@@ -377,7 +377,7 @@ namespace PrincesPalace
         // and swallow the one behind it. Taken from the animator's BaseScale
         // rather than the live localScale because the target is being punched
         // on this exact frame and its localScale is mid-squash -- the same
-        // distinction AnchorStageSlots draws when it compares marks.
+        // distinction AnchorOne draws when it compares marks.
         //
         // The spell path deliberately does NOT do this: a spell authors its
         // own size per skill and a caster tunes it against what they see. This

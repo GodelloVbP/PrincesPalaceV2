@@ -131,6 +131,20 @@ namespace PrincesPalace
         // Paints a set of vitals. Called TWICE per beat -- once with what stood
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
+
+        // PaintVitals' twin for POSITION: which formation the stage should be
+        // drawing. Called once at the top of each beat, and with null when
+        // playback ends -- after which live state is the moment being shown.
+        //
+        // A separate delegate rather than reading beat.Formation off a beat
+        // the view was handed, for the same reason PaintVitals is one: the
+        // view is told what to paint and never given the beat to interpret.
+        internal Action<BeatFormation> PaintFormation;
+
+        // Whether the stage is still walking figures to the marks that
+        // formation implies. Playback waits it out before going on -- see the
+        // call site.
+        internal Func<bool> FormationIsMoving;
         internal Action<string> PushLine;
 
         // Starts a beat's spell effect, and says how long after the beat opens
@@ -244,6 +258,10 @@ namespace PrincesPalace
             // here rather than at the call sites.
             StopVfx?.Invoke();
 
+            // An abandoned round leaves the stage on live state, same rule as
+            // the normal completion path below and for the same reason.
+            PaintFormation?.Invoke(null);
+
             IsPlaying = false;
 
             // AND WHOEVER WAS WAITING IS TOLD, which it never was.
@@ -281,6 +299,36 @@ namespace PrincesPalace
                 // thing that caused it happens. Painting what stood BEFORE the
                 // blow and only landing the after-state at the impact frame is
                 // what puts cause back in front of effect.
+                // THE FORMATION FIRST, THEN THE NUMBERS.
+                //
+                // Where everybody stands is settled before anything else about
+                // the beat is drawn, because the rest of the beat is measured
+                // against it: TravelFor reads the slots' live positions to
+                // work out how far the actor has to lean, and the damage
+                // popup is placed off the target's slot. Painted from the
+                // beat's own snapshot rather than from the live lists for the
+                // reason the vitals are -- a Move rewrites the party order in
+                // place, so live state is the order the ROUND finished on.
+                PaintFormation?.Invoke(beat.Formation);
+
+                // AND THE FIGURES HAVE TO ARRIVE BEFORE THE BEAT GOES ON.
+                //
+                // A Move's own beat is the case this is for: the two party
+                // members cross over about a third of a second, and the enemy
+                // reply that follows in the SAME round would otherwise open
+                // while they were still passing each other -- aiming at the
+                // gap between them, landing its flash on whichever figure
+                // happened to be nearer. The other case is a line closing up
+                // over a corpse that has just finished fading.
+                //
+                // A while rather than a fixed wait: the walk's length is the
+                // animator's business (StageActorAnimator.GlideSeconds, scaled
+                // like everything else on the beat clock), and a beat that
+                // waited its own guess at that number would drift the day it
+                // changed. Nothing is moving on the overwhelming majority of
+                // beats, so this costs one delegate call.
+                while (FormationIsMoving != null && FormationIsMoving()) yield return null;
+
                 PaintVitals?.Invoke(beat.PreSnapshot);
 
                 if (beat.Messages != null)
@@ -492,6 +540,13 @@ namespace PrincesPalace
 
             _running = null;
             IsPlaying = false;
+
+            // BACK TO LIVE STATE. Every beat has been shown, so the order the
+            // round finished on is now the order on screen -- and the stage
+            // must not go on drawing the last beat's copy of it, or a Move
+            // made on the final beat of a round would be undone the moment
+            // anything repainted from live data.
+            PaintFormation?.Invoke(null);
 
             var finished = _onFinished;
             _onFinished = null;

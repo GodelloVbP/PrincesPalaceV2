@@ -72,41 +72,107 @@ namespace PrincesPalace
 
         // ---- the whole stage --------------------------------------------------
 
+        // WHICH MOMENT THE STAGE IS DRAWING: the formation a beat recorded, or
+        // null for "whatever is live".
+        //
+        // The same split StanceOf and FadeTheFallen already draw, applied to
+        // position. A round resolves in one pass before a single beat plays,
+        // so Encounter.PlayerParty read during playback is the order the round
+        // FINISHED on -- and with Move in the game that is a different order
+        // from the one most of its beats happened in. Set at the top of each
+        // beat by playback and cleared when playback ends, at which point live
+        // state is the moment being shown and is correct again.
+        private BeatFormation _playingFormation;
+
+        internal void PaintFormation(BeatFormation formation)
+        {
+            _playingFormation = formation;
+            RefreshStage();
+        }
+
+        // Whether anybody is still walking to a new mark. Playback holds the
+        // next beat on this: an enemy that swings while the party is halfway
+        // through a swap aims at neither of them (FightBeatPlayer.TravelFor
+        // reads the slot's live anchoredPosition), and the blow lands on a
+        // figure still sliding out from under it.
+        private bool FormationIsMoving() =>
+            AnyGliding(enemyActorAnimators) || AnyGliding(partyActorAnimators);
+
+        private static bool AnyGliding(StageActorAnimator[] animators)
+        {
+            if (animators == null) return false;
+
+            foreach (var animator in animators)
+            {
+                if (animator != null && animator.IsGliding) return true;
+            }
+
+            return false;
+        }
+
+        // The order a side stood in for the moment being drawn.
+        //
+        // Falls back to live state for an empty recorded formation rather than
+        // blanking the stage -- a beat built by a fixture with no encounter
+        // behind it carries BeatFormation.Empty, and graceful degradation on
+        // missing content is the house style.
+        private IReadOnlyList<CombatantState> OrderOf(bool playerSide)
+        {
+            var recorded = _playingFormation?.SideOf(playerSide);
+            if (recorded != null && recorded.Count > 0) return recorded;
+
+            return playerSide ? _session.Encounter.PlayerParty : _session.Encounter.Enemies;
+        }
+
+        // WHETHER THIS FIGURE IS STILL ON ITS FEET, as far as the stage knows.
+        //
+        // Busy-aware, and that is the whole of it: while a round plays only
+        // what a painted beat has confirmed counts, because live IsAlive
+        // already reflects a kill from later in the same round. Idle, there is
+        // no in-flight animation to get ahead of and live state is the answer.
+        // Extracted because three separate readers now ask it -- StanceOf, the
+        // rank rule below, and the revival check.
+        private bool IsStanding(CombatantState combatant)
+        {
+            if (combatant == null) return false;
+
+            return _isBusy ? !_confirmedDefeated.Contains(combatant) : combatant.IsAlive;
+        }
+
+        // WHETHER THIS FIGURE STILL TAKES UP A PLACE IN THE LINE.
+        //
+        // The living do. So does a body that has not finished fading, and that
+        // clause is the one doing the work: ranks compress behind a corpse the
+        // instant it dies, so a stage that took its ranks straight from the
+        // living would slide the survivors forward on the very frame the blow
+        // landed -- through a figure still standing there at full opacity,
+        // before its death fade has so much as started. Holding the rank until
+        // StageDeathFade says the body is gone is what makes the kill read as
+        // "it falls, it fades, THEN the line closes up".
+        private bool HoldsRank(CombatantState combatant)
+        {
+            if (!IsOnStage(combatant)) return false;
+            if (IsStanding(combatant)) return true;
+
+            var fade = DeathFadeFor(combatant);
+            return fade != null && !fade.Faded;
+        }
+
+        // Reused across repaints rather than allocated per call: RefreshStage
+        // is reached from every pose change of every beat, and these are three
+        // entries each.
+        private readonly List<CombatantState> _ranked = new List<CombatantState>();
+        private CombatantState[] _occupants = new CombatantState[0];
+
         private void RefreshStage()
         {
             if (_session == null) return;
 
-            var enemies = _session.Encounter.Enemies;
+            var enemies = OrderOf(playerSide: false);
 
-            // THE SHOWN COUNT, not the roster's. Spreading the formation for a
-            // monster nobody can see yet would shuffle the survivors sideways
-            // to make room for it, which gives the arrival away just as loudly
-            // as drawing it early did.
-            //
-            // A hidden newcomer is always the LAST entry -- a summon appends to
-            // the encounter -- so counting them is enough and no re-packing of
-            // the slot indices is needed. Everything else on this stage maps a
-            // combatant to a slot by its index in this same list (SlotFor, the
-            // plates, the intent icons), and re-packing would have to move all
-            // of them together.
-            int onStage = 0;
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                if (IsOnStage(enemies[i])) onStage++;
-            }
-
-            AnchorStageSlots(enemySlots, enemyActorAnimators, onStage, mirrored: false, StageScaleForSlot);
-
-            for (int i = 0; i < enemySprites.Length; i++)
-            {
-                var enemy = i < enemies.Count && IsOnStage(enemies[i]) ? enemies[i] : null;
-                enemySlots[i].gameObject.SetShown(enemy != null);
-                if (enemy == null) continue;
-
-                RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy),
-                    enemyActorAnimators[i], enemyHitFlashes[i]);
-                RefreshNameplate(enemyNameplates[i], enemy);
-            }
+            DrawSide(enemies, enemySlots, enemySprites, enemyActorAnimators, enemyHitFlashes,
+                     enemyNameplates, _enemySlotPlaced, StageSide.Right, mirrored: false, StageScaleFor,
+                     _enemyMarks);
 
             RefreshIntentIcons();
 
@@ -120,21 +186,128 @@ namespace PrincesPalace
             // the only path allowed to repaint this row; while busy it simply
             // keeps showing whatever it last painted, exactly like the
             // plates/verbs/submenu already do for the same reason.
-            if (!_isBusy) RefreshEnemyStatusRows(onStage);
+            if (!_isBusy) RefreshEnemyStatusRows();
 
-            var party = _session.Encounter.PlayerParty;
-            AnchorStageSlots(partySlots, partyActorAnimators, party.Count, mirrored: true);
+            DrawSide(OrderOf(playerSide: true), partySlots, partySprites, partyActorAnimators,
+                     partyHitFlashes, partyNameplates, _partySlotPlaced, StageSide.Left,
+                     mirrored: true, null);
+        }
 
-            for (int i = 0; i < partySprites.Length; i++)
+        // ONE SIDE: where each figure stands, and what it is wearing.
+        //
+        // THE TWO HALVES ARE INDEXED DIFFERENTLY AND THAT IS THE POINT.
+        // Position is walked by RANK -- rank 0 gets the near mark whoever is
+        // standing in it -- while the drawing, the nameplate, the flash and
+        // the fade are walked by SLOT, which belongs to one combatant for the
+        // whole fight. A Move changes the first and must never touch the
+        // second; before the slot map existed they were the same loop, so it
+        // changed both and the enemy's already-queued swing flashed the figure
+        // that had stepped out of the way.
+        private void DrawSide(IReadOnlyList<CombatantState> order,
+                              RectTransform[] slots, Image[] sprites, StageActorAnimator[] animators,
+                              StageHitFlash[] flashes, TMPro.TMP_Text[] nameplates, bool[] placed,
+                              StageSide side, bool mirrored, System.Func<CombatantState, float> presence,
+                              Vector2[] marks = null)
+        {
+            if (slots == null) return;
+
+            // ---- where they stand, by rank ---------------------------------
+            _ranked.Clear();
+            for (int i = 0; i < order.Count; i++)
             {
-                var member = i < party.Count ? party[i] : null;
-                partySlots[i].gameObject.SetShown(member != null);
-                if (member == null) continue;
-
-                RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member),
-                    partyActorAnimators[i], partyHitFlashes[i]);
-                RefreshNameplate(partyNameplates[i], member);
+                if (HoldsRank(order[i])) _ranked.Add(order[i]);
             }
+
+            int count = _ranked.Count > slots.Length ? slots.Length : _ranked.Count;
+            for (int rank = 0; rank < count; rank++)
+            {
+                int slot = SlotIndexOf(_ranked[rank]);
+                if (slot < 0 || slot >= slots.Length || slots[slot] == null) continue;
+
+                var offset = FightStageAnchors.SlotOffset(rank, count, mirrored);
+                float scale = FightStageAnchors.SlotScale(rank, count)
+                              * (presence?.Invoke(_ranked[rank]) ?? 1f);
+
+                var mark = new Vector2(offset.X, offset.Y);
+
+                // RECORDED, so the enemy status strip can follow the figure
+                // rather than re-deriving where it thinks the figure went.
+                // That row is baked at build time against the fixed
+                // three-slot geometry and has to be nudged by the difference
+                // (RefreshEnemyStatusRows); it used to compute that
+                // difference from the slot INDEX, which was the same number
+                // as the rank until this file stopped treating them as one.
+                if (marks != null && slot < marks.Length) marks[slot] = mark;
+
+                AnchorOne(slots[slot],
+                          animators != null && slot < animators.Length ? animators[slot] : null,
+                          mark, new Vector3(scale, scale, 1f), placed, slot);
+
+                // THE PAINTER'S ORDER, now that a figure can change rank.
+                // FightScreen.BuildStage declares the slots far-to-near so
+                // slot 0 draws last, which was the whole answer while a slot's
+                // rank never changed. A Move swaps two ranks without moving
+                // either figure's slot, so the nearer one has to be re-parented
+                // to the end or the back rank draws over the front one.
+                // Compared before assigning: SetSiblingIndex dirties the
+                // hierarchy, and this runs on every repaint.
+                int sibling = StageLayout.SiblingIndexForSlot(rank, count);
+                if (slots[slot].GetSiblingIndex() != sibling) slots[slot].SetSiblingIndex(sibling);
+            }
+
+            // ---- what they are wearing, by slot -----------------------------
+            if (_occupants.Length < slots.Length) _occupants = new CombatantState[slots.Length];
+            for (int slot = 0; slot < slots.Length; slot++) _occupants[slot] = null;
+
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (!IsOnStage(order[i])) continue;
+
+                int slot = SlotIndexOf(order[i]);
+                if (slot >= 0 && slot < slots.Length) _occupants[slot] = order[i];
+            }
+
+            for (int slot = 0; slot < slots.Length; slot++)
+            {
+                if (slots[slot] == null) continue;
+
+                var combatant = _occupants[slot];
+                slots[slot].gameObject.SetShown(combatant != null);
+                if (combatant == null) continue;
+
+                RaiseIfStandingAgain(combatant);
+
+                if (sprites != null && slot < sprites.Length)
+                {
+                    RefreshCombatantSprite(sprites[slot], combatant, side, StanceOf(combatant),
+                        animators != null && slot < animators.Length ? animators[slot] : null,
+                        flashes != null && slot < flashes.Length ? flashes[slot] : null);
+                }
+
+                if (nameplates != null && slot < nameplates.Length)
+                {
+                    RefreshNameplate(nameplates[slot], combatant);
+                }
+            }
+        }
+
+        // BACK ON ITS FEET AFTER HAVING BEEN SHOWN DOWN -- Second Life, which
+        // raises the WHOLE party at the moment the fight would have been lost
+        // (FightSession.Outcome.TrySecondLife).
+        //
+        // The beat-driven half of this lives in FadeTheFallen, which sees the
+        // revival in a snapshot. This is the other half, for a raise that
+        // lands after the last beat was committed: playback is over, live
+        // state is the moment being shown, and a party left faded out would
+        // fight the rest of the encounter invisible. Idle only, for exactly
+        // the reason StanceOf is busy-aware -- mid-round, live health has
+        // already run past the beat being drawn.
+        private void RaiseIfStandingAgain(CombatantState combatant)
+        {
+            if (_isBusy || !combatant.IsAlive) return;
+            if (!_confirmedDefeated.Remove(combatant)) return;
+
+            DeathFadeFor(combatant)?.ResetToVisible();
         }
 
         // What pose a combatant is holding. Public so a PlayMode test can assert
@@ -155,117 +328,102 @@ namespace PrincesPalace
                 // falling back to live IsAlive is correct and is what lets a
                 // combatant killed outside the beat pipeline still show
                 // defeated once refreshed.
-                bool defeated = _isBusy ? _confirmedDefeated.Contains(combatant) : !combatant.IsAlive;
-                if (defeated) return FightSession.Stances.Defeated;
+                if (!IsStanding(combatant)) return FightSession.Stances.Defeated;
             }
 
             return _stance.TryGetValue(combatant, out var stance) ? stance : FightSession.Stances.Idle;
         }
 
-        // Spreads however many actors are ACTUALLY on this side across the whole
-        // depth range, instead of filling the first N of three fixed slots.
+        // ONE SLOT PUT ON ONE MARK, at the size that mark implies.
         //
-        // The bug this fixes, measured rather than eyeballed: two Giant Rats sat
-        // in slots 0 and 1 of a three-slot formation, 132px apart, while slot 2
-        // -- the widest position, 265px out -- stood empty. The rat sheet is
-        // 675px wide, so the back one was 78% hidden behind the front one and
-        // read as one monster with a spare tail. Spreading the pair to the two
-        // ENDS of the same range takes that to 48% with no change to the anchors
-        // themselves, which are load-bearing for panel clearance and were
-        // derived against the tallest actor (see FightStageAnchors).
+        // Spreads however many actors are ACTUALLY on this side across the
+        // whole depth range, instead of filling the first N of three fixed
+        // slots. The bug that fixes, measured rather than eyeballed: two Giant
+        // Rats sat in slots 0 and 1 of a three-slot formation, 132px apart,
+        // while slot 2 -- the widest position, 265px out -- stood empty. The
+        // rat sheet is 675px wide, so the back one was 78% hidden behind the
+        // front one and read as one monster with a spare tail. Spreading the
+        // pair to the two ENDS of the same range takes that to 48% with no
+        // change to the anchors themselves, which are load-bearing for panel
+        // clearance and were derived against the tallest actor (see
+        // FightStageAnchors).
         //
         // Runtime rather than build-time for the same reason the submenu rows
-        // are: how many monsters a room fields is not known until it is entered.
-        // It goes through the SAME FightStageAnchors functions the builder used,
-        // so the two can never disagree about what "slot 1 of 2" means.
+        // are: how many monsters a room fields is not known until it is
+        // entered. It goes through the SAME FightStageAnchors functions the
+        // builder used, so the two can never disagree about what "slot 1 of 2"
+        // means.
         //
-        // Applies to the PARTY too. A squad of two had exactly the same problem
-        // and nobody had noticed, because two sheep overlapping reads as two
-        // sheep standing close together rather than as a layout fault.
-        private static void AnchorStageSlots(RectTransform[] slots, StageActorAnimator[] animators,
-                                            int liveCount, bool mirrored,
-                                            System.Func<int, float> presence = null)
+        // WAS A LOOP OVER SLOTS, and is now a call per RANK, which is the
+        // whole of A3's positional half: the caller decides which combatant
+        // holds which rank for the beat being drawn and this puts that
+        // combatant's own slot on the mark that rank implies. While rank and
+        // slot were the same number the difference did not exist.
+        private static void AnchorOne(RectTransform slot, StageActorAnimator animator,
+                                      Vector2 mark, Vector3 baseScale, bool[] placed, int index)
         {
-            if (slots == null || liveCount <= 0) return;
+            if (slot == null) return;
 
-            int shown = liveCount > slots.Length ? slots.Length : liveCount;
-            for (int i = 0; i < shown; i++)
+            // ONLY WHEN IT ACTUALLY MOVED, and that guard is the whole of this
+            // function's correctness.
+            //
+            // RefreshStage is not an occasional event -- the HUD refresh and
+            // every pose change reach it. Writing the mark unconditionally
+            // therefore fought the lunge tween for the rect all the way
+            // through the swing, and telling the animator unconditionally
+            // CANCELLED that tween outright, since Rehome stops whatever is in
+            // flight. The result was an attack where nobody moved.
+            //
+            // Compared against the ANIMATOR'S mark, never the live rect:
+            // mid-lunge the rect is somewhere between here and the target by
+            // design, so reading it back would see a difference every frame and
+            // re-home forever. Against its GOAL rather than its current mark,
+            // because a walk in flight is between the two -- see
+            // StageActorAnimator.Mark. Without an animator there is nothing to
+            // move it, so the rect IS the mark.
+            var currentMark = animator != null ? animator.Mark : slot.anchoredPosition;
+            var currentScale = animator != null ? animator.GoalScale : slot.localScale;
+
+            bool arrived = (currentMark - mark).sqrMagnitude < 0.0001f
+                           && (currentScale - baseScale).sqrMagnitude < 0.0001f;
+
+            // FIRST PLACEMENT SNAPS, EVERY LATER ONE WALKS. Setting a stage up
+            // is not a movement anybody is meant to watch -- figures sliding in
+            // from wherever the previous encounter left the slot would open
+            // every fight with the party wandering into position -- where a
+            // Move, or a line closing up over a corpse, is exactly the
+            // movement the player is meant to read.
+            bool first = placed == null || index < 0 || index >= placed.Length || !placed[index];
+            if (placed != null && index >= 0 && index < placed.Length) placed[index] = true;
+
+            if (arrived) return;
+
+            // THE ANIMATOR HAS TO BE TOLD, and telling it is the whole of the
+            // write. It holds the mark a figure returns to after a lunge and
+            // the scale its stretch multiplies onto, and it captured both in
+            // Awake -- which was correct only while a slot's position was fixed
+            // at build time. Without this every swing after a re-spread ended
+            // by snapping the figure back to where its slot used to be, at the
+            // size it used to be.
+            //
+            // ASSIGNING THE RECT HERE AS WELL USED TO BE PART OF IT, and it is
+            // not any more. That wrote the two values and then called a Rehome
+            // that read them straight back, which worked only because nothing
+            // else wrote localScale between the two lines. The idle breath
+            // writes it every frame, so that arrangement would have folded a
+            // breath into the base scale and multiplied it again on the next
+            // one. Handing the values over leaves one writer, which cannot be
+            // got out of order.
+            if (animator == null)
             {
-                if (slots[i] == null) continue;
-
-                var offset = FightStageAnchors.SlotOffset(i, shown, mirrored);
-                var mark = new Vector2(offset.X, offset.Y);
-
-                // DEPTH FIRST, THEN THE CREATURE. The stage's own scale answers
-                // "how far away is this slot"; the multiplier answers "how big
-                // is the thing standing in it", and those are two different
-                // questions that were previously being given one answer. See
-                // RawEnemyEntry.stageScale.
-                //
-                // Multiplied rather than substituted, so a boss in the back row
-                // is still smaller than the same boss in front and the
-                // perspective the whole stage rests on survives.
-                float scale = FightStageAnchors.SlotScale(i, shown) * (presence?.Invoke(i) ?? 1f);
-                var baseScale = new Vector3(scale, scale, 1f);
-
-                // HANDED IN, NOT LOOKED UP -- the array ScreenRegistry
-                // populated one-to-one with `slots`, so an index into one is
-                // an index into the other and there is nothing here left to
-                // GetComponent for.
-                var animator = animators != null && i < animators.Length ? animators[i] : null;
-
-                // ONLY WHEN IT ACTUALLY MOVED, and that guard is the whole of
-                // this function's correctness.
-                //
-                // RefreshStage is not an occasional event -- the HUD refresh
-                // and the idle breath both reach it. Writing the mark
-                // unconditionally therefore fought the lunge tween for the
-                // rect all the way through the swing, and telling the animator
-                // unconditionally CANCELLED that tween outright, since Rehome
-                // stops whatever is in flight. The result was an attack where
-                // nobody moved.
-                //
-                // Compared against the ANIMATOR'S mark, never the live rect:
-                // mid-lunge the rect is somewhere between here and the target
-                // by design, so reading it back would see a difference every
-                // frame and re-home forever. The animator's home is the only
-                // thing that still knows where the figure belongs. Without an
-                // animator there is nothing to move it, so the rect IS the mark.
-                var currentMark = animator != null ? animator.Home : slots[i].anchoredPosition;
-                var currentScale = animator != null ? animator.BaseScale : slots[i].localScale;
-
-                if ((currentMark - mark).sqrMagnitude < 0.0001f &&
-                    (currentScale - baseScale).sqrMagnitude < 0.0001f)
-                {
-                    continue;
-                }
-
-                // THE ANIMATOR HAS TO BE TOLD, and telling it is now the whole
-                // of the write. It holds the mark a figure returns to after a
-                // lunge and the scale its stretch multiplies onto, and it
-                // captured both in Awake -- which was correct only while this
-                // function did not exist. Without this every swing after a
-                // re-spread ended by snapping the figure back to where its slot
-                // used to be, at the size it used to be.
-                //
-                // ASSIGNING THE RECT HERE AS WELL USED TO BE PART OF IT, and it
-                // is not any more. This wrote the two values and then called a
-                // Rehome that read them straight back, which worked only
-                // because nothing else wrote localScale between the two lines.
-                // The idle breath writes it every frame, so that arrangement
-                // would have folded a breath into the base scale and
-                // multiplied it again on the next one. Handing the values over
-                // leaves one writer, which cannot be got out of order.
-                if (animator != null)
-                {
-                    animator.Rehome(mark, baseScale);
-                }
-                else
-                {
-                    slots[i].anchoredPosition = mark;
-                    slots[i].localScale = baseScale;
-                }
+                slot.anchoredPosition = mark;
+                slot.localScale = baseScale;
+                return;
             }
+
+            if (first) animator.Rehome(mark, baseScale);
+            else animator.GlideTo(mark, baseScale,
+                                  FightBeatPlayer.Scaled(StageActorAnimator.GlideSeconds));
         }
 
         // THE SAME NAME THE PLATE IN THE CORNER USES, ordinal and all. Three
@@ -499,7 +657,7 @@ namespace PrincesPalace
             // whenever it trails, picking up the current drawing and flip for
             // free. Same-sprite rebinds are cheap and idempotent. HANDED IN
             // rather than GetComponent'd off slotRect -- the same array
-            // ScreenRegistry populated for AnchorStageSlots.
+            // ScreenRegistry populated for AnchorOne.
             animator?.BindSprite(image);
 
             // ACTIVATED, not merely enabled. The sprite node is built inactive
@@ -649,9 +807,27 @@ namespace PrincesPalace
         {
             if (beat?.Snapshot == null || _session == null) return;
 
+            bool raised = false;
+
             foreach (var pair in beat.Snapshot)
             {
-                if (pair.Value.Health > 0) continue;
+                if (pair.Value.Health > 0)
+                {
+                    // AND THE FALLEN WHO ARE NOT FALLEN ANY MORE. Second Life
+                    // raises the WHOLE party at the moment the fight would
+                    // otherwise be lost (FightSession.Outcome.TrySecondLife),
+                    // so a snapshot showing health where the last one showed a
+                    // body IS the revival, and this is the only place that
+                    // reads snapshots in order. Without it the raised party
+                    // fought the rest of the encounter as invisible corpses:
+                    // _confirmedDefeated never emptied and the fade never
+                    // came back.
+                    if (!_confirmedDefeated.Remove(pair.Key)) continue;
+
+                    DeathFadeFor(pair.Key)?.ResetToVisible();
+                    raised = true;
+                    continue;
+                }
 
                 // The pose's own confirmation, alongside the fade's. Same
                 // beat-scoped moment, same reason: this is the first point
@@ -667,7 +843,40 @@ namespace PrincesPalace
                 // repeatedly and must only ever fade once.
                 DeathFadeFor(pair.Key)?.PlayIfNotAlready();
             }
+
+            // The raised are back in the line, so the line has to be re-laid
+            // around them. Nothing else repaints between here and the next
+            // beat, and a revival is the one case where every figure on a side
+            // changes rank at once.
+            if (raised) RefreshStage();
         }
+
+        // A BODY HAS FINISHED FADING, so the survivors close up.
+        //
+        // The whole of the compaction rule's timing, and it is deliberately
+        // the fade that decides rather than the beat: the kill, the fall and
+        // the fade are nearly a second apart, and sliding the line forward at
+        // either of the first two would walk a figure through a body still on
+        // screen. See HoldsRank.
+        private void OnDeathFadeFinished()
+        {
+            if (_session == null) return;
+
+            RefreshStage();
+        }
+
+        private static bool[] NewPlacedFlags(RectTransform[] slots) =>
+            new bool[slots == null ? 0 : slots.Length];
+
+        // Whether each slot has been put on a mark at least once this fight --
+        // the difference between standing a stage up and moving somebody.
+        private bool[] _enemySlotPlaced = new bool[0];
+        private bool[] _partySlotPlaced = new bool[0];
+
+        // Where the last repaint actually put each enemy figure. Read by the
+        // status strip, which hangs off the same position but is not a child
+        // of the slot -- see DrawSide.
+        private Vector2[] _enemyMarks = new Vector2[0];
 
         // ---- the breath between blows --------------------------------------------
 
@@ -876,6 +1085,24 @@ namespace PrincesPalace
 
             _confirmedDefeated.Clear();
 
+            // WHO OWNS WHICH SLOT, for the whole of this fight -- see the map's
+            // own header. Seeded here rather than in Bind because this is the
+            // one method that means "a new encounter is standing up", and the
+            // two facts it establishes (who is where, and nobody has moved yet)
+            // are the same fact.
+            BindSlots();
+
+            // Nobody has been put on a mark yet, so the first anchor of each
+            // slot snaps rather than walking -- see AnchorOne.
+            _enemySlotPlaced = NewPlacedFlags(enemySlots);
+            _partySlotPlaced = NewPlacedFlags(partySlots);
+            _enemyMarks = new Vector2[enemySlots == null ? 0 : enemySlots.Length];
+
+            // AND THE BEAT BEING DRAWN IS "none": a formation left over from
+            // the last encounter names combatants that no longer exist, and
+            // OrderOf would draw it.
+            _playingFormation = null;
+
             // C4: no holder from a fight that just ended can ever be
             // compared against again -- a fresh Bind means every combatant's
             // remembered status-code set starts empty, exactly as a fresh
@@ -897,7 +1124,21 @@ namespace PrincesPalace
 
             StartIdleBreathing();
 
-            foreach (var fade in enemyDeathFades.Concat(partyDeathFades)) fade?.ResetToVisible();
+            foreach (var fade in enemyDeathFades.Concat(partyDeathFades))
+            {
+                if (fade == null) continue;
+
+                fade.ResetToVisible();
+
+                // TOLD WHEN THE BODY IS GONE. A corpse holds its rank until it
+                // has faded (see HoldsRank), so the moment the fade ends is the
+                // moment the survivors are allowed to close up -- and nothing
+                // else repaints then. Waiting for the next beat instead would
+                // work only when there is one; a kill that ends the round would
+                // leave the line open until the player's next action.
+                fade.Finished = OnDeathFadeFinished;
+            }
+
             foreach (var animator in enemyActorAnimators.Concat(partyActorAnimators)) animator?.ResetToHome();
 
             // The racks too, for the same reason the figures are: a kick
@@ -962,19 +1203,16 @@ namespace PrincesPalace
             return PortraitFolderFor(combatant);
         }
 
-        // How big whoever is standing in enemy slot `index` should be drawn.
+        // How big this particular monster should be drawn, on top of whatever
+        // depth its rank implies.
         //
-        // BY SLOT INDEX, because that is the only thing AnchorStageSlots knows
-        // -- it walks slots, not combatants, and is shared with the party rack
-        // where the question does not arise. Reading the roster back out here
-        // keeps that function's signature honest about what it operates on.
-        private float StageScaleForSlot(int index)
-        {
-            var enemies = _session?.Encounter.Enemies;
-            if (enemies == null || index < 0 || index >= enemies.Count) return 1f;
-
-            return _session.SourceFor(enemies[index])?.Source.StageScale ?? 1f;
-        }
+        // BY COMBATANT, where it used to be by slot index -- the caller walked
+        // slots and read the roster back out at the same index, which is the
+        // identity assumption A3 removed. Only enemies author one
+        // (RawEnemyEntry.stageScale); the party rack passes no presence
+        // function at all.
+        private float StageScaleFor(CombatantState combatant) =>
+            _session?.SourceFor(combatant)?.Source.StageScale ?? 1f;
 
         private SpriteFacing FacingOf(CombatantState combatant)
         {

@@ -207,7 +207,7 @@ namespace PrincesPalace
         // home + delta, never by reading back wherever the row is CURRENTLY
         // sitting (which may already be shifted from a previous refresh at
         // a different enemy count). Same "compare against the recorded
-        // home, not the live rect" rule AnchorStageSlots' own comment gives
+        // home, not the live rect" rule AnchorOne's own comment gives
         // for why StageActorAnimator keeps a Home instead of reading the
         // rect back. Null-safe throughout: a screen with no status rows at
         // all (an older build, a test double) leaves these null and
@@ -519,6 +519,8 @@ namespace PrincesPalace
             beatPlayer.SlotFor = SlotFor;
             beatPlayer.AnimatorFor = AnimatorFor;
             beatPlayer.PaintVitals = PaintVitals;
+            beatPlayer.PaintFormation = PaintFormation;
+            beatPlayer.FormationIsMoving = FormationIsMoving;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
             beatPlayer.FlashTarget = FlashCombatant;
@@ -540,26 +542,83 @@ namespace PrincesPalace
             foreach (var shake in stageShakes) shake?.Kick(strength);
         }
 
-        // Where a combatant is standing, for the floating number. The view owns
-        // this mapping; playback only asks.
-        private RectTransform SlotFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
+        // WHICH SLOT A COMBATANT OWNS, FOR THE WHOLE FIGHT.
+        //
+        // THE BUG THIS EXISTS FOR, and it is the reason A3 is a package at
+        // all. Every one of the four lookups below used to answer by scanning
+        // Encounter.PlayerParty for the combatant and returning the handle at
+        // the same INDEX -- which was correct only while the party list never
+        // moved, and Move is the command that moves it. A move traded two
+        // members' list positions and therefore traded their sprites, their
+        // nameplates, their hit flashes, their death fades and their
+        // animators: the already-queued enemy swing then landed its flash and
+        // its number on the figure that had stepped out of the way.
+        //
+        // A slot belongs to the combatant that started in it and keeps it
+        // until the fight ends. Position is the thing that moves -- see
+        // RefreshStage, which marks each slot from its occupant's RANK in the
+        // beat being played. Identity and position were one fact by accident,
+        // and separating them is the whole of this change.
+        private readonly Dictionary<CombatantState, int> _slotOf =
+            new Dictionary<CombatantState, int>();
 
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && i < enemySlots.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemySlots[i];
-            }
+        // Seeded once per fight from the opening lists, which is the moment
+        // "where everyone started" is true by definition.
+        private void BindSlots()
+        {
+            _slotOf.Clear();
+            if (_session == null) return;
 
             var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && i < partySlots.Length; i++)
+            for (int i = 0; i < party.Count; i++) _slotOf[party[i]] = i;
+
+            var enemies = _session.Encounter.Enemies;
+            for (int i = 0; i < enemies.Count; i++) _slotOf[enemies[i]] = i;
+        }
+
+        // A combatant's own slot index, registering a newcomer on the way.
+        //
+        // ONLY THE ENEMY SIDE CAN GROW, and only by appending (a summon;
+        // CombatEncounter.TryAddEnemy refuses past StageSlotsPerSide), so an
+        // unregistered combatant's list index IS its slot -- nothing has
+        // reordered the list it is being read out of. The party is registered
+        // whole at Bind and can never reach this path, which matters: reading
+        // a party member's index back out of the live list is exactly the bug
+        // above.
+        private int SlotIndexOf(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return -1;
+            if (_slotOf.TryGetValue(combatant, out int known)) return known;
+
+            var side = combatant.IsPlayerSide ? _session.Encounter.PlayerParty : _session.Encounter.Enemies;
+            for (int i = 0; i < side.Count; i++)
             {
-                if (ReferenceEquals(party[i], combatant)) return partySlots[i];
+                if (!ReferenceEquals(side[i], combatant)) continue;
+
+                _slotOf[combatant] = i;
+                return i;
             }
 
-            return null;
+            return -1;
         }
+
+        // The one lookup the four below are. They differed only in which pair
+        // of arrays they walked, and each carried its own copy of the scan
+        // that the slot map replaces.
+        private T HandleFor<T>(CombatantState combatant, T[] enemyHandles, T[] partyHandles)
+            where T : class
+        {
+            int slot = SlotIndexOf(combatant);
+            if (slot < 0) return null;
+
+            var handles = combatant.IsPlayerSide ? partyHandles : enemyHandles;
+            return handles != null && slot < handles.Length ? handles[slot] : null;
+        }
+
+        // Where a combatant is standing, for the floating number. The view owns
+        // this mapping; playback only asks.
+        private RectTransform SlotFor(CombatantState combatant) =>
+            HandleFor(combatant, enemySlots, partySlots);
 
         // SlotFor's exact twin for the animator that lives on that same slot.
         // Playback (FightBeatPlayer.TravelFor/RecoilOne/Punch) used to walk
@@ -567,68 +626,25 @@ namespace PrincesPalace
         // this returns the component directly from the array ScreenRegistry
         // populated, so nothing downstream of the controller ever calls
         // GetComponent to find one.
-        private StageActorAnimator AnimatorFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
-
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && i < enemyActorAnimators.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemyActorAnimators[i];
-            }
-
-            var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && i < partyActorAnimators.Length; i++)
-            {
-                if (ReferenceEquals(party[i], combatant)) return partyActorAnimators[i];
-            }
-
-            return null;
-        }
+        private StageActorAnimator AnimatorFor(CombatantState combatant) =>
+            HandleFor(combatant, enemyActorAnimators, partyActorAnimators);
 
         // SlotFor's twin for the hit-flash silhouette. Used by FlashOne, which
         // used to reach it through SlotFor(target).GetComponentInChildren --
         // the same GetComponent-at-point-of-use shape this whole change
         // replaces.
-        private StageHitFlash HitFlashFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
-
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && i < enemyHitFlashes.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemyHitFlashes[i];
-            }
-
-            var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && i < partyHitFlashes.Length; i++)
-            {
-                if (ReferenceEquals(party[i], combatant)) return partyHitFlashes[i];
-            }
-
-            return null;
-        }
+        private StageHitFlash HitFlashFor(CombatantState combatant) =>
+            HandleFor(combatant, enemyHitFlashes, partyHitFlashes);
 
         // SlotFor's twin for the death fade. Used by FadeTheFallen, which used
         // to reach it through SlotFor(target).GetComponent.
-        private StageDeathFade DeathFadeFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
+        private StageDeathFade DeathFadeFor(CombatantState combatant) =>
+            HandleFor(combatant, enemyDeathFades, partyDeathFades);
 
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && i < enemyDeathFades.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemyDeathFades[i];
-            }
-
-            var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && i < partyDeathFades.Length; i++)
-            {
-                if (ReferenceEquals(party[i], combatant)) return partyDeathFades[i];
-            }
-
-            return null;
-        }
+        // And for the sprite, which nothing outside RefreshStage asks for --
+        // it is here so every per-combatant handle is resolved one way.
+        private Image SpriteFor(CombatantState combatant) =>
+            HandleFor(combatant, enemySprites, partySprites);
 
         // Repaints the HUD from a RECORDED set of vitals rather than from live
         // state. This is the reason the session records any at all: by the time a

@@ -199,5 +199,61 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEqual(new[] { behind },
                 session.EligibleTargets(foe, Reach.Melee).ToList());
         }
+
+        [Test]
+        public void AMovesBeatRecordsTheOrderItLeftBehindAndKeepsIt()
+        {
+            // THE SNAPSHOT IS A COPY, and this is the assertion that says so.
+            //
+            // The party list is written IN PLACE by SwapPartySlots, so a beat
+            // holding a reference to it -- or a deferred LINQ query over it --
+            // would report whatever order the round happened to finish on,
+            // several beats after the one being drawn. That is the same bug
+            // the vitals snapshot exists for, and it is invisible until two
+            // moves land in one round.
+            var front = Member("Front", 10);
+            var behind = Member("Behind", 1);
+            var session = Fight(front, behind);
+
+            Assert.IsTrue(session.Move(MoveDirection.Back));
+
+            var beats = session.DrainBeats();
+            Assert.AreEqual(1, beats.Count, "one Move, one beat");
+            var formation = beats[0].Formation;
+
+            CollectionAssert.AreEqual(new[] { behind, front }, formation.Party.ToList(),
+                "the beat records the order the swap PRODUCED -- captured at CommitBeat, " +
+                "which is after SwapPartySlots ran");
+
+            // And now move them back, which rewrites the very list the beat
+            // would have been pointing at.
+            Assert.IsTrue(session.Encounter.SwapPartySlots(0, 1));
+            CollectionAssert.AreEqual(new[] { front, behind },
+                session.Encounter.PlayerParty.ToList(), "the live list really did move again");
+
+            CollectionAssert.AreEqual(new[] { behind, front }, formation.Party.ToList(),
+                "the beat's formation is a copy and did not follow the list");
+        }
+
+        [Test]
+        public void AFormationCarriesTheDeadInListOrderSoTheViewCanHoldTheirGround()
+        {
+            // LIST ORDER, CORPSES INCLUDED -- see BeatFormation's own header.
+            // A formation of the living alone compacts on the very beat a kill
+            // lands, which would slide the survivors forward through a body
+            // still standing at full opacity.
+            var dead = Member("Dead", 1);
+            var mover = Member("Mover", 10);
+            var behind = Member("Behind", 2);
+            var session = Fight(dead, mover, behind);
+            dead.CurrentHealth = 0;
+
+            Assert.IsTrue(session.Move(MoveDirection.Back));
+
+            var formation = session.DrainBeats()[0].Formation;
+            CollectionAssert.AreEqual(new[] { dead, behind, mover }, formation.Party.ToList());
+            Assert.AreEqual(1, session.Encounter.LivingRankOf(mover),
+                "the RULE still ranks among the living only; the formation is the view's copy of the order");
+        }
     }
 }

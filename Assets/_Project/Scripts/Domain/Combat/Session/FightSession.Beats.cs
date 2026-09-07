@@ -56,6 +56,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // into the view to decide how far ahead to simulate.
             _recordingBeat.TurnOrder = _encounter?.UpcomingTurns(_initiativeSlots);
 
+            // AND WHERE EVERYBODY WAS STANDING, taken HERE rather than at
+            // BeginBeat, because a Move's whole effect happens between the two:
+            // the swap is written to the party list after the beat opens and
+            // before it closes, so a formation captured at the top would be the
+            // order the mover was trying to leave. Copied at this instant and
+            // never referenced -- see BeatFormation.
+            _recordingBeat.Formation = BeatFormation.Capture(_encounter);
+
             _beats.Add(_recordingBeat);
             _recordingBeat = null;
         }

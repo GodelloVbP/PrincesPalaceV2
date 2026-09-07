@@ -84,6 +84,14 @@ using PrincesPalace.Domain.Content;
         // so "NOW" never appeared to move off them.
         public IReadOnlyList<CombatantState> TurnOrder;
 
+        // WHERE EVERYBODY STOOD when this beat resolved -- see BeatFormation
+        // for why a copy and not the live lists. Same reasoning as TurnOrder
+        // directly above, applied to field position rather than to the queue:
+        // a Move reorders the party list in place, so the view has to be told
+        // the order this beat played at rather than reading the one the round
+        // finished on.
+        public BeatFormation Formation = BeatFormation.Empty;
+
         public readonly Dictionary<CombatantState, string> Stances = new Dictionary<CombatantState, string>();
         public readonly List<string> Messages = new List<string>();
         public Dictionary<CombatantState, Vitals> Snapshot;

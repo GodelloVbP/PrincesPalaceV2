@@ -64,6 +64,21 @@ namespace PrincesPalace
         // than the figure travelling.
         private const float AnticipationStretch = 0.06f;
 
+        // HOW LONG A FIGURE TAKES TO WALK TO A NEW MARK.
+        //
+        // A different motion from everything else in this file, and the
+        // difference is what it writes: a lunge is a TRAVEL (an offset from a
+        // fixed mark, returned to at the end), where this moves the mark
+        // itself. Two things move a mark -- a Move trading two party members'
+        // field positions, and the survivors closing up once a corpse has
+        // faded -- and both are the figure walking somewhere, not leaning.
+        //
+        // 0.35s: slow enough to be followed by eye across the widest gap on
+        // this stage (rank 0 to rank 2 is 265px of X and 93 of Y), short
+        // enough to fit inside the beat that caused it -- a Move beat spends
+        // StillPoseSeconds plus its settle, 0.45s, before the next beat opens.
+        internal const float GlideSeconds = 0.35f;
+
         // How far the figure stretches along its travel, at the fastest point
         // of each leg. The strike gets nearly three times the recovery's,
         // because that is the half being emphasised — the same asymmetry the
@@ -169,8 +184,27 @@ namespace PrincesPalace
 
         public Vector2 Home => _home;
 
+        // WHERE THE FIGURE IS HEADED, which is the same thing as Home except
+        // while a glide is in flight.
+        //
+        // AnchorOne' whole correctness rests on "only when it actually
+        // moved" (see its own header), and it compares the mark it is about to
+        // assign against the animator's. Compared against Home mid-glide that
+        // test is true on every frame of the walk, so every repaint would
+        // restart the glide from wherever the figure had got to and it would
+        // never arrive. The GOAL is the thing that answers "is this already
+        // the mark we want".
+        public Vector2 Mark => _gliding != null ? _glideMark : _home;
+        public Vector3 GoalScale => _gliding != null ? _glideScale : _baseScale;
+
+        // Whether that walk is still under way. Read by FightBeatPlayer, which
+        // holds the next beat until the formation has settled -- an enemy
+        // swinging at a party that is still crossing would aim at where the
+        // front rank was halfway through the swap.
+        public bool IsGliding => _gliding != null;
+
         // The depth scale the slot carries, which the stretch multiplies onto.
-        // Exposed for the same reason Home is: AnchorStageSlots has to be able
+        // Exposed for the same reason Home is: AnchorOne has to be able
         // to ask whether the mark it is about to assign is the one already
         // held, and the live localScale is mid-stretch during a swing.
         public Vector3 BaseScale => _baseScale;
@@ -194,7 +228,7 @@ namespace PrincesPalace
         //
         // THE BUG THIS EXISTS FOR. These were captured in Awake and never
         // again, which quietly assumed a slot never moves. It moves constantly:
-        // FightController.AnchorStageSlots re-spreads and re-scales the live
+        // FightController.AnchorOne re-spreads and re-scales the live
         // slots from FightStageAnchors every time the live count changes, so
         // that two rats occupy the two ENDS of the formation rather than
         // crowding its first two positions -- and an enemy dying re-lays every
@@ -214,7 +248,7 @@ namespace PrincesPalace
         // belongs. Right for Awake, where the scene's own values are the
         // answer and there is nobody to ask.
         //
-        // Anything that KNOWS the mark it wants -- AnchorStageSlots is the one
+        // Anything that KNOWS the mark it wants -- AnchorOne is the one
         // such caller -- should say so through the overload below rather than
         // assigning the rect and having this read it back.
         public void Rehome()
@@ -249,7 +283,7 @@ namespace PrincesPalace
         // The authoritative form: the caller states the mark and the size, and
         // this puts the figure on them.
         //
-        // TOLD, NOT SHOWN, which is the difference that matters. AnchorStageSlots
+        // TOLD, NOT SHOWN, which is the difference that matters. AnchorOne
         // used to assign the rect and then call the parameterless overload to
         // have it read back what had just been written -- two writers agreeing
         // by convention about the order they run in. That convention was
@@ -269,6 +303,12 @@ namespace PrincesPalace
                 StopCoroutine(_running);
                 _running = null;
             }
+
+            // INCLUDING A WALK, and this overload is the one that ends it: it
+            // is the authoritative "the mark is HERE, now", so a glide toward
+            // a mark somebody has since changed their mind about must not go
+            // on writing _home behind it.
+            StopGliding();
 
             _home = mark;
             _baseScale = baseScale;
@@ -356,6 +396,93 @@ namespace PrincesPalace
             _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds, leadSeconds));
         }
 
+        // ---- walking to a new mark ------------------------------------------
+
+        private Coroutine _gliding;
+        private Vector2 _glideMark;
+        private Vector3 _glideScale;
+
+        // THE FIGURE CHANGES WHERE IT STANDS, over time instead of at once.
+        //
+        // Rehome is the snap: it states the mark and puts the figure on it,
+        // which is right for setting a stage up and wrong for a Move -- two
+        // party members trading places by teleporting past each other is not a
+        // tank swap, it is a glitch. This is the same statement made as a walk.
+        //
+        // IT WRITES ONLY THE MARK, AND THAT IS THE WHOLE DESIGN. Rehome clears
+        // the travel, the hover, the stretch and the breath, because it is
+        // authoritative about everything; this touches none of them, so a
+        // lunge, a punch or a hover already in flight rides along on top and
+        // is composed by WritePosition/WriteScale exactly as it always is. A
+        // corpse fading out three slots away must not cancel the swing that
+        // killed it, and with Rehome as the only tool it would have.
+        //
+        // Degrades to a snap when there is no time to spend or nothing running
+        // to spend it -- a disabled slot has no coroutines, and a caller that
+        // asks for zero seconds is asking for Rehome.
+        public void GlideTo(Vector2 mark, Vector3 baseScale, float seconds)
+        {
+            if (_rect == null) _rect = transform as RectTransform;
+            if (_rect == null) return;
+
+            if (seconds <= 0f || !isActiveAndEnabled)
+            {
+                Rehome(mark, baseScale);
+                return;
+            }
+
+            if (_gliding != null) StopCoroutine(_gliding);
+
+            _glideMark = mark;
+            _glideScale = baseScale;
+            _gliding = StartCoroutine(Gliding(seconds));
+        }
+
+        private void StopGliding()
+        {
+            if (_gliding == null) return;
+
+            StopCoroutine(_gliding);
+            _gliding = null;
+        }
+
+        private IEnumerator Gliding(float seconds)
+        {
+            var fromMark = _home;
+            var fromScale = _baseScale;
+
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+
+                // Smoothstep: eased at both ends, unlike the lunge's
+                // snap-out/ease-back. A walk has no impact to emphasise, so
+                // there is no half to weight -- a figure that starts and stops
+                // abruptly reads as being dragged.
+                float t = Mathf.Clamp01(elapsed / seconds);
+                float eased = t * t * (3f - 2f * t);
+
+                _home = Vector2.Lerp(fromMark, _glideMark, eased);
+                _baseScale = Vector3.Lerp(fromScale, _glideScale, eased);
+                WritePosition();
+                WriteScale();
+
+                yield return null;
+            }
+
+            // ARRIVED EXACTLY, not at whatever the last lerp produced: the
+            // mark is compared against for equality by AnchorOne, and a
+            // figure that stopped a hundredth of a pixel short would be walked
+            // again on the next repaint.
+            _home = _glideMark;
+            _baseScale = _glideScale;
+            WritePosition();
+            WriteScale();
+
+            _gliding = null;
+        }
+
         // Snaps home immediately, for a fight ending or the panel closing
         // mid-animation — otherwise a figure could be left parked off-mark
         // for the next encounter, since _home is only captured in Awake.
@@ -366,6 +493,8 @@ namespace PrincesPalace
                 StopCoroutine(_running);
                 _running = null;
             }
+
+            StopGliding();
 
             if (_punching != null)
             {

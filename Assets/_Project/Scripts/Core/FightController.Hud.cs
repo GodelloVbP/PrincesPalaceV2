@@ -1271,7 +1271,7 @@ namespace PrincesPalace
         // always paint off the same beat. `onStage` is RefreshStage's own
         // count of enemies actually shown -- see the reposition comment
         // below for why this method needs it too.
-        private void RefreshEnemyStatusRows(int onStage)
+        private void RefreshEnemyStatusRows()
         {
             if (enemyStatusBadges == null || _session == null) return;
 
@@ -1299,12 +1299,12 @@ namespace PrincesPalace
                 // turns.
                 if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
 
-                // RE-SPREAD, the same way AnchorStageSlots re-spreads the
+                // RE-SPREAD, the same way AnchorOne re-spreads the
                 // FIGURE itself. FightScreen.BuildEnemyStatusRows baked this
                 // row's position against the FIXED FightHudSpec.
                 // StageSlotsPerSide slot geometry (it has to: it runs at
                 // build time, before any encounter exists to count), but
-                // AnchorStageSlots "spreads however many actors are
+                // AnchorOne "spreads however many actors are
                 // ACTUALLY on this side across the whole depth range,
                 // instead of filling the first N of three fixed slots" (its
                 // own header). With fewer than three enemies those two
@@ -1313,11 +1313,18 @@ namespace PrincesPalace
                 // happens to have moved there -- found by capturing this
                 // fixture's own screenshot with two enemies and watching
                 // the second one's row land on the first one's figure.
-                if (enemy != null && onStage > 0)
+                //
+                // TAKEN FROM WHERE THE FIGURE ACTUALLY WENT, not recomputed
+                // from the slot index. This used to read SlotOffset(slot,
+                // onStage) and be right, because a slot's index WAS its rank;
+                // A3 separated the two, so a survivor that closed up over a
+                // faded corpse stands at a rank its slot index no longer
+                // names -- and this row would have stayed behind on the empty
+                // ground the corpse left.
+                if (enemy != null && slot < _enemyMarks.Length)
                 {
                     var staticOffset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored: false);
-                    var dynamicOffset = FightStageAnchors.SlotOffset(slot, onStage, mirrored: false);
-                    var delta = new Vector2(dynamicOffset.X - staticOffset.X, dynamicOffset.Y - staticOffset.Y);
+                    var delta = _enemyMarks[slot] - new Vector2(staticOffset.X, staticOffset.Y);
                     RepositionEnemyStatusRow(slot, delta);
                 }
 

@@ -40,6 +40,27 @@ namespace PrincesPalace
         private Coroutine _running;
         private bool _played;
 
+        // WHETHER THIS FIGURE HAS FINISHED LEAVING.
+        //
+        // The stage compacts its ranks around it: once a body is gone the
+        // survivors close up, and until it is gone they stand where they
+        // stood. That is one question -- "is the slot still showing
+        // something?" -- and it has to be asked of the fade rather than of
+        // CombatantState.IsAlive, because the two are nearly a second apart
+        // (HoldSeconds + FadeSeconds) and the whole point is the gap between
+        // them. Clear() reports true for the same reason it sets alpha to
+        // zero: a fight torn down mid-fade leaves nothing on screen.
+        public bool Faded => _played && _running == null;
+
+        // Told when that moment arrives, so the survivors can close up on the
+        // frame the body finishes fading rather than on the next beat that
+        // happens to repaint. Assigned by FightController per fight; a fade
+        // with nobody listening simply finishes.
+        //
+        // NOT fired by Clear() or ResetToVisible(): both are teardown or a
+        // revival, and each already has its own repaint on the other side.
+        internal System.Action Finished;
+
         private void Awake()
         {
             if (sprite != null)
@@ -122,6 +143,10 @@ namespace PrincesPalace
 
             SetFraction(0f);
             _running = null;
+
+            // AFTER the handle is cleared, so a listener that asks `Faded`
+            // from inside this call gets the answer this call just made true.
+            Finished?.Invoke();
         }
 
         private void SetFraction(float fraction)

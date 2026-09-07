@@ -163,12 +163,19 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // Every party slot that is actually occupied, in slot order (which is
-        // party order -- FightController.StageVisuals binds partySlots[i] to
-        // Encounter.PlayerParty[i] directly).
+        // Every party slot that is actually occupied, in slot order.
+        //
+        // WHO IS IN A SLOT IS READ OFF THE NAMEPLATE, not off PlayerParty[i].
+        // Those were the same answer until A3: a slot belongs to the combatant
+        // that started in it for the whole fight, while the party LIST is
+        // reordered by every Move, so indexing the list by slot number names
+        // the wrong figure the moment anybody has stepped. Nothing in this
+        // fixture moves -- it photographs an opening formation -- but the
+        // shortcut is exactly the assumption that shipped the identity bug,
+        // and it does not belong in a fixture whose whole subject is which
+        // figure stands where.
         private PartySlot[] OccupiedPartySlots()
         {
-            var party = _fight.Session.Encounter.PlayerParty;
             var found = new System.Collections.Generic.List<PartySlot>();
 
             for (int i = 0; i < 8; i++)
@@ -184,7 +191,7 @@ namespace PrincesPalace.PlayModeTests
                 found.Add(new PartySlot
                 {
                     Name = $"Party{i}",
-                    CombatantName = i < party.Count ? party[i].Name : null,
+                    CombatantName = Named($"Party{i}Nameplate")?.GetComponent<TMPro.TMP_Text>()?.text,
                     Slot = slot,
                     Animator = animator,
                     Sprite = sprite,
