@@ -50,10 +50,16 @@ the README section it prints a reminder to add should say so plainly.
 Rather than resample straight to the target's exact pixel dimensions
 (a fractional, non-integer scale factor that resampling artifacts compound),
 this multiplies the crop's own native size by the largest whole integer
-that does not overshoot the target's height. That keeps every output pixel
-a clean multiple of a source pixel and lands close to, not necessarily
+that overshoots NEITHER of the target's dimensions. That keeps every output
+pixel a clean multiple of a source pixel and lands close to, not necessarily
 exactly on, the target's pixel dimensions -- "same aspect", not "same
 canvas size".
+
+The aspect half of that is a contract, not an approximation, and it is the
+half a crop against the edge of the still used to break: the crop box is
+never clipped to the source canvas, it is PADDED with transparency, so a
+head with no clear air above it in the still gets clear air in the portrait
+rather than a shortened frame. See main().
 
 Usage:
     python tools/portrait_from_stance.py --still Assets/_Project/Resources/Characters/bear/idle.png \\
@@ -178,16 +184,37 @@ def main():
     aspect = measure_target_aspect(args.aspect_reference)
 
     left, top, right, bottom = crop_box(still, bbox, args.height_fraction, args.top, aspect)
-    # Clamp to the source canvas -- a --top override or a very wide/short
-    # bbox could otherwise ask for pixels outside the image.
-    left = max(0, left)
-    top = max(0, top)
-    right = min(still.width, right)
-    bottom = min(still.height, bottom)
 
+    # NOT CLAMPED TO THE SOURCE CANVAS, deliberately. PIL fills an
+    # out-of-bounds RGBA crop with transparency, which is exactly the right
+    # answer here: the box asked for clear air around the head, and clear air
+    # is what padding gives it.
+    #
+    # Clamping was the first version and it lost the tool's one stated
+    # contract -- "same aspect", not "same canvas size". A clamp shortens ONE
+    # side of the box, so the output silently comes out at a ratio the dossier
+    # plate does not draw at, and nothing says so: the PNG looks fine on its
+    # own and is stretched only once something puts it in the frame. It bit at
+    # both severities. Portraits/bear.png shipped 1010x1250 rather than
+    # 1010x1260 -- the top margin clamped away, so the crown of his head
+    # touches the frame edge, which is the one thing TOP_MARGIN exists to
+    # prevent. And an owl-shaped still (a wide head band on a canvas barely
+    # taller than the band is wide) asked for 460 rows from a 366-row canvas
+    # and got a near-SQUARE portrait, 25% off a plate drawn at 4:5.
     cropped = still.crop((left, top, right, bottom))
     crop_w, crop_h = cropped.size
     print(f"crop box (source px): ({left}, {top}) - ({right}, {bottom}), size {crop_w}x{crop_h}")
+
+    padded = [name for name, outside in (
+        ("left", left < 0), ("top", top < 0),
+        ("right", right > still.width), ("bottom", bottom > still.height)) if outside]
+    if padded:
+        # Said out loud rather than left to be noticed. Transparent margin on
+        # a portrait is fine; a LOT of it means the still had nowhere near
+        # enough room around the head, and --height-fraction is the dial.
+        print(f"  padded with transparency on the {', '.join(padded)} -- the still's canvas "
+              f"ran out before the crop did. The aspect is kept; lower --height-fraction if "
+              f"the margin is more than the plate should carry.")
 
     with Image.open(args.aspect_reference) as ref:
         target_w, target_h = ref.size

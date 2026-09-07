@@ -38,7 +38,7 @@ $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 #
 # The gate checks itself, too: tools/test.ps1 -List -SelfCheck points
 # discovery at tools/test_areas_fixture/ -- a tree that is deliberately wrong
-# in six ways, outside Assets/ so Unity never compiles it and the real gate
+# in eight ways, outside Assets/ so Unity never compiles it and the real gate
 # never sees it -- and asserts each function reports the violation it is for.
 # A refusal nobody has watched fire is a refusal nobody knows still works.
 #

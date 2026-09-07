@@ -17,9 +17,26 @@ The command is tokenised rather than regex-matched. A regex over the raw string
 blocks `git commit -m "add -a note"`, because the flag it is looking for is
 sitting inside a quoted message. Shell quoting is the whole difficulty here, so
 the shell's own lexer does the work.
+
+TWO THINGS SIT BETWEEN THE COMMAND STRING AND THE CHECK, and both of them have
+been where a bypass lived rather than in the check itself:
+
+  * WHERE ONE COMMAND ENDS. `&&`, `||`, `;` and `|` were the whole list, and a
+    NEWLINE was not on it -- shlex treats it as ordinary whitespace, so
+    `git status\ngit add -A` lexed to one run of tokens whose subcommand was
+    `status`. A Bash call in this repo carrying several lines is the normal
+    case, so that was not an exotic hole. Every line is therefore ALSO lexed
+    on its own; a line that does not lex by itself (the middle of a multi-line
+    quoted string, a heredoc body) is skipped rather than guessed at.
+  * WHICH TOKEN IS THE PROGRAM. It was token 0, flatly, so anything the shell
+    lets you put in front of a command hid it: `(`, `{`, the `then`/`do` of a
+    compound statement, an environment assignment. Those are stripped now.
+
+Both are tested in deny_broad_staging_test.py, one case per shape.
 """
 
 import json
+import re
 import shlex
 import sys
 
@@ -33,7 +50,15 @@ SWEEPING_ADD_ARGS = {
     ".", "./", ":/", ":",
 }
 
-SEPARATORS = {"&&", "||", ";", "|", "&"}
+SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
+
+# Shell words that can legally precede a command without being the command:
+# the openers of a subshell or brace group, the keywords that introduce the
+# body of a compound statement, and `!`. An environment assignment
+# (`GIT_PAGER=cat git ...`) is matched by ASSIGNMENT below rather than listed.
+COMMAND_PREFIXES = {"(", "{", "!", "then", "do", "else", "elif"}
+
+ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 # Global options that take a separate value, so the subcommand is one token
 # further along than it looks: `git -C some/dir add -A`.
@@ -73,8 +98,44 @@ def segments(tokens):
         yield current
 
 
+def commands(command):
+    """Yield every token run in the string that could be a command.
+
+    Two passes over the same text, because neither alone is right. The whole
+    string lexed at once is what handles a quoted message containing a
+    newline; each line lexed on its own is what handles the far commoner case
+    of a multi-line Bash call, which the first pass runs together into one
+    nonsense command. A line that does not lex by itself -- a heredoc body,
+    the middle of a multi-line string -- yields nothing rather than a guess.
+
+    Duplicate segments across the two passes cost one extra `offence()` call
+    on a handful of tokens, which is not worth de-duplicating.
+    """
+    tokens = tokenise(command)
+    if tokens is not None:
+        for segment in segments(tokens):
+            yield segment
+
+    lines = command.splitlines()
+    if len(lines) < 2:
+        return
+
+    for line in lines:
+        tokens = tokenise(line)
+        if tokens is None:
+            continue
+        for segment in segments(tokens):
+            yield segment
+
+
 def offence(segment):
     """Return a reason string if this one command stages broadly, else None."""
+    # `(`, `{`, `then`, `FOO=bar` -- shell words that sit in front of the
+    # command without being it. Stripped before the program name is read, or
+    # `(git add -A)` reads as a program called `(`.
+    while segment and (segment[0] in COMMAND_PREFIXES or ASSIGNMENT.match(segment[0])):
+        segment = segment[1:]
+
     if not segment:
         return None
 
@@ -144,11 +205,7 @@ def main():
     if not isinstance(command, str) or not command.strip():
         return 0
 
-    tokens = tokenise(command)
-    if tokens is None:
-        return 0
-
-    for segment in segments(tokens):
+    for segment in commands(command):
         reason = offence(segment)
         if reason:
             json.dump(

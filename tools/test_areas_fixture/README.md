@@ -1,6 +1,6 @@
 # tools/test_areas_fixture/ -- a deliberately broken test tree
 
-Eight files -- six wrong in exactly one way, two deliberately right -- so that
+Ten files -- eight wrong in exactly one way, two deliberately right -- so that
 `tools/test.ps1 -List -SelfCheck` can point discovery at this folder instead
 of `Assets/_Project/Scripts/Tests` and watch every refusal in
 `tools/test_areas.ps1` fire. A gate nobody has seen fail is a gate nobody
@@ -20,6 +20,8 @@ not on any compile path here.
 | `EditMode/Ui/TestCaseOnlyFixtureTests.cs` | nothing -- it is the control: a fixture whose every case is `[TestCase]`/`[TestCaseSource]`, which the old `$TestAttrPattern` did not count as a test file | `Get-TestIndex` must discover it |
 | `EditMode/Ui/InternalFixtureTests.cs` | an `internal` fixture beside a public one, so "any class discovered" passed the file | `Get-DiscoveryBlindSpots` |
 | `EditMode/Combat/` + `PlayMode/Combat/DuplicateNameFixtureTests.cs` | one class name, two files, two platforms | `Get-DuplicateClassNames` |
+| `EditMode/LooseFixtureTests.cs` | a test file directly in the platform folder, in no area at all -- the first structural refusal and the successor to the old orphan gate | `Get-StructuralViolations` |
+| `PlayMode/Rogue/RogueFolderFixtureTests.cs` | a ninth folder beside the eight. The file exists only because git does not track an empty directory; the refusal is about the folder | `Get-StructuralViolations` |
 | `EditMode/Run/Nested/DepthTwoFixtureTests.cs` | a folder inside an area folder, and a file two deep | `Get-StructuralViolations` (twice) |
 | `EditMode/Shared/SharedSuiteFixtureTests.cs` | a suite parked in `Shared/`, carrying only `[TestCase]` | `Get-StructuralViolations` |
 | `EditMode/Art/UnfilterableFixtureTests.cs` | a generic fixture and a public nested one -- NUnit names them `Foo<T>` and `Outer+Inner`, which no filter this repo builds can select | `Get-StructuralViolations` (twice) |
