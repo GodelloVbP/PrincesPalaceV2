@@ -153,6 +153,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(Default.HasUnlocked(TrackReward.MaxHealth, 3));
         }
 
+        // THE SET ContentDatabase.BuildSignatureResource PAYS -- the four
+        // kinds meaningless on a character with no signature resource.
+        // MaxHealth and StatPoint are named explicitly rather than left to
+        // "everything else" because they are the two kinds a signature-
+        // resource check is most likely to be confused with (a resource pool
+        // and a spendable point both sound like they could gate on the same
+        // thing they do not).
+        [TestCase(TrackReward.SignatureCapacity, true)]
+        [TestCase(TrackReward.SignatureGainPerTurn, true)]
+        [TestCase(TrackReward.SignatureGainOnDamageTaken, true)]
+        [TestCase(TrackReward.SignatureAbsorbs, true)]
+        [TestCase(TrackReward.MaxHealth, false)]
+        [TestCase(TrackReward.StatPoint, false)]
+        public void OnlyTheFourSignatureResourceKindsAreSignatureRewards(TrackReward reward, bool isSignatureReward)
+        {
+            Assert.AreEqual(isSignatureReward, RewardTrack.IsSignatureReward(reward));
+        }
+
         // Level 80 grants ten stat points. It USED TO be sized to exactly one
         // AbilityDerivation.CharacterBand -- the edge past which a point
         // stopped paying a flat rate and started paying the square of the

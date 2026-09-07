@@ -175,6 +175,17 @@ namespace PrincesPalace.Domain.Progression
             || reward == TrackReward.SignatureAbsorbs
             || reward == TrackReward.UnlockSkill;
 
+        // THE SET ContentDatabase.BuildSignatureResource PAYS -- a reward of
+        // any of these four kinds is meaningless on a character with no
+        // signature resource, which is what both the resolver (at authoring
+        // time) and ContentDatabase's own validation (at load time, for a
+        // hand-authored asset that never passed through the resolver) refuse.
+        public static bool IsSignatureReward(TrackReward reward) =>
+            reward == TrackReward.SignatureCapacity
+            || reward == TrackReward.SignatureGainPerTurn
+            || reward == TrackReward.SignatureGainOnDamageTaken
+            || reward == TrackReward.SignatureAbsorbs;
+
         // HOW ONE NODE READS, given where the player is and how far the track
         // has paid. The screen's whole state model, in one pure function.
         //

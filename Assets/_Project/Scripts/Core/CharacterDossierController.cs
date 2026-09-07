@@ -82,13 +82,18 @@ namespace PrincesPalace
         // test that pins "the fight's copy is inert" reads unchanged.
         public bool EquipLocked => lockedForFight;
 
-        // Set by ScreenRegistry from WireSystemMenu's own inDescent parameter,
-        // not part of WireDossier's signature -- two adjacent bools in one
-        // parameter list are transposable (CODE_STANDARDS.md §5). Gates the
-        // dossier's refund minus: only the hub copy of this screen shows it,
-        // so a build revised mid-run can only be reconsidered between
-        // descents, never undone inside one.
-        [SerializeField] internal bool inDescent;
+        // The menu this dossier lives in -- same shape as ExitsController.menu,
+        // and for the same reason: a second serialized bool here would be one
+        // more thing that can disagree with the menu's own state. Set by
+        // ScreenRegistry.WireSystemMenu, not part of WireDossier's signature,
+        // because it is not carried by WireDossier's own parameters.
+        //
+        // Gates the dossier's refund minus: only the hub copy of this screen
+        // (InDescent false) shows it, so a build revised mid-run can only be
+        // reconsidered between descents, never undone inside one.
+        [SerializeField] internal SystemMenuController menu;
+
+        public bool InDescent => menu != null && menu.InDescent;
 
         [SerializeField] internal Button[] slotCells;
         [SerializeField] internal Image[] slotIcons;
@@ -916,7 +921,7 @@ namespace PrincesPalace
         // clicked -- Spend guards inside the method for the same reason.
         private void Refund(int index)
         {
-            if (lockedForFight || inDescent) return;
+            if (lockedForFight || InDescent) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
             if (!character.Refund(score)) return;
@@ -989,7 +994,7 @@ namespace PrincesPalace
             // so the button and the model can never disagree about it.
             if (attributeMinuses == null) return;
 
-            bool canRefund = !lockedForFight && !inDescent;
+            bool canRefund = !lockedForFight && !InDescent;
             for (int i = 0; i < attributeMinuses.Length; i++)
             {
                 if (attributeMinuses[i] == null) continue;

@@ -573,12 +573,6 @@ namespace PrincesPalace.Content
             //
             // Rules 4 and 5 below are the resolver's own two checks, mirrored
             // for the same reason.
-            bool IsSignatureReward(TrackReward reward) =>
-                reward == TrackReward.SignatureCapacity
-                || reward == TrackReward.SignatureGainPerTurn
-                || reward == TrackReward.SignatureGainOnDamageTaken
-                || reward == TrackReward.SignatureAbsorbs;
-
             foreach (var track in _rewardTracks)
             {
                 var owner = GetCharacter(track.Data.CharacterId);
@@ -614,7 +608,7 @@ namespace PrincesPalace.Content
                     // RULE 5: milestone or filler, unlike rule 4 -- a
                     // milestone with no signature resource to pay into is
                     // just as broken as a filler row would be.
-                    if (IsSignatureReward(milestone.Reward) && !hasSignatureResource)
+                    if (RewardTrack.IsSignatureReward(milestone.Reward) && !hasSignatureResource)
                     {
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} authors " +
                                    $"{milestone.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
@@ -630,7 +624,7 @@ namespace PrincesPalace.Content
                                    "an element the character can deal at level 1.");
                     }
 
-                    if (IsSignatureReward(filler.Reward) && !hasSignatureResource)
+                    if (RewardTrack.IsSignatureReward(filler.Reward) && !hasSignatureResource)
                     {
                         errors.Add($"Reward track '{track.Data.CharacterId}' filler authors {filler.Reward}, but " +
                                    $"'{track.Data.CharacterId}' has no signature resource.");

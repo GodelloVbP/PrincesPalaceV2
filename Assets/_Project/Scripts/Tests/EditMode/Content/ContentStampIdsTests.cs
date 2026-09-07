@@ -54,46 +54,17 @@ namespace PrincesPalace.Domain.Tests
         private delegate bool ResolveAll<TRaw, TResolved>(
             IReadOnlyList<TRaw> entries, out List<TResolved> resolved, out List<string> errors);
 
-        private static string RepoRoot() => RepoTree.Root();
-
-        private static string DataPath(string file) =>
-            Path.Combine(RepoRoot(), "Assets", "_Project", "ContentData", file);
-
+        // RepoRoot/DataPath/ParseFile live on Shared/ContentDataFiles --
+        // RewardTrackContentPinTests uses the same trio.
         private static ContentStamp Stamp()
         {
-            string path = Path.Combine(RepoRoot(), "Assets", "_Project", "Resources", "Content", "content_stamp.json");
+            string path = Path.Combine(ContentDataFiles.RepoRoot(), "Assets", "_Project", "Resources", "Content", "content_stamp.json");
 
             Assert.IsTrue(File.Exists(path),
                 "There is no Resources/Content/content_stamp.json, so no content build has completed against " +
                 "this tree and there is nothing to compare the resolvers against." + Fix);
 
             return ContentStamp.Parse(File.ReadAllText(path));
-        }
-
-        // The one line that differs between the two hosts. UNITY_5_3_OR_NEWER
-        // is defined by every Unity since 5.3 and by nothing else, so the
-        // dotnet host takes the other branch without needing a define of its
-        // own.
-        private static T ParseFile<T>(string path)
-        {
-            string json = File.ReadAllText(path);
-#if UNITY_5_3_OR_NEWER
-            return UnityEngine.JsonUtility.FromJson<T>(json);
-#else
-            return System.Text.Json.JsonSerializer.Deserialize<T>(json, new System.Text.Json.JsonSerializerOptions
-            {
-                // Fields, because every Raw*Entry member is one.
-                //
-                // CASE-SENSITIVE, deliberately, and it is not a preference:
-                // JsonUtility matches a JSON key to a field name exactly, so
-                // case-insensitivity here would accept files Unity's parser
-                // does not. It also breaks outright -- SpellPresentation has
-                // both a `anchor` field and an `Anchor` property, which
-                // System.Text.Json reports as a name collision the moment
-                // names stop being case-sensitive.
-                IncludeFields = true,
-            });
-#endif
         }
 
         // Resolve one type the way ContentBuilder.Build<> does: read the file,
@@ -141,15 +112,15 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Add(Resolve<RawItemEntry, ResolvedItem>(
-                "items.json", ParseFile<RawItemFile>(DataPath("items.json")).items,
+                "items.json", ContentDataFiles.ParseFile<RawItemFile>(ContentDataFiles.DataPath("items.json")).items,
                 ItemEntryResolver.TryResolveAll, item => item.Id));
 
             Add(Resolve<RawItemSetEntry, ResolvedSetPiece>(
-                "itemsets.json", ParseFile<RawItemSetFile>(DataPath("itemsets.json")).sets,
+                "itemsets.json", ContentDataFiles.ParseFile<RawItemSetFile>(ContentDataFiles.DataPath("itemsets.json")).sets,
                 ItemSetEntryResolver.TryResolveAll, piece => piece.Id));
 
             Add(Resolve<RawWeaponEntry, ResolvedWeapon>(
-                "weapons.json", ParseFile<RawWeaponFile>(DataPath("weapons.json")).families,
+                "weapons.json", ContentDataFiles.ParseFile<RawWeaponFile>(ContentDataFiles.DataPath("weapons.json")).families,
                 WeaponEntryResolver.TryResolveAll, weapon => weapon.Id));
 
             return ids;
@@ -159,7 +130,7 @@ namespace PrincesPalace.Domain.Tests
         // -- the same ordering ContentBuilder calls load-bearing.
         private static List<string> AchievementIds() =>
             Resolve<RawAchievementEntry, ResolvedAchievement>(
-                "achievements.json", ParseFile<RawAchievementFile>(DataPath("achievements.json")).achievements,
+                "achievements.json", ContentDataFiles.ParseFile<RawAchievementFile>(ContentDataFiles.DataPath("achievements.json")).achievements,
                 AchievementEntryResolver.TryResolveAll, achievement => achievement.Id);
 
         private static List<string> RelicIds()
@@ -171,7 +142,7 @@ namespace PrincesPalace.Domain.Tests
                 RelicEntryResolver.TryResolveAll(entries, achievementIds, out resolved, out errors);
 
             return Resolve<RawRelicEntry, ResolvedRelic>(
-                "relics.json", ParseFile<RawRelicFile>(DataPath("relics.json")).relics,
+                "relics.json", ContentDataFiles.ParseFile<RawRelicFile>(ContentDataFiles.DataPath("relics.json")).relics,
                 Resolver, relic => relic.Id);
         }
 
@@ -194,10 +165,10 @@ namespace PrincesPalace.Domain.Tests
         private static List<string> RewardTrackIds()
         {
             var characters = ResolveAllOf<RawCharacterEntry, ResolvedCharacter>(
-                "characters.json", ParseFile<RawCharacterFile>(DataPath("characters.json")).characters,
+                "characters.json", ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters,
                 CharacterEntryResolver.TryResolveAll);
             var skills = ResolveAllOf<RawSkillEntry, ResolvedSkill>(
-                "skills.json", ParseFile<RawSkillFile>(DataPath("skills.json")).skills,
+                "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
                 SkillEntryResolver.TryResolveAll);
 
             var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
@@ -207,7 +178,7 @@ namespace PrincesPalace.Domain.Tests
                 RewardTrackEntryResolver.TryResolveAll(entries, contexts, out resolved, out errors);
 
             return Resolve<RawRewardTrackEntry, ResolvedRewardTrack>(
-                "reward_tracks.json", ParseFile<RawRewardTrackFile>(DataPath("reward_tracks.json")).tracks,
+                "reward_tracks.json", ContentDataFiles.ParseFile<RawRewardTrackFile>(ContentDataFiles.DataPath("reward_tracks.json")).tracks,
                 Resolver, track => track.CharacterId);
         }
 
@@ -229,15 +200,15 @@ namespace PrincesPalace.Domain.Tests
             new Dictionary<string, List<string>>(StringComparer.Ordinal)
             {
                 ["Characters"] = Resolve<RawCharacterEntry, ResolvedCharacter>(
-                    "characters.json", ParseFile<RawCharacterFile>(DataPath("characters.json")).characters,
+                    "characters.json", ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters,
                     CharacterEntryResolver.TryResolveAll, character => character.Id),
 
                 ["Talents"] = Resolve<RawTalentEntry, ResolvedTalent>(
-                    "talents.json", ParseFile<RawTalentFile>(DataPath("talents.json")).talents,
+                    "talents.json", ContentDataFiles.ParseFile<RawTalentFile>(ContentDataFiles.DataPath("talents.json")).talents,
                     TalentEntryResolver.TryResolveAll, talent => talent.Id),
 
                 ["Upgrades"] = Resolve<RawUpgradeEntry, ResolvedUpgrade>(
-                    "upgrades.json", ParseFile<RawUpgradeFile>(DataPath("upgrades.json")).upgrades,
+                    "upgrades.json", ContentDataFiles.ParseFile<RawUpgradeFile>(ContentDataFiles.DataPath("upgrades.json")).upgrades,
                     UpgradeEntryResolver.TryResolveAll, upgrade => upgrade.Id),
 
                 // BENCHED MONSTERS ARE VALIDATED AND NOT WRITTEN. The
@@ -246,7 +217,7 @@ namespace PrincesPalace.Domain.Tests
                 // listed an inactive mob would mean ContentDatabase can spawn
                 // something the author switched off.
                 ["Enemies"] = Resolve<RawEnemyEntry, ResolvedEnemy>(
-                    "enemies.json", ParseFile<RawEnemyFile>(DataPath("enemies.json")).enemies,
+                    "enemies.json", ContentDataFiles.ParseFile<RawEnemyFile>(ContentDataFiles.DataPath("enemies.json")).enemies,
                     EnemyEntryResolver.TryResolveAll, enemy => enemy.Id, include: enemy => enemy.Active),
 
                 ["Items"] = ItemIds(),
@@ -254,15 +225,15 @@ namespace PrincesPalace.Domain.Tests
                 // A tier has no id of its own; the asset NAME is what the
                 // stamp records and what ContentDatabase browses.
                 ["SpellTiers"] = Resolve<RawSpellTierEntry, ResolvedSpellTier>(
-                    "spells.json", ParseFile<RawSpellTierFile>(DataPath("spells.json")).tiers,
+                    "spells.json", ContentDataFiles.ParseFile<RawSpellTierFile>(ContentDataFiles.DataPath("spells.json")).tiers,
                     SpellTierEntryResolver.TryResolveAll, tier => $"level_{tier.Level}"),
 
                 ["Skills"] = Resolve<RawSkillEntry, ResolvedSkill>(
-                    "skills.json", ParseFile<RawSkillFile>(DataPath("skills.json")).skills,
+                    "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
                     SkillEntryResolver.TryResolveAll, skill => skill.Id),
 
                 ["Modifiers"] = Resolve<RawModifierEntry, ResolvedModifier>(
-                    "modifiers.json", ParseFile<RawModifierFile>(DataPath("modifiers.json")).modifiers,
+                    "modifiers.json", ContentDataFiles.ParseFile<RawModifierFile>(ContentDataFiles.DataPath("modifiers.json")).modifiers,
                     ModifierEntryResolver.TryResolveAll, modifier => modifier.Id),
 
                 ["Achievements"] = AchievementIds(),

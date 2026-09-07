@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using PrincesPalace.Content;
-using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace

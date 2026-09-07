@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
@@ -19,33 +18,14 @@ namespace PrincesPalace.Domain.Tests
     //
     // TWO PARSERS, ONE ASSERTION, same pattern as ContentStampIdsTests: this
     // class has no UnityEngine dependency, so it is a [D] class and runs
-    // under plain `dotnet test`, which has no JsonUtility.
+    // under plain `dotnet test`, which has no JsonUtility. RepoRoot/DataPath/
+    // ParseFile live on Shared/ContentDataFiles -- ContentStampIdsTests uses
+    // the same trio.
     public class RewardTrackContentPinTests
     {
-        private static string RepoRoot() => RepoTree.Root();
-
-        private static string DataPath(string file) =>
-            Path.Combine(RepoRoot(), "Assets", "_Project", "ContentData", file);
-
-        private static T ParseFile<T>(string path)
-        {
-            string json = File.ReadAllText(path);
-#if UNITY_5_3_OR_NEWER
-            return UnityEngine.JsonUtility.FromJson<T>(json);
-#else
-            return System.Text.Json.JsonSerializer.Deserialize<T>(json, new System.Text.Json.JsonSerializerOptions
-            {
-                // Fields, because every Raw*Entry member is one; case
-                // sensitive so this accepts exactly what JsonUtility does --
-                // see ContentStampIdsTests.ParseFile for the full argument.
-                IncludeFields = true,
-            });
-#endif
-        }
-
         private static List<ResolvedCharacter> Characters()
         {
-            var raw = ParseFile<RawCharacterFile>(DataPath("characters.json")).characters;
+            var raw = ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters;
             bool ok = CharacterEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
             Assert.IsTrue(ok, "characters.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
             return resolved;
@@ -53,7 +33,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static List<ResolvedSkill> Skills()
         {
-            var raw = ParseFile<RawSkillFile>(DataPath("skills.json")).skills;
+            var raw = ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills;
             bool ok = SkillEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
             Assert.IsTrue(ok, "skills.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
             return resolved;
@@ -76,7 +56,7 @@ namespace PrincesPalace.Domain.Tests
             var skills = Skills();
             var contexts = Contexts(characters, skills);
 
-            var raw = ParseFile<RawRewardTrackFile>(DataPath("reward_tracks.json")).tracks;
+            var raw = ContentDataFiles.ParseFile<RawRewardTrackFile>(ContentDataFiles.DataPath("reward_tracks.json")).tracks;
             bool ok = RewardTrackEntryResolver.TryResolveAll(raw, contexts, out var resolved, out var errors);
             Assert.IsTrue(ok, "reward_tracks.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
 

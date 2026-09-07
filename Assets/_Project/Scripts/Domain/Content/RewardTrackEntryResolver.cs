@@ -354,12 +354,7 @@ namespace PrincesPalace.Domain.Content
 
             // RULE 5. Same as rule 4: P3 has landed the four signature-
             // resource kinds, so this reads the parsed enum value directly.
-            bool isSignatureReward = reward == TrackReward.SignatureCapacity
-                || reward == TrackReward.SignatureGainPerTurn
-                || reward == TrackReward.SignatureGainOnDamageTaken
-                || reward == TrackReward.SignatureAbsorbs;
-
-            if (isSignatureReward && !context.HasSignatureResource)
+            if (RewardTrack.IsSignatureReward(reward) && !context.HasSignatureResource)
             {
                 error = $"{trackLabel}, {where}: {rawReward} is authored on a character with no signature resource.";
                 return false;
@@ -382,7 +377,7 @@ namespace PrincesPalace.Domain.Content
                 resolvedSkillId = skillId;
             }
 
-            string resourceDisplayName = isSignatureReward
+            string resourceDisplayName = RewardTrack.IsSignatureReward(reward)
                 ? (string.IsNullOrWhiteSpace(context.SignatureDisplayName) ? "SIGNATURE" : context.SignatureDisplayName)
                 : "";
 
