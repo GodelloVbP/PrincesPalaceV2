@@ -493,7 +493,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 affinity: enemyKit?.Affinity ?? ElementalAffinity.Neutral,
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
-                resolveWard: ResolveWard);
+                resolveWard: ResolveWard,
+                resolveDetonation: ResolveDetonation);
 
             // Swift: the swing missed outright. Everything below this line
             // is a rider on a LANDED hit -- BreakShield depletion, the mark
@@ -713,7 +714,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     attacker: actor,
-                    dodgeAlreadyResolved: true);
+                    dodgeAlreadyResolved: true,
+                    resolveDetonation: ResolveDetonation);
 
                 int elementalDamage = elementalOutcome.Damage;
                 if (elementalDamage <= 0) continue;
@@ -797,6 +799,39 @@ namespace PrincesPalace.Domain.Combat.Session
         private bool RollPercent(int percentChance)
         {
             return RandomOps.RollPercent(_rng, percentChance);
+        }
+
+        // THE POISON COMBO'S DAMAGE HALF, handed to DamagePipeline beside
+        // ResolveWard. StatusCombos owns the RULE (which hits detonate, and
+        // what the remaining ticks are worth); this owns the consequence,
+        // because dealing damage is something only a session can do properly.
+        //
+        // Through DealDamage rather than CombatMath.ApplyDamage, which is the
+        // point: the bonus lands on the ledger, and a target it fells is
+        // settled like any other kill (SettleDeath -- the rider flag and the
+        // kill row together). It used to go straight to CombatMath from
+        // inside the pipeline, so it did neither.
+        //
+        // Typed as Poison on the ledger, not as whatever set it off: the
+        // damage IS the poison's remaining ticks arriving at once.
+        //
+        // CREDIT FOLLOWS THE SIDE, not the caller. A player's Nature swing
+        // detonating a monster is that player's kill. An enemy's Poison swing
+        // detonating a party member credits nobody -- the same answer the
+        // enemy swing itself already gives, and for the reason written at
+        // that call site: an enemy turn resolves INSIDE AdvanceAfterAction,
+        // after _killedThisAction has been read and reset, so a flag raised
+        // here would survive to hand the PLAYER a Trample the monster earned.
+        // See AUDIT.md #63.
+        private int ResolveDetonation(CombatantState attacker, CombatantState target, DamageType incomingType)
+        {
+            int bonus = StatusCombos.SpendPoisonIfMatched(target, incomingType);
+            if (bonus <= 0) return 0;
+
+            DealDamage(attacker, target, bonus, DamageType.Poison,
+                attacker != null && attacker.IsPlayerSide ? KillCredit.Attacker : KillCredit.Nobody);
+
+            return bonus;
         }
 
         private void DepleteBreakShield(CombatantState target, float effectiveness)

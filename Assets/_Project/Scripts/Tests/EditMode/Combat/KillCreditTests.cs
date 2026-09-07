@@ -303,6 +303,104 @@ namespace PrincesPalace.Domain.Tests
                 "a splash kill is a kill: before this change the flag stayed down here");
         }
 
+        // ---- site 7: the poison detonation, which never reached the funnel ---
+
+        [Test]
+        public void APoisonDetonationKillingItsTargetRaisesTheFlagAndScoresTheKill()
+        {
+            // NOT ONE OF THE FIVE HAND-TYPED SITES -- a path that never went
+            // through DealDamage at all. StatusCombos.DetonatePoisonIfMatched
+            // calls CombatMath.ApplyDamage directly from inside
+            // DamagePipeline.AfterDefences, so a detonation big enough to fell
+            // its target killed it outside the one funnel that settles a
+            // death: no kill row, no down-count, no rider eligibility, and the
+            // damage missing from the ledger entirely.
+            //
+            // The swing that triggers it then lands on a corpse, and
+            // DealDamage's own wasAlive guard correctly refuses to settle a
+            // body that was already down when it was called -- so the kill
+            // has nowhere left to be recorded.
+            var hero = Hero();
+            GiveTrample(hero);
+
+            // 25 x 4 = 100 detonated onto 40 health. A second foe keeps the
+            // fight running, so AdvanceAfterAction reaches the rider block
+            // instead of returning early on IsOver.
+            var poisoned = Foe("Poisoned", 40);
+            StatusEffects.Apply(poisoned.Statuses, StatusEffectType.Poison, 25, 4);
+
+            var natureSwinger = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Nature);
+            var (session, _) = Fight(hero, natureSwinger, poisoned, Foe("Tank", 999999));
+
+            session.ExecuteAttack(poisoned);
+
+            Assert.IsFalse(poisoned.IsAlive, "fixture: the detonation really killed");
+            Assert.AreEqual(1, session.Ledger.For("hero").Kills,
+                "a detonation is the hero's Nature swing setting it off -- the kill is theirs");
+            Assert.AreEqual(1, session.Ledger.For("Poisoned").TimesDowned);
+            Assert.IsTrue(Trampled(Drain(session)),
+                "and a kill is a kill for the rider block, however the last point of damage arrived");
+        }
+
+        [Test]
+        public void ADetonationsDamageIsCountedLikeEveryOtherPointDealt()
+        {
+            // The ledger half on its own, on a target that SURVIVES -- so the
+            // count cannot be confused with the swing's own kill bookkeeping.
+            var hero = Hero();
+            var poisoned = Foe("Poisoned", 999999);
+            StatusEffects.Apply(poisoned.Statuses, StatusEffectType.Poison, 25, 4);
+
+            var natureSwinger = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Nature);
+            var (session, _) = Fight(hero, natureSwinger, poisoned);
+
+            int before = poisoned.CurrentHealth;
+            session.ExecuteAttack(poisoned);
+            int lost = before - poisoned.CurrentHealth;
+
+            Assert.AreEqual(lost, session.Ledger.For("hero").TotalDealt,
+                "every point the target lost to this action is a point the hero dealt");
+        }
+
+        // ---- and the same mutation, fired from a TELEGRAPH ------------------
+
+        [Test]
+        public void PreparingATelegraphDoesNotSetOffThePartysPoison()
+        {
+            // PreviewDamage's own header: "What the blow would land for, with
+            // NOTHING that mutates and NOTHING that draws from the run's
+            // generator." It passes rng: null and resolveWard: null for
+            // exactly that reason -- but the poison combo has no such
+            // collaborator to leave out, so it fires from inside the preview:
+            // the party member's Poison is consumed and its remaining ticks
+            // are dealt as damage, before the monster has swung at all.
+            //
+            // An enemy authored attackType "Poison" is what routes the
+            // preview into the typed overload where the combo lives.
+            // enemies.json ships two of them.
+            var hero = Hero(health: 500);
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 25, 4);
+
+            var venomous = new CombatantState("Venomous", false, 200, 0, 5, FoeSpeed);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { venomous });
+            var session = new FightSession(encounter, null,
+                new List<EnemyKit> { new EnemyKit(PoisonSwinger("venomous"), false) },
+                new SeededRandom(1)) { DamageVarianceRange = 0f };
+
+            int before = hero.CurrentHealth;
+            session.PrepareEnemyIntents();
+
+            Assert.AreEqual(before, hero.CurrentHealth,
+                "a telegraph dealt real damage");
+            Assert.IsTrue(hero.Statuses.Any(s => s.Type == StatusEffectType.Poison),
+                "and spent the poison the player is still carrying");
+        }
+
+        private static ResolvedEnemy PoisonSwinger(string id) =>
+            new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false,
+                DamageType.Physical, DamageType.Physical, 0,
+                attackType: DamageType.Poison);
+
         // ---- the exception: a poison tick credits nobody ---------------------
 
         [Test]

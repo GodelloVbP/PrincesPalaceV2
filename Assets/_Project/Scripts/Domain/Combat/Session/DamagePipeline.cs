@@ -228,7 +228,8 @@ namespace PrincesPalace.Domain.Combat.Session
             Func<CombatantState, int, int> resolveWard,
             CombatantState attacker = null,
             bool ignoresDefense = false,
-            bool dodgeAlreadyResolved = false)
+            bool dodgeAlreadyResolved = false,
+            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null)
         {
             if (!dodgeAlreadyResolved && RollDodge(target, attacker, rng))
             {
@@ -251,7 +252,16 @@ namespace PrincesPalace.Domain.Combat.Session
             // goes through, rather than at each call site -- the untyped
             // enemy-attack overload never reaches this method at all, so a
             // monster's own claws can never accidentally detonate a status.
-            int detonated = StatusCombos.DetonatePoisonIfMatched(target, type);
+            //
+            // HANDED IN, like resolveWard beside it, and for the identical
+            // reason: it MUTATES. It spends a status and takes health, and
+            // this method is what every telegraph preview also runs through.
+            // A preview leaves rng, resolveWard and now this null, so it
+            // cannot spend anything -- which is the contract PreviewDamage
+            // and PreviewSkill have always claimed and, until this parameter
+            // existed, could not keep. Null here means "no combo", never
+            // "combo with nothing to report".
+            int detonated = resolveDetonation == null ? 0 : resolveDetonation(attacker, target, type);
 
             // The variance roll lands here too, same funnel -- AFTER
             // effectiveness/resistance (a deterministic property of the
@@ -291,7 +301,8 @@ namespace PrincesPalace.Domain.Combat.Session
             float varianceRange,
             SeededRandom rng,
             Func<CombatantState, int, int> resolveWard,
-            bool ignoresDefense = false)
+            bool ignoresDefense = false,
+            Func<CombatantState, CombatantState, DamageType, int> resolveDetonation = null)
         {
             // The execute bonus rides HERE, in the one overload that knows both
             // sides, rather than at the call sites that would otherwise each
@@ -315,7 +326,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // typed branch to reach the funnel's single dodge check.
                 return AfterDefences(raw, attackType.Value, target, affinity,
                                      varianceRange, rng, resolveWard,
-                                     attacker: actor, ignoresDefense: ignoresDefense);
+                                     attacker: actor, ignoresDefense: ignoresDefense,
+                                     resolveDetonation: resolveDetonation);
             }
 
             // The untyped tail never reaches the typed overload above, so it

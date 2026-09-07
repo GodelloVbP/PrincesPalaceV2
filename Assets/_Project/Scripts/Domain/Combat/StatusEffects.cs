@@ -189,12 +189,27 @@ namespace PrincesPalace.Domain.Combat
             return statuses.Any(s => s.Type == StatusEffectType.Rooted);
         }
 
-        // Consumes the Stun rather than merely reporting it — the skip it
-        // grants is spent the instant the turn it prevented would have
-        // started, the same "not on a timer" rule BreakShield.Reset follows.
+        // SPENDS ONE SKIPPED TURN, and it is also where a skip status's
+        // duration is counted down -- see Tick's own exemption for why the
+        // turn-start tick cannot be that place.
+        //
+        // The two halves differ because the two statuses promise different
+        // things. A Stun's whole promise is "the next turn", so it goes
+        // outright however many turns it was authored with (that has always
+        // been true; the authored duration was only ever decorative). A Fear
+        // promises a fixed number of the holder's own turns, so it counts one
+        // off and stays until it runs out -- which is exactly what
+        // StatusEffectType.Feared's header already claimed and what the
+        // turn-start tick was quietly getting wrong by one.
         public static void ConsumeStun(List<ActiveStatus> statuses)
         {
             statuses.RemoveAll(s => s.Type == StatusEffectType.Stun);
+
+            var fear = statuses.FirstOrDefault(s => s.Type == StatusEffectType.Feared);
+            if (fear == null) return;
+
+            fear.TurnsRemaining--;
+            if (fear.TurnsRemaining <= 0) statuses.Remove(fear);
         }
 
         // The same, for a taunt: spent by the turn it redirected. Called
@@ -390,6 +405,14 @@ namespace PrincesPalace.Domain.Combat
             public bool IsEmpty => PoisonDamage == 0 && RegenHealed == 0 && Expired.Count == 0;
         }
 
+        // The statuses whose whole effect IS the turn they land on, and which
+        // are therefore counted down by that turn rather than by the tick that
+        // opens it. See Tick's own comment at the countdown for the argument.
+        private static bool IsSpentByTheTurn(StatusEffectType type) =>
+            type == StatusEffectType.Provoked
+            || type == StatusEffectType.Stun
+            || type == StatusEffectType.Feared;
+
         // The start-of-turn tick: Poison and Regen apply their Magnitude
         // through the SAME CombatMath.ApplyDamage/Heal every other source of
         // damage or healing uses — a status is not a special case the
@@ -416,18 +439,30 @@ namespace PrincesPalace.Domain.Combat
                     regenHealed += combatant.CurrentHealth - before;
                 }
 
-                // Provoked is SPENT by the turn it redirects, not counted
-                // down by it — the same rule Stun and Shielded already
-                // follow, and here it is load-bearing rather than tidy. This
-                // tick runs at the START of the holder's turn, before the
-                // action it is supposed to redirect resolves, so a one-turn
-                // Provoke decremented here would expire a beat before it
-                // could do anything and "force one enemy to target Shawn on
-                // its next turn" would be silently dead content. Authoring
-                // two turns to work around that would leave a taunt lasting
-                // two enemy turns whenever the enemy died to something else
-                // first. ConsumeProvoke removes it, at the moment it is used.
-                if (status.Type != StatusEffectType.Provoked)
+                // A STATUS SPENT BY THE TURN IS NOT COUNTED DOWN BY IT.
+                //
+                // This tick runs at the START of the holder's turn, before
+                // the thing the status is supposed to change has happened --
+                // so counting one down here expires it a beat before it could
+                // do anything, and a one-turn application is silently dead
+                // content. Provoked was exempted for exactly that reason
+                // ("force one enemy to target Shawn on its next turn"), with
+                // the note that authoring two turns to work around it would
+                // leave a taunt lasting two enemy turns whenever the enemy
+                // died to something else first.
+                //
+                // Stun and Feared have the identical shape and were NOT
+                // exempted, which is the bug this predicate closes: both are
+                // read by ResolveSkippedTurn, which runs AFTER GrantTurnStart
+                // has already ticked. A one-turn Stun -- grapple's authored
+                // duration, and Loaded Dice's -- expired at the top of the
+                // very turn it existed to skip and cost nothing at all; a
+                // Fear was one turn short of what it promised, which for
+                // World Ender's Crown's authored 1 also meant nothing at all.
+                //
+                // Their countdown lives in ConsumeStun instead, beside
+                // ConsumeProvoke, at the moment the skip is actually spent.
+                if (!IsSpentByTheTurn(status.Type))
                 {
                     status.TurnsRemaining--;
                 }

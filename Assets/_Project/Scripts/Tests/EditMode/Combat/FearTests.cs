@@ -50,11 +50,45 @@ namespace PrincesPalace.Domain.Tests
             var target = Dummy();
             Fear.Apply(target, 2);
 
-            StatusEffects.Tick(target); // 2 -> 1
+            StatusEffects.ConsumeStun(target.Statuses); // one skipped turn: 2 -> 1
             Assert.IsTrue(StatusEffects.HasStun(target.Statuses));
 
-            StatusEffects.Tick(target); // 1 -> 0, expires
+            StatusEffects.ConsumeStun(target.Statuses); // the second: 1 -> 0, expires
             Assert.IsFalse(StatusEffects.HasStun(target.Statuses));
+        }
+
+        [Test]
+        public void FearSurvivesTheTurnStartTickThatOpensTheTurnItSkips()
+        {
+            // WHICH CLOCK OWNS THE COUNTDOWN, and it is not this one.
+            //
+            // GrantTurnStart ticks, and only then does ResolveSkippedTurn ask
+            // whether the holder can act. A Fear counted down by the tick is
+            // therefore one turn short of what it promises -- and at the
+            // authored duration World Ender's Crown actually uses (1), short
+            // by the only turn it had.
+            var target = Dummy();
+            Fear.Apply(target, 1);
+
+            StatusEffects.Tick(target);
+
+            Assert.IsTrue(StatusEffects.HasStun(target.Statuses),
+                "a one-turn Fear must still be standing when the skip is decided");
+        }
+
+        [Test]
+        public void FearsVulnerableHalfLastsExactlyAsLongAsItsSkipHalf()
+        {
+            // ONE STATUS, ONE DURATION -- the whole premise of this file. The
+            // two halves cannot come off separate clocks, so moving the
+            // countdown to the skip has to move both.
+            var target = Dummy();
+            Fear.Apply(target, 1);
+
+            StatusEffects.ConsumeStun(target.Statuses);
+
+            Assert.AreEqual(1f, StatusEffects.DamageTakenMultiplier(target.Statuses),
+                "the vulnerability went with the skip it was authored beside");
         }
 
         [Test]
