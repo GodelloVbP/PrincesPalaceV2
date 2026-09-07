@@ -483,11 +483,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     "painted border at runtime, not this node's own declared size");
             holdFillClip.Children.Add(holdFill);
 
-            var holdButton = Ui.Button("ResetConfirmYesButton", UiStrings.Delete, holdSize, 20)
+            // RUNTIME on the button itself: ThemedPlate() is CaptionPreserving
+            // -- unlike Themed(), it builds no <name>Label from the text
+            // passed to Ui.Button (Ui.ApplyThemePlateOnly only ever adds
+            // Visuals), so a real UiString there was being silently
+            // discarded. This regressed the caption entirely: the button
+            // held no visible word at all after the Crimson-plate conversion.
+            // Declared as its own child instead, named ResetConfirmYesCaption
+            // so Ui.CaptionOf finds it (the <name>Caption convention
+            // OutlineButton's retirement comment states), styled ButtonLabel
+            // like every other themed caption, and added AFTER holdFillClip
+            // so it draws above the hold fill -- UiEmitter's child order is
+            // draw order.
+            var holdButton = Ui.Button("ResetConfirmYesButton", UiString.Runtime, holdSize, 20)
                 .Quiet()
                 .ThemedPlate(ButtonTheme.Crimson);
             holdButton.Children.Add(holdFillClip);
-            holdButton.LayerCaptionWithVisuals(holdFillClip);
+            var holdCaption = Ui.Label("ResetConfirmYesCaption", UiStrings.Delete, holdSize, 20,
+                    place: Place.At(0f, 0f))
+                .Styled(TypographyRole.ButtonLabel);
+            holdButton.Children.Add(holdCaption);
+            holdButton.LayerCaptionWithVisuals(holdFillClip, holdCaption);
 
             var confirmYes = holdButton;
 

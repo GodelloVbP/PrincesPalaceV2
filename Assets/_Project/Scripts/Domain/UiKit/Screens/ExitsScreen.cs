@@ -225,12 +225,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // whatever the press was for -- and a hold released early is a
             // press that deliberately did nothing. A click sound there says
             // something happened.
-            var hold = Ui.Button("ExitAbandonHold", UiStrings.ExitAbandonHold, holdSize, 16,
+            //
+            // RUNTIME on the button itself: ThemedPlate() is CaptionPreserving
+            // -- unlike Themed(), it builds no <name>Label from the text
+            // passed to Ui.Button (Ui.ApplyThemePlateOnly only ever adds
+            // Visuals), so UiStrings.ExitAbandonHold passed here was being
+            // silently discarded. This regressed the caption entirely: the
+            // button held no visible "HOLD TO ABANDON" at all after the
+            // Crimson-plate conversion. Declared as its own child instead,
+            // named ExitAbandonHoldCaption so Ui.CaptionOf finds it (the
+            // <name>Caption convention OutlineButton's retirement comment
+            // states), styled ButtonLabel like every other themed caption,
+            // and added AFTER holdFillClip so it draws above the hold fill --
+            // UiEmitter's child order is draw order.
+            var hold = Ui.Button("ExitAbandonHold", UiString.Runtime, holdSize, 16,
                     Place.At(0f, ExitsLayout.HoldCentreY))
                 .Quiet()
                 .ThemedPlate(ButtonTheme.Crimson);
             hold.Children.Add(holdFillClip);
-            hold.LayerCaptionWithVisuals(holdFillClip);
+            var holdCaption = Ui.Label("ExitAbandonHoldCaption", UiStrings.ExitAbandonHold, holdSize, 16,
+                    place: Place.At(0f, 0f))
+                .Styled(TypographyRole.ButtonLabel);
+            hold.Children.Add(holdCaption);
+            hold.LayerCaptionWithVisuals(holdFillClip, holdCaption);
 
             screen.AbandonFill = fill;
             screen.AbandonHold = hold;
