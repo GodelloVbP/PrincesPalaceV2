@@ -142,7 +142,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string Rule = "#F2DB9E4D";
         public const string TextFigureLabel = "#D6C8E888";
         public const string TextNextAt = "#D6C8E8AA";
-        public const string ButtonFill = "#F2DB9E14";
 
         // A tick for a level not yet reached, and for one reached and
         // collected. The waiting weight is Gold, which is the point of it.
@@ -1222,45 +1221,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // claiming is sequential either way, so there is never a collected
             // hole below an uncollected level and claimedTrackLevel stays a
             // single integer.
-            // AN OUTLINED BOX, not the shared gold plate.
             //
-            // The two buttons on this row wore the game's standard button face,
-            // which is a filled gold gradient -- two of the brightest objects
-            // on a screen whose whole palette is gold used as stroke and glow,
-            // sitting at the top of it. The design draws both as a hairline
-            // rectangle with a wash inside, which is what everything else here
-            // does: outline the thing, do not fill it.
-            // NOT migrated to the semantic kit (would be Green -- collecting
-            // is the affirmative action) despite fitting Themed()'s aspect
-            // fine at 260x44 (5.91:1, in line with ContinueButton's accepted
-            // 5.15:1 stretch). The screen's OWN comment two lines up states
-            // why: this row deliberately replaced "the game's standard
-            // button face -- a filled gold gradient" with a hairline
-            // rectangle and a wash, because the filled plate was one of the
-            // brightest objects on a screen whose whole palette uses gold as
-            // stroke and glow. A themed plate (any colour) is exactly the
-            // filled look this row was built to get away from -- it would
-            // fight the design rather than fit it. TrackCloseButton below is
-            // the same case, left unthemed for the same reason.
+            // GOLD THEMED PLATE now (owner's HQ-kit instruction, 2026-09-07),
+            // superseding the "would fight the design" call this comment used
+            // to make: the hairline-and-wash treatment was a deliberate
+            // departure from the game's standard filled button so this row
+            // would not sit as the brightest thing on a screen whose palette
+            // otherwise uses gold only as stroke and glow. The owner's later
+            // instruction is "all buttons are replaced with HQ ones" without
+            // that exception, so it wins -- ThemedPlate rather than Themed()
+            // because this button already declares its own caption/pip
+            // children (see LayerCaptionWithVisuals below) the same way
+            // FightScreen's verb rows and ResetConfirmYesButton do.
+            // TrackCloseButton below is the same case.
+            var collectSize = new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.CollectHeight);
             var collect = Ui.Button("TrackCollectButton", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.SummaryRowHeight),
-                    15, Place.At(RewardTrackLayout.CollectCentreX,
+                    collectSize, 15, Place.At(RewardTrackLayout.CollectCentreX,
                                  RewardTrackLayout.SummaryCentreY))
-                .NoChrome()
+                .ThemedPlate(ButtonTheme.Gold)
                 .Inactive();
-
-            collect.Children.Add(Ui.Solid("TrackCollectFill", ButtonFill,
-                    new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.SummaryRowHeight),
-                    Place.At(0f, 0f))
-                .AsDecor());
-
-            foreach (var edge in Ui.Rim("TrackCollect",
-                         new UiVec(RewardTrackLayout.CollectWidth,
-                                   RewardTrackLayout.SummaryRowHeight),
-                         Gold))
-            {
-                collect.Children.Add(edge);
-            }
 
             // The pip on the button, which is the same 7px dot the design
             // pulses there -- the collect button appearing IS the notification
@@ -1268,7 +1247,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // read as an alert rather than as a control that was always there.
             var pip = Ui.Sprite("TrackCollectPip", "proc:solid_circle",
                     new UiVec(7f, 7f),
-                    Place.At(-RewardTrackLayout.CollectWidth * 0.5f + 22f, 0f))
+                    Place.At(-collectSize.X * 0.5f + 22f, 0f))
                 .Coloured(Gold)
                 .AsDecor();
             screen.CollectPip = pip;
@@ -1279,13 +1258,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ends up as the second GameObject of that name under one parent.
             // The wiring paints ours and every lookup by name takes the
             // emitter's empty one. See UiAudit A4b, and TalentScreen's
-            // InvestButtonCaption, which is where it was found.
+            // InvestButtonCaption, which is where it was found. ThemedPlate
+            // generates no <name>Label at all (CaptionPreserving), so this
+            // stays the button's only caption -- ScreenRegistry.WireRewardTrack
+            // still binds collectLabel off this exact NodeRef.
             var caption = Ui.Label("TrackCollectCaption", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.CollectWidth - 52f,
-                              RewardTrackLayout.SummaryRowHeight - 8f),
+                    new UiVec(collectSize.X - 52f, collectSize.Y - 8f),
                     11, Gold, Place.At(9f, 0f))
                 .Tracked(22f);
             collect.Children.Add(caption);
+            collect.LayerCaptionWithVisuals(pip, caption);
 
             screen.CollectButton = collect;
             screen.CollectCaption = caption;
@@ -1358,25 +1340,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SummaryReward = reward;
             yield return reward;
 
+            // SILVER THEMED PLATE now (owner's HQ-kit instruction,
+            // 2026-09-07), the same supersession TrackCollectButton's own
+            // comment records.
+            var closeSize = new UiVec(RewardTrackLayout.CloseWidth, RewardTrackLayout.CloseHeight);
             var close = Ui.Button("TrackCloseButton", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.CloseWidth, RewardTrackLayout.SummaryRowHeight),
-                    15, Place.At(RewardTrackLayout.CloseCentreX,
+                    closeSize, 15, Place.At(RewardTrackLayout.CloseCentreX,
                                  RewardTrackLayout.SummaryCentreY))
-                .NoChrome();
+                .ThemedPlate(ButtonTheme.Silver);
 
-            foreach (var edge in Ui.Rim("TrackClose",
-                         new UiVec(RewardTrackLayout.CloseWidth,
-                                   RewardTrackLayout.SummaryRowHeight),
-                         Gold))
-            {
-                close.Children.Add(edge);
-            }
-
-            close.Children.Add(Ui.Label("TrackCloseCaption", UiStrings.TrackClose,
-                    new UiVec(RewardTrackLayout.CloseWidth - 20f,
-                              RewardTrackLayout.SummaryRowHeight - 8f),
+            var closeCaption = Ui.Label("TrackCloseCaption", UiStrings.TrackClose,
+                    new UiVec(closeSize.X - 20f, closeSize.Y - 8f),
                     12, Gold, Place.At(0f, 0f))
-                .Tracked(24f));
+                .Tracked(24f);
+            close.Children.Add(closeCaption);
+            close.LayerCaptionWithVisuals(closeCaption);
 
             screen.CloseButton = close;
             yield return close;

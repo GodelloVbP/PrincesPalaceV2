@@ -312,6 +312,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return BuildNavRow("Pack", UiStrings.OverlayPack, DossierLayout.PackRowCentreY);
         }
 
+        // LEFT AS THE HAIRLINE LIST THEY ARE (owner's HQ-kit instruction,
+        // 2026-09-07, with the checked-and-declined exception the
+        // instruction itself allows for). 380x56 rows are 6.79:1, nearest
+        // Row6x1's 6:1 -- but the honest resize is 380x63.3, and stacking
+        // four of those (NavRowHeight applied four times from
+        // ColumnABottom) pushes the topmost row's (Spells) top edge to
+        // roughly y=-10.1, thirteen pixels ABOVE the reward-track readout's
+        // own bottom edge at roughly y=-23.4 (DossierLayout.TrackRowCentreY
+        // minus half TrackRowHeight) -- a real overlap under the XP bar, not
+        // a near miss, and one that does not depend on canvas aspect since
+        // nothing in this column's arithmetic reads one. Growing the rows
+        // would mean shrinking something above them (the portrait already
+        // absorbed 165px of a prior repin, per DossierLayout.PortraitHeight's
+        // own comment) rather than a free resize, so this is left as it was.
         private UiNode BuildNavRow(string key, UiString label, float centreY)
         {
             const float cx = 0f;
@@ -390,9 +404,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(170f, 22f), 13, TextFaint,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
 
-            var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, new UiVec(110f, 28f), 15,
-                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 55f, DossierLayout.ColumnATop - 12f))
-                .NoChrome();
+            // SILVER THEMED PLATE, small, at nominal aspect (owner's HQ-kit
+            // instruction, 2026-09-07) -- the flat NoChrome box this drew was
+            // 110x28 (3.93:1), past every plate shape's own tolerance
+            // (ThemedButtonAspectLintTests). HEIGHT kept, not width, this
+            // time -- Ui.PlateNominalSizeFor's own width-fixed shrink (110
+            // wide -> 22 tall) cleared the lint but left "CLOSE" at font
+            // size 15 needing 81.1x27.9, which a 22-tall box cannot hold
+            // (UiTextFitAudit, a scene-build check the dotnet lint suite
+            // does not run). FiveByOne at the UNCHANGED 28 tall resolves to
+            // 140 wide instead -- same shape ShapeFor already picks for
+            // this aspect, solved for the axis that was already proven to
+            // fit the caption. Right-aligned off its own half-width now
+            // rather than the old literal 55, so a caller changing this
+            // size again cannot silently misalign it against the column's
+            // right edge the way a stale literal would.
+            var closeShape = Ui.PlateShapeFor(110f, 28f);
+            var closeSize = new UiVec(28f * Ui.PlateAspect(closeShape), 28f);
+            var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, closeSize, 15,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - closeSize.X * 0.5f,
+                             DossierLayout.ColumnATop - 12f))
+                .Themed(ButtonTheme.Silver);
             PackCloseButton = close;
             children.Add(close);
 
@@ -412,10 +444,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float x = cx - DossierLayout.ContentAWidth * 0.5f
                           + DossierLayout.PackSortButtonWidth * (i + 0.5f);
 
-                var tab = Ui.Button($"DossierPackSort{i}", SortLabel(BagSort.All[i]),
-                        new UiVec(DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight), 14,
+                // SILVER THEMED PLATE, like GlossaryScreen.BuildCategory's own
+                // rail tabs (owner's HQ-kit instruction, 2026-09-07) -- the
+                // flat NoChrome box this drew was 84x32 (2.625:1), past
+                // Legacy's own tolerance (ThemedButtonAspectLintTests).
+                // Width kept, height down to Legacy's honest 28.
+                // ThemedPlate, not Themed(), because a hand-declared Caption
+                // is what GlossaryScreen's own comment recommends for a row
+                // that would otherwise fight a generated <button>Label for
+                // the same box -- here there is no generated label to fight,
+                // but the shape is copied for consistency with the rest of
+                // this pass. The sort's selected state stays exactly what it
+                // was: PackSortUnderlines below, driven by
+                // CharacterDossierController.RefreshSortMarkers -- this
+                // change touches only the plate, not that seam.
+                var label = SortLabel(BagSort.All[i]);
+                var tabSize = Ui.PlateNominalSizeFor(
+                    DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight);
+                var tab = Ui.Button($"DossierPackSort{i}", label, tabSize, 14,
                         Place.At(x, DossierLayout.PackSortCentreY))
-                    .NoChrome();
+                    .ThemedPlate(ButtonTheme.Silver);
+
+                // Caption, NOT Label -- UiEmitter names a button's own
+                // generated text "<button>Label", and ThemedPlate's
+                // CaptionPreserving generates none at all, so this is the
+                // tab's only caption and nothing can collide with it.
+                var caption = Ui.Label($"DossierPackSort{i}Caption", label,
+                        new UiVec(tabSize.X - 10f, 20f), 14, Text, Place.At(0f, 0f))
+                    .AsDecor();
+                tab.Children.Add(caption);
+                tab.LayerCaptionWithVisuals(caption);
 
                 var underline = Ui.Solid($"DossierPackSort{i}Underline", "#FFE0A8",
                         new UiVec(DossierLayout.PackSortButtonWidth - 24f, 2f),
@@ -583,9 +641,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(170f, 22f), 13, TextFaint,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
 
-            var close = Ui.Button("DossierSpellsClose", UiStrings.OverlayPackClose, new UiVec(110f, 28f), 15,
-                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 55f, DossierLayout.ColumnATop - 12f))
-                .NoChrome();
+            // SILVER THEMED PLATE, small, at nominal aspect (owner's HQ-kit
+            // instruction, 2026-09-07) -- same shape, same height-fixed
+            // solve, and same reason as DossierPackClose above (that
+            // comment has the UiTextFitAudit numbers this avoids).
+            var spellsCloseShape = Ui.PlateShapeFor(110f, 28f);
+            var spellsCloseSize = new UiVec(28f * Ui.PlateAspect(spellsCloseShape), 28f);
+            var close = Ui.Button("DossierSpellsClose", UiStrings.OverlayPackClose, spellsCloseSize, 15,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - spellsCloseSize.X * 0.5f,
+                             DossierLayout.ColumnATop - 12f))
+                .Themed(ButtonTheme.Silver);
             SpellsCloseButton = close;
             children.Add(close);
 

@@ -14,15 +14,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // difference in what they cost: leaving the game is undone by starting it
     // again, and a descent thrown away is not.
     //
-    // BUTTONS ARE CHROMELESS OVER DRAWN PLATES, like every other button in this
-    // menu. The shared button sprite is authored for a 220px button and stretches
-    // Simple, so a 520px one would smear it; the menu already draws its own
-    // plates for the bar, the cards and the rims, and one more is cheaper than
-    // one distorted sprite.
+    // BUTTONS WEAR THE KIT'S OWN PLATES now (owner's HQ-kit instruction,
+    // 2026-09-07), superseding the "chromeless over a drawn plate" call this
+    // comment used to make: the shared button sprite used to be authored for
+    // a 220px button and stretch Simple, so a 520px one would have smeared it
+    // and the menu drew its own flat plates instead. The kit's regenerated
+    // art (ButtonPlateArt) is delivered at several true nominal shapes now,
+    // so ExitTitle/ExitQuit size to whichever one fits their 720px width
+    // (ExitsLayout.ExitHeight) instead of drawing a bespoke rect.
     public sealed class ExitsScreen
     {
-        private const string Plate = FightHudPalette.CardFill;
-        private const string PlateRim = FightHudPalette.Hairline;
         private const string Hover = FightHudPalette.HoverTint;
         private const string Hairline = FightHudPalette.Hairline;
         private const string TextMuted = FightHudPalette.TextMuted;
@@ -32,10 +33,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string RedRim = "#E0786E73";
         private const string RedText = FightHudPalette.EnemyHpText;
 
-        // The track the hold runs across, and the wash that crosses it. The
-        // wash is deliberately not the rim's colour: it passes under the label
-        // for 1.2 seconds and the label has to stay readable the whole way.
-        private const string HoldTrack = FightHudPalette.Track;
+        // The wash that crosses the hold. Deliberately not the rim's colour:
+        // it passes under the label for 1.2 seconds and the label has to
+        // stay readable the whole way. The track it used to run across is
+        // gone -- the Crimson kit plate reads as the track now.
         private const string HoldFill = "#E0786E4D";
 
         public UiNode Root;
@@ -111,8 +112,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
-        // One exit: a plate, a hover plate over it, a chromeless button over
-        // that, and a note underneath saying what it does to the run.
+        // One exit: a themed plate, a hover wash over it, and a note
+        // underneath saying what it does to the run.
         //
         // The note is not flavour. Both of these END THE DESCENT -- the
         // codebase's rule is that leaving one kills it, and the hub's own title
@@ -124,32 +125,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float buttonY = ExitsLayout.ExitButtonCentreY;
             var size = new UiVec(ExitsLayout.ExitWidth, ExitsLayout.ExitHeight);
 
-            var blockChildren = new List<UiNode>
-            {
-                Ui.Solid($"Exit{key}Plate", Plate, size, Place.At(0f, buttonY))
-                    .AsDecor(),
-            };
+            var blockChildren = new List<UiNode>();
 
-            blockChildren.AddRange(Ui.Rim($"Exit{key}",
-                new UiVec(ExitsLayout.ExitWidth, ExitsLayout.ExitHeight), PlateRim,
-                new UiVec(0f, buttonY)));
+            var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
+                .Themed(ButtonTheme.Silver);
 
-            // A PLATE, not a scale, for the same reason the tab bar's hover is
-            // one: the button is chromeless over a drawn plate, so scaling the
-            // button would grow its label and leave the frame behind standing
-            // still.
+            // A WASH, not a scale, for the same reason it always was: scaling
+            // the button would grow its label and leave the plate behind
+            // standing still. DECLARED AFTER the button now (it used to sit
+            // under a chromeless button's own drawn plate) so it draws ON TOP
+            // of the kit plate -- Themed()'s own Glow already answers "does
+            // this button react to hover" on the plate itself, so this stays
+            // only for the same wash the design still asks for on top of it,
+            // and drawing it behind the new opaque plate would have hidden it
+            // completely.
             var hover = Ui.Solid($"Exit{key}Hover", Hover, size, Place.At(0f, buttonY))
                 .Inactive()
                 .AsDecor();
 
-            var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
-                .NoChrome();
-
             screen.ExitHovers.Add(hover);
             screen.ExitButtons.Add(button);
 
-            blockChildren.Add(hover);
             blockChildren.Add(button);
+            blockChildren.Add(hover);
 
             blockChildren.Add(Ui.Label($"Exit{key}Note", note,
                     new UiVec(ExitsLayout.ExitWidth, ExitsLayout.NoteHeight), 13, TextMuted,
@@ -190,23 +188,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var holdSize = new UiVec(ExitsLayout.HoldWidth, ExitsLayout.HoldHeight);
 
-            cardChildren.Add(Ui.Solid("ExitAbandonHoldTrack", HoldTrack, holdSize,
-                    Place.At(0f, ExitsLayout.HoldCentreY))
-                .AsDecor());
+            // CRIMSON THEMED PLATE now (owner's HQ-kit instruction,
+            // 2026-09-07), replacing the flat track Solid this used to draw
+            // under NoChrome -- the plate itself reads as the track, so only
+            // the progress fill survives as a child, clipped to the plate's
+            // own measured paint exactly as MainMenuScreen.
+            // ResetConfirmYesButton's identical hold already does (see that
+            // screen's own comment for the clip/fill mechanism this copies).
+            var holdPlateShape = Ui.PlateShapeFor(holdSize.X, holdSize.Y);
+            var holdPlatePad = Ui.PlateVisiblePad(holdPlateShape);
+            var holdFillClip = Ui.Panel("ExitAbandonHoldFillClip",
+                    Place.Stretch(holdSize.X * holdPlatePad.Left, holdSize.X * holdPlatePad.Right,
+                        holdSize.Y * holdPlatePad.Bottom, holdSize.Y * holdPlatePad.Top),
+                    UiSize.Fill)
+                .Clipping();
 
-            // AUTHORED FULL WIDTH and driven to zero by the controller on
-            // wiring. It has to be authored at its real size because UiAudit
-            // refuses a zero-sized graphic -- rightly, since a graphic with no
-            // area is indistinguishable from one somebody forgot to size.
+            // AUTHORED AT THE HOLD'S FULL SIZE and driven to zero by the
+            // controller on wiring, same as before -- UiAudit refuses a
+            // zero-sized graphic, and growing sizeDelta.x from a pinned left
+            // edge is what lets HoldFillMath resize it with one number.
             //
-            // PIVOTED LEFT, at the track's left edge, so growing it by width
-            // extends it rightwards. Anchoring 0..progress instead is relative
-            // to the PARENT, which is the card, and would paint a red bar
-            // straight through the note above it -- the same mistake the
-            // Options slider's fill records in its own comment.
+            // PIVOTED LEFT, at the button's own left edge (button-local now
+            // that this is a CHILD of the button rather than a card-level
+            // sibling), so growing it by width extends it rightwards.
             var fill = Ui.Solid("ExitAbandonHoldFill", HoldFill, holdSize,
-                    Place.At(ExitsLayout.HoldFillLeft, ExitsLayout.HoldCentreY, new UiVec(0f, 0.5f)))
-                .AsDecor();
+                    Place.At(ExitsLayout.HoldFillLeft, 0f, new UiVec(0f, 0.5f)))
+                .AsDecor()
+                .AllowOverflow(
+                    "authored at the button's full holdSize so HoldFillMath can only ever shrink it, which " +
+                    "means it starts a fraction of a pixel past the clip panel's own plate-inset edge - the " +
+                    "clip panel is what actually keeps it off the painted border at runtime, not this node's " +
+                    "own declared size");
+            holdFillClip.Children.Add(fill);
 
             // QUIET, because a Button plays the shared click on release
             // whatever the press was for -- and a hold released early is a
@@ -214,13 +227,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // something happened.
             var hold = Ui.Button("ExitAbandonHold", UiStrings.ExitAbandonHold, holdSize, 16,
                     Place.At(0f, ExitsLayout.HoldCentreY))
-                .NoChrome()
-                .Quiet();
+                .Quiet()
+                .ThemedPlate(ButtonTheme.Crimson);
+            hold.Children.Add(holdFillClip);
+            hold.LayerCaptionWithVisuals(holdFillClip);
 
             screen.AbandonFill = fill;
             screen.AbandonHold = hold;
 
-            cardChildren.Add(fill);
             cardChildren.Add(hold);
 
             // INACTIVE by default, switched on only in a descent.

@@ -447,14 +447,42 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 out _, null);
 
             float inner = WideColWidth - PanelPad * 2f;
-            const float PlateHeight = 62f;
-            const float ActionGap = 16f;
-            const float LeaveHeight = 76f;
+            const float GoldPlateHeight = 62f;
 
-            float goldY = ContentTop - PlateHeight * 0.5f;
-            float buyY = goldY - PlateHeight - ActionGap;
-            float packY = buyY - PlateHeight - ActionGap;
-            float leaveY = ContentBottom + LeaveHeight * 0.5f;
+            // ONE SHAPE FOR ALL THREE ACTIONS now (this pass, superseding
+            // INT-1's own fix above the one it recorded next to this
+            // comment): INT-1 narrowed Buy/Pack to 372 (Row6x1 at their old
+            // 62 tall) and Leave to 456 (Row6x1 at its old 76 tall) to clear
+            // ThemedButtonAspectLintTests, which cleared the lint but left
+            // the column reading as two different widths for three actions
+            // that are all "press this to act". FiveByOne at 372 wide is
+            // what a shared 372/74-ish rect already resolves to on its own
+            // (Ui.PlateNominalSizeFor picks the shape - no .Plate()
+            // override needed), so this is the SAME width INT-1 already
+            // settled on for two of the three, carried to all three at one
+            // honest aspect instead of two.
+            var actionSize = Ui.PlateNominalSizeFor(372f, 74f);
+
+            // THE THREE ROWS NO LONGER SHARE ONE GAP CONSTANT with the gold
+            // plate above them, because they are no longer the same height
+            // as it (GoldPlateHeight 62 vs actionSize.Y ~74.4) -- gapping all
+            // four by one literal would either overflow ContentBottom or
+            // leave the gaps visibly uneven. actionGap is instead SOLVED for
+            // the space actually available (from the gold plate's own
+            // bottom edge down to ContentBottom) so the three action rows
+            // plus their two internal gaps plus the gap under the gold plate
+            // land exactly flush with the panel's bottom edge, the same
+            // "hard against the bottom edge" rule LEAVE always followed --
+            // it is just no longer a literal 16, because 16 was tuned
+            // against heights this pass retired.
+            float goldY = ContentTop - GoldPlateHeight * 0.5f;
+            float goldBottom = goldY - GoldPlateHeight * 0.5f;
+            float actionsAvailable = goldBottom - ContentBottom;
+            float actionGap = (actionsAvailable - actionSize.Y * 3f) / 3f;
+
+            float buyY = goldBottom - actionGap - actionSize.Y * 0.5f;
+            float packY = buyY - actionSize.Y - actionGap;
+            float leaveY = ContentBottom + actionSize.Y * 0.5f;
 
             var gold = Ui.Label("ShopGoldLabel", UiStrings.ShopGold, new UiVec(inner - 24f, 48f), 36,
                     GoldText, Place.At(0f, 0f))
@@ -462,42 +490,40 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             GoldLabel = gold;
 
+            // FULL WIDTH, kept -- not narrowed to the actions' own 372.
+            // ShopGoldPlate is a flat Ui.OutlineBox (fill+rim, no plate art),
+            // so it was never subject to ThemedButtonAspectLintTests and has
+            // no aspect to clear; it was already wider than Buy/Pack/Leave
+            // before this pass (640 against their 372/456), so a narrower
+            // action column under a full-width total is the SAME
+            // relationship this panel already had, not a new one this pass
+            // introduces. Narrowing it to 372 to match would be a second,
+            // unrelated proportion change with no lint forcing it - left for
+            // the owner's eyes at the capture review instead.
             parts.Add(Ui.OutlineBox("ShopGoldPlate", Place.At(0f, goldY),
-                new UiVec(inner, PlateHeight), GoldPlateFill, PanelRim, new[] { gold }));
+                new UiVec(inner, GoldPlateHeight), GoldPlateFill, PanelRim, new[] { gold }));
 
             // Themed(Gold)/Themed(Silver), owner's HQ-kit instruction
-            // (2026-09-07). WAS NOT A CLEAN FIT: inner is 640 here, so Buy/
-            // Pack (640x62, 10.3:1) and Leave (640x76, 8.4:1) sat far past
-            // even the widest plate shape (Row6x1, 6:1) -- ThemedButtonAspect
-            // LintTests. Unlike a container, a themed button has no room to
-            // grow into here: PlateHeight/LeaveHeight/ActionGap already spend
-            // the panel's whole ContentHeight (goldY down to leaveY leaves
-            // zero slack), so the only axis left is width -- narrowed to each
-            // button's own Row6x1 nominal for its (unchanged) height, rather
-            // than the panel's full inner width. Centred rather than
-            // stretched, so the visible dead space either side reads as a
+            // (2026-09-07). Centred rather than stretched, so the visible
+            // dead space either side of each 372-wide plate reads as a
             // deliberately narrower CTA over the gold total's own full-width
-            // bar (unaffected -- Ui.OutlineBox is a flat fill+rim, not plate
-            // art, so it never stretched) rather than as a mis-measured box.
-            // WORTH THE OWNER'S EYES: three actions each about 40% narrower
-            // than the column that holds them is a real proportion change,
-            // not just an aspect fix -- flagged for the capture review this
-            // pass ends with.
-            var buySize = new UiVec(PlateHeight * Ui.PlateAspect(Ui.PlateShapeFor(inner, PlateHeight)), PlateHeight);
-            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, buySize, 28,
+            // bar rather than as a mis-measured box. WORTH THE OWNER'S EYES:
+            // three actions each about 40% narrower than the column that
+            // holds them is a real proportion change, not just an aspect
+            // fix -- flagged for the capture review this pass ends with.
+            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, actionSize, 28,
                     Place.At(0f, buyY))
                 .Themed(ButtonTheme.Gold);
             BuyButton = buy;
             parts.Add(buy);
 
-            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, buySize, 28,
+            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, actionSize, 28,
                     Place.At(0f, packY))
                 .Themed(ButtonTheme.Silver);
             PackButton = pack;
             parts.Add(pack);
 
-            var leaveSize = new UiVec(LeaveHeight * Ui.PlateAspect(Ui.PlateShapeFor(inner, LeaveHeight)), LeaveHeight);
-            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, leaveSize, 32,
+            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, actionSize, 32,
                     Place.At(0f, leaveY))
                 .Themed(ButtonTheme.Silver);
             LeaveButton = leave;

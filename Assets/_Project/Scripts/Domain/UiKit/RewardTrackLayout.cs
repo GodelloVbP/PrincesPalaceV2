@@ -382,6 +382,20 @@ namespace PrincesPalace.Domain.UiKit
         public const float CollectWidth = 260f;
         public const float CloseWidth = 180f;
 
+        // TrackCollectButton/TrackCloseButton now wear a themed kit plate
+        // (owner's HQ-kit instruction, 2026-09-07) in place of the hand-drawn
+        // hairline rim the two used to share at a flat SummaryRowHeight.
+        // static readonly, not const, for the same reason MainMenuScreen.
+        // ResetHoldHeight is: Ui.PlateNominalSizeFor is not a compile-time
+        // constant. The two land on DIFFERENT plate shapes at their own
+        // width (260x44 is nearest Row6x1's 6:1, an 8.5% miss; 180x44 is
+        // nearest FiveByOne's 5:1, an 18.2% miss) -- forcing them to a
+        // shared height would leave one of the two still stretching its
+        // plate, which is the exact thing ThemedButtonAspectLintTests
+        // exists to catch.
+        public static readonly float CollectHeight = Ui.PlateNominalSizeFor(CollectWidth, SummaryRowHeight).Y;
+        public static readonly float CloseHeight = Ui.PlateNominalSizeFor(CloseWidth, SummaryRowHeight).Y;
+
         // ---- the summary line, as five pieces --------------------------------
         //
         // "LEVEL 47 -- NEXT AT 48   A STAT POINT", set as a rule of parts

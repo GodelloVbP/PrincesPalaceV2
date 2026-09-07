@@ -50,7 +50,21 @@ namespace PrincesPalace.Domain.UiKit
         // other content to give them scale, so they have to carry it
         // themselves.
         public const float ExitWidth = 720f;
-        public const float ExitHeight = 96f;
+
+        // 720x96 was 7.5:1 -- past every button-plate shape's own tolerance
+        // (ThemedButtonAspectLintTests) -- from when ExitTitle/ExitQuit drew
+        // a flat Solid+Rim under NoChrome. They wear a Silver kit plate now
+        // (owner's HQ-kit instruction, 2026-09-07), so the height comes from
+        // Ui.PlateNominalSizeFor rather than being authored: static
+        // readonly, not const, for the same reason MainMenuScreen.
+        // ResetHoldHeight is -- PlateNominalSizeFor is not a compile-time
+        // constant. It resolves to Row6x1 (nominal 6:1, height 120), which
+        // StackFits below confirms clears the pane's vertical rhythm with
+        // about 40px to spare at both ends of the stack, same as the old 96
+        // did -- the note underneath each button (NoteGap/NoteHeight,
+        // unchanged) still sits clear of it by construction of
+        // ExitNoteCentreY/ExitButtonCentreY below.
+        public static readonly float ExitHeight = Ui.PlateNominalSizeFor(ExitWidth, 96f).Y;
 
         // The quiet line under each, saying what the button actually does to
         // the run. Not decoration: both of these end a descent, and a player
@@ -59,7 +73,10 @@ namespace PrincesPalace.Domain.UiKit
         public const float NoteGap = 10f;
         public const float NoteHeight = 20f;
 
-        public const float ExitBlockHeight = ExitHeight + NoteGap + NoteHeight;   // 104
+        // A PROPERTY, not a const, now that ExitHeight is a resized static
+        // readonly field rather than a compile-time literal -- the const
+        // expression this used to be cannot reference one.
+        public static float ExitBlockHeight => ExitHeight + NoteGap + NoteHeight;
         public const float ExitGap = 40f;
 
         public const int ExitCount = 2;
@@ -70,7 +87,8 @@ namespace PrincesPalace.Domain.UiKit
         public const int ExitIndexTitle = 0;
         public const int ExitIndexQuit = 1;
 
-        public const float PairHeight = ExitBlockHeight * ExitCount + ExitGap * (ExitCount - 1);  // 240
+        // A PROPERTY for the same reason ExitBlockHeight above is.
+        public static float PairHeight => ExitBlockHeight * ExitCount + ExitGap * (ExitCount - 1);
 
         // A block is a CONTAINER, so the controller moves one rect per exit
         // rather than seven. Its box is a couple of pixels larger than its
@@ -118,19 +136,34 @@ namespace PrincesPalace.Domain.UiKit
         public const float AbandonNoteGap = 22f;
 
         public const float HoldWidth = 620f;
-        public const float HoldHeight = 80f;
 
-        public const float AbandonHeight =
+        // 620x80 was 7.75:1 -- past every plate shape's own tolerance
+        // (ThemedButtonAspectLintTests) -- from when the hold drew a flat
+        // track Solid under NoChrome. It wears the Crimson kit plate now
+        // (owner's HQ-kit instruction, 2026-09-07), with the progress fill
+        // clipped inside it exactly as MainMenuScreen.ResetConfirmYesButton's
+        // own hold does -- see that screen's comment for the clip mechanism.
+        // static readonly for the same reason ExitHeight above is: it
+        // resolves to Row6x1 (nominal 6:1, height 103.33), which pushes the
+        // whole abandon card, and so the whole three-piece stack, taller --
+        // StackFits below is what actually proves the pane still holds it
+        // rather than this comment asserting it.
+        public static readonly float HoldHeight = Ui.PlateNominalSizeFor(HoldWidth, 80f).Y;
+
+        // A PROPERTY, not a const, for the same reason ExitBlockHeight above
+        // is -- HoldHeight is no longer a compile-time literal.
+        public static float AbandonHeight =>
             AbandonPadY * 2f + AbandonHeadingHeight + AbandonHeadingGap +
-            AbandonNoteHeight + AbandonNoteGap + HoldHeight;                     // 178
+            AbandonNoteHeight + AbandonNoteGap + HoldHeight;
 
         public static float AbandonCentreY => SeparatorY - SeparatorGap - AbandonHeight * 0.5f;
 
         // Pair, both separator gaps, and the card. The rule itself is 1px and
-        // sits inside the gap rather than adding to it.
-        public const float StackHeight = PairHeight + SeparatorGap * 2f + AbandonHeight;
+        // sits inside the gap rather than adding to it. A PROPERTY now, for
+        // the same reason as its two dependencies above.
+        public static float StackHeight => PairHeight + SeparatorGap * 2f + AbandonHeight;
 
-        private const float AbandonHalf = AbandonHeight * 0.5f;
+        private static float AbandonHalf => AbandonHeight * 0.5f;
 
         public static float AbandonHeadingCentreY =>
             AbandonHalf - AbandonPadY - AbandonHeadingHeight * 0.5f;

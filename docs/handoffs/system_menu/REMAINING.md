@@ -287,3 +287,90 @@ Unrelated to the menu, still true, recorded so they do not get lost:
 - **Skills reads "0 known"** — only talent-granted skills are counted.
 - The eight **container art prompts** in `docs/handoffs/archive/dossier_containers/` are
   written and none of the art is generated.
+
+## 2026-09-07 — containers removed, buttons on the kit
+
+Two changes landed the same day, back to back, and are easy to conflate: the
+owner first called every kit *container* frame inside the system menu ugly and
+had them stripped to bare panels (recorded throughout this file and in
+`ExitsLayout`/`DossierLayout`/`RewardTrackLayout`'s own comments); then, later
+the same day, gave the opposite instruction for *buttons* — "all buttons are
+replaced with HQ ones." This section is the second change.
+
+**Converted to a themed kit plate:**
+
+- `ExitsScreen` `ExitTitle`/`ExitQuit` — flat Solid+Rim under `NoChrome` to
+  `Themed(Silver)`, 720x120 (Row6x1, `ExitsLayout.ExitHeight` now a
+  `static readonly` derived from `Ui.PlateNominalSizeFor`, not a `96f` const).
+  The hover wash moved to draw AFTER the button instead of under the old flat
+  plate, or the kit's own opaque plate would have hidden it entirely.
+- `ExitsScreen` `ExitAbandonHold` — flat track Solid to `ThemedPlate(Crimson)`
+  at 620x103.33 (Row6x1), fill clipped inside the plate exactly as
+  `MainMenuScreen.ResetConfirmYesButton`'s hold does. **The hold shows no
+  caption now** — `ResetConfirmYesButton`, the pattern this was told to copy,
+  has none either (`ThemedPlate` generates no label, and neither button
+  declares its own). "HOLD TO ABANDON" was readable before this change and is
+  not now; flagged rather than quietly accepted, per house style.
+- `RewardTrackScreen` `TrackCollectButton`/`TrackCloseButton` — hairline
+  Solid+Rim to `ThemedPlate(Gold)`/`ThemedPlate(Silver)`, sized via each
+  button's own `Ui.PlateNominalSizeFor` rather than sharing `SummaryRowHeight`
+  (they land on different plate shapes at their own width). `collectLabel`
+  keeps binding straight to `TrackCollectCaption` — a real, hand-declared
+  child either way, so `ScreenRegistry.WireRewardTrack` needed no change.
+  The screen's old "would fight the design" comment is gone; the owner's
+  later instruction supersedes it.
+- `CharacterDossierScreen` `DossierPackClose`/`DossierSpellsClose` — to
+  `Themed(Silver)`, HEIGHT kept at the original 28 (not width): a first pass
+  kept width and shrank height to 22, which cleared
+  `ThemedButtonAspectLintTests` but failed `UiTextFitAudit` at scene-build
+  time — "CLOSE" at font 15 needs 81.1x27.9, and 22 tall cannot hold it. Fixed
+  by solving for the axis already proven to fit text (110x28 → FiveByOne at
+  the same 28 tall, 140 wide), then right-aligning off the button's own new
+  half-width instead of the old literal offset.
+- `CharacterDossierScreen` `DossierPackSort{i}` tabs — to
+  `ThemedPlate(Silver)` with a hand-declared `{name}Caption` child (Legacy,
+  84x28, shrunk 4px from the old 32 tall), the same shape
+  `GlossaryScreen.BuildCategory`'s rail tabs use. The sort/selected state is
+  unchanged — `PackSortUnderlines` and
+  `CharacterDossierController.RefreshSortMarkers` were not touched.
+- `ShopScreen` `ShopBuyButton`/`ShopPackButton`/`ShopLeaveButton` — unified.
+  A prior pass (INT-1) had already themed all three but left Buy/Pack at
+  372 wide (Row6x1, their own 62 tall) and Leave at 456 (Row6x1, its own 76
+  tall) — two widths in one action column. All three are now one shape,
+  FiveByOne at 372x74.4, centred under the gold total; the gap between them
+  is solved from the panel's own remaining height rather than restated as a
+  literal, since the old 62/76 mix no longer applies to any of them.
+
+**Left flat, deliberately, and why:**
+
+- `CharacterDossierScreen`'s four nav rows (`DossierSpellsRow`/`TrackRow`/
+  `SkillsRow`/`PackRow`) stay the chromeless hairline list they were. The
+  honest Row6x1 resize (380 wide → 63.3 tall) does not fit: stacking four of
+  them from the column's floor pushes the topmost row's top edge to about
+  y=-10.1, which is *above* — and so overlapping by roughly 13px — the
+  reward-track readout's own bottom edge at about y=-23.4, directly under the
+  XP bar. This does not depend on canvas aspect; nothing in `DossierLayout`'s
+  arithmetic for this column reads one. Growing the rows would need shrinking
+  something above them instead, which is outside this pass's brief.
+- `ShopScreen`'s `ShopGoldPlate` stays full width (640, unchanged). It is a
+  flat `Ui.OutlineBox`, not plate art, so it was never subject to
+  `ThemedButtonAspectLintTests` and has no aspect to clear — and it was
+  already wider than the actions under it before this pass (640 against
+  372/456). Narrowing it to the actions' new shared 372 would be a second,
+  unrelated proportion change with nothing forcing it; left for the owner's
+  eyes at the capture review instead.
+- `AttrPlus`/`AttrMinus`, both pagers, equipment sockets, pack cells and
+  spell slots are untouched — they are glyphs, sockets and cells, not
+  push-buttons, and the brief said to leave them that way.
+- The system-menu tab bar and its close X, the Party seats/cards/links, and
+  the Options steppers were not touched, per the brief.
+
+Verification: `dotnet build tools/domain-tests` clean; the nine dotnet
+EditMode-equivalent classes (100 tests) and five Unity classes (`RewardTrackTests`
+dotnet, the rest PlayMode — 48 passed, 1 unrelated skip) green; full
+`run_tests_parallel.ps1 -BuildScenes` green (EditMode 3053/3053, PlayMode
+785/812, 27 unrelated skips, 0 failed). `ExitsScreenTests` named in the
+original brief does not exist as a class — Exits is covered by
+`SystemMenuExitsTests` (PlayMode) and by every dotnet suite that walks
+`ExitsScreen.Build()` (`ButtonFallbackLintTests`, `ThemedButtonAspectLintTests`,
+`UiKitAuditTests`); run instead of guessing at a name.
