@@ -124,8 +124,11 @@ namespace PrincesPalace.Domain.Tests
             var (session, hero, foe1, foe2) = Fight(RelicEffect.WorldEndersCrown);
 
             session.DealDamageForTest(foe1, hero, 75, DamageType.Physical); // 100 -> 25, fires
-            StatusEffects.Tick(foe1); // Fear's 1-turn duration expires
-            StatusEffects.Tick(foe2);
+            // Fear's 1-turn duration is spent by the turn it skips, not by
+            // the tick that opens that turn -- see StatusEffects.Tick's
+            // IsSpentByTheTurn exemption. Driving the skip is what expires it.
+            StatusEffects.ConsumeStun(foe1.Statuses);
+            StatusEffects.ConsumeStun(foe2.Statuses);
             Assert.IsFalse(Fear.IsFeared(foe1), "the first Fear must have expired for this to be a real check");
 
             session.DealDamageForTest(foe1, hero, 5, DamageType.Physical); // 25 -> 20, still below 30%

@@ -190,6 +190,35 @@ namespace PrincesPalace.Domain.Tests
                 "control must land back on a real player turn (or the fight ending), never stuck mid-skip");
         }
 
+        [Test]
+        public void Grapple_ActuallyCostsTheTargetTheTurnItPromises()
+        {
+            // THE HALF THE TEST ABOVE CANNOT SEE. "The stun is gone by the
+            // time control comes back" is true both when the skip was spent
+            // and when the status simply ticked itself off the list at the
+            // start of the very turn it was supposed to prevent -- so it needs
+            // an assertion on the SKIP, which only the log can carry.
+            var grapple = new ResolvedSkill("grapple", "Grapple", "", "forest_warden", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Stun, statusMagnitude: 1, statusDuration: 1);
+
+            var hero = Fighter("Hero", true, maxHealth: 5000, defense: 50, speed: 1);
+            var warden = Fighter("Forest Troll", false, speed: 20);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { warden });
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { null }, new List<EnemyKit> { new EnemyKit(Source("forest_warden"), false) },
+                new SeededRandom(1)) { DamageVarianceRange = 0f };
+
+            session.CastSkill(grapple, hero);
+
+            var messages = session.DrainBeats().SelectMany(b => b.Messages).ToList();
+
+            Assert.IsTrue(messages.Any(m => m.Contains("stunned and cannot act")),
+                "a one-turn Stun has to actually cost a turn -- authored durations start at 1: "
+                + string.Join(" | ", messages));
+        }
+
         // ---- Roar: summoning mid-fight, and the cap that limits it ------------
 
         [Test]
