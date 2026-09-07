@@ -329,6 +329,21 @@ namespace PrincesPalace.Domain.UiKit
         // assembly.
         public static float PlateAspect(ButtonPlateShape shape) => ButtonPlateArt.Aspect(shape);
 
+        // Same reason PlateAspect is forwarded here rather than read directly
+        // off ButtonPlateArt: it is internal to this assembly, and
+        // ThemedButtonAspectLintTests needs to compute a rect's error against
+        // the plate it wears without an InternalsVisibleTo grant.
+        // ButtonPlateArt.AspectError's own comment says why this is a plain
+        // relative error rather than ShapeFor's ratio/log distance.
+        public static float PlateAspectError(float width, float height) =>
+            ButtonPlateArt.AspectError(width, height);
+
+        // The same-width box that already passes PlateAspectError at zero --
+        // see ButtonPlateArt.NominalSizeFor for why width stays and height
+        // moves.
+        public static UiVec PlateNominalSizeFor(float width, float height) =>
+            ButtonPlateArt.NominalSizeFor(width, height);
+
         // Where a rect's CENTRE has to sit so that its VISIBLE bottom edge
         // (rect bottom + height * the art's own bottom VisiblePad fraction)
         // lands exactly on `visibleBottomLine`. One line, but it is the one
@@ -779,6 +794,13 @@ namespace PrincesPalace.Domain.UiKit
             var visuals = BuildVisuals(theme, shape, buttonSize);
             node.Children.Add(visuals);
         }
+
+        // The band ValidateContainerAspect refuses a Container/FlagBanner
+        // outside of, forwarded for the same reason PlateAspect is: a caller
+        // (ThemedButtonAspectLintTests) outside this assembly needs the exact
+        // number the container-side rule enforces so a button-side mirror of
+        // it can cite the same tolerance rather than a second copy of it.
+        public static float ContainerAspectTolerance => ContainerArt.AspectTolerance;
 
         // The plate shape a themed button of this rect gets when it does not
         // force one with .Plate(). Ratio-nearest by the same rule

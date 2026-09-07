@@ -154,6 +154,44 @@ namespace PrincesPalace.Domain.UiKit
             return best;
         }
 
+        // How far a declared rect misses the EXACT aspect of the shape
+        // ShapeFor picks for it -- the same relative-error shape
+        // ValidateContainerAspect computes for a Container/FlagBanner, but a
+        // button has no ValidateContainerAspect of its own: UiEmitter draws a
+        // themed button's plate with Image.type = Simple and
+        // preserveAspect = false (see its own comment on why -- a stretched
+        // plate reads as less broken than dead transparent padding), so a
+        // rect that misses the plate's aspect does not crop or letterbox, it
+        // visibly stretches, non-uniformly, every time. ThemedButtonAspectLintTests
+        // is the mechanised version of noticing that by eye.
+        //
+        // Deliberately NOT the same distance ShapeFor itself uses to CHOOSE
+        // a shape (ratio/log distance, symmetric under swapping which side is
+        // wider) -- once a shape is chosen, what a caller and a reviewer both
+        // want to know is the ordinary "how many percent off" a container
+        // caller already gets from ValidateContainerAspect's own message, so
+        // this stays a plain relative error against the picked shape's exact
+        // aspect.
+        internal static float AspectError(float width, float height)
+        {
+            var shape = ShapeFor(width, height);
+            float nominal = Aspect(shape);
+            float rectAspect = width / height;
+            return Math.Abs(rectAspect / nominal - 1f);
+        }
+
+        // The same-WIDTH box that would pass with zero error: width kept,
+        // height recomputed from the chosen shape's exact aspect. One call
+        // for a fix site to reach for instead of hand-dividing width by the
+        // aspect it has to go look up separately -- mirrors
+        // Ui.ContainerSizeForWidth's shape for the container kit.
+        internal static UiVec NominalSizeFor(float width, float height)
+        {
+            var shape = ShapeFor(width, height);
+            float nominal = Aspect(shape);
+            return new UiVec(width, width / nominal);
+        }
+
         internal static string Key(ButtonTheme theme, ButtonPlateShape shape)
         {
             string t = theme.ThemeKey();
