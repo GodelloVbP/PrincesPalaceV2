@@ -239,6 +239,63 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void APromiseWithNothingLeftInReachForfeitsInsteadOfLandingOnRankZero()
+        {
+            // THE RE-PICK THAT FINDS NOBODY. Every other re-pick test above
+            // has somewhere for the blow to go; this one does not, and that
+            // is the case where the fallback used to reach past the mask.
+            //
+            // The lob is telegraphed at the back rank while both members are
+            // standing. The back-ranker then dies, so by the time the monster
+            // resolves, its promise is a corpse and the only living party
+            // member stands on rank 0 -- a rank the lob is authored never to
+            // reach.
+            var front = Member("Front", 100);
+            var back = Member("Back", 1);
+            var abilities = new List<EnemyAbility> { EnemyAbility.Of(Ability(Reach.Ranks(1, 2)), 1f) };
+            var session = Fight(new[] { front, back }, new[] { Monster() }, abilities);
+            session.Begin();
+            session.DrainBeats();
+
+            back.CurrentHealth = 0;
+
+            session.ExecuteAttack(session.Encounter.Enemies[0]);
+
+            var messages = session.DrainBeats().SelectMany(b => b.Messages).ToList();
+
+            Assert.AreEqual(front.MaxHealth, front.CurrentHealth,
+                "a back-rank-only ability must not land on rank 0 just because its promise died: "
+                + string.Join(" | ", messages));
+        }
+
+        [Test]
+        public void AForfeitedPromiseDropsTheIntentSoTheNextDrawCanFindALegalAbility()
+        {
+            // AND THE FORFEIT IS NOT PERMANENT. The commitment is spent by the
+            // turn it could not deliver -- the same rule ResolveSkippedTurn
+            // already applies to a stun -- so the next preparation re-draws
+            // over a pool where EffectivePoolFor has weighted the unreachable
+            // lob out and the plain swing is what is left.
+            var front = Member("Front", 100);
+            var back = Member("Back", 1);
+            var abilities = new List<EnemyAbility>
+            {
+                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f),
+                EnemyAbility.Of(Ability(Reach.Ranks(1, 2)), 1000f),
+            };
+            var session = Fight(new[] { front, back }, new[] { Monster() }, abilities);
+            session.Begin();
+
+            back.CurrentHealth = 0;
+            session.ExecuteAttack(session.Encounter.Enemies[0]);
+            session.DrainBeats();
+
+            Assert.AreEqual(FightSession.IntentAttack,
+                session.IntentFor(session.Encounter.Enemies[0]),
+                "the stale lob commitment was dropped and a legal swing drawn in its place");
+        }
+
+        [Test]
         public void APromiseAgainstAFrontRankerThatMovedIsRePickedOntoTheNewFront()
         {
             // The player's whole reason to spend a turn on Move: the blow that

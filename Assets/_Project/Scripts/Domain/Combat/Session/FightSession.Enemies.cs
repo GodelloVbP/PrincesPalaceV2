@@ -552,16 +552,10 @@ namespace PrincesPalace.Domain.Combat.Session
                                      && RootedEnemyHasNoLegalAction(enemy);
             if (!isBroken && !isStunned && !isRootedHelpless) return false;
 
-            BeginBeat(enemy, enemy);
-
             if (isBroken) enemy.BreakShield.Reset();
             if (isStunned) StatusEffects.ConsumeStun(enemy.Statuses);
 
-            // A skipped turn still spends the commitment: the monster declared
-            // it and then could not deliver, so re-rolling next turn is honest.
-            _intents.Remove(enemy);
-
-            AppendMessage(isBroken && isStunned
+            ForfeitTurn(enemy, isBroken && isStunned
                 ? $"{enemy.Name} is stunned AND still reeling - it cannot act!"
                 : isBroken
                     ? $"{enemy.Name} is still reeling and cannot act!"
@@ -569,8 +563,30 @@ namespace PrincesPalace.Domain.Combat.Session
                         ? $"{enemy.Name} is stunned and cannot act!"
                         : $"{enemy.Name} is rooted with nothing to cast - it cannot act!");
 
-            CommitBeat();
             return true;
+        }
+
+        // A TURN THAT RESOLVES TO NOTHING, in the one shape every such turn
+        // takes: a beat of its own carrying the sentence that explains it, and
+        // the commitment dropped.
+        //
+        // DROPPING THE INTENT IS THE LOAD-BEARING HALF. A monster that
+        // declared something it could not deliver has spent that declaration
+        // -- PrepareEnemyIntents skips an enemy that still holds one, so an
+        // intent left standing after a forfeit is re-honoured next turn
+        // against the same field that already refused it, and the monster
+        // forfeits again, and again. Re-drawing is what lets EffectivePoolFor
+        // weight the impossible entry out and find the enemy something legal.
+        //
+        // A BEAT, not a silent return: playback is beat-driven, so a turn with
+        // no beat passes with nothing on screen at all -- the player sees
+        // their own action and then, apparently, their own action again.
+        private void ForfeitTurn(CombatantState combatant, string message)
+        {
+            BeginBeat(combatant, combatant);
+            _intents.Remove(combatant);
+            AppendMessage(message);
+            CommitBeat();
         }
 
         private void ResolveEnemyAction(CombatantState enemy)
@@ -627,6 +643,25 @@ namespace PrincesPalace.Domain.Combat.Session
                 && (!promised.IsAlive || !CanReachWithAbility(enemy, committedAbility, promised)))
             {
                 promised = FirstEligibleFor(enemy, committedAbility);
+
+                // AND WHEN THE RE-PICK FINDS NOBODY, THE TURN IS FORFEIT --
+                // it does not fall through to the pick below. That fall-through
+                // broke the two rules this whole block exists to keep. It drew
+                // (PickIntentTarget always rolls), on a branch whose frequency
+                // is decided by how the player is playing, which is exactly the
+                // dependency the "re-picks draw nothing" rule forbids. And
+                // PickIntentTarget's own last-resort widening to the living
+                // party -- written for the preview showcase, where an ability
+                // is forced onto a field that cannot satisfy it -- then handed
+                // back a target the committed ability's mask had just refused,
+                // so a back-rank-only blow landed on rank 0 the moment its
+                // promised target died or stepped away. The mask is the rule;
+                // an ability with nothing left in reach lands on nobody.
+                if (promised == null)
+                {
+                    ForfeitTurn(enemy, $"{enemy.Name} has nothing in reach - it cannot act!");
+                    return;
+                }
             }
 
             // THE THIRD PATH, and it is not a re-pick: an enemy that has no
