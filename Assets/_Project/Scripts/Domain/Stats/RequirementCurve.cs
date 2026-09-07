@@ -54,11 +54,19 @@ namespace PrincesPalace.Domain.Stats
             return Apply(requirement);
         }
 
-        // Entirely in integers, floored the same asymmetric-safe way
-        // ItemUpgrade.Apply is — negative inputs are not a real case for a
-        // requirement (0 means "none"), but staying direction-symmetric
-        // costs nothing and avoids C#'s truncate-toward-zero trap should
-        // that ever change.
+        // Entirely in integers, FLOORED in both directions — negative inputs
+        // are not a real case for a requirement (0 means "none"), but staying
+        // direction-symmetric costs nothing and avoids C#'s
+        // truncate-toward-zero trap should that ever change.
+        //
+        // NOT the same rounding as ItemUpgrade.Apply, which this used to
+        // claim to match: that one rounds AWAY FROM ZERO now (its `+ 99`
+        // against this one's plain `/ 100`), because a +1 that granted the
+        // same numbers as a +0 was a lie on 58% of the catalogue. A
+        // requirement has the opposite bias — rounding a gate UP would make
+        // an item unwearable that its authored number says is wearable — so
+        // the two deliberately differ, and only the negative branch is
+        // shared.
         public static int Apply(int requirement)
         {
             if (requirement == 0)

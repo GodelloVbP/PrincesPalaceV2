@@ -155,9 +155,20 @@ namespace PrincesPalace.Domain.Progression
         // time CollectedTotal re-reads the same levels.
         public static bool IsGrant(TrackReward reward) => reward == TrackReward.StatPoint;
 
-        // A CAPABILITY WITH NO NUMBER -- the four kinds whose whole meaning is
-        // that they happened, so their authored Amount is 0 and summing them
-        // says nothing. These are the four an author may not place as FILLER
+        // A CAPABILITY GRANTED ONCE -- the four kinds whose whole meaning is
+        // that they happened.
+        //
+        // "GRANTED ONCE" IS NOT "HAS NO NUMBER", and this comment said the
+        // latter until it was checked: SecondLife's Amount is its CHARGE
+        // COUNT, both shipped tracks author it as 1, and SquadTrack.
+        // SecondLivesLeft sums CollectedTotal(SecondLife, ...) across the
+        // squad to get the ceiling. Author it as 0 -- which is what the old
+        // wording told you to do -- and the level-90 milestone silently
+        // grants nothing, with no resolver rule refusing it and nothing on
+        // screen saying so. Respec, SignatureAbsorbs and UnlockSkill are the
+        // three that genuinely carry no number; see TrackEntry.Amount, which
+        // has always said "the PARAMETER of the capability where it has one".
+        // These are the four an author may not place as FILLER
         // (docs/PLAN_REWARD_TRACKS.md §4's rule 3): a filler node's level is
         // computed rather than authored, and "you learn Lightning Bolt at
         // whichever level the interleave happens to put it" is not a design
