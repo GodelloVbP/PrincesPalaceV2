@@ -73,12 +73,20 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- grants vs unlocks --------------------------------------------------
 
+        // STATPOINT IS THE ONLY GRANT NOW (docs/PLAN_REWARD_TRACKS.md §2, P3).
+        // MaxHealth used to be one too, back when the interim table had only
+        // two reward kinds to pick a filler mix from -- now that it is one of
+        // twelve, everything but the one spent, storable quantity is read
+        // live instead (RewardTrackDefinition.CollectedTotal).
         [TestCase(TrackReward.StatPoint, true)]
-        [TestCase(TrackReward.MaxHealth, true)]
+        [TestCase(TrackReward.MaxHealth, false)]
         [TestCase(TrackReward.Respec, false)]
         [TestCase(TrackReward.SecondLife, false)]
+        [TestCase(TrackReward.SignatureCapacity, false)]
+        [TestCase(TrackReward.ElementalDamagePercent, false)]
+        [TestCase(TrackReward.UnlockSkill, false)]
         [TestCase(TrackReward.None, false)]
-        public void QuantitiesAreGrantsAndCapabilitiesAreNot(TrackReward reward, bool isGrant)
+        public void OnlyStatPointIsAGrant(TrackReward reward, bool isGrant)
         {
             Assert.AreEqual(isGrant, RewardTrack.IsGrant(reward));
         }
@@ -169,6 +177,16 @@ namespace PrincesPalace.Domain.Tests
         // by listing them. The failure this catches is the one that cannot be
         // seen in a diff: a new TrackReward compiles, pays out correctly, and
         // displays as an empty string.
+        //
+        // A FILLED-IN ENTRY, not just a reward and an amount -- four of the
+        // twelve captions (SignatureCapacity/GainPerTurn/GainOnDamageTaken/
+        // Absorbs, ElementalDamagePercent, UnlockSkill) read a baked field
+        // (ResourceDisplayName/Against/SkillDisplayName) the plain
+        // RewardTrackNames.Of(reward, amount) overload cannot supply, so this
+        // walks the enum with an entry that carries all of them rather than
+        // leaning on ResourceNameOf/SkillNameOf's blank-string fallbacks,
+        // which would pass even for a caption template that forgot to use its
+        // own selector.
         [Test]
         public void EveryRewardKindHasSomethingToCallItself()
         {
@@ -176,7 +194,11 @@ namespace PrincesPalace.Domain.Tests
             {
                 if (reward == TrackReward.None) continue;
 
-                Assert.IsNotEmpty(RewardTrackNames.Of(reward, 1),
+                var entry = new TrackEntry(reward, 5, against: Stats.DamageType.Nature,
+                    skillId: "fixture_skill", skillDisplayName: "Fixture Skill",
+                    resourceDisplayName: "Fixture Resource");
+
+                Assert.IsNotEmpty(RewardTrackNames.Of(entry),
                     $"{reward} has no display name, so it would show as a blank line");
             }
         }
@@ -242,36 +264,31 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel + 50));
         }
 
-        // EVERY REWARD KIND THE ENUM KNOWS ABOUT IS ACTUALLY GRANTED.
-        //
-        // This replaces a test that asserted the opposite about
-        // SignatureAtFightStart -- that it was deliberately unplaced -- which
-        // was true while a reward kind existed with no way to pay it out. The
-        // author cut it rather than building it, so the enum no longer carries
-        // anything the track never grants, and the invariant worth holding is
-        // the strong one: a kind nobody can earn is dead weight, and the next
-        // one added has to be placed or this fails.
-        [Test]
-        public void EveryRewardKindTheEnumKnowsAboutIsActuallyGranted()
-        {
-            foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
-            {
-                if (reward == TrackReward.None) continue;
-
-                Assert.Greater(RewardTrack.UnlockLevel(reward), 0,
-                    $"{reward} exists as a reward kind but no level of the track ever grants it");
-            }
-        }
+        // EVERY REWARD KIND THE ENUM KNOWS ABOUT IS ACTUALLY GRANTED used to
+        // live here, walking RewardTrack.UnlockLevel over the static table.
+        // docs/PLAN_REWARD_TRACKS.md P3 deletes both: the static table is gone
+        // (RewardTrackDefinition replaces it, one instance per character) and
+        // eight of the twelve reward kinds now exist that only an AUTHORED
+        // track grants -- the generated default (RewardTrackDefinition.
+        // Default) still only carries four. Asserting "every kind is granted"
+        // against the default would be false; weakening it to "against SOME
+        // track" needs the shipped sheep/owl tracks P6 authors, which do not
+        // exist in this package. P6 restores the honest version,
+        // EveryRewardKindIsGrantedBySomeShippedTrack, over real content.
 
         // ---- the max-health nodes -------------------------------------------------
 
-        // A quantity, so it is claimed against the watermark exactly once --
-        // the same rule stat points follow.
+        // MaxHealth used to be claimed against the watermark exactly once, the
+        // same rule stat points follow -- see OnlyStatPointIsAGrant above for
+        // why that changed. It is still an IsUnlock kind (IsUnlock is just
+        // "not the one grant" now), even though it does not behave like a
+        // classic on/off capability: it is read live via CollectedTotal,
+        // summed rather than switched on.
         [Test]
-        public void MaxHealthIsAGrantRatherThanACapability()
+        public void MaxHealthIsCollectedLiveRatherThanGranted()
         {
-            Assert.IsTrue(RewardTrack.IsGrant(TrackReward.MaxHealth));
-            Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.MaxHealth));
+            Assert.IsFalse(RewardTrack.IsGrant(TrackReward.MaxHealth));
+            Assert.IsTrue(RewardTrack.IsUnlock(TrackReward.MaxHealth));
         }
 
         // EVERY LEVEL PAYS. The filler counts sum to exactly the number of
@@ -306,21 +323,12 @@ namespace PrincesPalace.Domain.Tests
                 "the track grants enough points to max every band, so spending them is no longer a choice");
         }
 
-        // THE INTERIM TABLE, PINNED AS THE TWO TOTALS IT PROMISES.
-        //
-        // P1 of docs/PLAN_REWARD_TRACKS.md retires eight reward kinds and fills
-        // their milestones with MaxHealth so the track still pays every level.
-        // The interim table is deliberately the eventual generated default
-        // (P4's RewardTrackDefinition.Default), so these two literals are the
-        // number that must not drift: 40 filler stat points + level 80's ten =
-        // 50; 47 filler MaxHealth at 2 each + 9 milestones at 15 each = 229.
-        [Test]
-        public void TheTrackStillPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth()
-        {
-            Assert.AreEqual(50, RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
-                "40 filler singles plus level 80's ten");
-            Assert.AreEqual(229, RewardTrack.GrantedBetween(TrackReward.MaxHealth, 1, RewardTrack.MaxLevel),
-                "9 milestone nodes at 15 plus 47 filler nodes at 2");
-        }
+        // THE INTERIM TABLE'S TWO TOTALS moved to
+        // RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth
+        // (Tests/EditMode/Run/RewardTrackDefinitionTests.cs) now that
+        // RewardTrackDefinition.Default owns the table this pinned --
+        // RewardTrack.GrantedBetween(MaxHealth, ...) is 0 by construction
+        // since P3 (OnlyStatPointIsAGrant above), so the old assertion could
+        // not be kept here even reworded.
     }
 }

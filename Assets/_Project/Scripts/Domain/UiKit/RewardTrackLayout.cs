@@ -932,18 +932,38 @@ namespace PrincesPalace.Domain.UiKit
         // section 8 rather than the finished look: each one is the ghost glyph
         // its slot draws until painted art lands, and the stroke is what that
         // painting has to still read as at 15px.
-        public static string IconFor(int level)
+        //
+        // FOUR PROCEDURAL BAKES PLUS THE RING DEFAULT, reused rather than
+        // grown to twelve (docs/PLAN_REWARD_TRACKS.md §1): a rail mark is
+        // read at a glance, not read, so the eight new reward kinds share the
+        // four existing bakes by what they resemble (a capacity/gain/absorb
+        // kind reads as "a capability", the same as Respec or SecondLife) and
+        // only the two numeric ones with an existing bake keep their own.
+        public static string IconFor(TrackReward reward)
         {
-            switch (RewardTrack.At(level).Reward)
+            switch (reward)
             {
                 case TrackReward.None: return null;
                 case TrackReward.StatPoint: return "proc:track_stat";
                 case TrackReward.MaxHealth: return "proc:track_health";
+                case TrackReward.ElementalDamagePercent: return "proc:track_exp";
+                case TrackReward.MaxMana:
+                case TrackReward.ManaRegen: return "proc:track_favor";
                 default: return "proc:ring_outline";
             }
         }
 
-        // WHICH PAINTED MEDALLION THE CARD SHOWS for a level's reward.
+        // P4/P5 shim: RewardTrackScreen.cs:723 still bakes the rail's icon at
+        // BUILD TIME per level ("the track is static", its own comment says),
+        // which stays true until P5 wires the controller to write
+        // icons[i].sprite from a per-kind array at runtime instead (plan §1,
+        // "the three things that DO become runtime"). Resolves through the
+        // generated default so a Domain file P3 is not allowed to rewire
+        // (RewardTrackScreen.cs's tree-building block) keeps compiling and
+        // keeps drawing the same interim icons it always has.
+        public static string IconFor(int level) => IconFor(DefaultShimTrack.At(level).Reward);
+
+        // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward.
         //
         // Keyed off the reward KIND rather than the level, so the twelve
         // milestones and the eighty-seven filler nodes go through one map and a
@@ -952,18 +972,38 @@ namespace PrincesPalace.Domain.UiKit
         // graceful degradation, and the same fallback a missing file gets.
         //
         // See RewardTrackScreen's art block for why these are the card's and
-        // not the rail's, and for how provisional the assignments are.
-        public static string CardArtFor(int level)
+        // not the rail's, and for how provisional the assignments are. The
+        // eight new cases are a RE-POINT of the same twelve constants, not a
+        // commission -- docs/PLAN_REWARD_TRACKS.md §1's table, freed by the
+        // eight retired reward kinds those constants used to serve.
+        public static string CardArtKeyFor(TrackReward reward)
         {
-            switch (RewardTrack.At(level).Reward)
+            switch (reward)
             {
                 case TrackReward.StatPoint: return Screens.RewardTrackScreen.StatArtKey;
                 case TrackReward.MaxHealth: return Screens.RewardTrackScreen.HealthArtKey;
                 case TrackReward.Respec: return Screens.RewardTrackScreen.RespecArtKey;
                 case TrackReward.SecondLife: return Screens.RewardTrackScreen.SecondLifeArtKey;
+                case TrackReward.SignatureCapacity: return Screens.RewardTrackScreen.SignatureCapacityArtKey;
+                case TrackReward.SignatureGainPerTurn: return Screens.RewardTrackScreen.SignatureGainArtKey;
+                case TrackReward.SignatureGainOnDamageTaken: return Screens.RewardTrackScreen.SignatureHurtArtKey;
+                case TrackReward.SignatureAbsorbs: return Screens.RewardTrackScreen.SignatureAbsorbArtKey;
+                case TrackReward.ElementalDamagePercent: return Screens.RewardTrackScreen.ElementalArtKey;
+                case TrackReward.MaxMana: return Screens.RewardTrackScreen.MaxManaArtKey;
+                case TrackReward.ManaRegen: return Screens.RewardTrackScreen.ManaRegenArtKey;
+                case TrackReward.UnlockSkill: return Screens.RewardTrackScreen.UnlockSkillArtKey;
                 default: return null;
             }
         }
+
+        // P4/P5 shim: ScreenRegistry.cs:927 still keys `cardArtByLevel`, 99
+        // sprites indexed by level, at SCENE-BUILD TIME -- Editor code P3 may
+        // not touch. P5 replaces that with `cardArtByReward`, one sprite per
+        // TrackReward (plan §1). Kept under its old name, CardArtFor, because
+        // that is the literal method ScreenRegistry.cs already calls; renaming
+        // it here would be renaming an Editor call site P3 is not allowed to
+        // edit.
+        public static string CardArtFor(int level) => CardArtKeyFor(DefaultShimTrack.At(level).Reward);
 
         // The hue a reward kind tints its art-slot mat with.
         //
@@ -971,15 +1011,30 @@ namespace PrincesPalace.Domain.UiKit
         // handoff section 5. A lit disc is gold metal, and a tint laid over
         // that reads as tarnish, which is the same way the flat-fill disc
         // failed before the gradient replaced it.
-        public static string MatTintFor(int level)
+        public static string MatTintFor(TrackReward reward)
         {
-            switch (RewardTrack.At(level).Reward)
+            switch (reward)
             {
                 case TrackReward.StatPoint: return "#EDE6FF2E";
                 case TrackReward.MaxHealth: return "#D8B4A82E";
+                case TrackReward.ElementalDamagePercent: return "#C8B4DE2E";
+                case TrackReward.MaxMana:
+                case TrackReward.ManaRegen: return "#F2DB9E2E";
                 default: return "#C8B4DE1F";
             }
         }
+
+        // P4/P5 shim: RewardTrackController.cs:295, 529 still paints this per
+        // level at runtime (the mat tint IS already a runtime write today,
+        // unlike the icon/card art above -- see plan §1's table -- so this one
+        // only needs its argument re-typed once Core is allowed to change).
+        // Resolves through the generated default, same as IconFor(int) above.
+        public static string MatTintFor(int level) => MatTintFor(DefaultShimTrack.At(level).Reward);
+
+        // Backing the three level-keyed shims above. A single cached instance
+        // rather than rebuilding RewardTrackDefinition.Default on every node
+        // paint -- the rail repaints up to 99 nodes a frame while scrolling.
+        private static readonly RewardTrackDefinition DefaultShimTrack = RewardTrackDefinition.Default("");
 
         // The twelve landmarks, in rail order.
         //

@@ -183,23 +183,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // painting behind glass rather than as an unreached reward.
         //
         // These are PLACEMENTS, not decisions. Twelve rewards mapped onto
-        // fourteen icons drawn for a different screen is a first fit and should
+        // twelve icons drawn for a different screen is a first fit and should
         // be overruled by anyone with an opinion; the whole map is the switch
-        // in RewardTrackLayout.CardArtFor.
+        // in RewardTrackLayout.CardArtKeyFor.
+        //
+        // EIGHT OF THESE ARE RE-POINTS, not new commissions
+        // (docs/PLAN_REWARD_TRACKS.md §1's table): the eight retired
+        // over-arching reward kinds each freed one constant, and the constant
+        // is renamed to name what actually uses it now rather than what it
+        // used to.
         public const string IconRoot = "UI/TalentTree/Icons/Processed";
 
         public const string StatArtKey = IconRoot + "/ability_score.png";
         public const string HealthArtKey = IconRoot + "/health.png";
-        public const string ExpArtKey = IconRoot + "/skill_cost.png";
-        public const string FavorArtKey = IconRoot + "/eye_unused.png";
         public const string RespecArtKey = IconRoot + "/regen.png";
-        public const string RestArtKey = IconRoot + "/mana.png";
-        public const string RerollArtKey = IconRoot + "/precision.png";
-        public const string OfferArtKey = IconRoot + "/cross_unused.png";
-        public const string RelicArtKey = IconRoot + "/defense.png";
-        public const string ChosenRelicArtKey = IconRoot + "/fist_unused.png";
         public const string SecondLifeArtKey = IconRoot + "/flame_unused.png";
-        public const string SecondLifeRefreshArtKey = IconRoot + "/skull_unused.png";
+
+        // was ExpArtKey (ExpFind) -> ElementalDamagePercent
+        public const string ElementalArtKey = IconRoot + "/skill_cost.png";
+        // was FavorArtKey (Favor) -> MaxMana
+        public const string MaxManaArtKey = IconRoot + "/eye_unused.png";
+        // was RestArtKey (RestBeforeBoss) -> SignatureGainPerTurn
+        public const string SignatureGainArtKey = IconRoot + "/mana.png";
+        // was RerollArtKey (OfferReroll) -> ManaRegen
+        public const string ManaRegenArtKey = IconRoot + "/precision.png";
+        // was OfferArtKey (WiderOffer) -> SignatureAbsorbs
+        public const string SignatureAbsorbArtKey = IconRoot + "/cross_unused.png";
+        // was RelicArtKey (StartingRelics) -> SignatureCapacity
+        public const string SignatureCapacityArtKey = IconRoot + "/defense.png";
+        // was ChosenRelicArtKey (ChosenStartingRelics) -> SignatureGainOnDamageTaken
+        public const string SignatureHurtArtKey = IconRoot + "/fist_unused.png";
+        // was SecondLifeRefreshArtKey (SecondLifeRefresh) -> UnlockSkill
+        public const string UnlockSkillArtKey = IconRoot + "/skull_unused.png";
 
         public UiNode Root;
 
