@@ -135,25 +135,40 @@ of his own idle stance still, made by `tools/portrait_from_stance.py`:
 
 ```bash
 python tools/portrait_from_stance.py --still Assets/_Project/Resources/Characters/bear/idle.png \
-    --out Assets/_Project/Resources/Portraits/bear.png
+    --out Assets/_Project/Resources/Portraits/bear.png --height-fraction 0.20
 ```
 
-Crop box (source px, against `idle.png`'s 486x467 canvas): `(64, 8) -
-(401, 429)`, size 337x421. The bear faces right with his head sitting right
-of his own torso/hammer centre, so centring on the full-figure bbox (as an
-earlier version of this tool did) put the muzzle outside the frame; the
-crop is centred on the head band's own alpha extent instead (top 45% of the
-figure, its horizontal span measured on its own), then widened with margin
-and re-checked against whatever the growing crop covers so nothing below
-the head — the raised hammer arm, in this delivery — gets clipped by the
-left/right edges either. For Bjorn's build (pauldrons and hammer nearly as
-wide as his full standing height) that convergence pulls in almost the
-entire idle pose, not just head-and-shoulders; see the tool's header for
-why growing downward is preferred over narrowing into the head. Native crop
-337x421, upscaled 3x with LANCZOS to 1011x1263 (the largest whole-integer
-multiple that doesn't overshoot `Portraits/sheep.png`'s 1122x1402 — see the
-tool's header for why an integer factor beats resampling straight to the
-target's exact pixel size). **This is soft** — a 3x upscale is still a real
-quality loss next to a painted portrait — and that is accepted "for now."
+The bear faces right with his head sitting right of his own torso/hammer
+centre, so centring on the full-figure bbox (as an earlier version of this
+tool did) put the muzzle outside the frame; the crop is centred on the
+HEAD BAND's own alpha extent instead — the top slice of the figure's alpha
+bbox, its horizontal span measured on its own. The band's width (plus a
+small margin) sets the crop width, and the reference portrait's aspect sets
+the crop height from that, so the band is always whole and centred. Nothing
+grows to keep the rest of the pose in frame: below the band the crop is
+left to clip at the left/right edges, which is why the delivered plate cuts
+into the left pauldron and drops the arm bracer and hammer.
+
+Bjorn's build is stout enough that the tool's own default `--height-fraction`
+(0.45) puts the band's bottom row already past the shoulder pauldrons' widest
+point — at that width, matching the portrait's aspect makes the crop tall
+enough to reach the hammer head and boots. `--height-fraction 0.20` keeps
+the band to head, ears, scar and scarf, ending just as the round shoulder
+guard comes into view; checked by hand against 0.25-0.35 first, where the
+hammer's handle starts entering the frame at the bottom-left corner from
+about 0.28 up.
+
+Crop box (source px, against `idle.png`'s 486x467 canvas): `(132, 0) -
+(334, 250)`, size 202x250. Native crop 202x250, upscaled 5x with LANCZOS to
+1010x1250 (the largest whole-integer multiple that doesn't overshoot
+`Portraits/sheep.png`'s 1122x1402 — see the tool's header for why an
+integer factor beats resampling straight to the target's exact pixel
+size). **This is soft** — a 5x upscale off a ~200px-wide native crop is a
+real quality loss next to a painted portrait — and that is accepted "for
+now." The plate shows both ears, the whole muzzle, the scar and the scarf,
+whole and centred, and the top of the near shoulder pauldron; the hammer
+and both feet fall entirely outside the frame **by design** — this crop
+trades full-figure coverage for a face that actually reads at dossier size
+(~107px), which the previous near-full-body crop did not.
 `characters.json`'s `portraitPath` for `bear` is `Portraits/bear`; replace
 this file and stop pointing at it the moment a painted portrait lands.

@@ -12,25 +12,28 @@ stand-in crop of art the character already has. This tool is that stopgap:
 it takes the idle stance PNG already sitting under Resources/<Enemies|
 Characters>/<id>/idle.png (produced by slice_actor_sheet.py) and crops a
 head-and-shoulders slice off the top of the figure's own alpha bounding
-box, scaled up to roughly the dossier portrait's own resolution -- though
-for a wide-built figure (see Centring below) that slice can grow to cover
-most of the pose rather than staying a tight head crop.
+box, scaled up to roughly the dossier portrait's own resolution. The slice
+stays sized to the head band itself (see Centring below): for a stout or
+wide-built figure that means the body below the head is free to clip at
+the crop's left/right edges rather than the box growing to keep it in
+frame, so the default `--height-fraction` may need lowering per character
+to keep held weapons and feet out of shot -- see a real example in
+Usage below.
 
 Centring: a figure facing sideways (bear faces right, head sits right of
 his own torso/hammer centre) has its head off-center from the full-figure
 bbox, so centring the crop on that bbox clips the face. The crop is
 centred on the HEAD BAND's own alpha extent instead -- the top
-`height-fraction` rows of the figure, measured on their own -- and widened
-so that band's full width fits with a small margin. When that width needs
-more height than the band has to hit the target aspect (pauldrons spread
-wider than the portrait aspect wants for that band height), the crop grows
-downward for more shoulder/chest rather than narrowing to cut into the
-head -- and because growing downward can pull in content that is itself
-wider still (a raised hammer, an out-held arm), the width is re-checked
-against whatever the taller box now covers and the process repeats until
-it stops growing. See `crop_box`'s docstring for the mechanics; the upshot
-is the result never clips content within its own frame, even if that means
-the "head and shoulders" crop ends up closer to full-body for some builds.
+`height-fraction` rows of the figure, measured on their own. The band's
+own width (plus a small margin) sets the crop width, and the target aspect
+sets the crop height from that -- so the band is always whole and centred.
+Below the band the figure is free to run wider than the crop (pauldrons,
+an out-held hammer): rather than growing the box to keep chasing that
+content in frame (an earlier version of this tool did, and for a
+broad-built figure that convergence pulled in almost the entire pose), the
+body is simply allowed to clip at the left/right edges. A dossier plate
+this small reads by the face, not by whether a hammer head is intact at
+the bottom corner. See `crop_box`'s docstring for the mechanics.
 
 It does NOT key anything — the still already carries real alpha from the
 slicer, so there is no backdrop to remove. remove_portrait_backgrounds.py
@@ -54,11 +57,17 @@ canvas size".
 
 Usage:
     python tools/portrait_from_stance.py --still Assets/_Project/Resources/Characters/bear/idle.png \\
-        --out Assets/_Project/Resources/Portraits/bear.png
+        --out Assets/_Project/Resources/Portraits/bear.png --height-fraction 0.20
 
-    # override how much of the figure's height to keep, or crop from an
-    # explicit pixel row instead of the bbox top:
-    python tools/portrait_from_stance.py --still <path> --out <path> --height-fraction 0.5
+    # the bear needs a narrower band than the 0.45 default: at 0.45 the
+    # band's own width already reaches the shoulder pauldrons' widest
+    # point, and matching the portrait's aspect from that width makes the
+    # crop tall enough to reach the hammer head and boots. 0.20 keeps the
+    # band to head/ears/scar/scarf and lets the pauldron's top edge in
+    # without pulling the hammer into frame -- see Art/Characters/bear/
+    # README.md's Portrait section for how that value was picked.
+
+    # or crop from an explicit pixel row instead of the bbox top:
     python tools/portrait_from_stance.py --still <path> --out <path> --top 20 --height-fraction 0.4
 """
 
@@ -73,6 +82,10 @@ DEFAULT_ASPECT_REFERENCE = "Assets/_Project/Resources/Portraits/sheep.png"
 # How much clear air to leave on each side of the head band's own alpha
 # width, as a fraction of that width -- not of the final crop.
 HEAD_BAND_MARGIN = 0.04
+# How much clear air to leave above the head band's own top row, as a
+# fraction of the final crop height -- keeps the crown of the head off the
+# frame edge instead of touching it exactly.
+TOP_MARGIN = 0.04
 
 
 def alpha_bbox(img: Image.Image) -> tuple:
@@ -107,59 +120,39 @@ def measure_target_aspect(reference_path: str) -> float:
 
 def crop_box(still: Image.Image, bbox: tuple, height_fraction: float, top_override: int,
              aspect: float) -> tuple:
-    """Crop box centred on the HEAD BAND's own width, not the full-figure
-    bbox's -- a figure facing sideways (bear faces right, head sits right of
-    the body's centre) has its head off-center from its feet/hammer, so
-    centring on the full bbox clips the face. The band is the top
-    `height_fraction` slice of the figure's alpha bbox; its own alpha extent
-    within those rows gives the head's true horizontal position and width.
+    """Crop box sized and centred on the HEAD BAND's own width, not the
+    full-figure bbox's -- a figure facing sideways (bear faces right, head
+    sits right of the body's centre) has its head off-center from its
+    feet/hammer, so centring on the full bbox clips the face. The band is
+    the top `height_fraction` slice of the figure's alpha bbox; its own
+    alpha extent within those rows gives the head's true horizontal
+    position and width.
 
-    The crop must be at least as wide as that band's width plus a small
-    margin on each side (HEAD_BAND_MARGIN), and must match the reference
-    portrait's aspect ratio. When the band is wide relative to how tall the
-    band itself is (pauldrons/shoulders spread wider than a portrait aspect
-    wants for that height), the fix is to grow the crop taller -- more
-    shoulder and chest below the band -- never to shrink the width and cut
-    into the head to force the band's height to fit.
-
-    Growing downward can pull in content that is itself wider than the band
-    (an out-held hammer, a wide stance) -- if the box were sized once from
-    the band alone, that lower content would get clipped by the left/right
-    edges instead of the intended top/bottom-only trim. So this re-measures
-    the alpha width of whatever the *current* crop height now covers and
-    repeats until the box stops growing: the result is guaranteed to contain
-    every opaque pixel within its own row range, not just the band's."""
+    Width comes straight from that band: the band's own alpha width plus a
+    small margin on each side (HEAD_BAND_MARGIN). Height then comes from
+    width via the reference portrait's aspect ratio, and the box sits with
+    a small margin of clear air above the band's top row (TOP_MARGIN). No
+    widening or growing: whatever of the figure falls below the band --
+    pauldrons, a raised or out-held hammer -- is left to clip at the crop's
+    left/right edges rather than pulling the box wider to keep it in frame.
+    The head band itself is always whole and centred; the body below it is
+    not guaranteed to be."""
     x0, y0, x1, y1 = bbox
     bbox_h = y1 - y0 + 1
 
-    top = y0 if top_override is None else y0 + top_override
-    crop_h = round(bbox_h * height_fraction)
+    band_top = y0 if top_override is None else y0 + top_override
+    band_bottom = min(y1, band_top + round(bbox_h * height_fraction) - 1)
 
-    center_x = None
-    for _ in range(20):
-        bottom = min(y1, top + crop_h - 1)
-        span_x0, span_x1 = alpha_row_span(still, top, bottom)
-        span_w = span_x1 - span_x0 + 1
-        center_x = span_x0 + span_w / 2
+    span_x0, span_x1 = alpha_row_span(still, band_top, band_bottom)
+    span_w = span_x1 - span_x0 + 1
+    center_x = span_x0 + span_w / 2
 
-        required_w = span_w * (1 + 2 * HEAD_BAND_MARGIN)
-        candidate_w = round(crop_h * aspect)
-        if candidate_w >= required_w:
-            crop_w = candidate_w
-            break
-        # This row range's content needs more width than the current
-        # height allows at this aspect -- grow downward (never narrower)
-        # and re-measure, since a taller box may cover still-wider content.
-        new_crop_h = round(required_w / aspect)
-        if new_crop_h == crop_h:
-            crop_w = candidate_w
-            break
-        crop_h = new_crop_h
-    else:
-        crop_w = round(crop_h * aspect)
+    crop_w = round(span_w * (1 + 2 * HEAD_BAND_MARGIN))
+    crop_h = round(crop_w / aspect)
 
     left = round(center_x - crop_w / 2)
     right = left + crop_w
+    top = band_top - round(crop_h * TOP_MARGIN)
     bottom = top + crop_h
     return left, top, right, bottom
 
