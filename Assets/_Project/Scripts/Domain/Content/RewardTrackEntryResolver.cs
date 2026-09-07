@@ -288,16 +288,11 @@ namespace PrincesPalace.Domain.Content
                 against = parsedAgainst;
             }
 
-            // RULE 4. Keyed on the enum member NAME rather than
-            // TrackReward.ElementalDamagePercent -- that member does not
-            // exist yet (P3 adds it), so referencing it here would not
-            // compile. Because of that, Enum.TryParse above already refuses
-            // any entry naming it, and this branch is unreachable until P3
-            // lands: left in place, string-keyed, so the rule is correct the
-            // day the member exists rather than a second thing to remember
-            // to add then. See RewardTrackEntryResolverTests' two [Ignore]d
-            // tests for the behaviour this is meant to produce.
-            if (isFiller && string.Equals(rawReward, "ElementalDamagePercent", StringComparison.OrdinalIgnoreCase)
+            // RULE 4. P3 has landed TrackReward.ElementalDamagePercent, so
+            // this reads the parsed enum value directly rather than the
+            // reward's raw string -- see RewardTrackEntryResolverTests'
+            // FillerElementalDamageOfAnUnknownElement_IsRejected.
+            if (isFiller && reward == TrackReward.ElementalDamagePercent
                          && against.HasValue && !context.Level1DamageTypes.Contains(against.Value))
             {
                 error = $"{trackLabel}, {where}: filler {against} damage is not an element this character can deal " +
@@ -306,13 +301,12 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // RULE 5. Same status as rule 4: the four signature-resource
-            // kinds do not exist on TrackReward yet, so this is unreachable
-            // until P3 adds them.
-            bool isSignatureReward = string.Equals(rawReward, "SignatureCapacity", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureGainPerTurn", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureGainOnDamageTaken", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureAbsorbs", StringComparison.OrdinalIgnoreCase);
+            // RULE 5. Same as rule 4: P3 has landed the four signature-
+            // resource kinds, so this reads the parsed enum value directly.
+            bool isSignatureReward = reward == TrackReward.SignatureCapacity
+                || reward == TrackReward.SignatureGainPerTurn
+                || reward == TrackReward.SignatureGainOnDamageTaken
+                || reward == TrackReward.SignatureAbsorbs;
 
             if (isSignatureReward && !context.HasSignatureResource)
             {
@@ -325,7 +319,7 @@ namespace PrincesPalace.Domain.Content
             // for why there is no ownership test here (§3f/§3h).
             string resolvedSkillId = "";
             string skillDisplayName = "";
-            if (string.Equals(rawReward, "UnlockSkill", StringComparison.OrdinalIgnoreCase))
+            if (reward == TrackReward.UnlockSkill)
             {
                 if (string.IsNullOrWhiteSpace(skillId) || !context.SkillDisplayNames.TryGetValue(skillId, out skillDisplayName))
                 {

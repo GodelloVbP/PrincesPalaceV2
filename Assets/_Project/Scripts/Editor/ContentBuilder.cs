@@ -309,11 +309,8 @@ public static class ContentBuilder
             relic => relic.Id);
     }
 
-    // docs/PLAN_REWARD_TRACKS.md P2: the content type only -- nothing reads
-    // a RewardTrackDefinitionAsset yet. reward_tracks.json ships with an
-    // empty "tracks" array until P6 authors the real Shawn/Odette content,
-    // so this legitimately writes zero assets today; Build<>'s own
-    // written-count log line says so rather than treating it as a failure.
+    // docs/PLAN_REWARD_TRACKS.md P6: reward_tracks.json now authors Shawn's
+    // and Odette's real tracks, so this writes two assets.
     //
     // Assembles the per-character cross-catalogue context
     // RewardTrackEntryResolver validates rules 4/5 and captions UnlockSkill
@@ -336,6 +333,9 @@ public static class ContentBuilder
 
         foreach (var character in characters)
         {
+            // Level1DamageTypes stays owner-filtered: rule 4 asks for "a
+            // skill authored to them with unlockLevel <= 1", which IS an
+            // ownership question, unlike UnlockSkill's.
             var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
 
             var level1Types = new HashSet<DamageType> { character.AttackType };

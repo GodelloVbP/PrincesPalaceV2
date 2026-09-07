@@ -60,47 +60,12 @@ namespace PrincesPalace
                 {
                     if (asset?.Data != null && asset.Data.CharacterId == characterId)
                     {
-                        return From(asset.Data);
+                        return RewardTrackDefinition.From(asset.Data);
                     }
                 }
             }
 
             return RewardTrackDefinition.Default(characterId);
-        }
-
-        // The resolved content record turned into the Domain definition that
-        // knows how to read itself.
-        //
-        // HERE RATHER THAN ON RewardTrackDefinition, and the reason is the
-        // package boundary this landed across: ResolvedRewardTrack is
-        // Domain/Content and RewardTrackDefinition is Domain/Progression, and
-        // P3 built the latter without being allowed to see the former. If a
-        // From(ResolvedRewardTrack) later appears in Domain, this is the one
-        // call site to delete.
-        private static RewardTrackDefinition From(ResolvedRewardTrack track)
-        {
-            var milestones = new (int Level, TrackEntry Entry)[track.Milestones.Length];
-            for (int i = 0; i < track.Milestones.Length; i++)
-            {
-                var m = track.Milestones[i];
-                milestones[i] = (m.Level, new TrackEntry(m.Reward, m.Amount, m.Against,
-                    m.SkillId, m.SkillDisplayName, m.ResourceDisplayName));
-            }
-
-            var filler = new (TrackEntry Entry, int Count)[track.Filler.Length];
-            for (int i = 0; i < track.Filler.Length; i++)
-            {
-                var f = track.Filler[i];
-
-                // NO SKILL OR RESOURCE CAPTION ON FILLER, because there can be
-                // none: UnlockSkill is refused as filler by rule 3, and the
-                // signature kinds caption off the character rather than off the
-                // row (RewardTrackEntryResolver bakes ResourceDisplayName onto
-                // milestones only, which is where the resolver puts it).
-                filler[i] = (new TrackEntry(f.Reward, f.Amount, f.Against), f.Count);
-            }
-
-            return RewardTrackDefinition.Build(track.CharacterId, milestones, filler);
         }
     }
 }
