@@ -1,6 +1,7 @@
 using System;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -64,6 +65,14 @@ namespace PrincesPalace.Domain.Content
         public bool StartsInSquad;
         public int SquadSlot;
 
+        // Which of the kit's six themes the fight HUD's party plate wears
+        // for this character -- content-authored (RawCharacterEntry.
+        // plateTheme), not a Core-side default, so a new character's card
+        // colour is a one-line JSON edit rather than a code change. Blue by
+        // default (the same default battleSpriteFacing/attackType use for
+        // an unauthored field).
+        public ButtonTheme PlateTheme = ButtonTheme.Blue;
+
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.Signature for why that distinction is kept
         // sharp.
@@ -87,7 +96,11 @@ namespace PrincesPalace.Domain.Content
             // character's stats and art, not about who a fresh profile opens
             // with; making them all pass `false, 0` would be eighteen
             // arguments of noise for one fact only characters.json has.
-            bool startsInSquad = false, int squadSlot = 0)
+            bool startsInSquad = false, int squadSlot = 0,
+            // Same reasoning, same place: a plate theme is one more fact
+            // most existing callers (fixtures that build a ResolvedCharacter
+            // by hand, not through the resolver) have no opinion about.
+            ButtonTheme plateTheme = ButtonTheme.Blue)
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -109,6 +122,7 @@ namespace PrincesPalace.Domain.Content
             SortOrder = sortOrder;
             StartsInSquad = startsInSquad;
             SquadSlot = squadSlot;
+            PlateTheme = plateTheme;
         }
     }
 }

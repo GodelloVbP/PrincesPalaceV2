@@ -73,6 +73,7 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawCharacterEntry), nameof(RawCharacterEntry.role))] = typeof(CharacterRole),
                 [(typeof(RawCharacterEntry), nameof(RawCharacterEntry.attackType))] = typeof(Stats.DamageType),
                 [(typeof(RawCharacterEntry), nameof(RawCharacterEntry.battleSpriteFacing))] = typeof(Stage.SpriteFacing),
+                [(typeof(RawCharacterEntry), nameof(RawCharacterEntry.plateTheme))] = typeof(UiKit.ButtonTheme),
                 [(typeof(RawItemEntry), nameof(RawItemEntry.kind))] = typeof(ResolvedItemKind),
                 [(typeof(RawItemEntry), nameof(RawItemEntry.effect))] = typeof(ResolvedItemEffect),
                 [(typeof(RawRelicEntry), nameof(RawRelicEntry.effect))] = typeof(RelicEffect),

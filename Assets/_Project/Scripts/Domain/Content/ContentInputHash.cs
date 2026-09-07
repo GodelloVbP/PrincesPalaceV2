@@ -82,6 +82,7 @@ namespace PrincesPalace.Domain.Content
             ("Assets/_Project/Scripts/Domain/Stats/ScalingGrade.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Stats/ScalingProfile.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Stats/StatBlock.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/UiKit/UiNode.cs", null, false), // ButtonTheme (RawCharacterEntry.plateTheme)
         };
 
         // The number of files below which the hash is not measuring anything.

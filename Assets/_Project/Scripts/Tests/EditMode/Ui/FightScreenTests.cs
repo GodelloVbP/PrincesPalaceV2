@@ -179,26 +179,28 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePartyPlateSitsWhereV1PutIt()
         {
-            // Width and height are v1's/section-1's own numbers, unmoved by
-            // B1 (452 wide, 452/1.98 = 228.28 tall -- see
-            // FightScreen.BuildPartyPlate's own header). The BOTTOM EDGE
-            // moved, deliberately: it used to be a flat -500 (the canvas's
-            // own 40px HUD margin, with no reference to the verb column at
-            // all), and is now solved so the plate's own VISIBLE bottom
-            // (rect bottom + height * the 2:1 art's own halo) lands flush
-            // with the verb column's visible bottom instead -- see
-            // FightSubmenuLayout.VisibleBottomLine's header. OLD -500 (rect)
-            // / -385.858 (centre); NEW -486.972 (rect) / -372.830 (centre),
-            // 13.03px higher -- the old rect bottom sat 14px BELOW the verb
-            // column's own line, invisible only because -500's own comment
-            // never compared the two.
+            // LEFT EDGE ONLY, now -- the one thing that has stayed fixed
+            // through both B1 and B2. B1 moved the BOTTOM off a flat -500
+            // (the canvas's own 40px HUD margin, with no reference to the
+            // verb column at all) onto FightSubmenuLayout.VisibleBottomLine
+            // instead (see its own header). B2 then shrank WIDTH/HEIGHT for
+            // the cozy-plate pass (452x228.28 -> 380x191.92, still the 2:1
+            // aspect -- see BuildPartyPlate's own header) and re-solved the
+            // bottom against the SAME VisibleBottomLine at the new height,
+            // which is why the numbers below moved a second time.
+            //
+            // History: v1/A1 -500 (rect) / -385.858 (centre); B1 -486.972 /
+            // -372.830 (bottom moved onto the verb column's visible line);
+            // B2 -486.703 / -390.743 (bottom re-solved at the new, shorter
+            // height -- 0.27px from B1's own number, since VisibleBottomLine
+            // itself did not move and only the plate's own height did).
             var rect = RectOf("PartyPlate");
-            Assert.AreEqual(-694f, rect.Centre.X, 0.01f);
-            Assert.AreEqual(-372.830f, rect.Centre.Y, 0.01f);
-            Assert.AreEqual(452f, rect.Width, 0.01f);
-            Assert.AreEqual(228.283f, rect.Height, 0.01f);
-            Assert.AreEqual(-486.972f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
-                "the bottom edge is now solved from FightSubmenuLayout.VisibleBottomLine, not a flat -500");
+            Assert.AreEqual(-920f, rect.Centre.X - rect.Width * 0.5f, 0.01f, "the left edge must not move");
+            Assert.AreEqual(-390.743f, rect.Centre.Y, 0.01f);
+            Assert.AreEqual(380f, rect.Width, 0.01f);
+            Assert.AreEqual(191.919f, rect.Height, 0.01f);
+            Assert.AreEqual(-486.703f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
+                "the bottom edge is solved from FightSubmenuLayout.VisibleBottomLine, not a flat -500");
         }
 
         // The party plate's container theme/ratio and content inset are
