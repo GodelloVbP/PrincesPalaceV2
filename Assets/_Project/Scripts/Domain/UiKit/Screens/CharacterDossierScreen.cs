@@ -129,6 +129,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> AttributeValues = new List<NodeRef>();
         public List<NodeRef> AttributeKeys = new List<NodeRef>();
         public List<NodeRef> AttributePluses = new List<NodeRef>();
+        public List<NodeRef> AttributeMinuses = new List<NodeRef>();
         public NodeRef UnspentPoints;
 
         // Indexed by SheetStats.Derived.
@@ -889,15 +890,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
                                  halfHeight - DossierLayout.AttributePlusInset))
                     .NoChrome()
                     .Inactive();
+                // The "-" that refunds a point out of this score. Mirrored off
+                // the plus across the cell's centre, same size and inset, same
+                // inactive-until-shown treatment -- but gated per cell rather
+                // than globally, since a refund can only come out of a score
+                // that has something invested in it (see PaintStatSpending).
+                var minus = Ui.Button($"DossierAttrMinus{i}", UiStrings.DossierRefundPoint,
+                        new UiVec(DossierLayout.AttributePlusSize, DossierLayout.AttributePlusSize), 14,
+                        Place.At(-(halfWidth - DossierLayout.AttributePlusInset),
+                                 halfHeight - DossierLayout.AttributePlusInset))
+                    .NoChrome()
+                    .Inactive();
 
                 cell.Children.Add(value);
                 cell.Children.Add(keyLabel);
                 cell.Children.Add(plus);
+                cell.Children.Add(minus);
 
                 AttributeCells.Add(cell);
                 AttributeValues.Add(value);
                 AttributeKeys.Add(keyLabel);
                 AttributePluses.Add(plus);
+                AttributeMinuses.Add(minus);
                 yield return cell;
             }
 

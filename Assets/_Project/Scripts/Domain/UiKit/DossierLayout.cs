@@ -629,7 +629,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- column C: the numbers ----------------------------------------------
 
-        public const float ContentCWidth = ColumnCWidth - ColumnCPadX * 2f;       // 340
+        public const float ContentCWidth = ColumnCWidth - ColumnCPadX * 2f;       // 400
 
         // The "+" that spends a stat point, in the cell's top-right corner.
         //

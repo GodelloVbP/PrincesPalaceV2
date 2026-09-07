@@ -809,7 +809,17 @@ public static class ScreenRegistry
         controller.inDescent = inDescent;
 
         CharacterDossierController dossierController = null;
-        if (menu.Dossier != null) dossierController = WireDossier(result, menu.Dossier, lockedForFight);
+        if (menu.Dossier != null)
+        {
+            dossierController = WireDossier(result, menu.Dossier, lockedForFight);
+
+            // Not on WireDossier's own signature: two adjacent bools in one
+            // parameter list are transposable (CODE_STANDARDS.md §5), and
+            // WireSystemMenu already has this one as its own parameter. Only
+            // the hub copy of the dossier (inDescent: false) shows the
+            // refund minus.
+            dossierController.inDescent = inDescent;
+        }
 
         if (menu.RewardTrack != null)
         {

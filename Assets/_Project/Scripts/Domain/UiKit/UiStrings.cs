@@ -207,6 +207,9 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString DossierSpendPoint =
             UiString.Define("dossier.spend_point", "+");
+
+        public static readonly UiString DossierRefundPoint =
+            UiString.Define("dossier.refund_point", "-");
         // ---- the hub -------------------------------------------------------
 
         // Three currencies, not two. Embers is what talents actually cost and

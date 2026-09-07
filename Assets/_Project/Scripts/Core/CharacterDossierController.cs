@@ -82,6 +82,14 @@ namespace PrincesPalace
         // test that pins "the fight's copy is inert" reads unchanged.
         public bool EquipLocked => lockedForFight;
 
+        // Set by ScreenRegistry from WireSystemMenu's own inDescent parameter,
+        // not part of WireDossier's signature -- two adjacent bools in one
+        // parameter list are transposable (CODE_STANDARDS.md §5). Gates the
+        // dossier's refund minus: only the hub copy of this screen shows it,
+        // so a build revised mid-run can only be reconsidered between
+        // descents, never undone inside one.
+        [SerializeField] internal bool inDescent;
+
         [SerializeField] internal Button[] slotCells;
         [SerializeField] internal Image[] slotIcons;
         [SerializeField] internal TMP_Text[] slotLabels;
@@ -92,6 +100,9 @@ namespace PrincesPalace
         // One "+" per attribute cell, and the label saying how many points are
         // waiting. See Spend().
         [SerializeField] internal Button[] attributePluses;
+
+        // One "-" per attribute cell, mirrored off the plus. See Refund().
+        [SerializeField] internal Button[] attributeMinuses;
         [SerializeField] internal TMP_Text unspentPoints;
         [SerializeField] internal TMP_Text[] attributeValues;
         [SerializeField] internal TMP_Text[] attributeKeys;
@@ -253,6 +264,20 @@ namespace PrincesPalace
 
                     int cell = i;
                     attributePluses[i].onClick.AddListener(() => Spend(cell));
+                }
+            }
+
+            // THE "-" PER SCORE, beside the plus for the same reasons: below
+            // the lockedForFight guard, indexed by cell and resolved through
+            // _cellOrder at click time.
+            if (attributeMinuses != null)
+            {
+                for (int i = 0; i < attributeMinuses.Length; i++)
+                {
+                    if (attributeMinuses[i] == null) continue;
+
+                    int cell = i;
+                    attributeMinuses[i].onClick.AddListener(() => Refund(cell));
                 }
             }
 
@@ -890,6 +915,30 @@ namespace PrincesPalace
             Refresh();
         }
 
+        // Takes one point back out of the score sitting in cell `index`. Same
+        // cell-not-score resolution as Spend, and the same reason for it.
+        //
+        // A hidden button is still EventSystem-reachable, so this guards
+        // itself rather than trusting that the minus was inactive when
+        // clicked -- Spend guards inside the method for the same reason.
+        private void Refund(int index)
+        {
+            if (lockedForFight || inDescent) return;
+
+            var squad = Squad();
+            if (squad.Count == 0) return;
+            if (_index < 0 || _index >= squad.Count) return;
+
+            var character = squad[_index];
+            if (character == null) return;
+            if (index < 0 || index >= _cellOrder.Count) return;
+
+            if (!character.Refund(_cellOrder[index])) return;
+
+            SaveSlotManager.SaveCurrent();
+            Refresh();
+        }
+
         // Shows the "+" on every cell when there is a point to spend, and says
         // how many.
         //
@@ -920,6 +969,27 @@ namespace PrincesPalace
                 // Only cells that actually hold a score. _cellOrder is rebuilt
                 // per character and a content pass could leave it short.
                 attributePluses[i].gameObject.SetActive(canSpend && i < _cellOrder.Count);
+            }
+
+            // The minus is gated PER CELL, where the plus above is gated
+            // GLOBALLY, and that is the whole reason this is not a copy-paste
+            // of the loop above. An unspent point can go into any of the six
+            // scores, so one condition answers all six pluses. A refund can
+            // only come back out of a score that has something invested in
+            // it, which is a different condition on every cell -- and it is
+            // exactly what makes Character.Refund return true for that cell,
+            // so the button and the model can never disagree about it.
+            if (attributeMinuses == null) return;
+
+            bool canRefund = !lockedForFight && !inDescent;
+            for (int i = 0; i < attributeMinuses.Length; i++)
+            {
+                if (attributeMinuses[i] == null) continue;
+
+                bool hasInvested = character != null
+                    && i < _cellOrder.Count
+                    && character.investedAbilityScores[_cellOrder[i]] > 0;
+                attributeMinuses[i].gameObject.SetActive(canRefund && hasInvested);
             }
         }
 

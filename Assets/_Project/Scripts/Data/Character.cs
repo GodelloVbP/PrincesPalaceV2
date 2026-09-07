@@ -153,18 +153,10 @@ namespace PrincesPalace
         // a bulk-invest API would need its own partial-success story (what
         // happens when you ask for 5 and can afford 3) for no gain.
         //
-        // There is deliberately no matching Refund, and the reason given for
-        // that has to change: it was "a placed point is placed for the rest of
-        // the run ... and the run ending is already a full reset, so nobody is
-        // stuck with a build forever". The second half was never true. Nothing
-        // resets these (see `level` above), so a placed point is placed
-        // FOREVER, and the escape hatch this argument leaned on does not
-        // exist.
-        //
-        // Left without a Refund anyway, for the half of the argument that
-        // survives: a point you can take back is a slider, and levelling
-        // should be a decision. The way out is a deliberate, earned respec
-        // rather than an always-available undo.
+        // A point you can take back is a slider, and levelling should be a
+        // decision -- Refund below exists, but only where the dossier's hub
+        // copy puts its minus. That is what keeps the decision a decision:
+        // revisable between descents, not undoable inside one.
         public bool Invest(AbilityScore score)
         {
             if (unspentStatPoints <= 0)
@@ -174,6 +166,28 @@ namespace PrincesPalace
 
             unspentStatPoints--;
             investedAbilityScores = investedAbilityScores.With(score, investedAbilityScores[score] + 1);
+            return true;
+        }
+
+        // Takes one point back out of `score` and returns it to
+        // unspentStatPoints. Returns false, changing nothing, when nothing is
+        // invested in that score -- same "safe to drive a button off it"
+        // contract as Invest above.
+        //
+        // Can flip a worn item inert, and that is not a bug: invested points
+        // are part of the equipment requirement floor
+        // (ContentDatabase.Effective.cs), so a sword lifted by levelling into
+        // Strength goes back down when the point does. Not silent -- the
+        // caller repaints the paperdoll in the same frame.
+        public bool Refund(AbilityScore score)
+        {
+            if (investedAbilityScores[score] <= 0)
+            {
+                return false;
+            }
+
+            unspentStatPoints++;
+            investedAbilityScores = investedAbilityScores.With(score, investedAbilityScores[score] - 1);
             return true;
         }
 

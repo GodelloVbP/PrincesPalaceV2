@@ -67,6 +67,57 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // The minus mirrors the plus across the cell's own centre. Solved in
+        // canvas space, so both centres are read relative to the cell's own
+        // solved centre before comparing -- the cell itself sits wherever the
+        // grid places it, and only the offset inside it is what §7 measured.
+        //
+        // Literal expected values, not DossierLayout's own constants: a bug
+        // that broke the constants and this test's use of them the same way
+        // would still pass.
+        //
+        // NOT §7's own literals. ContentCWidth carried a stale "// 340"
+        // comment (DossierLayout.cs:632, now fixed) against a computed 400 --
+        // ColumnCWidth(480) - ColumnCPadX(40)*2. §7's arithmetic was built on
+        // the comment rather than the computation, so its 42.67/63.33 read as
+        // plausible and were wrong; these are recomputed from the real
+        // constants once, by hand, and then pinned as literals so a second
+        // regression here cannot mark its own homework either.
+        [Test]
+        public void TheMinusSitsOppositeThePlusInsideItsCell()
+        {
+            var solved = UiSolver.Solve(CharacterDossierScreen.Build().Root, UiFrames.Reference);
+            var cell = FindSolved(solved, "DossierAttrCell0");
+            var plus = FindSolved(solved, "DossierAttrPlus0");
+            var minus = FindSolved(solved, "DossierAttrMinus0");
+
+            Assert.IsNotNull(cell);
+            Assert.IsNotNull(plus);
+            Assert.IsNotNull(minus);
+
+            Assert.AreEqual(131.33f, cell.Rect.Width, 0.01f);
+            Assert.AreEqual(84f, cell.Rect.Height, 0.01f);
+
+            var plusLocal = plus.Rect.Centre - cell.Rect.Centre;
+            var minusLocal = minus.Rect.Centre - cell.Rect.Centre;
+
+            Assert.AreEqual(52.67f, plusLocal.X, 0.01f);
+            Assert.AreEqual(29f, plusLocal.Y, 0.01f);
+            Assert.AreEqual(22f, plus.Rect.Width, 0.01f);
+            Assert.AreEqual(22f, plus.Rect.Height, 0.01f);
+
+            Assert.AreEqual(-52.67f, minusLocal.X, 0.01f);
+            Assert.AreEqual(29f, minusLocal.Y, 0.01f);
+            Assert.AreEqual(22f, minus.Rect.Width, 0.01f);
+            Assert.AreEqual(22f, minus.Rect.Height, 0.01f);
+
+            float gap = plus.Rect.Left - minus.Rect.Right;
+            Assert.AreEqual(83.33f, gap, 0.01f);
+        }
+
+        private static SolvedNode FindSolved(SolvedNode root, string name) =>
+            root.Name == name ? root : root.Descendants().FirstOrDefault(n => n.Name == name);
+
         private static System.Collections.Generic.IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;
