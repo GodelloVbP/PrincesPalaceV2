@@ -124,6 +124,19 @@ namespace PrincesPalace
         private float[] _seatArtFloorY;
         private float[] _cardArtFloorY;
 
+        // ONE SCALE PER SLOT KIND, recomputed each Paint from the roster's
+        // own idle canvases (PartyArtScale.ScaleFor) rather than each Image
+        // fitting its own sprite into the box independently -- see
+        // PartyArtScale's own header for the defect this replaces (a bigger
+        // canvas got shrunk MORE to fill the same fixed box, so an actor
+        // delivered on a larger sheet read smaller than one on a smaller
+        // sheet, backwards from the fight stage where every actor draws at
+        // native pixel size). Defaults to 1f (native size) before the first
+        // Paint, same answer PartyArtScale.NoRosterScale gives an empty
+        // roster.
+        private float _seatArtScale = 1f;
+        private float _cardArtScale = 1f;
+
         // ---- P4: drag session state ---------------------------------------------
 
         // Whether THIS controller's own BeginDrag accepted the gesture that
@@ -534,6 +547,17 @@ namespace PrincesPalace
 
             PaintHeader();
 
+            // ONE PASS OVER THE ROSTER'S OWN CANVASES, before either row
+            // paints -- both slot kinds measure against the SAME tallest
+            // actor (PartyArtScale's own header), so a seat and a card
+            // showing the same occupant always agree on how big he is drawn.
+            var canvasHeights = _rosterIds
+                .Select(id => ArtFor(id))
+                .Where(sprite => sprite != null)
+                .Select(sprite => sprite.rect.height);
+            _seatArtScale = PartyArtScale.ScaleFor(PartyLayout.ArtHeight, canvasHeights);
+            _cardArtScale = PartyArtScale.ScaleFor(PartyLayout.CardArtHeight, canvasHeights);
+
             for (int i = 0; i < PartySeat.Count; i++) PaintSeat(i);
 
             int cardCount = cardButtons?.Length ?? 0;
@@ -590,6 +614,7 @@ namespace PrincesPalace
             var art = occupantId != null ? ArtFor(occupantId) : null;
             bool hasArt = art != null;
             SetArt(seatArts, seat, art);
+            ScaleArt(At(seatArts, seat), art, _seatArtScale);
             GroundArt(At(seatArts, seat), FloorYAt(_seatArtFloorY, seat), art,
                 occupantId != null ? BattleSpritePathFor(occupantId) : null);
             SetShown(seatMonogramPlates, seat, occupantId != null && !hasArt);
@@ -639,6 +664,7 @@ namespace PrincesPalace
             var art = ArtFor(id);
             bool hasArt = art != null;
             SetArt(cardArts, index, art);
+            ScaleArt(At(cardArts, index), art, _cardArtScale);
             GroundArt(At(cardArts, index), FloorYAt(_cardArtFloorY, index), art, BattleSpritePathFor(id));
             SetShown(cardMonogramPlates, index, !hasArt);
             SetMonogram(cardMonogramLetters, index, !hasArt, id);
@@ -703,6 +729,34 @@ namespace PrincesPalace
             SetShown(cardWashes, index, false);
         }
 
+        // ---- common scale (P5) ------------------------------------------------------
+        //
+        // Sizes the slot's own RectTransform to the sprite's NATIVE size times
+        // the roster-wide scale Paint just computed (PartyArtScale.ScaleFor),
+        // rather than leaving the box at its authored fixed size for
+        // preserveAspect to fit into. Width and height both move by the same
+        // factor, so the box's own aspect ratio always ends up matching the
+        // sprite's -- preserveAspect (still set by AlignArtSlots) is then a
+        // no-op, kept only as a safety net against a rounding gap between the
+        // two.
+        //
+        // Only pivot.x = 0.5 is in play here (AlignArtSlots already moved
+        // pivot.y to 0, bottom-anchored) -- sizeDelta grows/shrinks the box
+        // symmetrically about its own centre X and upward from its pinned
+        // floor Y, so the art stays centred in its column/card without this
+        // method touching anchoredPosition at all; GroundArt (below) is what
+        // moves the box off that floor for the ground-line shift.
+        //
+        // A null sprite is a no-op: HideCard/an empty seat leave the Image
+        // inactive, so its box's leftover size from a previous occupant is
+        // never seen.
+        private static void ScaleArt(Image image, Sprite sprite, float scale)
+        {
+            if (image == null || sprite == null) return;
+
+            image.rectTransform.sizeDelta = new Vector2(sprite.rect.width * scale, sprite.rect.height * scale);
+        }
+
         // ---- ground line (P4) ------------------------------------------------------
         //
         // The fight stage grounds a figure against its stance manifest's own
@@ -712,22 +766,24 @@ namespace PrincesPalace
         // (Resources/StanceManifest.json's "Characters/sheep" entry). P3's
         // AlignArtSlots pinned every slot's canvas-bottom to the slot floor
         // instead, which DECISIONS.md flagged as a known gap. This closes it
-        // the same way the stage does, adapted for a slot that draws with
-        // preserveAspect inside a FIXED box rather than at native size:
+        // the same way the stage does, adapted for a slot that draws at a
+        // roster-common scale (ScaleArt, above) rather than at native size:
         //
         //   1. AlignArtSlots already pinned the UNSHIFTED canvas-bottom to
         //      the slot floor -- _seatArtFloorY/_cardArtFloorY remember that
         //      anchoredPosition.y so repeated repaints (a different occupant
         //      each time) always shift from the same baseline rather than
         //      compounding.
-        //   2. preserveAspect draws the sprite at MIN(box-width/sprite-width,
-        //      box-height/sprite-height) of its own source size -- the same
-        //      scale a shifted offset has to travel through, since the
-        //      manifest speaks in the sprite's own source pixels and this
-        //      slot never shows the sprite at that size.
+        //   2. ScaleArt already sized this image's own box to sprite-native
+        //      size times the common scale, so re-deriving that scale off the
+        //      box (rect-width/sprite-width, equivalently rect-height/sprite-
+        //      height -- ScaleArt makes the two agree exactly) needs no
+        //      second number threaded in from Paint.
         //   3. The shift is the manifest's ground line, scaled by exactly
         //      that factor (equivalently "drawn height / source height",
-        //      since drawnHeight = sourceHeight * scale by construction).
+        //      since drawnHeight = sourceHeight * scale by construction) --
+        //      the manifest speaks in the sprite's own source pixels, and
+        //      this slot no longer shows the sprite at that size.
         //
         // FALLS BACK TO CANVAS-BOTTOM (no shift) for any actor with no
         // manifest entry -- StanceManifest.GroundLineFor already returns

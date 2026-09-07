@@ -473,6 +473,47 @@ namespace PrincesPalace.PlayModeTests
                 "the ground-line shift should sit BELOW plain canvas-bottom, not above it");
         }
 
+        // ---- P5: one common scale per slot kind, not a per-actor fit ------------
+        //
+        // Bjorn (bear, idle canvas 486x467) is delivered on a bigger canvas
+        // than Shawn (sheep, 540x370) -- see PartyArtScale's own header for
+        // the defect this pins shut. If PartyController still fit each
+        // occupant into the seat box independently, both would be drawn at
+        // the SAME height (the box's) regardless of canvas size; the whole
+        // point of PartyArtScale.ScaleFor is that they are not.
+        [UnityTest]
+        public IEnumerator BjornsSeatArtIsTallerThanShawnsByTheirOwnCanvasRatio()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+
+            OpenParty();
+            yield return null;
+
+            var shawnImage = NodeOf("PartySeat0Art").GetComponent<Image>();
+            var bjornImage = NodeOf("PartySeat1Art").GetComponent<Image>();
+            Assert.IsNotNull(shawnImage?.sprite, "Shawn's own idle art did not resolve -- nothing to compare");
+            Assert.IsNotNull(bjornImage?.sprite, "Bjorn's own idle art did not resolve -- nothing to compare");
+
+            float shawnDrawnHeight = shawnImage.rectTransform.rect.height;
+            float bjornDrawnHeight = bjornImage.rectTransform.rect.height;
+
+            // ONE SHARED SCALE means Bjorn's drawn height divided by Shawn's
+            // must equal their raw SPRITE heights' own ratio -- exactly the
+            // relative size the fight stage already draws them at, since
+            // that stage applies no per-actor fit at all.
+            float expectedBjornHeight = shawnDrawnHeight * (bjornImage.sprite.rect.height / shawnImage.sprite.rect.height);
+
+            Assert.AreEqual(expectedBjornHeight, bjornDrawnHeight, 1f,
+                "Bjorn's drawn seat-art height is not Shawn's own drawn height scaled by their sprite-height " +
+                "ratio -- each is still being fit into the slot independently rather than at one common scale");
+            Assert.Greater(bjornDrawnHeight, shawnDrawnHeight,
+                "Bjorn's canvas (467px tall) is taller than Shawn's (370px) -- he should read as the taller " +
+                "figure in the seat row, matching the fight stage rather than being shrunk to match the slot");
+        }
+
         // ---- fixture --------------------------------------------------------------
 
         private static IEnumerator LoadScene(string name)
