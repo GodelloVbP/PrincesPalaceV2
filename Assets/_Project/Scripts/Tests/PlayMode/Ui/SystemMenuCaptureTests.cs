@@ -190,9 +190,7 @@ namespace PrincesPalace.PlayModeTests
             // shot and down in the next, which reads as a bug in the preview
             // rather than as drift in the fixture. So the file is put back
             // exactly as it was, and the manager's cache dropped with it.
-            string savePath = Path.Combine(Application.persistentDataPath,
-                                           $"save_slot_{SaveSlotManager.CurrentSlot}.json");
-            string backup = File.Exists(savePath) ? File.ReadAllText(savePath) : null;
+            string backup = BackupSave();
 
             var whoever = SaveSlotManager.CurrentSave?.ActiveSquad()?.FirstOrDefault(c => c != null);
             var wornBefore = whoever?.equipment == null ? null
@@ -232,10 +230,39 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(File.Exists(optionsPath));
             Debug.Log($"[SystemMenuCapture] wrote {optionsPath}");
 
-            if (backup != null) File.WriteAllText(savePath, backup);
-            else if (File.Exists(savePath)) File.Delete(savePath);
+            // NO try/finally: an assertion thrown between BackupSave() and here
+            // would skip this restore and leave the real save mutated. Known
+            // and accepted for this capture (equip is a single step with a
+            // narrow failure window); CaptureTheParty below does the same
+            // backup/restore across a longer sequence of commits and DOES wrap
+            // it, because that window is wide enough to matter.
+            RestoreSave(backup);
+        }
+
+        // Backs up save_slot_{CurrentSlot}.json verbatim, and restores it
+        // byte-for-byte (or deletes it if none existed) plus drops
+        // SaveSlotManager's cache. Shared by every capture in this file that
+        // has to commit a real mutation (equip, formation swap) to get the
+        // picture it wants -- Application.persistentDataPath is the REAL save
+        // location (RootOverride is null in this suite), shared between the
+        // main project and the TestRunner copies because they carry the same
+        // company/product name, so nothing here is a throwaway file.
+        private static string BackupSave()
+        {
+            string path = SavePathForCurrentSlot();
+            return File.Exists(path) ? File.ReadAllText(path) : null;
+        }
+
+        private static void RestoreSave(string backup)
+        {
+            string path = SavePathForCurrentSlot();
+            if (backup != null) File.WriteAllText(path, backup);
+            else if (File.Exists(path)) File.Delete(path);
             SaveSlotManager.Forget();
         }
+
+        private static string SavePathForCurrentSlot() =>
+            Path.Combine(Application.persistentDataPath, $"save_slot_{SaveSlotManager.CurrentSlot}.json");
 
         // The two panes that only exist mid-run, captured FROM the map so the
         // five-tab bar and the in-run lintel are in shot with them.
@@ -253,69 +280,83 @@ namespace PrincesPalace.PlayModeTests
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
             }
 
-            // A run with something to say. Captured against invented history
-            // rather than a fresh run, because a run that has done nothing
-            // prints eighteen zeroes and shows nothing about the layout.
-            RunManager.StartRun(4242);
-            var run = RunManager.Run;
-            RunLedger.RecordRoom(run, won: true, goldGained: 40, expGained: 15, step: 3);
-            RunLedger.RecordRoom(run, won: true, goldGained: 88, expGained: 30, step: 6);
-            RunLedger.Fold(run, LoudFight());
+            // StartRun/EndRun both persist through RunManager.Persist() ->
+            // SaveSlotManager.SaveCurrent() -- the same real save
+            // CaptureTheParty guards above. Found while diagnosing THAT bug:
+            // the file's hash still moved on a run with CaptureTheParty's own
+            // backup/restore already in place, because this capture was the
+            // other leak writing to it. Same fix, same helper.
+            string backup = BackupSave();
+            try
+            {
+                // A run with something to say. Captured against invented
+                // history rather than a fresh run, because a run that has
+                // done nothing prints eighteen zeroes and shows nothing about
+                // the layout.
+                RunManager.StartRun(4242);
+                var run = RunManager.Run;
+                RunLedger.RecordRoom(run, won: true, goldGained: 40, expGained: 15, step: 3);
+                RunLedger.RecordRoom(run, won: true, goldGained: 88, expGained: 30, step: 6);
+                RunLedger.Fold(run, LoudFight());
 
-            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+                yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
 
-            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the Map scene has no SystemMenuController");
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(menu, "the Map scene has no SystemMenuController");
 
-            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
-                .FirstOrDefault(c => c.isRootCanvas);
-            Assert.IsNotNull(canvas);
+                var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                    .FirstOrDefault(c => c.isRootCanvas);
+                Assert.IsNotNull(canvas);
 
-            Directory.CreateDirectory(OutputDir);
+                Directory.CreateDirectory(OutputDir);
 
-            menu.Open();
-            menu.Select(SystemMenuTab.RunStats);
-            yield return new WaitForSecondsRealtime(0.4f);
+                menu.Open();
+                menu.Select(SystemMenuTab.RunStats);
+                yield return new WaitForSecondsRealtime(0.4f);
 
-            string statsPath = Path.Combine(OutputDir, "SystemMenu_run_stats.png");
-            CanvasCapture.RenderToFile(canvas, statsPath);
-            Assert.IsTrue(File.Exists(statsPath));
-            Debug.Log($"[SystemMenuCapture] wrote {statsPath}");
+                string statsPath = Path.Combine(OutputDir, "SystemMenu_run_stats.png");
+                CanvasCapture.RenderToFile(canvas, statsPath);
+                Assert.IsTrue(File.Exists(statsPath));
+                Debug.Log($"[SystemMenuCapture] wrote {statsPath}");
 
-            // And the exits, with abandon showing -- which it only does in a
-            // descent, so this scene is the only place the card can be seen.
-            menu.Select(SystemMenuTab.MainMenu);
-            yield return new WaitForSecondsRealtime(0.4f);
+                // And the exits, with abandon showing -- which it only does in a
+                // descent, so this scene is the only place the card can be seen.
+                menu.Select(SystemMenuTab.MainMenu);
+                yield return new WaitForSecondsRealtime(0.4f);
 
-            string exitsPath = Path.Combine(OutputDir, "SystemMenu_main_menu.png");
-            CanvasCapture.RenderToFile(canvas, exitsPath);
-            Assert.IsTrue(File.Exists(exitsPath));
-            Debug.Log($"[SystemMenuCapture] wrote {exitsPath}");
+                string exitsPath = Path.Combine(OutputDir, "SystemMenu_main_menu.png");
+                CanvasCapture.RenderToFile(canvas, exitsPath);
+                Assert.IsTrue(File.Exists(exitsPath));
+                Debug.Log($"[SystemMenuCapture] wrote {exitsPath}");
 
-            // Half way through the hold, which is the state the design actually
-            // specified -- a fill drawn in the button -- and the one thing about
-            // this pane that a still of it at rest does not show.
-            var hold = Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-                .FirstOrDefault();
-            Assert.IsNotNull(hold, "the abandon button has no hold behaviour attached");
+                // Half way through the hold, which is the state the design actually
+                // specified -- a fill drawn in the button -- and the one thing about
+                // this pane that a still of it at rest does not show.
+                var hold = Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                    .FirstOrDefault();
+                Assert.IsNotNull(hold, "the abandon button has no hold behaviour attached");
 
-            hold.Begin();
-            hold.Advance(hold.Seconds * 0.55f);
-            yield return null;
+                hold.Begin();
+                hold.Advance(hold.Seconds * 0.55f);
+                yield return null;
 
-            string holdPath = Path.Combine(OutputDir, "SystemMenu_abandon_hold.png");
-            CanvasCapture.RenderToFile(canvas, holdPath);
-            Assert.IsTrue(File.Exists(holdPath));
-            Debug.Log($"[SystemMenuCapture] wrote {holdPath}");
+                string holdPath = Path.Combine(OutputDir, "SystemMenu_abandon_hold.png");
+                CanvasCapture.RenderToFile(canvas, holdPath);
+                Assert.IsTrue(File.Exists(holdPath));
+                Debug.Log($"[SystemMenuCapture] wrote {holdPath}");
 
-            // Let go before the capture's own hold ends the run it is standing
-            // in. Advance() fires Completed at the top, so leaving this out
-            // would abandon the descent and navigate mid-capture.
-            hold.Cancel();
-            RunManager.EndRun();
-            SaveSlotManager.Forget();
+                // Let go before the capture's own hold ends the run it is standing
+                // in. Advance() fires Completed at the top, so leaving this out
+                // would abandon the descent and navigate mid-capture.
+                hold.Cancel();
+                RunManager.EndRun();
+            }
+            finally
+            {
+                RestoreSave(backup);
+            }
         }
 
         // The Party pane, in three states.
@@ -336,42 +377,86 @@ namespace PrincesPalace.PlayModeTests
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
             }
 
-            // STATE 1: default camp, nothing selected.
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // THIS TEST COMMITS TWO REAL FORMATION CHANGES (below) to produce
+            // the swap and toast pictures, and PartyController.Persist()
+            // writes every commit straight through SaveSlotManager.SaveCurrent()
+            // to the REAL save on disk -- there is no test-only slot here. Left
+            // unrestored, every -Runtime run of this file silently reordered
+            // the player's actual squad; caught because two runs in a row
+            // disagreed with each other about who was in front. Same shape as
+            // CaptureTheSkeletonOnEachTab's equip capture above, but wrapped in
+            // try/finally rather than a plain tail: that capture is one commit
+            // with a narrow failure window, this one is two commits across
+            // several yields, and a failed assertion between them must not
+            // strand the real save mid-swap.
+            string backup = BackupSave();
+            try
+            {
+                // Reset to the save's OWN authored default squad before the
+                // camp-default shot is taken, rather than trusting whatever
+                // order the developer's real slot happens to be in.
+                // "Default" is a claim about content (characters.json's three
+                // starters, front-to-back), not about whatever the last
+                // session left on disk -- and CaptureTheSkeletonOnEachTab's
+                // equip capture already showed what depending on the real
+                // slot's incidental state does to a fixture: two runs, two
+                // different pictures, read as a bug rather than as drift.
+                // Consistent with that capture's restore-the-real-file
+                // approach: this resets to a KNOWN state instead (via
+                // SaveData.CreateNew()) rather than merely hoping the real
+                // slot happens to already be in default order.
+                SaveSystem.Save(SaveData.CreateNew(), SaveSlotManager.CurrentSlot);
+                SaveSlotManager.Forget();
 
-            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
-            menu.Open();
-            menu.Select(SystemMenuTab.Party);
-            yield return null;
+                // STATE 1: default camp, nothing selected.
+                yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
 
-            var party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(party, "the Party tab has no PartyController");
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+                menu.Open();
+                menu.Select(SystemMenuTab.Party);
+                yield return null;
 
-            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
-                .FirstOrDefault(c => c.isRootCanvas);
-            Assert.IsNotNull(canvas);
+                var party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(party, "the Party tab has no PartyController");
 
-            Directory.CreateDirectory(OutputDir);
-            yield return Capture("SystemMenu_party_camp_default.png", canvas);
+                var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                    .FirstOrDefault(c => c.isRootCanvas);
+                Assert.IsNotNull(canvas);
 
-            // STATE 2: a seated card selected -- every position it could swap
-            // with shows its live "Swap with {name}" badge and a gold ring.
-            party.ClickSeat(PartySeat.Front);
-            yield return null;
-            yield return Capture("SystemMenu_party_swap_preview.png", canvas);
-            party.Cancel();
-            yield return null;
+                Directory.CreateDirectory(OutputDir);
+                yield return Capture("SystemMenu_party_camp_default.png", canvas);
 
-            // STATE 4 (P4): right after a committed swap -- the toast, at
-            // full alpha before its fade begins (PartyToast.Show holds full
-            // alpha for its first HoldSeconds).
-            party.ClickSeat(PartySeat.Front);
-            party.ClickSeat(PartySeat.Middle);
-            yield return null;
-            yield return Capture("SystemMenu_party_toast.png", canvas);
+                // STATE 2: a seated card selected -- every position it could swap
+                // with shows its live "Swap with {name}" badge and a gold ring.
+                party.ClickSeat(PartySeat.Front);
+                yield return null;
+                yield return Capture("SystemMenu_party_swap_preview.png", canvas);
+                party.Cancel();
+                yield return null;
+
+                // STATE 4 (P4): right after a committed swap -- the toast, at
+                // full alpha before its fade begins (PartyToast.Show holds full
+                // alpha for its first HoldSeconds).
+                party.ClickSeat(PartySeat.Front);
+                party.ClickSeat(PartySeat.Middle);
+                yield return null;
+                yield return Capture("SystemMenu_party_toast.png", canvas);
+            }
+            finally
+            {
+                // Restored HERE -- before the Map load below -- so STATE 3
+                // sees the ORIGINAL real order rather than either the
+                // synthetic default squad or the swap just committed above.
+                // A finally in an iterator runs on normal exception
+                // propagation through MoveNext() same as any method (Dispose
+                // is only needed for the yield-suspended case, not this one),
+                // so an assertion failing anywhere in the try still restores
+                // the real save before the test ends.
+                RestoreSave(backup);
+            }
 
             // STATE 3: in a run -- reposition only, captured from the map so
             // the five-tab bar and the in-run lintel are in shot with it.
@@ -379,17 +464,17 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(menu, "the map has no SystemMenuController");
-            menu.Open();
-            menu.Select(SystemMenuTab.Party);
+            var mapMenu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(mapMenu, "the map has no SystemMenuController");
+            mapMenu.Open();
+            mapMenu.Select(SystemMenuTab.Party);
             yield return null;
 
-            canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+            var mapCanvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(c => c.isRootCanvas);
-            Assert.IsNotNull(canvas);
+            Assert.IsNotNull(mapCanvas);
 
-            yield return Capture("SystemMenu_party_run_mode.png", canvas);
+            yield return Capture("SystemMenu_party_run_mode.png", mapCanvas);
         }
 
         private static IEnumerator Capture(string fileName, Canvas canvas)
