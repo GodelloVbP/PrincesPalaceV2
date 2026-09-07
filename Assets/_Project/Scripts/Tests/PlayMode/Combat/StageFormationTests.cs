@@ -61,8 +61,12 @@ namespace PrincesPalace.PlayModeTests
         // deterministic (CLAUDE.md gotcha 5).
         private static readonly Vector2 NearMark = new Vector2(300f, -218f);
         private static readonly Vector2 FarMark = new Vector2(565f, -125f);
-        private static readonly Vector2 PartyNearMark = new Vector2(-300f, -218f);
-        private static readonly Vector2 PartyFarMark = new Vector2(-565f, -125f);
+
+        // C4: the party (mirrored) side stands FightStageAnchors.PartyRetreat
+        // (60px) further back on X than the enemy side's plain mirror image
+        // -- -360/-625, not -300/-565.
+        private static readonly Vector2 PartyNearMark = new Vector2(-360f, -218f);
+        private static readonly Vector2 PartyFarMark = new Vector2(-625f, -125f);
 
         // A mark is arrived at or it is not; the walk lands on the exact value
         // rather than easing asymptotically into it (StageActorAnimator.Gliding
@@ -300,8 +304,10 @@ namespace PrincesPalace.PlayModeTests
             // about the FRACTION of each, not about equal alphas.
             float bodyBase = AlphaOf("Enemy0Sprite");
             float ringBase = AlphaOf("Enemy0FootShadow");
+            float glowBase = AlphaOf("Enemy0FootGlow");
             Assert.Greater(bodyBase, 0f, "the doomed monster is already invisible");
             Assert.Greater(ringBase, 0f, "the doomed monster's contact ring is already invisible");
+            Assert.Greater(glowBase, 0f, "the doomed monster's foot glow is already invisible");
 
             Time.captureDeltaTime = SampleSeconds;
 
@@ -318,6 +324,7 @@ namespace PrincesPalace.PlayModeTests
 
                 float body = AlphaOf("Enemy0Sprite") / bodyBase;
                 float ring = AlphaOf("Enemy0FootShadow") / ringBase;
+                float glow = AlphaOf("Enemy0FootGlow") / glowBase;
 
                 // THE RING GOES WITH THE BODY. A corpse whose shadow stayed put
                 // reads as the sprite failing to draw rather than as a death --
@@ -325,6 +332,12 @@ namespace PrincesPalace.PlayModeTests
                 // holds that true through a real kill.
                 Assert.AreEqual(body, ring, 0.01f,
                     $"frame {frame}: the body is at {body:F2} of its opacity and the ring at {ring:F2}");
+
+                // AND THE GLOW GOES WITH BOTH (C2) -- a corpse whose foot
+                // glow stayed lit read as a smudge of light left behind
+                // rather than as part of the same death.
+                Assert.AreEqual(body, glow, 0.01f,
+                    $"frame {frame}: the body is at {body:F2} of its opacity and the glow at {glow:F2}");
 
                 if (fadedFrame < 0 && body <= 0.001f) fadedFrame = frame;
 
@@ -346,6 +359,17 @@ namespace PrincesPalace.PlayModeTests
 
             AssertMark("Enemy1Slot", NearMark,
                 "the survivor is the only one standing, so it holds rank 0 and the near mark");
+
+            // AND RESET FOR THE NEXT FIGHT (C2) -- a fresh StandUp reuses
+            // these same slots, and a fade left at zero would leave the
+            // glow (like the body and the ring before it) invisible for
+            // whichever combatant next stands in Enemy0Slot.
+            var nextFoe = new CombatantState("Next", false, 5000, 0, 4, 3);
+            StandUp(new[] { hero }, new[] { nextFoe });
+            yield return null;
+
+            Assert.AreEqual(glowBase, AlphaOf("Enemy0FootGlow"), 0.01f,
+                "the foot glow did not reset to full opacity for the next fight's occupant of this slot");
         }
 
         // ---- watching one round -----------------------------------------------

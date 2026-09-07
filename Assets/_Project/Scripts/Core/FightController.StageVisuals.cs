@@ -754,6 +754,26 @@ namespace PrincesPalace
             shadowRect.anchoredPosition = new Vector2(centre * slotRect.sizeDelta.x * mirror, 0f);
         }
 
+        // TEST SEAM (C3, PartyFormationCaptureTests/StageFormationTests):
+        // where the ring OUGHT to sit on the X axis for a combatant's
+        // CURRENTLY SHOWN sprite, converted into the same "stage pixels"
+        // space those fixtures already read StanceSpriteFor's rendered
+        // bounds in (RectTransformUtility.CalculateRelativeRectTransformBounds
+        // against the root canvas). Reuses the exact folder lookup and
+        // fraction PlaceShadow itself consults (SpriteFolderFor,
+        // ContentCentreFractionForActor) so a test cannot silently check
+        // against a different actor's manifest entry than production reads.
+        // `mirrorSign` is read off the sprite's own rectTransform.localScale.x
+        // by the caller -- RefreshCombatantSprite writes exactly that value,
+        // so this needs no second copy of StageFacing's mirroring rule.
+        public float ExpectedRingCentreXForTest(CombatantState combatant, Rect spriteRectStagePixels, float mirrorSign)
+        {
+            string folder = SpriteFolderFor(combatant);
+            float fraction = ContentCentreFractionForActor(folder);
+            float centreX = spriteRectStagePixels.x + spriteRectStagePixels.width * 0.5f;
+            return centreX + fraction * spriteRectStagePixels.width * mirrorSign;
+        }
+
         // HANDED IN rather than found with GetComponentInChildren off the
         // slot -- the array ScreenRegistry populated one-to-one with the
         // slots is the same lookup, done once at build time instead of once
@@ -1246,15 +1266,111 @@ namespace PrincesPalace
                 : StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
         }
 
+        // C3 ROOT CAUSE, confirmed with a throwaway diagnostic PlayMode test
+        // (Resources.Load("Characters/sheep/idle") + a raw GetPixels dump,
+        // run against the real imported asset): `sprite.textureRect` is NOT
+        // `sprite.rect`. Every stance PNG imports with Sprite Mesh Type
+        // Tight, which crops the texture DATA Unity actually stores down to
+        // the opaque bounding box -- for Shawn's idle, `rect` reports the
+        // full authored 540x370 canvas but `textureRect` is (65, 6, 280,
+        // 354), a sub-window well inside it. The measurement functions below
+        // (both the old whole-silhouette one and this file's first C3 pass)
+        // called `GetPixels(textureRect.x, textureRect.y, ...)` -- which
+        // correctly reads the trimmed pixel data -- and then divided by
+        // THAT SAME trimmed rect's own width to get a fraction, discarding
+        // its `.x`/`.y` OFFSET within the untrimmed canvas entirely. A tight
+        // crop's content fills its own crop edge-to-edge BY CONSTRUCTION, so
+        // that fraction is always close to 0 no matter how far off-centre
+        // the art actually sits on the canvas PlaceShadow positions the ring
+        // against (`slotRect.sizeDelta = sprite.rect.size`, the UNTRIMMED
+        // width) -- which is exactly the "the offset reads as barely
+        // applied" symptom the capture showed. Confirmed numerically: the
+        // old whole-silhouette scan against the trimmed rect measured
+        // Shawn's fraction at ~0 (the shipped `footShadowAnchoredPosition.x
+        // == -0.87` in tools/screenshots/runtime/party_formation/a3 and
+        // /c3_after/slots.json, both captured before this fix); converting
+        // the same scan's pixel coordinates back into canvas space before
+        // dividing gives -0.121 (whole silhouette) / -0.133 (foot band) --
+        // which is what an offline scan of the same idle.png on disk, with
+        // no Unity import involved at all, independently gives too.
+        //
+        // THE FIX, IN ONE SENTENCE: every pixel coordinate GetPixels hands
+        // back is LOCAL TO THE TRIMMED CROP, and has to be translated back
+        // into canvas space (+ textureRect.x / .y) before it is compared
+        // against a canvas-space quantity (the ground line) or divided by
+        // the canvas's own width (sprite.rect.width, not textureRect.width).
+        //
+        // Was the whole silhouette's centroid (every opaque pixel, top to
+        // bottom); now it is the FOOT BAND's alone -- the 24 texture rows
+        // directly above the authored ground line. Even set aside from the
+        // trimming bug, the whole-silhouette centroid was always the wrong
+        // SPAN to average: a prop or a limb that never touches the ring's
+        // own ground line (Shawn's staff, a flyer's trailing wingtip) drags
+        // the measured centre away from where the FEET actually are.
+        private const int FootBandHeight = 24;
+
         private static float ContentCentreFractionForActor(string folder)
         {
             if (string.IsNullOrWhiteSpace(folder)) return 0f;
             if (ContentCentreCache.TryGetValue(folder, out var cached)) return cached;
 
             var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
-            float centre = ContentCentreFraction(idle);
+            float groundLine = StanceManifestLoader.Manifest.GroundLineFor(folder);
+            float centre = FootBandCentreFraction(idle, groundLine);
             ContentCentreCache[folder] = centre;
             return centre;
+        }
+
+        // How far the FOOT BAND's opaque pixels' horizontal midpoint sits
+        // from the canvas's, as a fraction of the FULL (untrimmed) canvas
+        // width -- `sprite.rect`, the same one `slotRect.sizeDelta` reads,
+        // never `sprite.textureRect`, which a Tight sprite mesh crops down
+        // to the opaque bounding box (see this method's own header above
+        // for the measured numbers that found this). The band is the
+        // `FootBandHeight` rows starting at the ground line and reaching
+        // up; the ground line is authored in canvas-bottom-relative pixels,
+        // which is `textureRect.y` rows above where GetPixels' own
+        // bottom-up row 0 sits, so that offset has to be subtracted before
+        // the ground line means anything as an index into the pixels
+        // GetPixels actually returns.
+        private static float FootBandCentreFraction(Sprite sprite, float groundLine)
+        {
+            if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
+
+            var textureRect = sprite.textureRect;
+            int cropX = (int)textureRect.x;
+            int cropY = (int)textureRect.y;
+            int cropWidth = (int)textureRect.width;
+            int cropHeight = (int)textureRect.height;
+            if (cropWidth <= 0 || cropHeight <= 0) return 0f;
+
+            float canvasWidth = sprite.rect.width;
+            if (canvasWidth <= 0f) return 0f;
+
+            int bandBottom = Mathf.Clamp(Mathf.RoundToInt(groundLine) - cropY, 0, Mathf.Max(cropHeight - 1, 0));
+            int bandTop = Mathf.Clamp(bandBottom + FootBandHeight, bandBottom, cropHeight);
+
+            var pixels = sprite.texture.GetPixels(cropX, cropY, cropWidth, cropHeight);
+            int left = int.MaxValue;
+            int right = int.MinValue;
+
+            for (int y = bandBottom; y < bandTop; y++)
+            {
+                for (int x = 0; x < cropWidth; x++)
+                {
+                    if (pixels[y * cropWidth + x].a <= 0.02f) continue;
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                }
+            }
+
+            if (left > right) return 0f;
+
+            // BACK INTO CANVAS SPACE (+cropX) before dividing by the canvas's
+            // own width -- see this method's own header for why dividing by
+            // the trimmed crop's width instead is the bug this replaces.
+            float midpointCanvasX = cropX + (left + right) * 0.5f;
+            return midpointCanvasX / canvasWidth - 0.5f;
         }
 
         // How far the topmost opaque pixel of the IDLE pose sits above the
@@ -1269,7 +1385,7 @@ namespace PrincesPalace
         // rather than as the canvas being taller than the pose.
         //
         // Measured rather than authored, and from the IDLE pose only, for the
-        // same reasons ContentCentreFraction is: a pose that raises an arm must
+        // same reasons FootBandCentreFraction is: a pose that raises an arm must
         // not drag the badge up with it, and one more authored number per actor
         // is a number that can rot. The ground line stays authored -- that one is
         // load-bearing enough to be worth the manifest.
@@ -1304,31 +1420,5 @@ namespace PrincesPalace
             return 0f;
         }
 
-        // How far the opaque pixels' horizontal midpoint sits from the canvas's,
-        // as a fraction of width. 0 means the figure is dead centre.
-        private static float ContentCentreFraction(Sprite sprite)
-        {
-            if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
-
-            var rect = sprite.textureRect;
-            int left = int.MaxValue;
-            int right = int.MinValue;
-
-            var pixels = sprite.texture.GetPixels((int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
-            for (int y = 0; y < (int)rect.height; y++)
-            {
-                for (int x = 0; x < (int)rect.width; x++)
-                {
-                    if (pixels[y * (int)rect.width + x].a <= 0.02f) continue;
-                    if (x < left) left = x;
-                    if (x > right) right = x;
-                }
-            }
-
-            if (left > right) return 0f;
-
-            float midpoint = (left + right) * 0.5f;
-            return midpoint / rect.width - 0.5f;
-        }
     }
 }

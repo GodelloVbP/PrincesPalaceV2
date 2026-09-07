@@ -125,6 +125,17 @@ namespace PrincesPalace.Domain.UiKit
         // crop the art inside its own box, which is a quieter, harder-to-spot
         // version of the same mistake; refusing it at declaration time is
         // cheaper than finding it in a screenshot.
+        // THE SAME KEY Container() BAKES ITS FRAME FROM, exposed publicly.
+        // ContainerArt is internal to this assembly and ScreenRegistry (Editor)
+        // carries no InternalsVisibleTo grant into it, so a caller that needs
+        // to LoadSpriteByKey a themed container at runtime -- the party plate's
+        // per-theme sprite array, Phase C1 -- would otherwise have to restate
+        // the "UI/Buttons/Processed/container_<theme>_<ratio>.png" format
+        // itself. Reusing the same builder is what keeps the two unable to
+        // disagree.
+        public static string ContainerKey(ButtonTheme theme, ContainerRatio ratio) =>
+            ContainerArt.Key(ContainerKind.Container, theme, ratio);
+
         public static UiNode Container(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
         {
             ValidateContainerAspect(name, "Container", ContainerKind.Container, ratio, size);

@@ -30,12 +30,23 @@ namespace PrincesPalace
         [SerializeField] internal Image sprite;
         [SerializeField] internal Image shadow;
 
+        // The soft bloom under the ring (FootGlow, a child of the shadow --
+        // see FightScreen.BuildStage) -- C2. Left out of the fade until now:
+        // the sprite and the ring both dimmed with a kill, but the glow sat
+        // at full brightness under a body that had otherwise faded away,
+        // which read as a smudge of light left behind rather than as part
+        // of the same death.
+        [SerializeField] internal Image glow;
+
         // Each image's own resting alpha — the shadow ring is baked at
         // 0.85, not 1, so fading has to scale RELATIVE to that rather than
         // overwrite it, or "reset to visible" would leave the ring more
-        // opaque than SceneBuilder ever authored it.
+        // opaque than SceneBuilder ever authored it. The glow carries its
+        // own baked alpha too (the shadowHex colour BuildStage paints it
+        // with), same reasoning.
         private float _spriteBaseAlpha = 1f;
         private float _shadowBaseAlpha = 1f;
+        private float _glowBaseAlpha = 1f;
 
         private Coroutine _running;
         private bool _played;
@@ -71,6 +82,11 @@ namespace PrincesPalace
             if (shadow != null)
             {
                 _shadowBaseAlpha = shadow.color.a;
+            }
+
+            if (glow != null)
+            {
+                _glowBaseAlpha = glow.color.a;
             }
         }
 
@@ -153,6 +169,7 @@ namespace PrincesPalace
         {
             SetImageAlpha(sprite, _spriteBaseAlpha * fraction);
             SetImageAlpha(shadow, _shadowBaseAlpha * fraction);
+            SetImageAlpha(glow, _glowBaseAlpha * fraction);
         }
 
         private static void SetImageAlpha(Image image, float alpha)

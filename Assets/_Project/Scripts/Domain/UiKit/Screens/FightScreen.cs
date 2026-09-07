@@ -78,6 +78,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyIntentIcons = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
 
+        // The soft bloom UNDER the contact ring (a child of the shadow --
+        // see BuildStage) -- C2: StageDeathFade fades this alongside the
+        // sprite and the ring, so a corpse's glow does not sit at full
+        // brightness under a body that has otherwise faded away.
+        public List<NodeRef> EnemyFootGlows = new List<NodeRef>();
+
         // The status row hanging under each enemy figure -- see BuildEnemy-
         // StatusRows. Flattened SLOT-MAJOR (slot 0's five badges, then slot
         // 1's, then slot 2's), matching every other per-slot list on this
@@ -97,6 +103,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
         public List<NodeRef> PartyNameplates = new List<NodeRef>();
         public List<NodeRef> PartyFootShadows = new List<NodeRef>();
+        public List<NodeRef> PartyFootGlows = new List<NodeRef>();
 
         public NodeRef BarkPanel;
         public NodeRef BarkPortrait;
@@ -116,6 +123,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyPlateBreakFills = new List<NodeRef>();
 
         public NodeRef PartyPlate;
+
+        // The plate's frame sprite (Container's "Art" child) -- see
+        // BuildPartyPlate's own note. C1: swapped at runtime by
+        // RefreshPartyPlate off the acting character's PlateTheme.
+        public NodeRef PartyPlateArt;
         public NodeRef PartyPortrait;
         public NodeRef PartyName;
         // PartyClass ("LV1 UTILITY") is GONE, B2 (balance-bot pass) -- see
@@ -255,10 +267,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // vanishing point at centre.
             var partyStage = s.BuildStage("Party", mirrored: true,
                 FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes,
-                s.PartyNameplates, s.PartyFootShadows);
+                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
-                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons, s.EnemyHitAreas);
+                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
             hud.Add(partyStage);
@@ -418,7 +430,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // what the controller and every test index by.
         private UiNode BuildStage(string prefix, bool mirrored, string shadowHex,
                                   List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
-                                  List<NodeRef> nameplates, List<NodeRef> shadows,
+                                  List<NodeRef> nameplates, List<NodeRef> shadows, List<NodeRef> glows,
                                   List<NodeRef> intentIcons = null,
                                   List<NodeRef> hitAreas = null)
         {
@@ -430,6 +442,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 flashes.Add(default);
                 nameplates.Add(default);
                 shadows.Add(default);
+                glows.Add(default);
                 intentIcons?.Add(default);
                 hitAreas?.Add(default);
             }
@@ -449,6 +462,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.Frac(new UiVec(-0.45f, -1.1f), new UiVec(1.45f, 2.1f)), UiSize.Fill)
                     .Coloured(shadowHex)
                     .AllowOverflow("the bloom behind the contact ring is meant to bleed well past it - that softness IS the effect");
+                glows[slot] = glow;
 
                 // the actor stands ON its own shadow - the sprite covering it
                 // is the point
@@ -1302,6 +1316,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Ui.ContainerContent(plate, ContainerRatio.TwoByOne, "PartyPlateContent", content.ToArray());
 
             PartyPlate = plate;
+
+            // THE FRAME ART ITSELF, not the plate's non-drawing wrapper --
+            // Ui.Container's BuildFrameHolder returns `plate` as a plain
+            // Panel with the themed sprite as its one Decor child (named
+            // "PartyPlateArt" by the "name + Art" convention every
+            // Container/FlagBanner uses). RefreshPartyPlate needs this
+            // node specifically to swap the runtime theme sprite -- the
+            // wrapper itself carries no Image to swap.
+            PartyPlateArt = plate.Children.FirstOrDefault();
+
             return plate;
         }
 

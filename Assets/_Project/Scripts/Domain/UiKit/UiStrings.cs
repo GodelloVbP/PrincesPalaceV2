@@ -640,8 +640,11 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("signature_value", "{0}/{1}", "16/16");
         public static readonly UiString StandingCount =
             UiString.Define("standing_count", "{0} STANDING", "99 STANDING");
-        public static readonly UiString LevelAndRole =
-            UiString.Define("level_and_role", "LV{0} {1}", "LV20 ASSASSIN");
+
+        // LevelAndRole ("LV1 UTILITY") is GONE, Phase C1 -- the party plate's
+        // PartyClass row it painted was removed in B2 (FightScreen.
+        // BuildPartyPlate's own note); this was its last reader
+        // (FightController.Hud.cs's RefreshPartyPlate).
 
         // Submenu chrome. The hint is the one line that tells a player the
         // column can be closed at all.

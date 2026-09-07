@@ -123,6 +123,14 @@ namespace PrincesPalace.PlayModeTests
             public Vector2 AnimatorHome;
             public Rect SpriteRectStagePixels;
             public Vector2 ShadowAnchoredPosition;
+
+            // C3: the ring's own RENDERED bounds, in the same stage-pixel
+            // space SpriteRectStagePixels already reports -- so "where is
+            // the ring's centre" and "where is the figure's centre" can be
+            // compared directly, with the slot's depth scale and the
+            // mirror already baked in by the transform walk rather than
+            // reconstructed from AnchoredPosition + a scale read separately.
+            public Rect ShadowRectStagePixels;
         }
 
         private sealed class PartySlot
@@ -145,20 +153,23 @@ namespace PrincesPalace.PlayModeTests
                 // measured from stage centre, and StageCaptureRig's crop is
                 // centred the same way against the render target.
                 var canvasRect = (RectTransform)Sprite.canvas.transform;
-                var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(canvasRect, Sprite.rectTransform);
                 float halfW = FightStageAnchors.StageSize.X / 2f;
                 float halfH = FightStageAnchors.StageSize.Y / 2f;
-                var rect = new Rect(
-                    bounds.min.x + halfW, bounds.min.y + halfH,
-                    bounds.size.x, bounds.size.y);
+
+                Rect StagePixels(RectTransform rt)
+                {
+                    var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(canvasRect, rt);
+                    return new Rect(bounds.min.x + halfW, bounds.min.y + halfH, bounds.size.x, bounds.size.y);
+                }
 
                 return new SlotReading
                 {
                     Name = Name,
                     AnchoredPosition = Slot.anchoredPosition,
                     AnimatorHome = Animator.Home,
-                    SpriteRectStagePixels = rect,
+                    SpriteRectStagePixels = StagePixels(Sprite.rectTransform),
                     ShadowAnchoredPosition = Shadow != null ? Shadow.anchoredPosition : Vector2.zero,
+                    ShadowRectStagePixels = Shadow != null ? StagePixels(Shadow) : default,
                 };
             }
         }
@@ -174,24 +185,32 @@ namespace PrincesPalace.PlayModeTests
         // shortcut is exactly the assumption that shipped the identity bug,
         // and it does not belong in a fixture whose whole subject is which
         // figure stands where.
-        private PartySlot[] OccupiedPartySlots()
+        private PartySlot[] OccupiedPartySlots() => OccupiedSlots("Party");
+
+        // C3: the SAME per-slot reading, over the ENEMY prefix instead --
+        // nothing in PartySlot's fields is actually party-specific, and the
+        // ring-vs-foot-band claim below is a claim about every stage slot,
+        // not a party-only one.
+        private PartySlot[] OccupiedEnemySlots() => OccupiedSlots("Enemy");
+
+        private PartySlot[] OccupiedSlots(string prefix)
         {
             var found = new System.Collections.Generic.List<PartySlot>();
 
             for (int i = 0; i < 8; i++)
             {
-                var slotGo = Named($"Party{i}Slot");
+                var slotGo = Named($"{prefix}{i}Slot");
                 if (slotGo == null || !slotGo.activeSelf) continue;
 
                 var slot = slotGo.GetComponent<RectTransform>();
                 var animator = slotGo.GetComponent<StageActorAnimator>();
-                var sprite = Named($"Party{i}Sprite")?.GetComponent<Image>();
-                var shadow = Named($"Party{i}FootShadow")?.GetComponent<RectTransform>();
+                var sprite = Named($"{prefix}{i}Sprite")?.GetComponent<Image>();
+                var shadow = Named($"{prefix}{i}FootShadow")?.GetComponent<RectTransform>();
 
                 found.Add(new PartySlot
                 {
-                    Name = $"Party{i}",
-                    CombatantName = Named($"Party{i}Nameplate")?.GetComponent<TMPro.TMP_Text>()?.text,
+                    Name = $"{prefix}{i}",
+                    CombatantName = Named($"{prefix}{i}Nameplate")?.GetComponent<TMPro.TMP_Text>()?.text,
                     Slot = slot,
                     Animator = animator,
                     Sprite = sprite,
@@ -278,6 +297,78 @@ namespace PrincesPalace.PlayModeTests
 
             File.WriteAllText(Path.Combine(dir, "slots.json"), SlotsJson(first, last));
             Debug.Log($"[PartyFormationCapture] wrote {SampleTimes.Length} frames + slots.json to {dir}");
+
+            // C3: the ring sits under the FEET, on every occupied slot of
+            // both sides -- not just the three party members this fixture
+            // otherwise photographs. Checked against the opening formation
+            // (frame 0's readings), before any hover has moved a flyer off
+            // its own ground line.
+            AssertRingUnderFeet(OccupiedPartySlots(), first, _fight.Session.Encounter.PlayerParty);
+            AssertRingUnderFeet(OccupiedEnemySlots(), OccupiedEnemySlots().Select(s => s.Read()).ToArray(),
+                _fight.Session.Encounter.Enemies);
+
+            // A LITERAL PIN, not just the check above -- CLAUDE.md gotcha 5.
+            // AssertRingUnderFeet compares the ring against
+            // FightController.ExpectedRingCentreXForTest, which calls the
+            // very same production function (ContentCentreFractionForActor)
+            // PlaceShadow itself does; a regression that makes BOTH sides of
+            // that comparison wrong THE SAME WAY (exactly what shipped here:
+            // the trimmed-sprite bug made the "expected" and the "actual"
+            // agree at ~0px, nowhere near the feet) would still pass it.
+            // Shawn's own foot-band offset is independently known (an
+            // offline PIL scan of the same Characters/sheep/idle.png,
+            // recorded in this method's own C3 note) to be a REAL ~65-72px,
+            // not a near-zero one -- so pin that the ring for whichever slot
+            // is showing "Shawn" sits meaningfully away from that sprite's
+            // own rendered centre, not merely "wherever the formula points".
+            var shawnSlot = OccupiedPartySlots().FirstOrDefault(s => s.CombatantName == "Shawn");
+            if (shawnSlot != null)
+            {
+                var shawnReading = first.FirstOrDefault(r => r.Name == shawnSlot.Name);
+                float shawnRingX = shawnReading.ShadowRectStagePixels.x + shawnReading.ShadowRectStagePixels.width * 0.5f;
+                float shawnSpriteCentreX = shawnReading.SpriteRectStagePixels.x + shawnReading.SpriteRectStagePixels.width * 0.5f;
+
+                Assert.Greater(Mathf.Abs(shawnRingX - shawnSpriteCentreX), 20f,
+                    "Shawn's ring sits within 20px of his sprite's own rendered centre -- his idle art is " +
+                    "known (offline PIL scan of Characters/sheep/idle.png) to be off-centre by far more than " +
+                    "that, so a ring this close to centre means the foot-band measurement collapsed to ~0 " +
+                    "again (the exact shape of the C3 bug), not that Shawn's art happens to be centred.");
+            }
+        }
+
+        // C3: |ring centre x - foot-band midpoint x| < 6px, for whichever
+        // combatant this slot's nameplate says is standing there. Skips a
+        // slot with no sprite/shadow/matching combatant rather than
+        // failing outright -- an empty or fallback-plate slot has no foot
+        // band to check, and that is FightPlayableTests' claim to make, not
+        // this fixture's.
+        private void AssertRingUnderFeet(PartySlot[] slots, SlotReading[] readings,
+            System.Collections.Generic.IReadOnlyList<CombatantState> combatants)
+        {
+            const float ToleranceX = 6f;
+
+            for (int i = 0; i < slots.Length && i < readings.Length; i++)
+            {
+                var slot = slots[i];
+                if (slot.Sprite == null || slot.Sprite.sprite == null || slot.Shadow == null) continue;
+
+                var combatant = combatants.FirstOrDefault(c => c.Name == slot.CombatantName);
+                if (combatant == null) continue;
+
+                // The same value RefreshCombatantSprite wrote onto this exact
+                // Image's rectTransform -- reading it back here means the
+                // test needs no second copy of StageFacing's mirroring rule.
+                float mirrorSign = Mathf.Sign(slot.Sprite.rectTransform.localScale.x);
+                var reading = readings[i];
+
+                float expectedRingX = _fight.ExpectedRingCentreXForTest(
+                    combatant, reading.SpriteRectStagePixels, mirrorSign);
+                float actualRingX = reading.ShadowRectStagePixels.x + reading.ShadowRectStagePixels.width * 0.5f;
+
+                Assert.Less(Mathf.Abs(actualRingX - expectedRingX), ToleranceX,
+                    $"{slot.Name} ({slot.CombatantName}): ring centre x={actualRingX:F1}, " +
+                    $"expected foot-band midpoint x={expectedRingX:F1}");
+            }
         }
 
         private static string SlotsJson(SlotReading[] first, SlotReading[] last)
@@ -293,7 +384,8 @@ namespace PrincesPalace.PlayModeTests
                 $"      \"anchoredPosition\": {Vec(s.AnchoredPosition)},\n" +
                 $"      \"animatorHome\": {Vec(s.AnimatorHome)},\n" +
                 $"      \"spriteRectStagePixels\": {Rct(s.SpriteRectStagePixels)},\n" +
-                $"      \"footShadowAnchoredPosition\": {Vec(s.ShadowAnchoredPosition)}\n" +
+                $"      \"footShadowAnchoredPosition\": {Vec(s.ShadowAnchoredPosition)},\n" +
+                $"      \"footShadowRectStagePixels\": {Rct(s.ShadowRectStagePixels)}\n" +
                 "    }";
 
             var json = new StringBuilder();

@@ -561,16 +561,34 @@ namespace PrincesPalace
             SetFill(partyMpFill, actor.CurrentMana, actor.MaxMana);
 
             var kit = _session == null ? null : _session.KitFor(actor);
-            if (kit != null)
-            {
-                partyClass.Set(UiStrings.LevelAndRole, kit.Level, kit.Role.ToString().ToUpperInvariant());
-            }
+            ApplyPartyPlateTheme(kit);
 
             RefreshWool(actor);
             RefreshPartyStatusRow(actor);
             RefreshTransformStrip(actor);
             RefreshSecondLifeBadge();
             RefreshRoster(actor);
+        }
+
+        // THE PLATE'S OWN FRAME, swapped rather than baked -- C1. sheep
+        // Silver, owl Blue, placeholder_brawler Gold (ResolvedCharacter.
+        // PlateTheme, authored per characters.json's plateTheme field and
+        // carried onto PlayerKit by FightEncounterAdapter.KitFor).
+        //
+        // GRACEFUL ON EVERY MISS, the house style: no kit (no session yet),
+        // no baked array (an older scene, or a test build with nothing
+        // wired), or an index the array does not cover all leave the
+        // scene's own baked Blue frame standing rather than clearing the
+        // Image or throwing.
+        private void ApplyPartyPlateTheme(PlayerKit kit)
+        {
+            if (partyPlateArt == null || partyPlateThemes == null || kit == null) return;
+
+            int index = (int)kit.PlateTheme;
+            if (index < 0 || index >= partyPlateThemes.Length) return;
+
+            var themed = partyPlateThemes[index];
+            if (themed != null) partyPlateArt.sprite = themed;
         }
 
         // Fused above the party plate, shown only while the acting character

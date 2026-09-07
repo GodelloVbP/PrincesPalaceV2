@@ -100,9 +100,9 @@ namespace PrincesPalace.Domain.Tests
             AssertSameLength("detail stats", s.DetailStatKeys, s.DetailStatValues);
             AssertSameLength("popups", s.DamagePopups, s.DamagePopupLabels);
             AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
-                s.EnemyNameplates, s.EnemyFootShadows);
+                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows);
             AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes,
-                s.PartyNameplates, s.PartyFootShadows);
+                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
         }
 
         // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
@@ -136,10 +136,10 @@ namespace PrincesPalace.Domain.Tests
                 { "InitiativeLabels", s.InitiativeLabels },
                 { "EnemySlots", s.EnemySlots }, { "EnemySprites", s.EnemySprites },
                 { "EnemyHitFlashes", s.EnemyHitFlashes }, { "EnemyNameplates", s.EnemyNameplates },
-                { "EnemyFootShadows", s.EnemyFootShadows },
+                { "EnemyFootShadows", s.EnemyFootShadows }, { "EnemyFootGlows", s.EnemyFootGlows },
                 { "PartySlots", s.PartySlots }, { "PartySprites", s.PartySprites },
                 { "PartyHitFlashes", s.PartyHitFlashes }, { "PartyNameplates", s.PartyNameplates },
-                { "PartyFootShadows", s.PartyFootShadows },
+                { "PartyFootShadows", s.PartyFootShadows }, { "PartyFootGlows", s.PartyFootGlows },
                 { "EnemyPlates", s.EnemyPlates }, { "VerbButtons", s.VerbButtons },
                 { "SubmenuRows", s.SubmenuRows }, { "WoolPips", s.WoolPips },
                 { "DamagePopups", s.DamagePopups },
@@ -155,6 +155,7 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Assert.IsTrue(s.PartyPlate.IsValid);
+            Assert.IsTrue(s.PartyPlateArt.IsValid);
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
             Assert.IsTrue(s.DetailDamageType.IsValid);
@@ -383,16 +384,19 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThePartySideIsTheEnemySideMirroredInXOnly()
+        public void ThePartySideIsTheEnemySideMirroredInXPlusTheRetreat()
         {
-            // Mirroring only X keeps the ground line identical on both sides,
-            // which is what makes the two halves read as one floor.
+            // C4: X is no longer a pure mirror -- the party side stands
+            // FightStageAnchors.PartyRetreat further back than the enemy
+            // side's mirror image. The ground line (Y) is still identical
+            // on both sides, which is what makes the two halves read as
+            // one floor.
             for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
             {
                 var enemy = RectOf($"Enemy{slot}Slot");
                 var party = RectOf($"Party{slot}Slot");
 
-                Assert.AreEqual(-enemy.Centre.X, party.Centre.X, 0.01f);
+                Assert.AreEqual(-(enemy.Centre.X + FightStageAnchors.PartyRetreat), party.Centre.X, 0.01f);
                 Assert.AreEqual(enemy.Bottom, party.Bottom, 0.01f, "one floor, not two platforms");
             }
         }

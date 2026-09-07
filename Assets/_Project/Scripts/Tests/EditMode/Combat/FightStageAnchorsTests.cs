@@ -28,7 +28,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-125f, FightStageAnchors.Far.Y, 0.001f);
             Assert.AreEqual(0.76f, FightStageAnchors.SpriteScale, 0.001f);
             Assert.AreEqual(-34f, FightStageAnchors.NameplateOffset, 0.001f);
-            Assert.AreEqual(1200f, FightStageAnchors.StageSize.X, 0.001f);
+            Assert.AreEqual(60f, FightStageAnchors.PartyRetreat, 0.001f);
+            Assert.AreEqual(1260f, FightStageAnchors.StageSize.X, 0.001f);
             Assert.AreEqual(600f, FightStageAnchors.StageSize.Y, 0.001f);
         }
 
@@ -51,12 +52,15 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void MirroringFlipsXOnly()
+        public void MirroringFlipsXAndAddsThePartyRetreat()
         {
+            // C4: no longer a pure mirror -- the party (mirrored) side
+            // stands PartyRetreat further back on X than the enemy side's
+            // mirror image, while Y is still shared exactly.
             var right = FightStageAnchors.SlotOffset(1, 3, mirrored: false);
             var left = FightStageAnchors.SlotOffset(1, 3, mirrored: true);
 
-            Assert.AreEqual(-right.X, left.X, 0.001f);
+            Assert.AreEqual(-(right.X + FightStageAnchors.PartyRetreat), left.X, 0.001f);
             Assert.AreEqual(right.Y, left.Y, 0.001f, "the two sides share a ground line");
         }
 
@@ -88,17 +92,22 @@ namespace PrincesPalace.Domain.Tests
             // screen tree's containment audit would fail at build time, and
             // this says so a step earlier, in Domain, where it costs a second.
             //
-            // It has already earned that: moving the far anchor out to 565 put
-            // the outermost slot 65px beyond the old 1000-wide frame, and this
-            // is the test that said so.
+            // It has already earned that TWICE: moving the far anchor out to
+            // 565 put the outermost slot 65px beyond the old 1000-wide frame,
+            // and C4's PartyRetreat put the retreated party slot 25px beyond
+            // the 1200-wide frame that fix landed on -- which is why BOTH
+            // sides are checked here now, not just the enemy one.
             float halfW = FightStageAnchors.StageSize.X / 2f;
             float halfH = FightStageAnchors.StageSize.Y / 2f;
 
             for (int i = 0; i < 3; i++)
             {
-                var offset = FightStageAnchors.SlotOffset(i, 3, mirrored: false);
-                Assert.LessOrEqual(System.Math.Abs(offset.X), halfW, $"slot {i} x");
-                Assert.LessOrEqual(System.Math.Abs(offset.Y), halfH, $"slot {i} y");
+                foreach (bool mirrored in new[] { false, true })
+                {
+                    var offset = FightStageAnchors.SlotOffset(i, 3, mirrored);
+                    Assert.LessOrEqual(System.Math.Abs(offset.X), halfW, $"slot {i} x (mirrored={mirrored})");
+                    Assert.LessOrEqual(System.Math.Abs(offset.Y), halfH, $"slot {i} y (mirrored={mirrored})");
+                }
             }
         }
 
@@ -147,13 +156,16 @@ namespace PrincesPalace.Domain.Tests
         // Mirroring is the party side, and it must mirror the SPREAD too rather
         // than only the endpoints.
         [Test]
-        public void ThePartySideMirrorsTheSameSpread()
+        public void ThePartySideMirrorsTheSameSpreadPlusTheRetreat()
         {
+            // C4: -360/-625, not -300/-565 -- the party side's whole spread
+            // is pushed back by PartyRetreat, not just its endpoints
+            // individually re-tuned.
             var front = FightStageAnchors.SlotOffset(0, 2, mirrored: true);
             var back = FightStageAnchors.SlotOffset(1, 2, mirrored: true);
 
-            Assert.AreEqual(-300f, front.X, 0.01f);
-            Assert.AreEqual(-565f, back.X, 0.01f);
+            Assert.AreEqual(-360f, front.X, 0.01f);
+            Assert.AreEqual(-625f, back.X, 0.01f);
         }
     }
 }

@@ -585,7 +585,7 @@ namespace PrincesPalace
             }
 
             return new PlayerKit(kit.Id, kit.Role, skills, kit.Relics, kit.AttackType,
-                kit.Level, kit.SkillPowerMultiplier);
+                kit.Level, kit.SkillPowerMultiplier, kit.PlateTheme);
         }
 
         private static PlayerKit KitFor(CharacterDefinition definition,
@@ -616,7 +616,8 @@ namespace PrincesPalace
                 .ToList();
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
-                definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level));
+                definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level),
+                definition.Data.PlateTheme);
         }
 
         // Test-only door to the overload above, named ...ForTest per house
@@ -662,7 +663,8 @@ namespace PrincesPalace
                 .ToList();
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
-                definition.Data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
+                definition.Data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character),
+                definition.Data.PlateTheme);
         }
 
         // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's

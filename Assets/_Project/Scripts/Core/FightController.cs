@@ -96,7 +96,19 @@ namespace PrincesPalace
 
         [SerializeField] internal Image partyPortrait;
         [SerializeField] internal TMP_Text partyName;
-        [SerializeField] internal TMP_Text partyClass;
+
+        // The plate's own frame art -- C1. Swapped by RefreshPartyPlate off
+        // the acting character's ResolvedCharacter.PlateTheme (carried onto
+        // PlayerKit), falling back to whatever SceneBuilder baked (Blue) on
+        // a missing kit, a missing array or an out-of-range theme.
+        [SerializeField] internal Image partyPlateArt;
+
+        // One 2x1 container sprite per ButtonTheme, indexed by (int)theme --
+        // loaded once at scene-build time (ScreenRegistry.Fight) through the
+        // same Ui.ContainerKey/LoadSpriteByKey path Ui.Container itself bakes
+        // the default frame from, so the runtime swap can never name a
+        // different file than the tree's own baked art would.
+        [SerializeField] internal Sprite[] partyPlateThemes;
         [SerializeField] internal Image partyHpFill;
         [SerializeField] internal TMP_Text partyHpValue;
         [SerializeField] internal Image partyMpFill;

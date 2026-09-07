@@ -85,6 +85,16 @@ namespace PrincesPalace.Domain.Stage
         public static readonly UiVec Near = new UiVec(300f, -218f);
         public static readonly UiVec Far = new UiVec(565f, -125f);
 
+        // C4: the mirrored (party) side stands this much further back on X
+        // than the enemy side's plain mirror image -- party Near/Far X
+        // become -360/-625 rather than -300/-565. X ONLY: the two sides
+        // still share one ground line (Y untouched), so nothing about
+        // vertical clearance (the plate top, the ring's Y, the mini-rows)
+        // moves. Widens the gap between the two front actors, which sat
+        // exactly as close together as two same-side neighbours despite
+        // facing off across the whole stage.
+        public const float PartyRetreat = 60f;
+
         // Applied on top of StageLayout.ScaleForDepth. The art is authored
         // larger than it is shown, so this is the one global shrink.
         //
@@ -122,13 +132,15 @@ namespace PrincesPalace.Domain.Stage
         // eyeballed against.
         public const float IntentIconOffset = 72f;
 
-        // 1200 WIDE, up from 1000. The far anchor is at 565 and this frame is
-        // measured from its centre, so a 1000-wide frame put the outermost slot
-        // 65px outside the box it is declared in -- which
-        // FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect exists to
-        // refuse. Widening the frame is free: it draws nothing and takes no
+        // 1260 WIDE, up from 1200 -- PartyRetreat's own 60px, C4. The party
+        // far anchor is now at -(565 + 60) = -625, so the 1200-wide frame
+        // that exactly fit the OLD +-565 range left the retreated party
+        // slot 25px outside it -- the same
+        // FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect this
+        // frame's own history (1000 -> 1200) already exists to catch.
+        // Widening the frame is still free: it draws nothing and takes no
         // clicks, it is a coordinate frame and not a surface.
-        public static readonly UiVec StageSize = new UiVec(1200f, 600f);
+        public static readonly UiVec StageSize = new UiVec(1260f, 600f);
 
         public const float InitiativeIconSize = 74f;
         public const float InitiativeIconGap = 8f;
@@ -146,7 +158,7 @@ namespace PrincesPalace.Domain.Stage
             float depth = StageLayout.DepthForSlot(slotIndex, slotCount);
             float x = StageLayout.PositionForDepth(Near.X, Far.X, depth);
             float y = StageLayout.PositionForDepth(Near.Y, Far.Y, depth);
-            return new UiVec(mirrored ? -x : x, y);
+            return new UiVec(mirrored ? -(x + PartyRetreat) : x, y);
         }
 
         // The scale a slot's sprite is drawn at: the depth curve times the one

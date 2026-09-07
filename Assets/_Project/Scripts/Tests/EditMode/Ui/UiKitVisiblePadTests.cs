@@ -210,16 +210,4 @@ namespace PrincesPalace.Domain.Tests
             }
         }
     }
-
-    // ButtonPlateArt is internal to PrincesPalace.Domain and this test
-    // assembly carries no InternalsVisibleTo grant to it (same situation
-    // KitContainerPlacementTests documents for ContainerArt.Key) -- but
-    // Ui.PlateVisiblePad is the same public forwarder FightSubmenuLayout
-    // itself calls, so this probe is not a second, possibly-drifting copy of
-    // the numbers: it is the one production entry point, named per-shape for
-    // this file's own readability.
-    internal static class ButtonPlateArtProbe
-    {
-        internal static ContentInsetFrac VisiblePad(ButtonPlateShape shape) => Ui.PlateVisiblePad(shape);
-    }
 }

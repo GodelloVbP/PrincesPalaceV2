@@ -213,6 +213,20 @@ public static class ScreenRegistry
                 // someone has to remember (CLAUDE.md gotcha 3).
                 fight.enemyFallbackSprite = SceneBuilder.LoadSpriteByKey(FightScreen.FallbackPlateKey);
 
+                // One 2x1 container sprite per ButtonTheme (C1), through the
+                // SAME Ui.ContainerKey the tree's own Ui.Container("PartyPlate",
+                // ButtonTheme.Blue, ...) built its baked frame from -- so a
+                // runtime swap can never name a file the baked one did not
+                // already prove exists. Indexed by (int)theme, matching
+                // RefreshPartyPlate's ApplyPartyPlateTheme lookup.
+                var plateThemes = (ButtonTheme[])Enum.GetValues(typeof(ButtonTheme));
+                fight.partyPlateThemes = new Sprite[plateThemes.Length];
+                foreach (var theme in plateThemes)
+                {
+                    fight.partyPlateThemes[(int)theme] =
+                        SceneBuilder.LoadSpriteByKey(Ui.ContainerKey(theme, ContainerRatio.TwoByOne));
+                }
+
                 // Something has to actually START a fight, or the scene opens on
                 // an empty stage and the screen cannot be looked at. Placeholder
                 // until a descent exists to hand a room's roster over -- see
@@ -254,6 +268,7 @@ public static class ScreenRegistry
                     var fade = result.Attach<StageDeathFade>(screen.EnemySlots[i]);
                     fade.sprite = result.Image(screen.EnemySprites[i]);
                     fade.shadow = result.Image(screen.EnemyFootShadows[i]);
+                    fade.glow = result.Image(screen.EnemyFootGlows[i]);
                     fight.enemyDeathFades[i] = fade;
                 }
 
@@ -263,6 +278,7 @@ public static class ScreenRegistry
                     var fade = result.Attach<StageDeathFade>(screen.PartySlots[i]);
                     fade.sprite = result.Image(screen.PartySprites[i]);
                     fade.shadow = result.Image(screen.PartyFootShadows[i]);
+                    fade.glow = result.Image(screen.PartyFootGlows[i]);
                     fight.partyDeathFades[i] = fade;
                 }
 
