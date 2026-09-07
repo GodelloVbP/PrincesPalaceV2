@@ -39,12 +39,16 @@ namespace PrincesPalace.Domain.UiKit
         // 2:1 container added 2f3ccd0 read as "the big blue container" -- a
         // second frame wrapping column A's own Blue 3:4 card, competing with
         // it rather than housing it. Column A keeps its card; the pane around
-        // it goes back to no frame at all (BuildColumnAFrame's Container is
-        // the only Container this screen draws now; the flat #120a18 Ground/
-        // DossierVeil wash this container itself replaced is not reinstated
-        // either -- the system menu's own pane background already grounds it,
-        // same as it did before either treatment existed). HalfWidth/HalfHeight
-        // go back to a plain half of the declared frame.
+        // it goes back to no frame at all (the flat #120a18 Ground/DossierVeil
+        // wash this container itself replaced is not reinstated either -- the
+        // system menu's own pane background already grounds it, same as it
+        // did before either treatment existed). HalfWidth/HalfHeight go back
+        // to a plain half of the declared frame.
+        //
+        // COLUMN A'S OWN CARD IS GRAPHIC-LESS TOO, since 2026-09-07 (owner's
+        // call: every kit frame inside the system menu read as ugly) --
+        // BuildColumnAFrame draws no Container any more, only a plain Panel
+        // at this same rect, so this screen currently draws none at all.
         public static float HalfWidth => Width * 0.5f;
         public static float HalfHeight => Height * 0.5f;
 
@@ -61,8 +65,12 @@ namespace PrincesPalace.Domain.UiKit
         public const float ColumnAWidth = 374f + ColumnBGivesUp;  // 449
 
         // WIDTH-BOUND, and that is the choice the 2026-09-07 kit repin forced.
-        // The 3:4 art is at a true 0.75 now (it measured 0.588 before), so a
-        // 449-wide card is 598.67 tall where it used to be 763.61. Column A's
+        // Still measured off the 3:4 KIT'S aspect (Ui.ContainerSizeForWidth
+        // below) even though no container art renders here any more (see the
+        // comment above) -- 0.75 is still the shape this card was authored
+        // to, only the painted border is gone. A true 0.75 (it measured 0.588
+        // before the repin), so a 449-wide card is 598.67 tall where it used
+        // to be 763.61. Column A's
         // width is set by the three-column split above and cannot grow without
         // taking 124px off the loadout stage, so the height is what moves --
         // the card sits centred in the 804-tall pane with ~103px of empty
@@ -78,13 +86,17 @@ namespace PrincesPalace.Domain.UiKit
         // 32f again -- the outer container's own border no longer eats a
         // second margin on top of this one; see the comment above.
         public const float PadY = 32f;
-        // 34, UP FROM 30. The 3:4 container's left/right inset went from
-        // 0.065 to 0.069 at the 2026-09-07 repin, which caps column A's
-        // content at 449 * (1 - 0.138) = 387.0 -- and ContentAWidth was 389,
-        // so every full-width row in the column (portrait, sub-line, XP
-        // labels, all four nav rows) hung 1px past the container on both
-        // sides. 34 puts ContentAWidth at 381 with 3px of margin a side,
-        // matching ColumnAContentMargin's own slack on the vertical.
+        // 34, UP FROM 30. The 3:4 kit's own left/right inset went from 0.065
+        // to 0.069 at the 2026-09-07 repin, which capped column A's content
+        // at 449 * (1 - 0.138) = 387.0 -- and ContentAWidth was 389, so every
+        // full-width row in the column (portrait, sub-line, XP labels, all
+        // four nav rows) hung 1px past the container's painted border on
+        // both sides. 34 put ContentAWidth at 381 with 3px of margin a side,
+        // matching ColumnAContentMargin's own slack on the vertical. The
+        // border that margin was measured against stopped rendering later
+        // that same day (owner's call, no kit frames in the system menu);
+        // the pad stays at 34 anyway rather than being widened to use the
+        // freed space, so this content does not move either.
         public const float ColumnAPadX = 34f;
         public const float ColumnBPadLeft = 40f;
         public const float ColumnCPadX = 40f;
@@ -107,14 +119,16 @@ namespace PrincesPalace.Domain.UiKit
         // as a flow container because the pack panel has to cover the column
         // exactly and a flow would fight that.
         //
-        // MEASURED AGAINST THE CONTAINER'S OWN FRAME, not the shared panel
-        // HalfHeight/PadY any more -- ColumnAFrameHeight is shorter than the
-        // full 804 pane, and content stacking to the old ColumnATop/Bottom
-        // would sit past the container's painted border. 0.052/0.055 are the
-        // kit's measured Container/3:4 top/bottom insets (ContainerArt.Inset,
-        // repinned 2026-09-07 -- they were 0.045/0.04 against the previous
-        // delivery's thinner-looking border); the extra 3px is slack over the
-        // audit's own 0.01 containment tolerance, not a second inset.
+        // MEASURED AGAINST THE FRAME PANEL'S OWN HEIGHT, not the shared panel
+        // HalfHeight/PadY -- ColumnAFrameHeight is shorter than the full 804
+        // pane, and content stacking to the old ColumnATop/Bottom would sit
+        // past its edge. 0.052/0.055 were the kit's measured Container/3:4
+        // top/bottom insets (ContainerArt.Inset, repinned 2026-09-07 -- they
+        // were 0.045/0.04 against the previous delivery's thinner-looking
+        // border) from when this frame still painted one; the numbers stay
+        // now that it does not, since changing them would move the identity
+        // content this pass was told not to touch. The extra 3px is slack
+        // over the audit's own 0.01 containment tolerance, not a second inset.
         private const float ColumnAFrameInsetTop = 0.052f;
         private const float ColumnAFrameInsetBottom = 0.055f;
         private const float ColumnAContentMargin = 3f;
@@ -394,11 +408,12 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float StageFitWidth => ColumnBWidth - StagePadX * 2f;
 
-        // HalfHeight * 2f, NOT Height -- the pane's usable vertical extent is
-        // the outer container's own content box (715.56) now, not the
-        // declared 804-tall frame. StageFitHeight drops to 651.56 from 740;
-        // StageScale (whichever axis is tighter) is what makes the stage
-        // shrink uniformly rather than distorting it.
+        // HalfHeight * 2f, NOT Height -- pre-dates 2026-09-03's "back to no
+        // outer frame" and is stale: HalfHeight is a plain Height * 0.5f now
+        // (see the comment on it above), so this reduces to Height - PadY * 2f
+        // exactly as the plain form would. Left as HalfHeight * 2f anyway so
+        // this keeps reading from the one HalfHeight everything else in the
+        // column does, rather than restating Height as a second name for it.
         public static float StageFitHeight => HalfHeight * 2f - PadY * 2f;
 
         public static float StageScale
@@ -691,9 +706,10 @@ namespace PrincesPalace.Domain.UiKit
         public const float AttributeColumns = 3f;
         public const float AttributeCellWidth = ContentCWidth / AttributeColumns;
 
-        // Properties, not consts, now that HalfHeight is the outer container's
-        // own inset boundary rather than a compile-time half of Height. 325.78,
-        // was 370.
+        // Properties, not consts -- HalfHeight is a plain Height * 0.5f now
+        // (see its own comment; this predates 2026-09-03's "back to no outer
+        // frame" and is stale about why), kept as a property because PadY is
+        // still a design choice rather than a literal worth inlining here.
         public static float ColumnCTop => HalfHeight - PadY;
         public const float SectionLabelHeight = 24f;
         public static float AttributeBlockTop => ColumnCTop - SectionLabelHeight - 12f;

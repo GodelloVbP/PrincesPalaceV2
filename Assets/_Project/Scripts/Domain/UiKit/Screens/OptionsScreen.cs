@@ -108,14 +108,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Styled(TypographyRole.Body));
 
-            // A SILVER 2:1 CONTAINER, not a bare Panel -- this pane sat on the
-            // shared SystemMenuFill with no ground of its own before this
-            // (balance-bot, 2026-09-02). Silver: the neutral/utility theme,
-            // same choice as Run statistics and the Main menu pane.
-            // PaneWidth x PaneHeight (1600x804) already hits the kit's
-            // measured 2:1 aspect within 0.5% -- see SystemMenuLayout.
-            // PaneInset's own comment -- so no size nudge was needed.
-            var ground = Ui.SystemMenuPane("OptionsPane", "OptionsPaneContent", ButtonTheme.Silver,
+            // BARE, not a kit container (owner's call, 2026-09-07 -- every
+            // frame inside the system menu read as ugly). This pane sits on
+            // the shared SystemMenuFill with no ground of its own, same as
+            // the dossier always did.
+            var ground = Ui.SystemMenuPane("OptionsPane", "OptionsPaneContent",
                 new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight), children.ToArray());
 
             screen.Root = ground;

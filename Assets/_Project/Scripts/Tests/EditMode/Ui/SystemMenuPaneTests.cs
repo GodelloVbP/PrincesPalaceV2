@@ -67,8 +67,8 @@ namespace PrincesPalace.Domain.Tests
                     // column, and it was the one stopping 184px early.
                     //
                     // HalfHeight - PadY, NOT DossierLayout.ColumnATop -- the two
-                    // were the same number before column A got its own Blue 3:4
-                    // container frame (shorter than the pane, see
+                    // were the same number before column A got its own 3:4-shaped
+                    // frame (shorter than the pane, see
                     // DossierLayout.ColumnAFrameHeight), and this row is about
                     // column C's own top, which still runs the full pane.
                     float genericTop = DossierLayout.HalfHeight - DossierLayout.PadY;

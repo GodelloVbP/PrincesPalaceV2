@@ -11,11 +11,21 @@ namespace PrincesPalace.Domain.Tests
     // be true of it -- it wears the theme/ratio art it claims to, and its
     // content sits inside the kit's measured inset rather than the painted
     // border -- collapsed to one parameterised test instead of the same pair
-    // repeated per screen (SystemMenuPaneTests x3, CharacterDossierScreenTests,
-    // ConstellationScreenTests' Talent panel, DefeatScreenTests, FightScreenTests
-    // x2, RelicDraftScreenTests). A row that is also screen-specific (the
-    // Defeat/RelicDraft frames' "old flat fill is gone" ColorHex check) stays
-    // in its own file -- this covers only the two facts every row shares.
+    // repeated per screen (ConstellationScreenTests' Talent panel,
+    // DefeatScreenTests, FightScreenTests x2, RelicDraftScreenTests). A row
+    // that is also screen-specific (the Defeat/RelicDraft frames' "old flat
+    // fill is gone" ColorHex check) stays in its own file -- this covers only
+    // the two facts every row shares.
+    //
+    // FOUR ROWS WENT (RunStatsPane, OptionsPane, ExitsPane,
+    // DossierColumnAFrame) on 2026-09-07: the owner called every kit frame
+    // inside the system menu ugly, and Exits/Options/Party/RunStats/
+    // RewardTrack/DossierColumnAFrame are plain Panels now (Ui.SystemMenuPane,
+    // CharacterDossierScreen.BuildColumnAFrame) with no theme/ratio/inset for
+    // this test to pin. PartyPane and RewardTrackPanel were never rows here
+    // to begin with -- SystemMenuScreenTests.NoSystemMenuNodeUsesAContainer
+    // OrFlagBannerSprite is the mechanised form of the rule that replaces
+    // all six.
     public class KitContainerPlacementTests
     {
         private static IEnumerable<UiNode> Walk(UiNode node)
@@ -31,30 +41,6 @@ namespace PrincesPalace.Domain.Tests
         // ratio, container width, container height).
         private static IEnumerable Cases()
         {
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => RunStatsScreen.Build().Root),
-                "RunStatsPaneContent", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight)
-                .SetName("RunStatsPane/Silver/TwoByOne");
-
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => OptionsScreen.Build().Root),
-                "OptionsPaneContent", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                OptionsLayout.PaneWidth, OptionsLayout.PaneHeight)
-                .SetName("OptionsPane/Silver/TwoByOne");
-
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => ExitsScreen.Build().Root),
-                "ExitsPaneContent", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                ExitsLayout.PaneWidth, ExitsLayout.PaneHeight)
-                .SetName("ExitsPane/Silver/TwoByOne");
-
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => Walk(CharacterDossierScreen.Build().Root).First(n => n.Name == "DossierColumnAFrame")),
-                "DossierColumnAContent", ButtonTheme.Blue, ContainerRatio.ThreeByFour,
-                DossierLayout.ColumnAWidth, DossierLayout.ColumnAFrameHeight)
-                .SetName("DossierColumnAFrame/Blue/ThreeByFour");
-
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn")),
                 "TalentPanelContent", ButtonTheme.Violet, ContainerRatio.NineBySixteen,

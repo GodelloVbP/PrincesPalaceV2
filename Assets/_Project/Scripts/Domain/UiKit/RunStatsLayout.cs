@@ -18,21 +18,23 @@ namespace PrincesPalace.Domain.UiKit
     public static class RunStatsLayout
     {
         // Still the FRAME's declared size (SystemMenuPaneTests.EveryHostedPane
-        // IsTheSizeOfTheContentArea pins it against the panel) -- it needed no
-        // aspect nudge to become the Silver 2:1 ground below.
+        // IsTheSizeOfTheContentArea pins it against the panel).
         public const float PaneWidth = SystemMenuLayout.PanelWidth;                              // 1600
         public const float PaneHeight = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        // THE CONTAINER'S OWN INSET BOUNDARY now (balance-bot, 2026-09-02),
-        // not PaneWidth/PaneHeight * 0.5f -- see SystemMenuLayout.PaneInset's
-        // own comment. 744/357.78 against the old 800/402.
+        // THE PANE'S OWN DECLARED CONTENT HALF-EXTENTS, not PaneWidth/
+        // PaneHeight * 0.5f -- see SystemMenuLayout.PaneContentHalfWidth/
+        // HalfHeight's own comment. 744/357.78 against the old 800/402; the
+        // ground that boundary used to be a Silver 2:1 Container's painted
+        // border is bare now (owner's call, 2026-09-07), but the numbers are
+        // unchanged so nothing in this pane moved.
         public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
         public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
-        // A SMALL SLACK MARGIN over the container's own inset, not a second
-        // authored pad -- same pattern as ExitsLayout.ContentMargin and
-        // OptionsLayout's own PadX/PadTop/PadBottom. ColumnWidth comes out
-        // unchanged at 460 either way: 744 * 2 - 8 equals 1600 - 120.
+        // A SMALL SLACK MARGIN over the pane's own content inset, not a
+        // second authored pad -- same pattern as ExitsLayout.ContentMargin
+        // and OptionsLayout's own PadX/PadTop/PadBottom. ColumnWidth comes
+        // out unchanged at 460 either way: 744 * 2 - 8 equals 1600 - 120.
         public const float PadX = 4f;
         public const float PadTop = 4f;
         public const float PadBottom = 4f;

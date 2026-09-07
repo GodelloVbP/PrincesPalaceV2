@@ -228,19 +228,35 @@ namespace PrincesPalace.Domain.UiKit
             return content;
         }
 
-        // A system-menu screen's whole pane in one call: a 2:1 Container as
-        // the screen's ground, its content wrapped inside the measured inset.
-        // Exits, Options, Run statistics and Reward track each built this by
-        // hand (a Container call, a ContainerContent call, then `screen.Root
-        // = ground`) with the same six-line "this pane sat on the shared
-        // SystemMenuFill with no ground of its own" comment repeated at every
-        // site -- the ground node is still handed back so a caller that needs
-        // to mark it Inactive() (Reward track, which opens over the dossier)
-        // or read it back into `screen.Root` can do so itself.
-        public static UiNode SystemMenuPane(string groundName, string contentName, ButtonTheme theme, UiVec size, params UiNode[] children)
+        // A system-menu screen's whole pane in one call: a plain, graphic-less
+        // ground the size of the pane, with a content Panel inset by
+        // SystemMenuLayout's pane content half-extents so nothing inside it
+        // moves.
+        //
+        // WAS a themed 2:1 Container until the owner called every kit frame
+        // inside the system menu ugly and asked for the bare violet pane the
+        // design pass (docs/handoffs/system_menu/README.md) actually
+        // specified (2026-09-07). Exits, Options, Party, Run statistics and
+        // Reward track each built the container by hand (a Container call, a
+        // ContainerContent call, then `screen.Root = ground`) with the same
+        // six-line "this pane sat on the shared SystemMenuFill with no ground
+        // of its own" comment repeated at every site; this is the one place
+        // that construction happens now, so a caller only says what size its
+        // pane is. The content inset is the SAME 744/357.78 the container's
+        // measured border used to leave (SystemMenuLayout.PaneContentHalf
+        // Width/HalfHeight's own comment), so no label, card or button in any
+        // hosted pane moved when the frame came off. The ground node is still
+        // handed back so a caller that needs to mark it Inactive() (Reward
+        // track, which opens over the dossier) or read it back into
+        // `screen.Root` can do so itself.
+        public static UiNode SystemMenuPane(string groundName, string contentName, UiVec size, params UiNode[] children)
         {
-            var ground = Container(groundName, theme, ContainerRatio.TwoByOne, Place.At(0f, 0f), size);
-            ContainerContent(ground, ContainerRatio.TwoByOne, contentName, children);
+            var ground = Panel(groundName, Place.At(0f, 0f), UiSize.Fixed(size.X, size.Y));
+
+            float insetX = size.X * 0.5f - SystemMenuLayout.PaneContentHalfWidth;
+            float insetY = size.Y * 0.5f - SystemMenuLayout.PaneContentHalfHeight;
+            var content = Panel(contentName, Place.Stretch(insetX, insetX, insetY, insetY), UiSize.Fill, children);
+            ground.Children.Add(content);
             return ground;
         }
 

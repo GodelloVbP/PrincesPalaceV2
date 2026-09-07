@@ -7,11 +7,14 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Column A's Blue 3:4 container frame. The rest of the dossier's geometry
-    // is covered by SystemMenuPaneTests; this file is only about the kit
-    // placement -- the frame itself, its theme, and that column A's identity
-    // content actually lives inside the measured inset rather than under the
-    // painted border.
+    // Column A's identity frame. It carried a Blue 3:4 container kit until
+    // the owner called every frame inside the system menu ugly (2026-09-07);
+    // this file used to also cover the kit placement (theme, ratio, content
+    // inset) but that went with the art -- KitContainerPlacementTests no
+    // longer has a row for it either. What is left here is that column A's
+    // identity content still rides inside one named parent rather than
+    // floating beside it, and the rest of the dossier's geometry, covered by
+    // SystemMenuPaneTests.
     public class CharacterDossierScreenTests
     {
         [Test]
@@ -28,8 +31,8 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // Column A's container theme/ratio and content inset are covered by
-        // KitContainerPlacementTests, not repeated here.
+        // Column A's frame drew Blue 3:4 container art until 2026-09-07; it
+        // is a plain Panel now, so there is no theme/ratio/inset left to pin.
 
         [Test]
         public void ColumnAIdentityContentRidesInsideTheFrame()
