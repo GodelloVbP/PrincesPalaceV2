@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Domain.Dungeon;
-using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace
 {
@@ -100,7 +99,7 @@ namespace PrincesPalace
 
                 if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep)
                 {
-                    _map = DescentMapGenerator.GenerateLeg(new SeededRandom(run.runSeed), run.legStartStep,
+                    _map = DescentMapGenerator.GenerateLegFor(run.runSeed, run.legStartStep,
                         restBeforeBoss: run.restBeforeBoss);
                     _mapSeed = run.runSeed;
                     _mapStartStep = run.legStartStep;
