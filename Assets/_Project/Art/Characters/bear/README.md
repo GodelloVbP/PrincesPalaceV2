@@ -138,13 +138,22 @@ python tools/portrait_from_stance.py --still Assets/_Project/Resources/Character
     --out Assets/_Project/Resources/Portraits/bear.png
 ```
 
-Crop box (source px, against `idle.png`'s 486x467 canvas): `(163, 8) -
-(301, 181)`, i.e. the top 45% of the idle stance's alpha bbox (312x385),
-centred horizontally on the bbox. Native crop 138x173, upscaled 8x with
-LANCZOS to 1104x1384 (the largest whole-integer multiple that doesn't
-overshoot `Portraits/sheep.png`'s 1122x1402 — see the tool's header for why
-an integer factor beats resampling straight to the target's exact pixel
-size). **This is soft** — an 8x upscale of a ~140px source is real
+Crop box (source px, against `idle.png`'s 486x467 canvas): `(64, 8) -
+(401, 429)`, size 337x421. The bear faces right with his head sitting right
+of his own torso/hammer centre, so centring on the full-figure bbox (as an
+earlier version of this tool did) put the muzzle outside the frame; the
+crop is centred on the head band's own alpha extent instead (top 45% of the
+figure, its horizontal span measured on its own), then widened with margin
+and re-checked against whatever the growing crop covers so nothing below
+the head — the raised hammer arm, in this delivery — gets clipped by the
+left/right edges either. For Bjorn's build (pauldrons and hammer nearly as
+wide as his full standing height) that convergence pulls in almost the
+entire idle pose, not just head-and-shoulders; see the tool's header for
+why growing downward is preferred over narrowing into the head. Native crop
+337x421, upscaled 3x with LANCZOS to 1011x1263 (the largest whole-integer
+multiple that doesn't overshoot `Portraits/sheep.png`'s 1122x1402 — see the
+tool's header for why an integer factor beats resampling straight to the
+target's exact pixel size). **This is soft** — a 3x upscale is still a real
 quality loss next to a painted portrait — and that is accepted "for now."
 `characters.json`'s `portraitPath` for `bear` is `Portraits/bear`; replace
 this file and stop pointing at it the moment a painted portrait lands.
