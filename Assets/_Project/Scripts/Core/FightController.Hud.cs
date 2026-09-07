@@ -577,7 +577,7 @@ namespace PrincesPalace
         }
 
         // THE PLATE'S OWN FRAME, swapped rather than baked -- C1. sheep
-        // Silver, owl Blue, placeholder_brawler Gold (ResolvedCharacter.
+        // Silver, owl Blue, bear Gold (ResolvedCharacter.
         // PlateTheme, authored per characters.json's plateTheme field and
         // carried onto PlayerKit by FightEncounterAdapter.KitFor).
         //

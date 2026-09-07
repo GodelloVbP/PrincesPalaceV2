@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 587fe3da128cb904da22de232329c98f, type: 3}
-  m_Name: placeholder_brawler
+  m_Name: bear
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.CharacterDefinition
   data:
-    Id: placeholder_brawler
-    DisplayName: Placeholder Brawler
+    Id: bear
+    DisplayName: Bjorn
     Role: 3
     BaseStats:
       maxHealth: 260
@@ -31,7 +31,7 @@ MonoBehaviour:
       intelligence: 4
       charisma: 8
     PortraitPath: Portraits/sheep
-    BattleSpritePath: Characters/sheep
+    BattleSpritePath: Characters/bear
     BattleSpriteFacing: 1
     AttackType: 0
     SignatureId: 

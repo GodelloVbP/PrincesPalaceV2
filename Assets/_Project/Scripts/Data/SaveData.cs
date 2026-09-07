@@ -61,7 +61,7 @@ namespace PrincesPalace
 
         // THE single switch, but its DEFAULT is derived rather than hardcoded
         // false. Null (the state every fresh process starts in) means "decide
-        // from content": once both placeholder_brawler and owl (Odette)
+        // from content": once both bear (Bjorn) and owl (Odette)
         // resolve in ContentDatabase.Characters, a new save fields all three
         // without anyone having to flip anything. Set true/false to override
         // that either way -- BalanceBotRunner forces true regardless of
@@ -74,7 +74,7 @@ namespace PrincesPalace
         // can be (re)loaded mid-process (Editor domain reload, tests), and a
         // stale "yes" here would field a seat content no longer has.
         //
-        // ASKS THE FLAG, NOT TWO IDS. This named placeholder_brawler and owl
+        // ASKS THE FLAG, NOT TWO IDS. This named bear and owl
         // literally, which made "can we field three" a question about two
         // specific characters rather than about the roster -- rename either
         // and every fresh profile silently drops back to a solo Shawn with

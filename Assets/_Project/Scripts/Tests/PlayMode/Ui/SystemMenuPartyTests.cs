@@ -68,7 +68,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "owl", "sheep", "placeholder_brawler" };
+            save.selectedCharacterIds = new List<string> { "owl", "sheep", "bear" };
 
             OpenParty();
             yield return null;
@@ -78,11 +78,11 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front], "seat 0 is not the front seat");
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Middle]);
-            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Rear]);
+            Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Rear]);
 
             Assert.AreEqual("Odette", TextOf("PartySeat0Name"));
             Assert.AreEqual("Shawn", TextOf("PartySeat1Name"));
-            Assert.AreEqual("Placeholder Brawler", TextOf("PartySeat2Name"));
+            Assert.AreEqual("Bjorn", TextOf("PartySeat2Name"));
         }
 
         // ---- camp: a roster card, then a seat -----------------------------------
@@ -93,7 +93,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
             SaveSlotManager.SaveCurrent();
 
             OpenParty();
@@ -110,13 +110,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
-            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Middle]);
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
 
             SaveSlotManager.Forget();
             var reloaded = SaveSlotManager.CurrentSave;
             CollectionAssert.AreEqual(
-                new[] { "owl", "placeholder_brawler", "sheep" }, reloaded.selectedCharacterIds,
+                new[] { "owl", "bear", "sheep" }, reloaded.selectedCharacterIds,
                 "the swap did not reach disk");
         }
 
@@ -128,7 +128,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
 
             OpenParty();
             var party = Party();
@@ -139,7 +139,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
-            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Middle]);
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
             Assert.AreEqual("Swapped Shawn and Odette.", TextOf("PartyToastText"));
         }
@@ -247,7 +247,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
             SaveSlotManager.SaveCurrent();
 
             OpenParty();
@@ -263,13 +263,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
-            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Middle]);
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
 
             SaveSlotManager.Forget();
             var reloaded = SaveSlotManager.CurrentSave;
             CollectionAssert.AreEqual(
-                new[] { "owl", "placeholder_brawler", "sheep" }, reloaded.selectedCharacterIds,
+                new[] { "owl", "bear", "sheep" }, reloaded.selectedCharacterIds,
                 "the dragged swap did not reach disk");
         }
 
@@ -279,7 +279,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
             SaveSlotManager.SaveCurrent();
 
             OpenParty();
@@ -287,7 +287,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // owl is PartyCard2 (characters.json's own order: sheep,
-            // placeholder_brawler, owl) and, per this file's own header,
+            // bear, owl) and, per this file's own header,
             // always also a seat with today's 3-of-3 content -- this drives
             // the CARD drag source's own entry point (BeginCardDragAt)
             // rather than the seat's, landing on the front seat.
@@ -300,13 +300,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
-            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("bear", party.Formation.SeatIds[PartySeat.Middle]);
             Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
 
             SaveSlotManager.Forget();
             var reloaded = SaveSlotManager.CurrentSave;
             CollectionAssert.AreEqual(
-                new[] { "owl", "placeholder_brawler", "sheep" }, reloaded.selectedCharacterIds,
+                new[] { "owl", "bear", "sheep" }, reloaded.selectedCharacterIds,
                 "the dragged placement did not reach disk");
         }
 
@@ -316,7 +316,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
             SaveSlotManager.SaveCurrent();
 
             OpenParty();
@@ -371,7 +371,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
             SaveSlotManager.SaveCurrent();
 
             OpenParty();
@@ -409,7 +409,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
 
             OpenParty();
             yield return null;
@@ -438,7 +438,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadScene("Hub");
 
             var save = SaveSlotManager.CurrentSave;
-            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
 
             OpenParty();
             yield return null;

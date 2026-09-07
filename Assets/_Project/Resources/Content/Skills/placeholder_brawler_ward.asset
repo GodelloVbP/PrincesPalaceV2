@@ -18,7 +18,7 @@ MonoBehaviour:
     Description: Placeholder kit. Reuses the Ward effect Shawn's own kit already
       defines; see placeholder_brawler_ward_root in talents.json for the magnitude
       it needs to do anything.
-    CharacterId: placeholder_brawler
+    CharacterId: bear
     UnlockLevel: 1
     Effect: 7
     Targeting: 2

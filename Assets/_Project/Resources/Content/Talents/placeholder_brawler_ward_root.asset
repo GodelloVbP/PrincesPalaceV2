@@ -17,7 +17,7 @@ MonoBehaviour:
     DisplayName: 'Placeholder: Brace'
     Description: Placeholder kit. Gives placeholder_brawler_ward (skills.json) a
       magnitude to apply, in sheep_lamb_ward's own range.
-    CharacterId: placeholder_brawler
+    CharacterId: bear
     Column: 0
     Row: 0
     Prerequisites: []

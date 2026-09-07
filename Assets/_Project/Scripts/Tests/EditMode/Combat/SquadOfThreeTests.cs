@@ -63,7 +63,7 @@ namespace PrincesPalace.Domain.Tests
             var kits = new List<PlayerKit>
             {
                 new PlayerKit("sheep", CharacterRole.Utility, null, null, DamageType.Nature),
-                new PlayerKit("placeholder_brawler", CharacterRole.Tank, null, null, DamageType.Physical),
+                new PlayerKit("bear", CharacterRole.Tank, null, null, DamageType.Physical),
                 new PlayerKit("owl", CharacterRole.Support, null, null, DamageType.Arcane),
             };
 

@@ -479,7 +479,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void AnUnauthoredCharacterResolvesToTheGeneratedDefault()
         {
-            var track = RewardTracks.For("placeholder_brawler");
+            var track = RewardTracks.For("bear");
 
             Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
                 "40 filler singles plus level 80's ten");

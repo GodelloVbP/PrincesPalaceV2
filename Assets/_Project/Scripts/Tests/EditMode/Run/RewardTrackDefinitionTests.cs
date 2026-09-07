@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth()
         {
-            var track = RewardTrackDefinition.Default("placeholder_brawler");
+            var track = RewardTrackDefinition.Default("bear");
 
             Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
                 "40 filler singles plus level 80's ten");
@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryMilestoneLevelCarriesSomething()
         {
-            var track = RewardTrackDefinition.Default("placeholder_brawler");
+            var track = RewardTrackDefinition.Default("bear");
 
             foreach (int level in RewardTrack.MilestoneLevels)
             {
@@ -73,7 +73,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NothingIsCollectedAboveTheWatermark()
         {
-            var track = RewardTrackDefinition.Default("placeholder_brawler");
+            var track = RewardTrackDefinition.Default("bear");
 
             Assert.AreEqual(0, track.CollectedTotal(TrackReward.SecondLife, 89),
                 "level 90's second life was collected before level 90 was reached");

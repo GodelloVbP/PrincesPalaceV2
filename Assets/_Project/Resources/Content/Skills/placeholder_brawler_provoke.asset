@@ -17,7 +17,7 @@ MonoBehaviour:
     DisplayName: Bellow
     Description: Placeholder kit. Reuses the Provoke effect Shawn's own kit already
       defines.
-    CharacterId: placeholder_brawler
+    CharacterId: bear
     UnlockLevel: 1
     Effect: 5
     Targeting: 0

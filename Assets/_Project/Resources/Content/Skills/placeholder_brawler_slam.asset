@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: placeholder_brawler_slam
     DisplayName: Slam
     Description: Placeholder kit. A shoulder into whatever is in front of him.
-    CharacterId: placeholder_brawler
+    CharacterId: bear
     UnlockLevel: 1
     Effect: 0
     Targeting: 0

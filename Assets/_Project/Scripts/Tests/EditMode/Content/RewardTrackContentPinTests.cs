@@ -252,15 +252,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("+2% FIRE DAMAGE", RewardTrackNames.Of(Owl().At(6)));
         }
 
-        // ---- no placeholder_brawler entry ----
+        // ---- no bear entry ----
         //
-        // The placeholder_brawler-uses-the-default assertion belongs to P4's
+        // The bear-uses-the-default assertion belongs to P4's
         // RewardTracks.For tests (Core), not here -- this only pins that
         // reward_tracks.json authors nothing for it, which is P6's own scope.
         [Test]
-        public void PlaceholderBrawlerHasNoAuthoredTrack()
+        public void BearHasNoAuthoredTrack()
         {
-            Assert.IsFalse(Tracks().ContainsKey("placeholder_brawler"));
+            Assert.IsFalse(Tracks().ContainsKey("bear"));
         }
     }
 }

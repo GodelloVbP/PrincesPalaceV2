@@ -19,7 +19,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // The question this fixture answers: does Odette (the navy owl, the
     // party's flying caster, seated in the FAR/back party slot per
-    // characters.json's order -- sheep, placeholder_brawler, owl) actually
+    // characters.json's order -- sheep, bear, owl) actually
     // read above the two figures standing in front of her, does her foot
     // shadow stay pinned to the floor while she hovers, and does she bob.
     // FightController.StageVisuals.HoverIdle pushes her altitude every idle

@@ -32,7 +32,7 @@ namespace PrincesPalace
 
         // The track a character is on. Never null: a character with no
         // authored track gets the generated default, which is the project's
-        // graceful-degradation posture and is what `placeholder_brawler`
+        // graceful-degradation posture and is what `bear`
         // actually ships on (§5).
         public static RewardTrackDefinition For(string characterId)
         {

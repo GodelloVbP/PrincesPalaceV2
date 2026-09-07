@@ -856,7 +856,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("party.banner.default", "Select a companion, then choose a position.");
         public static readonly UiString PartyBannerSelected =
             UiString.Define("party.banner.selected", "{0} selected — choose a position.",
-                "Placeholder Brawler selected - choose a position.");
+                "Bjorn selected - choose a position.");
         public static readonly UiString PartyCancel = UiString.Define("party.cancel", "Cancel");
         public static readonly UiString PartySendToBench = UiString.Define("party.send_to_bench", "Send to bench");
 
@@ -886,15 +886,15 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PartySeatRear = UiString.Define("party.seat.rear", "REAR");
 
         public static readonly UiString PartyBadgeReplace =
-            UiString.Define("party.badge.replace", "Replace {0}", "Replace Placeholder Brawler");
+            UiString.Define("party.badge.replace", "Replace {0}", "Replace Bjorn");
         public static readonly UiString PartyBadgeSwap =
-            UiString.Define("party.badge.swap", "Swap with {0}", "Swap with Placeholder Brawler");
+            UiString.Define("party.badge.swap", "Swap with {0}", "Swap with Bjorn");
         public static readonly UiString PartyBadgePlace =
-            UiString.Define("party.badge.place", "Place {0} here", "Place Placeholder Brawler here");
+            UiString.Define("party.badge.place", "Place {0} here", "Place Bjorn here");
 
         public static readonly UiString PartyRosterHeading = UiString.Define("party.roster.heading", "ROSTER");
         public static readonly UiString PartyCardTagInParty =
-            UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · Placeholder Brawler");
+            UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · Bjorn");
         public static readonly UiString PartyCardTagArtPending =
             UiString.Define("party.card.tag_art_pending", "Art pending");
         public static readonly UiString PartyCardTagBenched = UiString.Define("party.card.tag_benched", "Benched");
@@ -906,26 +906,26 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the toast, one entry per outcome kind ---------------------------
         public static readonly UiString PartyToastPlaced =
             UiString.Define("party.toast.placed", "{0} takes the {1} position.",
-                "Placeholder Brawler takes the front position.");
+                "Bjorn takes the front position.");
         public static readonly UiString PartyToastMoved =
             UiString.Define("party.toast.moved", "{0} takes the {1} position.",
-                "Placeholder Brawler takes the front position.");
+                "Bjorn takes the front position.");
         public static readonly UiString PartyToastSwapped =
             UiString.Define("party.toast.swapped", "Swapped {0} and {1}.",
-                "Swapped Placeholder Brawler and Placeholder Brawler.");
+                "Swapped Bjorn and Bjorn.");
         public static readonly UiString PartyToastReplaced =
             UiString.Define("party.toast.replaced", "{1} steps aside for {0}.",
-                "Placeholder Brawler steps aside for Placeholder Brawler.");
+                "Bjorn steps aside for Bjorn.");
         public static readonly UiString PartyToastBenched =
             UiString.Define("party.toast.benched", "{0} returns to the bench.",
-                "Placeholder Brawler returns to the bench.");
+                "Bjorn returns to the bench.");
         public static readonly UiString PartyToastFormationFixedInFight =
             UiString.Define("party.toast.formation_fixed_in_fight", "The formation is fixed during a fight.");
         public static readonly UiString PartyToastSeatNotOpen =
             UiString.Define("party.toast.seat_not_open", "That seat is not open yet.");
         public static readonly UiString PartyToastSeatLocked =
             UiString.Define("party.toast.seat_locked", "{0} is locked in this run.",
-                "Placeholder Brawler is locked in this run.");
+                "Bjorn is locked in this run.");
         public static readonly UiString PartyToastBenchedDuringRun =
             UiString.Define("party.toast.benched_during_run", "New companions join between runs.");
         public static readonly UiString PartyToastRepositionOnlyDuringRun =
