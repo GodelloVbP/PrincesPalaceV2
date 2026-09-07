@@ -84,6 +84,31 @@ using PrincesPalace.Domain.Content;
         // so "NOW" never appeared to move off them.
         public IReadOnlyList<CombatantState> TurnOrder;
 
+        // WHICH OF THE TWO THE TRACKER ACTUALLY PAINTS, given the queue the
+        // beat being played recorded and the queue live state holds right now.
+        //
+        // A pure function rather than an `if` inside the view, for the reason
+        // ImpactFraction is one: the rule is a decision and Core cannot be
+        // tested here, so leaving it in FightController.Hud would mean the
+        // fallback below was only ever exercised by looking at a fight.
+        //
+        // `recorded` is null for the whole input phase -- nothing is playing,
+        // so live IS the moment being shown -- and RECORDED-BUT-EMPTY falls
+        // back the same way rather than blanking the row: a beat committed
+        // with no encounter behind it (a fixture) or with the fight already
+        // decided carries nothing, and an empty tracker mid-round reads as a
+        // broken HUD rather than as an absence. It costs nothing when the
+        // fight really is over, because live UpcomingTurns is empty then too.
+        // Exactly the shape FightController.OrderOf already uses for the
+        // formation's own recorded-or-live question.
+        public static IReadOnlyList<CombatantState> QueueToShow(
+            IReadOnlyList<CombatantState> recorded, IReadOnlyList<CombatantState> live)
+        {
+            if (recorded != null && recorded.Count > 0) return recorded;
+
+            return live ?? System.Array.Empty<CombatantState>();
+        }
+
         // WHERE EVERYBODY STOOD when this beat resolved -- see BeatFormation
         // for why a copy and not the live lists. Same reasoning as TurnOrder
         // directly above, applied to field position rather than to the queue:

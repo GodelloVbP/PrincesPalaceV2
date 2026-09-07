@@ -1120,8 +1120,11 @@ namespace PrincesPalace
 
             // AND THE BEAT BEING DRAWN IS "none": a formation left over from
             // the last encounter names combatants that no longer exist, and
-            // OrderOf would draw it.
+            // OrderOf would draw it. Its twin for the turn queue goes with it,
+            // for the same reason and against the same failure -- a tracker
+            // opening a fresh fight with the last fight's dead monsters in it.
             _playingFormation = null;
+            _playingTurnOrder = null;
 
             // C4: no holder from a fight that just ended can ever be
             // compared against again -- a fresh Bind means every combatant's
