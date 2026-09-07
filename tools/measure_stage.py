@@ -30,6 +30,7 @@ ANCHORS = ROOT / "Assets/_Project/Scripts/Domain/Stage/FightStageAnchors.cs"
 STAGE_LAYOUT = ROOT / "Assets/_Project/Scripts/Domain/Stage/StageLayout.cs"
 FIGHT_SCREEN = ROOT / "Assets/_Project/Scripts/Domain/UiKit/Screens/FightScreen.cs"
 SUBMENU = ROOT / "Assets/_Project/Scripts/Domain/UiKit/FightSubmenuLayout.cs"
+CONTAINER_ART = ROOT / "Assets/_Project/Scripts/Domain/UiKit/ContainerArt.cs"
 
 # The contact ring straddles the ground line, hanging this far below it.
 RING_DROP = 8.0
@@ -51,8 +52,16 @@ def grab(text, pattern, what):
     return float(match.group(1))
 
 
+def expect(text, pattern, what):
+    """Assert the source still says what a derivation below assumes it says."""
+    if not re.search(pattern, text):
+        sys.exit(f"{what} is no longer true of the source - this tool's arithmetic "
+                 f"has to be re-derived. pattern: {pattern}")
+
+
 def constants():
     a, s, f, m = read(ANCHORS), read(STAGE_LAYOUT), read(FIGHT_SCREEN), read(SUBMENU)
+    k = read(CONTAINER_ART)
 
     c = {}
     c["near_x"] = grab(a, r"Near\s*=\s*new UiVec\(\s*(-?[\d.]+)f", "Near.X")
@@ -65,12 +74,31 @@ def constants():
     c["far_scale"] = grab(s, r"FarScale\s*=\s*(-?[\d.]+)f", "FarScale")
 
     c["plate_first_y"] = grab(f, r"PlateFirstY\s*=\s*(-?[\d.]+)f", "PlateFirstY")
-    c["plate_h"] = grab(f, r"PlateH\s*=\s*(-?[\d.]+)f", "PlateH")
-    c["plate_x"] = grab(f, r"PlateX\s*=\s*(-?[\d.]+)f", "PlateX")
     c["plate_w"] = grab(f, r"PlateW\s*=\s*(-?[\d.]+)f", "PlateW")
+    c["plate_gap"] = grab(f, r"PlateGap\s*=\s*(-?[\d.]+)f", "PlateGap")
+    c["plate_block_right"] = grab(f, r"PlateBlockRight\s*=\s*(-?[\d.]+)f", "PlateBlockRight")
+    c["plate_columns"] = grab(f, r"PlateColumns\s*=\s*(\d+)\s*;", "PlateColumns")
+
+    # PLATE HEIGHT IS NO LONGER A LITERAL. The plate wears a 2x1 kit container
+    # (FightScreen's PlateSize), so its height is PlateW over the kit's own
+    # measured 2x1 aspect -- derived here for the same reason PlatePitch is
+    # below, rather than re-typed and left to rot the way the "PlateH = 64f"
+    # this replaces did.
+    expect(f, r"PlateSize\s*=\s*Ui\.ContainerSizeForWidth\(\s*ContainerRatio\.TwoByOne\s*,\s*PlateW\s*\)",
+           "the enemy plate is still a 2x1 container sized off PlateW")
+    c["plate_h"] = c["plate_w"] / grab(k, r"ContainerAspect2x1\s*=\s*([\d.]+)f", "ContainerAspect2x1")
+
+    # The block's left edge, derived the way FightScreen derives PlateFirstX.
+    c["plate_first_x"] = (c["plate_block_right"]
+                          - (c["plate_columns"] * c["plate_w"]
+                             + (c["plate_columns"] - 1) * c["plate_gap"])
+                          + c["plate_w"] / 2.0)
     c["verb_x"] = grab(f, r"VerbColumnX\s*=\s*(-?[\d.]+)f", "VerbColumnX")
-    c["verb_w"] = grab(f, r"VerbRowW\s*=\s*(-?[\d.]+)f", "VerbRowW")
-    c["verb_h"] = grab(f, r"VerbRowH\s*=\s*(-?[\d.]+)f", "VerbRowH")
+    # READ FROM FightSubmenuLayout, which is where the literals live --
+    # FightScreen's own VerbRowW/VerbRowH are forwards onto these two, and a
+    # regex looking for a number found a symbol name and gave up.
+    c["verb_w"] = grab(m, r"VerbRowW\s*=\s*(-?[\d.]+)f", "VerbRowW")
+    c["verb_h"] = grab(m, r"VerbRowH\s*=\s*(-?[\d.]+)f", "VerbRowH")
     c["verb_pitch"] = grab(f, r"VerbPitch\s*=\s*(-?[\d.]+)f", "VerbPitch")
 
     c["command_bottom"] = grab(m, r"CommandBottom\s*=\s*(-?[\d.]+)f", "CommandBottom")
@@ -131,7 +159,8 @@ def main():
     print("Constants, read from source:")
     print(f"  Near ({c['near_x']:.0f}, {c['near_y']:.0f})   Far ({c['far_x']:.0f}, {c['far_y']:.0f})"
           f"   SpriteScale {c['sprite_scale']}")
-    print(f"  PlateFirstY {c['plate_first_y']:.0f}   CommandBottom {c['command_bottom']:.0f}")
+    print(f"  PlateFirstY {c['plate_first_y']:.0f}   PlateW {c['plate_w']:.0f} x PlateH {c['plate_h']:.0f}"
+          f" in {int(c['plate_columns'])} columns   CommandBottom {c['command_bottom']:.0f}")
     print()
 
     print("Actors, measured off the delivered art (opaque box, not canvas):")
@@ -147,8 +176,13 @@ def main():
     # highest one actually on screen is index 3.
     verb_top = c["command_bottom"] + 26.0 + 3 * c["verb_pitch"] + c["verb_h"] / 2.0
 
-    # The bottom enemy plate's lower edge: three plates stepping down.
-    plate_bottom = c["plate_first_y"] - (SLOTS - 1) * c["plate_pitch"] - c["plate_h"] / 2.0
+    # The bottom enemy plate's lower edge. The stack is a GRID, not a column:
+    # plate i sits at row i // PlateColumns, so three plates in two columns
+    # occupy two rows and step down once, not twice. Assuming one column read
+    # the ceiling a whole pitch lower than it is.
+    columns = int(c["plate_columns"])
+    bottom_row = (SLOTS - 1) // columns
+    plate_bottom = c["plate_first_y"] - bottom_row * c["plate_pitch"] - c["plate_h"] / 2.0
 
     print(f"Floor  (topmost always-visible verb row) y {verb_top:7.1f}")
     print(f"Ceiling(bottom enemy plate, lower edge)  y {plate_bottom:7.1f}")
@@ -177,7 +211,7 @@ def main():
                             f"(top {verb_top:.0f}, want {MARGIN:.0f} of daylight)")
 
         # Head: only slots whose art actually reaches the plates in x.
-        plate_left = c["plate_x"] - c["plate_w"] / 2.0
+        plate_left = c["plate_first_x"] - c["plate_w"] / 2.0
         if x + half > plate_left and head > plate_bottom - MARGIN:
             failures.append(f"slot {i}'s tallest head at {head:.0f} is inside the enemy plates "
                             f"(lower edge {plate_bottom:.0f}, want {MARGIN:.0f} of daylight)")

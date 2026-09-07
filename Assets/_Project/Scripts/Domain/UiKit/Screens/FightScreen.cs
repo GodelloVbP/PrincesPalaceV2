@@ -952,12 +952,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // exact TwoByOne match. PlatePitch below grows with it (76 to 122)
         // to keep the two rows from overlapping.
         //
-        // FLAGGED, NOT RESOLVED: PlateFirstY's own comment below ties this
-        // stack's lower edge to a 12px clearance against the tallest actor's
-        // head, measured by tools/measure_stage.py. Growing PlateH pushes
-        // that lower edge further down and tools/measure_stage.py was NOT
-        // re-run as part of this conversion -- re-check stage clearance
-        // before this ships.
+        // RESOLVED 2026-09-08, by finally running the tool. Growing PlateH
+        // drops the bottom row's lower edge from 284 to 215, and the tallest
+        // actor's head at the near slot reaches 149 -- 66 units of daylight
+        // against the 12 this layout is toleranced to, so the conversion
+        // shipped inside its own band. It took a repair to get that answer:
+        // tools/measure_stage.py had been reading PlateH as a literal and a
+        // PlateX that no longer exists, and it assumed one column where the
+        // stack has had two, so it exited on a parse failure rather than
+        // measuring anything.
         private static readonly UiVec PlateSize = Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, PlateW);
         private static float PlateH => PlateSize.Y;
 

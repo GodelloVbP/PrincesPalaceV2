@@ -37,11 +37,12 @@ namespace PrincesPalace.Domain.Stage
         //
         //   floor    verb column top -248, +8 for the ring, +12 so it reads as
         //            clearance rather than as touching     -> Near.Y >= -228
-        //   ceiling  the golem is the tallest actor at 384px above its own
-        //            manifest ground line, so at the near slot's 0.78 it needs
-        //            300 and its head lands at 72 -- which is why the bottom
-        //            enemy plate had to rise with it (PlateFirstY 332 -> 380,
-        //            putting that plate's lower edge at 96)
+        //   ceiling  the golem was the tallest actor then, at 331px above its
+        //            own manifest ground line, so at the near slot's scale it
+        //            needed ~260 -- which is why the bottom enemy plate had to
+        //            rise with it (PlateFirstY 332 -> 380). The "384" this
+        //            paragraph carried was never measured off the art; see the
+        //            re-measurement note under the live band below.
         //
         // X NOW RUNS OUTWARD WITH DEPTH, 300 -> 565, where it used to run
         // inward, 470 -> 250. Two things were wrong with running inward and
@@ -71,11 +72,23 @@ namespace PrincesPalace.Domain.Stage
         //
         //   floor    verb column top -248, +8 for the ring, +12 so it reads as
         //            clearance rather than as touching    -> Near.Y >= -228
-        //   ceiling  the tallest actor is 384px above its own manifest ground
-        //            line, and the bottom enemy plate's lower edge is at 108
+        //   ceiling  the tallest actor is 483px above its own manifest ground
+        //            line, and the bottom enemy plate's lower edge is at 215
         //
-        // At -218/-125 the front ring sits at -226 and the highest head at 90,
+        // At -218/-125 the front ring sits at -226 and the highest head at 149,
         // so both ends have more room than before rather than less.
+        //
+        // RE-MEASURED 2026-09-08, and both halves of the old note were wrong.
+        // The tallest actor is not the golem and never was 384: the roster
+        // grew, and tools/measure_stage.py reads forest_warden at 483 above
+        // its ground line while the golem measures 331. The plates moved too
+        // -- the 2x1 kit container took PlateH from 64 to 110, which drops the
+        // bottom row's lower edge from 284 to 215. The band still closes, by
+        // 66 units rather than by the 18 the old numbers claimed, but nothing
+        // here had been measured since either change; the tool that measures
+        // it could not parse the source at all (its PlateX/PlateH/VerbRowW
+        // patterns had all rotted), so re-running it was not the check anybody
+        // thought it was.
         //
         // KNOWN AND DELIBERATE: the detail column (top -186, x 308..648) still
         // covers a front enemy's feet while a submenu is open. Clearing it
