@@ -616,6 +616,29 @@ namespace PrincesPalace.Domain.Combat.Session
         // dodge -- the caller must check `dodged` rather than infer a miss
         // from `total == 0`, the identical discipline
         // DamagePipeline.Outcome.IsMiss already enforces one level down.
+        // Sums ModifierEffectType.ElementalDamagePercent across every source
+        // that grants it for this element, rather than ModifierEffectSet.
+        // Best()'s max-not-sum default -- see FightEncounterAdapter.cs'
+        // TypedResistanceFlat precedent ("the two sources stack, same as
+        // PhysicalDefense/MagicalDefense already do for relics vs gear
+        // stats"): a typed rider meant to combine across sources, not a
+        // repeated copy of one rule that Best() would collapse. Reads
+        // actor.ModifierEffects directly (an instance member), so this does
+        // not need `this` despite living on FightSession.
+        private int ElementalDamagePercentFor(CombatantState actor, DamageType type)
+        {
+            int total = 0;
+            foreach (var effect in actor.ModifierEffects.All)
+            {
+                if (effect.Type == ModifierEffectType.ElementalDamagePercent && effect.Against == type)
+                {
+                    total += effect.Magnitude;
+                }
+            }
+
+            return total;
+        }
+
         private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target,
             StringBuilder detail, out bool dodged)
         {
@@ -630,7 +653,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var instance in skill.DamageInstances)
             {
-                int scaled = System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
+                float elementalMultiplier = 1f + ElementalDamagePercentFor(actor, instance.type) / 100f;
+                int scaled = System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier * elementalMultiplier));
                 var outcome = DamagePipeline.AfterDefences(
                     scaled, instance.type, target,
                     affinity: AffinityOf(target),

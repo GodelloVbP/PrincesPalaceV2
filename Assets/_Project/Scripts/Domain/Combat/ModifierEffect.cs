@@ -76,6 +76,33 @@ namespace PrincesPalace.Domain.Combat
         // that would only ever differ by which DamageType they close over.
         ElementalDamageOnHitPercent,
 
+        // Bonus damage of ONE type, read against the PACKET's own element
+        // (instance.type inside ResolveDamageInstances -- FightSession.
+        // Skills.cs), NOT the caster's authored attackType the way the
+        // sibling member above is. This is what lets a foreign-element
+        // reward or affix pay a spell whose element differs from the
+        // caster's own swing -- ElementalDamageOnHitPercent's rider only
+        // ever fires on the caster's own attackType (FightSession.Ledger.
+        // cs's AttackTypeOf), so a Fire node on an Arcane caster would
+        // otherwise be worth a flat, un-scaling Attack x n% tick instead of
+        // a real percentage of the Fire packet she actually cast.
+        //
+        // Only fires for a skill that authors damageInstances at all --
+        // ResolveDamageInstances is never reached by a plain swing or a
+        // formula-scaled cast -- which is why this member and
+        // ElementalDamageOnHitPercent are NOT interchangeable and the
+        // reward-track routing rule (docs/PLAN_REWARD_TRACKS.md §2) appends
+        // exactly one of the two per element, never both: same element as
+        // attackType rides the rider above (every landed hit); any other
+        // element rides this one (spell packets only).
+        //
+        // SUMS across sources rather than ModifierEffectSet.Best()'s
+        // max-not-sum default -- see ElementalDamagePercentFor's own
+        // comment (FightSession.Skills.cs) for why, mirroring
+        // TypedResistanceFlat's summed-not-maxed precedent
+        // (FightEncounterAdapter.cs).
+        ElementalDamagePercent,
+
         // Flat resistance to ONE damage type — see the struct's own
         // Against/AgainstMagical fields below for which one. "magical" is
         // accepted at authoring time as shorthand for every type that is not

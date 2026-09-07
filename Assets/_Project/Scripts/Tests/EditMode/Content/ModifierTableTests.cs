@@ -361,6 +361,7 @@ namespace PrincesPalace.Domain.Tests
             var covered = new HashSet<ModifierEffectType>
             {
                 ModifierEffectType.ElementalDamageOnHitPercent,
+                ModifierEffectType.ElementalDamagePercent,
                 ModifierEffectType.FlatSpeedBonus,
                 ModifierEffectType.LifestealPercent,
                 ModifierEffectType.GuaranteedFirstAction,
