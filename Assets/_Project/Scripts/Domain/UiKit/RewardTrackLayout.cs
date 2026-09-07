@@ -953,7 +953,7 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // P4/P5 shim: RewardTrackScreen.cs:723 still bakes the rail's icon at
+        // P5 shim: RewardTrackScreen.cs:723 still bakes the rail's icon at
         // BUILD TIME per level ("the track is static", its own comment says),
         // which stays true until P5 wires the controller to write
         // icons[i].sprite from a per-kind array at runtime instead (plan §1,
@@ -996,7 +996,7 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // P4/P5 shim: ScreenRegistry.cs:927 still keys `cardArtByLevel`, 99
+        // P5 shim: ScreenRegistry.cs:927 still keys `cardArtByLevel`, 99
         // sprites indexed by level, at SCENE-BUILD TIME -- Editor code P3 may
         // not touch. P5 replaces that with `cardArtByReward`, one sprite per
         // TrackReward (plan §1). Kept under its old name, CardArtFor, because
@@ -1024,7 +1024,7 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // P4/P5 shim: RewardTrackController.cs:295, 529 still paints this per
+        // P5 shim: RewardTrackController.cs:295, 529 still paints this per
         // level at runtime (the mat tint IS already a runtime write today,
         // unlike the icon/card art above -- see plan §1's table -- so this one
         // only needs its argument re-typed once Core is allowed to change).

@@ -23,7 +23,7 @@ MonoBehaviour:
       since Phase C; untouched by the affix split.
     SortOrder: 18
     Effects:
-    - Type: 8
+    - Type: 9
       Magnitude: 15
       Threshold: 0
       AgainstType: 0

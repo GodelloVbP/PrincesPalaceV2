@@ -146,9 +146,19 @@ namespace PrincesPalace
             // ScaleCarriedHealth below: collecting one moves a character's
             // maximum, and a run that is carrying their current health has to
             // be told, or the bar grows a permanently empty tail.
+            //
+            // THE READ ORDER IS WHAT MAKES THIS WORK, and it stopped being
+            // incidental when max health stopped being a stored field.
+            // EffectiveStats now sums the track's MaxHealth entries at levels
+            // <= claimedTrackLevel, so `maxBefore` is a photograph taken
+            // BEFORE the claim moves the watermark on the next line and
+            // `EffectiveStats` inside ScaleCarriedHealth is one taken after.
+            // The delta between the two is exactly what the old
+            // bonusMaxHealth += used to produce. Reading maxBefore any later
+            // silently makes the scale a no-op.
             int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
 
-            if (!character.ClaimTrackRewards(throughLevel)) return;
+            if (!character.ClaimTrackRewards(RewardTracks.For(character), throughLevel)) return;
 
             RunEncounter.ScaleCarriedHealth(character, maxBefore);
 

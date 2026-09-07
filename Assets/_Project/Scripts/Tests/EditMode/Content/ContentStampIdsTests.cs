@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -175,14 +176,52 @@ namespace PrincesPalace.Domain.Tests
                 Resolver, relic => relic.Id);
         }
 
-        // reward_tracks.json ships with an empty "tracks" array until P6
-        // authors the real Shawn/Odette content (docs/PLAN_REWARD_TRACKS.md
-        // P2/P6), so an empty context map is correct here -- there is
-        // nothing yet for rules 4/5's cross-catalogue checks to run against,
-        // and nothing authored that would need them.
+        // Characters and skills first, because a reward track is validated
+        // against both -- the same ordering ContentBuilder.BuildRewardTracks
+        // depends on, and the same context map it assembles.
+        //
+        // THE CONTEXT WAS EMPTY HERE until P6 authored real tracks, on the
+        // argument that an empty tracks array has nothing to validate. That
+        // was true and stopped being true, and the failure it produced was the
+        // useful kind: every rule 4/5 and skillId check refused, because a
+        // character absent from the map resolves against a blank context (see
+        // RewardTrackCharacterContext's own header). Mirrored properly now.
+        //
+        // ONE HALF DIFFERS BETWEEN THE TWO MAPS, deliberately, and it is the
+        // rule docs/PLAN_REWARD_TRACKS.md §3f/§3h turns on: Level1DamageTypes
+        // is the character's OWN kit, while SkillDisplayNames is the WHOLE
+        // catalogue, because a track may grant a skill authored to somebody
+        // else and every book-only spell in the game is authored to "sheep".
         private static List<string> RewardTrackIds()
         {
+            var characters = ResolveAllOf<RawCharacterEntry, ResolvedCharacter>(
+                "characters.json", ParseFile<RawCharacterFile>(DataPath("characters.json")).characters,
+                CharacterEntryResolver.TryResolveAll);
+            var skills = ResolveAllOf<RawSkillEntry, ResolvedSkill>(
+                "skills.json", ParseFile<RawSkillFile>(DataPath("skills.json")).skills,
+                SkillEntryResolver.TryResolveAll);
+
+            var everySkillName = skills.ToDictionary(s => s.Id, s => s.DisplayName);
             var contexts = new Dictionary<string, RewardTrackCharacterContext>();
+
+            foreach (var character in characters)
+            {
+                var level1Types = new HashSet<DamageType> { character.AttackType };
+                foreach (var skill in skills.Where(s => s.CharacterId == character.Id && s.UnlockLevel <= 1))
+                {
+                    foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
+                }
+
+                contexts[character.Id] = new RewardTrackCharacterContext
+                {
+                    SortOrder = character.SortOrder,
+                    AttackType = character.AttackType,
+                    HasSignatureResource = character.HasSignatureResource,
+                    SignatureDisplayName = character.SignatureDisplayName,
+                    Level1DamageTypes = level1Types,
+                    SkillDisplayNames = everySkillName,
+                };
+            }
 
             bool Resolver(IReadOnlyList<RawRewardTrackEntry> entries, out List<ResolvedRewardTrack> resolved,
                           out List<string> errors) =>
@@ -191,6 +230,20 @@ namespace PrincesPalace.Domain.Tests
             return Resolve<RawRewardTrackEntry, ResolvedRewardTrack>(
                 "reward_tracks.json", ParseFile<RawRewardTrackFile>(DataPath("reward_tracks.json")).tracks,
                 Resolver, track => track.CharacterId);
+        }
+
+        // Resolve as above, but keeping the RECORDS rather than their ids --
+        // the cross-catalogue context a reward track is validated against
+        // needs fields, not names.
+        private static List<TResolved> ResolveAllOf<TRaw, TResolved>(
+            string label, TRaw[] entries, ResolveAll<TRaw, TResolved> resolve)
+        {
+            Assert.IsNotNull(entries, $"{label}: the JSON parsed to nothing.");
+
+            bool ok = resolve(entries, out var resolved, out var errors);
+            Assert.IsTrue(ok, $"{label}: {string.Join("; ", errors.Take(5))}");
+
+            return resolved;
         }
 
         private static Dictionary<string, List<string>> ResolvedByFolder() =>

@@ -261,8 +261,12 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheRoom(f => fight = f);
             TolerateTheStalledTurnWatchdog();
 
-            Assert.AreEqual(1, fight.Session.SecondLifeCharges,
-                "fixture: the fight opened without the charge this test is about");
+            // THREE, one per squad member: the source of a second life is
+            // per-character (docs/PLAN_REWARD_TRACKS.md §6) and LevelTheSquadTo
+            // collects level 90 on every one of them. The spend stays
+            // squad-wide, which is what the assertion below is about.
+            Assert.AreEqual(SaveSlotManager.CurrentSave.ActiveSquad().Count, fight.Session.SecondLifeCharges,
+                "fixture: the fight opened without the charges this test is about");
 
             yield return PlayToTheEnd(fight);
 
@@ -354,26 +358,35 @@ namespace PrincesPalace.PlayModeTests
         // A REAL LEVEL-N SQUAD, not just the level field. `character.level`
         // alone changes nothing a fight reads: max health, attack and every
         // other combat stat come from ContentDatabase.EffectiveAbilityScores
-        // (base + invested + talent bonuses) and Character.bonusMaxHealth,
-        // both of which only move through ClaimTrackRewards and Invest --
-        // see Character.cs's own header on `level` ("level gates spell tiers
+        // (base + invested + talent bonuses) and from the reward track's own
+        // terms, and the track pays nothing until it is COLLECTED -- see
+        // Character.cs's own header on `level` ("level gates spell tiers
         // ... [not] a within-run curve") and FightEncounterAdapter (maxHealth
         // = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores)). A
         // character left at raw `level = N` fights with a level-1 statline
         // whatever N is, which is why level 200 and level 90 used to be
-        // indistinguishable here. ProfilePresets.Build is the game's own door
-        // for turning a level into a build (level, ClaimTrackRewards, spend
-        // every point) and this mirrors it minus the talent/ember half,
-        // which the tests in this file never needed. Points are spread
-        // round-robin across every score rather than by any archetype --
-        // there is no fight-specific build under test, only "is this
-        // character as strong as its level says it should be".
+        // indistinguishable here.
+        //
+        // THE CLAIM IS THE WHOLE OF IT since docs/PLAN_REWARD_TRACKS.md P4:
+        // it hands over the stat points and moves claimedTrackLevel, and every
+        // other term (max health, the second life, wool, elemental damage) is
+        // summed live against that watermark at its own read site. So this
+        // helper is one call shorter in effect than it looks -- there is no
+        // second field to move.
+        //
+        // ProfilePresets.Build is the game's own door for turning a level into
+        // a build (level, ClaimTrackRewards, spend every point) and this
+        // mirrors it minus the talent/ember half, which the tests in this file
+        // never needed. Points are spread round-robin across every score
+        // rather than by any archetype -- there is no fight-specific build
+        // under test, only "is this character as strong as its level says it
+        // should be".
         private static void LevelTheSquadTo(int level)
         {
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = level;
-                character.ClaimTrackRewards();
+                character.ClaimTrackRewards(RewardTracks.For(character), character.level);
 
                 int scoreIndex = 0;
                 while (character.unspentStatPoints > 0)

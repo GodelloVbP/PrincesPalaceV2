@@ -20,7 +20,7 @@ MonoBehaviour:
       the rest of the family.
     SortOrder: 22
     Effects:
-    - Type: 12
+    - Type: 13
       Magnitude: 13
       Threshold: 0
       AgainstType: 0

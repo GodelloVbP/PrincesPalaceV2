@@ -141,9 +141,13 @@ namespace PrincesPalace
                     // RewardApplier leaves the track unclaimed so the player
                     // collects it themselves. A bot that skipped this would
                     // play a level 60 character with a level 1 character's
-                    // stat points and max health -- which is not "level 60"
-                    // by any reading a balance report could use.
-                    character.ClaimTrackRewards();
+                    // stat points, max health and signature resource -- which
+                    // is not "level 60" by any reading a balance report could
+                    // use. The claim moves claimedTrackLevel, and that
+                    // watermark is what every read site on the track sums
+                    // against, so this one call is what makes the whole
+                    // statline the level it says.
+                    character.ClaimTrackRewards(RewardTracks.For(character), character.level);
 
                     SpendEveryPoint(character, policy, rng);
 

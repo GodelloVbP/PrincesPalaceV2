@@ -21,7 +21,7 @@ MonoBehaviour:
       its own like every other affix.
     SortOrder: 20
     Effects:
-    - Type: 10
+    - Type: 11
       Magnitude: 5
       Threshold: 0
       AgainstType: 0

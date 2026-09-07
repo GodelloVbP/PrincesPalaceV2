@@ -23,7 +23,7 @@ MonoBehaviour:
       family.
     SortOrder: 23
     Effects:
-    - Type: 13
+    - Type: 14
       Magnitude: 0
       Threshold: 0
       AgainstType: 0

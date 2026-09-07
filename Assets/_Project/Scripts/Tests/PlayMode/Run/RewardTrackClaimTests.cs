@@ -7,7 +7,10 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -73,7 +76,6 @@ namespace PrincesPalace.PlayModeTests
                 character.level = level;
                 character.claimedTrackLevel = claimed;
                 character.unspentStatPoints = 0;
-                character.bonusMaxHealth = 0;
             }
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
@@ -276,6 +278,215 @@ namespace PrincesPalace.PlayModeTests
                 "pressing an unreached node paid something out");
             Assert.AreNotEqual(before, content.anchoredPosition.x,
                 "pressing an unreached node did nothing at all");
+        }
+
+        // ---- what a collected node actually pays ---------------------------------
+        //
+        // Everything below reads the PRODUCTION seam the reward is spent
+        // through -- ContentDatabase.BuildSignatureResource, .ModifierEffects,
+        // .AvailableSkillsFor, SquadTrack.SecondLivesLeft -- rather than
+        // asking the definition what it holds. Asking the definition would
+        // pass just as happily if no read site had ever been wired, which is
+        // the exact failure AUDIT #53 records: a reward that is granted,
+        // stored and read by nothing.
+        //
+        // EVERY LITERAL HERE IS READ OFF docs/PLAN_REWARD_TRACKS.md section 5's
+        // tables, never recomputed from the definition under test (CLAUDE.md's
+        // fifth gotcha). A retune in reward_tracks.json moves these numbers
+        // and these tests together, which is the honest trade for pinning
+        // figures a person can check by eye.
+
+        private static Character Roster(string definitionId) =>
+            SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == definitionId);
+
+        // 10 base capacity (characters.json), plus the three filler
+        // "+1 WOOL CAPACITY" nodes at levels 6, 14 and 21, plus the level-25
+        // milestone's +5. The uncollected reading is the same minus that
+        // milestone.
+        [Test]
+        public void AWoolCapacityNodeCollectedRaisesTheFightsCapacityAndAnUncollectedOneDoesNot()
+        {
+            var shawn = Roster("sheep");
+            shawn.level = 26;
+
+            shawn.claimedTrackLevel = 25;
+            Assert.AreEqual(18, ContentDatabase.BuildSignatureResource(shawn).Max,
+                "the level-25 wool capacity milestone never reaches the fight's resource");
+
+            shawn.claimedTrackLevel = 24;
+            Assert.AreEqual(13, ContentDatabase.BuildSignatureResource(shawn).Max,
+                "an uncollected capacity node was paid anyway");
+        }
+
+        // LIGHTNING, and the choice of element is the whole test. It is the
+        // one element on Odette's track that is milestone-only (section 5: Ice
+        // and Lightning arrive with the spells that deal them, so validation
+        // rule 4 refuses them as filler), which is what makes "none, then
+        // exactly one" a true statement about it. Fire has filler nodes from
+        // level 6 and is already well above zero by 69.
+        //
+        // ElementalDamagePercent, the packet hook P4b added, NOT the on-hit
+        // rider: Lightning is not her attackType.
+        [Test]
+        public void AnElementalNodeReachesTheCombatantAsAModifierEffect()
+        {
+            var odette = Roster("owl");
+            odette.level = 71;
+
+            odette.claimedTrackLevel = 70;
+            var lightning = ContentDatabase.ModifierEffects(odette).All
+                .Where(e => e.Type == ModifierEffectType.ElementalDamagePercent
+                            && e.Against == DamageType.Lightning)
+                .ToList();
+
+            Assert.AreEqual(1, lightning.Count,
+                "the level-70 Lightning milestone did not reach the effect set as exactly one effect");
+            Assert.AreEqual(20, lightning[0].Magnitude);
+
+            odette.claimedTrackLevel = 69;
+            Assert.IsFalse(ContentDatabase.ModifierEffects(odette).All
+                    .Any(e => e.Against == DamageType.Lightning),
+                "an uncollected elemental node was paid anyway");
+        }
+
+        // THE OTHER HALF OF THE ROUTING RULE (section 2), and the pin that
+        // stops an implementer collapsing the two hooks back into one.
+        //
+        // A character's OWN attackType rides ElementalDamageOnHitPercent --
+        // the existing rider, which multiplies every landed hit, swing and
+        // cast alike -- because a plain swing carries no damage instances for
+        // the packet hook to see at all. Everything else rides the packet
+        // hook. Never both, for any element.
+        [Test]
+        public void TheCharactersOwnElementRidesTheOnHitRiderInstead()
+        {
+            // Shawn's attackType is Nature: 9 filler "+1% NATURE DAMAGE" nodes
+            // through level 45, plus the level-45 milestone's 10.
+            var shawn = Roster("sheep");
+            shawn.level = 46;
+            shawn.claimedTrackLevel = 45;
+
+            var shawnEffects = ContentDatabase.ModifierEffects(shawn).All;
+            var nature = shawnEffects
+                .Where(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent)
+                .ToList();
+
+            Assert.AreEqual(1, nature.Count, "Shawn's Nature line is not one on-hit effect");
+            Assert.AreEqual(DamageType.Nature, nature[0].Against);
+            Assert.AreEqual(19, nature[0].Magnitude);
+            Assert.IsFalse(shawnEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent),
+                "Shawn's own element was ALSO routed through the packet hook, which would pay it twice " +
+                "-- and pay it through the one hook 68 of his 100 levels cannot reach");
+
+            // Odette's attackType is Arcane: 4 filler "+2% ARCANE DAMAGE"
+            // nodes through level 49, plus the level-50 milestone's 10. Her
+            // Fire line is the same track, the other branch.
+            var odette = Roster("owl");
+            odette.level = 51;
+            odette.claimedTrackLevel = 50;
+
+            var odetteEffects = ContentDatabase.ModifierEffects(odette).All;
+            var arcane = odetteEffects
+                .Where(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent)
+                .ToList();
+
+            Assert.AreEqual(1, arcane.Count, "Odette's Arcane line is not one on-hit effect");
+            Assert.AreEqual(DamageType.Arcane, arcane[0].Against);
+            Assert.AreEqual(18, arcane[0].Magnitude);
+
+            Assert.IsTrue(odetteEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent
+                                                 && e.Against == DamageType.Fire),
+                "Odette's Fire line did not take the packet hook, which is the only seam that can " +
+                "pay an element her attackType is not");
+        }
+
+        // Frost Flare is authored characterId "sheep" like every other
+        // book-only spell in the game, and lands in Odette's kit anyway: the
+        // track's skill route carries no ownership test, because the track IS
+        // per-character and has already said whose skill it is (section 3f/3h).
+        [Test]
+        public void ASkillNodeCollectedPutsTheSpellInTheKit()
+        {
+            var odette = Roster("owl");
+            odette.level = 11;
+
+            odette.claimedTrackLevel = 10;
+            Assert.IsTrue(ContentDatabase.AvailableSkillsFor(odette).Any(s => s.id == "frost_flare"),
+                "the level-10 spell the track paid for is not in the kit the fight builds");
+
+            odette.claimedTrackLevel = 9;
+            Assert.IsFalse(ContentDatabase.AvailableSkillsFor(odette).Any(s => s.id == "frost_flare"),
+                "a spell arrived before the player collected the node that grants it");
+        }
+
+        // Section 6: the SOURCE is per-character and the SPEND is squad-wide.
+        // Two members who have collected level 90 bring two charges; the
+        // third, who has collected nothing, brings none -- and the pair is
+        // spent out of one pot, because TrySecondLife only fires when the
+        // party would otherwise be wiped and raises everyone who is down.
+        [Test]
+        public void ASecondLifeIsCountedPerCollectingCharacter()
+        {
+            RunManager.StartRun(4457728181926001UL);
+
+            var squad = SaveSlotManager.CurrentSave.ActiveSquad();
+            Assert.AreEqual(3, squad.Count, "fixture: this test needs the squad of three");
+
+            for (int i = 0; i < squad.Count; i++)
+            {
+                squad[i].level = 90;
+                squad[i].claimedTrackLevel = i < 2 ? 90 : 0;
+            }
+
+            Assert.AreEqual(2, SquadTrack.SecondLivesLeft(RunManager.Run),
+                "the second life is not sourced from the characters who collected it");
+        }
+
+        // ---- the v5 migration ----------------------------------------------------
+
+        // DIRECT FIELD ASSIGNMENT ON A CreateNew SAVE, the idiom
+        // EmberOwnershipTests established for a migration that reinterprets
+        // values without changing the save's SHAPE. The JSON-token-stripping
+        // technique in ItemModifierSaveCompatTests is for a field REMOVED from
+        // the shape; claimedTrackLevel and unspentStatPoints are neither
+        // removed nor renamed by this step, only read against a different
+        // table afterwards, so there is nothing a round-trip would prove.
+        [Test]
+        public void AVersionFourSaveComesBackWithEverythingWaiting()
+        {
+            var save = SaveData.CreateNew();
+            save.version = 4;
+
+            var character = save.roster[0];
+            character.level = 41;
+            character.claimedTrackLevel = 40;
+            character.unspentStatPoints = 7;
+
+            Assert.IsTrue(save.Migrate());
+
+            character = save.roster[0];
+            Assert.AreEqual(0, character.claimedTrackLevel,
+                "a v4 watermark was carried across and reinterpreted against the new table");
+            Assert.AreEqual(0, character.unspentStatPoints,
+                "points paid by the old table survived the track that paid them");
+            Assert.AreEqual(41, character.level, "the migration took a level away");
+            Assert.AreEqual(SaveData.CurrentVersion, save.version);
+        }
+
+        // The generated default, reached through the same lookup every read
+        // site uses. RewardTrackDefinitionTests pins the two totals against
+        // RewardTrackDefinition.Default directly; what is left to prove is
+        // that a character with no authored track actually RESOLVES to it
+        // rather than to an empty one or to somebody else's.
+        [Test]
+        public void AnUnauthoredCharacterResolvesToTheGeneratedDefault()
+        {
+            var track = RewardTracks.For("placeholder_brawler");
+
+            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
+                "40 filler singles plus level 80's ten");
+            Assert.AreEqual(229, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
+                "9 milestone nodes at 15 plus 47 filler nodes at 2");
         }
     }
 }

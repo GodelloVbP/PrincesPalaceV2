@@ -143,6 +143,14 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `modifiers` | RawRelicModifier[] (below) | `[]` | Numeric stat changes this relic grants; see RawRelicModifier. |  |
 | `requiresConvergenceAbility` | bool | `false` | Whether this relic is only ever offered to a party that already has a convergence/ultimate ability. |  |
 
+## reward_tracks.json -- `RawRewardTrackEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `characterId` | string | `""` | The character this track belongs to; matches a characters.json id. |  |
+| `milestones` | RawTrackMilestone[] (below) | `[]` | The track's twelve milestone rewards, one per fixed milestone level; see RawTrackMilestone. |  |
+| `filler` | RawTrackFiller[] (below) | `[]` | The track's filler reward mix, spread evenly across its 87 non-milestone levels; see RawTrackFiller. |  |
+
 ## skills.json -- `RawSkillEntry`
 
 | Field | Type | Default | Description | Values |
@@ -275,7 +283,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `type` | string | `""` | Which Domain.Combat.ModifierEffectType this rule grants, matched case-insensitively. | None, ElementalDamageOnHitPercent, TypedResistanceFlat, FlatSpeedBonus, LifestealPercent, GuaranteedFirstAction, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatMaxManaBonus, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, FortunateFavorBonusFlat, DodgeRating, ChilledOnHitChancePercent, RootChancePercent |
+| `type` | string | `""` | Which Domain.Combat.ModifierEffectType this rule grants, matched case-insensitively. | None, ElementalDamageOnHitPercent, ElementalDamagePercent, TypedResistanceFlat, FlatSpeedBonus, LifestealPercent, GuaranteedFirstAction, FlatPhysicalDamageReduction, BreakShieldDepletionResistPercent, OnKillSplashPercent, PushBackOnHitChancePercent, FlatMaxManaBonus, FlatManaRegenBonus, NextSkillManaDiscountPercent, ManaToWardOnTurnStartPercent, FortunateFavorBonusFlat, DodgeRating, ChilledOnHitChancePercent, RootChancePercent |
 | `magnitude` | int | `0` | The rule's UNSCALED base magnitude; the fight reads base x TierMultiplier x RiftMultiplier. |  |
 | `threshold` | int | `0` | The rule's threshold; meaning depends on type. |  |
 | `damageType` | string | `""` | A DamageType name (or 'magical') this rule targets; required by TypedResistanceFlat only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
@@ -309,6 +317,25 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `type` | string | `""` | Which Domain.Combat.TalentEffectType this rule grants, matched case-insensitively. | None, WoolOnHitTaken, WoolPerTurnBelowHealth, WoolWhenWardedAllyHit, WoolPerStatusedEnemy, IgnoreDefensePercent, ShredDefenseOnHit, ProvokedDamageReductionPercent, ProvokeHitsEveryEnemy, WoolPerProvokedEnemy, ExecuteDamageBonusPercent, KillSplashPercentOfAttack, ExtraAttackOnKill, TransformDurationBonus, TransformExtendOnKill, TransformHoldsBelowHealth, DefenseBonusPercentBelowHealth, DamageCapPercentBelowHealth, CheatDeathOncePerFight, HeadbuttCancelsIntent, TransformPushesEveryEnemy, TransformPermanentBelowHealth, WardReductionPercent, WardIsFreeAction, WardAlsoAppliesRegen, WardHealsWhenSpent, WardDamageBonusPerAlly, WardDamageBonusSelf, WardSelfBonusPersistsTurns, WardSpreadsToAllies, WardSpreadsToWholeParty, GiftManaPercent, GiftAttackBonusPercent, GiftAppliesImmediateTurn, ShatterDamagePercentOfAttack, ShatterSelfWardMultiplier, ShatterAppliesVulnerable, WardsNeverExpire |
 | `magnitude` | int | `0` | The rule's magnitude; meaning depends on type. |  |
 | `threshold` | int | `0` | The rule's threshold; meaning depends on type. |  |
+
+### `RawTrackFiller`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `reward` | string | `""` | Which TrackReward this filler row grants, matched case-insensitively against the enum member name. A one-shot capability (an unlock) is refused here -- filler may only be a grant. | None, StatPoint, MaxHealth, Respec, SecondLife, SignatureCapacity, SignatureGainPerTurn, SignatureGainOnDamageTaken, SignatureAbsorbs, ElementalDamagePercent, MaxMana, ManaRegen, UnlockSkill |
+| `amount` | int | `0` | The reward's magnitude, paid at every filler level this row places. |  |
+| `against` | string | `""` | The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+| `count` | int | `0` | How many of the track's 87 filler levels this row occupies. Every row's count in a track must sum to exactly 87. |  |
+
+### `RawTrackMilestone`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `level` | int | `0` | The milestone level this entry lands on; must be one of the track's twelve fixed milestone levels (10, 20, 25, 30, 40, 45, 50, 60, 70, 80, 90, 100), and every one of the twelve must be named exactly once. |  |
+| `reward` | string | `""` | Which TrackReward this milestone grants, matched case-insensitively against the enum member name. | None, StatPoint, MaxHealth, Respec, SecondLife, SignatureCapacity, SignatureGainPerTurn, SignatureGainOnDamageTaken, SignatureAbsorbs, ElementalDamagePercent, MaxMana, ManaRegen, UnlockSkill |
+| `amount` | int | `0` | The reward's magnitude -- a count for a grant (a stat point, max health), or an unlock's own parameter where it has one (SecondLife's charge count); 0 for an unlock with none (Respec). |  |
+| `against` | string | `""` | The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+| `skillId` | string | `""` | The skill id this reward unlocks; only UnlockSkill reads this, empty otherwise. |  |
 
 ### `SpellPresentation`
 

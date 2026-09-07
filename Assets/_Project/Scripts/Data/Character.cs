@@ -111,43 +111,29 @@ namespace PrincesPalace
         // attack/speed/health with no separate stat pathway of its own.
         public AbilityScoreBlock investedAbilityScores;
 
-        // Max health granted by the reward track, on top of everything the
-        // character's definition, talents, gear and ability scores already give
-        // them.
-        //
-        // A FLAT ADDITION rather than invested Constitution, and the difference
-        // matters. AbilityDerivation pays a flat rate for the first ten points
-        // into a score and then switches to the square of the excess, which
-        // starts far lower -- so folding these into CON would make each node
-        // worth 20 health to a character who had spent nothing there and 1 to
-        // one who had already filled the band. A reward whose value depends on
-        // where the player happened to put unrelated points is not a reward
-        // anyone can plan around.
-        //
-        // A GRANT, so it goes through the claim watermark and is paid exactly
-        // once -- and unlike stat points it is NOT refunded by a respec. There
-        // is nothing to take back: the player never chose where it went.
-        //
-        // Purely additive, so SaveData.CurrentVersion does not move.
-        public int bonusMaxHealth;
-
         // How far up the reward track this character has been PAID.
         //
         // A watermark rather than a list of claimed ids, because the track is
         // ordered and dense: "everything up to 37" is the same statement as a
         // list of 37 entries and cannot disagree with itself about level 12.
         //
-        // Only GRANTS need this -- the quantities, like a stat point or two
-        // Favor, which have to be handed over exactly once. Unlocks (respec, a
-        // wider offer, a second life) are pure functions of `level` and are
-        // stored nowhere, so they cannot be missed by a character who passed
-        // the level before the feature was built. RewardTrack's header has the
-        // full reasoning.
+        // THE ONE NUMBER THE WHOLE TRACK IS READ AGAINST, and this used to be
+        // narrower. It once served only the grants -- quantities that had to
+        // be handed over exactly once -- while capabilities like the respec
+        // were pure functions of `level` and stored nothing, so a character
+        // who passed the level before the feature existed still had them.
+        // Under docs/PLAN_REWARD_TRACKS.md §2 that split is gone: a reward is
+        // COLLECTED or it is not, and every read site (max health, wool
+        // capacity, elemental damage, the respec, the second life, an unlocked
+        // spell) sums or tests the track's entries at levels <= this. Reaching
+        // a level and being paid for it stay two steps, which is what makes
+        // the collect button on the track screen mean something.
         //
         // Zero on an older save, which is BELOW StartingLevel and therefore
-        // reads as "has claimed nothing" -- RewardTrack.GrantedBetween floors
-        // it. An existing character is paid everything the track owes them for
-        // the levels they already have, the next time they gain any exp.
+        // reads as "has claimed nothing" -- every read floors it there. An
+        // existing character is owed everything the track holds for the levels
+        // they already have, and collects it the next time they open the
+        // track.
         public int claimedTrackLevel;
 
         public Character()
@@ -277,7 +263,9 @@ namespace PrincesPalace
         // independent and neither total is computed from the other.
         //
         // NOT gated here. Whether this character has EARNED a respec is
-        // RewardTrack.HasUnlocked(Respec, level), and it is the caller's job --
+        // RewardTracks.For(this).HasUnlocked(Respec, claimedTrackLevel) --
+        // their own track, read against what they have collected rather than
+        // what they have reached -- and it is the caller's job --
         // a model method that silently refused would be indistinguishable from
         // one that worked and found nothing to give back.
         public RespecRefund Respec(int embersSpent)
@@ -303,11 +291,17 @@ namespace PrincesPalace
         // `level` and has nothing between. Callers therefore do not have to
         // know whether anybody else has already claimed.
         //
-        // Only GRANTS are paid here. Unlocks are answered from `level`
-        // directly, wherever the capability is used -- see RewardTrack.
+        // Only THE GRANT is paid here. Everything else the track carries is
+        // read live off `claimedTrackLevel` at its own site -- see RewardTrack
+        // and docs/PLAN_REWARD_TRACKS.md §2.
         //
-        // Returns whether anything was actually handed over, so a caller can
-        // drive a "reward earned" flourish without diffing the character.
+        // Returns whether the watermark actually moved, so a caller can drive
+        // a "reward earned" flourish without diffing the character. NOT
+        // "whether stat points arrived": a level whose entry is a wool node or
+        // a spell hands over something real and pays no points, and a claim
+        // that reported false there would leave the screen unrefreshed and the
+        // save unwritten with the watermark already moved.
+        //
         // THROUGH A LEVEL, not simply up to the character's own.
         //
         // It used to take no argument and always settle the entire gap, and
@@ -325,8 +319,18 @@ namespace PrincesPalace
         // One number, no hole, exactly as before. The design says the same
         // thing in section 4 -- "claims everything from claimedTrackLevel + 1
         // up to and including it" -- and `it` is the node, not the character.
-        public bool ClaimTrackRewards(int throughLevel)
+        // TAKES THE TRACK RATHER THAN FINDING IT. The definition is content
+        // (Core.RewardTracks reads it off ContentDatabase) and this type is
+        // save state; a convenience overload that resolved its own track
+        // would make this the one method on Character reaching into a content
+        // lookup on its own initiative, which is the same discipline
+        // ActiveLoadout's "an inert item is inert everywhere at once" keeps.
+        // Every caller has the character in hand already, so
+        // RewardTracks.For(character) is one expression at the call site.
+        public bool ClaimTrackRewards(RewardTrackDefinition track, int throughLevel)
         {
+            if (track == null) return false;
+
             // NEVER PAST THE CHARACTER'S OWN LEVEL, whatever the caller asks
             // for. This is the one guard that makes an arbitrary argument safe:
             // a caller cannot collect a reward that has not been earned.
@@ -344,17 +348,28 @@ namespace PrincesPalace
 
             if (throughLevel <= claimedTrackLevel) return false;
 
-            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, throughLevel);
-            int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, throughLevel);
+            // ONE GRANT, and moving the watermark is the rest of the payment.
+            //
+            // Max health used to be handed over here too, into a
+            // `bonusMaxHealth` field on this type. It is not a second grant
+            // any more and neither is anything else: everything the track pays
+            // except stat points is summed live off `claimedTrackLevel` at its
+            // own read site (max health in ContentDatabase.EffectiveStats,
+            // wool in BuildSignatureResource, and so on -- docs/PLAN_REWARD_
+            // TRACKS.md §2's read-site table). Stat points are the exception
+            // because the player SPENDS them, so the balance has to be
+            // storable; a stored copy of anything else could only disagree
+            // with the definition after a retune.
+            int points = track.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, throughLevel);
 
             unspentStatPoints += points;
-            bonusMaxHealth += health;
+
+            // MOVED WHATEVER THE GRANT PAID, because the watermark is what
+            // every other reward is read against -- a level whose entry is a
+            // wool node pays nothing here and must still be collected.
             claimedTrackLevel = throughLevel;
 
-            return points > 0 || health > 0;
+            return true;
         }
-
-        // Everything owed, which is what a collect-all button asks for.
-        public bool ClaimTrackRewards() => ClaimTrackRewards(level);
     }
 }

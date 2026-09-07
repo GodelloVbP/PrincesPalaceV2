@@ -82,12 +82,18 @@ namespace PrincesPalace.Content
             get { EnsureLoaded(); return _modifiers; }
         }
 
-        // Every character's reward track, authored order. NOTHING READS THIS
-        // YET -- docs/PLAN_REWARD_TRACKS.md's P2 lands the loading seam in
-        // isolation from the packages (P3/P4/P6) that turn it into gameplay.
-        // reward_tracks.json ships with zero tracks until P6 authors real
-        // content, so this is legitimately empty today.
-        public static IReadOnlyList<RewardTrackDefinitionAsset> RewardTracks
+        // Every character's authored reward track, in roster order. One
+        // reader: RewardTracks.For, which turns the one that matches a
+        // character into the RewardTrackDefinition every read site asks.
+        //
+        // NAMED FOR THE ASSET rather than for the concept, unlike its eleven
+        // neighbours, and not out of pedantry: `RewardTracks` unqualified
+        // inside this namespace binds to THIS property, so
+        // `RewardTracks.For(character)` from any file in PrincesPalace.Content
+        // resolves to a member lookup on a list and does not compile. Naming
+        // the raw list after what it holds leaves the good name free for the
+        // thing callers actually want.
+        public static IReadOnlyList<RewardTrackDefinitionAsset> RewardTrackAssets
         {
             get { EnsureLoaded(); return _rewardTracks; }
         }
@@ -282,7 +288,7 @@ namespace PrincesPalace.Content
             var granted = TalentGrantedSkillsFor(character);
 
             // ...or was LEARNED FROM A BOOK this run (docs/PLAN_SHOP.md §1a),
-            // the fourth route. Reads RunManager.Run directly rather than
+            // the fourth of five. Reads RunManager.Run directly rather than
             // taking it as a parameter -- the same ambient-run-state posture
             // every other Core method that needs "the run right now" already
             // takes (RunOrchestrator, MapController) -- and is null-safe:
@@ -316,14 +322,39 @@ namespace PrincesPalace.Content
             // through SkillsUnlockedByLevel rather than a second copy of it.
             var byLevel = SkillsUnlockedByLevel(character.definitionId, character.level);
 
-            // TWO ROUTES WITH DIFFERENT OWNERSHIP RULES, so the CharacterId
+            // ...or because the character's own REWARD TRACK handed it over
+            // and they have collected that far -- the fifth route.
+            //
+            // NO OWNERSHIP TEST, deliberately, and this is the opposite of
+            // what ContentDatabase.Validation's talent arm enforces two
+            // catalogues over ("a character cannot hand out another
+            // character's kit"). The difference is real rather than an
+            // oversight: a TALENT belongs to a character and could name
+            // somebody else's skill by typo, while a TRACK DEFINITION IS
+            // per-character -- naming the skill on Odette's track has already
+            // said whose it is. Restoring the symmetry here would refuse
+            // Odette every book spell in the game, since all six carry
+            // characterId "sheep" for the reason the comment above gives.
+            //
+            // Read off claimedTrackLevel, not level: a track reward is
+            // COLLECTED, and a spell arriving before the player pressed the
+            // node would be the auto-claim this whole design removed. A fresh
+            // character sits at 0, where SkillsCollected returns nothing --
+            // which is the invariant SkillUnlockFilterTests'
+            // TheSharedFunctionAgreesWithAvailableSkillsForAFreshLevelOne-
+            // Character rests on.
+            var fromTrack = RewardTracks.For(character).SkillsCollected(character.claimedTrackLevel);
+
+            // THREE ROUTES WITH DIFFERENT OWNERSHIP RULES, so the CharacterId
             // check sits inside the levelled branch rather than in front of
-            // both. A levelled/granted skill is available because it is THIS
-            // character's; a learned book is available because THIS character
-            // learned it.
+            // them all. A levelled/granted skill is available because it is
+            // THIS character's; a learned book is available because THIS
+            // character learned it; a track-collected skill is available
+            // because THIS character's own track paid it.
             return _skills
                 .Where(s => s.Data.PlayerSelectable
                             && (LearnedThisRun(s)
+                                || fromTrack.Contains(s.id)
                                 || byLevel.Contains(s)
                                 || (s.Data.CharacterId == character.definitionId
                                     && (character.unlockedSkillIds.Contains(s.id)
@@ -353,6 +384,13 @@ namespace PrincesPalace.Content
             // that installs its own characters would otherwise see the last
             // one's face.
             CharacterPortraits.Reset();
+
+            // Same shape, same reason: RewardTracks memoises one
+            // RewardTrackDefinition per character id, built out of the
+            // _rewardTracks assets just dropped above, so a swapped catalogue
+            // has to drop the memo or every read site keeps answering off the
+            // last one's track.
+            RewardTracks.Reset();
         }
 
         public static CharacterDefinition GetCharacter(string id)

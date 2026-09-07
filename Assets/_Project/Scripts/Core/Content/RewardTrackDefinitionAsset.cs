@@ -9,13 +9,13 @@ namespace PrincesPalace.Content
     // asset by ContentBuilder -- never hand-edited under Resources/Content,
     // which ContentBuilder deletes wholesale on every build.
     //
-    // NOTHING READS THIS YET. docs/PLAN_REWARD_TRACKS.md's P2 lands the
-    // content type in isolation from the two packages that would consume
-    // it: P3 (concurrent, its own worktree) rewrites
-    // Domain/Progression/RewardTrack.cs into a RewardTrackDefinition, and
-    // P4/P6 are what wire a definition built from this asset's data into
-    // Character/ContentDatabase. Until then this is a generated, loaded,
-    // and entirely unread ScriptableObject -- see ContentDatabase.RewardTracks.
+    // READ IN EXACTLY ONE PLACE, Core.RewardTracks.For, which converts the
+    // asset matching a character into the RewardTrackDefinition every read
+    // site (max health, wool, elemental damage, the respec, the second life,
+    // an unlocked spell) sums against their claimedTrackLevel. Nothing else
+    // touches ContentDatabase.RewardTrackAssets, and nothing should: the
+    // resolved record is a serialisation shape, not the thing that knows how
+    // to read itself.
     //
     // Same shape as RelicDefinition: [SerializeField] private data with an
     // Editor-only setter, so `definition.Data.CharacterId = "x"` still

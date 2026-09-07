@@ -4,22 +4,26 @@ namespace PrincesPalace
 {
     // What the fielded squad has earned from the reward track.
     //
-    // THE HIGHEST LEVEL IN THE SQUAD, NEVER THE SUM, and this exists because
-    // that rule was being spelled out for the fourth time. The reward track is
-    // per character; a run-scoped reward on a per-character track (how many
-    // second lives a descent has left) has to resolve to ONE number somehow.
+    // A run-scoped question asked of a per-character track has to resolve to
+    // ONE number somehow, and there are two honest ways to do it. This file
+    // holds both, and which one a reward gets is a design decision each time
+    // rather than a default:
     //
-    // Highest rather than total for the reason ItemOfferRoll.SquadFavor already
-    // gives about Favor: summing would make every reward scale with squad size,
-    // so the real decision would become "bring more bodies" rather than "bring
-    // the character who has earned this". Fielding your best character is
-    // supposed to be the choice.
+    // - THE HIGHEST LEVEL IN THE SQUAD (BestLevel), for anything the run
+    //   itself has, for the reason ItemOfferRoll.SquadFavor gives: summing
+    //   would make the reward scale with squad size, so the real decision
+    //   becomes "bring more bodies" rather than "bring the character who has
+    //   earned this".
+    // - THE SUM OVER THE FIELDED SQUAD, for a reward that is genuinely each
+    //   character's own and merely spent out of a shared pot. The second life
+    //   is the only one today; SecondLivesLeft's own comment argues it, and
+    //   docs/PLAN_REWARD_TRACKS.md §6 is where it was settled.
     //
-    // This is docs/archive/HANDOVER_PROGRESSION_TRACK.md 4c answered the cheap way
-    // while the squad is one character. The other reading -- a benefit that
-    // applies only while its owner is fielded -- is more interesting and needs
-    // a per-character notion of whose second life it is, which nothing in the
-    // run state has.
+    // This was "highest, never the sum" outright, which was
+    // docs/archive/HANDOVER_PROGRESSION_TRACK.md 4c answered the cheap way
+    // while the squad was one character. The reading it deferred -- a benefit
+    // sourced from whoever earned it -- is what §6 chose once the tracks
+    // became per-character and there was something to differ about.
     public static class SquadTrack
     {
         // The best level among the characters actually fielded. 1 when there is
@@ -40,26 +44,48 @@ namespace PrincesPalace
             return best;
         }
 
-        // Whether the squad has earned a capability at all.
-        public static bool HasUnlocked(TrackReward reward) =>
-            RewardTrack.HasUnlocked(reward, BestLevel());
-
-        // How many second lives this descent has left. Level 90 grants one.
+        // How many second lives this descent has left.
+        //
+        // THE SOURCE IS PER-CHARACTER AND THE SPEND IS SQUAD-WIDE, which is
+        // the one place this file's "highest, never the sum" rule does not
+        // apply, and docs/PLAN_REWARD_TRACKS.md §6 is where it was argued. A
+        // squad of three who have each collected level 90 brings three
+        // charges; a member who has collected none contributes none. The rule
+        // above exists so a run-scoped reward does not scale with squad size,
+        // and this one is a per-character reward the squad happens to spend
+        // out of a shared pot -- because FightSession.TrySecondLife fires only
+        // when the party would OTHERWISE BE WIPED and raises everyone who is
+        // down for one charge (FightSession.Outcome.cs). Making the charge
+        // owner-only would bring back exactly the outcome that rule exists to
+        // avoid: reviving one member and losing anyway, having spent the
+        // charge to change nothing.
+        //
+        // COLLECTED, not reached: like every other reward on the track, a
+        // second life is read off claimedTrackLevel, so a character who has
+        // hit 90 and never pressed collect has not got it yet.
         //
         // P1 of docs/PLAN_REWARD_TRACKS.md retired the level-100 refresh
         // (TrackReward.SecondLifeRefresh, which used to give the charge back
         // on entering every boss) along with seven other over-arching reward
-        // kinds -- so the ceiling is one per descent with no way to renew it
-        // mid-run, and level 100 is a MaxHealth node on the interim table now.
-        //
-        // No HasUnlocked guard: UnlockedAmount with a fallback of 0 already
-        // answers 0 below level 90, and the guard was a second BestLevel() scan
-        // to learn what the next line was about to work out anyway.
+        // kinds -- so the ceiling is what the squad has collected, with no way
+        // to renew it mid-run.
         public static int SecondLivesLeft(RunSnapshot run)
         {
             if (run == null) return 0;
 
-            int left = RewardTrack.UnlockedAmount(TrackReward.SecondLife, BestLevel(), 0) - run.secondLivesUsed;
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return 0;
+
+            int earned = 0;
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character == null) continue;
+
+                earned += RewardTracks.For(character)
+                    .CollectedTotal(TrackReward.SecondLife, character.claimedTrackLevel);
+            }
+
+            int left = earned - run.secondLivesUsed;
             return left < 0 ? 0 : left;
         }
     }

@@ -262,17 +262,24 @@ namespace PrincesPalace.PlayModeTests
         // The failure this exists for is the one AUDIT #53 records for stat
         // points: a reward that is granted, stored, and read by nothing. A
         // number on the save is not a reward.
+        // 150 IS THE TRACK'S WHOLE MAX-HEALTH LINE for either authored
+        // character (docs/PLAN_REWARD_TRACKS.md §5: 15 filler nodes at 10,
+        // and no milestone pays health on Shawn's or Odette's track). Written
+        // as a literal rather than read back off CollectedTotal, which would
+        // make this a tautology -- the point is that the watermark reaches the
+        // stats a fight reads, and a recomputed expectation passes even if it
+        // does not.
         [Test]
-        public void GrantedMaxHealthActuallyRaisesTheCharactersMaxHealth()
+        public void ACollectedTrackActuallyRaisesTheCharactersMaxHealth()
         {
             var character = First();
-            character.bonusMaxHealth = 0;
+            character.claimedTrackLevel = 0;
             int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
-            character.bonusMaxHealth = 40;
+            character.claimedTrackLevel = RewardTrack.MaxLevel;
 
-            Assert.AreEqual(before + 40, Content.ContentDatabase.EffectiveStats(character).maxHealth,
-                "bonus max health is stored but never reaches the stats the fight reads");
+            Assert.AreEqual(before + 150, Content.ContentDatabase.EffectiveStats(character).maxHealth,
+                "a fully collected track's max health never reaches the stats the fight reads");
         }
 
         // The payout half of the same pair: a fight raises the LEVEL that owes
@@ -285,11 +292,13 @@ namespace PrincesPalace.PlayModeTests
             var character = First();
             character.level = 60;
             character.claimedTrackLevel = 0;
-            character.bonusMaxHealth = 0;
+            int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
             RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
 
-            Assert.AreEqual(0, First().bonusMaxHealth,
+            Assert.AreEqual(0, First().claimedTrackLevel,
+                "the watermark moved without the player collecting anything");
+            Assert.AreEqual(before, Content.ContentDatabase.EffectiveStats(First()).maxHealth,
                 "max health arrived without the player collecting it");
         }
 
@@ -315,15 +324,23 @@ namespace PrincesPalace.PlayModeTests
         // A respec gives back what was SPENT. Max health was never spent -- the
         // player made no choice about where it went -- so taking it away would
         // be confiscation rather than a refund.
+        //
+        // THE WATERMARK IS WHAT MUST SURVIVE, now that max health is summed
+        // off it rather than stored: a respec that reset claimedTrackLevel
+        // would take back the whole collected track, and the character would
+        // have to walk the rail again for health they were already paid.
         [Test]
         public void ARespecDoesNotTakeBackGrantedMaxHealth()
         {
             var character = First();
-            character.bonusMaxHealth = 50;
+            character.claimedTrackLevel = RewardTrack.MaxLevel;
+            int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
             character.Respec(0);
 
-            Assert.AreEqual(50, character.bonusMaxHealth,
+            Assert.AreEqual(RewardTrack.MaxLevel, character.claimedTrackLevel,
+                "the respec unwound the track itself, not just what was spent out of it");
+            Assert.AreEqual(before, Content.ContentDatabase.EffectiveStats(character).maxHealth,
                 "the respec confiscated max health the player never chose to spend");
         }
 

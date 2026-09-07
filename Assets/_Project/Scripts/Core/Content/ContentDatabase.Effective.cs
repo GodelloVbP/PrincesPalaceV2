@@ -3,6 +3,7 @@ using System.Linq;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Stats;
 using UnityEngine;
 
@@ -204,13 +205,25 @@ namespace PrincesPalace.Content
             // run RequirementResolver's fixpoint again for one caller).
             total += AbilityDerivation.DerivedStats(loadout.Scores);
 
-            // The reward track's max-health nodes, flat and on top of all of
-            // it. Here rather than in AbilityDerivation because it is not
-            // derived from anything -- it is a quantity the track handed over,
-            // and folding it into Constitution would make each node worth 20
-            // health or 1 depending on where the player had spent unrelated
-            // points (see Character.bonusMaxHealth).
-            total.maxHealth += character?.bonusMaxHealth ?? 0;
+            // The reward track's collected nodes, flat and on top of all of
+            // it. Here rather than in AbilityDerivation because neither is
+            // derived from anything -- both are quantities the track handed
+            // over, and folding max health into Constitution would make each
+            // node worth 20 health or 1 depending on where the player had
+            // spent unrelated points, which is a reward nobody can plan
+            // around.
+            //
+            // READ LIVE off the watermark rather than off a stored total (§2).
+            // Character.bonusMaxHealth used to hold the accumulated figure and
+            // is gone: a stored copy is one retune away from disagreeing with
+            // the definition, and there is nothing to spend here, so there is
+            // nothing storage buys.
+            if (character != null)
+            {
+                var track = RewardTracks.For(character);
+                total.maxHealth += track.CollectedTotal(TrackReward.MaxHealth, character.claimedTrackLevel);
+                total.manaRegen += track.CollectedTotal(TrackReward.ManaRegen, character.claimedTrackLevel);
+            }
 
             // THE single clamp point (see AbilityDerivation's own header --
             // every derivation above this is deliberately signed and
@@ -271,6 +284,38 @@ namespace PrincesPalace.Content
                 }
             }
 
+            // The reward track's three signature terms, beside the talent ones
+            // and summed the same way -- docs/PLAN_REWARD_TRACKS.md §2's
+            // read-site table. Every kind ACCUMULATES: an authored capacity
+            // step is written "+5", never "15", so there is one summation rule
+            // and no pair of kinds where getting it the wrong way round is
+            // silent.
+            //
+            // The on-attack gain is deliberately absent: no reward kind grants
+            // it, so there is nothing to add and a term reading a total that is
+            // always zero would only look like coverage.
+            var track = RewardTracks.For(character);
+            int claimed = character.claimedTrackLevel;
+
+            capacity += track.CollectedTotal(TrackReward.SignatureCapacity, claimed);
+            perTurn += track.CollectedTotal(TrackReward.SignatureGainPerTurn, claimed);
+            int onDamageTaken = definition.Data.SignatureGainOnDamageTaken
+                                + track.CollectedTotal(TrackReward.SignatureGainOnDamageTaken, claimed);
+
+            // OR'd, never replaced. A character authored to absorb already
+            // does; the track can only turn it on for one that does not, and
+            // a collected node cannot un-author the flag.
+            //
+            // HasUnlocked, NOT CollectedTotal(...) > 0. The plan's read-site
+            // table says the latter and it cannot work: SignatureAbsorbs is a
+            // capability with no number, so its authored Amount is 0 and the
+            // sum is 0 however many of them are collected. HasUnlocked asks
+            // the question the entry actually answers -- is there such a node
+            // at or below the watermark -- and reads the watermark rather than
+            // `level`, which is what makes it a COLLECTED reward.
+            bool absorbs = definition.Data.SignatureAbsorbsDamage
+                           || track.HasUnlocked(TrackReward.SignatureAbsorbs, claimed);
+
             return new SignatureResource(
                 definition.Data.SignatureId,
                 string.IsNullOrWhiteSpace(definition.Data.SignatureDisplayName)
@@ -279,9 +324,9 @@ namespace PrincesPalace.Content
                 capacity,
                 Mathf.Max(0, perTurn),
                 Mathf.Max(0, definition.Data.SignatureGainOnAttack),
-                Mathf.Max(0, definition.Data.SignatureGainOnDamageTaken),
+                Mathf.Max(0, onDamageTaken),
                 SignatureAbsorbPerPoint,
-                definition.Data.SignatureAbsorbsDamage);
+                absorbs);
         }
 
         // Every triggered/conditional rule this character's unlocked talents
@@ -318,9 +363,18 @@ namespace PrincesPalace.Content
         }
 
         // Every rule this character's equipped items' ROLLED MODIFIERS
-        // contribute, flattened into the shape combat reads — the gear-side
-        // mirror of TalentEffects just above, same "resolved once per fight,
-        // unknown ids skipped" reasoning.
+        // contribute — AND the elemental damage their reward track has paid —
+        // flattened into the shape combat reads. The gear-side mirror of
+        // TalentEffects just above, same "resolved once per fight, unknown ids
+        // skipped" reasoning.
+        //
+        // THE TRACK TERM IS NOT GEAR, and this method is where it lands anyway
+        // rather than getting a seam of its own: ModifierEffectSet is the
+        // shape combat already reads elemental percentages out of, and a
+        // second set threaded to the same place would be two mechanisms for
+        // one thing. Its other production caller, ItemOfferRoll, asks only
+        // .Best(FortunateFavorBonusFlat) and cannot be disturbed by an
+        // appended elemental effect.
         //
         // PHASE A2: real working code, not a stub, even though it returns
         // ModifierEffectSet.Empty for every character in every real save
@@ -354,6 +408,48 @@ namespace PrincesPalace.Content
                     found = found ?? new List<ModifierEffect>();
                     found.Add(scaled.Effect);
                 }
+            }
+
+            // THE REWARD TRACK'S ELEMENTAL NODES, one effect per element,
+            // ROUTED BY THE CHARACTER'S OWN attackType (docs/PLAN_REWARD_
+            // TRACKS.md §2, "the routing rule"). Exactly one of the two hooks
+            // per element, never both:
+            //
+            // - SAME ELEMENT as their attackType -> ElementalDamageOnHitPercent,
+            //   the existing on-hit rider, whose same-element branch multiplies
+            //   the hit's own landed figure. That is every landed hit, swing
+            //   and cast alike, and it is the only hook a plain swing reaches
+            //   at all.
+            // - ANY OTHER ELEMENT -> ElementalDamagePercent, the packet hook,
+            //   which reads a damage instance's own type inside
+            //   ResolveDamageInstances. A foreign element only exists on a
+            //   spell packet in the first place.
+            //
+            // Getting this wrong is invisible rather than broken, which is why
+            // it is spelled out: routing everything through the packet hook
+            // pays a Nature line on a character whose whole kit authors one
+            // damageInstances entry precisely nothing, and routing everything
+            // through the rider pays a Fire line on an Arcane caster a flat
+            // few points of Attack that has nothing to do with her Firebolt.
+            //
+            // A character we cannot identify falls through to the packet hook,
+            // which is the inert direction: an unknown attackType must not
+            // accidentally match and double a line's value.
+            var own = GetCharacter(character.definitionId)?.Data.AttackType;
+            var track = RewardTracks.For(character);
+
+            foreach (DamageType type in System.Enum.GetValues(typeof(DamageType)))
+            {
+                int n = track.CollectedTotal(TrackReward.ElementalDamagePercent, type,
+                    character.claimedTrackLevel);
+                if (n <= 0) continue;
+
+                found = found ?? new List<ModifierEffect>();
+                found.Add(new ModifierEffect(
+                    own == type
+                        ? ModifierEffectType.ElementalDamageOnHitPercent
+                        : ModifierEffectType.ElementalDamagePercent,
+                    n, against: type));
             }
 
             return found == null ? ModifierEffectSet.Empty : new ModifierEffectSet(found);
@@ -554,6 +650,12 @@ namespace PrincesPalace.Content
             }
 
             total += AbilityDerivation.MaxManaBonus(EffectiveAbilityScores(character));
+
+            // The reward track's max-mana nodes, read live off the watermark
+            // (§2). Reaches the fight through FightEncounterAdapter, the same
+            // one seam every other mana term already goes through.
+            total += RewardTracks.For(character)
+                .CollectedTotal(TrackReward.MaxMana, character.claimedTrackLevel);
 
             return Mathf.Max(0, total);
         }

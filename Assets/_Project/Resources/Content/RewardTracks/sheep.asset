@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f7778c4b3a043408d1b4436ef9c3988, type: 3}
+  m_Name: sheep
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RewardTrackDefinitionAsset
+  data:
+    CharacterId: sheep
+    Milestones:
+    - Level: 10
+      Reward: 6
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    - Level: 20
+      Reward: 3
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 25
+      Reward: 5
+      Amount: 5
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    - Level: 30
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: static_fleece
+      SkillDisplayName: Static Fleece
+      ResourceDisplayName: 
+    - Level: 40
+      Reward: 7
+      Amount: 2
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    - Level: 45
+      Reward: 9
+      Amount: 10
+      AgainstType: 3
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 50
+      Reward: 6
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    - Level: 60
+      Reward: 8
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    - Level: 70
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: cinderfault
+      SkillDisplayName: Cinderfault
+      ResourceDisplayName: 
+    - Level: 80
+      Reward: 1
+      Amount: 10
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 90
+      Reward: 4
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 100
+      Reward: 5
+      Amount: 10
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: Wool
+    Filler:
+    - Reward: 1
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 40
+      ResourceDisplayName: 
+    - Reward: 2
+      Amount: 10
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 15
+      ResourceDisplayName: 
+    - Reward: 5
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 12
+      ResourceDisplayName: Wool
+    - Reward: 9
+      Amount: 1
+      AgainstType: 3
+      HasAgainst: 1
+      Count: 20
+      ResourceDisplayName: 
+    SortOrder: 0

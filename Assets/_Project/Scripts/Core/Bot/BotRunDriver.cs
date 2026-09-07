@@ -1016,17 +1016,19 @@ namespace PrincesPalace
         // header says so at length: collection is something the player does
         // now, from the reward-track screen). So a bot that only settled the
         // fight levelled up and then never collected the stat points, max
-        // health, Favor or exp-find those levels owed -- for a Late profile
+        // health and everything else those levels owed -- for a Late profile
         // mid-run that is dozens of unclaimed nodes, and the batch reported it
         // as the game being hard.
         //
         // ClaimTrackRewards is idempotent against its own watermark, so calling
         // it after every won fight costs nothing on the fights that crossed no
-        // level. Only the four GRANT kinds need this; every UNLOCK on the track
-        // (respec, wider offers, second life, the extra starting relics) is a
-        // pure function of `level` and is answered wherever it is used --
-        // SquadTrack reads them straight through, so they need no claim and
-        // there is nothing else here to collect.
+        // level. It moves the watermark, and under docs/PLAN_REWARD_TRACKS.md
+        // that is the WHOLE payment: stat points are handed over here because
+        // the bot spends them below, and every other reward on the track --
+        // max health, wool, elemental damage, the respec, the second life, a
+        // book spell -- is summed live off claimedTrackLevel at its own read
+        // site. So a bot that skipped this would not merely miss the points,
+        // it would field a level-60 character with a level-1 everything.
         private static void CollectLevelUps(
             ulong seed, SaveData save, IRunPolicy runPolicy, int step)
         {
@@ -1038,7 +1040,7 @@ namespace PrincesPalace
             {
                 if (character == null) continue;
 
-                if (character.ClaimTrackRewards()) changed = true;
+                if (character.ClaimTrackRewards(RewardTracks.For(character), character.level)) changed = true;
 
                 int guard = 0;
                 while (character.unspentStatPoints > 0 && guard++ < 1000)

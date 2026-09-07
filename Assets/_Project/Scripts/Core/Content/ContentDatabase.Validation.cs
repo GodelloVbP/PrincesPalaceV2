@@ -3,6 +3,7 @@ using System.Linq;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Content
@@ -548,6 +549,39 @@ namespace PrincesPalace.Content
             if (_spellTiers.Count > 0 && !seenSpellTierLevels.Contains(1))
             {
                 errors.Add("No spell tier defined for level 1 — every fresh character starts at level 1 and needs one.");
+            }
+
+            // A reward track's UnlockSkill node that points at nothing is the
+            // same failure the talent arm above exists for: a reward the
+            // player collects, is captioned for, and never receives, with no
+            // symptom but an absence.
+            //
+            // THE FIRST HALF OF THAT ARM AND DELIBERATELY NOT ITS SECOND
+            // (docs/PLAN_REWARD_TRACKS.md §3h). The talent check also refuses
+            // a skill belonging to another character; this one must not, and
+            // the next reader restoring the symmetry is exactly what this
+            // paragraph is here to stop. A talent belongs to a character and
+            // could name somebody else's skill by typo; a TRACK IS the
+            // character, so naming a skill on it has already said whose it
+            // is -- and every book-only spell in the game is authored
+            // characterId "sheep", so an ownership test would refuse Odette
+            // the two her track is built around.
+            //
+            // Here as well as in RewardTrackEntryResolver because this
+            // validates the LOADED catalogue: an asset created by hand under
+            // Resources/Content never passed through a resolver at all.
+            foreach (var track in _rewardTracks)
+            {
+                foreach (var milestone in track.Data.Milestones)
+                {
+                    if (milestone.Reward != TrackReward.UnlockSkill) continue;
+
+                    if (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null)
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} unlocks " +
+                                   $"unknown skill id '{milestone.SkillId}'.");
+                    }
+                }
             }
 
             return errors;

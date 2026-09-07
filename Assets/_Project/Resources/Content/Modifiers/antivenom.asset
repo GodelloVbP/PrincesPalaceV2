@@ -21,7 +21,7 @@ MonoBehaviour:
       never both.'
     SortOrder: 9
     Effects:
-    - Type: 2
+    - Type: 3
       Magnitude: 8
       Threshold: 0
       AgainstType: 4

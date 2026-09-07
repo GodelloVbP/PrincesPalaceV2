@@ -325,6 +325,25 @@ namespace PrincesPalace
             DriveKindling(0f);
         }
 
+        // WHETHER THIS CHARACTER HAS COLLECTED THEIR RESPEC, asked in one
+        // place because three separate controls on this screen ask it (the
+        // button's visibility, opening the dialog, and confirming it) and
+        // three copies of a rule is how one of them gets left behind.
+        //
+        // THEIR OWN TRACK, AND THE WATERMARK, not the shared table and not
+        // `level`. Both halves changed with docs/PLAN_REWARD_TRACKS.md: the
+        // track is per-character now, and every reward on it is COLLECTED
+        // rather than merely reached -- so a character at level 40 who has
+        // never opened the reward screen has not got a respec yet, and the
+        // collect button is what hands it over.
+        //
+        // HasUnlocked rather than CollectedTotal(...) > 0, which is what the
+        // plan's read-site table says: a respec is a capability with no
+        // number, so its authored Amount is 0 and the sum can never be
+        // positive however many are collected.
+        private static bool HasEarnedARespec(Character character) =>
+            RewardTracks.For(character).HasUnlocked(TrackReward.Respec, character.claimedTrackLevel);
+
         // Gives back everything this character has committed, so they can
         // spend it again. Level 20 of the reward track.
         //
@@ -337,7 +356,7 @@ namespace PrincesPalace
         {
             var character = Current;
             if (character == null || respecDialog == null) return;
-            if (!RewardTrack.HasUnlocked(TrackReward.Respec, character.level)) return;
+            if (!HasEarnedARespec(character)) return;
 
             int refund = ContentDatabase.SpentBy(character);
             int stars = character.unlockedTalentIds?.Count ?? 0;
@@ -376,7 +395,7 @@ namespace PrincesPalace
             // Earned, not free-for-all. Checked here as well as on the button,
             // because a hidden button is a presentation fact and this is the
             // rule.
-            if (!RewardTrack.HasUnlocked(TrackReward.Respec, character.level)) return;
+            if (!HasEarnedARespec(character)) return;
 
             character.Respec(ContentDatabase.SpentBy(character));
 
@@ -411,7 +430,7 @@ namespace PrincesPalace
             // pressing it is never a no-op the player has to interpret.
             if (respecButton != null)
             {
-                bool earned = RewardTrack.HasUnlocked(TrackReward.Respec, character.level);
+                bool earned = HasEarnedARespec(character);
                 respecButton.SetShown(earned);
                 if (earned)
                 {

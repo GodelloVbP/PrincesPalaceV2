@@ -61,6 +61,15 @@ namespace PrincesPalace.Domain.Content
         public bool HasAgainst;
         public int Count;
 
+        // Empty except for the four signature-resource kinds -- and three of
+        // those four CAN be filler (SignatureAbsorbs is the one-shot, refused
+        // by rule 3), so the caption's resource name has to ride here as well
+        // as on a milestone. Shawn's twelve `+1 WOOL CAPACITY` filler nodes
+        // are the case: without this they caption "+1 SIGNATURE CAPACITY",
+        // RewardTrackNames' blank-name fallback rather than the character's
+        // own word for the resource.
+        public string ResourceDisplayName = "";
+
         public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
 
         // For the serializer only.
@@ -68,13 +77,15 @@ namespace PrincesPalace.Domain.Content
         {
         }
 
-        public ResolvedTrackFiller(TrackReward reward, int amount, DamageType? against, int count)
+        public ResolvedTrackFiller(TrackReward reward, int amount, DamageType? against, int count,
+            string resourceDisplayName)
         {
             Reward = reward;
             Amount = amount;
             HasAgainst = against.HasValue;
             AgainstType = against ?? default;
             Count = count;
+            ResourceDisplayName = resourceDisplayName ?? "";
         }
     }
 

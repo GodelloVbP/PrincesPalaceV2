@@ -324,6 +324,16 @@ public static class ContentBuilder
     {
         var contexts = new Dictionary<string, RewardTrackCharacterContext>();
 
+        // THE WHOLE CATALOGUE, built once and shared by every context: an
+        // UnlockSkill node names a skill by id and nothing about whose it is
+        // (docs/PLAN_REWARD_TRACKS.md §3f/§3h -- every book-only spell is
+        // authored to "sheep", so an own-kit lookup would refuse Odette's own
+        // Frost Flare node). Rule 4's Level1DamageTypes below is the opposite
+        // and stays per-character: what a character can already DEAL at level
+        // 1 is a fact about their own kit.
+        var everySkillName = new Dictionary<string, string>();
+        foreach (var skill in skills) everySkillName[skill.Id] = skill.DisplayName;
+
         foreach (var character in characters)
         {
             var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
@@ -342,7 +352,7 @@ public static class ContentBuilder
                 HasSignatureResource = character.HasSignatureResource,
                 SignatureDisplayName = character.SignatureDisplayName,
                 Level1DamageTypes = level1Types,
-                SkillDisplayNames = ownSkills.ToDictionary(s => s.Id, s => s.DisplayName),
+                SkillDisplayNames = everySkillName,
             };
         }
 

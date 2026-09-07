@@ -22,7 +22,7 @@ MonoBehaviour:
       affix split.
     SortOrder: 15
     Effects:
-    - Type: 4
+    - Type: 5
       Magnitude: 8
       Threshold: 0
       AgainstType: 0

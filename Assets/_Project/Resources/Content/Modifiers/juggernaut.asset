@@ -21,7 +21,7 @@ MonoBehaviour:
       on one bundled Hardened roll, now it is its own affix.'
     SortOrder: 14
     Effects:
-    - Type: 9
+    - Type: 10
       Magnitude: 8
       Threshold: 0
       AgainstType: 0

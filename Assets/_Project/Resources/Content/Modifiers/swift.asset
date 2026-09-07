@@ -30,7 +30,7 @@ MonoBehaviour:
       than retuned. Already single-effect since Phase C; untouched by the affix split.'
     SortOrder: 24
     Effects:
-    - Type: 15
+    - Type: 16
       Magnitude: 6
       Threshold: 0
       AgainstType: 0

@@ -21,7 +21,7 @@ MonoBehaviour:
       roll, now it is its own affix.'
     SortOrder: 4
     Effects:
-    - Type: 16
+    - Type: 17
       Magnitude: 10
       Threshold: 0
       AgainstType: 0

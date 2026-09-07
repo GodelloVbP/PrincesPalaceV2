@@ -32,9 +32,20 @@ namespace PrincesPalace.Domain.Content
         // skill authored to them with unlockLevel <= 1. Rule 4.
         public IReadOnlyCollection<DamageType> Level1DamageTypes = Array.Empty<DamageType>();
 
-        // Every skill id authored to this character, keyed to its own
-        // display name -- what UnlockSkill's skillId resolves against, and
-        // captions with "LEARN {S}".
+        // Every skill id in the whole catalogue, keyed to its own display
+        // name -- what UnlockSkill's skillId resolves against, and captions
+        // with "LEARN {S}".
+        //
+        // THE WHOLE CATALOGUE, NOT THIS CHARACTER'S OWN KIT, and that is the
+        // rule rather than a convenience (docs/PLAN_REWARD_TRACKS.md §3f/§3h).
+        // Every book-only spell in the game is authored characterId "sheep"
+        // because Shawn is who they were drafted for, so an ownership test
+        // here would refuse Odette's own level-10 Frost Flare. The check this
+        // arm makes is the FIRST HALF of the talent system's
+        // GrantsSkillId arm and deliberately not its second: the id resolves
+        // to a real skill, and nothing about whose it is. The track
+        // definition is per-character, so it has already said whose skill
+        // this is.
         public IReadOnlyDictionary<string, string> SkillDisplayNames = new Dictionary<string, string>();
     }
 
@@ -197,7 +208,8 @@ namespace PrincesPalace.Domain.Content
                 if (TryResolveEntry(label, "a filler row", f.reward, f.amount, f.against, null, isFiller: true,
                         context, out var core, out string entryError))
                 {
-                    resolvedFiller.Add(new ResolvedTrackFiller(core.Reward, core.Amount, core.Against, f.count));
+                    resolvedFiller.Add(new ResolvedTrackFiller(core.Reward, core.Amount, core.Against, f.count,
+                        core.ResourceDisplayName));
                 }
                 else
                 {
@@ -248,11 +260,17 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // RULE 3. IsUnlock is exactly "not a grant" -- Respec and
-            // SecondLife today, joined later by SignatureAbsorbs and
-            // UnlockSkill once P3 adds them (RewardTrack.IsGrant/IsUnlock
-            // classify by name, so this needs no change when that happens).
-            if (isFiller && RewardTrack.IsUnlock(reward))
+            // RULE 3. The four kinds RewardTrack.IsOneShotCapability names --
+            // Respec, SecondLife, SignatureAbsorbs, UnlockSkill.
+            //
+            // THIS ASKED IsUnlock UNTIL P4, which was the same four while the
+            // grants were StatPoint/MaxHealth/Favor/ExpPermille and became
+            // "everything but StatPoint" the moment the one-grant model landed
+            // -- so it refused the MaxHealth filler row both shipped tracks
+            // author. The rule was always about a capability whose LEVEL would
+            // otherwise be computed, not about the grant/unlock split, and it
+            // now says so in one place.
+            if (isFiller && RewardTrack.IsOneShotCapability(reward))
             {
                 error = $"{trackLabel}, {where}: {reward} is a one-shot capability and cannot appear as filler -- only grants may.";
                 return false;
@@ -302,9 +320,9 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // UnlockSkill's skillId, resolved against the character's own
-            // skills -- also unreachable until P3 adds the kind, for the
-            // same reason as rules 4/5.
+            // UnlockSkill's skillId, resolved against the WHOLE skill
+            // catalogue -- see RewardTrackCharacterContext.SkillDisplayNames
+            // for why there is no ownership test here (§3f/§3h).
             string resolvedSkillId = "";
             string skillDisplayName = "";
             if (string.Equals(rawReward, "UnlockSkill", StringComparison.OrdinalIgnoreCase))
@@ -312,7 +330,7 @@ namespace PrincesPalace.Domain.Content
                 if (string.IsNullOrWhiteSpace(skillId) || !context.SkillDisplayNames.TryGetValue(skillId, out skillDisplayName))
                 {
                     error = $"{trackLabel}, {where}: UnlockSkill names skillId '{skillId}', which is not a skill " +
-                            "authored to this character.";
+                            "in the catalogue.";
                     return false;
                 }
 

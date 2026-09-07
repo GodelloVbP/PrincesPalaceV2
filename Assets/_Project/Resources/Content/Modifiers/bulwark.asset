@@ -22,7 +22,7 @@ MonoBehaviour:
       a roll grants the flat mitigation or the shield-resist, never both.
     SortOrder: 17
     Effects:
-    - Type: 7
+    - Type: 8
       Magnitude: 15
       Threshold: 0
       AgainstType: 0

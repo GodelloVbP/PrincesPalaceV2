@@ -72,9 +72,18 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(639228196442867409UL);
 
+            // LEVELLED AND COLLECTED. Reaching 90 is no longer enough on its
+            // own: since docs/PLAN_REWARD_TRACKS.md P4 every reward on the
+            // track, the second life included, is summed against
+            // claimedTrackLevel rather than level, so a squad that never
+            // pressed collect has earned nothing. That is the design (the
+            // collect button is what hands rewards over), and pinning it here
+            // is what stops a future "level is enough" shortcut going
+            // unnoticed.
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = 90;
+                character.ClaimTrackRewards(RewardTracks.For(character), character.level);
             }
 
             var choices = RunManager.Choices();
@@ -89,8 +98,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(fight);
             Assert.IsTrue(fight.HasSession, "the room built no session");
 
-            Assert.AreEqual(1, fight.Session.SecondLifeCharges,
-                "the fight opened without the second life the squad has earned, so the reward " +
+            // ONE PER COLLECTING MEMBER (§6): the source is per-character and
+            // only the spend is squad-wide.
+            Assert.AreEqual(SaveSlotManager.CurrentSave.ActiveSquad().Count, fight.Session.SecondLifeCharges,
+                "the fight opened without the second lives the squad has earned, so the reward " +
                 "does nothing in the actual game");
         }
 

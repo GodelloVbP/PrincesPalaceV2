@@ -158,6 +158,26 @@ namespace PrincesPalace.Domain.Progression
         public static bool IsUnlock(TrackReward reward) =>
             reward != TrackReward.None && !IsGrant(reward);
 
+        // A CAPABILITY WITH NO NUMBER -- the four kinds whose whole meaning is
+        // that they happened, so their authored Amount is 0 and summing them
+        // says nothing. These are the four an author may not place as FILLER
+        // (docs/PLAN_REWARD_TRACKS.md §4's rule 3): a filler node's level is
+        // computed rather than authored, and "you learn Lightning Bolt at
+        // whichever level the interleave happens to put it" is not a design
+        // decision anybody made.
+        //
+        // NOT IsUnlock, and the difference is the whole reason this exists.
+        // IsUnlock means "not the one grant", which since the one-grant model
+        // is every kind but StatPoint -- MaxHealth and wool capacity
+        // included. Using it as the filler gate refused MaxHealth 10 x15,
+        // which is a filler row on BOTH shipped tracks, and would have left
+        // levels 2-24 as nothing but stat points.
+        public static bool IsOneShotCapability(TrackReward reward) =>
+            reward == TrackReward.Respec
+            || reward == TrackReward.SecondLife
+            || reward == TrackReward.SignatureAbsorbs
+            || reward == TrackReward.UnlockSkill;
+
         // HOW ONE NODE READS, given where the player is and how far the track
         // has paid. The screen's whole state model, in one pure function.
         //
@@ -200,51 +220,33 @@ namespace PrincesPalace.Domain.Progression
             return owed < 0 ? 0 : owed;
         }
 
-        // ---- P4/P5 compile-boundary shims ---------------------------------------
+        // ---- P5 compile-boundary shims ------------------------------------------
         //
-        // docs/PLAN_REWARD_TRACKS.md's P3 package moves everything below onto
-        // RewardTrackDefinition (one instance per character) and, in the
-        // plan's own execution order, P4 lands right behind P3 and rewrites
-        // every caller to go through RewardTracks.For(...)/
-        // RewardTrackDefinition directly -- so in the finished tree none of
-        // this would exist on RewardTrack at all.
+        // docs/PLAN_REWARD_TRACKS.md's P3 moved WHICH REWARD SITS AT WHICH
+        // LEVEL onto RewardTrackDefinition, one instance per character, and
+        // P4 rewired every read site that had a Character in hand to ask
+        // RewardTracks.For(character) for its own track. What is left below is
+        // the remainder: two level-keyed forwards onto the GENERATED DEFAULT
+        // track, still called by the screen layer, which P5 rewires and this
+        // block dies with.
         //
-        // This worktree carries P3 alone, and Core/Data still call the
-        // level-keyed API by these exact names: RewardTrackController.cs /
-        // RewardTrackController.Input.cs / RewardTrackController.Motion.cs
-        // and CharacterDossierController.cs (At, NextRewardLevel),
-        // Data/Character.cs:347-348 (GrantedBetween), Core/SquadTrack.cs
-        // (HasUnlocked, UnlockedAmount), Core/TalentController.cs
-        // (HasUnlocked) -- none of which P3 is allowed to touch. Each shim
-        // below is a one-line forward onto the generated default track so the
-        // whole tree keeps compiling; P4 deletes this whole block along with
-        // every one of those call sites.
+        // The four remaining callers, all of them painting the reward rail or
+        // the dossier's next-reward line:
+        //   Core/RewardTrackController.cs (At at :323, :417, :471;
+        //     NextRewardLevel at :394)
+        //   Core/CharacterDossierController.cs (NextRewardLevel :918, At :927)
         //
-        // A KNOWN GAP WHILE ONLY P3 IS LANDED: Data/Character.cs:348 still
-        // calls GrantedBetween(MaxHealth, ...) expecting a nonzero result
-        // (the pre-P4 accumulate-into-bonusMaxHealth model). IsGrant above
-        // now answers false for MaxHealth, so this shim returns 0 for it and
-        // Character.bonusMaxHealth stops growing until P4 rewires
-        // ClaimTrackRewards and deletes that field. No test in this worktree's
-        // `[D]` EditMode suite exercises that path (RewardTrackClaimTests
-        // only asserts unspentStatPoints/claimedTrackLevel), but
-        // Tests/PlayMode/Combat/FightSettlementTests.cs's LevelTheSquadTo
-        // helper (:371-390) explicitly depends on ClaimTrackRewards moving
-        // max health and is a `[U]` test this worktree cannot run -- flagged
-        // rather than silently assumed fine; run it once P4 lands.
+        // WHAT THAT MEANS TODAY, said plainly rather than left to be
+        // discovered: the reward SCREEN paints the default track's captions
+        // whoever is selected, while every place the reward is actually PAID
+        // reads the selected character's own. P5 is what closes that, by
+        // giving the controller a definition to paint from; the deleted shims
+        // (GrantedBetween, HasUnlocked, UnlockedAmount) went with the call
+        // sites P4 rewrote, and none of them had a screen caller.
         private static readonly RewardTrackDefinition DefaultShimTrack = RewardTrackDefinition.Default("");
 
         public static TrackEntry At(int level) => DefaultShimTrack.At(level);
 
         public static int NextRewardLevel(int level) => DefaultShimTrack.NextRewardLevel(level);
-
-        public static int GrantedBetween(TrackReward reward, int afterLevel, int throughLevel) =>
-            DefaultShimTrack.GrantedBetween(reward, afterLevel, throughLevel);
-
-        public static bool HasUnlocked(TrackReward reward, int level) =>
-            DefaultShimTrack.HasUnlocked(reward, level);
-
-        public static int UnlockedAmount(TrackReward reward, int level, int fallback) =>
-            DefaultShimTrack.UnlockedAmount(reward, level, fallback);
     }
 }

@@ -66,9 +66,20 @@ namespace PrincesPalace.PlayModeTests
                 if (definition == null) continue;
 
                 // A brand new Character record: level 1, no talents taken, no
-                // unlockedSkillIds, no run (so no learned books either). Every
-                // extra route AvailableSkillsFor unions in contributes nothing
-                // here, so its answer should be exactly the base predicate's.
+                // unlockedSkillIds, no run (so no learned books either), and
+                // claimedTrackLevel 0. Every extra route AvailableSkillsFor
+                // unions in contributes nothing here, so its answer should be
+                // exactly the base predicate's.
+                //
+                // THE TRACK ROUTE IS THE ONE WORTH NAMING, because it is the
+                // newest and the only one that could quietly start
+                // contributing: it reads SkillsCollected(claimedTrackLevel),
+                // and a fresh character's watermark is 0, which is below the
+                // first level any track pays. An implementer who reads the
+                // track off `level` instead of the watermark breaks this test
+                // and nothing else -- which is precisely why
+                // docs/PLAN_REWARD_TRACKS.md §3k made it a stated invariant of
+                // P4 rather than an accident that happened to hold.
                 var fresh = new Character(definition.id);
 
                 var fromSharedFunction = ContentDatabase.SkillsUnlockedByLevel(definition.id, 1)

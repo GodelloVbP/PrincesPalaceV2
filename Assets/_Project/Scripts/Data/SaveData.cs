@@ -39,7 +39,15 @@ namespace PrincesPalace
         // and three worn pieces on the save that reported this. Cleared once,
         // on the way up, rather than left as a permanent exception to a rule
         // the game otherwise enforces.
-        public const int CurrentVersion = 4;
+        // 4 -> 5: the reward track became per-character content. Removed
+        // fields would need no bump -- JsonUtility drops what the shape no
+        // longer has -- but `claimedTrackLevel` SURVIVES and would be
+        // REINTERPRETED, which is worse than either: a watermark of 40 read
+        // against Shawn's new table claims two wool-capacity nodes and +12%
+        // Nature that were never applied, while unspentStatPoints still holds
+        // what the old table paid. See Migrate's own step for what it does
+        // about it.
+        public const int CurrentVersion = 5;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -382,6 +390,11 @@ namespace PrincesPalace
                 ClearWhatARunShouldNotHaveKept();
             }
 
+            if (version < 5)
+            {
+                ResetTheRewardTrack();
+            }
+
             version = CurrentVersion;
             Reconcile();
             return true;
@@ -407,6 +420,53 @@ namespace PrincesPalace
             foreach (var character in roster ?? new List<Character>())
             {
                 character?.equipment?.Clear();
+            }
+        }
+
+        // The one-time sweep for saves written before the reward track became
+        // per-character content.
+        //
+        // WHAT THIS IS ACTUALLY FIXING is not the removed fields -- JsonUtility
+        // drops `earnedFavor`, `bonusExpPermille` and `bonusMaxHealth` on load
+        // with no help from here -- but the one that SURVIVED.
+        // `claimedTrackLevel` used to mean "paid this far up ONE shared table
+        // of stat points and max health"; it now means "collected this far up
+        // THIS CHARACTER'S track", and every reward on that track is summed
+        // live against it. A watermark of 40 carried across unread would hand
+        // Shawn two wool-capacity nodes and +12% Nature he was never paid,
+        // while his unspentStatPoints still holds what the old table gave him.
+        // That is a plausible wrong answer, which is the one thing neither of
+        // this project's two error postures may return.
+        //
+        // So the track is put back to waiting and the points it paid are taken
+        // back with it: claimedTrackLevel 0, unspentStatPoints 0, and the
+        // invested block cleared, since points that came off the old table
+        // cannot stay spent once the payment is unwound. `level`, `exp`,
+        // `embers`, unlocked talents and equipment are untouched. The player
+        // opens the reward screen to a full track of waiting nodes and one
+        // collect button -- a free respec of exactly the half the track paid
+        // for, which is the right answer to "the track changed underneath
+        // you", and it exercises the new claim path from level 1 on first
+        // open.
+        //
+        // ONE CONSEQUENCE WORTH KNOWING BEFORE IT IS REPORTED AS A BUG:
+        // invested points are part of the equipment requirement floor
+        // (ContentDatabase.ActiveLoadout), so a character whose weapon was
+        // liftable only because of them opens the migrated save with that item
+        // INERT -- worn, on the paperdoll, contributing nothing -- until the
+        // points are re-spent. It is visible (the dossier paints
+        // SlotBlockedCaptions) and it is one collect plus a re-spend away,
+        // which is the same state Character.Respec already produces on
+        // purpose. Nothing here tries to be clever about it.
+        private void ResetTheRewardTrack()
+        {
+            foreach (var character in roster ?? new List<Character>())
+            {
+                if (character == null) continue;
+
+                character.claimedTrackLevel = 0;
+                character.unspentStatPoints = 0;
+                character.investedAbilityScores = default;
             }
         }
 

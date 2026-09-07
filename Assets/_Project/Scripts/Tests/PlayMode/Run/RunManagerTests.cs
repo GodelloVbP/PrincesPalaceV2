@@ -441,11 +441,15 @@ namespace PrincesPalace.PlayModeTests
         // see their own comments -- so this test still earns its keep: it pins
         // that a descent never turns the flag on by itself.
 
+        // LEVELLED AND COLLECTED, because since docs/PLAN_REWARD_TRACKS.md P4
+        // the track pays nothing off `level` alone -- every reward on it is
+        // summed against claimedTrackLevel, which only a claim moves.
         private static void LevelTheSquadTo(int level)
         {
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = level;
+                character.ClaimTrackRewards(RewardTracks.For(character), character.level);
             }
         }
 
@@ -580,9 +584,15 @@ namespace PrincesPalace.PlayModeTests
         //
         // Level 100's refresh (TrackReward.SecondLifeRefresh, giving the charge
         // back on entering every boss) was retired in P1 of
-        // docs/PLAN_REWARD_TRACKS.md along with the reward kind itself -- level
-        // 100 is a MaxHealth node on the interim table now. What is left to pin
-        // is the single charge level 90 grants and RunManager's spend tracking.
+        // docs/PLAN_REWARD_TRACKS.md along with the reward kind itself. What is
+        // left to pin is the charge level 90 pays and RunManager's spend
+        // tracking.
+        //
+        // ONE PER COLLECTING MEMBER since P4 (§6): the source of a second life
+        // is per-character and only the spend is squad-wide, so a squad of
+        // three who have each collected level 90 brings three. Reaching 90 is
+        // not enough on its own either -- the track pays what has been
+        // COLLECTED, which is why LevelTheSquadTo claims.
 
         [Test]
         public void AnUnlevelledSquadHasNoSecondLife()
@@ -593,16 +603,34 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void LevelNinetyGrantsExactlyOnePerDescent()
+        public void LevelNinetyGrantsOnePerCollectingMemberPerDescent()
         {
             RunManager.StartRun(Seed);
             LevelTheSquadTo(90);
 
-            Assert.AreEqual(1, SquadTrack.SecondLivesLeft(RunManager.Run));
+            int squad = SaveSlotManager.CurrentSave.ActiveSquad().Count;
+            Assert.AreEqual(squad, SquadTrack.SecondLivesLeft(RunManager.Run));
 
-            RunManager.Run.secondLivesUsed = 1;
+            RunManager.Run.secondLivesUsed = squad;
             Assert.AreEqual(0, SquadTrack.SecondLivesLeft(RunManager.Run),
                 "a spent second life is still on offer");
+        }
+
+        // Levelled and NOT collected -- the pin that keeps "level is enough"
+        // from creeping back in. Every reward on the track is read against
+        // claimedTrackLevel; a squad that never pressed collect has earned
+        // nothing, and the collect button is what changes that.
+        [Test]
+        public void ALevelNinetySquadThatHasCollectedNothingHasNoSecondLife()
+        {
+            RunManager.StartRun(Seed);
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = 90;
+            }
+
+            Assert.AreEqual(0, SquadTrack.SecondLivesLeft(RunManager.Run));
         }
 
         // The other half, and the reason this is two tests rather than one:

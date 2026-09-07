@@ -1,0 +1,145 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f7778c4b3a043408d1b4436ef9c3988, type: 3}
+  m_Name: owl
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RewardTrackDefinitionAsset
+  data:
+    CharacterId: owl
+    Milestones:
+    - Level: 10
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: frost_flare
+      SkillDisplayName: Frost Flare
+      ResourceDisplayName: 
+    - Level: 20
+      Reward: 3
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 25
+      Reward: 10
+      Amount: 20
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 30
+      Reward: 11
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 40
+      Reward: 9
+      Amount: 10
+      AgainstType: 1
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 45
+      Reward: 9
+      Amount: 15
+      AgainstType: 2
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 50
+      Reward: 9
+      Amount: 10
+      AgainstType: 5
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 60
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: lightning_bolt
+      SkillDisplayName: Lightning Bolt
+      ResourceDisplayName: 
+    - Level: 70
+      Reward: 9
+      Amount: 20
+      AgainstType: 9
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 80
+      Reward: 1
+      Amount: 10
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 90
+      Reward: 4
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    - Level: 100
+      Reward: 11
+      Amount: 2
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+    Filler:
+    - Reward: 1
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 40
+      ResourceDisplayName: 
+    - Reward: 2
+      Amount: 10
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 15
+      ResourceDisplayName: 
+    - Reward: 10
+      Amount: 2
+      AgainstType: 0
+      HasAgainst: 0
+      Count: 15
+      ResourceDisplayName: 
+    - Reward: 9
+      Amount: 2
+      AgainstType: 1
+      HasAgainst: 1
+      Count: 9
+      ResourceDisplayName: 
+    - Reward: 9
+      Amount: 2
+      AgainstType: 5
+      HasAgainst: 1
+      Count: 8
+      ResourceDisplayName: 
+    SortOrder: 2

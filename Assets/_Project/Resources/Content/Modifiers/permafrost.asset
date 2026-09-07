@@ -20,7 +20,7 @@ MonoBehaviour:
       carries the old bundle''s chill proc. Split off so each rule rolls on its own.'
     SortOrder: 3
     Effects:
-    - Type: 2
+    - Type: 3
       Magnitude: 8
       Threshold: 0
       AgainstType: 2

@@ -24,7 +24,7 @@ MonoBehaviour:
       so the two can no longer only ever be found together.
     SortOrder: 16
     Effects:
-    - Type: 6
+    - Type: 7
       Magnitude: 2
       Threshold: 0
       AgainstType: 0

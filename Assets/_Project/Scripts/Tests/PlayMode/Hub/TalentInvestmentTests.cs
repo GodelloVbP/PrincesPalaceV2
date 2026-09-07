@@ -217,6 +217,12 @@ namespace PrincesPalace.PlayModeTests
             talents.GetComponentsInChildren<Button>(includeInactive: true)
                 .FirstOrDefault(b => b.name == name);
 
+        // THREE STATES, NOT TWO, since docs/PLAN_REWARD_TRACKS.md P4 made the
+        // respec a COLLECTED reward rather than a function of `level`: not
+        // reached, reached but not collected, collected. The middle one is the
+        // new state and the one worth pinning -- a level-20 character who has
+        // never opened the reward screen has not got their respec yet, and
+        // pressing collect is what hands it over.
         [UnityTest]
         public IEnumerator TheRespecIsHiddenUntilTheTrackGrantsIt()
         {
@@ -225,6 +231,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.level = 19;
+            character.claimedTrackLevel = 19;
             talents.Refresh();
             yield return null;
 
@@ -235,8 +242,15 @@ namespace PrincesPalace.PlayModeTests
             talents.Refresh();
             yield return null;
 
+            Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
+                "reaching level 20 handed over the respec without the player collecting it");
+
+            character.claimedTrackLevel = 20;
+            talents.Refresh();
+            yield return null;
+
             Assert.IsTrue(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
-                "level 20 granted the respec and the button is still hidden");
+                "collecting level 20 granted the respec and the button is still hidden");
         }
 
         [UnityTest]
@@ -247,6 +261,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.level = 20;
+            character.claimedTrackLevel = 20;
             character.embers = 99;
             talents.Refresh();
             yield return null;
@@ -297,6 +312,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.level = 20;
+            character.claimedTrackLevel = 20;
             character.embers = 99;
             character.unlockedSkillIds.Add("taught_by_the_mage");
             talents.Refresh();
@@ -334,6 +350,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.level = 20;
+            character.claimedTrackLevel = 20;
             character.unspentStatPoints = 3;
             Assert.IsTrue(character.Invest(PrincesPalace.Domain.Stats.AbilityScore.Constitution));
             Assert.IsTrue(character.Invest(PrincesPalace.Domain.Stats.AbilityScore.Strength));
@@ -363,6 +380,7 @@ namespace PrincesPalace.PlayModeTests
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.level = 20;
+            character.claimedTrackLevel = 20;
             character.unlockedTalentIds.Clear();
             character.investedAbilityScores = default;
             talents.Refresh();

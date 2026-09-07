@@ -98,14 +98,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.None));
         }
 
+        // THE GENERATED DEFAULT, which is what the level-keyed statics on
+        // RewardTrack used to forward onto. P4 deleted the GrantedBetween /
+        // HasUnlocked / UnlockedAmount forwards along with the production call
+        // sites that needed them (every one of those now asks
+        // RewardTracks.For(character) for the character's OWN track), so the
+        // handful of tests below that were really about the default table's
+        // arithmetic name it directly rather than through a shim that no
+        // longer exists.
+        private static readonly RewardTrackDefinition Default = RewardTrackDefinition.Default("");
+
         // A watermark is half-open at the bottom: everything up to and
         // including `afterLevel` has already been paid.
         [Test]
         public void AClaimedLevelIsNotPaidTwice()
         {
-            int all = RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, 40);
-            int firstHalf = RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, 20);
-            int secondHalf = RewardTrack.GrantedBetween(TrackReward.StatPoint, 20, 40);
+            int all = Default.GrantedBetween(TrackReward.StatPoint, 1, 40);
+            int firstHalf = Default.GrantedBetween(TrackReward.StatPoint, 1, 20);
+            int secondHalf = Default.GrantedBetween(TrackReward.StatPoint, 20, 40);
 
             Assert.AreEqual(all, firstHalf + secondHalf,
                 "claiming in two steps paid a different total than claiming in one");
@@ -114,17 +124,23 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AWatermarkPastTheLevelIsOwedNothing()
         {
-            Assert.AreEqual(0, RewardTrack.GrantedBetween(TrackReward.StatPoint, 50, 20));
+            Assert.AreEqual(0, Default.GrantedBetween(TrackReward.StatPoint, 50, 20));
         }
 
         [Test]
         public void AnUnlockIsNeverPaidAsAGrant()
         {
-            Assert.AreEqual(0, RewardTrack.GrantedBetween(TrackReward.Respec, 1, RewardTrack.MaxLevel),
+            Assert.AreEqual(0, Default.GrantedBetween(TrackReward.Respec, 1, RewardTrack.MaxLevel),
                 "an unlock was counted as a claimable quantity");
         }
 
-        // ---- unlocks are pure functions of level --------------------------------
+        // ---- a capability turns on once and stays on ----------------------------
+        //
+        // Written as a function of a level because that is HasUnlocked's
+        // parameter; what production passes it since P4 is the character's
+        // claimedTrackLevel, not their level, so the capability is COLLECTED
+        // rather than merely reached (docs/PLAN_REWARD_TRACKS.md §2). The
+        // arithmetic under test is the same either way.
 
         [TestCase(TrackReward.Respec, 19, false)]
         [TestCase(TrackReward.Respec, 20, true)]
@@ -133,7 +149,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(TrackReward.SecondLife, 90, true)]
         public void ACapabilityTurnsOnAtItsLevelAndStaysOn(TrackReward reward, int level, bool expected)
         {
-            Assert.AreEqual(expected, RewardTrack.HasUnlocked(reward, level));
+            Assert.AreEqual(expected, Default.HasUnlocked(reward, level));
         }
 
         // Level 80 grants ten stat points. It USED TO be sized to exactly one
@@ -316,7 +332,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AFullTrackCannotFillEveryAbilityBand()
         {
-            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel);
+            int points = Default.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel);
 
             Assert.AreEqual(50, points);
             Assert.Less(points, Stats.AbilityScores.All.Length * 10,
@@ -327,7 +343,7 @@ namespace PrincesPalace.Domain.Tests
         // RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth
         // (Tests/EditMode/Run/RewardTrackDefinitionTests.cs) now that
         // RewardTrackDefinition.Default owns the table this pinned --
-        // RewardTrack.GrantedBetween(MaxHealth, ...) is 0 by construction
+        // Default.GrantedBetween(MaxHealth, ...) is 0 by construction
         // since P3 (OnlyStatPointIsAGrant above), so the old assertion could
         // not be kept here even reworded.
     }
