@@ -93,6 +93,16 @@ namespace PrincesPalace.Domain.UiKit
             $"Fixed {axis}; or moving the Fill child into a sibling container that has one.";
 
         // The extent a container's children occupy, before its own padding.
+        //
+        // FLOW CHILDREN ONLY, on a flow container's own axis. ArrangeFlow
+        // lays out and spaces exactly the children whose Place.IsFlow is true
+        // -- an absolutely-placed child inside a Column or Row is legal and
+        // "does not consume flow space", in that method's own words. Measuring
+        // every child instead made a FromChildren container as tall as its
+        // stack PLUS whatever was pinned inside it, plus one spacing gap for
+        // the pin: a 210px stack behind a 500px glow measured 720. The cross
+        // axis still takes every child, because that is where a pinned child
+        // genuinely does sit inside the container.
         private static UiVec ContentSize(UiNode node, Dictionary<UiNode, UiVec> cache)
         {
             if (node.Children.Count == 0) return UiVec.Zero;
@@ -107,6 +117,7 @@ namespace PrincesPalace.Domain.UiKit
                     {
                         var s = cache[c];
                         w = Math.Max(w, s.X);
+                        if (!c.Place.IsFlow) continue;
                         h += c.Kind == UiNodeKind.Space ? c.Size.Y : s.Y;
                         counted++;
                     }
@@ -119,8 +130,9 @@ namespace PrincesPalace.Domain.UiKit
                     foreach (var c in node.Children)
                     {
                         var s = cache[c];
-                        w += c.Kind == UiNodeKind.Space ? c.Size.X : s.X;
                         h = Math.Max(h, s.Y);
+                        if (!c.Place.IsFlow) continue;
+                        w += c.Kind == UiNodeKind.Space ? c.Size.X : s.X;
                         counted++;
                     }
                     return new UiVec(w + node.Spacing * Math.Max(0, counted - 1), h);

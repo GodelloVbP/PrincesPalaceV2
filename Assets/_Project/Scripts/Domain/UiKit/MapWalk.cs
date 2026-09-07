@@ -87,9 +87,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float BobHeight = 5f;
         public const int BobsPerStep = 2;
 
+        // ONE BOUNCE IS PI OF PHASE, not 2 PI: the absolute value halves the
+        // sine's period, so a bounce is a HALF cycle of the underlying wave and
+        // the extra doubling this used to carry delivered four bounces where
+        // BobsPerStep says two. Pinned by MapWalkBobTests, which counts the
+        // peaks rather than trusting the constant.
         public static float BobAt(float t)
         {
-            double phase = Clamp01(t) * System.Math.PI * BobsPerStep * 2.0;
+            double phase = Clamp01(t) * System.Math.PI * BobsPerStep;
             return (float)(System.Math.Abs(System.Math.Sin(phase)) * BobHeight);
         }
 

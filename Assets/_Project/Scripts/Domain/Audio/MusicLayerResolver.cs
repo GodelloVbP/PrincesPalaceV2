@@ -48,12 +48,19 @@ namespace PrincesPalace.Domain.Audio
                 }
             }
 
-            foreach (string duplicate in sets.GroupBy(s => s.Id).Where(g => g.Count() > 1).Select(g => g.Key))
+            // Both of these read MusicLayerLibrary.IdComparer, and they have
+            // to be the same one the library itself looks ids up with -- see
+            // its header for what two comparers cost. Duplicate detection
+            // used the default (case-sensitive) comparer while the membership
+            // set below ignored case, so "floor_1" and "Floor_1" were neither
+            // a duplicate nor two distinct sets.
+            foreach (string duplicate in sets.GroupBy(s => s.Id, MusicLayerLibrary.IdComparer)
+                         .Where(g => g.Count() > 1).Select(g => g.Key))
             {
                 errors.Add($"Duplicate music set id '{duplicate}' — every id must be unique.");
             }
 
-            var byId = new HashSet<string>(sets.Select(s => s.Id), StringComparer.OrdinalIgnoreCase);
+            var byId = new HashSet<string>(sets.Select(s => s.Id), MusicLayerLibrary.IdComparer);
             var floors = ResolveFloors(raw, byId, errors);
 
             string fallback = (raw.fallbackSet ?? "").Trim();
