@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Progression
@@ -108,6 +109,36 @@ namespace PrincesPalace.Domain.Progression
 
         public static RewardTrackDefinition Default(string characterId) =>
             Build(characterId, DefaultMilestones, DefaultFillerMix);
+
+        // THE BRIDGE FROM CONTENT. ResolvedRewardTrack (Domain/Content,
+        // docs/PLAN_REWARD_TRACKS.md P2) is what RewardTrackEntryResolver
+        // hands back after validating and captioning reward_tracks.json;
+        // this turns it into the same materialised, hundred-entry shape
+        // Default produces, so a caller (P6's content pin test today; P4's
+        // Core/RewardTracks.For once it lands) can read an authored track
+        // through the identical At/CollectedTotal/HasUnlocked API regardless
+        // of whether it came from JSON or from Default. Kept in Domain,
+        // deliberately -- Core/RewardTracks.For is P4's own seam and takes
+        // this one call rather than reimplementing the conversion.
+        public static RewardTrackDefinition From(ResolvedRewardTrack resolved)
+        {
+            var milestones = new (int Level, TrackEntry Entry)[resolved.Milestones.Length];
+            for (int i = 0; i < resolved.Milestones.Length; i++)
+            {
+                var m = resolved.Milestones[i];
+                milestones[i] = (m.Level, new TrackEntry(m.Reward, m.Amount, m.Against, m.SkillId,
+                    m.SkillDisplayName, m.ResourceDisplayName));
+            }
+
+            var fillerMix = new (TrackEntry Entry, int Count)[resolved.Filler.Length];
+            for (int i = 0; i < resolved.Filler.Length; i++)
+            {
+                var f = resolved.Filler[i];
+                fillerMix[i] = (new TrackEntry(f.Reward, f.Amount, f.Against), f.Count);
+            }
+
+            return Build(resolved.CharacterId, milestones, fillerMix);
+        }
 
         // ---- reads -----------------------------------------------------------
 

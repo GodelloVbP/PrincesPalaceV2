@@ -164,21 +164,16 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("cannot appear as filler", joined);
         }
 
-        // ---- rules 4 and 5: cross-catalogue, and currently unreachable ----
+        // ---- rules 4 and 5: cross-catalogue ----
         //
-        // Both rules are keyed on the enum member NAME rather than a
-        // TrackReward value -- ElementalDamagePercent and the four
-        // SignatureX kinds do not exist on TrackReward yet;
-        // docs/PLAN_REWARD_TRACKS.md's P3 adds them, running concurrently in
-        // a sibling worktree. Until then Enum.TryParse<TrackReward> already
-        // refuses any entry naming one of them as "not a known TrackReward",
-        // before RewardTrackEntryResolver's rule 4/5 checks are ever
-        // reached -- so these two tests are ignored rather than asserted
-        // against today's actual (different) refusal reason, and pin the
-        // rule the day the member lands instead.
+        // ElementalDamagePercent and the four SignatureX kinds were
+        // unreachable until P3 added them to TrackReward -- Enum.TryParse
+        // refused any entry naming one as "not a known TrackReward" before
+        // the resolver's own rule 4/5 checks were ever reached. P3 has
+        // landed (docs/PLAN_REWARD_TRACKS.md's P6), so both are asserted for
+        // real now.
 
         [Test]
-        [Ignore("ElementalDamagePercent does not exist on TrackReward yet (P3 adds it) -- unreachable until then.")]
         public void FillerElementalDamageOfAnUnknownElement_IsRejected()
         {
             var context = new RewardTrackCharacterContext
@@ -204,7 +199,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        [Ignore("SignatureCapacity does not exist on TrackReward yet (P3 adds it) -- unreachable until then.")]
         public void SignatureRewardOnACharacterWithNoSignatureResource_IsRejected()
         {
             var characters = new Dictionary<string, RewardTrackCharacterContext>

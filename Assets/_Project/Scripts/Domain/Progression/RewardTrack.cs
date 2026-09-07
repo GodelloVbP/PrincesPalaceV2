@@ -158,6 +158,37 @@ namespace PrincesPalace.Domain.Progression
         public static bool IsUnlock(TrackReward reward) =>
             reward != TrackReward.None && !IsGrant(reward);
 
+        // A DIFFERENT SPLIT FROM IsGrant/IsUnlock, for a different question.
+        // IsUnlock above answers "is this read live rather than stored" --
+        // true for every kind but StatPoint, MaxHealth included
+        // (RewardTrackTests.MaxHealthIsCollectedLiveRatherThanGranted pins
+        // that on purpose). This answers "can placing this at a computed,
+        // uncontrolled level ever be wrong" -- true only for a pure on/off or
+        // single-parameter CAPABILITY (Respec, SecondLife, SignatureAbsorbs,
+        // UnlockSkill), false for every accumulating total (MaxHealth,
+        // SignatureCapacity, ElementalDamagePercent, MaxMana, ManaRegen...),
+        // which is exactly as legal as filler as StatPoint is.
+        //
+        // RewardTrackEntryResolver's validation rule 3
+        // (docs/PLAN_REWARD_TRACKS.md §4) is the one caller: filler's
+        // placement is computed and always starts at level 2, so a one-shot
+        // capability landing there would be granted before an author could
+        // ever deliberately delay it -- the earlier code called
+        // RewardTrack.IsUnlock for this, which was correct only while
+        // TrackReward's non-grant set happened to equal the one-shot set
+        // (StatPoint was the only grant AND MaxHealth was the only
+        // accumulating non-grant); P3 landing SignatureCapacity/
+        // SignatureGainPerTurn/SignatureGainOnDamageTaken/
+        // ElementalDamagePercent/MaxMana/ManaRegen broke that coincidence,
+        // and every authored filler mix that used any of those six started
+        // failing rule 3 for reasons that had nothing to do with rule 3's own
+        // intent.
+        public static bool IsOneShotCapability(TrackReward reward) =>
+            reward == TrackReward.Respec
+            || reward == TrackReward.SecondLife
+            || reward == TrackReward.SignatureAbsorbs
+            || reward == TrackReward.UnlockSkill;
+
         // HOW ONE NODE READS, given where the player is and how far the track
         // has paid. The screen's whole state model, in one pure function.
         //

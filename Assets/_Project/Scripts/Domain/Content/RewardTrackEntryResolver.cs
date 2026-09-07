@@ -32,9 +32,16 @@ namespace PrincesPalace.Domain.Content
         // skill authored to them with unlockLevel <= 1. Rule 4.
         public IReadOnlyCollection<DamageType> Level1DamageTypes = Array.Empty<DamageType>();
 
-        // Every skill id authored to this character, keyed to its own
-        // display name -- what UnlockSkill's skillId resolves against, and
-        // captions with "LEARN {S}".
+        // EVERY skill id in the game, keyed to its own display name -- what
+        // UnlockSkill's skillId resolves against, and captions with
+        // "LEARN {S}". Deliberately NOT filtered to this character's own
+        // skills: docs/PLAN_REWARD_TRACKS.md §3f/§3h says a track's
+        // UnlockSkill entry carries no ownership test, because the track is
+        // already per-character -- Odette's track grants frost_flare and
+        // lightning_bolt, both authored characterId "sheep" (every book-only
+        // spell in the game is). The per-character CharacterId gate stays on
+        // the unrelated unlockedSkillIds/granted branch (ContentDatabase.
+        // AvailableSkillsFor), untouched.
         public IReadOnlyDictionary<string, string> SkillDisplayNames = new Dictionary<string, string>();
     }
 
@@ -248,11 +255,14 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // RULE 3. IsUnlock is exactly "not a grant" -- Respec and
-            // SecondLife today, joined later by SignatureAbsorbs and
-            // UnlockSkill once P3 adds them (RewardTrack.IsGrant/IsUnlock
-            // classify by name, so this needs no change when that happens).
-            if (isFiller && RewardTrack.IsUnlock(reward))
+            // RULE 3. NOT RewardTrack.IsUnlock -- that answers "is this read
+            // live rather than stored", which is true for MaxHealth and every
+            // other accumulating total too (RewardTrack.IsOneShotCapability's
+            // own header explains why the two used to coincide and no
+            // longer do, now that P3 has landed six more accumulating kinds).
+            // Rule 3 only cares about a pure on/off or single-parameter
+            // CAPABILITY, which is a strictly narrower set.
+            if (isFiller && RewardTrack.IsOneShotCapability(reward))
             {
                 error = $"{trackLabel}, {where}: {reward} is a one-shot capability and cannot appear as filler -- only grants may.";
                 return false;
@@ -270,16 +280,11 @@ namespace PrincesPalace.Domain.Content
                 against = parsedAgainst;
             }
 
-            // RULE 4. Keyed on the enum member NAME rather than
-            // TrackReward.ElementalDamagePercent -- that member does not
-            // exist yet (P3 adds it), so referencing it here would not
-            // compile. Because of that, Enum.TryParse above already refuses
-            // any entry naming it, and this branch is unreachable until P3
-            // lands: left in place, string-keyed, so the rule is correct the
-            // day the member exists rather than a second thing to remember
-            // to add then. See RewardTrackEntryResolverTests' two [Ignore]d
-            // tests for the behaviour this is meant to produce.
-            if (isFiller && string.Equals(rawReward, "ElementalDamagePercent", StringComparison.OrdinalIgnoreCase)
+            // RULE 4. P3 has landed TrackReward.ElementalDamagePercent, so
+            // this reads the parsed enum value directly rather than the
+            // reward's raw string -- see RewardTrackEntryResolverTests'
+            // FillerElementalDamageOfAnUnknownElement_IsRejected.
+            if (isFiller && reward == TrackReward.ElementalDamagePercent
                          && against.HasValue && !context.Level1DamageTypes.Contains(against.Value))
             {
                 error = $"{trackLabel}, {where}: filler {against} damage is not an element this character can deal " +
@@ -288,13 +293,12 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // RULE 5. Same status as rule 4: the four signature-resource
-            // kinds do not exist on TrackReward yet, so this is unreachable
-            // until P3 adds them.
-            bool isSignatureReward = string.Equals(rawReward, "SignatureCapacity", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureGainPerTurn", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureGainOnDamageTaken", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(rawReward, "SignatureAbsorbs", StringComparison.OrdinalIgnoreCase);
+            // RULE 5. Same as rule 4: P3 has landed the four signature-
+            // resource kinds, so this reads the parsed enum value directly.
+            bool isSignatureReward = reward == TrackReward.SignatureCapacity
+                || reward == TrackReward.SignatureGainPerTurn
+                || reward == TrackReward.SignatureGainOnDamageTaken
+                || reward == TrackReward.SignatureAbsorbs;
 
             if (isSignatureReward && !context.HasSignatureResource)
             {
@@ -302,17 +306,19 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // UnlockSkill's skillId, resolved against the character's own
-            // skills -- also unreachable until P3 adds the kind, for the
-            // same reason as rules 4/5.
+            // UnlockSkill's skillId, resolved against every known skill --
+            // NOT just this character's own. §3f/§3h: the id resolves to a
+            // real skill, and nothing about whose it is (the track
+            // definition is per-character, so it has already said whose
+            // skill this is). context.SkillDisplayNames is the whole
+            // catalogue for exactly that reason -- see its own header.
             string resolvedSkillId = "";
             string skillDisplayName = "";
-            if (string.Equals(rawReward, "UnlockSkill", StringComparison.OrdinalIgnoreCase))
+            if (reward == TrackReward.UnlockSkill)
             {
                 if (string.IsNullOrWhiteSpace(skillId) || !context.SkillDisplayNames.TryGetValue(skillId, out skillDisplayName))
                 {
-                    error = $"{trackLabel}, {where}: UnlockSkill names skillId '{skillId}', which is not a skill " +
-                            "authored to this character.";
+                    error = $"{trackLabel}, {where}: UnlockSkill names skillId '{skillId}', which is not a known skill.";
                     return false;
                 }
 
