@@ -158,6 +158,67 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Lines(session).Any(m => m.Contains("The party falls")));
         }
 
+        // ---- what a summoned body is worth ----------------------------------------
+
+        [Test]
+        [Ignore("owner's call: whether a summoned body pays its own reward is a balance question")]
+        public void ASummonedBodyDoesNotPayItsOwnReward()
+        {
+            // ResolveSummon (FightSession.Skills.cs) files the summon's kit into
+            // _enemyKits, and ResolveOutcome pays out over _enemyKits.Values --
+            // so every rat the Forest Warden's Roar calls in is worth its full
+            // authored experience and gold on top of the Warden's own.
+            //
+            // The cap counts the LIVING (SummonCap 2), not the summoned, so the
+            // Warden re-fills the field every time the player clears it and the
+            // dictionary keeps every corpse's kit. A player willing to stall has
+            // an unbounded experience and gold faucet inside one room.
+            //
+            // The rest of the kill funnel already decided the other way:
+            // EssenceSiphonOnKill and InconspicuousKeyOnKill both bail on
+            // victim.IsSummon, on the stated reasoning that a called-in body is
+            // not a body worth paying for. The payout is the one place that
+            // does not ask.
+            //
+            // LEFT ALONE. Excluding summons drops the reward for a boss room
+            // that is genuinely harder for having adds in it, and capping the
+            // faucet some other way (count summons once, pay a fraction) is a
+            // different answer again. That is a tuning decision, not a wiring
+            // one -- this test says what the code does today and fails the
+            // moment somebody decides.
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
+            var warden = new CombatantState("Warden", false, 1, 10, 1, 1);
+
+            bool SummonFactory(string id, out CombatantState state, out EnemyKit kit)
+            {
+                state = new CombatantState("Rat", false, 1, 0, 1, 1);
+                kit = new EnemyKit(Source("rat", 20, 10), false);
+                return true;
+            }
+
+            var encounter = new CombatEncounter(new[] { hero }, new[] { warden });
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, null, null) },
+                new List<EnemyKit> { new EnemyKit(Source("warden", 20, 10), false) },
+                new SeededRandom(2), summonFactory: SummonFactory) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            var roar = new ResolvedSkill("roar", "Roar", "", "warden", 1, SkillEffect.Summon,
+                SkillTargeting.Self, 0, 0, false, 0, 0, false, null, SpellPresentation.None, 0,
+                summonEnemyId: "rat", summonCap: 2);
+            session.ResolveSummonForTest(warden, roar);
+
+            session.ExecuteAttack(warden);
+            Assert.IsFalse(warden.IsAlive, "fixture: the Warden has to fall first");
+
+            var rat = encounter.Enemies.First(e => e.IsAlive);
+            session.ExecuteAttack(rat);
+
+            Assert.IsTrue(session.IsOver);
+            Assert.AreEqual(20, session.Payout.Value.Experience,
+                "the room paid for a body it called in itself");
+        }
+
         // ---- a defeat that lands at a turn start ----------------------------------
 
         [Test]
