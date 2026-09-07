@@ -98,6 +98,13 @@
       "groundLine": 8,
       "groundLineSource": "slicer",
       "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 646x478 canvas; the slicer measured this ground line and every pose agrees within 0px. Handed to the slicer 2026-09-06, once Art/Enemies/treant/recipe.json was shown to replay the committed stills byte for byte -- a measurement a tool can reproduce is a measurement that tool should own."
+    },
+    {
+      "spritePath": "Characters/bear",
+      "groundLine": 74,
+      "groundLineSource": "slicer",
+      "breath": 1.0,
+      "_breathNote": "Copied, not tuned: Shawn's own entry (Characters/sheep) sets no breath at all, which means the runtime default of 1.0 -- so this is that same number written out explicitly for the bear rather than a judgement about how hard he breathes. See Art/Characters/bear/README.md."
     }
   ]
 }
