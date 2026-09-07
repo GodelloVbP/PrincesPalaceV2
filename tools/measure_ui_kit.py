@@ -38,6 +38,12 @@ group, whether the six themes agree within 1px at threshold 32 (exits 1
 naming the file if not); and a C#-pasteable block of the threshold-32
 numbers, averaged across each group's six themes, in the shape
 ContainerArt.Specs/ButtonPlateArt already read literals in.
+
+A GROUP THAT FAILS THE AGREEMENT CHECK GETS NO PASTEABLE NUMBER, only the
+reason. Averaging six themes that disagree by 9px produces a figure that is
+wrong for all six rather than right for the middle one, and printing it
+under a heading reading "C#-PASTEABLE" -- with the warning further down the
+output -- asks to be read bottom-up.
 """
 
 import os
@@ -164,16 +170,37 @@ def main():
         # Agreement check at the pin threshold: every theme's px pad, per
         # edge, within AGREEMENT_BAND_PX of every other theme's.
         pin_pads = [(theme, name, pads[PIN_THRESHOLD]) for theme, name, w, h, pads in entries]
+        disagreed = []
         for edge_index, edge_name in enumerate(("left", "top", "right", "bottom")):
             values = [p[2][edge_index] for p in pin_pads]
             spread = max(values) - min(values)
             if spread > AGREEMENT_BAND_PX:
                 worst = max(pin_pads, key=lambda p: p[2][edge_index])
+                disagreed.append(f"{edge_name} (spread {spread}px, worst {worst[1]} at {worst[2][edge_index]}px)")
                 failures.append(
                     f"{stem}{suffix} edge={edge_name}: spread {spread}px across themes at threshold "
                     f"{PIN_THRESHOLD} (> {AGREEMENT_BAND_PX}px band) -- worst file {worst[1]} "
                     f"({worst[2][edge_index]}px). Re-measure by hand before pinning this group."
                 )
+
+        # NO PASTEABLE LINE FOR A GROUP THAT JUST FAILED ITS OWN CHECK. The
+        # number would be a mean over a spread the tool has this second
+        # declared untrustworthy -- for container_3x4's 9px left spread that
+        # mean is wrong for every one of the six themes, not right for the
+        # middle one -- and it was being printed under a heading that says
+        # "C#-PASTEABLE" with the reason not to paste it further down the
+        # output. Anything that has to be read bottom-up to be read correctly
+        # gets read wrong.
+        if disagreed:
+            csharp_blocks.append(
+                f"  // {label}\n"
+                f"  // REFUSED: the six themes disagree on {', '.join(disagreed)} at threshold "
+                f"{PIN_THRESHOLD}.\n"
+                f"  // An average across a spread that wide is wrong for every theme in it. Fix the\n"
+                f"  // art or re-measure by hand; see the FAILURES list below."
+            )
+            print()
+            continue
 
         # C# paste: the fraction average across the group's six themes, at
         # the pin threshold, one fraction per edge.
