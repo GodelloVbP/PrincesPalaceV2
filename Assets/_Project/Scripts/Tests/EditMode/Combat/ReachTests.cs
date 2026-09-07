@@ -85,6 +85,67 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(ReachKind.ExplicitRanks, Reach.FromContent(new[] { 1 }).Kind);
         }
 
+        // ---- MaxRanks against the stage it is measuring ----------------------
+        //
+        // Reach.MaxRanks IS FightHudSpec.StageSlotsPerSide now, so asserting
+        // they are equal would be a tautology and is deliberately not what
+        // these do. What is still worth pinning is everything the derivation
+        // alone cannot promise: that the number is what the design says, that
+        // the bitmask underneath can carry it, and that a real fight fielded at
+        // the default capacity has a reachable rank for every stage slot and
+        // nothing above the last one.
+
+        // THE LITERAL, once, so raising the stage is a decision somebody makes
+        // rather than a number that drifts. Both constants move together now;
+        // this is the one place that says which value they moved to.
+        [Test]
+        public void MaxRanksIsThreeAndIsTheStageCapacity()
+        {
+            Assert.AreEqual(3, Reach.MaxRanks,
+                "three ranks a side. If the stage genuinely grew, change "
+                + "FightHudSpec.StageSlotsPerSide -- Reach.MaxRanks is derived from it -- "
+                + "and update this literal to match.");
+        }
+
+        // THE BITMASK'S OWN CEILING, which nothing else checks and which fails
+        // silently rather than loudly. RankMask is an int and MaskOf writes
+        // `1 << rank` for every rank below MaxRanks; C# masks a shift count to
+        // its low five bits, so a 33-slot stage would fold rank 32 back onto
+        // rank 0 and a melee reach would start allowing the deepest rank on the
+        // field. Not a plausible design change -- which is exactly why nobody
+        // would think to check it while making one.
+        [Test]
+        public void MaxRanksStillFitsInTheIntRankMask()
+        {
+            Assert.LessOrEqual(Reach.MaxRanks, 31,
+                "RankMask is an int and MaskOf shifts by rank. Past 31 ranks it needs "
+                + "a long (or a different representation), not a bigger constant.");
+        }
+
+        // AND THE RELATIONSHIP THAT ACTUALLY MATTERS, through a real fight
+        // rather than through the constants: every slot the default encounter
+        // can field has a rank something can be aimed at, and the one past the
+        // last does not exist. This is what a mismatch would break, so it is
+        // what a mismatch should fail.
+        [Test]
+        public void EveryDefaultStageSlotHasAReachableRankAndNothingAboveIt()
+        {
+            var hero = Hero();
+            var foes = Enumerable.Range(0, FightHudSpec.StageSlotsPerSide)
+                .Select(i => Foe("Foe" + i))
+                .ToArray();
+            var session = Fight(new[] { hero }, foes);
+
+            var everyRank = Reach.Ranks(Enumerable.Range(0, Reach.MaxRanks).ToArray());
+
+            CollectionAssert.AreEqual(foes, session.EligibleTargets(hero, everyRank).ToList(),
+                "a reach naming every rank should reach a full stage, and it cannot if "
+                + "Reach.MaxRanks is smaller than FightHudSpec.StageSlotsPerSide");
+
+            Assert.IsFalse(everyRank.Allows(FightHudSpec.StageSlotsPerSide),
+                "the rank one past the last stage slot is not a place anything stands");
+        }
+
         // ---- rank, and what death does to it --------------------------------
 
         [Test]

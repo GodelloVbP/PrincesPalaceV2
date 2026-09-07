@@ -99,6 +99,32 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
 
+            // REFRESHED, NOT STACKED, when it is a timed buff. A second cast
+            // before the first expires resets the clock rather than doubling
+            // the speed -- the same rule StatusEffects.Apply follows, and for
+            // the same reason: paying the cost twice should not be strictly
+            // better than paying it once and waiting.
+            //
+            // HANDING THE PREVIOUS GRANT BACK FIRST is what makes that true,
+            // and for eleven months it did not: only TurnsLeft was reset while
+            // Granted and Speed both went on compounding, so two Tin-Foil Pipe
+            // casts in one turn gave 20 base + 20% + 20% = 28 rather than the
+            // 24 the relic's own card promises. Reachable, not theoretical --
+            // Fleece Ward T3 grants a free action, so a second cast lands
+            // before the turn start that would have ticked the first grant
+            // away. Same revoke-then-regrant shape RefreshNecklaceSpeed and
+            // RefreshChilledSpeed already use, and for the same reason: what
+            // a refresh owes is "the magnitude one grant would give against
+            // the current true base", which is exactly what recomputing from
+            // scratch produces and what adjusting a delta only approximates.
+            //
+            // turns > 0 ONLY. A turns: 0 grant is not a timed buff and the
+            // relics that use it mean what they do: Ballerina's Slippers
+            // accumulate across a whole fight to their own cap, and the
+            // Toothed Necklace already revokes explicitly before re-granting
+            // because its ramp moves in both directions. Neither wants this.
+            if (turns > 0) RevokeSpeedBuff(actor, source);
+
             if (!_speedBuffs.TryGetValue(actor, out var forActor))
             {
                 forActor = new Dictionary<object, SpeedBuff>();
@@ -113,7 +139,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // The TRUE base -- see TrueBaseSpeed. Every OTHER relic's grant is
             // subtracted too, not only this one's, or a second speed relic
-            // reads a base that the first one already inflated.
+            // reads a base that the first one already inflated. Read AFTER the
+            // revoke above, so a refresh measures against a base this source is
+            // no longer part of.
             int baseSpeed = TrueBaseSpeed(actor, forActor);
             int wanted = baseSpeed * percent / 100;
             if (wanted <= 0) wanted = 1;
@@ -124,11 +152,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (buff.Granted + wanted > ceiling) wanted = ceiling - buff.Granted;
             }
 
-            // REFRESHED, NOT STACKED, when it is a timed buff. A second cast
-            // before the first expires resets the clock rather than doubling
-            // the speed -- the same rule StatusEffects.Apply follows, and for
-            // the same reason: paying the cost twice should not be strictly
-            // better than paying it once and waiting.
+            // The clock. The refresh half of "refreshed, not stacked" is done
+            // at the top of this method, where the previous grant is handed
+            // back; by here `buff` is either brand new or an accumulating
+            // turns: 0 entry.
             if (turns > 0) buff.TurnsLeft = turns;
             else buff.TurnsLeft = -1;
 

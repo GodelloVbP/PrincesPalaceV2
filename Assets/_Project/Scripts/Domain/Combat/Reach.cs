@@ -62,7 +62,28 @@ namespace PrincesPalace.Domain.Combat
         // TryAddEnemy refuses past it), so every living rank has a stage slot
         // and an authored slot above this is a build refusal rather than a
         // rule nothing can ever satisfy.
-        public const int MaxRanks = 3;
+        //
+        // DERIVED, NOT RESTATED. This was `= 3` sitting directly under a
+        // comment naming the constant it was copying, with nothing that would
+        // fire when the two disagreed -- and the disagreement is silent in
+        // both directions. Raise the stage to four slots and SkillEntryResolver
+        // (which reads its authored 1..N bound off MaxRanks, and is the only
+        // place that bound is stated) starts refusing a reachSlots of 4 as
+        // "a restriction nothing could ever satisfy" while the fourth slot is
+        // right there on screen; lower it to two and Allows goes on granting a
+        // rank the stage cannot draw, which is the invisible-and-still-swinging
+        // failure FightHudSpec's own header exists to prevent.
+        //
+        // Both constants are in the same assembly (PrincesPalace.Domain, which
+        // is noEngineReferences and so cannot be bringing UI in through the
+        // back door), and Session is a child namespace of this one, so the
+        // reference resolves with no using and costs nothing. Domain.Content
+        // and Domain.Dungeon already read the same constant this way.
+        //
+        // FightHudSpec is the direction of the derivation on purpose: it says
+        // what combat may CREATE and the stage having that many slots is the
+        // consequence. Reach is downstream of both.
+        public const int MaxRanks = Session.FightHudSpec.StageSlotsPerSide;
 
         public Reach(ReachKind kind, int rankMask)
         {
