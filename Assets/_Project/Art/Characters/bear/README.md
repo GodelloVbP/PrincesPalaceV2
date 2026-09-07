@@ -105,11 +105,10 @@ Verified 2026-09-07: the replay reproduces all six committed stills and
   Shawn, unlike the owl.
 - **Display name "Bjorn"** is the owner's call and is provisional, same
   status Odette's stats/skill kit carried at her own delivery.
-- **Portrait is borrowed.** `portraitPath` stays `Portraits/sheep` verbatim
-  from `placeholder_brawler` — no bear portrait exists yet, so the dossier
-  shows Shawn's neutral portrait for him too, exactly as it did for Odette
-  before an owl portrait existed. First thing a design pass on this
-  character should fix.
+- **Portrait was borrowed, now stopgapped.** `portraitPath` used to stay
+  `Portraits/sheep` verbatim from `placeholder_brawler`, showing Shawn's
+  neutral portrait for Bjorn too. See the Portrait section below for what
+  replaced it.
 - **Skill ids kept as `placeholder_brawler_*`.** Renaming them would touch
   saves and tests for no visible gain today, the same call Odette's delivery
   made for her `placeholder_caster_*` skills. A design pass on stats, skill
@@ -126,3 +125,26 @@ python tools/slice_actor_sheet.py --sheet Assets/_Project/Art/Characters/bear/sh
 
 Canvas 486x467, `groundLine 74`, idle content height 385px against the sheep's
 measured 350px (1.10x, by design).
+
+## Portrait
+
+No painted portrait exists for Bjorn yet. Until one is commissioned and run
+through `tools/remove_portrait_backgrounds.py` (the keyer for painted
+portrait sheets — this is not that), the dossier plate shows a stopgap crop
+of his own idle stance still, made by `tools/portrait_from_stance.py`:
+
+```bash
+python tools/portrait_from_stance.py --still Assets/_Project/Resources/Characters/bear/idle.png \
+    --out Assets/_Project/Resources/Portraits/bear.png
+```
+
+Crop box (source px, against `idle.png`'s 486x467 canvas): `(163, 8) -
+(301, 181)`, i.e. the top 45% of the idle stance's alpha bbox (312x385),
+centred horizontally on the bbox. Native crop 138x173, upscaled 8x with
+LANCZOS to 1104x1384 (the largest whole-integer multiple that doesn't
+overshoot `Portraits/sheep.png`'s 1122x1402 — see the tool's header for why
+an integer factor beats resampling straight to the target's exact pixel
+size). **This is soft** — an 8x upscale of a ~140px source is real
+quality loss next to a painted portrait — and that is accepted "for now."
+`characters.json`'s `portraitPath` for `bear` is `Portraits/bear`; replace
+this file and stop pointing at it the moment a painted portrait lands.
