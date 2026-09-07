@@ -163,6 +163,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var glossary = GlossaryScreen.Build();
             screen.Glossary = glossary;
 
+            // Gold, 5:1 KIT CONTAINER (owner's HQ-kit instruction,
+            // 2026-09-07) -- not the flat #2C1C42E0 panel this replaces.
+            // Width kept at the old panel's 520 (ContainerSizeForWidth
+            // derives the matching 104 height from FiveByOne's own 5.0
+            // aspect, up from the flat panel's 90 -- 520/90 missed 5.0 by
+            // 15.6%, more than ValidateContainerAspect's 5% tolerance
+            // allows). CurrencyLabel's own 500x80 box still clears the kit's
+            // measured content inset at the new height with room to spare,
+            // so it needed no change.
+            var currencyPlate = Ui.Container("CurrencyPlate", ButtonTheme.Gold, ContainerRatio.FiveByOne,
+                Place.At(620f, 470f), Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f));
+            Ui.ContainerContent(currencyPlate, ContainerRatio.FiveByOne, "CurrencyPlateContent", currency);
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fill,
                 world,
 
@@ -183,15 +196,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         .Styled(TypographyRole.Body))
                     .AsDecor(),
 
-                // Lighter than it looks like it should be. v1's first pass made
-                // this near-identical to the background it sits on, so the plate
-                // vanished and the numbers read as text floating in space -
-                // found by rendering the panel and looking at it, which no test
-                // would have caught.
-                // Widened for a third currency: Embers is what talents actually
-                // cost and it was invisible here.
-                Ui.Panel("CurrencyPlate", Place.At(620f, 470f), UiSize.Fixed(520f, 90f), currency)
-                    .Coloured("#2C1C42E0").AsDecor(),
+                currencyPlate,
 
                 mainMenu,
                 draft.Root,

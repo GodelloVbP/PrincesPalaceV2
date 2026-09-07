@@ -53,9 +53,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // reckoning_frame.png's own bespoke key retired 2026-09-02 when the
         // frame moved to the Gold 3:2 kit container (see the frame's own
-        // build-site comment) -- no caller reads it any more.
-        public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
-        public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
+        // build-site comment) -- no caller reads it any more. TabKey and
+        // ContinueKey retired the same way 2026-09-07: the tabs wear
+        // ThemedPlate(Silver) and Continue wears Themed(Gold) now (owner's
+        // HQ-kit instruction), so tab_plate.png and continue_arrow.png have
+        // no reader left in this file either.
         // BAKED, not painted. The painted attempt came back as a stubby star:
         // short rays, a hard silhouette, and it read as a spiky blob rather
         // than as light. The generated one holds all three things the brief
@@ -335,16 +337,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ONLY on the summary phase. Phase one has no way out but the
             // choice itself -- you always take something.
-            // NOT migrated to the semantic kit. The brief's own plan calls
-            // this Silver, but the button already wears bespoke arrow art
-            // (continue_arrow.png, immediately below) with a matching glow
-            // built for that shape (ReckoningContinueGlow, above) -- exactly
-            // the case the migration brief itself calls out to leave alone:
-            // the art already IS the continue control. A themed plate would
-            // replace it outright, not dress it.
+            // MIGRATED TO THE HQ KIT (owner's instruction, 2026-09-07):
+            // Gold, same size/font as FightScreen's own ContinueButton
+            // (FightScreen.cs ~1715) so the two "the recommended next
+            // action" buttons in the game read as the same control. This
+            // retires continue_arrow.png as this button's face -- ContinueKey
+            // is unread below and deleted with TabKey at the bottom of this
+            // file. ReckoningContinueGlow (above) is left in place: it is
+            // still a real node PlayMode pins (ReckoningPhaseTests) and
+            // EmberFlare still animates it, but it was tuned to an arrow's
+            // taper point and now sits behind a rectangular plate that
+            // brings its own built-in glow -- worth a follow-up look, not
+            // resolved here.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
-                new UiVec(340f, 84f), 22, Place.At(0f, -272f));
-            continueButton.SpriteKey = ContinueKey;
+                    new UiVec(300f, 80f), 20, Place.At(0f, -272f))
+                .Themed(ButtonTheme.Gold);
 
             // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
             // three full-size pages it crosses.
@@ -486,14 +493,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The lit marker is a separate layer from the caption, so "which
             // tab am I on" and "what is it called" stay two channels -- the
             // same split the draft cards and the glossary rail both make.
+            // Independent from the plate underneath it, which is exactly the
+            // seam that survives the HQ-kit swap below: ReckoningController's
+            // PaintTabs recolours only this Image (MarkerLit/MarkerDark), never
+            // the tab's own plate, so ThemedPlate needs no selected-state
+            // support of its own.
             var marker = Ui.Solid("ReckoningTab" + index + "Marker", "#F2DB9E00",
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -4f), UiSize.Fill)
                 .AsDecor();
 
-            var tab = Ui.Button("ReckoningTab" + index, TabStrings[index],
-                new UiVec(230f, 52f), 19, Place.At(x, TabY));
-            tab.SpriteKey = TabKey;
+            // ThemedPlate(Silver), owner's HQ-kit instruction (2026-09-07),
+            // replacing bespoke tab_plate.png. Caption-preserving mode
+            // because the marker strip is already a declared child sitting
+            // UNDER the label -- Themed()'s label-generating mode has no
+            // hook for a second layered child, and ThemedPlate's whole
+            // reason to exist is a button whose caption isn't just one
+            // centred string (see FightScreen's verb rows for the same
+            // shape).
+            var tabSize = new UiVec(230f, 52f);
+            var caption = Ui.Label("ReckoningTab" + index + "Caption", TabStrings[index], tabSize, 19,
+                    "#FFFFFFFF", Place.Stretch())
+                .AsDecor()
+                .Styled(TypographyRole.ButtonLabel);
+
+            var tab = Ui.Button("ReckoningTab" + index, UiString.Runtime, tabSize, 19, Place.At(x, TabY))
+                .ThemedPlate(ButtonTheme.Silver);
+            tab.Children.Add(caption);
             tab.Children.Add(marker);
+            tab.LayerCaptionWithVisuals(caption, marker);
 
             TabButtons.Add(tab);
             TabMarkers.Add(marker);

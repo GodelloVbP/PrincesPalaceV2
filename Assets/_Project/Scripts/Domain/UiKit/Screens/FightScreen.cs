@@ -113,6 +113,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef EnemiesHint;
         public List<NodeRef> EnemyPlates = new List<NodeRef>();
+
+        // The Crimson TwoByOne container frame's own Art sprite (owner's
+        // HQ-kit instruction, 2026-09-07), added alongside EnemyPlates
+        // rather than in place of it: EnemyPlates is now NoChrome (a
+        // transparent, always-alpha-0 click target, see BuildEnemyPlates),
+        // so FightController.Hud's RefreshEnemyPlates tints THIS Image for
+        // the elite/boss dress and the out-of-reach dim it used to apply to
+        // enemyPlates[i].targetGraphic -- tinting the chromeless button's own
+        // Image would tint something the player can never see.
+        public List<NodeRef> EnemyPlateFrames = new List<NodeRef>();
         public List<NodeRef> EnemyPlateIcons = new List<NodeRef>();
         public List<NodeRef> EnemyPlateNames = new List<NodeRef>();
         public List<NodeRef> EnemyPlateHps = new List<NodeRef>();
@@ -925,20 +935,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // that is a name, a number and a bar. At 200x56 in two columns the same
         // three plates occupy two rows in the same width, and the space that
         // buys goes back to the battlefield they are describing.
-        private const float PlateW = 200f;
+        //
+        // GROWN FROM 200 TO 220 (owner's HQ-kit instruction, 2026-09-07): the
+        // Crimson TwoByOne frame's own content inset eats 3.5% of PlateW off
+        // each side, which at the old 200 left only 186px of usable width
+        // where the icon/name/tag/hp row was already sharing 196 with zero
+        // slack (see PlateContentHalfWidth and the row's own "2px gaps"
+        // comment below) -- 220 gives back a content half-width of 102.3,
+        // just over the original un-inset 100, so the row's own margins and
+        // gaps need no further change.
+        private const float PlateW = 220f;
 
-        // 64 RATHER THAN THE 52 THAT WOULD BE EXACTLY HALF. That twelve
-        // originally bought a third row for the status line; Phase 3
-        // (EnemyStatusLine's own header) retired that row to BRK alone,
-        // folded into the name row instead of kept as its own line (see
-        // BuildEnemyPlates' tag comment) -- but PlateH stayed 64 rather than
-        // shrinking back toward 52, because PlatePitch, PlateFirstY's own
-        // headroom margin against the stage anchors, and every test pinned
-        // against them (TheEnemyPlatesFillTwoColumnsBeforeStartingASecondRow)
-        // are tuned against this number, and the two remaining rows read
-        // comfortably with 11px of margin above and below rather than
-        // cramped -- not visibly too tall for what they now hold.
-        private const float PlateH = 64f;
+        // GROWN FROM 64 TO 110 (owner's HQ-kit instruction, 2026-09-07):
+        // EnemyPlate wears a Crimson TwoByOne container frame now instead of
+        // the flat panel_crimson.png sprite, and this is PlateW's (220) own
+        // exact TwoByOne match. PlatePitch below grows with it (76 to 122)
+        // to keep the two rows from overlapping.
+        //
+        // FLAGGED, NOT RESOLVED: PlateFirstY's own comment below ties this
+        // stack's lower edge to a 12px clearance against the tallest actor's
+        // head, measured by tools/measure_stage.py. Growing PlateH pushes
+        // that lower edge further down and tools/measure_stage.py was NOT
+        // re-run as part of this conversion -- re-check stage clearance
+        // before this ships.
+        private static readonly UiVec PlateSize = Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, PlateW);
+        private static float PlateH => PlateSize.Y;
+
+        // The USABLE half-width inside the Crimson frame's own content
+        // inset (3.5% of PlateW off each side for TwoByOne), not PlateW's
+        // own half-width -- the icon/name/hp row was authored against the
+        // bare plate rect with a 4px margin, and at the original PlateW=200
+        // the container's inset ate more than that (7px), putting the icon
+        // 3px past the frame's own left edge (caught by UiAudit's
+        // ChildContainment at build) and closing the name/tag gap into an
+        // overlap besides -- PlateW grew to 220 to buy that room back (see
+        // its own comment), and every "left"/"rowRight" style margin below
+        // is measured off this content half-width instead, which restores
+        // the original 4px margins against the box content
+        // actually has to live in.
+        private static float PlateContentHalfWidth =>
+            PlateSize.X * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Left);
         private const float PlateGap = 16f;
         private const int PlateColumns = 2;
 
@@ -949,7 +985,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PlateBlockRight - (PlateColumns * PlateW + (PlateColumns - 1) * PlateGap) + PlateW * 0.5f;
 
         private const float PlatePitchX = PlateW + PlateGap;
-        private const float PlatePitch = PlateH + 12f;
+        private static float PlatePitch => PlateH + 12f;
 
         // The icon that tells two of the same monster apart at a glance, before
         // the name is read. The actor's own idle sprite, fitted -- no new art,
@@ -994,18 +1030,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return vignette;
         }
 
+        private const float EnemiesHeadingHeight = 24f;
+
+        // 6px clear of the plate stack's own top edge -- DERIVED from PlateH
+        // now rather than the restated literal "+50" this replaces (392+50
+        // was only ever "PlateFirstY + PlateH*0.5 + 6 + 12" with PlateH=64
+        // baked in by hand). Growing PlateH (owner's HQ-kit instruction,
+        // 2026-09-07 -- see PlateH's own comment) moved the plate stack's
+        // top edge up into where the restated "+50" still put the heading,
+        // an overlap UiAudit caught at build; deriving it instead means the
+        // next PlateH change cannot silently reopen the same collision.
+        private const float EnemiesHeadingGap = 6f;
+
+        private static float EnemiesHeadingY =>
+            PlateFirstY + PlateH * 0.5f + EnemiesHeadingGap + EnemiesHeadingHeight * 0.5f;
+
         private IEnumerable<UiNode> BuildEnemiesHeading()
         {
             // 155 wide, not v1's 200. At 200 this box ran to x 720 while the
             // right-aligned hint's box starts at 680 -- a 40px crossing the
             // audit refuses. "E N E M I E S" at 12pt bold is well under 155.
-            yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading, new UiVec(155f, 24f), 12,
+            yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading,
+                new UiVec(155f, EnemiesHeadingHeight), 12,
                 FightHudPalette.TextMuted,
-                Place.At(PlateFirstX - PlateW * 0.5f, PlateFirstY + 50f, new UiVec(0f, 0.5f)));
+                Place.At(PlateFirstX - PlateW * 0.5f, EnemiesHeadingY, new UiVec(0f, 0.5f)));
 
-            var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount, new UiVec(240f, 24f), 12,
+            var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount,
+                new UiVec(240f, EnemiesHeadingHeight), 12,
                 FightHudPalette.TextDisabled,
-                Place.At(PlateBlockRight, PlateFirstY + 50f, new UiVec(1f, 0.5f)));
+                Place.At(PlateBlockRight, EnemiesHeadingY, new UiVec(1f, 0.5f)));
             EnemiesHint = hint;
             yield return hint;
         }
@@ -1019,7 +1072,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             return Ui.Each(Enumerable.Range(0, FightHudSpec.EnemyPlates).ToList(), (_, i) =>
             {
-                float left = -PlateW * 0.5f;
+                float left = -PlateContentHalfWidth;
 
                 var icon = Ui.Sprite($"EnemyPlate{i}Icon", null,
                         new UiVec(PlateIconSize, PlateIconSize),
@@ -1036,7 +1089,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // below -- named once so the tag can be pinned off it without
                 // restating the margin. 4px rather than the old 8: same
                 // reclaim as textLeft above.
-                float rowRight = PlateW * 0.5f - 4f;
+                float rowRight = PlateContentHalfWidth - 4f;
 
                 // TWO ROWS, NOT THREE. The status line that used to sit
                 // between these retired to the stage rows under each figure
@@ -1164,24 +1217,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 EnemyPlateBreakTracks.Add(breakTrack);
                 EnemyPlateBreakFills.Add(breakFill);
 
+                // CRIMSON, 2:1 KIT CONTAINER (owner's HQ-kit instruction,
+                // 2026-09-07) as the frame, replacing panel_crimson.png --
+                // the mirror of the party plate's own Container(Blue,
+                // TwoByOne), and the same frame+chromeless-click-target shape
+                // RelicDraftScreen's cards use. The frame carries every piece
+                // of content as its ContainerContent; the button itself stays
+                // the click/hover target, NoChrome so it paints nothing of
+                // its own over the frame.
+                var frame = Ui.Container($"EnemyPlate{i}Frame", ButtonTheme.Crimson, ContainerRatio.TwoByOne,
+                    Place.At(0f, 0f), PlateSize);
+                Ui.ContainerContent(frame, ContainerRatio.TwoByOne, $"EnemyPlate{i}FrameContent",
+                    icon, name, hp, tags, bar, reticle, breakTrack);
+
                 // 1.03 hover, no press pop: the plate carries four pieces of
                 // text, so the press animator's 1.05/0.95 would swing them all
                 // sideways under the cursor. v1 made the same call at the same
                 // number.
-                var plate = Ui.Button($"EnemyPlate{i}", UiString.Runtime, new UiVec(PlateW, PlateH), 1,
-                    Place.At(PlateFirstX + i % PlateColumns * PlatePitchX,
-                             PlateFirstY - i / PlateColumns * PlatePitch)).Hovers(1.03f);
-                plate.SpriteKey = PanelCrimson;
-                plate.Children.Add(icon);
-                plate.Children.Add(name);
-                plate.Children.Add(hp);
-                plate.Children.Add(tags);
-                plate.Children.Add(bar);
-                plate.Children.Add(reticle);
-                plate.Children.Add(breakTrack);
+                var plate = Ui.Button($"EnemyPlate{i}", UiString.Runtime, PlateSize, 1,
+                        Place.At(PlateFirstX + i % PlateColumns * PlatePitchX,
+                                 PlateFirstY - i / PlateColumns * PlatePitch))
+                    .Hovers(1.03f)
+                    .NoChrome();
+                plate.Children.Add(frame);
                 plate.Inactive();
 
                 EnemyPlates.Add(plate);
+                EnemyPlateFrames.Add(frame.Children.FirstOrDefault());
                 return plate;
             });
         }
@@ -1190,12 +1252,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // BLUE, 2:1 CONTAINER ART -- the character's own stat card, so the
         // informational/defensive theme (the same one HOLD BACK uses in the
-        // verb column) rather than Crimson, which the old panel_crimson.png
-        // fallback wore for reasons that had nothing to do with theme (see
-        // FallbackPlateKey, still Crimson for the enemy plates that use it).
-        // FightHudPalette itself never tied this slot to a colour -- its hex
-        // tokens are HP/MP/text roles, not a per-plate theme -- so there was
-        // nothing here to defer to.
+        // verb column) rather than Crimson, which is EnemyPlate{i}'s own
+        // theme now (see BuildEnemyPlates) for the same "this is the other
+        // side" reason panel_crimson.png used to wear it for no reason at
+        // all. FightHudPalette itself never tied this slot to a colour --
+        // its hex tokens are HP/MP/text roles, not a per-plate theme -- so
+        // there was nothing here to defer to. (FallbackPlateKey still names
+        // panel_crimson.png, but only for the stage actor's own missing-art
+        // fallback now -- see FightController.StageVisuals -- not for
+        // either plate.)
         //
         // COZY, B2 (balance-bot pass): 452x228 was sized for a header row
         // (name + "LV1 UTILITY") that no longer exists -- PartyClass is gone
@@ -1402,6 +1467,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // vertical position a second thing the controller has to keep in sync
         // with a fact the strip already displays. A fixed 44px gap costs
         // nothing when the strip is hidden and avoids that entirely.
+        // LEFT FLAT, NOT CONVERTED (owner's HQ-kit instruction, 2026-09-07,
+        // asked for Container(Silver, TwoByOne) here "at their current size
+        // if within tolerance, otherwise the nearest size that is"). 452x44
+        // is aspect 10.27, 414% off TwoByOne's 2.0 -- Ui.ContainerSizeFor*
+        // gives 452x226 as the nearest conforming size, a 5x GROWTH in
+        // height. RosterPitchY would grow from 50 to 232 with it, and two
+        // slots plus the transform strip would then need roughly 460px of
+        // vertical room between the party plate's top edge and the stage
+        // above it, where the design has room for under 100 today -- this
+        // does not "resize a plate", it breaks the HUD's whole vertical
+        // budget for two non-acting party members. Judged worse than
+        // leaving this one flat; see the conversion report for the
+        // alternative (FiveByOne, still a 2x height growth) if a resize is
+        // wanted after all.
         private const int RosterSlots = 2;
         private const float RosterPlateW = 452f;
         private const float RosterPlateH = 44f;

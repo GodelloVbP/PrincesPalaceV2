@@ -70,6 +70,42 @@ namespace PrincesPalace.Domain.Tests
                 "DraftFrameContent", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
                 1500f, 1000f)
                 .SetName("DraftFrame/Violet/ThreeByTwo");
+
+            // ---- HQ-kit conversions (owner's instruction, 2026-09-07) ----
+
+            yield return new TestCaseData(
+                (System.Func<UiNode>)(() => Walk(HubScreen.Build().Root).First(n => n.Name == "CurrencyPlate")),
+                "CurrencyPlateContent", ButtonTheme.Gold, ContainerRatio.FiveByOne,
+                Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f).X,
+                Ui.ContainerSizeForWidth(ContainerRatio.FiveByOne, 520f).Y)
+                .SetName("CurrencyPlate/Gold/FiveByOne");
+
+            yield return new TestCaseData(
+                (System.Func<UiNode>)(() => GlossaryScreen.Build().Frame.Node),
+                "GlossaryFrameContent", ButtonTheme.Silver, ContainerRatio.TwoByOne,
+                GlossaryScreen.PanelWidth, GlossaryScreen.PanelHeight)
+                .SetName("GlossaryFrame/Silver/TwoByOne");
+
+            yield return new TestCaseData(
+                (System.Func<UiNode>)(() => Walk(GlossaryScreen.Build().Root).First(n => n.Name == "GlossaryDetailPlate")),
+                "GlossaryDetailContent", ButtonTheme.Silver, ContainerRatio.ThreeByFour,
+                Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f).X,
+                Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f).Y)
+                .SetName("GlossaryDetailPlate/Silver/ThreeByFour");
+
+            yield return new TestCaseData(
+                (System.Func<UiNode>)(() => Walk(TalentScreen.Build().Root).First(n => n.Name == "RespecDialogCard")),
+                "RespecDialogContent", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
+                Ui.ContainerSizeForWidth(ContainerRatio.ThreeByTwo, 780f).X,
+                Ui.ContainerSizeForWidth(ContainerRatio.ThreeByTwo, 780f).Y)
+                .SetName("RespecDialogCard/Violet/ThreeByTwo");
+
+            yield return new TestCaseData(
+                (System.Func<UiNode>)(() => Walk(FightScreen.Build().Root).First(n => n.Name == "EnemyPlate0Frame")),
+                "EnemyPlate0FrameContent", ButtonTheme.Crimson, ContainerRatio.TwoByOne,
+                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 220f).X,
+                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 220f).Y)
+                .SetName("EnemyPlate0Frame/Crimson/TwoByOne");
         }
 
         [TestCaseSource(nameof(Cases))]

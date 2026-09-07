@@ -238,10 +238,21 @@ namespace PrincesPalace.Domain.Tests
             var third = RectOf("EnemyPlate2").Centre;
 
             Assert.AreEqual(first.Y, second.Y, 0.01f, "the first two sit side by side");
-            Assert.AreEqual(216f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
+
+            // 236, UP FROM 216 (owner's HQ-kit instruction, 2026-09-07):
+            // PlateW grew 200 to 220 so the Crimson TwoByOne frame's own
+            // content inset leaves the icon/name/tag/hp row the same usable
+            // width it always had -- see PlateW's own comment. The 16px
+            // gutter itself did not move; the plate width inside it did.
+            Assert.AreEqual(236f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
 
             Assert.AreEqual(first.X, third.X, 0.01f, "the third starts the next row under the first");
-            Assert.AreEqual(76f, first.Y - third.Y, 0.01f, "plate height plus a 12px gutter");
+
+            // 122, UP FROM 76: PlateH grew 64 to 110 (owner's HQ-kit
+            // instruction, 2026-09-07 -- ValidateContainerAspect at the new
+            // PlateW=220, see PlateH's own comment). The 12px gutter itself
+            // is unchanged; the plate height inside it grew.
+            Assert.AreEqual(122f, first.Y - third.Y, 0.01f, "plate height plus a 12px gutter");
 
             // 392 still, and the block's RIGHT edge is what is pinned -- it sits
             // against the same margin the heading and the standing-count do.
@@ -251,8 +262,16 @@ namespace PrincesPalace.Domain.Tests
             // The plates are the stage's ceiling: the tallest actor needs 300
             // above the front slot's ground line, so its head reaches 72, and
             // the middle slot's reaches 89 while still just crossing the plates
-            // in x. Two rows of 64 clear both by more than the three of 104 did.
-            Assert.Greater(third.Y - 32f, 89f + 12f,
+            // in x. Two rows of 110 (was 64, see PlateH's own comment) still
+            // clear both -- by less margin than before, since the taller
+            // plate and the wider gutter both push this edge down. 55, not
+            // 32: half of the new 110-tall plate, not the old 64.
+            //
+            // NOT RE-VERIFIED AGAINST tools/measure_stage.py as part of the
+            // HQ-kit conversion -- this Domain-only check uses the same
+            // hand-derived 89f+12f the old assertion did, which is a real
+            // gap this test cannot close on its own.
+            Assert.Greater(third.Y - 55f, 89f + 12f,
                 "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
         }
 
@@ -282,7 +301,13 @@ namespace PrincesPalace.Domain.Tests
             float bottomMargin = bar.Bottom - plate.Bottom;
             Assert.AreEqual(topMargin, bottomMargin, 0.01f,
                 "the top row and the bar should be centred as one block, not offset toward one edge");
-            Assert.AreEqual(11f, topMargin, 0.01f);
+
+            // 34, UP FROM 11: PlateH grew 64 to 110 (owner's HQ-kit
+            // instruction, 2026-09-07 -- see PlateH's own comment), and
+            // topY/barY did not move with it, so the block that used to sit
+            // with 11px of margin now sits with 34 -- still centred (the
+            // assertion above), just inside a taller frame.
+            Assert.AreEqual(34f, topMargin, 0.01f);
 
             // A deliberate small gap between the two rows, not the old blank
             // band (which was the full retired status line's own height).

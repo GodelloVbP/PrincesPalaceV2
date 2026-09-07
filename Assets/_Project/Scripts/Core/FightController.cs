@@ -68,6 +68,14 @@ namespace PrincesPalace
 
         [SerializeField] internal TMP_Text enemiesHint;
         [SerializeField] internal Button[] enemyPlates;
+
+        // The Crimson TwoByOne container frame's own Art Image (owner's
+        // HQ-kit instruction, 2026-09-07). RefreshEnemyPlates tints THIS for
+        // the elite/boss dress and the out-of-reach dim -- enemyPlates is
+        // NoChrome now (a transparent, always-alpha-0 click target, see
+        // FightScreen.BuildEnemyPlates), so its own targetGraphic is no
+        // longer the visible plate.
+        [SerializeField] internal Image[] enemyPlateFrames;
         [SerializeField] internal Image[] enemyPlateIcons;
         [SerializeField] internal TMP_Text[] enemyPlateNames;
 

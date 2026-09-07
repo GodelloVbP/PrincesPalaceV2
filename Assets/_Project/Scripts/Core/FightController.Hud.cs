@@ -477,12 +477,18 @@ namespace PrincesPalace
 
                 if (present)
                 {
-                    var plateImage = enemyPlates[i].targetGraphic as Image;
-                    if (plateImage != null)
+                    // enemyPlateFrames[i], not enemyPlates[i].targetGraphic:
+                    // the button is NoChrome now (owner's HQ-kit instruction,
+                    // 2026-09-07), so its own Image is a permanently
+                    // transparent click target -- the Crimson container
+                    // frame under it is what the player actually sees, and
+                    // is what the elite/boss dress and the out-of-reach dim
+                    // have to tint instead.
+                    if (Has(enemyPlateFrames, i))
                     {
                         var colour = dressed ? EliteBossPlateTint : Color.white;
                         colour.a = blocked ? OutOfReachAlpha : 1f;
-                        plateImage.color = colour;
+                        enemyPlateFrames[i].color = colour;
                     }
                     enemyPlates[i].interactable = !blocked;
 
