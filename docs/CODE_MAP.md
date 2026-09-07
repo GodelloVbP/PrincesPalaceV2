@@ -30,7 +30,7 @@ controller (+ its own parts, for Fight), its tests, and its content data
 | Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
 | Relics (start-of-run draft) | `Domain/UiKit/Screens/RelicDraftScreen.cs` (wired into Hub via `ScreenRegistry.cs`) | `RelicDraftController.cs` | `relics.json` |
 | System Menu (Pause replacement — tabs: Dossier/RewardTrack/Party/Options/RunStats/Exits) | `Domain/UiKit/Screens/SystemMenuScreen.cs` (wired into Fight/Map/Hub via `ScreenRegistry.cs`) | `SystemMenuController.cs` | — |
-| Party (roster & formation, a System Menu tab) | `Domain/UiKit/Screens/PartyScreen.cs` + `Domain/UiKit/PartyLayout.cs`, model in `Domain/Party/` (`PartyFormation.cs`, `PartyMode.cs`, `PartyOutcome.cs`, `PartyCardState.cs`, `PartyRosterEntry.cs`, `PartySeat.cs`, `PartySelectionSource.cs`), wired via `ScreenRegistry.cs`'s `WireParty` | `PartyController.cs` | `characters.json` |
+| Party (roster & formation, a System Menu tab) | `Domain/UiKit/Screens/PartyScreen.cs` + `Domain/UiKit/PartyLayout.cs`, model in `Domain/Party/` (`PartyFormation.cs`, `PartyMode.cs`, `PartyOutcome.cs`, `PartyCardState.cs`, `PartyRosterEntry.cs`, `PartySeat.cs`, `PartySelectionSource.cs`), wired via `ScreenRegistry.cs`'s `WireParty`; handoff + gap audit at `docs/handoffs/party_screen/` | `PartyController.cs`, `PartyDragSource.cs`, `PartyToast.cs` | `characters.json` |
 
 Generic building-block primitives (`CreateButtonStrip`, `AssertColumnClears`,
 `CreateFramedPanel`, the `Hud*`/`Suite*` color palette, `CreateGearCell`/`Icon`/`Text`, etc.) live
