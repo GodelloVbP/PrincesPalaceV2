@@ -409,28 +409,50 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // this exact label invisible, because CreateText defaulted to black
             // and the panel behind it is near-black (AUDIT P0 #4). Ui.Label
             // defaults to white, so the bug has no way to recur.
-            // THE HOLD, built exactly the way ExitsScreen's abandon-hold is:
-            // a track, a fill authored FULL WIDTH and pivoted to its own left
-            // edge (UiAudit refuses a zero-sized graphic, and growing from a
-            // pinned left edge is what lets the controller resize it rightward
-            // as sizeDelta.x alone), and a chromeless, silent button on top
-            // that takes the actual press -- silent because a Button plays the
-            // shared click on RELEASE whatever the press was for, and a hold
+            // THE HOLD, now wearing the Crimson HQ plate (owner's kit
+            // instruction, 2026-09-07) instead of a flat track rect -- the
+            // plate itself reads as the track, so only the progress fill
+            // survives as a child. Fill stays authored at holdSize, FULL
+            // WIDTH and pivoted to its own left edge, unchanged from the flat
+            // version: UiAudit refuses a zero-sized graphic, and growing
+            // sizeDelta.x from a pinned left edge is what lets
+            // ResetProgressController resize it rightward with one number
+            // (HoldFillMath.SetFill). It sits inside a clip panel sized to
+            // the plate's own measured paint (PlateVisiblePad) so the red
+            // rect can never bleed past the border the art already draws --
+            // "clipped/scaled over the plate" is the actual mechanism, not
+            // just a description of it. ThemedPlate()+LayerCaptionWithVisuals
+            // states the fill and the plate are one widget, the same
+            // relationship Themed()'s own Visuals/Label pair states.
+            //
+            // Quiet() stays for the reason it always did: a Button plays its
+            // click on RELEASE whatever the press was for, and a hold
             // released early deliberately did nothing.
             var holdSize = new UiVec(ResetHoldWidth, ResetHoldHeight);
-            var holdTrack = Ui.Solid("ResetConfirmYesTrack", FightHudPalette.Track, holdSize,
-                    Place.At(0f, 0f))
-                .AsDecor();
+            var holdPlateShape = Ui.PlateShapeFor(holdSize.X, holdSize.Y);
+            var holdPlatePad = Ui.PlateVisiblePad(holdPlateShape);
+            var holdFillClip = Ui.Panel("ResetConfirmYesFillClip",
+                    Place.Stretch(holdSize.X * holdPlatePad.Left, holdSize.X * holdPlatePad.Right,
+                        holdSize.Y * holdPlatePad.Bottom, holdSize.Y * holdPlatePad.Top),
+                    UiSize.Fill)
+                .Clipping();
             var holdFill = Ui.Solid("ResetConfirmYesFill", "#E0786E4D", holdSize,
                     Place.At(-holdSize.X * 0.5f, 0f, new UiVec(0f, 0.5f)))
-                .AsDecor();
-            var holdButton = Ui.Button("ResetConfirmYesButton", UiStrings.Delete, holdSize, 20,
-                    Place.At(0f, 0f))
-                .NoChrome()
-                .Quiet();
+                .AsDecor()
+                .AllowOverflow(
+                    "authored at the button's full holdSize (TheHoldFillIsAuthoredAtItsFullSize pins this) so " +
+                    "HoldFillMath can only ever shrink it, which means it starts a fraction of a pixel past the " +
+                    "clip panel's own plate-inset edge - the clip panel is what actually keeps it off the " +
+                    "painted border at runtime, not this node's own declared size");
+            holdFillClip.Children.Add(holdFill);
 
-            var confirmYes = Ui.Panel("ResetConfirmYesGroup", Place.Flow, UiSize.Fixed(holdSize),
-                holdTrack, holdFill, holdButton);
+            var holdButton = Ui.Button("ResetConfirmYesButton", UiStrings.Delete, holdSize, 20)
+                .Quiet()
+                .ThemedPlate(ButtonTheme.Crimson);
+            holdButton.Children.Add(holdFillClip);
+            holdButton.LayerCaptionWithVisuals(holdFillClip);
+
+            var confirmYes = holdButton;
 
             var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel, new UiVec(200f, 60f), 20)
                 .Themed(ButtonTheme.Silver);

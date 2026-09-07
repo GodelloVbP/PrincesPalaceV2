@@ -62,7 +62,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string CardFill = FightHudPalette.CardFill;
         private const string CardRim = FightHudPalette.BorderQuiet;
         private const string ChipRim = FightHudPalette.BorderGold;
-        private const string ButtonRim = FightHudPalette.BorderGold;
         private const string HeadingText = FightHudPalette.HeadingGold;
         private const string TitleText = FightHudPalette.TextPrimary;
         private const string NameText = FightHudPalette.TextPrimary;
@@ -70,7 +69,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string PriceText = FightHudPalette.GoldText;
         private const string GoldPlateFill = FightHudPalette.ScrollTrack;
         private const string GoldText = FightHudPalette.GoldLight;
-        private const string ButtonText = FightHudPalette.GoldText;
         private const string DetailText = FightHudPalette.RowNameText;
         private const string QuietText = FightHudPalette.TextMuted;
 
@@ -341,9 +339,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float width, int count, out NodeRef headerRef, out NodeRef reroll, out NodeRef rerollLabel,
             List<OfferCard> cards)
         {
-            var rerollButton = Ui.OutlineButton($"Shop{prefix}Reroll", UiStrings.ShopReroll,
-                Place.At(width * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY),
-                new UiVec(RerollWidth, RerollHeight), 22, ButtonRim, ButtonText);
+            // Themed(Silver), owner's HQ-kit instruction (2026-09-07),
+            // replacing the hairline OutlineButton. 210x40 (5.25) is close
+            // enough to the FiveByOne plate's 5.0 that the swap costs no
+            // visible stretch.
+            var rerollButton = Ui.Button($"Shop{prefix}Reroll", UiStrings.ShopReroll,
+                    new UiVec(RerollWidth, RerollHeight), 22,
+                    Place.At(width * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
+                .Themed(ButtonTheme.Silver);
             reroll = rerollButton;
             rerollLabel = Ui.CaptionOf(rerollButton);
 
@@ -370,9 +373,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // right) re-flows instead of overflowing.
         private UiNode BuildGearPanel()
         {
-            var rerollButton = Ui.OutlineButton("ShopGearReroll", UiStrings.ShopReroll,
-                Place.At(GearWidth * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY),
-                new UiVec(RerollWidth, RerollHeight), 22, ButtonRim, ButtonText);
+            // Themed(Silver) -- same conversion and same 5.25-vs-5.0 fit as
+            // BuildShelf's own reroll above.
+            var rerollButton = Ui.Button("ShopGearReroll", UiStrings.ShopReroll,
+                    new UiVec(RerollWidth, RerollHeight), 22,
+                    Place.At(GearWidth * 0.5f - PanelPad - RerollWidth * 0.5f, HeaderCentreY))
+                .Themed(ButtonTheme.Silver);
             GearReroll = rerollButton;
             GearRerollLabel = Ui.CaptionOf(rerollButton);
 
@@ -459,18 +465,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(Ui.OutlineBox("ShopGoldPlate", Place.At(0f, goldY),
                 new UiVec(inner, PlateHeight), GoldPlateFill, PanelRim, new[] { gold }));
 
-            var buy = Ui.OutlineButton("ShopBuyButton", UiStrings.ShopBuy, Place.At(0f, buyY),
-                new UiVec(inner, PlateHeight), 28, ButtonRim, ButtonText);
+            // Themed(Gold)/Themed(Silver), owner's HQ-kit instruction
+            // (2026-09-07). NOT A CLEAN FIT: inner is 640 here, so Buy/Pack
+            // (640x62, aspect 10.3) and Leave (640x76, aspect 8.4) both sit
+            // far past even the widest plate shape (Row6x1, aspect 6.0) --
+            // unlike Ui.Container, ButtonPlateArt.ShapeFor has no aspect
+            // tolerance that refuses a bad fit, so these three will render
+            // with the plate texture visibly stretched horizontally /
+            // squashed vertically. Converted at the owner's specified theme
+            // and the panel's existing box size regardless, since resizing
+            // the actions column was not part of this instruction -- flagged
+            // in the conversion report rather than resolved here.
+            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, new UiVec(inner, PlateHeight), 28,
+                    Place.At(0f, buyY))
+                .Themed(ButtonTheme.Gold);
             BuyButton = buy;
             parts.Add(buy);
 
-            var pack = Ui.OutlineButton("ShopPackButton", UiStrings.ShopPack, Place.At(0f, packY),
-                new UiVec(inner, PlateHeight), 28, ButtonRim, ButtonText);
+            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, new UiVec(inner, PlateHeight), 28,
+                    Place.At(0f, packY))
+                .Themed(ButtonTheme.Silver);
             PackButton = pack;
             parts.Add(pack);
 
-            var leave = Ui.OutlineButton("ShopLeaveButton", UiStrings.ShopLeave, Place.At(0f, leaveY),
-                new UiVec(inner, LeaveHeight), 32, ButtonRim, ButtonText);
+            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, new UiVec(inner, LeaveHeight), 32,
+                    Place.At(0f, leaveY))
+                .Themed(ButtonTheme.Silver);
             LeaveButton = leave;
             LeaveButtonLabel = Ui.CaptionOf(leave);
             parts.Add(leave);
@@ -585,8 +605,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(ModalWidth, 1f), Place.At(0f, 344f))
                 .AsDecor());
 
-            var close = Ui.OutlineButton("ShopPackClose", UiStrings.Close, Place.At(460f, 380f),
-                new UiVec(160f, 48f), 26, PanelRim, DetailText);
+            // Themed(Silver): 160x48 (3.33) lands almost exactly on the
+            // Legacy/ThreeByOne plate (3.0).
+            var close = Ui.Button("ShopPackClose", UiStrings.Close, new UiVec(160f, 48f), 26,
+                    Place.At(460f, 380f))
+                .Themed(ButtonTheme.Silver);
             PackCloseButton = close;
             content.Add(close);
 
@@ -666,18 +689,41 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             children.Add(price);
 
-            var sellOne = Ui.OutlineButton($"ShopPackRow{index}SellOne", UiStrings.ShopSellOneButton,
-                Place.At(260f, 0f), new UiVec(120f, 40f), 20, ChipRim, ButtonText);
+            // ThemedPlate(Silver) small plates, owner's HQ-kit instruction
+            // (2026-09-07). ThemedPlate rather than Themed(): each needs its
+            // own declared `<name>Caption` child the way OutlineButton always
+            // built one (Runtime button text + a separate caption node), so
+            // swapping factories keeps that shape and only trades the
+            // hairline rim for the kit's plate art.
+            var sellOneSize = new UiVec(120f, 40f);
+            var sellOne = Ui.Button($"ShopPackRow{index}SellOne", UiString.Runtime, sellOneSize, 20,
+                    Place.At(260f, 0f))
+                .ThemedPlate(ButtonTheme.Silver);
+            var sellOneCaption = Ui.Label($"ShopPackRow{index}SellOneCaption", UiStrings.ShopSellOneButton,
+                    sellOneSize, 20, "#FFFFFFFF", Place.Stretch())
+                .AsDecor()
+                .Styled(TypographyRole.ButtonLabel);
+            sellOne.Children.Add(sellOneCaption);
+            sellOne.LayerCaptionWithVisuals(sellOneCaption);
             children.Add(sellOne);
 
             // 150 wide, not 120: UiTextFitAudit measures "SELL ALL 99" (the
             // string's AuditSample) against the button's own box, and this is
             // the wider of the two captions. Sits flush to the row's right edge
             // (405 + 75 = 480, 10px in from RowWidth / 2); SellOne sits to its
-            // left with a 10px gap.
-            var sellAll = Ui.OutlineButton($"ShopPackRow{index}SellAll", UiStrings.ShopSellAllButton,
-                    Place.At(405f, 0f), new UiVec(150f, 40f), 20, ChipRim, ButtonText)
+            // left with a 10px gap. 150x40 (3.75) still resolves to the
+            // Legacy/ThreeByOne plate (3.0), same as SellOne's 120x40 (3.0).
+            var sellAllSize = new UiVec(150f, 40f);
+            var sellAll = Ui.Button($"ShopPackRow{index}SellAll", UiString.Runtime, sellAllSize, 20,
+                    Place.At(405f, 0f))
+                .ThemedPlate(ButtonTheme.Silver)
                 .Inactive();
+            var sellAllCaption = Ui.Label($"ShopPackRow{index}SellAllCaption", UiStrings.ShopSellAllButton,
+                    sellAllSize, 20, "#FFFFFFFF", Place.Stretch())
+                .AsDecor()
+                .Styled(TypographyRole.ButtonLabel);
+            sellAll.Children.Add(sellAllCaption);
+            sellAll.LayerCaptionWithVisuals(sellAllCaption);
             children.Add(sellAll);
 
             var row = Ui.Panel($"ShopPackRow{index}", Place.At(0f, y), UiSize.Fixed(size), children)

@@ -525,10 +525,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             RespecCancelButton = cancel;
             RespecConfirmButton = confirm;
 
-            var card = Ui.Panel("RespecDialogCard", Place.At(0f, 0f), UiSize.Fixed(780f, 320f),
-                Ui.Sprite("RespecDialogGround", "proc:card_ground", new UiVec(780f, 320f), Place.At(0f, 0f))
-                    .Coloured("#241735")
-                    .AsDecor(),
+            // Violet, 3:2 KIT CONTAINER (owner's HQ-kit instruction,
+            // 2026-09-07), replacing the procedural proc:card_ground panel.
+            // The card's own working shape is 780x320 (aspect 2.44), well
+            // past ThreeByTwo's 1.5 -- so the box is grown, not just
+            // reskinned: width holds at the original 780 (its content's own
+            // horizontal need, title/body's 700px width, is the binding
+            // edge), and ContainerSizeForWidth derives the matching 520
+            // height off ThreeByTwo's exact aspect. That leaves real spare
+            // room above/below title and the button row (they still sit at
+            // their old y, unmoved) rather than a tight fit -- a nearer
+            // ratio (TwoByOne, 21.9% off vs ThreeByTwo's 62.5%) would have
+            // cost far less growth, but the owner named ThreeByTwo for this
+            // site specifically.
+            var cardSize = Ui.ContainerSizeForWidth(ContainerRatio.ThreeByTwo, 780f);
+            var card = Ui.Container("RespecDialogCard", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
+                Place.At(0f, 0f), cardSize);
+            Ui.ContainerContent(card, ContainerRatio.ThreeByTwo, "RespecDialogContent",
                 title, body, cancel, confirm);
 
             var dialog = Ui.Modal("TalentRespecDialog", "#05030ACC", card).Inactive();

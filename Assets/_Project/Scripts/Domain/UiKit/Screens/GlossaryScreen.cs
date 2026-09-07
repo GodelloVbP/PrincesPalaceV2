@@ -14,8 +14,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // since the hub was built.
     public sealed class GlossaryScreen
     {
-        public const float PanelWidth = 1700f;
-        public const float PanelHeight = 900f;
+        // Silver, 2:1 KIT CONTAINER (owner's HQ-kit instruction,
+        // 2026-09-07), replacing a flat #241736F5 panel authored at
+        // 1700x900. TwoByOne (aspect 2.0) is the nearest kit ratio to that
+        // working shape (1.89, a 5.5% miss -- closer than ThreeByTwo's 1.5,
+        // which misses by 26%), but even TwoByOne needs the box GROWN to
+        // pass ValidateContainerAspect at a size that still contains every
+        // child once TwoByOne's own inset (3.5% each side, 5.5% top/bottom)
+        // is carved out of it: CloseButton's 840px right edge and the
+        // title/pager rows' ~417px top/bottom edges are the two extremes
+        // that set the floor. 945 clears both with room to spare (content
+        // half-width 872, half-height 420) and keeps the frame inside the
+        // +-960/+-540 safe area every UiFrames.All frame guarantees at
+        // minimum -- PanelWidth/PanelHeight derive from it rather than
+        // restating the two numbers this replaces.
+        private static readonly UiVec FrameSize = Ui.ContainerSizeForHeight(ContainerRatio.TwoByOne, 945f);
+        public static float PanelWidth => FrameSize.X;
+        public static float PanelHeight => FrameSize.Y;
 
         private const float RailX = -700f;
         private const float RailTop = 300f;
@@ -95,21 +110,42 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(pager.Next);
 
             // ---- the plate ---------------------------------------------------
-            var icon = Ui.Sprite("GlossaryDetailIcon", null, Place.At(PlateX, 250f),
+            //
+            // Silver, 3:4 KIT CONTAINER (owner's HQ-kit instruction,
+            // 2026-09-07), sized exactly on ThreeByFour rather than the flat
+            // panel's old 660x780 (aspect 0.846, 12.8% off 0.75 -- more than
+            // ValidateContainerAspect allows). Width holds at 660
+            // (ContainerSizeForHeight keeps the old 780 and derives 585 --
+            // narrower, not wider, so this container's own footprint SHRINKS
+            // inside GlossaryFrame rather than pushing that frame's resize
+            // further). The kit's own content inset (6.9% each side) then
+            // leaves 504px of usable width where the flat panel had all 660,
+            // so DetailName/Meta/Body/LockedBy are re-solved to 480 (was
+            // 600) -- narrower text, same font size, comfortably inside.
+            //
+            // Every child here is now inside the Container's own
+            // ContainerContent, so its coordinates are LOCAL TO THE PLATE
+            // (0-centred) rather than offset by PlateX the way the flat
+            // panel's siblings used to be -- PlateX now names only where the
+            // plate itself sits in the frame.
+            var detailPlateSize = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 780f);
+            const float DetailContentWidth = 480f;
+
+            var icon = Ui.Sprite("GlossaryDetailIcon", null, Place.At(0f, 250f),
                     UiSize.Fixed(140f, 140f))
                 .AsDecor();
-            var detailName = Ui.Label("GlossaryDetailName", UiString.Runtime, new UiVec(600f, 50f), 26,
-                    "#EDE6FF", Place.At(PlateX, 140f))
+            var detailName = Ui.Label("GlossaryDetailName", UiString.Runtime, new UiVec(DetailContentWidth, 50f), 26,
+                    "#EDE6FF", Place.At(0f, 140f))
                 .AsDecor();
-            var detailMeta = Ui.Label("GlossaryDetailMeta", UiString.Runtime, new UiVec(600f, 34f), 17,
-                    "#B8A8D9", Place.At(PlateX, 92f))
+            var detailMeta = Ui.Label("GlossaryDetailMeta", UiString.Runtime, new UiVec(DetailContentWidth, 34f), 17,
+                    "#B8A8D9", Place.At(0f, 92f))
                 .AsDecor();
-            var detailBody = Ui.Label("GlossaryDetailBody", UiString.Runtime, new UiVec(600f, 240f), 16,
-                    "#9C8FC4", Place.At(PlateX, -60f))
+            var detailBody = Ui.Label("GlossaryDetailBody", UiString.Runtime, new UiVec(DetailContentWidth, 240f), 16,
+                    "#9C8FC4", Place.At(0f, -60f))
                 .AsDecor()
                 .Styled(TypographyRole.Body);
-            var lockedBy = Ui.Label("GlossaryDetailLockedBy", UiStrings.GlossaryLockedBy, new UiVec(600f, 60f), 16,
-                    "#D9A87E", Place.At(PlateX, -230f))
+            var lockedBy = Ui.Label("GlossaryDetailLockedBy", UiStrings.GlossaryLockedBy,
+                    new UiVec(DetailContentWidth, 60f), 16, "#D9A87E", Place.At(0f, -230f))
                 .AsDecor()
                 .Inactive();
 
@@ -119,23 +155,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.DetailBody = detailBody;
             screen.DetailLockedBy = lockedBy;
 
-            inside.Add(Ui.Panel("GlossaryDetailPlate", Place.At(PlateX, 0f), UiSize.Fixed(660f, 780f))
-                .Coloured("#1E1430D0").AsDecor());
-            inside.Add(icon);
-            inside.Add(detailName);
-            inside.Add(detailMeta);
-            inside.Add(detailBody);
-            inside.Add(lockedBy);
+            var detailPlate = Ui.Container("GlossaryDetailPlate", ButtonTheme.Silver, ContainerRatio.ThreeByFour,
+                Place.At(PlateX, 0f), detailPlateSize);
+            Ui.ContainerContent(detailPlate, ContainerRatio.ThreeByFour, "GlossaryDetailContent",
+                icon, detailName, detailMeta, detailBody, lockedBy);
+            inside.Add(detailPlate);
 
             var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, new UiVec(200f, 54f), 16,
                     Place.At(740f, 390f))
-                .Themed(ButtonTheme.Silver);
+                .Themed(ButtonTheme.Silver)
+                // Floats over the detail plate's top-right corner by design
+                // (declared after it, so it draws on top) -- the flat
+                // #1E1430D0 panel this replaced was AsDecor and so exempt
+                // from this check without saying so; GlossaryDetailPlate is
+                // a real audited Container now (its OWN content has to be
+                // checked, which is the whole point), so the corner overlap
+                // it always had with Close needs stating instead of hiding.
+                .AllowOverlap(
+                    "GlossaryCloseButton floats over the detail plate's top-right corner by design - it is " +
+                    "declared last so it draws on top, same as every close/X control that sits on the panel " +
+                    "it closes");
             screen.CloseButton = close;
             inside.Add(close);
 
-            var frame = Ui.Panel("GlossaryFrame", Place.At(0f, 0f),
-                    UiSize.Fixed(PanelWidth, PanelHeight), inside)
-                .Coloured("#241736F5");
+            var frame = Ui.Container("GlossaryFrame", ButtonTheme.Silver, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), FrameSize);
+            Ui.ContainerContent(frame, ContainerRatio.TwoByOne, "GlossaryFrameContent", inside.ToArray());
             screen.Frame = frame;
 
             var content = Ui.Panel("GlossaryContent", Place.At(0f, 0f), UiSize.Fill, frame);

@@ -422,47 +422,18 @@ namespace PrincesPalace.Domain.UiKit
             return Panel(name, place, UiSize.Fixed(size), parts);
         }
 
-        // THE OUTLINED BUTTON: no painted plate at all, a 1px rim and a caption.
+        // OutlineButton (the hairline-rim, no-plate button) retired
+        // 2026-09-07: the shop was its only caller and every one of those
+        // sites now wears a kit plate (owner's HQ-kit instruction). The
+        // `<name>Caption` convention it established outlives it -- a
+        // ThemedPlate() button whose caption is more than one centred string
+        // (the shop's small sell plates, Reckoning's tabs, FightScreen's verb
+        // rows) still declares its own `<name>Caption`/`<name>Text` child
+        // rather than relying on the label Themed() generates, which is what
+        // CaptionOf below still has to find both shapes of.
         //
-        // Themed() gives a button one of the six painted plates, which is the
-        // right answer everywhere a button is a raised object. The shop's
-        // design draws its controls as hairline boxes on a flat ground instead,
-        // and a plate PNG cannot be talked into looking like one -- so this is
-        // Chromeless (transparent Image, still raycasting, see UiEmitter's own
-        // note on why the Image stays) plus Rim plus a label.
-        //
-        // THE CAPTION IS A DECLARED `<name>Caption` CHILD, and the button's
-        // own text is Runtime. Both halves of that are forced by the emitter,
-        // not preference:
-        //
-        //   - UiEmitter generates its own `<name>Label` for every button that
-        //     is not Themed(), white, centred, in the default UI font. It
-        //     cannot be styled or coloured from the tree, and A6 refuses a
-        //     declared child of that name outright (it would be shadowed).
-        //   - So the caption gets its own name, and the button's text is
-        //     UiString.Runtime so the emitter's label bakes to nothing rather
-        //     than drawing the same words in white underneath. This is the
-        //     shape the offer cards already had for the same reason.
-        public static UiNode OutlineButton(string name, UiString text, Place place, UiVec size,
-            int fontSize, string rimHex, string textHex)
-        {
-            var button = Button(name, UiString.Runtime, size, fontSize, place).NoChrome();
-
-            foreach (var edge in Rim(name, size, rimHex))
-            {
-                button.Children.Add(edge);
-            }
-
-            var caption = Label(name + "Caption", text, size, fontSize, textHex, Place.Stretch())
-                .AsDecor()
-                .Styled(TypographyRole.ButtonLabel);
-            button.Children.Add(caption);
-
-            return button;
-        }
-
-        // A button's caption node, whichever factory built it: OutlineButton's
-        // declared `<name>Caption`, or the `<name>Label` Themed() generates.
+        // A button's caption node, whichever factory built it: a declared
+        // `<name>Caption` child, or the `<name>Label` Themed() generates.
         // The one way to reach a caption that changes at runtime.
         public static UiNode CaptionOf(UiNode button) =>
             button?.Children.Find(c => c.Name == button.Name + "Caption")
