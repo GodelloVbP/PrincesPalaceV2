@@ -60,7 +60,16 @@ namespace PrincesPalace.Domain.UiKit
         public const float ColumnBGivesUp = 75f;
         public const float ColumnAWidth = 374f + ColumnBGivesUp;  // 449
 
-        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 763.61
+        // WIDTH-BOUND, and that is the choice the 2026-09-07 kit repin forced.
+        // The 3:4 art is at a true 0.75 now (it measured 0.588 before), so a
+        // 449-wide card is 598.67 tall where it used to be 763.61. Column A's
+        // width is set by the three-column split above and cannot grow without
+        // taking 124px off the loadout stage, so the height is what moves --
+        // the card sits centred in the 804-tall pane with ~103px of empty
+        // column above and below it, and everything measured from
+        // ColumnATop/ColumnABottom moves in with it. What actually absorbs
+        // the 165px is the portrait, per PortraitHeight's own note.
+        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 598.67, was 763.61
         public const float ColumnCWidth = 480f;
 
         public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 671
@@ -68,7 +77,14 @@ namespace PrincesPalace.Domain.UiKit
         // 32f again -- the outer container's own border no longer eats a
         // second margin on top of this one; see the comment above.
         public const float PadY = 32f;
-        public const float ColumnAPadX = 30f;
+        // 34, UP FROM 30. The 3:4 container's left/right inset went from
+        // 0.065 to 0.069 at the 2026-09-07 repin, which caps column A's
+        // content at 449 * (1 - 0.138) = 387.0 -- and ContentAWidth was 389,
+        // so every full-width row in the column (portrait, sub-line, XP
+        // labels, all four nav rows) hung 1px past the container on both
+        // sides. 34 puts ContentAWidth at 381 with 3px of margin a side,
+        // matching ColumnAContentMargin's own slack on the vertical.
+        public const float ColumnAPadX = 34f;
         public const float ColumnBPadLeft = 40f;
         public const float ColumnCPadX = 40f;
 
@@ -83,7 +99,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- column A -----------------------------------------------------------
 
-        public static float ContentAWidth => ColumnAWidth - ColumnAPadX * 2f;      // 356.05, was 389
+        public static float ContentAWidth => ColumnAWidth - ColumnAPadX * 2f;      // 381, was 389
 
         // Everything in column A stacks from the top, so each y is the one
         // above it minus its own height. Stated as running totals rather than
@@ -93,12 +109,13 @@ namespace PrincesPalace.Domain.UiKit
         // MEASURED AGAINST THE CONTAINER'S OWN FRAME, not the shared panel
         // HalfHeight/PadY any more -- ColumnAFrameHeight is shorter than the
         // full 804 pane, and content stacking to the old ColumnATop/Bottom
-        // would sit past the container's painted border. 0.045/0.04 are the
-        // kit's measured Container/3:4 top/bottom insets (ContainerArt.Inset);
-        // the extra 3px is slack over the audit's own 0.01 containment
-        // tolerance, not a second inset.
-        private const float ColumnAFrameInsetTop = 0.045f;
-        private const float ColumnAFrameInsetBottom = 0.04f;
+        // would sit past the container's painted border. 0.052/0.055 are the
+        // kit's measured Container/3:4 top/bottom insets (ContainerArt.Inset,
+        // repinned 2026-09-07 -- they were 0.045/0.04 against the previous
+        // delivery's thinner-looking border); the extra 3px is slack over the
+        // audit's own 0.01 containment tolerance, not a second inset.
+        private const float ColumnAFrameInsetTop = 0.052f;
+        private const float ColumnAFrameInsetBottom = 0.055f;
         private const float ColumnAContentMargin = 3f;
 
         public static float ColumnATop =>
@@ -111,14 +128,23 @@ namespace PrincesPalace.Domain.UiKit
         // past about the content width buys empty bars and nothing else. This
         // is why column A cannot simply be filled by growing the portrait.
         //
-        // DERIVED, NOT AUTHORED, same as before -- but the total it derives
-        // from shrank again (balance-bot, 2026-09-02): ColumnATop/Bottom now
-        // run 318.9 to -322.5 (was 344.4 to -348.3), because ColumnAFrameHeight
-        // itself dropped to fit the OUTER container. Everything BELOW the
-        // portrait -- name, sub-line, XP row, the track readout, three nav
-        // rows -- is still the same fixed 422px of gaps and boxes, so the
-        // portrait absorbs this reduction too rather than every row shrinking.
-        public static float PortraitHeight => ColumnATop - ColumnABottom - 422f; // 219.4, was ~277
+        // DERIVED, NOT AUTHORED, same as before -- and the total it derives
+        // from shrank hard at the 2026-09-07 kit repin: ColumnATop/Bottom now
+        // run 265.2 to -263.4 (was 318.9 to -322.5), because the 3:4 card is
+        // 598.67 tall at a true 0.75 aspect instead of 763.61 at the old
+        // measured 0.588. Everything BELOW the portrait -- name, sub-line, XP
+        // row, the track readout, four nav rows -- is still the same fixed
+        // 422px of gaps and boxes, so the portrait absorbs all 165px of it.
+        //
+        // THAT LEAVES THE PORTRAIT AT ~107px, down from 219. It is a
+        // preserveAspect sprite, so it letterboxes to roughly 80x107 in a
+        // 356-wide column: legible, audited clean, and noticeably small. The
+        // alternative is to stop being width-bound and give column A 573px
+        // (which restores a 763-tall card and the old portrait) by taking
+        // 124px off the loadout stage beside it -- a proportion change to the
+        // screen, not a repin, so it is left as the owner's call rather than
+        // folded into an art-repin commit.
+        public static float PortraitHeight => ColumnATop - ColumnABottom - 422f; // ~106.6, was 219.4
 
         public static float PortraitCentreY => ColumnATop - PortraitHeight * 0.5f;
         // Each step is the PREVIOUS box's half-height, then this box's, then the
@@ -254,21 +280,40 @@ namespace PrincesPalace.Domain.UiKit
         public static float PackCellHeight =>
             (PackListHeight - PackRowGap * (PackVisibleRows - 1)) / PackVisibleRows;
 
-        // WIDTH-BOUND, and that is worth stating because it is what caps the
-        // icon rather than the row count. At two columns in a 314px content
-        // strip a cell is 143 wide, so an icon can never be larger than that
-        // however few rows are shown -- dropping to two rows would buy vertical
-        // room the icon cannot use. Three rows is the point where the two
-        // constraints meet.
+        // BOUND ON BOTH AXES NOW, and the height bound is the one that was
+        // missing. The comment this replaces said the icon is width-bound
+        // ("at two columns in a 314px content strip a cell is 143 wide"), and
+        // that stopped being true when column A widened to 449: ContentAWidth
+        // went to 389, the cell to 180 wide, and a 172px icon in a 193px cell
+        // left PackNameHeight -- a pure residual -- at 4.3px. The name had
+        // been squeezed to a hairline and nothing failed, because a 4px box
+        // is not a zero-size one. The 2026-09-07 kit repin shortened the card
+        // (see ColumnAFrameHeight) and pushed that residual NEGATIVE, which
+        // is how it finally surfaced: a zero-size name and an icon hanging
+        // out of its own cell, at every canvas aspect.
+        //
+        // So the name gets a floor and the icon takes what is left, rather
+        // than the other way round. 44px is three lines at 14 or two at 18 --
+        // enough for "Annotated Vellum Ink-stained Gloves +2", which is what
+        // the two-abreast layout exists to make readable in the first place.
         public const float PackIconPadX = 4f;
+        public const float PackNameMinHeight = 44f;
 
-        public static float PackIconSize => PackCellWidth - PackIconPadX * 2f;
+        public static float PackIconSize
+        {
+            get
+            {
+                float byWidth = PackCellWidth - PackIconPadX * 2f;
+                float byHeight = PackCellHeight - PackCellPadY * 2f - PackIconGap - PackNameMinHeight;
+                return byHeight < byWidth ? byHeight : byWidth;
+            }
+        }
 
-        // WHATEVER THE ICON LEAVES. The cell is taller than the icon can be, so
-        // the surplus goes to the name instead of to empty space -- about 54px,
-        // which is three lines at 15px where it used to be two at 11px.
-        // Generated gear runs long ("Annotated Vellum Ink-stained Gloves +2")
-        // and the old two lines clipped most of it.
+        // WHATEVER THE ICON LEAVES, which is now never less than
+        // PackNameMinHeight: the icon is capped so this cannot be squeezed
+        // out. Where the cell is tall enough that the icon is width-bound
+        // instead, the surplus still goes to the name rather than to empty
+        // space.
         public static float PackNameHeight =>
             PackCellHeight - PackCellPadY * 2f - PackIconGap - PackIconSize;
 

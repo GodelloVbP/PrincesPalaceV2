@@ -462,3 +462,52 @@ constructed once per resolve, not by the compiler. `Reach` shipped as a
 plain mutable `struct` with that comment inline, the same bargain
 `ResolvedSkill.cs:25` and `SpellPresentation.cs:29` already document for
 themselves.
+
+---
+
+## A measurement tool that read zero, and a comment that believed it (2026-09-07)
+
+`measure_inset` in `tools/splice_ui_kit.py` walks in from a cell's edge until
+the pixel "looks like the dark interior" rather than the painted border. Run
+against an already-cropped `Processed/` PNG it returned **0 on every side of
+every file**, because those PNGs carry a transparent halo whose RGB is
+`(0, 0, 0)` — within the tool's own 45-unit distance of the dark panel
+interior. The first pixel it looked at was, by its own test, interior.
+
+That zero was not read as a failure. It went into `ContainerArt`'s header as
+fact: "container_*_3x2's raw max was re-measured: L.008 T.003 R.008 B.015 --
+smaller than the original the pinned insets were sized against, so those
+insets (kept as-is) stay comfortably safe." The conclusion was right by luck
+— the pins really are safe — but it was drawn from a number that measured
+nothing, and it was written twice, for two different ratios, on two different
+days.
+
+**What would have caught it:** an eight-thousandths-of-a-width border on a
+1536px-wide painted frame is 12 pixels. The comment recorded that as plausible
+without anyone looking at the picture. A three-thousandths TOP border on the
+same frame is 3px, which is not a border at all. Implausibility is a signal;
+"the tool said so" is not a defence against it.
+
+Fixed by gating `is_interior` on alpha >= 200, which is the one-line change
+that makes the halo stop counting. The insets pinned today are the first real
+measurement 3x2, 2x1 and the plates have ever had.
+
+## A dimension that was only a residual, already down to 4px (2026-09-07)
+
+`DossierLayout.PackNameHeight` was defined as *whatever the icon leaves*:
+cell height, minus padding, minus the icon — and the icon was defined as
+*whatever the cell is wide*. Nothing bounded the pair. When column A widened
+to 449 the cell went to 180 wide, the icon to 172, and the name — three lines
+at 15px per its own comment — was silently squeezed to **4.3px**. Every test
+passed. `ZeroSizeGraphic` fires at zero, and 4.3 is not zero.
+
+It surfaced only because the 2026-09-07 kit repin shortened the card by 165px
+and pushed the same residual negative, at which point the name hit zero and
+the icon hung out of its own cell at all four canvas aspects. The defect was
+already there; the repin only moved it past a threshold something checked.
+
+**The shape to watch for:** two derived dimensions that share a budget, where
+one is authored and the other is the remainder. The remainder can be starved
+to nearly nothing without ever being wrong enough to fail. `PackIconSize` now
+takes the smaller of its width bound and `cell height - PackNameMinHeight`,
+so the name has a floor and the icon is what gives.

@@ -56,14 +56,20 @@ pad, not its rect — is what the submenu frame and the party plate both
 bottom-anchor against, because every `Processed/` kit PNG carries a
 transparent halo outside its painted border and a rect-to-rect flush reads as
 misaligned even when the rects agree exactly) ·
-`ButtonPlateArt` (the button-plate kit's measured shape/selection rule;
-`VisiblePad(shape)` is the measured paint-vs-rect fraction on each edge) ·
-`ContainerArt` (the container/flag-banner kit's measured aspect/inset,
-one `ContainerSpec` table keyed on kind+ratio; `VisiblePad(kind, ratio)` is
+`ButtonPlateArt` (the button-plate kit's shape/selection rule — since the
+2026-09-07 regeneration all four shapes are at true nominal aspect, so Legacy
+and ThreeByOne both read 3.0 and are byte-identical files, and `ShapeFor`'s
+tie between them goes to Legacy; `VisiblePad(shape)` is the measured
+paint-vs-rect fraction on each edge) ·
+`ContainerArt` (the container/flag-banner kit's aspect/inset, one
+`ContainerSpec` table keyed on kind+ratio — `ContainerRatio` covers
+ThreeByFour/NineBySixteen/ThreeByTwo/TwoByOne/FiveByOne, the last of which is
+container-only and has no caller yet; `VisiblePad(kind, ratio)` is
 `ButtonPlateArt.VisiblePad`'s counterpart, both fed by `tools/measure_ui_kit.py`
 — it scans every `Processed/` PNG per edge at alpha thresholds 8/32/128,
 asserts the six themes agree within 1px at 32, and prints a C#-pasteable
-threshold-32 block) ·
+threshold-32 block; four edges of the 2026-09-07 delivery fail that assertion
+for real, and both `ContainerArt` and `UiKitVisiblePadTests` name them) ·
 `Typography` (the `TypographyRole` vocabulary and each role's
 `TypographySpec`, including `ResolveSizeRange` — the explicit-literal-vs-
 role-band autosize precedence `UiEmitter.ApplyTypography` calls into)

@@ -265,19 +265,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // GOLD, 3:2 KIT CONTAINER, not a flat scrim any more -- this is the
             // save-selection surface's own colour, matching the plaques the
             // wordmark sits above. 900x560 (aspect 1.607) was 7.9% off the
-            // kit's measured 3:2 aspect (1.49, see ContainerArt.
-            // ContainerAspect3x2) -- past the 5% band Ui.Container refuses.
-            // Nudged to 834x560 (aspect 1.489, 0.06% off) rather than grown to
-            // 900x604: nothing is declared INSIDE this rect (the title/menu
-            // column are separate siblings positioned independently, not
-            // children of it), so there is nothing to re-fit either way, and
-            // keeping the height untouched is the smaller of the two changes.
+            // kit's 3:2 aspect -- past the 5% band Ui.Container refuses --
+            // and was nudged to 834x560 to hit the spliced delivery's
+            // measured 1.49. The 2026-09-07 repin puts the art at a true 1.5,
+            // so this goes to 840x560 (exactly 1.5) rather than being left
+            // 0.7% off. Width still moves and height still does not: nothing
+            // is declared INSIDE this rect (the title/menu column are
+            // separate siblings positioned independently, not children of
+            // it), so there is nothing to re-fit either way.
             // .AsDecor() stays: nothing sits inside this container to check
             // via Ui.ContainerContent, so it keeps behaving exactly as the
             // flat scrim did -- an opaque background the title is allowed to
             // sit on top of without an overlap exemption.
             var scrim = Ui.Container("TextScrim", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
-                    Place.At(LeftEdgeX + 380f, 60f), new UiVec(834f, 560f))
+                    Place.At(LeftEdgeX + 380f, 60f), new UiVec(840f, 560f))
                 .AsDecor();
 
             // --- the menu itself ---------------------------------------------
@@ -313,7 +314,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // EmptyWash Solids as the card's own background, and
                 // SaveSlotController drives filled/empty through
                 // SetMenuState(Primary/Idle) instead of toggling two washes.
-                // 700x92 (aspect 7.6) stretches the 5.92 row plate non-
+                // 700x92 (aspect 7.6) stretches the 6.0 row plate non-
                 // uniformly by about 28% rather than being narrowed to fit
                 // it exactly: AddCardContent's column geometry (the number
                 // badge at -310, the gold figure centred at 250) is SHARED

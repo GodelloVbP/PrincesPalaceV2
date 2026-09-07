@@ -77,6 +77,7 @@ GROUP_LABELS = {
     ("container", "_9x16"): "ContainerArt: (ContainerKind.Container, ContainerRatio.NineBySixteen)",
     ("container", "_3x2"): "ContainerArt: (ContainerKind.Container, ContainerRatio.ThreeByTwo)",
     ("container", "_2x1"): "ContainerArt: (ContainerKind.Container, ContainerRatio.TwoByOne)",
+    ("container", "_5x1"): "ContainerArt: (ContainerKind.Container, ContainerRatio.FiveByOne)",
     ("banner_flag", "_3x4"): "ContainerArt: (ContainerKind.FlagBanner, ContainerRatio.ThreeByFour)",
     ("banner_flag", "_9x16"): "ContainerArt: (ContainerKind.FlagBanner, ContainerRatio.NineBySixteen)",
 }

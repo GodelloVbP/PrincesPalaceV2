@@ -122,12 +122,14 @@ namespace PrincesPalace.Domain.Tests
         {
             var rect = RectOf("DefeatFrame");
 
-            // 1.49 -- ContainerArt.ContainerAspect3x2 is internal and this
+            // 1.5 -- ContainerArt.ContainerAspect3x2 is internal and this
             // assembly carries no InternalsVisibleTo grant to it (only
-            // Editor gets one), so the measured aspect is restated here as a
-            // literal, same as ContainerTests' own SpriteKey literals.
+            // Editor gets one), so the aspect is restated here as a literal,
+            // same as ContainerTests' own SpriteKey literals. The 2026-09-07
+            // regeneration put the 3:2 art at a true 1.5, so the frame is
+            // back to the 896 it was before the spliced 1.49 pushed it out.
             Assert.AreEqual(1344f, rect.Width, 0.01f);
-            Assert.AreEqual(1344f / 1.49f, rect.Height, 0.01f, "902.01, was 896");
+            Assert.AreEqual(896f, rect.Height, 0.01f, "1344 / 1.5; was 902.01 at the old measured 1.49");
         }
 
         [Test]

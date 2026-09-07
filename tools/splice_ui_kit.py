@@ -206,6 +206,15 @@ def measure_inset(rgba_array, box):
     a57775f commit message): walk in from each edge until the pixel colour
     stops looking like the border and starts looking like the dark interior,
     using the cell's own centre patch as the interior reference colour.
+
+    ALPHA GATE. A pixel only counts as interior if it is actually opaque.
+    Without that gate this returns 0 on every side of an already-cropped
+    Processed/ PNG: those carry a transparent halo outside the paint whose
+    RGB is (0,0,0), which is within 45 of the dark panel interior, so the
+    very first pixel scanned "reads as interior" and the border measures
+    zero. That is what produced the implausible .008/.003 raw fractions
+    recorded against container_*_3x2 and _2x1 -- they were measurement
+    artifacts, not thin borders.
     """
     y0, y1, x0, x1 = box
     h, w = y1 - y0, x1 - x0
@@ -216,8 +225,10 @@ def measure_inset(rgba_array, box):
     interior = rgba_array[cy0:cy1, cx0:cx1, :3].astype(np.int32).reshape(-1, 3)
     interior_color = interior.mean(axis=0) if len(interior) else np.array([0, 0, 0])
 
+    OPAQUE = 200
+
     def is_interior(px):
-        return np.abs(px[:3].astype(np.int32) - interior_color).sum() < 45
+        return px[3] >= OPAQUE and np.abs(px[:3].astype(np.int32) - interior_color).sum() < 45
 
     def scan(axis_len, sample_fn):
         for i in range(axis_len // 2):

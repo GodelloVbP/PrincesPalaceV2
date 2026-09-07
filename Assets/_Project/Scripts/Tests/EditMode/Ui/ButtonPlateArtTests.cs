@@ -4,18 +4,24 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Ui.PlateShapeFor / ButtonPlateArt: which of the four measured plate
-    // shapes (Legacy 2.79, ThreeByOne 3.10, FiveByOne 4.91, Row6x1 5.92) a
-    // themed button's own declared rect resolves to, and UiNode.Plate()'s
-    // override of that pick.
+    // Ui.PlateShapeFor / ButtonPlateArt: which of the four plate shapes
+    // (Legacy 3.0, ThreeByOne 3.0, FiveByOne 5.0, Row6x1 6.0) a themed
+    // button's own declared rect resolves to, and UiNode.Plate()'s override
+    // of that pick.
     //
-    // FiveByOne/Row6x1 moved 2026-09-02 (3.42->4.91, 4.92->5.92) when the
-    // user resliced button_51.png/row_61.png at closer-to-true ratios --
-    // see ButtonPlateArt's own header comment. Several real rects below
-    // changed which shape they land on as a result; each such test is
-    // renamed and re-pinned to the new pick rather than just re-asserted,
-    // so a future reader isn't left wondering why a "PicksFiveByOne" test
-    // asserts Row6x1.
+    // THE WHOLE TABLE MOVED 2026-09-07, when the kit was regenerated at true
+    // nominal aspect: 2.79/3.10/4.91/5.92 became 3.0/3.0/5.0/6.0. Two
+    // consequences the cases below pin. First, Legacy and ThreeByOne are now
+    // the same number (and the same PNG, byte for byte), so ShapeFor's loop
+    // ties and Legacy -- first in the loop -- always wins; ThreeByOne is
+    // reachable only through an explicit .Plate() override, which costs
+    // nothing because the two load identical pixels. Second, the boundary
+    // between the 3.0 cluster and FiveByOne moved from 3.902 to 3.873 and
+    // the FiveByOne/Row6x1 boundary from 5.39 to 5.477.
+    //
+    // Each real rect below whose pick changed is renamed and re-pinned to
+    // the new pick rather than just re-asserted, so a future reader isn't
+    // left wondering why a "PicksThreeByOne" test asserts Legacy.
     public class ButtonPlateArtTests
     {
         // --- the selection rule itself, pinned against the real rects this
@@ -27,47 +33,60 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void VerbRow_300x52_PicksRow6x1()
         {
-            // FightScreen.VerbRowW/VerbRowH. Aspect 5.769 sits 0.026 (ln)
-            // from Row6x1 (was 0.160 pre-reslice) and at least 0.5 from
-            // every other shape.
+            // FightScreen.VerbRowW/VerbRowH. Aspect 5.769 sits 0.039 (ln)
+            // from Row6x1 (was 0.026 against the old 5.92) and 0.143 from
+            // FiveByOne, its nearest rival.
             Assert.AreEqual(ButtonPlateShape.Row6x1, Ui.PlateShapeFor(300f, 52f));
         }
 
         [Test]
-        public void HubMainMenuButton_220x60_PicksThreeByOne()
+        public void HubMainMenuButton_220x60_PicksLegacy()
         {
             // HubScreen.MainMenuButton (also DamagePopup's own incidental
             // 220x60, and close enough to MainMenuScreen's various 200-260
             // wide Silver buttons to stand in for the whole cluster). Aspect
-            // 3.667 sits 0.168 (ln) from ThreeByOne, its nearest neighbour --
-            // FiveByOne moving up to 4.91 pulled this rect off FiveByOne
-            // (was its pick pre-reslice, at 0.070) and onto ThreeByOne.
-            Assert.AreEqual(ButtonPlateShape.ThreeByOne, Ui.PlateShapeFor(220f, 60f));
+            // 3.667 sits 0.201 (ln) from the 3.0 cluster and 0.310 from
+            // FiveByOne. It used to pick ThreeByOne at 3.10; now that Legacy
+            // and ThreeByOne share 3.0 the tie goes to Legacy, which loads
+            // the same PNG -- so the picture is unchanged and only the key
+            // that names it moved.
+            Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(220f, 60f));
+        }
+
+        [Test]
+        public void LegacyAndThreeByOne_TieAt3_0_AndLegacyWins()
+        {
+            // The tie is the point: button_plate_<theme>.png and
+            // button_plate_<theme>_3x1.png are byte-identical after the
+            // 2026-09-07 regeneration, both at 1536x512. Nothing in the game
+            // can tell the two picks apart, and this pins WHICH ONE the
+            // selection names so a reordering of ShapeFor's loop is a visible
+            // change rather than a silent one.
+            Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(300f, 100f));
         }
 
         [Test]
         public void TargetCancelButton_88x30_PicksLegacy()
         {
-            // FightScreen.TargetCancelButton. Aspect 2.933 sits 0.050 (ln)
-            // from Legacy versus 0.055 from ThreeByOne - the closest contest
-            // in the codebase's real rects, and Legacy still wins it.
-            // Legacy/ThreeByOne were untouched by the reslice, so this pick
-            // is unchanged.
+            // FightScreen.TargetCancelButton. Aspect 2.933 sits 0.023 (ln)
+            // from the 3.0 cluster and 0.533 from FiveByOne. It was the
+            // closest contest in the codebase when Legacy (2.79) and
+            // ThreeByOne (3.10) straddled it; they are the same number now,
+            // so it is not close any more and the pick is unchanged.
             Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(88f, 30f));
         }
 
         [Test]
         public void RelicDraftContinueButton_320x64_PicksFiveByOne()
         {
-            // RelicDraftScreen's continue button. Aspect 5.0 sits 0.018 (ln)
-            // from FiveByOne - Row6x1 was the pick pre-reslice (0.016 from
-            // the old 4.92 Row6x1 aspect); FiveByOne moving up to 4.91 is
-            // now the closer neighbour by a hair.
+            // RelicDraftScreen's continue button. Aspect 5.0 is FiveByOne
+            // EXACTLY now (it was 0.018 ln away from the spliced 4.91), and
+            // 0.182 from Row6x1.
             Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(320f, 64f));
         }
 
         [Test]
-        public void SquareButton_PicksLegacy_TheNarrowestShape()
+        public void SquareButton_PicksLegacy_TheNarrowestShape()  // narrowest is 3.0
         {
             Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(100f, 100f));
         }
@@ -75,8 +94,12 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ExactlyAtAShapesOwnAspect_PicksThatShape()
         {
-            Assert.AreEqual(ButtonPlateShape.ThreeByOne, Ui.PlateShapeFor(310f, 100f));
-            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(491f, 100f));
+            // 3.0 resolves to Legacy rather than ThreeByOne -- see
+            // LegacyAndThreeByOne_TieAt3_0_AndLegacyWins for why that is the
+            // pin rather than an accident.
+            Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(300f, 100f));
+            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(500f, 100f));
+            Assert.AreEqual(ButtonPlateShape.Row6x1, Ui.PlateShapeFor(600f, 100f));
         }
 
         [TestCase(0f, 52f)]

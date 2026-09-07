@@ -22,11 +22,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // PanelHeight. Those two stay matched to the Reckoning's for
         // ItIsTheSameSizeAsTheReckoning (the screen's overall footprint);
         // the FRAME wears real art now, so its own height is derived to hit
-        // the kit's measured 3:2 aspect (1.49, see ContainerArt.
-        // ContainerAspect3x2) exactly rather than reusing 896 (aspect 1.5),
-        // which was only ever a number a flat-coloured panel didn't care
-        // about matching. Width unchanged (1344, pinned by DefeatScreenTests);
-        // height moves 896 -> 902.01.
+        // the kit's 3:2 aspect exactly. Since the 2026-09-07 repin that
+        // aspect IS 1.5 (the art is 1536x1024 at true nominal), so this lands
+        // back on 896 -- the number the flat-coloured panel used before the
+        // kit's spliced 1.49 pushed it to 902.01. Width unchanged (1344,
+        // pinned by DefeatScreenTests); height moves 902.01 -> 896.
         public const float FrameHeight = PanelWidth / ContainerArt.ContainerAspect3x2;
 
         // Matches the Reckoning's, for the same reason: fixed at build time, so

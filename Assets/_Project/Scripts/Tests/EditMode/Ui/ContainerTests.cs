@@ -185,6 +185,70 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
         }
 
+        // --- FiveByOne: container-only, NO CALLER YET ----------------------
+        //
+        // container_<theme>_5x1.png arrived with the 2026-09-07 regeneration
+        // and nothing in the game asks for it. These three cases are what
+        // make it reachable rather than dead art on disk: the aspect a screen
+        // would have to declare, the refusal if it declares a different one,
+        // and the sprite key the declaration resolves to. If a caller lands
+        // later it inherits an already-pinned surface.
+
+        [Test]
+        public void ContainerFiveByOne_AtItsOwnAspect_DoesNotThrow()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.FiveByOne, 120f);
+
+            Assert.AreEqual(600f, size.X, 0.01f, "5:1 at height 120");
+            Assert.DoesNotThrow(() =>
+                Ui.Container("Frame", ButtonTheme.Green, ContainerRatio.FiveByOne, Place.At(0f, 0f), size));
+        }
+
+        [Test]
+        public void ContainerFiveByOne_StretchedPastFivePercent_Throws()
+        {
+            // 600x120 is the exact 5:1 box; 660 wide is 5.5:1, 10% out.
+            Assert.Throws<System.ArgumentException>(() =>
+                Ui.Container("Frame", ButtonTheme.Green, ContainerRatio.FiveByOne, Place.At(0f, 0f),
+                    new UiVec(660f, 120f)));
+        }
+
+        [Test]
+        public void ContainerFiveByOne_HasNoFlagBannerArt()
+        {
+            // The kit ships no banner_flag_<theme>_5x1.png, so asking for one
+            // is a mistake ContainerArt catches rather than a key that names
+            // a file which does not exist.
+            Assert.Throws<System.ArgumentOutOfRangeException>(() =>
+                Ui.FlagBanner("Banner", ButtonTheme.Green, ContainerRatio.FiveByOne, Place.At(0f, 0f),
+                    new UiVec(600f, 120f)));
+        }
+
+        [TestCase(ButtonTheme.Gold, "UI/Buttons/Processed/container_gold_5x1.png")]
+        [TestCase(ButtonTheme.Silver, "UI/Buttons/Processed/container_silver_5x1.png")]
+        public void ContainerFiveByOne_SpriteKeyMatchesTheme(ButtonTheme theme, string expectedKey)
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.FiveByOne, 120f);
+            var node = Ui.Container("Frame", theme, ContainerRatio.FiveByOne, Place.At(0f, 0f), size);
+
+            Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
+        }
+
+        [Test]
+        public void FiveByOneContent_PassesUiAudit_AtAllFourAspects()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.FiveByOne, 120f);
+            var holder = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.FiveByOne, Place.At(0f, 0f), size);
+            Ui.ContainerContent(holder, ContainerRatio.FiveByOne, "FrameContent",
+                Ui.Label("Label", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(0f, 0f)).AsDecor());
+
+            var root = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), holder);
+            var errors = UiAudit.RunAllFrames(root);
+
+            CollectionAssert.IsEmpty(errors,
+                "first 5 of " + errors.Count + ": " + string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
         // --- the second delivery: ThreeByTwo/TwoByOne, container-only -------
 
         [Test]
@@ -301,19 +365,19 @@ namespace PrincesPalace.Domain.Tests
             // recomputes a formula to build its own expected value is a
             // tautology and cannot catch that formula breaking).
             //
-            // ContainerArt.ContainerAspect3x4 = 0.588, so at height 569:
-            //   size.X = 569 * 0.588 = 334.572
+            // ContainerArt.ContainerAspect3x4 = 0.75, so at height 569:
+            //   size.X = 569 * 0.75 = 426.75
             //   size.Y = 569
             // ContainerArt.Inset(Container, ThreeByFour) =
-            //   left 0.065, right 0.065, top 0.045, bottom 0.04, so:
-            //   Left   = 334.572 * 0.065 = 21.74718
-            //   Right  = 334.572 * 0.065 = 21.74718
-            //   Top    = 569     * 0.045 = 25.605
-            //   Bottom = 569     * 0.04  = 22.76
-            Assert.AreEqual(21.74718f, content.Place.Left, 0.01f);
-            Assert.AreEqual(21.74718f, content.Place.Right, 0.01f);
-            Assert.AreEqual(25.605f, content.Place.Top, 0.01f);
-            Assert.AreEqual(22.76f, content.Place.Bottom, 0.01f);
+            //   left 0.069, right 0.069, top 0.052, bottom 0.055, so:
+            //   Left   = 426.75 * 0.069 = 29.44575
+            //   Right  = 426.75 * 0.069 = 29.44575
+            //   Top    = 569    * 0.052 = 29.588
+            //   Bottom = 569    * 0.055 = 31.295
+            Assert.AreEqual(29.44575f, content.Place.Left, 0.01f);
+            Assert.AreEqual(29.44575f, content.Place.Right, 0.01f);
+            Assert.AreEqual(29.588f, content.Place.Top, 0.01f);
+            Assert.AreEqual(31.295f, content.Place.Bottom, 0.01f);
 
             // The formula check stays too, as a second, independent-in-name
             // but not in fact assertion -- kept because it still catches a

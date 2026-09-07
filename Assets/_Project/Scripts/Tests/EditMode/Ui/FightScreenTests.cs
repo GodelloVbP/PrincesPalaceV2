@@ -194,13 +194,19 @@ namespace PrincesPalace.Domain.Tests
             // -372.830 (bottom moved onto the verb column's visible line);
             // B2 -486.703 / -390.743 (bottom re-solved at the new, shorter
             // height -- 0.27px from B1's own number, since VisibleBottomLine
-            // itself did not move and only the plate's own height did).
+            // itself did not move and only the plate's own height did);
+            // 2026-09-07 -486.627 / -391.627, the kit repin. TWO numbers moved
+            // there and neither is a layout decision: the 2:1 art is at a true
+            // 2.0 now (it measured 1.98), so 380 wide is 190 tall rather than
+            // 191.92; and the Row6x1 plate's own bottom halo pad moved
+            // 0.0138 -> 0.0117 of the verb row's height, which is what shifts
+            // VisibleBottomLine itself by 0.11px.
             var rect = RectOf("PartyPlate");
             Assert.AreEqual(-920f, rect.Centre.X - rect.Width * 0.5f, 0.01f, "the left edge must not move");
-            Assert.AreEqual(-390.743f, rect.Centre.Y, 0.01f);
+            Assert.AreEqual(-391.627f, rect.Centre.Y, 0.01f);
             Assert.AreEqual(380f, rect.Width, 0.01f);
-            Assert.AreEqual(191.919f, rect.Height, 0.01f);
-            Assert.AreEqual(-486.703f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
+            Assert.AreEqual(190f, rect.Height, 0.01f);
+            Assert.AreEqual(-486.627f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
                 "the bottom edge is solved from FightSubmenuLayout.VisibleBottomLine, not a flat -500");
         }
 

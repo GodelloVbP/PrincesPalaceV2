@@ -151,12 +151,12 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EachCardIsAVioletThreeByFourContainerNestedInsideItsButton()
         {
-            // Balance-bot, 2026-09-02: 380x460 (0.826) moved to 270x460
-            // (0.587) to clear the kit's measured 3:4 aspect (0.588) -- see
-            // CardWidth's own comment. The card stays a Button (it still
-            // takes Choose()'s click); the container art is a nested,
-            // non-Button holder inside it, same shape Ui.Container always
-            // returns.
+            // The authored 380x460 (0.826) moved to 270x460 (0.587) against
+            // the spliced kit's measured 0.588, and to 345x460 (0.75 exactly)
+            // at the 2026-09-07 regeneration -- see CardWidth's own comment.
+            // The card stays a Button (it still takes Choose()'s click); the
+            // container art is a nested, non-Button holder inside it, same
+            // shape Ui.Container always returns.
             var card = RelicDraftScreen.Build().Cards[0].Node;
             var frame = card.Children.Single(c => c.Name == "DraftCard0Frame");
 
@@ -166,10 +166,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(art.Decor);
 
             var content = frame.Children.Single(c => c.Name == "DraftCard0FrameContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
             Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(RelicDraftScreen.CardWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(RelicDraftScreen.CardHeight * inset.Top, content.Place.Top, 0.01f);
+
+            // LITERAL, worked by hand rather than recomputed from
+            // Ui.ContainerContentInset -- multiplying the production inset
+            // back out here would only assert that multiplication works
+            // (CLAUDE.md gotcha 5). The kit's Container/3:4 inset is
+            // left/right 0.069 and top 0.052, so on a 345x460 card:
+            //   Left = 345 * 0.069 = 23.805
+            //   Top  = 460 * 0.052 = 23.92
+            Assert.AreEqual(23.805f, content.Place.Left, 0.01f);
+            Assert.AreEqual(23.92f, content.Place.Top, 0.01f);
         }
 
         [Test]

@@ -128,6 +128,7 @@ namespace PrincesPalace.Domain.Tests
                 ContainerRatio.NineBySixteen => "9x16",
                 ContainerRatio.ThreeByTwo => "3x2",
                 ContainerRatio.TwoByOne => "2x1",
+                ContainerRatio.FiveByOne => "5x1",
                 _ => throw new System.ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio"),
             };
             return $"UI/Buttons/Processed/container_{theme.ToString().ToLowerInvariant()}_{ratioKey}.png";

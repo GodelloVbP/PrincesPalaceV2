@@ -1182,13 +1182,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // (name + "LV1 UTILITY") that no longer exists -- PartyClass is gone
         // below, see its own note -- and left the HP/MP rows and the wool
         // meter floating in a card built for a fourth fact it no longer
-        // states. 380 keeps the 2:1 aspect (380/1.98 = 191.92, well inside
-        // Ui.Container's 5% band); the height derives from it rather than
-        // being pinned separately, same discipline the old 452/1.98 used.
+        // states. 380 keeps the 2:1 aspect (380/2.0 = 190, exactly on it
+        // since the 2026-09-07 kit repin put the art at a true 2.0; it was
+        // 191.92 against the old measured 1.98); the height derives from it
+        // rather than being pinned separately, same discipline the old
+        // 452/1.98 used.
         // Public: FightScreenTests (a separate assembly, no InternalsVisibleTo
         // grant to it) reads these rather than restating the numbers.
         public const float PartyPlateWidth = 380f;
-        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 191.92, was 228.28
+        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 190, was 191.92
         private const float PartyPlateCentreX = -730f; // LEFT EDGE STAYS AT -920 -- see BuildPartyPlate's own note
 
         // VISIBLE-BOTTOM FLUSH NOW (B1), not the fixed -500 HUD margin it
@@ -1802,7 +1804,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // neutral default elsewhere (Relic Draft, the Constellation
                 // screen). 282x40 (was 282x48, balance-bot item 5, 2026-09-03)
                 // is 7.05:1, which the aspect-nearest rule still resolves to
-                // Row6x1 (5.92, ln-distance 0.175 against FiveByOne's 0.362)
+                // Row6x1 (6.0, ln-distance 0.161 against FiveByOne's 0.344)
                 // on its own -- no .Plate() override needed. ThemedButtonState's
                 // own hover state replaces the manual .Hovers(1.02f) scale-pop
                 // this used to drive.
@@ -1954,12 +1956,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- the Violet 3:4 themed frame, wrapping the inner box above --------
             //
             // containerW x FightSubmenuLayout.ContainerHeight (316x500, 0.632)
-            // missed the kit's measured 3:4 aspect (0.588) by 7.5% -- past
-            // Ui.Container's 5% band. FrameWidth/FrameHeight (363.22x617.72)
-            // are what the SAME inner box looks like widened to the kit's own
-            // 6.5%-a-side inset and then completed to 0.588 exactly; see
-            // FightSubmenuLayout.FrameHeight's own comment for why nothing
-            // below RowsBottom had to move for it. The flat Solid + Ui.Rim
+            // misses the kit's 3:4 aspect (0.75 since the 2026-09-07 repin,
+            // 0.588 before it) by more than Ui.Container's 5% band either
+            // way. FrameWidth/FrameHeight (419.9x559.9, was 363.22x617.72)
+            // are what the SAME inner box looks like grown to the kit's own
+            // 5.2%/5.5% top/bottom inset and then completed to 0.75 exactly
+            // -- the frame is height-bound now rather than width-bound; see
+            // FightSubmenuLayout.FrameHeight's own comment for why, and for
+            // why nothing below RowsBottom had to move for it. The flat Solid + Ui.Rim
             // this replaces is gone -- Ui.Container draws its own border art.
             var frameNode = Ui.Container("SubmenuContainer", ButtonTheme.Violet, ContainerRatio.ThreeByFour,
                 Place.At(containerX, FightSubmenuLayout.FrameCentreY),

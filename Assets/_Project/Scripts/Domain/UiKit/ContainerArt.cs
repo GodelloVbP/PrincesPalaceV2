@@ -3,15 +3,16 @@ using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Which shape of container/banner art a screen wants. Nominal names only --
-    // see ContainerArt's own comment for why the literal aspect a screen must
-    // declare against is measured off the PNGs, not 3f/4f or 9f/16f.
+    // Which shape of container/banner art a screen wants. The names ARE the
+    // ratios now -- this delivery of the kit is at true nominal aspect on
+    // every file; see ContainerArt's own comment.
     public enum ContainerRatio
     {
         ThreeByFour,
         NineBySixteen,
         ThreeByTwo,
         TwoByOne,
+        FiveByOne,
     }
 
     // The measured shape of the six-theme container/banner kit
@@ -19,53 +20,38 @@ namespace PrincesPalace.Domain.UiKit
     // banner_flag_<theme>_<ratio>.png), and the safe interior every one of
     // them shares.
     //
-    // NOMINAL RATIOS, MEASURED ASPECT. "3x4" and "9x16" are the kit's own
-    // filenames, not a literal 0.75 or 0.5625 -- every delivered PNG was
-    // measured (`PIL.Image.size`) and none of the six themes lands there:
+    // THIS DELIVERY IS AT TRUE NOMINAL ASPECT, which is new. Every PNG was
+    // re-measured (`PIL.Image.size`) after the 2026-09-07 regeneration, and
+    // all six themes of every group land on exactly one size, exactly on the
+    // fraction their filename claims:
     //
-    //   container_*_3x4:    334x569 .. 338x569, aspect 0.583-0.594
-    //   container_*_9x16:   284x699 .. 287x699, aspect 0.406-0.411
-    //   banner_flag_*_3x4:  330x640 .. 330x642, aspect 0.514-0.516
-    //   banner_flag_*_9x16: 242x802 .. 243x810, aspect 0.299-0.301
+    //   container_*_3x4:    768x1024  -> 0.75    (all six identical)
+    //   container_*_9x16:   576x1024  -> 0.5625  (all six identical)
+    //   container_*_3x2:    1536x1024 -> 1.5     (all six identical)
+    //   container_*_2x1:    1536x768  -> 2.0     (all six identical)
+    //   container_*_5x1:    1530x306  -> 5.0     (all six identical, NEW)
+    //   banner_flag_*_3x4:  768x1024  -> 0.75    (all six identical)
+    //   banner_flag_*_9x16: 576x1024  -> 0.5625  (all six identical)
     //
-    // Each cluster agrees within ~2% of itself, so ONE canonical aspect per
-    // (kind, ratio) -- the average below -- covers every theme comfortably
-    // inside the 5% refusal band Container/FlagBanner enforce, without
-    // pretending the art matches a clean fraction it does not.
+    // So the constants below are the clean fractions, not a cluster average,
+    // and a screen that declares a nominal box now gets an exact fit.
+    //
+    // HISTORY, one line, because the screens still carry its fingerprints:
+    // every earlier delivery was spliced off sheets and came out several
+    // percent off nominal (3x4 measured 0.588, 9x16 0.4083, banner 3x4
+    // 0.5145, banner 9x16 0.3004, 3x2 1.49, 2x1 1.98), and every screen was
+    // sized against those numbers -- which is why repinning this file moves
+    // real layout rather than only a comment.
     internal static class ContainerArt
     {
-        // width / height, averaged across the six themes' delivered PNGs.
-        internal const float ContainerAspect3x4 = 0.588f;
-        internal const float ContainerAspect9x16 = 0.4083f;
-        internal const float BannerAspect3x4 = 0.5145f;
-        internal const float BannerAspect9x16 = 0.3004f;
-
-        // The transparent-grid kit's second delivery -- container_<theme>_
-        // 3x2.png and _2x1.png, container-only (no banner_flag_ equivalent
-        // shipped for these two).
-        //
-        // container_*_3x2 was RESPLICED 2026-09-02: the user regenerated
-        // container_32.png in place at a true-to-nominal 3:2 ratio (the
-        // filename didn't change, only the pixels -- tools/splice_ui_kit.py
-        // re-ran against it and overwrote the same Processed/ filenames, so
-        // every .meta GUID stayed valid). Old measurement was 464x341 ..
-        // 466x344, aspect 1.349-1.367; resliced:
-        //
-        //   container_*_3x2: 504x338 .. 505x338, aspect 1.491-1.494
-        //
-        // container_*_2x1 was RESPLICED 2026-09-02 (same day, earlier): the
-        // user regenerated container_21.png (plus the two button sheets
-        // above) at a closer-to-true 2:1 ratio, and tools/splice_ui_kit.py
-        // re-ran against the new containers_21.png in place of the original
-        // -- same Processed/ filenames, so callers are unaffected, but the
-        // measured aspect moved from 1.718-1.759 to a noticeably tighter
-        // cluster:
-        //
-        //   container_*_2x1: 530x269 .. 536x270, aspect 1.963-1.993
-        //
-        // Each cluster agrees within ~2% of itself.
-        internal const float ContainerAspect3x2 = 1.49f;
-        internal const float ContainerAspect2x1 = 1.98f;
+        // width / height. Exact, for this delivery.
+        internal const float ContainerAspect3x4 = 0.75f;
+        internal const float ContainerAspect9x16 = 0.5625f;
+        internal const float BannerAspect3x4 = 0.75f;
+        internal const float BannerAspect9x16 = 0.5625f;
+        internal const float ContainerAspect3x2 = 1.5f;
+        internal const float ContainerAspect2x1 = 2f;
+        internal const float ContainerAspect5x1 = 5f;
 
         internal static float Aspect(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Aspect;
 
@@ -80,39 +66,44 @@ namespace PrincesPalace.Domain.UiKit
         // pixels because a screen can ask Container() for any size that
         // clears the aspect check, and the painted border scales with it.
         //
-        // Measured by scanning each PNG's alpha/colour in python (see the
-        // commit message for the exact script): for a container, the inner
-        // edge of the painted border on all four sides; for a banner, the
-        // same border on left/top/right, but the BOTTOM figure is not the
-        // border -- it is measured up to the row where the V-notch first
-        // narrows the opaque span (the "shoulder"), so a bottom-anchored
-        // label cannot sit in the point of the flag. Both numbers carry a
-        // safety margin over the raw measurement (container ~25%, banner's
-        // V-clearance ~20%) so the six themes' small per-asset variance can
-        // never eat into it.
+        // MEASURED BY measure_inset in tools/splice_ui_kit.py, run directly
+        // against the cropped Processed/ PNGs: in from each edge along the
+        // mid row/column until the pixel stops looking like the painted
+        // border and starts looking like the dark interior. For a BANNER the
+        // bottom figure is not the border -- it is the V-notch "shoulder",
+        // the first row walking up from the bottom at which the opaque span
+        // reaches full width, so a bottom-anchored label cannot sit in the
+        // point of the flag. The WORST (largest) raw fraction per side across
+        // the six themes takes a safety margin (container ~25%, banner's
+        // V-clearance ~20%) and that is what is pinned below.
         //
-        //   container_gold_3x4:  334x569, border L17 T17 R18 B15px  -> raw frac  L.051 T.030 R.054 B.026
-        //   container_gold_9x16: 285x699, border L18 T18 R19 B19px  -> raw frac  L.063 T.026 R.067 B.027
-        //   banner_flag_gold_3x4:  330x641, border L19 T18 R18px, V-shoulder 86px from bottom -> raw frac L.058 T.028 R.055 B.134
-        //   banner_flag_gold_9x16: 242x810, border L17 T18 R17px, V-shoulder 72px from bottom -> raw frac L.070 T.022 R.070 B.111
+        // A NOTE ON THE TOOL, because the numbers this replaces were wrong:
+        // measure_inset used to read 0 on every side of an already-cropped
+        // PNG. The transparent halo's RGB is (0,0,0), close enough to the
+        // dark panel interior that the very first pixel scanned counted as
+        // interior -- which is where the implausible L.008 T.003 raw
+        // fractions recorded against 3x2/2x1 came from. It gates on alpha
+        // now, so the figures below are the first real measurement those two
+        // groups have had.
         //
-        // 3x2/2x1 measured the same way (measure_inset in tools/
-        // splice_ui_kit.py, run directly against the already-cropped PNGs
-        // rather than a sheet's grid box), across all six themes -- the
-        // WORST (largest) raw fraction per side, then the same margin
-        // discipline as the pair above:
+        // Raw worst-per-side, this delivery:
         //
-        // container_*_3x2's raw max was re-measured against the resliced
-        // art (see ContainerAspect3x2's comment above): L.008 T.003 R.008
-        // B.015 -- smaller than the original .015/.018/.015/.021 the pinned
-        // insets below were sized against, so those insets (kept as-is)
-        // stay comfortably safe rather than needing to shrink.
+        //   container_*_3x4    L.0534 T.0410 R.0547 B.0439   (border 34-45px of 768/1024)
+        //   container_*_9x16   L.0660 T.0371 R.0660 B.0381   (border 31-39px of 576/1024)
+        //   container_*_3x2    L.0124 T.0098 R.0130 B.0215   (hairline: 15-22px of 1536/1024)
+        //   container_*_2x1    L.0137 T.0273 R.0156 B.0312   (hairline: 11-24px of 1536/768)
+        //   container_*_5x1    L.0052 T.0261 R.0065 B.0327   (hairline: 5-9px of 1530/306)
+        //   banner_flag_*_3x4  L.0573 T.0410 R.0573, V-shoulder .1533 (156-157px of 1024)
+        //   banner_flag_*_9x16 L.0729 T.0420 R.0729, V-shoulder .1172 (118-120px of 1024)
         //
-        // container_*_2x1's raw max was re-measured against the resliced
-        // art (see ContainerAspect2x1's comment above): L.010 T.019 R.011
-        // B.023 -- smaller than the original .017/.030/.017/.030 the pinned
-        // insets below were sized against, so those insets (kept as-is)
-        // stay comfortably safe rather than needing to shrink.
+        // 3x2 AND 2x1 KEEP THE INSETS THEY ALREADY HAD (0.035/0.04/0.045 and
+        // 0.035/0.055) rather than dropping to raw*1.25: their frames are
+        // hairlines, the existing pins clear them several times over, and
+        // those two ratios are what SystemMenuLayout.PaneInset -- and through
+        // it every hosted pane's content bound -- lays out against. Same
+        // "already comfortably safe, so leave it" call the previous delivery
+        // made; the difference is that the raw number backing it is now a
+        // real measurement rather than a scanner artifact.
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Inset;
 
         // THE VISIBLE EDGE, not the rect edge -- every one of these PNGs
@@ -134,20 +125,18 @@ namespace PrincesPalace.Domain.UiKit
         //
         // MEASURED BY tools/measure_ui_kit.py AT ALPHA >= 32 (the threshold
         // decided on the main tree -- see the script's own header for why),
-        // one fraction per edge, AVERAGED across the six themes -- same
-        // discipline ContainerArt.Aspect already uses (a canonical number
-        // per (kind, ratio), not a per-theme table), because this pad exists
-        // for FLUSH PLACEMENT, not as a safety margin the way Inset's own
-        // "worst raw fraction" choice is (Inset guards against a label
-        // reaching the border; this guards against a rect edge reading as
-        // "off" beside a neighbour's visible edge).
+        // one fraction per edge, AVERAGED across the six themes -- because
+        // this pad exists for FLUSH PLACEMENT, not as a safety margin the way
+        // Inset's own "worst raw fraction" choice is (Inset guards against a
+        // label reaching the border; this guards against a rect edge reading
+        // as "off" beside a neighbour's visible edge).
         //
         // RE-MEASURE: `py tools/measure_ui_kit.py` after any Processed/
         // regeneration and re-paste its "C#-PASTEABLE, threshold 32" block
         // below. It also asserts the six themes agree within 1px per edge
-        // and exits 1 naming the file when they do not -- which is exactly
-        // what happened for THIS delivery on two groups, noted where they
-        // are pinned below, so the averages there are a known approximation
+        // and exits 1 naming the file when they do not -- which is what
+        // happened for THIS delivery on four edges, noted where they are
+        // pinned below, so those four averages are a known approximation
         // rather than a clean six-way agreement.
         internal static ContentInsetFrac VisiblePad(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).VisiblePad;
 
@@ -160,42 +149,62 @@ namespace PrincesPalace.Domain.UiKit
         // One statement of "which surfaces exist per (kind, ratio)" -- Aspect,
         // Inset and Key above all read the same table instead of repeating
         // the kind/ratio switch three times. A combination this kit never
-        // shipped art for (FlagBanner + ThreeByTwo/TwoByOne) is simply absent
-        // from the dictionary, so the lookup itself is the one throw.
-        // VisiblePad, per group -- tools/measure_ui_kit.py output at alpha
-        // >= 32, fraction averaged across the six themes. Two callouts:
+        // shipped art for (FlagBanner + ThreeByTwo/TwoByOne/FiveByOne) is
+        // simply absent from the dictionary, so the lookup itself is the one
+        // throw.
         //
-        //   (Container, ThreeByFour) and (Container, NineBySixteen) FAILED
-        //   the script's own six-theme agreement check on their LEFT edge --
-        //   silver/violet's cells were spliced with 3-4px less left padding
-        //   than the other four themes (confirmed on the raw alpha, not a
-        //   threshold artifact: the column jumps 0 -> 255 at col 8-9 for
-        //   those two PNGs and at col 12 for the rest). Every OTHER edge of
-        //   both groups agrees within 1px, and BOTTOM -- the only edge B1
-        //   actually places anything against -- is exact. Left/Top/Right
-        //   have no reader yet; the averages below are the honest number for
-        //   when one arrives, not a claim the six themes agree on it.
+        // VisiblePad, per group -- tools/measure_ui_kit.py output at alpha
+        // >= 32, fraction averaged across the six themes. Four callouts, all
+        // confirmed against the raw alpha rather than assumed to be threshold
+        // artifacts (each row/column ramps 0 -> 255 over about 3px, at a
+        // DIFFERENT index per theme):
+        //
+        //   (Container, ThreeByFour) LEFT: silver's paint starts at column 20
+        //   and violet's at 18, where the other four start at 26-27 -- a 9px
+        //   spread. This is the same silver/violet splice offset the previous
+        //   delivery carried; it was 3-4px then, so the regeneration made it
+        //   worse rather than better.
+        //   (Container, ThreeByFour) TOP: blue starts at row 28 and crimson
+        //   at 26 -- a 2px spread.
+        //   (Container, NineBySixteen) LEFT: the same two themes as the 3x4
+        //   left edge, 19px against 23-24 -- a 5px spread.
+        //   (FlagBanner, ThreeByFour) TOP: crimson and gold start 2px lower
+        //   than the other four (29 against 27).
+        //
+        // Every other edge of every group agrees within 1px, and BOTTOM --
+        // the only edge anything is actually placed against today -- is clean
+        // on all four of the above. UiKitVisiblePadTests widens its band for
+        // exactly those four edges and holds every other one at 1px.
         private static readonly Dictionary<(ContainerKind, ContainerRatio), ContainerSpec> Specs =
             new Dictionary<(ContainerKind, ContainerRatio), ContainerSpec>
         {
             [(ContainerKind.Container, ContainerRatio.ThreeByFour)] = new ContainerSpec(
-                ContainerAspect3x4, new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f),
-                new ContentInsetFrac(left: 0.0324f, right: 0.0359f, top: 0.0211f, bottom: 0.0211f), "3x4"),
+                ContainerAspect3x4, new ContentInsetFrac(left: 0.069f, right: 0.069f, top: 0.052f, bottom: 0.055f),
+                new ContentInsetFrac(left: 0.0315f, right: 0.0349f, top: 0.0264f, bottom: 0.0262f), "3x4"),
             [(ContainerKind.Container, ContainerRatio.NineBySixteen)] = new ContainerSpec(
-                ContainerAspect9x16, new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f),
-                new ContentInsetFrac(left: 0.0397f, right: 0.0421f, top: 0.0172f, bottom: 0.0174f), "9x16"),
+                ContainerAspect9x16, new ContentInsetFrac(left: 0.083f, right: 0.083f, top: 0.047f, bottom: 0.048f),
+                new ContentInsetFrac(left: 0.0379f, right: 0.0411f, top: 0.0229f, bottom: 0.0239f), "9x16"),
             [(ContainerKind.Container, ContainerRatio.ThreeByTwo)] = new ContainerSpec(
                 ContainerAspect3x2, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f),
-                new ContentInsetFrac(left: 0.0040f, right: 0.0040f, top: 0.0059f, bottom: 0.0059f), "3x2"),
+                new ContentInsetFrac(left: 0.0033f, right: 0.0033f, top: 0.0049f, bottom: 0.0049f), "3x2"),
             [(ContainerKind.Container, ContainerRatio.TwoByOne)] = new ContainerSpec(
                 ContainerAspect2x1, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f),
-                new ContentInsetFrac(left: 0.0037f, right: 0.0037f, top: 0.0074f, bottom: 0.0074f), "2x1"),
+                new ContentInsetFrac(left: 0.0029f, right: 0.0031f, top: 0.0056f, bottom: 0.0065f), "2x1"),
+            // NEW WITH THIS DELIVERY, and nothing calls it yet -- it is here
+            // so the twelve container_*_5x1 PNGs are reachable, keyed and
+            // pinned like every other group rather than sitting on disk
+            // unreferenced. Insets are the plain raw*1.25: there is no caller
+            // to tune them against, and unlike 3x2/2x1 no prior pin to
+            // preserve. The frame is a 5-9px hairline on a 1530px bar.
+            [(ContainerKind.Container, ContainerRatio.FiveByOne)] = new ContainerSpec(
+                ContainerAspect5x1, new ContentInsetFrac(left: 0.009f, right: 0.009f, top: 0.033f, bottom: 0.041f),
+                new ContentInsetFrac(left: 0.0013f, right: 0.0013f, top: 0.0065f, bottom: 0.0065f), "5x1"),
             [(ContainerKind.FlagBanner, ContainerRatio.ThreeByFour)] = new ContainerSpec(
-                BannerAspect3x4, new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f),
-                new ContentInsetFrac(left: 0.0364f, right: 0.0364f, top: 0.0190f, bottom: 0.0187f), "3x4"),
+                BannerAspect3x4, new ContentInsetFrac(left: 0.072f, right: 0.072f, top: 0.052f, bottom: 0.185f),
+                new ContentInsetFrac(left: 0.0352f, right: 0.0352f, top: 0.0270f, bottom: 0.0264f), "3x4"),
             [(ContainerKind.FlagBanner, ContainerRatio.NineBySixteen)] = new ContainerSpec(
-                BannerAspect9x16, new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f),
-                new ContentInsetFrac(left: 0.0496f, right: 0.0496f, top: 0.0149f, bottom: 0.0149f), "9x16"),
+                BannerAspect9x16, new ContentInsetFrac(left: 0.092f, right: 0.092f, top: 0.053f, bottom: 0.15f),
+                new ContentInsetFrac(left: 0.0489f, right: 0.0486f, top: 0.0273f, bottom: 0.0273f), "9x16"),
         };
 
         private static ContainerSpec Spec(ContainerKind kind, ContainerRatio ratio)
@@ -205,9 +214,9 @@ namespace PrincesPalace.Domain.UiKit
                 return spec;
             }
 
-            // FlagBanner never shipped 3x2/2x1 art -- ThreeByFour/
+            // FlagBanner never shipped 3x2/2x1/5x1 art -- ThreeByFour and
             // NineBySixteen are the only ratios that resolve to a real
-            // banner_flag_ asset, so a caller asking for one of the new
+            // banner_flag_ asset, so a caller asking for one of the
             // container-only ratios on a FlagBanner is a mistake to catch
             // here rather than hand back a number that names no PNG.
             throw new ArgumentOutOfRangeException(nameof(ratio), ratio,

@@ -63,9 +63,11 @@ namespace PrincesPalace.Domain.UiKit
         // ---- the shared pane ground, as a themed 2:1 container -------------------
         //
         // PanelWidth x ContentHeight (1600x804, aspect 1.99) ALREADY hits the
-        // kit's measured 2:1 aspect (1.98) within 0.5% -- comfortably inside
-        // Ui.Container's 5% band, so unlike every other conversion in this
-        // series, no size nudge is needed here at all. That settles the "804
+        // kit's 2:1 aspect within 0.5% -- it was 0.5% off the spliced
+        // delivery's measured 1.98 and is 0.5% off the regenerated kit's true
+        // 2.0, comfortably inside Ui.Container's 5% band either way, so
+        // unlike every other conversion in this series, no size nudge is
+        // needed here at all. That settles the "804
         // vs 1592" question the balance-bot brief posed: neither literal moves,
         // because the pane's existing frame size was already a valid 2:1 box.
         //

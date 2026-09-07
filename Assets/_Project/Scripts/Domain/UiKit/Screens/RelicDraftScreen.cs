@@ -16,15 +16,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // the same one and a pool change cannot leave a fourth card orphaned.
     public sealed class RelicDraftScreen
     {
-        // VIOLET, 3:4 KIT CONTAINER. 380x460 (aspect 0.826) was 40% off the
-        // kit's measured 3:4 aspect (0.588, see ContainerArt.
-        // ContainerAspect3x4) -- past the 5% band Ui.Container refuses.
-        // Narrowed to 270 (270/460 = 0.587, 0.2% off) rather than grown
-        // taller: height is what the frame's title/subtitle/Descend column
-        // above and below the card row was already budgeted against (see
-        // the frame's own 1500x1000 comment), so narrowing is the change
-        // that does not also reopen that budget.
-        public const float CardWidth = 270f; // was 380
+        // VIOLET, 3:4 KIT CONTAINER. The authored 380x460 (aspect 0.826) was
+        // 40% off the kit's 3:4 aspect and had to move; WHICH AXIS MOVES has
+        // been the same call twice, and the answer is still width. Height is
+        // what the frame's title/subtitle/Descend column above and below the
+        // card row is budgeted against (see the frame's own 1500x1000
+        // comment), so changing width is the change that does not reopen that
+        // budget.
+        //
+        // 345 NOW, WAS 270. Against the spliced delivery's measured 0.588 a
+        // 460-tall card was 270 wide; the 2026-09-07 repin puts the art at a
+        // true 0.75, so the same card is 345 (345/460 = 0.75 exactly). Three
+        // of them at a CardGap pitch reach +-557.5, still well inside the
+        // frame's own +-697.5 content bound, and every child inside the card
+        // (the 230-wide body being the widest) gains room rather than losing
+        // it.
+        public const float CardWidth = 345f; // was 270, was 380
         public const float CardHeight = 460f;
         private const float CardGap = 40f;
 
@@ -136,14 +143,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // VIOLET, 3:2 KIT CONTAINER -- was a flat #241736F5 panel at
             // 1500x820 (aspect 1.83), 22.8% off the kit's measured 3:2
-            // aspect (1.49, see ContainerArt.ContainerAspect3x2's comment) --
-            // past the 5% band Ui.Container refuses. Nudged to 1500x1000
-            // (aspect 1.5, 0.7% off -- comfortably inside the band) rather
-            // than narrowed to 1230x820: every existing child (three
-            // 380-wide cards at a 420 pitch, the title, the descend button)
-            // already clears the container's own measured inset at the
+            // aspect -- past the 5% band Ui.Container refuses. Nudged to
+            // 1500x1000 (aspect 1.5, which was 0.7% off the spliced
+            // delivery's 1.49 and is EXACT against the regenerated kit)
+            // rather than narrowed to 1230x820: every existing child (three
+            // cards at a CardWidth + CardGap pitch, the title, the descend
+            // button) clears the container's own measured inset at the
             // TALLER box with room to spare -- the card row's outer edge
-            // reaches only 610 against a 697.5 content bound, and Descend's
+            // reaches 557.5 against a 697.5 content bound, and Descend's
             // bottom edge reaches only -382 against a -455 bound -- so nudging
             // height moves fewer things than narrowing width and re-fitting
             // three cards plus their gaps would have.
@@ -206,11 +213,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
                 .AsDecor();
 
-            // 230, DOWN FROM 340: the card narrowed from 380 to 270 to clear
-            // the Violet 3:4 container's own aspect (see CardWidth's own
-            // comment), and the container's measured 3:4 inset (6.5% each
-            // side of 270 = 17.55px) caps content at a 234.9px content
-            // width -- 230 clears that with 5px to spare on each side.
+            // 230, DOWN FROM 340: the card was narrowed from 380 to clear the
+            // Violet 3:4 container's own aspect (see CardWidth's own comment)
+            // and 230 was what the 270-wide version's 234.9px content width
+            // left. The card is 345 wide now, so the container's 6.9%-a-side
+            // inset leaves 297.4 -- 230 has 33px a side rather than 5, which
+            // is slack it does not have to spend.
             var name = Ui.Label($"DraftCard{index}Name", UiString.Runtime, new UiVec(230f, 60f), 24,
                     "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
@@ -223,14 +231,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Below the rarity line, in the gap the reward card's shorter card
             // doesn't have: rarity's box bottoms out at RarityY - 15, so this
-            // starts 8px under that. Pulled up 10px from the pre-container
-            // position (- 38 -> - 28): the Violet 3:4 container's own bottom
-            // inset (4% of 460 = 18.4px content bound) now trims 7.5px this
-            // box used to have to spend -- shrinking the card's own edge, not
-            // this label -- so the label moves up to clear it with ~3.6px to
-            // spare rather than escaping the frame's own painted border.
-            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(230f, 76f), 14,
-                    "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 28f))
+            // starts 8px under that.
+            //
+            // 290x58, WAS 230x76 AND PULLED 10px UP INTO THE RARITY LINE. The
+            // 2026-09-07 repin took the container's bottom inset from 0.04 to
+            // 0.055 (a 204.7px content bound on a 460-tall card, down from
+            // 211.6), which the 76-tall box could no longer clear even with
+            // the pull-up -- it hung 2.6px past. The card is also 345 wide now
+            // instead of 270, so the trade is straightforward: give the line
+            // 60px more width and take 18px of height back, which fits more
+            // characters per line than the height paid for. At 58 tall it
+            // sits exactly 8px under the rarity line with no pull-up at all
+            // and clears the content bound by 4.7px.
+            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(290f, 58f), 14,
+                    "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 29f))
                 .AsDecor();
 
             // THE FRAME, nested inside the clickable button rather than

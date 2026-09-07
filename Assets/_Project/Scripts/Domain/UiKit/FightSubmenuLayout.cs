@@ -170,31 +170,46 @@ namespace PrincesPalace.Domain.UiKit
         // UNCHANGED by wrapping it in themed art -- nothing about RowY,
         // ScrollRange or ThumbHeight above had to move, because the frame is
         // built AROUND this box in BuildSubmenuFrame rather than replacing its
-        // arithmetic. 0.632 misses the kit's measured 3:4 aspect (0.588) by
-        // 7.5%, past Ui.Container's 5% band, so the frame is WIDER than the
-        // inner box by the kit's own measured inset (6.5% a side) -- widened so
-        // ContainerWidth is EXACTLY what the frame's own left+right inset
-        // leaves once its border is subtracted (316 = FrameWidth * (1 - .13)),
-        // which is what keeps the inner box's horizontal centre equal to the
-        // frame's own with no separate x correction.
+        // arithmetic. 0.632 misses the kit's 3:4 aspect by more than
+        // Ui.Container's 5% band either way it has ever been measured, so the
+        // frame has to be bigger than the inner box on one axis and the kit's
+        // own content inset is what says by how much.
         //
-        // Tall enough (617.72) for that wider frame to still hit 0.588 exactly.
-        // The inner box's own vertical need (500 of the 565.21 the frame's
-        // 4.5%/4% top/bottom inset leaves) uses 88% of it: BuildSubmenuFrame
-        // reparents the unchanged viewport/track/thumb/BACK under this inset
-        // instead of a bare Panel at the old ContainerCentreY -- and because
-        // every one of their own Y's is already authored AS AN OFFSET FROM
-        // that centre (ViewportOffsetInContainer, BackRowY - ContainerCentreY),
+        // HEIGHT-BOUND SINCE THE 2026-09-07 KIT REPIN, where it used to be
+        // width-bound. While the 3:4 art measured 0.588, widening the inner
+        // box to the frame's left/right inset (FrameWidth = 316 / (1 - .13) =
+        // 363.22) gave a frame 617.72 tall -- far more vertical room than the
+        // 500-tall inner box needed. At a true 0.75 that same 363.22-wide
+        // frame is only 484 tall, which the inner box does not fit inside at
+        // all. So the binding constraint flipped: the frame's height is what
+        // the inner box's own 500 needs once the top/bottom inset is put back
+        // (500 / (1 - .052 - .055) = 559.9), and the width follows from the
+        // aspect (419.9).
+        //
+        // The inner box is CENTRED in that width rather than exactly filling
+        // it -- 419.9 * (1 - .138) = 361.9 of content box against 316 of
+        // inner box, so ~23px of slack a side. That is fine where the old
+        // exact fit was necessary: SubmenuX is back-solved from ContainerX
+        // through ContainerWidth (see FightScreen.SubmenuX), so the rows,
+        // scrollbar and BACK stay centred on the frame's own centre whatever
+        // the slack is; the exact fit was tightness, not a requirement.
+        //
+        // BuildSubmenuFrame reparents the unchanged viewport/track/thumb/BACK
+        // under this inset instead of a bare Panel at the old
+        // ContainerCentreY -- and because every one of their own Y's is
+        // already authored AS AN OFFSET FROM that centre
+        // (ViewportOffsetInContainer, BackRowY - ContainerCentreY),
         // reparenting them under a DIFFERENT centre (FrameContentCentreY,
-        // below) recentres the whole 500-tall block inside the taller frame
+        // below) recentres the whole 500-tall block inside the frame
         // automatically -- no shift added anywhere in the screen.
         public static readonly ContentInsetFrac FrameInset =
             Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
 
-        public static float FrameWidth => ContainerWidth / (1f - FrameInset.Left - FrameInset.Right);
-
         public static float FrameHeight =>
-            Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, FrameWidth).Y;
+            ContainerHeight / (1f - FrameInset.Top - FrameInset.Bottom);
+
+        public static float FrameWidth =>
+            Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, FrameHeight).X;
 
         // BOTTOM-ANCHORED AT THE FRAME'S OWN VISIBLE EDGE now, not its rect
         // edge -- this is what keeps FightScreenTests.TheSkillPanelEndsOnThe

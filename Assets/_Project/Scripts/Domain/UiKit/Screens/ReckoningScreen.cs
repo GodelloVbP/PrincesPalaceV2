@@ -382,11 +382,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // GOLD, 3:2 KIT CONTAINER -- not the bespoke reckoning_frame.png
             // painting this replaces. The reward container per the plan: this
-            // is the screen paying out. 1344x896 (aspect 1.5) is 0.7% off the
-            // kit's measured 3:2 aspect (1.49, see ContainerArt.
-            // ContainerAspect3x2) -- comfortably inside the 5% band, so the
-            // panel's own numbers (already chosen to match the OLD frame's
-            // 1536x1024 art) needed no change at all.
+            // is the screen paying out. 1344x896 is aspect 1.5, which is the
+            // kit's 3:2 aspect EXACTLY since the 2026-09-07 repin (it was
+            // 0.7% off the spliced delivery's 1.49). The panel's own numbers
+            // were already chosen to match the OLD frame's 1536x1024 art --
+            // the same 3:2 the regenerated kit is now cut at -- so they have
+            // needed no change through either delivery.
             //
             // ContentHalfWidth/ContentTop/ContentBottom below still gate
             // NothingSitsOnThePaintedBorder -- they stay put deliberately,
