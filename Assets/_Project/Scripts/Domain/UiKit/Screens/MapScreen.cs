@@ -199,7 +199,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // painted tree IS their plate (button.SpriteKey = TreeKey below),
             // so a theme's plate would replace the bespoke art rather than
             // dress a bare frame.
-            var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, new UiVec(240f, 60f), 16,
+            // 240x60 was 4:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var abandonSize = Ui.PlateNominalSizeFor(240f, 60f);
+            var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, abandonSize, 16,
                     Place.At(-800f, 452f))
                 .Themed(ButtonTheme.Silver);
 

@@ -35,7 +35,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // disagree with itself. See ExitsLayout.HoldWidth for the identical
         // reason that constant is public.
         public const float ResetHoldWidth = 200f;
-        public const float ResetHoldHeight = 60f;
+
+        // Was a 60f const (200x60 = 3.333:1, 11.1% off the Legacy plate's
+        // true 3:1 -- ThemedButtonAspectLintTests). static readonly, not
+        // const, because Ui.PlateNominalSizeFor is not a compile-time
+        // constant -- ResetProgressController and MainMenuScreenTests both
+        // read this same field, so the two stay unable to disagree the same
+        // way the const did.
+        public static readonly float ResetHoldHeight = Ui.PlateNominalSizeFor(ResetHoldWidth, 60f).Y;
 
         public UiNode Root;
 
@@ -90,6 +97,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // so the two screens read as one vocabulary rather than two.
         public const float CardWidth = 700f;
         public const float CardHeight = 92f;
+
+        // The CHOOSE list's own card height, taller than CardHeight.
+        // 700x92 was 72% off the Row6x1 plate's true 6:1 -- the choose-list
+        // card wears a ThemedPlate (SaveSlotController drives its filled/
+        // empty state through ThemedButtonState.SetMenuState, so it cannot
+        // go chromeless the way DebugMenuScreen/GlossaryScreen's rows did),
+        // and the honest nominal height for 700 wide is 116.7 -- but eight
+        // of those (TheMenuAuditsCleanAtOtherSlotCounts, a roster larger
+        // than the shipped SaveSystem.SlotCount=5 the screen's own
+        // arithmetic still has to hold for) do not fit a 1080-tall screen
+        // even with SaveSlotColumn's spacing trimmed. 112 is the shortest
+        // height inside Ui.ContainerAspectTolerance's 5% band (4.2% off, an
+        // 111.1-122.8 window) rather than the full nominal, so as little
+        // height as the lint allows goes to the roster that does not ship.
+        // Manage Saves' rows stay Panels at plain CardHeight -- they carry
+        // no plate, so the lint has no opinion on them.
+        private const float ChooseCardHeight = 112f;
 
         // One slot's card content: the number badge, its two lines of text,
         // the gold figure (Choose only -- Gold.IsValid is false on a Manage
@@ -292,9 +316,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Themed(ButtonTheme.Gold);
             screen.ContinueButton = continueButton;
 
-            var play = Ui.Button("PlayButton", UiStrings.Play, new UiVec(260f, 60f), 24)
+            // 260x60 was 4.333:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var playExitSize = Ui.PlateNominalSizeFor(260f, 60f);
+            var play = Ui.Button("PlayButton", UiStrings.Play, playExitSize, 24)
                 .Themed(ButtonTheme.Gold);
-            var exit = Ui.Button("ExitButton", UiStrings.Exit, new UiVec(260f, 60f), 24)
+            var exit = Ui.Button("ExitButton", UiStrings.Exit, playExitSize, 24)
                 .Themed(ButtonTheme.Silver);
             screen.PlayButton = play;
             screen.ExitButton = exit;
@@ -327,7 +354,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // stretch" tradeoff RespecButton already established
                 // (ButtonPlateArt's own header, 2ff2e50).
                 var button = Ui.Button($"Slot{i}Button", UiString.Runtime,
-                        new UiVec(CardWidth, CardHeight), 20)
+                        new UiVec(CardWidth, ChooseCardHeight), 20)
                     .ThemedPlate(ButtonTheme.Gold);
                 screen.SlotButtons.Add(button);
                 var card = AddCardContent(button, $"Slot{i}", showGold: true, includeWash: false);
@@ -336,9 +363,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slotChildren.Add(button);
             }
 
-            var manageSaves = Ui.Button("ManageSavesButton", UiStrings.ManageSaves, new UiVec(200f, 50f), 18)
+            // 200x50 was 4:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var footerButtonSize = Ui.PlateNominalSizeFor(200f, 50f);
+            var manageSaves = Ui.Button("ManageSavesButton", UiStrings.ManageSaves, footerButtonSize, 18)
                 .Themed(ButtonTheme.Silver);
-            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, new UiVec(200f, 50f), 18)
+            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, footerButtonSize, 18)
                 .Themed(ButtonTheme.Silver);
             screen.ManageSavesButton = manageSaves;
             screen.CloseSaveSlotButton = cancel;
@@ -348,8 +378,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             slotChildren.Add(Ui.Row("SaveSlotFooter", Place.Flow, spacing: 24f, UiAlign.Centre,
                 manageSaves, cancel));
 
+            // 10, down from 16: Slot{i}Button grew from 92 to 112 tall (see
+            // its own comment -- 700x92 was 72% off the Row6x1 plate's true
+            // 6:1, ThemedButtonAspectLintTests), and at the roster size
+            // TheMenuAuditsCleanAtOtherSlotCounts(8) checks (a roster the
+            // game does not currently field, but the screen's own arithmetic
+            // has to hold for), the column no longer fit the 1080-tall
+            // screen at the old spacing.
             var saveSlotModal = Ui.Modal("SaveSlotPanel", "#000000D9",
-                Ui.Column("SaveSlotColumn", Place.At(0f, 0f), spacing: 16f, UiAlign.Centre, slotChildren))
+                Ui.Column("SaveSlotColumn", Place.At(0f, 0f), spacing: 10f, UiAlign.Centre, slotChildren))
                 .Inactive();
             screen.SaveSlotPanel = saveSlotModal;
 
@@ -454,7 +491,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var confirmYes = holdButton;
 
-            var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel, new UiVec(200f, 60f), 20)
+            // Matches ResetConfirmYesButton's own resized height (both were
+            // 200x60, 11.1% off Legacy's true 3:1) so the hold and its
+            // cancel sibling stay the same height in their Row.
+            var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel,
+                    new UiVec(ResetHoldWidth, ResetHoldHeight), 20)
                 .Themed(ButtonTheme.Silver);
             var confirmLabel = Ui.Label("ResetConfirmLabel", UiStrings.ConfirmDelete, new UiVec(760f, 50f), 22)
                 .Styled(TypographyRole.Body);

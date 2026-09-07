@@ -46,11 +46,15 @@ namespace PrincesPalace.Domain.Tests
         {
             // "DebugMenuScreen: Silver only" -- no recommended action, no
             // danger, in a tool rather than the fiction. Balance-bot,
-            // 2026-09-02: the filter tabs and the item rows moved off the
-            // gold-fallback plate onto Silver too (rows via ThemedPlate,
-            // caption-preserving, since a row's caption is its own child --
-            // see BuildRow's own comment); only the icon pager arrows stay
-            // NoChrome.
+            // 2026-09-02: the filter tabs moved off the gold-fallback plate
+            // onto Silver too. 2026-09-07 (ThemedButtonAspectLintTests): the
+            // item rows moved OFF a plate entirely -- 900x44 is 20.5:1, a
+            // ratio no plate shape lands within the container kit's own
+            // tolerance of, and 900x150 (Row6x1's honest nominal for that
+            // width) only fits 6 of RowsPerPage on screen. Rows are now
+            // chromeless with a hairline rule, same shape as
+            // CharacterDossierScreen.BuildNavRow; the icon pager arrows were
+            // already NoChrome.
             var screen = DebugMenuScreen.Build();
 
             Assert.AreEqual(ButtonTheme.Silver, screen.GiveGoldButton.Node.Theme);
@@ -58,8 +62,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(ButtonTheme.Silver, screen.GiveOneEmberButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.FilterButtons[0].Node.Theme);
-            Assert.AreEqual(ButtonTheme.Silver, screen.RowButtons[0].Node.Theme);
-            Assert.IsTrue(screen.RowButtons[0].Node.CaptionPreserving);
+            Assert.IsTrue(screen.RowButtons[0].Node.Chromeless, "20.5:1 fits no plate shape -- hairline row instead");
             Assert.IsTrue(screen.PrevPageButton.Node.Chromeless, "an icon arrow, not a plate button");
             Assert.IsTrue(screen.NextPageButton.Node.Chromeless, "an icon arrow, not a plate button");
         }

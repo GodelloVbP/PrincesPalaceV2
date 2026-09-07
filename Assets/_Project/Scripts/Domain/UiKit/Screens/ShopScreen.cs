@@ -466,29 +466,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(inner, PlateHeight), GoldPlateFill, PanelRim, new[] { gold }));
 
             // Themed(Gold)/Themed(Silver), owner's HQ-kit instruction
-            // (2026-09-07). NOT A CLEAN FIT: inner is 640 here, so Buy/Pack
-            // (640x62, aspect 10.3) and Leave (640x76, aspect 8.4) both sit
-            // far past even the widest plate shape (Row6x1, aspect 6.0) --
-            // unlike Ui.Container, ButtonPlateArt.ShapeFor has no aspect
-            // tolerance that refuses a bad fit, so these three will render
-            // with the plate texture visibly stretched horizontally /
-            // squashed vertically. Converted at the owner's specified theme
-            // and the panel's existing box size regardless, since resizing
-            // the actions column was not part of this instruction -- flagged
-            // in the conversion report rather than resolved here.
-            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, new UiVec(inner, PlateHeight), 28,
+            // (2026-09-07). WAS NOT A CLEAN FIT: inner is 640 here, so Buy/
+            // Pack (640x62, 10.3:1) and Leave (640x76, 8.4:1) sat far past
+            // even the widest plate shape (Row6x1, 6:1) -- ThemedButtonAspect
+            // LintTests. Unlike a container, a themed button has no room to
+            // grow into here: PlateHeight/LeaveHeight/ActionGap already spend
+            // the panel's whole ContentHeight (goldY down to leaveY leaves
+            // zero slack), so the only axis left is width -- narrowed to each
+            // button's own Row6x1 nominal for its (unchanged) height, rather
+            // than the panel's full inner width. Centred rather than
+            // stretched, so the visible dead space either side reads as a
+            // deliberately narrower CTA over the gold total's own full-width
+            // bar (unaffected -- Ui.OutlineBox is a flat fill+rim, not plate
+            // art, so it never stretched) rather than as a mis-measured box.
+            // WORTH THE OWNER'S EYES: three actions each about 40% narrower
+            // than the column that holds them is a real proportion change,
+            // not just an aspect fix -- flagged for the capture review this
+            // pass ends with.
+            var buySize = new UiVec(PlateHeight * Ui.PlateAspect(Ui.PlateShapeFor(inner, PlateHeight)), PlateHeight);
+            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, buySize, 28,
                     Place.At(0f, buyY))
                 .Themed(ButtonTheme.Gold);
             BuyButton = buy;
             parts.Add(buy);
 
-            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, new UiVec(inner, PlateHeight), 28,
+            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, buySize, 28,
                     Place.At(0f, packY))
                 .Themed(ButtonTheme.Silver);
             PackButton = pack;
             parts.Add(pack);
 
-            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, new UiVec(inner, LeaveHeight), 32,
+            var leaveSize = new UiVec(LeaveHeight * Ui.PlateAspect(Ui.PlateShapeFor(inner, LeaveHeight)), LeaveHeight);
+            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, leaveSize, 32,
                     Place.At(0f, leaveY))
                 .Themed(ButtonTheme.Silver);
             LeaveButton = leave;
@@ -605,9 +614,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(ModalWidth, 1f), Place.At(0f, 344f))
                 .AsDecor());
 
-            // Themed(Silver): 160x48 (3.33) lands almost exactly on the
-            // Legacy/ThreeByOne plate (3.0).
-            var close = Ui.Button("ShopPackClose", UiStrings.Close, new UiVec(160f, 48f), 26,
+            // Was "160x48 (3.33) lands almost exactly on the Legacy/
+            // ThreeByOne plate (3.0)" -- true of ShapeFor's pick, but 11.1%
+            // off that plate's true 3:1 now it is at exact nominal aspect
+            // (ThemedButtonAspectLintTests). Height up to nominal, width
+            // kept; the modal is 860 tall (half 430) and the grown top edge
+            // (406.65) still clears it.
+            var closeSize = Ui.PlateNominalSizeFor(160f, 48f);
+            var close = Ui.Button("ShopPackClose", UiStrings.Close, closeSize, 26,
                     Place.At(460f, 380f))
                 .Themed(ButtonTheme.Silver);
             PackCloseButton = close;
@@ -712,8 +726,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the wider of the two captions. Sits flush to the row's right edge
             // (405 + 75 = 480, 10px in from RowWidth / 2); SellOne sits to its
             // left with a 10px gap. 150x40 (3.75) still resolves to the
-            // Legacy/ThreeByOne plate (3.0), same as SellOne's 120x40 (3.0).
-            var sellAllSize = new UiVec(150f, 40f);
+            // Legacy/ThreeByOne plate (3.0), same as SellOne's 120x40 (3.0) --
+            // but unlike SellOne, 150x40 is 25% off Legacy's true 3:1
+            // (ThemedButtonAspectLintTests) now that the plate is at exact
+            // nominal aspect. Height up to nominal (150x50), width kept so
+            // the text-fit and the row's own edge alignment survive; the
+            // 68-tall RowHeightPack has plenty of room for a 50-tall child.
+            var sellAllSize = Ui.PlateNominalSizeFor(150f, 40f);
             var sellAll = Ui.Button($"ShopPackRow{index}SellAll", UiString.Runtime, sellAllSize, 20,
                     Place.At(405f, 0f))
                 .ThemedPlate(ButtonTheme.Silver)

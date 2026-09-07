@@ -27,21 +27,27 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void CloseWearsSilverAndThePooledRowsWearThemedPlates()
+        public void CloseWearsSilverAndTheRailWearsAThemedPlate()
         {
-            // Balance-bot, 2026-09-02: the rail and the row list moved off
-            // the gold-fallback plate onto ThemedPlate (caption-preserving,
-            // so the pooled marker/label/count children are untouched) --
-            // see BuildCategory/BuildRow's own comments for why plain
-            // Themed() does not fit a row that already declares its own
-            // caption children.
+            // Balance-bot, 2026-09-02: the rail moved off the gold-fallback
+            // plate onto ThemedPlate (caption-preserving, so the pooled
+            // marker/label/count children are untouched) -- see
+            // BuildCategory's own comment for why plain Themed() does not
+            // fit a row that already declares its own caption children.
+            //
+            // 2026-09-07 (ThemedButtonAspectLintTests): the row LIST moved
+            // OFF a plate entirely -- 500x60 is 8.3:1, a ratio no plate
+            // shape lands within the container kit's own tolerance of, and
+            // the honest resize (500x83.3 on Row6x1) only fits 8 of the 10
+            // rows GlossaryCatalog.RowsPerPage pages by. Rows are now
+            // chromeless with a hairline rule, same shape as
+            // DebugMenuScreen.BuildRow / CharacterDossierScreen.BuildNavRow.
             var screen = GlossaryScreen.Build();
 
             Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Blue, screen.CategoryButtons[0].Node.Theme);
             Assert.IsTrue(screen.CategoryButtons[0].Node.CaptionPreserving);
-            Assert.AreEqual(ButtonTheme.Silver, screen.Rows[0].Node.Theme);
-            Assert.IsTrue(screen.Rows[0].Node.CaptionPreserving);
+            Assert.IsTrue(screen.Rows[0].Node.Chromeless, "8.3:1 fits no plate shape -- hairline row instead");
         }
 
         [Test]

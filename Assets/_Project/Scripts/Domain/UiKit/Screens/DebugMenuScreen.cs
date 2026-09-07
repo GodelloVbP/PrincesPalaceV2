@@ -90,7 +90,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // Evenly spaced about centre: four buttons 210 wide on a 220
                 // pitch, so the row is symmetric however many there are.
                 float x = (i - (filters.Length - 1) * 0.5f) * 220f;
-                var filter = Ui.Button($"DebugFilter{i}", filters[i], new UiVec(210f, 48f), 18,
+                // 210x48 was 4.375:1 against the plate's true FiveByOne 5:1 --
+                // ThemedButtonAspectLintTests. Height down to the plate's own
+                // nominal (Ui.PlateNominalSizeFor keeps the authored width),
+                // width untouched so the 220 pitch between filters stays.
+                var filterSize = Ui.PlateNominalSizeFor(210f, 48f);
+                var filter = Ui.Button($"DebugFilter{i}", filters[i], filterSize, 18,
                         Place.At(x, 276f))
                     .Themed(ButtonTheme.Silver);
 
@@ -99,17 +104,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             // --- the item list ------------------------------------------------------
-            // SILVER, CAPTION-PRESERVING PLATE: a pooled, pinned-width
-            // (900x44) composite row (its own Name child, not the button's
-            // generated caption), same shape as GlossaryScreen's rail/list
-            // rows -- ThemedPlate rather than Themed() for the same reason.
+            // CHROMELESS, HAIRLINE ROW: was a ThemedPlate at 900x44 (20.5:1),
+            // a ratio no plate shape gets within the container kit's own
+            // tolerance of -- ThemedButtonAspectLintTests. 900x150 (Row6x1's
+            // nominal for this width) would only fit 6 of RowsPerPage on
+            // screen, so this follows CharacterDossierScreen.BuildNavRow's
+            // precedent instead: no plate at all, a single hairline rule
+            // under the row, hover/press from the default hover-scale.
             for (int i = 0; i < DebugMenuCatalog.RowsPerPage; i++)
             {
                 float y = ListTop - i * (RowHeight + RowSpacing);
 
-                var row = Ui.Button($"DebugRow{i}", UiString.Runtime, new UiVec(RowWidth, RowHeight), 16,
+                var row = Ui.Button($"DebugRow{i}", UiString.Runtime, new UiVec(RowWidth, RowHeight), 1,
                         Place.At(0f, y))
-                    .ThemedPlate(ButtonTheme.Silver);
+                    .NoChrome()
+                    .Hovers(1.01f);
+
+                row.Children.Add(Ui.Solid($"DebugRow{i}Rule", "#4A3E5C", new UiVec(RowWidth, 1f),
+                    Place.At(0f, -RowHeight * 0.5f + 0.5f)).AsDecor());
 
                 // The label is a child so it can be left-aligned inside a
                 // centred button without the button's own text fighting it.
@@ -120,7 +132,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(RowWidth - 40f, RowHeight - 8f), 16, "#EDE6FF", Place.At(0f, 0f))
                     .AsDecor();
                 row.Children.Add(label);
-                row.LayerCaptionWithVisuals(label);
 
                 screen.RowButtons.Add(row);
                 screen.RowLabels.Add(label);
@@ -143,7 +154,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             chrome.Add(pager.Prev);
             chrome.Add(pager.Next);
 
-            var close = Ui.Button("DebugCloseButton", UiStrings.Close, new UiVec(220f, 56f), 18,
+            // 220x56 was 3.929:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var closeSize = Ui.PlateNominalSizeFor(220f, 56f);
+            var close = Ui.Button("DebugCloseButton", UiStrings.Close, closeSize, 18,
                     Place.At(0f, -470f))
                 .Themed(ButtonTheme.Silver);
             screen.CloseButton = close;

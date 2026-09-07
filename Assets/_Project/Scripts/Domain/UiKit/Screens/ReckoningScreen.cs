@@ -349,8 +349,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // taper point and now sits behind a rectangular plate that
             // brings its own built-in glow -- worth a follow-up look, not
             // resolved here.
+            // 300x80 was 3.75:1 against the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal (matching
+            // FightScreen.BuildContinueButton's own resize, so the two
+            // "recommended next action" buttons stay the same control).
+            // The old Y (-272) put the new bottom edge past ContentBottom
+            // (-317.184), so the button moves up just enough to clear it
+            // again -- from -312 (old bottom) to -317.184 exactly, a 5.2px
+            // shift the glow behind it (tuned to +-a few px of slop already)
+            // does not need to follow.
+            var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
+            var continueY = ContentBottom + continueSize.Y * 0.5f + 1f;
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
-                    new UiVec(300f, 80f), 20, Place.At(0f, -272f))
+                    continueSize, 20, Place.At(0f, continueY))
                 .Themed(ButtonTheme.Gold);
 
             // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
@@ -510,7 +521,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // reason to exist is a button whose caption isn't just one
             // centred string (see FightScreen's verb rows for the same
             // shape).
-            var tabSize = new UiVec(230f, 52f);
+            // 230x52 was 4.423:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var tabSize = Ui.PlateNominalSizeFor(230f, 52f);
             var caption = Ui.Label("ReckoningTab" + index + "Caption", TabStrings[index], tabSize, 19,
                     "#FFFFFFFF", Place.Stretch())
                 .AsDecor()

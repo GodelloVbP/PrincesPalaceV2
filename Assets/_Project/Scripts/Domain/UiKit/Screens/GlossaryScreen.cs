@@ -34,7 +34,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const float RailX = -700f;
         private const float RailTop = 300f;
-        private const float RailPitch = 76f;
+
+        // 84, up from 76: BuildCategory's plate grew 66 -> 80 tall (see its
+        // own comment -- 240x66 was 21.2% off the Legacy plate's true 3:1,
+        // ThemedButtonAspectLintTests) and needs at least that much pitch to
+        // not overlap its neighbour. Seven categories at 84 span RailTop
+        // down to RailTop - 6*84 = -204, comfortably inside the 2:1 frame's
+        // +-420 content half-height.
+        private const float RailPitch = 84f;
 
         private const float ListX = -180f;
         private const float ListTop = 290f;
@@ -161,8 +168,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 icon, detailName, detailMeta, detailBody, lockedBy);
             inside.Add(detailPlate);
 
-            var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, new UiVec(200f, 54f), 16,
-                    Place.At(740f, 390f))
+            // 200x54 was 3.704:1 against the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
+            // the extra height comes off the TOP (button re-centred so its
+            // old top edge at y=417 is unchanged), because it grew toward
+            // the frame's own top edge and 390 + new-half overflowed it by
+            // 2.8px at every aspect -- UiAudit ChildContainment.
+            const float CloseOldTopEdge = 390f + 54f * 0.5f;
+            var closeSize = Ui.PlateNominalSizeFor(200f, 54f);
+            var closeY = CloseOldTopEdge - closeSize.Y * 0.5f;
+            var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, closeSize, 16,
+                    Place.At(740f, closeY))
                 .Themed(ButtonTheme.Silver)
                 // Floats over the detail plate's top-right corner by design
                 // (declared after it, so it draws on top) -- the flat
@@ -220,8 +236,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     "#7E6E9E", Place.At(-14f, -16f))
                 .AsDecor();
 
+            // 240x66 was 21.2% off the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal (240x80),
+            // width kept; RailPitch grew to match (its own comment says how
+            // much room that leaves).
+            var categorySize = Ui.PlateNominalSizeFor(240f, 66f);
             var button = Ui.Button($"GlossaryCategory{index}", UiString.Runtime,
-                    new UiVec(240f, 66f), 12, Place.At(RailX, y))
+                    categorySize, 12, Place.At(RailX, y))
                 .ThemedPlate(ButtonTheme.Blue);
 
             button.Children.Add(marker);
@@ -236,8 +257,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // SILVER, CAPTION-PRESERVING PLATE -- same reason as BuildCategory
-        // above.
+        // CHROMELESS, HAIRLINE ROW -- was a Silver ThemedPlate at 500x60
+        // (8.3:1), a ratio no plate shape lands within the container kit's
+        // own tolerance of (ThemedButtonAspectLintTests). The honest resize
+        // (500x83.3 on Row6x1) only fits 8 of GlossaryCatalog.RowsPerPage's
+        // 10 rows in the list's vertical span between the title and the
+        // pager, so this follows CharacterDossierScreen.BuildNavRow's
+        // precedent instead, same as DebugMenuScreen.BuildRow's own row:
+        // no plate, a hairline rule under the row.
         private UiNode BuildRow(int index)
         {
             float y = ListTop - index * ListPitch;
@@ -254,14 +281,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     "#7E6E9E", Place.At(-10f, -14f))
                 .AsDecor();
 
-            var row = Ui.Button($"GlossaryRow{index}", UiString.Runtime,
-                    new UiVec(500f, 60f), 12, Place.At(ListX, y))
-                .ThemedPlate(ButtonTheme.Silver);
+            var rule = Ui.Solid($"GlossaryRow{index}Rule", "#4A3E5C", new UiVec(500f, 1f),
+                    Place.At(0f, -30f + 0.5f))
+                .AsDecor();
 
+            var row = Ui.Button($"GlossaryRow{index}", UiString.Runtime,
+                    new UiVec(500f, 60f), 1, Place.At(ListX, y))
+                .NoChrome()
+                .Hovers(1.01f);
+
+            row.Children.Add(rule);
             row.Children.Add(marker);
             row.Children.Add(name);
             row.Children.Add(meta);
-            row.LayerCaptionWithVisuals(marker, name, meta);
 
             Rows.Add(row);
             RowMarkers.Add(marker);

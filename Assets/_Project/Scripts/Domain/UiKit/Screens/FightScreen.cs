@@ -1791,7 +1791,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // next-action button (see CLAUDE.md's colour reservation) rather
             // than a combat choice - it only ever appears once a beat has
             // resolved and there is exactly one thing to do next.
-            var button = Ui.Button("ContinueButton", UiStrings.Continue, new UiVec(300f, 80f), 20,
+            //
+            // 300x80 was 3.75:1 against the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
+            // the new bottom edge (-470) still clears CommandBottom (-486),
+            // so the Y stays put.
+            var continueSize = Ui.PlateNominalSizeFor(300f, 80f);
+            var button = Ui.Button("ContinueButton", UiStrings.Continue, continueSize, 20,
                     Place.At(-286f, -420f))
                 .Themed(ButtonTheme.Gold)
                 .Inactive()
@@ -1925,8 +1931,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // crossed by 58px. The hint is the wider of the two because it is
             // the one that grows -- "SHOWING 9 OF 12" when a kit outruns the
             // window.
+            //
+            // 86, DOWN FROM 110 (FightSubmenuLayout.RowWidth's own comment:
+            // 282 -> 240, ThemedButtonAspectLintTests). The hint keeps its
+            // 150 -- it carries the longer, growing text ("SHOWING 9 OF 12")
+            // -- so the trim comes off the short "S K I L L S" title instead,
+            // same asymmetric split as the previous resize. 86 + 150 = 236,
+            // 4px inside the row's new 240 (was 22px at the old 282).
             float headerY = FightSubmenuLayout.HeaderY(count);
-            var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(110f, 20f), 11,
+            var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(86f, 20f), 11,
                 FightHudPalette.GoldLight,
                 Place.At(SubmenuX - SubmenuRowW * 0.5f, headerY, new UiVec(0f, 0.5f)));
             var hint = Ui.Label("SubmenuHint", UiStrings.SubmenuHint, new UiVec(150f, 20f), 11,

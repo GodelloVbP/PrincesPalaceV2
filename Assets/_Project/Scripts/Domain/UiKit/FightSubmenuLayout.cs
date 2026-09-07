@@ -156,9 +156,22 @@ namespace PrincesPalace.Domain.UiKit
 
         // The row's own content width -- ONE COPY, because the art frame below
         // (built in FightScreen.BuildSubmenuFrame) has to size itself from the
-        // exact same number the rows are actually built at, not a second 282
-        // that could drift from it the way this file's own header warns about.
-        public const float RowWidth = 282f;
+        // exact same number the rows are actually built at, not a second
+        // number that could drift from it the way this file's own header
+        // warns about.
+        //
+        // 240, DOWN FROM 282: 282x40 was 7.05:1 against the Row6x1 plate's
+        // true 6:1 -- ThemedButtonAspectLintTests. Width down to the row's
+        // exact nominal for RowHeight (240 = 40 * 6), not RowHeight grown to
+        // 282's nominal (47), because FrameWidth/FrameHeight above are
+        // entirely a function of ContainerHeight -- RowWidth only feeds
+        // ContainerWidth, which the frame does not size itself from (see
+        // FrameWidth's own comment: "the inner box is CENTRED in that width
+        // rather than exactly filling it") -- so narrowing the rows costs
+        // nothing but slack inside the frame, where growing them taller
+        // would have re-run every RowsInView/PoolSize/scroll number this
+        // whole file derives from RowHeight.
+        public const float RowWidth = 240f;
 
         public static float ContainerWidth =>
             RowWidth + ContainerPad * 2f + ScrollbarGap + ScrollbarWidth;

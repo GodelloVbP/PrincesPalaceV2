@@ -113,7 +113,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.TacticalData);
             screen.CurrencyLabel = currency;
 
-            var mainMenu = Ui.Button("MainMenuButton", UiStrings.HubMainMenu, new UiVec(220f, 60f), 16,
+            // 220x60 was 3.667:1 against the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
+            // a corner button with nothing else nearby vertically, so the
+            // grow has room.
+            var mainMenuSize = Ui.PlateNominalSizeFor(220f, 60f);
+            var mainMenu = Ui.Button("MainMenuButton", UiStrings.HubMainMenu, mainMenuSize, 16,
                 Place.At(-830f, 480f))
                 .Themed(ButtonTheme.Silver);
             screen.MainMenuButton = mainMenu;

@@ -199,7 +199,13 @@ namespace PrincesPalace.Domain.UiKit
         public const float PanelRespecY = -459f;  // was -468, 9x16 container's bottom inset
 
         public const float PanelActionWidth = 320f;
-        public const float PanelActionHeight = 72f;
+
+        // Was 72f (320x72 = 4.444:1, 11.1% off the FiveByOne plate's true
+        // 5:1 -- ThemedButtonAspectLintTests). static readonly, not const,
+        // because Ui.PlateNominalSizeFor is not a compile-time constant.
+        // Shrinking 72 -> 64 only opens more clearance before PanelMeterY
+        // (-420), so nothing below it had to move.
+        public static readonly float PanelActionHeight = Ui.PlateNominalSizeFor(PanelActionWidth, 72f).Y;
 
         // ---- gate collars --------------------------------------------------------
         //

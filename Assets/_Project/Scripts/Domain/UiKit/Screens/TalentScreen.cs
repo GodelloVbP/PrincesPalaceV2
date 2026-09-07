@@ -193,7 +193,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.PrevPathButton = prevPath;
             screen.NextPathButton = nextPath;
 
-            var back = Ui.Button("TalentBackButton", UiStrings.TalentBack, new UiVec(190f, 52f), 15,
+            // 190x52 was 3.654:1 against the Legacy plate's true 3:1 --
+            // ThemedButtonAspectLintTests. Height up to nominal, width kept;
+            // a corner button with nothing else nearby vertically.
+            var backSize = Ui.PlateNominalSizeFor(190f, 52f);
+            var back = Ui.Button("TalentBackButton", UiStrings.TalentBack, backSize, 15,
                     Place.At(-UiFrames.Reference.X * 0.5f + 119f, UiFrames.Reference.Y * 0.5f - 50f))
                 .Themed(ButtonTheme.Silver);
             screen.BackButton = back;
@@ -515,11 +519,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Cancel/Confirm, not two Golds: at most one gold button per
             // screen state, so the confirmation gets it and backing out reads
             // as ordinary navigation, same as Back everywhere else.
+            // 260x64 was 4.063:1 against the FiveByOne plate's true 5:1 --
+            // ThemedButtonAspectLintTests. Height down to nominal, width kept.
+            var respecButtonSize = Ui.PlateNominalSizeFor(260f, 64f);
             var cancel = Ui.Button("RespecCancelButton", UiStrings.TalentRespecCancel,
-                    new UiVec(260f, 64f), 18, Place.At(-150f, -104f))
+                    respecButtonSize, 18, Place.At(-150f, -104f))
                 .Themed(ButtonTheme.Silver);
             var confirm = Ui.Button("RespecConfirmButton", UiStrings.TalentRespecConfirm,
-                    new UiVec(260f, 64f), 18, Place.At(150f, -104f))
+                    respecButtonSize, 18, Place.At(150f, -104f))
                 .Themed(ButtonTheme.Gold);
 
             RespecCancelButton = cancel;
