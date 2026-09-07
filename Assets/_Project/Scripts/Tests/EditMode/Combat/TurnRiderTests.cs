@@ -274,6 +274,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(AllMessages(session).Any(m => m.Contains("tramples") || m.Contains("Bloodlust")));
         }
 
+        // ---- whose kill it was -----------------------------------------------
+
+        [Test]
+        public void AMonstersKillDoesNotEarnThePlayerAnExtraTurn()
+        {
+            // _killedThisAction says "the action being resolved killed
+            // something", and SettleDeath raises it for EVERY credited death --
+            // the party's own included, since a monster's swing goes through
+            // the same DealDamage funnel. AdvanceAfterAction only clears it at
+            // the top of the NEXT player action, so a monster felling an ally
+            // during the enemy phase left the flag standing, and the player's
+            // next swing read a corpse it did not make as its own kill.
+            //
+            // Ally at rank 0 so the melee monster has exactly one target it can
+            // reach; the schedule then skips the corpse and hands the turn
+            // straight back to the hero, which is what makes the second swing
+            // the same actor's.
+            var ally = new CombatantState("Ally", true, 1, 0, 1, 1);
+            var hero = Hero();
+            GiveTrample(hero, 1);
+            var tank = Foe("Tank", 1000);
+
+            var encounter = new CombatEncounter(new[] { ally, hero }, new[] { tank });
+            var session = new FightSession(
+                encounter, new List<PlayerKit> { KitWith() }, null,
+                new SeededRandom(1)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            session.ExecuteAttack(tank);      // kills nothing; the monster replies
+            session.DrainBeats();
+
+            Assert.IsFalse(ally.IsAlive, "the monster was supposed to fell the front rank");
+            Assert.AreSame(hero, encounter.Current, "the schedule skips the corpse");
+
+            var round = Round(session, () => session.ExecuteAttack(tank));
+
+            Assert.IsFalse(MessagesIn(round).Any(m => m.Contains("tramples")),
+                "a swing that killed nothing collected on a kill the monster made");
+            Assert.GreaterOrEqual(EnemyTurnsIn(round), 1, "and the turn has to pass on");
+        }
+
         // ---- turn-start bookkeeping ------------------------------------------
 
         [Test]
