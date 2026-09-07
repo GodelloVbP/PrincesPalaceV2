@@ -499,19 +499,42 @@ namespace PrincesPalace.Domain.Combat.Session
         // regen has no such cover and would have fired once per fight, ever.
         private bool StepToNextTurn()
         {
-            if (_encounter.IsOver)
-            {
-                // A fight can end on a monster's swing or on a poison tick at
-                // turn start, and neither of those passes through the riders --
-                // so without this a defeat would never settle.
-                ResolveVictory();
-                ResolveOutcome();
-                return false;
-            }
+            // A fight can end on a monster's swing or on a poison tick at turn
+            // start, and neither of those passes through the riders -- so
+            // without this a defeat would never settle.
+            //
+            // ASKED ON BOTH EXITS, because the two endings this names arrive at
+            // opposite ends of the method and only the first was ever caught: a
+            // swing is already settled by the time the loop calls back in, but
+            // the turn start is the LAST thing that happens here, and the death
+            // it causes is exactly what makes this method return false and the
+            // loop stop. There is no next pass to catch it on.
+            //
+            // AdvanceAfterAction re-checks IsOver after the loop and covered it
+            // for any fight driven by a player command, which is why this held
+            // for so long. It does not cover the two callers that drive
+            // AutoResolveEnemyTurns themselves -- Begin, and
+            // FightController.RescueAStalledEnemyTurn, the path a spent second
+            // life leaves the fight sitting on. Both settled nothing: no payout,
+            // not even the zeroed one a loss owes, and no "The party falls."
+            //
+            // Both calls are idempotent (_victoryResolved, _payoutResolved), so
+            // asking twice costs a comparison.
+            if (SettleIfOver()) return false;
 
             _encounter.AdvanceTurn();
             GrantTurnStart();
-            return !_encounter.IsOver;
+            return !SettleIfOver();
+        }
+
+        // True when the fight is over, having settled it.
+        private bool SettleIfOver()
+        {
+            if (!_encounter.IsOver) return false;
+
+            ResolveVictory();
+            ResolveOutcome();
+            return true;
         }
 
         // Three independent reasons a turn is skipped outright rather than

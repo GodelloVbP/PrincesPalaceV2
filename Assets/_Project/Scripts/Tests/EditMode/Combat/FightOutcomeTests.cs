@@ -158,6 +158,49 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Lines(session).Any(m => m.Contains("The party falls")));
         }
 
+        // ---- a defeat that lands at a turn start ----------------------------------
+
+        [Test]
+        public void ADefeatAtATurnStartSettlesEvenWhenNothingElseIsWatching()
+        {
+            // StepToNextTurn (FightSession.Enemies.cs) says in writing that it
+            // is there because "a fight can end on a monster's swing or on a
+            // poison tick at turn start, and neither of those passes through
+            // the riders -- so without this a defeat would never settle". It
+            // only settles the first of those two: the guard sits at the TOP of
+            // the method, so a death caused by the GrantTurnStart at the BOTTOM
+            // is only ever caught on the next pass -- and there is no next pass,
+            // because that same death makes the method return false and break
+            // the loop.
+            //
+            // AdvanceAfterAction re-checks IsOver afterwards and covers it for a
+            // fight driven by a player command. Nothing covers the two callers
+            // that drive AutoResolveEnemyTurns on their own: Begin, and
+            // FightController.RescueAStalledEnemyTurn -- which is precisely the
+            // path a spent second life leaves the fight sitting on.
+            //
+            // Slower than the monster, so the opening belongs to the monster and
+            // the hero's own turn start is the next thing that happens; enough
+            // health to survive the swing, and poison that nothing survives.
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 5);
+            var foe = new CombatantState("Rat", false, 5000, 10, 8, 10);
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 999, 3);
+
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, null, null) },
+                new List<EnemyKit> { new EnemyKit(Source("rat", 20, 10), false) },
+                new SeededRandom(2), isEliteFight: false) { DamageVarianceRange = 0f };
+
+            session.Begin();
+
+            Assert.IsFalse(hero.IsAlive, "the poison tick was supposed to be the fatal one");
+            Assert.IsTrue(session.IsOver);
+            Assert.IsNotNull(session.Payout, "the fight ended and paid nothing at all, not even zero");
+            Assert.IsTrue(Lines(session).Any(m => m.Contains("The party falls")),
+                "the defeat was never announced");
+        }
+
         // ---- second life, level 90 of the reward track ----------------------------
         //
         // The whole mechanic is that the fight REFUSES TO END. There is no
