@@ -50,8 +50,13 @@ if (Test-Path $lock) {
     Remove-Item $lock -Force -ErrorAction SilentlyContinue
 }
 
-$results = Join-Path $env:TEMP "pp-gfx-results.xml"
-$log = Join-Path $env:TEMP "pp-gfx.log"
+# PER INVOCATION, for the reason test.ps1 states at its own $dotnetLog:
+# $env:TEMP is per user, so two sessions running different runner copies
+# shared these two names. Sharper here than a confusing printout -- the
+# results XML is what the verdict is PARSED from, and the delete just
+# below would take a concurrent run's results with it.
+$results = Join-Path $env:TEMP "pp-gfx-results-$PID.xml"
+$log = Join-Path $env:TEMP "pp-gfx-$PID.log"
 if (Test-Path $results) { Remove-Item $results }
 
 # Every path QUOTED, as run_tests_parallel.ps1 quotes its own. Start-Process

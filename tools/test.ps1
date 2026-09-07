@@ -407,7 +407,17 @@ Write-Host ""
 # VSTest's filter is substring-based, so ".<Class>." is the same anchoring
 # trick the Unity regex below uses, for the same reason.
 $dotnetJob = $null
-$dotnetLog = Join-Path $env:TEMP "domain-tests-run.log"
+# PER INVOCATION, not one fixed name. This was "domain-tests-run.log"
+# flat, and $env:TEMP is per USER -- so two sessions (WORKFLOW.md section 4
+# plans for exactly two) overwrote each other's transcript. The verdict
+# survived that, because it comes from the job's own exit code; two other
+# things did not. The summary line PRINTED was whichever run wrote last,
+# so a green slice could report a red one's "Failed! - Failed: 1" and send
+# the reader hunting a failure that was not theirs. Worse, $totalRun is
+# parsed out of that same line, and it is what the "No tests actually ran"
+# guard below tests -- a neighbouring run's count defeats the one check
+# that catches a typo'd filter reading as a pass.
+$dotnetLog = Join-Path $env:TEMP "domain-tests-run-$PID.log"
 if ($dotnetWanted) {
     $dotnetFilter = ($dotnetWanted | ForEach-Object { "FullyQualifiedName~.$_." }) -join "|"
     $solutionDir = Join-Path $PSScriptRoot "domain-tests"
