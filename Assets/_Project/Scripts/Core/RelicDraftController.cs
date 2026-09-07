@@ -26,18 +26,14 @@ namespace PrincesPalace
     // ONE OFFER OF THREE, ROUNDS RATHER THAN A WIDER OFFER -- not one wide
     // offer of N+2, even though there is currently only ever one round.
     //
-    // RelicPool.StartingRelicsPerDescent is flat at one: the reward track
-    // used to escalate it in steps up to level 60 (TrackReward.StartingRelics)
-    // and hand the whole catalogue at level 70 (ChosenStartingRelics), both
-    // retired in P1 of docs/PLAN_REWARD_TRACKS.md (section 3e2). The round
-    // machinery stays because nothing about it was specific to that grant:
-    // three separate choices of three is a better decision than one choice
-    // of six should a future reward escalate the count again; the card row
-    // is emitted at scene-build time from RelicPool.OfferCount and a
-    // runtime-variable width would mean emitting the maximum and hiding the
-    // surplus; and the round number falls out of run.relicIds.Count, which
-    // is persisted, so a reload mid-draft returns to the same round with the
-    // same cards.
+    // RelicPool.StartingRelicsPerDescent is flat at one, and nothing on the
+    // reward track escalates it. The round machinery stays anyway: three
+    // separate choices of three is a better decision than one choice of six
+    // should a future reward escalate the count; the card row is emitted at
+    // scene-build time from RelicPool.OfferCount and a runtime-variable
+    // width would mean emitting the maximum and hiding the surplus; and the
+    // round number falls out of run.relicIds.Count, which is persisted, so a
+    // reload mid-draft returns to the same round with the same cards.
     public class RelicDraftController : MonoBehaviour
     {
         [SerializeField] internal Button[] cards;

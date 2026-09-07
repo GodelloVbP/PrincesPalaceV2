@@ -8,20 +8,17 @@ namespace PrincesPalace.Domain.Progression
     // filler mix an author (or, for a character nobody has designed yet,
     // Default) described, computed once into a hundred entries.
     //
-    // docs/PLAN_REWARD_TRACKS.md P3. This is what RewardTrack.cs's static
-    // table used to be, generalised so a track can differ per character --
-    // RewardTrack.cs itself keeps only the parts that do NOT vary by
-    // character (the shared cadence, the state arithmetic) and this class
-    // holds the part that does (which reward sits at which level).
+    // RewardTrack.cs keeps only the parts of a track that do NOT vary by
+    // character -- the shared cadence, the state arithmetic; this class
+    // holds the part that does, which reward sits at which level. See
+    // docs/PLAN_REWARD_TRACKS.md §3 for the fuller rationale for the split.
     //
-    // DESCRIBED, THEN DERIVED, same construction as the static table it
-    // replaces: twelve milestones and a filler mix are written down, and the
-    // eighty-seven filler placements are computed by InterleaveMix/Spread,
-    // moved here VERBATIM from RewardTrack.cs (CODE_STANDARDS.md's "no
-    // renames during a pure-move split") -- only their parameter shapes
-    // changed, from (TrackReward, int) tuples to TrackEntry, because TrackEntry
-    // itself grew the two authored selectors (Against, SkillId) this package
-    // adds.
+    // DESCRIBED, THEN DERIVED: twelve milestones and a filler mix are
+    // written down, and the eighty-seven filler placements are computed by
+    // InterleaveMix/Spread. Every entry is a TrackEntry rather than a bare
+    // (TrackReward, int) tuple, because TrackEntry carries the two authored
+    // selectors -- Against, SkillId -- a track needs beyond reward and
+    // amount.
     public sealed class RewardTrackDefinition
     {
         public readonly string CharacterId;
@@ -69,17 +66,12 @@ namespace PrincesPalace.Domain.Progression
         }
 
         // THE GENERATED DEFAULT, for a character with no authored track.
-        //
-        // This is RewardTrack.cs's own interim table (docs/PLAN_REWARD_
-        // TRACKS.md P1), moved here verbatim rather than retyped: P1's own
-        // comment already said this table IS the eventual generated default,
-        // and RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPoints-
+        // RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPoints-
         // AndTwoHundredTwentyNineMaxHealth pins the two totals (50 stat
         // points, 229 max health) this must keep producing. `characterId` is
-        // accepted rather
-        // than ignored so a future per-character variant of "no track
-        // authored" (there is none today) is one signature away rather than a
-        // breaking change to every caller.
+        // accepted rather than ignored so a future per-character variant of
+        // "no track authored" (there is none today) is one signature away
+        // rather than a breaking change to every caller.
         //
         // THE SPINE -- Respec at 20, StatPoint 10 at 80, SecondLife at 90 --
         // is the same three levels on every track, authored or generated; the
@@ -110,16 +102,15 @@ namespace PrincesPalace.Domain.Progression
         public static RewardTrackDefinition Default(string characterId) =>
             Build(characterId, DefaultMilestones, DefaultFillerMix);
 
-        // THE BRIDGE FROM CONTENT. ResolvedRewardTrack (Domain/Content,
-        // docs/PLAN_REWARD_TRACKS.md P2) is what RewardTrackEntryResolver
-        // hands back after validating and captioning reward_tracks.json;
-        // this turns it into the same materialised, hundred-entry shape
-        // Default produces, so a caller (P6's content pin test today; P4's
-        // Core/RewardTracks.For once it lands) can read an authored track
-        // through the identical At/CollectedTotal/HasUnlocked API regardless
-        // of whether it came from JSON or from Default. Kept in Domain,
-        // deliberately -- Core/RewardTracks.For is P4's own seam and takes
-        // this one call rather than reimplementing the conversion.
+        // THE BRIDGE FROM CONTENT. ResolvedRewardTrack (Domain/Content) is
+        // what RewardTrackEntryResolver hands back after validating and
+        // captioning reward_tracks.json; this turns it into the same
+        // materialised, hundred-entry shape Default produces, so a caller
+        // (RewardTrackContentPinTests, Core/RewardTracks.For) can read an
+        // authored track through the identical At/CollectedTotal/HasUnlocked
+        // API regardless of whether it came from JSON or from Default. Kept
+        // in Domain, deliberately -- Core/RewardTracks.For takes this one
+        // call rather than reimplementing the conversion.
         public static RewardTrackDefinition From(ResolvedRewardTrack resolved)
         {
             var milestones = new (int Level, TrackEntry Entry)[resolved.Milestones.Length];
@@ -134,7 +125,8 @@ namespace PrincesPalace.Domain.Progression
             for (int i = 0; i < resolved.Filler.Length; i++)
             {
                 var f = resolved.Filler[i];
-                fillerMix[i] = (new TrackEntry(f.Reward, f.Amount, f.Against), f.Count);
+                fillerMix[i] = (new TrackEntry(f.Reward, f.Amount, f.Against, null, null,
+                    f.ResourceDisplayName), f.Count);
             }
 
             return Build(resolved.CharacterId, milestones, fillerMix);
@@ -207,6 +199,32 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
+        // Every ElementalDamagePercent total collected through claimedLevel,
+        // grouped by which element it was authored against -- one pass over
+        // the track rather than CollectedTotal(reward, against, level)
+        // called once per DamageType member. ContentDatabase.Effective's
+        // ModifierEffects is why this exists: it needs every element's total
+        // at once, and walking the track eleven times (once per DamageType,
+        // via Enum.GetValues -- itself a fresh array on every call) to
+        // answer that was the eleven-times-slower way to ask a
+        // single-pass question.
+        public IReadOnlyDictionary<DamageType, int> CollectedElementalTotals(int claimedLevel)
+        {
+            int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
+            var totals = new Dictionary<DamageType, int>();
+
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward != TrackReward.ElementalDamagePercent || !entry.Against.HasValue) continue;
+
+                totals.TryGetValue(entry.Against.Value, out int running);
+                totals[entry.Against.Value] = running + entry.Amount;
+            }
+
+            return totals;
+        }
+
         // Every skill id an UnlockSkill entry has handed over at or below
         // claimedLevel. ContentDatabase.AvailableSkillsFor's fifth route.
         //
@@ -247,7 +265,7 @@ namespace PrincesPalace.Domain.Progression
         // answer, and it needs no storage to do it.
         public bool HasUnlocked(TrackReward reward, int level)
         {
-            if (!RewardTrack.IsUnlock(reward)) return false;
+            if (!RewardTrack.IsOneShotCapability(reward)) return false;
 
             int unlockedAt = UnlockLevel(reward);
             return unlockedAt > 0 && level >= unlockedAt;

@@ -250,17 +250,14 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(first, second, "the draft re-rolled itself on reload");
         }
 
-        // ---- paging: retired along with it -----------------------------------------
+        // ---- paging never appears -----------------------------------------------
         //
-        // RelicDraftController's paging (DraftNextPage/DraftPrevPage) existed
-        // for exactly one caller: the reward track's level-70 milestone,
-        // TrackReward.ChosenStartingRelics, which handed the whole relic pool
-        // to a high-level character instead of a weighted draw. P1 of
-        // docs/PLAN_REWARD_TRACKS.md retired that milestone -- RunOrchestrator
-        // .RelicDraftOffer always takes RelicPool.DraftWeighted's three-card
-        // path now (see its own comment) -- so PageCount can never exceed 1
-        // any more and the paging controls can never appear. What is left
-        // worth pinning is exactly that: the controls stay hidden.
+        // RelicDraftController's paging (DraftNextPage/DraftPrevPage) has no
+        // caller today: RunOrchestrator.RelicDraftOffer always takes
+        // RelicPool.DraftWeighted's three-card path (see its own comment),
+        // so PageCount can never exceed 1 and the paging controls can never
+        // appear. What is worth pinning is exactly that: the controls stay
+        // hidden.
         [UnityTest]
         public IEnumerator PagingNeverAppearsBecauseNothingEverOffersMoreThanThreeCards()
         {
@@ -275,15 +272,12 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the draft is a single flat round -------------------------------------
         //
-        // The reward track used to escalate this in steps -- 1 relic below
-        // level 25, 2 at 25, 3 at 45, 4 at 60 (TrackReward.StartingRelics) --
-        // which is what made a "second round" and "does the second round
-        // avoid repeating the first" meaningful questions. P1 of
-        // docs/PLAN_REWARD_TRACKS.md retired that grant along with seven other
-        // over-arching reward kinds (see section 3e2): every descent now
-        // drafts RelicPool.StartingRelicsPerDescent, a flat one, regardless of
-        // level. Levelling the squad in these tests would prove nothing, so
-        // it is gone rather than kept as decoration.
+        // Every descent drafts RelicPool.StartingRelicsPerDescent, a flat
+        // one, regardless of level -- nothing on the reward track escalates
+        // it. A "second round" or "does the second round avoid repeating the
+        // first" is not a question this draft can ask, so levelling the
+        // squad in these tests would prove nothing and there is no such test
+        // here.
 
         private static void LevelTheSquadTo(int level)
         {

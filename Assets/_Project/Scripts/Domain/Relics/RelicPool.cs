@@ -42,19 +42,10 @@ namespace PrincesPalace.Domain.Relics
         // reason, and shared so they cannot drift apart in either direction.
         public const int OfferCount = 3;
 
-        // How many relics a descent's draft offers, start to finish.
-        //
-        // MOVED HERE FROM THE REWARD TRACK, not deleted. RewardTrack used to
-        // grant this in escalating steps (TrackReward.StartingRelics, 1 at
-        // level 1 rising to 4 by level 60) with a fourth milestone
-        // (ChosenStartingRelics) letting a high-level character pick instead
-        // of draft. P1 of docs/PLAN_REWARD_TRACKS.md retired all four --
-        // see docs/PLAN_REWARD_TRACKS.md section 3e2 -- but
-        // RunOrchestrator.DraftHasAnotherRound still needs a round count, so
-        // the flat number that was the track's own fallback below level 25
-        // lives on here instead. Shipped behaviour is unchanged for every
-        // character below that level, which is every character on a migrated
-        // save.
+        // How many relics a descent's draft offers, start to finish. Flat,
+        // and lives here rather than on the reward track because nothing on
+        // the track grants it any more -- RunOrchestrator.DraftHasAnotherRound
+        // still needs a round count regardless, and this is it.
         public const int StartingRelicsPerDescent = 1;
 
         // Everything the player has actually earned the right to see.

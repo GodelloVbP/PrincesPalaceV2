@@ -72,11 +72,10 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.StartRun(639228196442867409UL);
 
-            // LEVELLED AND COLLECTED. Reaching 90 is no longer enough on its
-            // own: since docs/PLAN_REWARD_TRACKS.md P4 every reward on the
-            // track, the second life included, is summed against
-            // claimedTrackLevel rather than level, so a squad that never
-            // pressed collect has earned nothing. That is the design (the
+            // LEVELLED AND COLLECTED. Reaching 90 is not enough on its own:
+            // every reward on the track, the second life included, is summed
+            // against claimedTrackLevel rather than level, so a squad that
+            // never pressed collect has earned nothing. That is the design (the
             // collect button is what hands rewards over), and pinning it here
             // is what stops a future "level is enough" shortcut going
             // unnoticed.

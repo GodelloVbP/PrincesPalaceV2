@@ -9,13 +9,10 @@ namespace PrincesPalace.Domain.Tests
     // docs/PLAN_REWARD_TRACKS.md P3.
     public class RewardTrackDefinitionTests
     {
-        // THE INTERIM TABLE'S TWO TOTALS, pinned here now that
-        // RewardTrackDefinition.Default owns the table RewardTrack.cs used to
-        // (docs/PLAN_REWARD_TRACKS.md P1's own comment already called this
-        // table "the eventual generated default"): 40 filler stat points +
-        // level 80's ten = 50; 47 filler MaxHealth at 2 each + 9 milestones at
-        // 15 each = 229. MaxHealth is read via CollectedTotal rather than
-        // GrantedBetween -- it is no longer a grant (RewardTrackTests.
+        // THE DEFAULT TABLE'S TWO TOTALS: 40 filler stat points + level 80's
+        // ten = 50; 47 filler MaxHealth at 2 each + 9 milestones at 15 each =
+        // 229. MaxHealth is read via CollectedTotal rather than
+        // GrantedBetween -- it is not a grant (RewardTrackTests.
         // OnlyStatPointIsAGrant).
         [Test]
         public void TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth()
@@ -82,6 +79,32 @@ namespace PrincesPalace.Domain.Tests
                 "level 90's second life was collected before level 90 was reached");
             Assert.AreEqual(1, track.CollectedTotal(TrackReward.SecondLife, 90),
                 "level 90's second life was not collected once it was reached");
+        }
+
+        // CollectedElementalTotals is ContentDatabase.Effective.ModifierEffects'
+        // single-pass replacement for calling CollectedTotal(reward, against,
+        // level) once per DamageType member -- pinned against a fixture built
+        // the same way CollectedTotalSumsRatherThanReplacing is, three
+        // Fire entries at levels 5, 7 and 10 (2 + 2 + 10) standing in for two
+        // filler placements and one milestone.
+        [Test]
+        public void CollectedElementalTotalsSumsOneElementInOnePass()
+        {
+            var entries = new (int Level, TrackEntry Entry)[]
+            {
+                (5, new TrackEntry(TrackReward.ElementalDamagePercent, 2, DamageType.Fire)),
+                (7, new TrackEntry(TrackReward.ElementalDamagePercent, 2, DamageType.Fire)),
+                (10, new TrackEntry(TrackReward.ElementalDamagePercent, 10, DamageType.Fire)),
+            };
+
+            var track = RewardTrackDefinition.Build("fixture", entries,
+                System.Array.Empty<(TrackEntry Entry, int Count)>());
+
+            var atMilestone = track.CollectedElementalTotals(10);
+            Assert.AreEqual(14, atMilestone[DamageType.Fire], "both filler entries plus the milestone");
+
+            var beforeMilestone = track.CollectedElementalTotals(9);
+            Assert.AreEqual(4, beforeMilestone[DamageType.Fire], "the milestone had not been reached yet");
         }
 
         // A new TrackReward compiles, resolves an art key, and displays as

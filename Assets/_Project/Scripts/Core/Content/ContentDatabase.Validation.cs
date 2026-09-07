@@ -570,16 +570,70 @@ namespace PrincesPalace.Content
             // Here as well as in RewardTrackEntryResolver because this
             // validates the LOADED catalogue: an asset created by hand under
             // Resources/Content never passed through a resolver at all.
+            //
+            // Rules 4 and 5 below are the resolver's own two checks, mirrored
+            // for the same reason.
+            bool IsSignatureReward(TrackReward reward) =>
+                reward == TrackReward.SignatureCapacity
+                || reward == TrackReward.SignatureGainPerTurn
+                || reward == TrackReward.SignatureGainOnDamageTaken
+                || reward == TrackReward.SignatureAbsorbs;
+
             foreach (var track in _rewardTracks)
             {
+                var owner = GetCharacter(track.Data.CharacterId);
+                bool hasSignatureResource = owner != null && owner.Data.HasSignatureResource;
+
+                // RULE 4's set: the character's own AttackType, plus the
+                // type of every damageInstances entry on a skill authored to
+                // them with unlockLevel <= 1 -- what they can already deal
+                // at level 1. A milestone is exempt (its level is authored
+                // and visible, so its element can be placed deliberately
+                // after the skill that first deals it); only filler is
+                // checked, matching the resolver's own gate.
+                var level1Types = new HashSet<DamageType>();
+                if (owner != null)
+                {
+                    level1Types.Add(owner.Data.AttackType);
+                    foreach (var skill in _skills)
+                    {
+                        if (skill.Data.CharacterId != track.Data.CharacterId || skill.Data.UnlockLevel > 1) continue;
+                        foreach (var instance in skill.Data.DamageInstances) level1Types.Add(instance.type);
+                    }
+                }
+
                 foreach (var milestone in track.Data.Milestones)
                 {
-                    if (milestone.Reward != TrackReward.UnlockSkill) continue;
-
-                    if (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null)
+                    if (milestone.Reward == TrackReward.UnlockSkill
+                        && (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null))
                     {
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} unlocks " +
                                    $"unknown skill id '{milestone.SkillId}'.");
+                    }
+
+                    // RULE 5: milestone or filler, unlike rule 4 -- a
+                    // milestone with no signature resource to pay into is
+                    // just as broken as a filler row would be.
+                    if (IsSignatureReward(milestone.Reward) && !hasSignatureResource)
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} authors " +
+                                   $"{milestone.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
+                    }
+                }
+
+                foreach (var filler in track.Data.Filler)
+                {
+                    if (filler.Reward == TrackReward.ElementalDamagePercent && filler.Against.HasValue
+                        && !level1Types.Contains(filler.Against.Value))
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' filler {filler.Against} damage is not " +
+                                   "an element the character can deal at level 1.");
+                    }
+
+                    if (IsSignatureReward(filler.Reward) && !hasSignatureResource)
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' filler authors {filler.Reward}, but " +
+                                   $"'{track.Data.CharacterId}' has no signature resource.");
                     }
                 }
             }

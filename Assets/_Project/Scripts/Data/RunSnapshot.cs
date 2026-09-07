@@ -120,12 +120,9 @@ namespace PrincesPalace
 
         // How many item-offer rerolls this descent has spent.
         //
-        // DEAD WEIGHT SINCE P1 OF docs/PLAN_REWARD_TRACKS.md, kept rather than
-        // deleted. The reward track's offer-reroll grant and the Reckoning's
-        // reroll button were both retired -- nothing sets this above zero any
-        // more -- but the field stays: removing it would drop the value
-        // JsonUtility already wrote for an in-flight run on an old save, for
-        // no gain.
+        // DEAD WEIGHT, KEPT RATHER THAN DELETED. Nothing sets this above zero
+        // any more, but removing the field would drop the value JsonUtility
+        // already wrote for an in-flight run on an old save, for no gain.
         //
         // Purely additive, so CurrentVersion does not move -- an older save's
         // in-flight run has no such field and JsonUtility leaves it at zero,
@@ -134,13 +131,10 @@ namespace PrincesPalace
 
         // Whether this descent guarantees a rest on the step before each boss.
         //
-        // NOTHING GRANTS THIS TODAY. It was level 30 of the reward track;
-        // P1 of docs/PLAN_REWARD_TRACKS.md retired that milestone along with
-        // seven other over-arching reward kinds, so RunManager.StartRun now
-        // leaves this at its default (false) rather than reading the squad.
-        // The field and the generator parameter it feeds both stay, so a
-        // future reward can wire back into StartRun without DescentMap
-        // changing at all.
+        // NOTHING GRANTS THIS TODAY. RunManager.StartRun leaves this at its
+        // default (false) rather than reading the squad. The field and the
+        // generator parameter it feeds both stay, so a future reward can
+        // wire back into StartRun without DescentMap changing at all.
         //
         // SNAPSHOT AT StartRun RATHER THAN READ LIVE, which is the opposite of
         // how the reroll allowance works, and the difference matters. The map
@@ -163,11 +157,8 @@ namespace PrincesPalace
         // How many second lives this descent has spent -- level 90 of the
         // reward track.
         //
-        // P1 of docs/PLAN_REWARD_TRACKS.md retired the level-100 refresh
-        // (TrackReward.SecondLifeRefresh, which gave the charge back on
-        // entering every boss) along with seven other over-arching reward
-        // kinds -- so this now climbs at most once per descent with nothing
-        // to clear it back to zero mid-run.
+        // NO MID-RUN REFRESH: this climbs at most once per descent, with
+        // nothing that clears it back to zero before the run ends.
         //
         // USED rather than remaining, the same shape as offerRerollsUsed and
         // for the same reason: the allowance stays a pure function of the

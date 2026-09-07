@@ -38,16 +38,14 @@ namespace PrincesPalace.PlayModeTests
         private static List<string> Squad() =>
             SaveSlotManager.CurrentSave.ActiveSquad().Select(c => c.definitionId).ToList();
 
-        private static Character First() => SaveSlotManager.CurrentSave.ActiveSquad()[0];
-
         [Test]
         public void AFieldedCharacterGainsTheExperience()
         {
-            int before = First().exp;
+            int before = SquadFixture.FirstLiveMember().exp;
 
             RewardApplier.Apply(new VictoryRewards.Payout(50, 10), Squad());
 
-            Assert.AreEqual(before + 50, First().exp);
+            Assert.AreEqual(before + 50, SquadFixture.FirstLiveMember().exp);
         }
 
         [Test]
@@ -55,7 +53,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var reward = RewardApplier.Apply(new VictoryRewards.Payout(10000, 0), Squad());
 
-            Assert.Greater(First().level, 1);
+            Assert.Greater(SquadFixture.FirstLiveMember().level, 1);
             Assert.IsTrue(reward.Characters[0].LevelledUp);
         }
 
@@ -65,15 +63,15 @@ namespace PrincesPalace.PlayModeTests
             // "Before" stops existing the moment AddExperience mutates in place,
             // which is why the report is the return value rather than something
             // the screen reconstructs afterwards.
-            int levelBefore = First().level;
-            int expBefore = First().exp;
+            int levelBefore = SquadFixture.FirstLiveMember().level;
+            int expBefore = SquadFixture.FirstLiveMember().exp;
 
             var reward = RewardApplier.Apply(new VictoryRewards.Payout(30, 0), Squad());
             var row = reward.Characters[0];
 
             Assert.AreEqual(levelBefore, row.LevelBefore);
             Assert.AreEqual(expBefore, row.ExpBefore);
-            Assert.AreEqual(First().exp, row.ExpAfter);
+            Assert.AreEqual(SquadFixture.FirstLiveMember().exp, row.ExpAfter);
             Assert.AreEqual(30, row.ExpGained);
         }
 
@@ -140,11 +138,11 @@ namespace PrincesPalace.PlayModeTests
             // The point of applying it at all: a level is meta-progression and
             // outlives the run that earned it.
             RewardApplier.Apply(new VictoryRewards.Payout(10000, 0), Squad());
-            int level = First().level;
+            int level = SquadFixture.FirstLiveMember().level;
 
             SaveSlotManager.Forget();
 
-            Assert.AreEqual(level, First().level);
+            Assert.AreEqual(level, SquadFixture.FirstLiveMember().level);
         }
 
         [Test]
@@ -195,7 +193,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void LevellingLeavesTheTrackOwingRatherThanPaying()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             Assert.AreEqual(1, character.level, "the fixture did not start at level 1");
             Assert.AreEqual(0, character.claimedTrackLevel, "a fresh character starts unpaid at 0");
             Assert.AreEqual(0, character.unspentStatPoints, "the fixture did not start unpaid");
@@ -204,7 +202,7 @@ namespace PrincesPalace.PlayModeTests
             // is also the multi-level case.
             RewardApplier.Apply(new VictoryRewards.Payout(20000, 0), Squad());
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             Assert.Greater(character.level, 1, "the fixture did not level up");
 
             // STILL ZERO. A fresh character's watermark is 0 rather than 1 --
@@ -227,7 +225,7 @@ namespace PrincesPalace.PlayModeTests
             // A trickle: not enough to reach the next level from here.
             RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
 
-            Assert.AreEqual(0, First().claimedTrackLevel);
+            Assert.AreEqual(0, SquadFixture.FirstLiveMember().claimedTrackLevel);
         }
 
         // The migration case, from the direction it now arrives: a character
@@ -239,14 +237,14 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void AFightDoesNotSettleACharactersBackCatalogue()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.level = 30;
             character.claimedTrackLevel = 0;
             character.unspentStatPoints = 0;
 
             RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             Assert.AreEqual(0, character.claimedTrackLevel,
                 "a fight collected the track on the player's behalf");
             Assert.AreEqual(0, character.unspentStatPoints);
@@ -272,7 +270,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ACollectedTrackActuallyRaisesTheCharactersMaxHealth()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.claimedTrackLevel = 0;
             int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
@@ -289,36 +287,34 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void LevellingDoesNotHandOverTheMaxHealthTheTrackOwes()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.level = 60;
             character.claimedTrackLevel = 0;
             int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
             RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
 
-            Assert.AreEqual(0, First().claimedTrackLevel,
+            Assert.AreEqual(0, SquadFixture.FirstLiveMember().claimedTrackLevel,
                 "the watermark moved without the player collecting anything");
-            Assert.AreEqual(before, Content.ContentDatabase.EffectiveStats(First()).maxHealth,
+            Assert.AreEqual(before, Content.ContentDatabase.EffectiveStats(SquadFixture.FirstLiveMember()).maxHealth,
                 "max health arrived without the player collecting it");
         }
 
         // ---- a fight is worth exactly what it paid --------------------------------
         //
-        // The reward track used to have an experience-find kind, so a payout
-        // could arrive boosted above what the fight actually paid. P1 of
-        // docs/PLAN_REWARD_TRACKS.md retired it along with Favor and six other
-        // over-arching rewards; RewardApplier now hands `payout.Experience`
-        // straight to AddExperience with nothing in between. What is left worth
-        // pinning is that the payout is never anything other than what it says.
+        // RewardApplier hands `payout.Experience` straight to AddExperience
+        // with nothing in between -- nothing on the reward track boosts it
+        // above what the fight actually paid. Worth pinning because the
+        // payout must never quietly become something other than what it says.
 
         [Test]
         public void AFightIsWorthExactlyWhatItPaid()
         {
-            int before = First().exp;
+            int before = SquadFixture.FirstLiveMember().exp;
 
             RewardApplier.Apply(new VictoryRewards.Payout(50, 0), Squad());
 
-            Assert.AreEqual(before + 50, First().exp);
+            Assert.AreEqual(before + 50, SquadFixture.FirstLiveMember().exp);
         }
 
         // A respec gives back what was SPENT. Max health was never spent -- the
@@ -332,7 +328,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ARespecDoesNotTakeBackGrantedMaxHealth()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.claimedTrackLevel = RewardTrack.MaxLevel;
             int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
@@ -350,14 +346,14 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ADownedCharacterGainsNoLevelsAndKeepsTheirDebt()
         {
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.level = 15;
             character.claimedTrackLevel = 0;
 
             // Fielded nobody: everyone is downed and gains zero exp.
             RewardApplier.Apply(new VictoryRewards.Payout(500, 0), new List<string>());
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             Assert.AreEqual(15, character.level, "a downed character gained a level");
             Assert.AreEqual(0, character.claimedTrackLevel,
                 "a downed character had their track debt settled for them");

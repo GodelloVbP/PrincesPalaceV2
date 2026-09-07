@@ -133,14 +133,10 @@ namespace PrincesPalace
             int from = character.claimedTrackLevel;
             if (throughLevel <= from) return;
 
-            // TO THE NODE THAT WAS PRESSED, and no further.
-            //
-            // This passed no argument for one build, so ClaimTrackRewards
-            // settled the entire gap and pressing any waiting node collected
-            // every waiting node. The watermark is still a single integer --
-            // a claim starts where the last one stopped, so there is no hole
-            // to store -- which is the thing the old comment here thought it
-            // was protecting.
+            // TO THE NODE THAT WAS PRESSED, and no further -- `throughLevel`
+            // bounds the claim rather than settling the entire gap. The
+            // watermark is still a single integer: a claim starts where the
+            // last one stopped, so there is no hole to store.
             //
             // The max-health nodes are the reason this also has to go through
             // ScaleCarriedHealth below: collecting one moves a character's

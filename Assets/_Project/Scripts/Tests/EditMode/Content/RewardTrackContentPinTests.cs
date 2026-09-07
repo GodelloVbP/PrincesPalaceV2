@@ -59,44 +59,14 @@ namespace PrincesPalace.Domain.Tests
             return resolved;
         }
 
-        // Mirrors ContentBuilder.BuildRewardTracks exactly (both fixed
-        // alongside this test, having found the same bug): every skill's
-        // display name goes into ONE global map, because a track's
-        // UnlockSkill carries no ownership test (docs/PLAN_REWARD_TRACKS.md
-        // §3f/§3h) -- Odette's track grants frost_flare and lightning_bolt,
-        // both authored characterId "sheep". Level1DamageTypes stays
-        // owner-filtered, because rule 4 ("a skill authored to them with
-        // unlockLevel <= 1") IS an ownership question.
+        // The same assembly ContentBuilder.BuildRewardTracks uses --
+        // RewardTrackCharacterContext.BuildAll is the one seam both call, so
+        // this pin reads the tracks through the exact context a real build
+        // resolves them against rather than a hand-rolled approximation of
+        // it that could quietly drift.
         private static Dictionary<string, RewardTrackCharacterContext> Contexts(
-            IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
-        {
-            var allSkillDisplayNames = skills.ToDictionary(s => s.Id, s => s.DisplayName);
-            var contexts = new Dictionary<string, RewardTrackCharacterContext>();
-
-            foreach (var character in characters)
-            {
-                var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
-
-                var level1Types = new HashSet<DamageType> { character.AttackType };
-                foreach (var skill in ownSkills)
-                {
-                    if (skill.UnlockLevel > 1) continue;
-                    foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
-                }
-
-                contexts[character.Id] = new RewardTrackCharacterContext
-                {
-                    SortOrder = character.SortOrder,
-                    AttackType = character.AttackType,
-                    HasSignatureResource = character.HasSignatureResource,
-                    SignatureDisplayName = character.SignatureDisplayName,
-                    Level1DamageTypes = level1Types,
-                    SkillDisplayNames = allSkillDisplayNames,
-                };
-            }
-
-            return contexts;
-        }
+            IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills) =>
+            RewardTrackCharacterContext.BuildAll(characters, skills);
 
         // The two shipped tracks, materialised through
         // RewardTrackDefinition.From -- what every assertion below reads.
@@ -241,7 +211,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel), "stat points");
         }
 
-        // ---- Round 3's level-by-level claims, §5 ----
+        // ---- level-by-level claims, §5 ----
 
         // "Wool capacity first reaches 20 at level 39" -- the owner's own
         // "wool capacity upgraded to 20" example. The DISPLAYED number is the
@@ -249,7 +219,7 @@ namespace PrincesPalace.Domain.Tests
         // track's own CollectedTotal, since the base is authored on the
         // roster and is not itself a track entry. Walked level by level
         // against the real resolved definition rather than hand-added, and
-        // pinned against the literal Round 3 computed (39) -- not a formula
+        // pinned against the literal computed answer (39) -- not a formula
         // this test recomputes, gotcha 5.
         [Test]
         public void SheepsWoolCapacityFirstReaches20AtLevel39()
@@ -276,6 +246,18 @@ namespace PrincesPalace.Domain.Tests
         public void SheepsLevelThreeCaptionIsOnePercentNatureDamage()
         {
             Assert.AreEqual("+1% NATURE DAMAGE", RewardTrackNames.Of(Sheep().At(3)));
+        }
+
+        // Shawn's first SignatureCapacity filler (level 6, the same one
+        // SheepsWoolCapacityFirstReaches20AtLevel39's comment names as the
+        // first of the 6/14/21 run) -- pins that RewardTrackDefinition.From
+        // forwards a filler's ResourceDisplayName the same way it forwards a
+        // milestone's, so the caption reads "WOOL" rather than falling back
+        // to the blank-name default "SIGNATURE".
+        [Test]
+        public void SheepsLevelSixCaptionIsOneWoolCapacity()
+        {
+            Assert.AreEqual("+1 WOOL CAPACITY", RewardTrackNames.Of(Sheep().At(6)));
         }
 
         [Test]

@@ -898,16 +898,9 @@ namespace PrincesPalace
         private void Spend(int index)
         {
             if (lockedForFight) return;
+            if (!TryResolveCell(index, out var character, out var score)) return;
 
-            var squad = Squad();
-            if (squad.Count == 0) return;
-            if (_index < 0 || _index >= squad.Count) return;
-
-            var character = squad[_index];
-            if (character == null) return;
-            if (index < 0 || index >= _cellOrder.Count) return;
-
-            if (!character.Invest(_cellOrder[index])) return;
+            if (!character.Invest(score)) return;
 
             // Written immediately. A placed point is permanent until a respec,
             // so losing one to a crash costs the player a level's reward.
@@ -924,19 +917,34 @@ namespace PrincesPalace
         private void Refund(int index)
         {
             if (lockedForFight || inDescent) return;
+            if (!TryResolveCell(index, out var character, out var score)) return;
 
-            var squad = Squad();
-            if (squad.Count == 0) return;
-            if (_index < 0 || _index >= squad.Count) return;
-
-            var character = squad[_index];
-            if (character == null) return;
-            if (index < 0 || index >= _cellOrder.Count) return;
-
-            if (!character.Refund(_cellOrder[index])) return;
+            if (!character.Refund(score)) return;
 
             SaveSlotManager.SaveCurrent();
             Refresh();
+        }
+
+        // THE CELL IS NOT THE SCORE (see Spend's own header). Resolves cell
+        // `index` against the squad member on screen and _cellOrder's
+        // click-time sort, or refuses -- shared by Spend and Refund so the
+        // resolution rule can only drift out of sync with itself once,
+        // rather than once per caller.
+        private bool TryResolveCell(int index, out Character character, out AbilityScore score)
+        {
+            character = null;
+            score = default;
+
+            var squad = Squad();
+            if (squad.Count == 0) return false;
+            if (_index < 0 || _index >= squad.Count) return false;
+
+            character = squad[_index];
+            if (character == null) return false;
+            if (index < 0 || index >= _cellOrder.Count) return false;
+
+            score = _cellOrder[index];
+            return true;
         }
 
         // Shows the "+" on every cell when there is a point to spend, and says

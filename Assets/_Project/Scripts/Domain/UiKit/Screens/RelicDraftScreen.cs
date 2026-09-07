@@ -90,9 +90,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // PAGING, for an offer wider than the card row can show at once.
             //
-            // Dormant today -- P1 of docs/PLAN_REWARD_TRACKS.md retired the
-            // reward track's level-70 "choose your starting relics" milestone,
-            // which was the one thing that ever offered more than three -- but
+            // Dormant today -- nothing currently offers more than three -- but
             // the tree keeps the controls rather than removing them: the card
             // row is three wide and emitted once at build time, so the whole
             // pool still cannot be shown at once should a future reward widen

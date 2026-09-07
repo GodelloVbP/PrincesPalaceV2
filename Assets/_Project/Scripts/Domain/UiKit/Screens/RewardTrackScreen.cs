@@ -187,11 +187,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // be overruled by anyone with an opinion; the whole map is the switch
         // in RewardTrackLayout.CardArtKeyFor.
         //
-        // EIGHT OF THESE ARE RE-POINTS, not new commissions
-        // (docs/PLAN_REWARD_TRACKS.md §1's table): the eight retired
-        // over-arching reward kinds each freed one constant, and the constant
-        // is renamed to name what actually uses it now rather than what it
-        // used to.
+        // THESE ARE RE-POINTS OF A FIXED SET OF ART CONSTANTS
+        // (docs/PLAN_REWARD_TRACKS.md §1's table), not new commissions --
+        // each constant is named for what actually uses it today.
         public const string IconRoot = "UI/TalentTree/Icons/Processed";
 
         public const string StatArtKey = IconRoot + "/ability_score.png";

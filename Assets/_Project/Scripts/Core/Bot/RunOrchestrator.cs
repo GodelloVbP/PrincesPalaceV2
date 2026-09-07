@@ -153,9 +153,8 @@ namespace PrincesPalace
         // smaller than the number of rounds there eventually is not one.
         //
         // RelicPool.StartingRelicsPerDescent RATHER THAN A REWARD-TRACK READ:
-        // the track used to escalate this per character (see that constant's
-        // own comment for why and where it went, docs/PLAN_REWARD_TRACKS.md
-        // section 3e2); every descent now drafts the same flat count.
+        // nothing on the track escalates this per character, so every
+        // descent drafts the same flat count.
         public static bool DraftHasAnotherRound() =>
             (RunManager.Run?.relicIds?.Count ?? 0) < RelicPool.StartingRelicsPerDescent;
 

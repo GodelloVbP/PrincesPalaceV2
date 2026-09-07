@@ -262,11 +262,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ItemOfferTable.OfferCount cards, edge to edge -- the tree is
             // emitted once for every save, and that is the only width the
-            // offer roll ever asks for now that the reward track no longer
-            // widens it (P1 of docs/PLAN_REWARD_TRACKS.md). A thinner content
-            // pool still shows fewer; see OfferRowLayout and
-            // ReckoningController.LayOutOfferRow for how the row re-centres
-            // for whatever count actually lands on screen.
+            // offer roll ever asks for; nothing on the reward track widens
+            // it. A thinner content pool still shows fewer; see
+            // OfferRowLayout and ReckoningController.LayOutOfferRow for how
+            // the row re-centres for whatever count actually lands on
+            // screen.
             for (int i = 0; i < ItemOfferTable.OfferCount; i++)
             {
                 offerChildren.Add(screen.BuildOffer(i));

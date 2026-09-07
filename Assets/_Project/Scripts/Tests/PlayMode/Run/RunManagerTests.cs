@@ -434,16 +434,14 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- restBeforeBoss: nothing grants it today -------------------------------
         //
-        // TrackReward.RestBeforeBoss was retired in P1 of
-        // docs/PLAN_REWARD_TRACKS.md (the eight over-arching rewards) and
-        // RunManager no longer sets this field to anything but its default.
-        // The generator parameter and RunSnapshot.restBeforeBoss itself stay --
-        // see their own comments -- so this test still earns its keep: it pins
-        // that a descent never turns the flag on by itself.
+        // RunManager sets this field to nothing but its default. The
+        // generator parameter and RunSnapshot.restBeforeBoss itself stay --
+        // see their own comments -- so this test still earns its keep: it
+        // pins that a descent never turns the flag on by itself.
 
-        // LEVELLED AND COLLECTED, because since docs/PLAN_REWARD_TRACKS.md P4
-        // the track pays nothing off `level` alone -- every reward on it is
-        // summed against claimedTrackLevel, which only a claim moves.
+        // LEVELLED AND COLLECTED, because the track pays nothing off `level`
+        // alone -- every reward on it is summed against claimedTrackLevel,
+        // which only a claim moves.
         private static void LevelTheSquadTo(int level)
         {
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
@@ -582,14 +580,11 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- level 90: the second life ---------------------------------------------
         //
-        // Level 100's refresh (TrackReward.SecondLifeRefresh, giving the charge
-        // back on entering every boss) was retired in P1 of
-        // docs/PLAN_REWARD_TRACKS.md along with the reward kind itself. What is
-        // left to pin is the charge level 90 pays and RunManager's spend
-        // tracking.
+        // No mid-run refresh exists -- what is pinned here is the charge
+        // level 90 pays and RunManager's spend tracking.
         //
-        // ONE PER COLLECTING MEMBER since P4 (§6): the source of a second life
-        // is per-character and only the spend is squad-wide, so a squad of
+        // ONE PER COLLECTING MEMBER (§6): the source of a second life is
+        // per-character and only the spend is squad-wide, so a squad of
         // three who have each collected level 90 brings three. Reaching 90 is
         // not enough on its own either -- the track pays what has been
         // COLLECTED, which is why LevelTheSquadTo claims.

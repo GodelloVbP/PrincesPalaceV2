@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
-using PrincesPalace.Domain.Stats;
 using UnityEditor;
 using UnityEngine;
 
@@ -309,52 +308,16 @@ public static class ContentBuilder
             relic => relic.Id);
     }
 
-    // docs/PLAN_REWARD_TRACKS.md P6: reward_tracks.json now authors Shawn's
-    // and Odette's real tracks, so this writes two assets.
-    //
-    // Assembles the per-character cross-catalogue context
-    // RewardTrackEntryResolver validates rules 4/5 and captions UnlockSkill
-    // against, from the characters and skills this same build already
-    // resolved -- see RewardTrackCharacterContext's own header for why nothing
-    // here re-reads characters.json or skills.json.
+    // Writes one RewardTrackDefinitionAsset per authored character in
+    // reward_tracks.json. RewardTrackCharacterContext.BuildAll assembles the
+    // per-character cross-catalogue context RewardTrackEntryResolver
+    // validates rules 4/5 and captions UnlockSkill against, from the
+    // characters and skills this same build already resolved -- see that
+    // method's own header for why nothing here re-reads characters.json or
+    // skills.json.
     private static void BuildRewardTracks(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
     {
-        var contexts = new Dictionary<string, RewardTrackCharacterContext>();
-
-        // THE WHOLE CATALOGUE, built once and shared by every context: an
-        // UnlockSkill node names a skill by id and nothing about whose it is
-        // (docs/PLAN_REWARD_TRACKS.md §3f/§3h -- every book-only spell is
-        // authored to "sheep", so an own-kit lookup would refuse Odette's own
-        // Frost Flare node). Rule 4's Level1DamageTypes below is the opposite
-        // and stays per-character: what a character can already DEAL at level
-        // 1 is a fact about their own kit.
-        var everySkillName = new Dictionary<string, string>();
-        foreach (var skill in skills) everySkillName[skill.Id] = skill.DisplayName;
-
-        foreach (var character in characters)
-        {
-            // Level1DamageTypes stays owner-filtered: rule 4 asks for "a
-            // skill authored to them with unlockLevel <= 1", which IS an
-            // ownership question, unlike UnlockSkill's.
-            var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
-
-            var level1Types = new HashSet<DamageType> { character.AttackType };
-            foreach (var skill in ownSkills)
-            {
-                if (skill.UnlockLevel > 1) continue;
-                foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
-            }
-
-            contexts[character.Id] = new RewardTrackCharacterContext
-            {
-                SortOrder = character.SortOrder,
-                AttackType = character.AttackType,
-                HasSignatureResource = character.HasSignatureResource,
-                SignatureDisplayName = character.SignatureDisplayName,
-                Level1DamageTypes = level1Types,
-                SkillDisplayNames = everySkillName,
-            };
-        }
+        var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
 
         // A LOCAL FUNCTION, the same shape BuildRelics uses to close over a
         // second resolver argument -- here the per-character context map

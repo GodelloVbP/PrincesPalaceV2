@@ -117,17 +117,13 @@ namespace PrincesPalace
         // ordered and dense: "everything up to 37" is the same statement as a
         // list of 37 entries and cannot disagree with itself about level 12.
         //
-        // THE ONE NUMBER THE WHOLE TRACK IS READ AGAINST, and this used to be
-        // narrower. It once served only the grants -- quantities that had to
-        // be handed over exactly once -- while capabilities like the respec
-        // were pure functions of `level` and stored nothing, so a character
-        // who passed the level before the feature existed still had them.
-        // Under docs/PLAN_REWARD_TRACKS.md §2 that split is gone: a reward is
-        // COLLECTED or it is not, and every read site (max health, wool
-        // capacity, elemental damage, the respec, the second life, an unlocked
-        // spell) sums or tests the track's entries at levels <= this. Reaching
-        // a level and being paid for it stay two steps, which is what makes
-        // the collect button on the track screen mean something.
+        // THE ONE NUMBER THE WHOLE TRACK IS READ AGAINST (docs/PLAN_
+        // REWARD_TRACKS.md §2): a reward is COLLECTED or it is not, and
+        // every read site (max health, wool capacity, elemental damage, the
+        // respec, the second life, an unlocked spell) sums or tests the
+        // track's entries at levels <= this. Reaching a level and being paid
+        // for it stay two steps, which is what makes the collect button on
+        // the track screen mean something.
         //
         // Zero on an older save, which is BELOW StartingLevel and therefore
         // reads as "has claimed nothing" -- every read floors it there. An
@@ -364,16 +360,14 @@ namespace PrincesPalace
 
             // ONE GRANT, and moving the watermark is the rest of the payment.
             //
-            // Max health used to be handed over here too, into a
-            // `bonusMaxHealth` field on this type. It is not a second grant
-            // any more and neither is anything else: everything the track pays
-            // except stat points is summed live off `claimedTrackLevel` at its
-            // own read site (max health in ContentDatabase.EffectiveStats,
-            // wool in BuildSignatureResource, and so on -- docs/PLAN_REWARD_
-            // TRACKS.md §2's read-site table). Stat points are the exception
-            // because the player SPENDS them, so the balance has to be
-            // storable; a stored copy of anything else could only disagree
-            // with the definition after a retune.
+            // Everything the track pays except stat points is summed live off
+            // `claimedTrackLevel` at its own read site (max health in
+            // ContentDatabase.EffectiveStats, wool in
+            // BuildSignatureResource, and so on -- docs/PLAN_REWARD_TRACKS.md
+            // §2's read-site table). Stat points are the exception because
+            // the player SPENDS them, so the balance has to be storable; a
+            // stored copy of anything else could only disagree with the
+            // definition after a retune.
             int points = track.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, throughLevel);
 
             unspentStatPoints += points;

@@ -23,7 +23,6 @@ namespace PrincesPalace.Domain.Content
     public sealed class RewardTrackCharacterContext
     {
         public int SortOrder;
-        public DamageType AttackType;
         public bool HasSignatureResource;
         public string SignatureDisplayName = "";
 
@@ -47,6 +46,47 @@ namespace PrincesPalace.Domain.Content
         // definition is per-character, so it has already said whose skill
         // this is.
         public IReadOnlyDictionary<string, string> SkillDisplayNames = new Dictionary<string, string>();
+
+        // Assembles one context per character from the characters and skills
+        // an earlier content-build phase already resolved -- see this
+        // class's own header for why SkillDisplayNames is the whole
+        // catalogue while Level1DamageTypes (rule 4) stays owner-filtered.
+        // ONE SEAM for three call sites that would otherwise each build this
+        // map by hand -- ContentBuilder.BuildRewardTracks, and the
+        // equivalent map ContentStampIdsTests and RewardTrackContentPinTests
+        // each need beside it: a change to what a context needs has one
+        // place to update instead of three that could quietly drift apart.
+        public static Dictionary<string, RewardTrackCharacterContext> BuildAll(
+            IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
+        {
+            var everySkillName = new Dictionary<string, string>();
+            foreach (var skill in skills) everySkillName[skill.Id] = skill.DisplayName;
+
+            var contexts = new Dictionary<string, RewardTrackCharacterContext>();
+
+            foreach (var character in characters)
+            {
+                var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
+
+                var level1Types = new HashSet<DamageType> { character.AttackType };
+                foreach (var skill in ownSkills)
+                {
+                    if (skill.UnlockLevel > 1) continue;
+                    foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
+                }
+
+                contexts[character.Id] = new RewardTrackCharacterContext
+                {
+                    SortOrder = character.SortOrder,
+                    HasSignatureResource = character.HasSignatureResource,
+                    SignatureDisplayName = character.SignatureDisplayName,
+                    Level1DamageTypes = level1Types,
+                    SkillDisplayNames = everySkillName,
+                };
+            }
+
+            return contexts;
+        }
     }
 
     // Validates reward_tracks.json. Same collected-not-first-only error
@@ -57,25 +97,6 @@ namespace PrincesPalace.Domain.Content
     // docs/PLAN_REWARD_TRACKS.md §4, "the five validation rules".
     public static class RewardTrackEntryResolver
     {
-        // The twelve fixed milestone levels every track shares, derived
-        // from RewardTrack.IsMilestone rather than restated as a literal
-        // list. RewardTrack.MilestoneLevels is not public today --
-        // docs/PLAN_REWARD_TRACKS.md's P3, rewriting that file concurrently
-        // in a sibling worktree, is what would add such an accessor, and P2
-        // must not touch Domain/Progression/RewardTrack.cs (§10 P2/P3's
-        // worktree boundary). Deriving over the whole 2..100 range costs
-        // nothing at content-build time.
-        private static IReadOnlyList<int> MilestoneLevels()
-        {
-            var levels = new List<int>();
-            for (int level = RewardTrack.StartingLevel + 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (RewardTrack.IsMilestone(level)) levels.Add(level);
-            }
-
-            return levels;
-        }
-
         public static bool TryResolveAll(IReadOnlyList<RawRewardTrackEntry> entries,
             IReadOnlyDictionary<string, RewardTrackCharacterContext> characters,
             out List<ResolvedRewardTrack> resolved, out List<string> errors)
@@ -84,13 +105,13 @@ namespace PrincesPalace.Domain.Content
             errors = new List<string>();
             characters ??= new Dictionary<string, RewardTrackCharacterContext>();
 
-            var milestoneLevels = MilestoneLevels();
+            var milestoneLevels = RewardTrack.MilestoneLevels;
 
             // RULE 2's target: the number of levels the track pays that are
             // NOT one of the twelve milestones. Restated from
-            // RewardTrack.MaxLevel - MilestoneLevels().Count - StartingLevel,
-            // never typed as a literal 87.
-            int expectedFillerCount = (RewardTrack.MaxLevel - RewardTrack.StartingLevel) - milestoneLevels.Count;
+            // RewardTrack.MaxLevel - RewardTrack.MilestoneLevels.Length -
+            // StartingLevel, never typed as a literal 87.
+            int expectedFillerCount = (RewardTrack.MaxLevel - RewardTrack.StartingLevel) - milestoneLevels.Length;
 
             for (int i = 0; i < entries.Count; i++)
             {
@@ -183,6 +204,36 @@ namespace PrincesPalace.Domain.Content
                 else
                 {
                     errors.Add(entryError);
+                }
+            }
+
+            // ---- rule 1, continued: a one-shot capability may appear at most
+            // once across the track's milestones. Rule 3 already keeps every
+            // one-shot kind out of filler, so a milestone is the only place
+            // one can be authored at all -- and HasUnlocked only ever asks
+            // "has the FIRST level this reward appears at been reached", so a
+            // second Respec or SecondLife milestone would be content no
+            // player could ever see paid out twice. UnlockSkill is keyed by
+            // skillId rather than by kind: two milestones naming two
+            // different skills are two different unlocks, but the same
+            // skillId named twice is the same dead-content bug.
+            var firstLevelOfCapability = new Dictionary<string, int>();
+            foreach (var milestone in resolvedMilestones)
+            {
+                if (!RewardTrack.IsOneShotCapability(milestone.Reward)) continue;
+
+                string key = milestone.Reward == TrackReward.UnlockSkill
+                    ? $"{milestone.Reward}:{milestone.SkillId}"
+                    : milestone.Reward.ToString();
+
+                if (firstLevelOfCapability.TryGetValue(key, out int firstLevel))
+                {
+                    errors.Add($"{label}: {milestone.Reward} is a one-shot capability and appears at both level " +
+                               $"{firstLevel} and level {milestone.Level} -- it may only be granted once.");
+                }
+                else
+                {
+                    firstLevelOfCapability[key] = milestone.Level;
                 }
             }
 

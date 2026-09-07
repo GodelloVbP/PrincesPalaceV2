@@ -5,16 +5,12 @@ namespace PrincesPalace.Domain.Tests
 {
     public class RewardTrackTests
     {
-        // THE GENERATED DEFAULT. RewardTrack.cs used to carry two level-keyed
-        // statics, At(int) and NextRewardLevel(int), that forwarded onto
-        // exactly this instance -- a P5 compile-boundary shim
-        // (docs/PLAN_REWARD_TRACKS.md) kept for the screen layer's benefit
-        // after P3 moved WHICH REWARD SITS AT WHICH LEVEL onto
-        // RewardTrackDefinition. P5 rewired the screen's own reads to
-        // RewardTracks.For(character) and deleted the shim with them, so
-        // every test below that is really about the default table's
-        // arithmetic (not about a specific character's authored track) names
-        // it directly instead.
+        // THE GENERATED DEFAULT, named directly rather than reached through a
+        // character or the screen layer: every test below is about the
+        // default table's own arithmetic (RewardTrackDefinition.Default),
+        // not about a specific character's authored track, so there is
+        // nothing to gain by routing through RewardTracks.For(character)
+        // first.
         private static readonly RewardTrackDefinition Default = RewardTrackDefinition.Default("");
 
         // ---- the milestones -----------------------------------------------------
@@ -23,10 +19,11 @@ namespace PrincesPalace.Domain.Tests
         // player is counting toward. Moving one is a design change and should
         // have to be typed twice.
         //
-        // NINE OF THE TWELVE ARE MaxHealth 15 -- the interim table's stand-in
-        // for the seven reward kinds this package removed (P1 of
-        // docs/PLAN_REWARD_TRACKS.md). The three that are not are the spine:
-        // Respec at 20, StatPoint at 80, SecondLife at 90.
+        // NINE OF THE TWELVE ARE MaxHealth 15 -- the generated default has no
+        // author to give the other nine milestones their own flavour, so it
+        // fills them with a plain, always-safe reward instead. The three
+        // that are not are the spine every track shares: Respec at 20,
+        // StatPoint at 80, SecondLife at 90.
         [TestCase(10, TrackReward.MaxHealth, 15)]
         [TestCase(20, TrackReward.Respec, 0)]
         [TestCase(25, TrackReward.MaxHealth, 15)]
@@ -85,11 +82,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- grants vs unlocks --------------------------------------------------
 
-        // STATPOINT IS THE ONLY GRANT NOW (docs/PLAN_REWARD_TRACKS.md §2, P3).
-        // MaxHealth used to be one too, back when the interim table had only
-        // two reward kinds to pick a filler mix from -- now that it is one of
-        // twelve, everything but the one spent, storable quantity is read
-        // live instead (RewardTrackDefinition.CollectedTotal).
+        // STATPOINT IS THE ONLY GRANT (docs/PLAN_REWARD_TRACKS.md §2) --
+        // spent once against the watermark and stored. Everything else,
+        // MaxHealth included, is read live instead
+        // (RewardTrackDefinition.CollectedTotal).
         [TestCase(TrackReward.StatPoint, true)]
         [TestCase(TrackReward.MaxHealth, false)]
         [TestCase(TrackReward.Respec, false)]
@@ -101,13 +97,6 @@ namespace PrincesPalace.Domain.Tests
         public void OnlyStatPointIsAGrant(TrackReward reward, bool isGrant)
         {
             Assert.AreEqual(isGrant, RewardTrack.IsGrant(reward));
-        }
-
-        [Test]
-        public void NoneIsNeitherAGrantNorAnUnlock()
-        {
-            Assert.IsFalse(RewardTrack.IsGrant(TrackReward.None));
-            Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.None));
         }
 
         // A watermark is half-open at the bottom: everything up to and
@@ -152,6 +141,16 @@ namespace PrincesPalace.Domain.Tests
         public void ACapabilityTurnsOnAtItsLevelAndStaysOn(TrackReward reward, int level, bool expected)
         {
             Assert.AreEqual(expected, Default.HasUnlocked(reward, level));
+        }
+
+        // HasUnlocked's gate is RewardTrack.IsOneShotCapability, not "every
+        // kind but the one grant" -- MaxHealth is neither: it is a total
+        // read live through CollectedTotal, so asking HasUnlocked about it
+        // must answer false rather than true the moment it clears level 1.
+        [Test]
+        public void HasUnlockedRefusesAReadLiveTotalLikeMaxHealth()
+        {
+            Assert.IsFalse(Default.HasUnlocked(TrackReward.MaxHealth, 3));
         }
 
         // Level 80 grants ten stat points. It USED TO be sized to exactly one
@@ -282,32 +281,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, Default.NextRewardLevel(RewardTrack.MaxLevel + 50));
         }
 
-        // EVERY REWARD KIND THE ENUM KNOWS ABOUT IS ACTUALLY GRANTED used to
-        // live here, walking RewardTrack.UnlockLevel over the static table.
-        // docs/PLAN_REWARD_TRACKS.md P3 deletes both: the static table is gone
-        // (RewardTrackDefinition replaces it, one instance per character) and
-        // eight of the twelve reward kinds now exist that only an AUTHORED
-        // track grants -- the generated default (RewardTrackDefinition.
-        // Default) still only carries four. Asserting "every kind is granted"
-        // against the default would be false; weakening it to "against SOME
-        // track" needs the shipped sheep/owl tracks P6 authors, which do not
-        // exist in this package. P6 restores the honest version,
-        // EveryRewardKindIsGrantedBySomeShippedTrack, over real content.
-
         // ---- the max-health nodes -------------------------------------------------
-
-        // MaxHealth used to be claimed against the watermark exactly once, the
-        // same rule stat points follow -- see OnlyStatPointIsAGrant above for
-        // why that changed. It is still an IsUnlock kind (IsUnlock is just
-        // "not the one grant" now), even though it does not behave like a
-        // classic on/off capability: it is read live via CollectedTotal,
-        // summed rather than switched on.
-        [Test]
-        public void MaxHealthIsCollectedLiveRatherThanGranted()
-        {
-            Assert.IsFalse(RewardTrack.IsGrant(TrackReward.MaxHealth));
-            Assert.IsTrue(RewardTrack.IsUnlock(TrackReward.MaxHealth));
-        }
 
         // EVERY LEVEL PAYS. The filler counts sum to exactly the number of
         // filler levels, so there is no level between 2 and 100 that hands over
@@ -341,12 +315,12 @@ namespace PrincesPalace.Domain.Tests
                 "the track grants enough points to max every band, so spending them is no longer a choice");
         }
 
-        // THE INTERIM TABLE'S TWO TOTALS moved to
-        // RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth
-        // (Tests/EditMode/Run/RewardTrackDefinitionTests.cs) now that
-        // RewardTrackDefinition.Default owns the table this pinned --
-        // Default.GrantedBetween(MaxHealth, ...) is 0 by construction
-        // since P3 (OnlyStatPointIsAGrant above), so the old assertion could
-        // not be kept here even reworded.
+        // The default table's two totals (50 stat points, 229 max health)
+        // are pinned in RewardTrackDefinitionTests.
+        // TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth
+        // instead of here -- RewardTrackDefinition.Default owns the table,
+        // and Default.GrantedBetween(MaxHealth, ...) is 0 by construction
+        // (OnlyStatPointIsAGrant above), so a MaxHealth total belongs beside
+        // the CollectedTotal read it actually uses.
     }
 }

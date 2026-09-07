@@ -92,14 +92,13 @@ namespace PrincesPalace.Domain.Content
     // One character's reward track, resolved -- the shape
     // RewardTrackDefinitionAsset stores.
     //
-    // DELIBERATELY NOT `TrackEntry`/`RewardTrack` from Domain/Progression.
-    // docs/PLAN_REWARD_TRACKS.md's P3, running concurrently in a sibling
-    // worktree, rewrites that file into a RewardTrackDefinition and grows
-    // TrackEntry with the same extra fields ResolvedTrackMilestone already
-    // carries here -- referencing it from this package would hand P2 and P3
-    // a shared file to fight over. This record is P2's own resolved shape;
-    // P3/P4 are what turn it into a RewardTrackDefinition. Nothing reads it
-    // yet.
+    // DELIBERATELY NOT `TrackEntry`/`RewardTrack` from Domain/Progression --
+    // this record shares only TrackReward (the enum) with that package, not
+    // its entry struct or its arithmetic. RewardTrackDefinition.From is what
+    // turns this into a RewardTrackDefinition, the shape every read site
+    // actually walks; ContentDatabase.Validation also reads it directly,
+    // for the loaded-catalogue checks that must catch a hand-edited asset a
+    // resolver never saw.
     [Serializable]
     public sealed class ResolvedRewardTrack
     {

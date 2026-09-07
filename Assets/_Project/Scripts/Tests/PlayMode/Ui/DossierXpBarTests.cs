@@ -155,15 +155,12 @@ namespace PrincesPalace.PlayModeTests
             _menu.GetComponentsInChildren<Button>(includeInactive: true)
                 .FirstOrDefault(b => b.name == name);
 
-        private static Character First() =>
-            SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
-
         [UnityTest]
         public IEnumerator ThePlusIsHiddenWhenThereIsNothingToSpend()
         {
             yield return OpenTheDossier();
 
-            First().unspentStatPoints = 0;
+            SquadFixture.FirstLiveMember().unspentStatPoints = 0;
             Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include).Refresh();
             yield return null;
 
@@ -177,7 +174,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheDossier();
 
-            First().unspentStatPoints = 3;
+            SquadFixture.FirstLiveMember().unspentStatPoints = 3;
             Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include).Refresh();
             yield return null;
 
@@ -192,7 +189,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheDossier();
 
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.unspentStatPoints = 2;
             character.investedAbilityScores = default;
 
@@ -203,7 +200,7 @@ namespace PrincesPalace.PlayModeTests
             ButtonNamed("DossierAttrPlus0").onClick.Invoke();
             yield return null;
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             Assert.AreEqual(1, character.unspentStatPoints, "pressing the plus did not spend a point");
             Assert.AreEqual(1, character.InvestedPointTotal, "the point was spent but landed nowhere");
         }
@@ -218,7 +215,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheDossier();
 
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.unspentStatPoints = 1;
             character.investedAbilityScores = default;
 
@@ -234,7 +231,7 @@ namespace PrincesPalace.PlayModeTests
             ButtonNamed("DossierAttrPlus0").onClick.Invoke();
             yield return null;
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             var moved = PrincesPalace.Domain.Stats.AbilityScores.All
                 .Where(s => character.investedAbilityScores[s] > 0)
                 .ToList();
@@ -258,7 +255,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheDossier();
 
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             character.unspentStatPoints = 2;
             character.investedAbilityScores = default;
 
@@ -292,7 +289,7 @@ namespace PrincesPalace.PlayModeTests
             ButtonNamed("DossierAttrPlus4").onClick.Invoke();
             yield return null;
 
-            character = First();
+            character = SquadFixture.FirstLiveMember();
             var moved = PrincesPalace.Domain.Stats.AbilityScores.All
                 .Where(sc => character.investedAbilityScores[sc] > 0)
                 .ToList();

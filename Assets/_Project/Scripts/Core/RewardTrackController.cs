@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -255,20 +256,9 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return null;
 
-            if (!string.IsNullOrEmpty(_characterId))
-            {
-                foreach (var character in save.ActiveSquad())
-                {
-                    if (character != null && character.definitionId == _characterId) return character;
-                }
-            }
-
-            foreach (var character in save.ActiveSquad())
-            {
-                if (character != null) return character;
-            }
-
-            return null;
+            var squad = save.ActiveSquad();
+            return squad.FirstOrDefault(c => c != null && c.definitionId == _characterId)
+                ?? squad.FirstOrDefault(c => c != null);
         }
 
         // ---- the rail -------------------------------------------------------

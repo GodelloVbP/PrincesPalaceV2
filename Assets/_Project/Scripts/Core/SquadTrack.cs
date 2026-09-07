@@ -7,17 +7,16 @@ namespace PrincesPalace
     //
     // A run-scoped question asked of a per-character track has to resolve to
     // ONE number somehow, and this is THE SUM OVER THE FIELDED SQUAD, for a
-    // reward that is genuinely each character's own and merely spent out of
-    // a shared pot -- SecondLivesLeft's own comment argues it, and
-    // docs/PLAN_REWARD_TRACKS.md §6 is where it was settled. This file used
-    // to hold a second rule alongside it, BestLevel (the highest level in the
-    // squad, never the sum), for the reason ItemOfferRoll.SquadFavor gives:
-    // summing would make a run-scoped reward scale with squad size. P5
-    // deleted it with its last caller (RewardTrackController now reads one
-    // SELECTED character's own level and watermark, not the squad's best) --
-    // if a future run-scoped reward needs "highest in the squad" again, write
-    // that rule fresh rather than resurrecting this one, because the argument
-    // for it lived beside a method that has to sum for the opposite reason.
+    // reward that is each character's own and merely spent out of a shared
+    // pot -- SecondLivesLeft's own comment argues it, and
+    // docs/PLAN_REWARD_TRACKS.md §6 is where it was settled.
+    //
+    // NOT "highest in the squad" -- that rule belongs beside a run-scoped
+    // reward the whole squad shares equally regardless of who earned it
+    // (ItemOfferRoll.SquadFavor is that case: summing there would make the
+    // reward scale with squad size). This class sums for the opposite
+    // reason, so a "highest in the squad" rule does not belong here even if
+    // a future run-scoped reward needs one again.
     public static class SquadTrack
     {
         // How many second lives this descent has left.
@@ -38,11 +37,9 @@ namespace PrincesPalace
         // second life is read off claimedTrackLevel, so a character who has
         // hit 90 and never pressed collect has not got it yet.
         //
-        // P1 of docs/PLAN_REWARD_TRACKS.md retired the level-100 refresh
-        // (TrackReward.SecondLifeRefresh, which used to give the charge back
-        // on entering every boss) along with seven other over-arching reward
-        // kinds -- so the ceiling is what the squad has collected, with no way
-        // to renew it mid-run.
+        // NO MID-RUN REFRESH. The ceiling is exactly what the squad has
+        // collected off the track; nothing renews a spent charge before the
+        // next level-up.
         public static int SecondLivesLeft(RunSnapshot run)
         {
             if (run == null) return 0;

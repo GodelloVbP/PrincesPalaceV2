@@ -213,10 +213,9 @@ namespace PrincesPalace.Content
             // spent unrelated points, which is a reward nobody can plan
             // around.
             //
-            // READ LIVE off the watermark rather than off a stored total (§2).
-            // Character.bonusMaxHealth used to hold the accumulated figure and
-            // is gone: a stored copy is one retune away from disagreeing with
-            // the definition, and there is nothing to spend here, so there is
+            // READ LIVE off the watermark rather than off a stored total (§2):
+            // a stored copy is one retune away from disagreeing with the
+            // definition, and there is nothing to spend here, so there is
             // nothing storage buys.
             if (character != null)
             {
@@ -438,10 +437,10 @@ namespace PrincesPalace.Content
             var own = GetCharacter(character.definitionId)?.Data.AttackType;
             var track = RewardTracks.For(character);
 
-            foreach (DamageType type in System.Enum.GetValues(typeof(DamageType)))
+            foreach (var elemental in track.CollectedElementalTotals(character.claimedTrackLevel))
             {
-                int n = track.CollectedTotal(TrackReward.ElementalDamagePercent, type,
-                    character.claimedTrackLevel);
+                DamageType type = elemental.Key;
+                int n = elemental.Value;
                 if (n <= 0) continue;
 
                 found = found ?? new List<ModifierEffect>();

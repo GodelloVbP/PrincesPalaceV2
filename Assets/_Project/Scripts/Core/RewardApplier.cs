@@ -55,12 +55,8 @@ namespace PrincesPalace
                 // character receives the full amount. A pre-existing design
                 // decision, made visible here rather than changed.
                 //
-                // EXACTLY WHAT THE FIGHT PAID, no more. The reward track used
-                // to carry an experience-find kind that boosted this figure
-                // per character (Character.ExperienceWorthOf); P1 of
-                // docs/PLAN_REWARD_TRACKS.md retired it along with seven other
-                // over-arching reward kinds, so there is nothing left to scale
-                // the payout by.
+                // EXACTLY WHAT THE FIGHT PAID, no more -- nothing on the
+                // reward track scales this figure per character.
                 int gained = isDowned ? 0 : payout.Experience;
                 if (gained > 0) character.AddExperience(gained);
 

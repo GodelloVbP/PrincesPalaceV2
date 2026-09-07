@@ -829,9 +829,9 @@ public static class ScreenRegistry
             // calls ShowFor on. Bound here rather than in WireDossier because
             // both are the one thing the dossier needs that lives on another
             // screen -- WireDossier's own signature does not carry the
-            // RewardTrack screen to reach for. Both wiring calls above already
-            // return their controller, so this is a straight field assignment
-            // rather than the GetComponent re-find it used to be.
+            // RewardTrack screen to reach for. Both wiring calls above
+            // already return their controller, so this is a straight field
+            // assignment rather than a GetComponent re-find.
             if (dossierController != null)
             {
                 dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
@@ -933,14 +933,14 @@ public static class ScreenRegistry
 
         // ONE ENTRY PER REWARD KIND, not per level -- docs/PLAN_REWARD_
         // TRACKS.md §1's "the three things that DO become runtime": which
-        // reward sits at which level is a per-character, runtime question
-        // since P3/P4, so the art can no longer be baked by level. It is
-        // still resolved HERE rather than at runtime, because the controller
-        // lives in the runtime assembly and LoadSpriteByKey is editor-only --
-        // only the KEY it is indexed by moved, from level to kind. Sized off
-        // the enum itself so a thirteenth reward kind is a longer array
-        // rather than a silent miss, and index (int)TrackReward.X is the
-        // controller's own lookup (RewardTrackController.MarkFor/CardArtFor).
+        // reward sits at which level is a per-character, runtime question,
+        // so the art cannot be baked by level. It is still resolved HERE
+        // rather than at runtime, because the controller lives in the
+        // runtime assembly and LoadSpriteByKey is editor-only -- only the
+        // KEY it is indexed by is kind rather than level. Sized off the enum
+        // itself so a thirteenth reward kind is a longer array rather than a
+        // silent miss, and index (int)TrackReward.X is the controller's own
+        // lookup (RewardTrackController.MarkFor/CardArtFor).
         var rewardKinds = (TrackReward[])Enum.GetValues(typeof(TrackReward));
 
         // INDEX 0 IS TrackReward.None, and both IconFor and CardArtKeyFor

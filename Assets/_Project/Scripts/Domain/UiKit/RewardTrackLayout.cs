@@ -962,10 +962,10 @@ namespace PrincesPalace.Domain.UiKit
         // graceful degradation, and the same fallback a missing file gets.
         //
         // See RewardTrackScreen's art block for why these are the card's and
-        // not the rail's, and for how provisional the assignments are. The
-        // eight new cases are a RE-POINT of the same twelve constants, not a
-        // commission -- docs/PLAN_REWARD_TRACKS.md §1's table, freed by the
-        // eight retired reward kinds those constants used to serve.
+        // not the rail's, and for how provisional the assignments are. Every
+        // case below points at one of the same twelve art-key constants
+        // (docs/PLAN_REWARD_TRACKS.md §1's table), not a fresh commission
+        // per reward kind.
         public static string CardArtKeyFor(TrackReward reward)
         {
             switch (reward)

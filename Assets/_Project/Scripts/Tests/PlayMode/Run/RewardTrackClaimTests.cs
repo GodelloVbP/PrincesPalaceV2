@@ -101,8 +101,6 @@ namespace PrincesPalace.PlayModeTests
             Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .FirstOrDefault(b => b.name == name);
 
-        private static Character First() => SaveSlotManager.CurrentSave.ActiveSquad()[0];
-
         // CLOSING THE PANEL WHILE A NODE IS HOVERED, which threw every time.
         //
         // HoverIndex reports an EXIT from its own OnDisable -- deliberately, so
@@ -160,7 +158,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            var character = First();
+            var character = SquadFixture.FirstLiveMember();
             Assert.AreEqual(30, character.claimedTrackLevel,
                 "pressing collect did not move the watermark to the level reached");
             Assert.Greater(character.unspentStatPoints, 0,
@@ -178,7 +176,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            int points = First().unspentStatPoints;
+            int points = SquadFixture.FirstLiveMember().unspentStatPoints;
 
             // The button has hidden itself by now, which is most of the answer.
             // Pressing it anyway is the half that matters: hiding a control is
@@ -187,7 +185,7 @@ namespace PrincesPalace.PlayModeTests
             collect.onClick.Invoke();
             yield return null;
 
-            Assert.AreEqual(points, First().unspentStatPoints,
+            Assert.AreEqual(points, SquadFixture.FirstLiveMember().unspentStatPoints,
                 "stat points were paid a second time for levels already collected");
         }
 
@@ -237,11 +235,11 @@ namespace PrincesPalace.PlayModeTests
             // different number. A test that agrees with the code rather than
             // with the design cannot fail when the code is the thing that is
             // wrong, which is the whole reason this one survived.
-            Assert.AreEqual(20, First().claimedTrackLevel,
+            Assert.AreEqual(20, SquadFixture.FirstLiveMember().claimedTrackLevel,
                 "pressing a waiting node paid past the node that was pressed");
 
             // And the rest is still owed rather than lost.
-            Assert.AreEqual(10, RewardTrack.UnclaimedCount(30, First().claimedTrackLevel),
+            Assert.AreEqual(10, RewardTrack.UnclaimedCount(30, SquadFixture.FirstLiveMember().claimedTrackLevel),
                 "the levels above the pressed node stopped being owed");
         }
 
@@ -274,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
             float deadline = Time.realtimeSinceStartup + 0.15f;
             while (Time.realtimeSinceStartup < deadline) yield return null;
 
-            Assert.AreEqual(30, First().claimedTrackLevel,
+            Assert.AreEqual(30, SquadFixture.FirstLiveMember().claimedTrackLevel,
                 "pressing an unreached node paid something out");
             Assert.AreNotEqual(before, content.anchoredPosition.x,
                 "pressing an unreached node did nothing at all");

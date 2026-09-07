@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
-using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -180,12 +179,12 @@ namespace PrincesPalace.Domain.Tests
         // against both -- the same ordering ContentBuilder.BuildRewardTracks
         // depends on, and the same context map it assembles.
         //
-        // THE CONTEXT WAS EMPTY HERE until P6 authored real tracks, on the
-        // argument that an empty tracks array has nothing to validate. That
-        // was true and stopped being true, and the failure it produced was the
-        // useful kind: every rule 4/5 and skillId check refused, because a
-        // character absent from the map resolves against a blank context (see
-        // RewardTrackCharacterContext's own header). Mirrored properly now.
+        // BUILD THE REAL CONTEXT, not an empty one -- an empty tracks array
+        // has nothing to validate, but a track that IS authored validates
+        // against a character absent from the map as a blank context (see
+        // RewardTrackCharacterContext's own header), so a stub map here
+        // would silently refuse every rule 4/5 and skillId check rather than
+        // exercising them.
         //
         // ONE HALF DIFFERS BETWEEN THE TWO MAPS, deliberately, and it is the
         // rule docs/PLAN_REWARD_TRACKS.md §3f/§3h turns on: Level1DamageTypes
@@ -201,27 +200,7 @@ namespace PrincesPalace.Domain.Tests
                 "skills.json", ParseFile<RawSkillFile>(DataPath("skills.json")).skills,
                 SkillEntryResolver.TryResolveAll);
 
-            var everySkillName = skills.ToDictionary(s => s.Id, s => s.DisplayName);
-            var contexts = new Dictionary<string, RewardTrackCharacterContext>();
-
-            foreach (var character in characters)
-            {
-                var level1Types = new HashSet<DamageType> { character.AttackType };
-                foreach (var skill in skills.Where(s => s.CharacterId == character.Id && s.UnlockLevel <= 1))
-                {
-                    foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
-                }
-
-                contexts[character.Id] = new RewardTrackCharacterContext
-                {
-                    SortOrder = character.SortOrder,
-                    AttackType = character.AttackType,
-                    HasSignatureResource = character.HasSignatureResource,
-                    SignatureDisplayName = character.SignatureDisplayName,
-                    Level1DamageTypes = level1Types,
-                    SkillDisplayNames = everySkillName,
-                };
-            }
+            var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
 
             bool Resolver(IReadOnlyList<RawRewardTrackEntry> entries, out List<ResolvedRewardTrack> resolved,
                           out List<string> errors) =>

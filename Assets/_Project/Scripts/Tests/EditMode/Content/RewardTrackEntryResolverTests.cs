@@ -164,6 +164,28 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("cannot appear as filler", joined);
         }
 
+        // ---- rule 1, continued: a one-shot capability at most once ----
+
+        [Test]
+        public void SecondLifeAtTwoMilestones_IsRejectedNamingBothLevels()
+        {
+            var milestones = FullMilestones();
+            milestones.RemoveAll(m => m.level == 20);
+            milestones.Add(Milestone(20, "SecondLife", 1));
+            // FullMilestones already carries SecondLife at 90, so this
+            // fixture now names the same capability at 20 and 90.
+
+            bool ok = RewardTrackEntryResolver.TryResolveAll(
+                new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
+                null, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            string joined = string.Join("; ", errors);
+            StringAssert.Contains("SecondLife", joined);
+            StringAssert.Contains("20", joined);
+            StringAssert.Contains("90", joined);
+        }
+
         // ---- rules 4 and 5: cross-catalogue ----
         //
         // ElementalDamagePercent and the four SignatureX kinds were
@@ -178,7 +200,6 @@ namespace PrincesPalace.Domain.Tests
         {
             var context = new RewardTrackCharacterContext
             {
-                AttackType = Stats.DamageType.Nature,
                 Level1DamageTypes = new[] { Stats.DamageType.Nature },
             };
             var characters = new Dictionary<string, RewardTrackCharacterContext> { ["sheep"] = context };

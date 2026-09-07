@@ -59,9 +59,6 @@ namespace PrincesPalace.PlayModeTests
             };
         }
 
-        private static Character First() =>
-            SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
-
         private static Button[] Minuses(GameObject scope) =>
             Enumerable.Range(0, 6)
                 .Select(i => scope.GetComponentsInChildren<Button>(includeInactive: true)
@@ -84,7 +81,7 @@ namespace PrincesPalace.PlayModeTests
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(dossier, "the hub has no dossier controller");
 
-            InvestOnePointInEveryScore(First());
+            InvestOnePointInEveryScore(SquadFixture.FirstLiveMember());
             dossier.Refresh();
             yield return null;
 
@@ -113,7 +110,7 @@ namespace PrincesPalace.PlayModeTests
             var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(dossier, "the map has no dossier controller");
 
-            InvestOnePointInEveryScore(First());
+            InvestOnePointInEveryScore(SquadFixture.FirstLiveMember());
             dossier.Refresh();
             yield return null;
 
@@ -140,7 +137,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(dossier, "the fight scene has no dossier controller");
             Assert.IsTrue(dossier.EquipLocked, "fixture: the fight's copy should be locked");
 
-            InvestOnePointInEveryScore(First());
+            InvestOnePointInEveryScore(SquadFixture.FirstLiveMember());
 
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;

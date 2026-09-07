@@ -155,9 +155,6 @@ namespace PrincesPalace.Domain.Progression
         // time CollectedTotal re-reads the same levels.
         public static bool IsGrant(TrackReward reward) => reward == TrackReward.StatPoint;
 
-        public static bool IsUnlock(TrackReward reward) =>
-            reward != TrackReward.None && !IsGrant(reward);
-
         // A CAPABILITY WITH NO NUMBER -- the four kinds whose whole meaning is
         // that they happened, so their authored Amount is 0 and summing them
         // says nothing. These are the four an author may not place as FILLER
@@ -166,12 +163,12 @@ namespace PrincesPalace.Domain.Progression
         // whichever level the interleave happens to put it" is not a design
         // decision anybody made.
         //
-        // NOT IsUnlock, and the difference is the whole reason this exists.
-        // IsUnlock means "not the one grant", which since the one-grant model
-        // is every kind but StatPoint -- MaxHealth and wool capacity
-        // included. Using it as the filler gate refused MaxHealth 10 x15,
-        // which is a filler row on BOTH shipped tracks, and would have left
-        // levels 2-24 as nothing but stat points.
+        // NOT "every kind but the one grant". A helper with that broader
+        // meaning briefly gated the filler check here and refused MaxHealth
+        // 10 x15, which is a filler row on BOTH shipped tracks -- MaxHealth
+        // is not StatPoint either, so the broader test caught it too and
+        // would have left levels 2-24 as nothing but stat points. This list
+        // names the four one-shot kinds explicitly instead.
         public static bool IsOneShotCapability(TrackReward reward) =>
             reward == TrackReward.Respec
             || reward == TrackReward.SecondLife

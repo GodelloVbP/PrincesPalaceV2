@@ -90,10 +90,8 @@ namespace PrincesPalace
         // Fortunate and the very next call to this method already sees it
         // gone; nothing has to be reset, decremented or expired.
         //
-        // The reward track used to add a third, EARNED part
-        // (Character.earnedFavor) -- P1 of docs/PLAN_REWARD_TRACKS.md retired
-        // that grant along with seven other over-arching reward kinds, so
-        // Favor is back to the two live sources.
+        // TWO SOURCES ONLY. Nothing on the reward track adds a third, earned
+        // part -- Favor is authored-plus-live, full stop.
         //
         // Tolerant of every side being missing, the house style: a character
         // whose definition has gone (content edited under a live save) still
@@ -223,10 +221,8 @@ namespace PrincesPalace
         // a seeded stand-in and get the same items every time.
         //
         // `count` defaults to ItemOfferTable.OfferCount, which is what every
-        // caller wants -- the reward track used to widen this at level 50
-        // (P1 of docs/PLAN_REWARD_TRACKS.md retired that grant), so the
-        // parameter exists for a caller under test that wants a specific
-        // count rather than for any live variation any more.
+        // live caller wants; the parameter exists for a caller under test
+        // that wants a specific count instead.
         public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex,
             int count = ItemOfferTable.OfferCount)
         {
