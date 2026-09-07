@@ -187,6 +187,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `bookOnly` | bool | `false` | Whether this skill is learned from a shop book rather than by levelling. |  |
 | `bookTier` | int | `0` | The shop's price band (1-4) for this spell as a book; 0 means not book-eligible. |  |
 | `meleeReach` | bool | `false` | Whether the front-rank melee-reach rule applies to this SingleEnemy skill. |  |
+| `reachSlots` | int[] | `[]` | Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere. |  |
 
 ## spells.json -- `RawSpellTierEntry`
 

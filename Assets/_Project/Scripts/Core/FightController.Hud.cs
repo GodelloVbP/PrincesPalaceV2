@@ -223,19 +223,12 @@ namespace PrincesPalace
                 }
             }
 
-            // HOLD BACK's own bank count, folded into the label it is already
-            // one of four -- BankedActions was invisible everywhere before
-            // this, including on the verb that spends a turn creating it.
-            // Index 3: {Attack, Skill, Item, HoldBack} is the fixed order
-            // BuildVerbColumn authored these in.
-            const int HoldBackVerbIndex = 3;
-            if (Has(verbLabels, HoldBackVerbIndex))
-            {
-                var actor = ActingCharacter();
-                int banked = actor?.BankedActions ?? 0;
-                verbLabels[HoldBackVerbIndex].Set(UiStrings.VerbHoldBackWithBank, banked, FightTuning.MaxBankedActions);
-            }
-
+            // NOTHING IS OVERWRITTEN ON A VERB LABEL ANY MORE. The fourth
+            // row used to have its banked-action count written in here every
+            // repaint, because Hold Back built a resource nothing else showed.
+            // Move builds none: what it costs (the turn) and what it can do
+            // (which directions are open) are both on its own submenu rows,
+            // so the label is exactly what the screen tree authored.
             breadcrumb.SetContent(FightHudModel.Breadcrumb(_menu));
         }
 
@@ -256,7 +249,9 @@ namespace PrincesPalace
 
             submenuTitle.Set(_menu.Branch == MenuBranch.Item
                 ? UiStrings.SubmenuItemsTitle
-                : UiStrings.SubmenuSkillsTitle);
+                : _menu.Branch == MenuBranch.Move
+                    ? UiStrings.SubmenuMoveTitle
+                    : UiStrings.SubmenuSkillsTitle);
             // The truncation is reported HERE, beside the list it truncates,
             // rather than into the combat log. It used to AppendMessage on every
             // refresh, so the bark spent the fight repeating "9 more entr(y/ies)
@@ -394,29 +389,32 @@ namespace PrincesPalace
             return options[row].Skill.Targeting == Domain.Combat.SkillTargeting.AllEnemies;
         }
 
-        // Whether the click resolving at Target depth is subject to the
-        // front-rank rule at all -- Attack is always the plain Strike, which
-        // always has been; a skill only joins it by carrying meleeReach (see
-        // ResolvedSkill.MeleeReach's own comment). Mirrors the same lookup
-        // OnEnemyPressed uses to gate the click itself -- this is the half
-        // that paints the same answer onto the plate, not a second rule.
-        private bool TargetingIsMelee()
+        // THE REACH the click resolving at Target depth would carry. Attack
+        // is always the plain Strike (Reach.Melee); a skill carries its own,
+        // which is Reach.Any for everything ranged or magical. Mirrors the
+        // same lookup OnEnemyPressed uses to gate the click itself -- this is
+        // the half that paints the same answer onto the plate, not a second
+        // rule.
+        private Domain.Combat.Reach TargetingReach()
         {
-            if (_menu.Branch == MenuBranch.Attack) return true;
-            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
+            if (_menu.Branch == MenuBranch.Attack) return Domain.Combat.Reach.Melee;
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null)
+            {
+                return Domain.Combat.Reach.Any;
+            }
 
             var options = SkillOptions(_session.Current);
             int row = _menu.Selection;
-            if (row < 0 || row >= options.Count) return false;
+            if (row < 0 || row >= options.Count) return Domain.Combat.Reach.Any;
 
-            return options[row].Skill.MeleeReach;
+            return options[row].Skill.Reach;
         }
 
         // Alpha rather than a colour swap -- the same "dim, don't hide"
         // choice the submenu's own unaffordable rows already make (see
         // DimmedAlpha there). A blocked plate is still information; it is
         // just not this click's business right now.
-        private const float MeleeBlockedAlpha = 0.5f;
+        private const float OutOfReachAlpha = 0.5f;
 
         // Elite/boss dressing -- a tint on the existing plate and name,
         // never a new node. The plate carries three text rows in 64px
@@ -443,7 +441,7 @@ namespace PrincesPalace
 
             // Computed ONCE per refresh, not once per plate -- the same
             // question asked of the same click for every plate in the loop.
-            bool meleeTargeting = _menu.IsTargeting && TargetingIsMelee();
+            var targetingReach = TargetingReach();
 
             // An elite room fields a squad drawn entirely from the elite pool,
             // so every living plate reads it; a boss room fields exactly the
@@ -470,8 +468,8 @@ namespace PrincesPalace
                 // interactable -- the plate stops being a button rather than
                 // staying one that silently refuses, which is the visual half
                 // of the fix Phase 1 already made to the click itself.
-                bool blocked = present && meleeTargeting && _session != null
-                    && !_session.CanMeleeReach(enemies[i]);
+                bool blocked = present && _menu.IsTargeting && _session != null
+                    && !_session.CanReach(_session.Current, targetingReach, enemies[i]);
 
                 bool dressed = present && (
                     _encounterClass == EncounterClass.Elite
@@ -483,7 +481,7 @@ namespace PrincesPalace
                     if (plateImage != null)
                     {
                         var colour = dressed ? EliteBossPlateTint : Color.white;
-                        colour.a = blocked ? MeleeBlockedAlpha : 1f;
+                        colour.a = blocked ? OutOfReachAlpha : 1f;
                         plateImage.color = colour;
                     }
                     enemyPlates[i].interactable = !blocked;
@@ -501,7 +499,7 @@ namespace PrincesPalace
                     if (reticleImage != null)
                     {
                         var colour = reticleImage.color;
-                        colour.a = blocked ? MeleeBlockedAlpha : 1f;
+                        colour.a = blocked ? OutOfReachAlpha : 1f;
                         reticleImage.color = colour;
                     }
                 }
@@ -1716,7 +1714,9 @@ namespace PrincesPalace
         private IReadOnlyList<SubmenuRow> CurrentRows() =>
             _menu.Branch == MenuBranch.Item
                 ? FightHudModel.ItemRows(_satchel)
-                : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
+                : _menu.Branch == MenuBranch.Move
+                    ? FightHudModel.MoveRows(_session, ActingCharacter())
+                    : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
 
         // Same seam as HoveredEnemyIndexForTest/FocusedVerbForTest
         // (FightController.Input.cs) -- the click handler stays private

@@ -36,7 +36,8 @@ namespace PrincesPalace.Domain.Tests
             int queuePushSlots = 0,
             DamageInstance[] damageInstances = null,
             TransformGrant transform = null) =>
-            new ResolvedSkill("test", displayName, "", "hero", 1, effect, SkillTargeting.SingleEnemy,
+            new ResolvedSkill("test", displayName, "", "hero", 1, effect,
+                SkillEntryResolver.DefaultTargetingFor(effect),
                 manaCost, resourceCost, false, power, flatAmount, false,
                 damageInstances, SpellPresentation.None, 0,
                 appliesStatus: appliesStatus, statusMagnitude: statusMagnitude,

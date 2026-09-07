@@ -218,6 +218,20 @@ namespace PrincesPalace.Domain.Tests
             int guard = 0;
             while (!session.IsOver && guard++ < 20)
             {
+                // A SESSION CAN BE LEFT SITTING ON AN ENEMY TURN (the same
+                // state FightController.RescueAStalledEnemyTurn and
+                // FightRunner's own StalledEnemyTurn invariant both exist for),
+                // and a swing issued on one is now refused rather than
+                // resolving as the monster attacking itself: CanReach's second
+                // step answers false for a target on the actor's own side. So
+                // this driver resolves what is owed instead of hammering the
+                // command, which is what a player's own screen does too.
+                if (!session.IsPlayerTurn)
+                {
+                    session.AutoResolveEnemyTurns();
+                    continue;
+                }
+
                 hero.CurrentHealth = 1;
                 session.ExecuteAttack(foe);
             }

@@ -426,6 +426,7 @@
         "impactY": 0.52
       },
       "cooldownTurns": 2,
+      "reachSlots": [2, 3],
       "playerSelectable": false
     },
     {

@@ -23,7 +23,7 @@ namespace PrincesPalace.Domain.Bot
         // Livelock guard for the fallback below: when NOTHING in `legal`
         // can put a positive number on anyone (DamagingTargetSelection
         // found no eligible target), a non-damaging Skill is picked at
-        // most twice in a row before HoldBack/Attack takes over instead --
+        // most twice in a row before FightAction.LastResort takes over --
         // see GreedyDefensivePolicy's own repeat guard for the seed this
         // shape of bug was first found at (629, a ward rather than a
         // provoke, but the same "re-scored identically every turn with
@@ -107,9 +107,10 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
-            // Nothing to hit, nothing safe to repeat -- HoldBack is the only
-            // thing left standing (it is always in `legal`).
-            return legal.First(a => a.Kind == FightActionKind.HoldBack);
+            // Nothing to hit, nothing safe to repeat. See
+            // FightAction.LastResort for why this is no longer a First(...)
+            // on a pass action that is no longer unconditionally legal.
+            return FightAction.LastResort(legal);
         }
 
         // The authored skill id behind one legal Skill action -- the key

@@ -123,20 +123,74 @@ namespace PrincesPalace.Domain.Combat.Session
         public bool PlayerWon => _encounter.PlayerWon;
         public CombatEncounter Encounter => _encounter;
 
-        // Monkey King's Scepter: the CURRENT actor's melee reaches any
-        // enemy regardless of the front-rank rule. Read off Current rather
-        // than taking an actor parameter -- every real caller (the input
-        // layer, checking before it lets a click through) is asking "can
-        // whoever is about to act reach this", which is exactly Current.
-        public bool CanMeleeReach(CombatantState target)
+        // CAN THIS ACTOR, WITH THIS REACH, LAND A SINGLE-OPPONENT ACTION ON
+        // THIS TARGET? The primitive. Everything positional in the game --
+        // the click gate, plate dimming, row affordability, the enemy AI's
+        // own pool, the bot's legal menu -- is a convenience over this one
+        // method, so there is exactly one place the rule is stated.
+        //
+        // DEFINED ONLY FOR SINGLE-OPPONENT ACTIONS: the plain attack, and a
+        // skill whose targeting is SingleEnemy. Self, Party, AllEnemies and
+        // Summon keep their existing applicability rules (AlliesOf /
+        // OpponentsOf, the summon cap) and must never ask this -- an ally
+        // handed in here answers false, which is the answer that surfaces
+        // the caller bug rather than hiding it.
+        //
+        // NO ALLOCATION. It is asked once per enemy plate per repaint and
+        // once per ability per AI draw; EligibleTargets below is the filter
+        // for callers who genuinely want a list.
+        //
+        // Evaluation order is fixed and each step is load-bearing:
+        public bool CanReach(CombatantState actor, Reach reach, CombatantState target)
         {
-            var actor = _encounter.Current;
-            if (actor != null && actor.IsPlayerSide && HasRelic(actor, RelicEffect.MonkeyKingsScepter))
+            // 1. VALIDATE. LivingRankOf answers -1 for dead and for "not in
+            //    this encounter" alike, which is the same "there is nothing
+            //    there to hit" in both cases.
+            if (actor == null || target == null) return false;
+            int rank = _encounter.LivingRankOf(target);
+            if (rank < 0) return false;
+
+            // 2. CATEGORY. A single-opponent question asked about an ally.
+            if (actor.IsPlayerSide == target.IsPlayerSide) return false;
+
+            // 3a. PROVOKE WINS, for every ReachKind. A taunt is the one thing
+            //     allowed to override where an action can go, in both
+            //     directions: it makes the provoker reachable from anywhere
+            //     AND makes everyone else unreachable. Applied before the
+            //     scepter because a taunt narrows and the scepter widens, and
+            //     the narrowing is the promise the player paid a turn for.
+            var forced = ForcedTargetFor(actor);
+            if (forced != null) return ReferenceEquals(target, forced);
+
+            // 3b. MONKEY KING'S SCEPTER lifts the FRONT-RANK RULE only.
+            //     Kind == Melee, never ExplicitRanks: the relic's promise is
+            //     about striking past a bodyguard, not about ignoring what a
+            //     skill says about where it may be aimed. See Reach's header.
+            if (reach.Kind == ReachKind.Melee && actor.IsPlayerSide
+                && HasRelic(actor, RelicEffect.MonkeyKingsScepter))
             {
-                return target != null;
+                return true;
             }
 
-            return _encounter.CanMeleeReach(target);
+            // 4. THE RANK MASK.
+            return reach.Allows(rank);
+        }
+
+        // The filter over CanReach: every opponent this actor could aim a
+        // single-opponent action at right now, in list order. Same
+        // single-opponent-only contract as CanReach above -- an AllEnemies or
+        // Party skill has no business here.
+        public IReadOnlyList<CombatantState> EligibleTargets(CombatantState actor, Reach reach)
+        {
+            var eligible = new List<CombatantState>();
+            if (actor == null) return eligible;
+
+            foreach (var opponent in _encounter.OpponentsOf(actor))
+            {
+                if (CanReach(actor, reach, opponent)) eligible.Add(opponent);
+            }
+
+            return eligible;
         }
 
         public PlayerKit KitFor(CombatantState combatant) =>
@@ -245,14 +299,26 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // A plain attack. Resolves the swing, records its beat, and hands the
         // turn on -- enemy replies included.
-        public void ExecuteAttack(CombatantState target)
+        //
+        // Returns false for a refusal that changed nothing: no beat, no
+        // mana, no cooldown, no turn. The click gate and the bot's legal
+        // menu both filter this out ahead of time, so a false here means
+        // something called the command directly.
+        public bool ExecuteAttack(CombatantState target)
         {
             var actor = Current;
-            if (actor == null || target == null) return;
+            if (actor == null || target == null) return false;
 
-            // Any ordinary action may cash in a banked turn afterwards. Hold
-            // Back is the exception and says so itself.
-            _actionCanBrave = true;
+            // THE REACH CHECK COMES FIRST, before anything is spent and
+            // before a beat exists to be thrown away. A plain swing is
+            // SingleEnemy with Reach.Melee, always -- the front-rank rule
+            // stated as a value rather than as a special case.
+            if (!CanReach(actor, Reach.Melee, target))
+            {
+                AppendMessage($"{target.Name} is out of reach.");
+                return false;
+            }
+
             BeginBeat(actor, target);
             SetStance(actor, Stances.Attack);
 
@@ -295,33 +361,118 @@ namespace PrincesPalace.Domain.Combat.Session
             // earned it rather than opening a beat of its own.
             CommitBeat();
             AdvanceAfterAction();
+            return true;
         }
 
-        // Give up this turn to bank one, up to the cap. The action that earns
-        // a banked point must NOT be able to spend it on itself, which is why
-        // this is the one command that leaves _actionCanBrave false.
-        public void HoldBack()
+        // ---- move ----------------------------------------------------------
+        //
+        // Trade field places with the nearest living ally in one direction,
+        // and END THE TURN doing it. This replaced Hold Back, which banked an
+        // action for a later free turn: a turn spent on tempo, for a turn
+        // spent on position. The tank swap it buys is only worth a turn
+        // because enemy melee now concentrates on rank 0 the same way the
+        // player's always has.
+        //
+        // ENEMIES NEVER MOVE. There is no AI branch for it and no intent that
+        // can telegraph one; the monsters' side of the front-rank rule is
+        // enforced entirely by what they are allowed to target.
+
+        // The ONE legality query -- the verb row, the bot's legal menu and
+        // Move itself all read this, so a row can never offer a move the
+        // command then refuses.
+        public bool CanMove(CombatantState actor, MoveDirection direction)
+        {
+            if (!TryFindMovePartner(actor, direction, out _, out int partnerIndex)) return false;
+            if (StatusEffects.HasRooted(actor.Statuses)) return false;
+            return !StatusEffects.HasRooted(_encounter.PlayerParty[partnerIndex].Statuses);
+        }
+
+        // Returns false for a refusal that spent nothing -- checked BEFORE
+        // BeginBeat, so a refused move costs no turn and leaves no beat.
+        public bool Move(MoveDirection direction)
         {
             var actor = Current;
-            if (actor == null) return;
+            if (actor == null) return false;
 
-            _actionCanBrave = false;
+            // ROOTED IS ONE RULE, READ OFF BOTH SIDES OF THE SWAP. Rooted
+            // means "cannot change field position", and a swap changes two --
+            // so a rooted partner refuses the move just as a rooted actor
+            // does, and says the same sentence about whichever one it is.
+            if (StatusEffects.HasRooted(actor.Statuses))
+            {
+                AppendMessage($"{actor.Name} is rooted.");
+                return false;
+            }
+
+            if (!TryFindMovePartner(actor, direction, out int actorIndex, out int partnerIndex))
+            {
+                AppendMessage($"{actor.Name} has nowhere to move {WordFor(direction)}.");
+                return false;
+            }
+
+            var other = _encounter.PlayerParty[partnerIndex];
+            if (StatusEffects.HasRooted(other.Statuses))
+            {
+                AppendMessage($"{other.Name} is rooted.");
+                return false;
+            }
+
             BeginBeat(actor, null);
             SetStance(actor, Stances.Idle);
 
-            if (actor.BankedActions < FightTuning.MaxBankedActions)
-            {
-                actor.BankedActions++;
-                AppendMessage($"{actor.Name} holds back, banking an action.");
-            }
-            else
-            {
-                AppendMessage($"{actor.Name} cannot bank any more actions.");
-            }
+            _encounter.SwapPartySlots(actorIndex, partnerIndex);
+            AppendMessage($"{actor.Name} steps {WordFor(direction)}, trading places with {other.Name}.");
+
+            // BOTH figures moved, and the note is fired for both -- Sparring
+            // Buckler pays the acting character for an action that changed
+            // ANY position, Sparring Saber pays only the one who chose to
+            // move (mover == actingCharacter). See NoteDeliberateMove.
+            NoteDeliberateMove(actor, actor);
+            NoteDeliberateMove(other, actor);
 
             CommitBeat();
             AdvanceAfterAction();
+            return true;
         }
+
+        // Who this actor would trade places with, and where both of them
+        // stand in the party list. CORPSES ARE STEPPED OVER: the swap is with
+        // the nearest LIVING ally in that direction, so a dead front-ranker
+        // does not wall the character behind it in.
+        //
+        // Returns list INDICES, not living ranks -- SwapPartySlots reorders
+        // the list, and the list is the thing ranks are computed from.
+        private bool TryFindMovePartner(CombatantState actor, MoveDirection direction,
+                                        out int actorIndex, out int partnerIndex)
+        {
+            actorIndex = -1;
+            partnerIndex = -1;
+
+            // Not the player's side means no move: the enemy AI has no Move
+            // and this is also what stops an enemy turn reaching it.
+            if (actor == null || !actor.IsPlayerSide || !actor.IsAlive) return false;
+
+            var party = _encounter.PlayerParty;
+            for (int i = 0; i < party.Count; i++)
+            {
+                if (ReferenceEquals(party[i], actor)) { actorIndex = i; break; }
+            }
+
+            if (actorIndex < 0) return false;
+
+            int step = direction == MoveDirection.Forward ? -1 : 1;
+            for (int i = actorIndex + step; i >= 0 && i < party.Count; i += step)
+            {
+                if (!party[i].IsAlive) continue;
+                partnerIndex = i;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string WordFor(MoveDirection direction) =>
+            direction == MoveDirection.Forward ? "forward" : "back";
 
         private int ResolveAttackSwing(CombatantState actor, CombatantState target, string verbPhrase)
         {

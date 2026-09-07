@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Tests
             var encounter = new CombatEncounter(new[] { hero }, foes);
             // TestSkills.RangedPacket stands in for the old free basic spell
             // so a target behind the front rank is reachable at all -- Attack is
-            // front-rank-only (see CombatEncounter.CanMeleeReach), and with
+            // front-rank-only (see FightSession.CanReach), and with
             // more than one foe that is the only way this fixture can show
             // GreedyAggressive choosing BETWEEN targets rather than being
             // handed just one.
@@ -75,7 +75,7 @@ namespace PrincesPalace.Domain.Tests
             // foes[0] (200 HP) is the front rank, reachable by Attack or the
             // ranged skill; foes[1] (40 HP) sits behind it and is reachable
             // only by the ranged skill (Attack is front-rank-only -- see
-            // CombatEncounter.CanMeleeReach). GreedyAggressive must still
+            // FightSession.CanReach). GreedyAggressive must still
             // pick the lower-HP one across both kinds of reach.
             var (session, hero, foes) = HeroVsMany(200, 40);
             var policy = new GreedyAggressivePolicy();
@@ -321,8 +321,8 @@ namespace PrincesPalace.Domain.Tests
         // ---- NonDamagingSkillGuard wiring -----------------------------------
         //
         // `legal` is built by hand rather than through FightAction.LegalActions
-        // for these two: whenever ANY enemy is alive, CombatEncounter.
-        // CanMeleeReach always allows Attack against the front rank (Max(1, ...)
+        // for these two: whenever ANY enemy is alive, FightSession.CanReach
+        // always allows Attack against the front rank (Max(1, ...)
         // in CombatMath.ComputeAttackDamage means it is never a 0-damage
         // candidate), so the guarded fallback below can never actually be
         // reached through LegalActions' own output in this game's current
@@ -340,8 +340,12 @@ namespace PrincesPalace.Domain.Tests
             var provokeOption = session.SkillOptionsFor(hero).First(o => o.Skill.Effect == SkillEffect.Provoke);
             var legal = new List<FightAction>
             {
+                // MOVE FIRST, deliberately: with no Attack on this hand-built
+                // menu, FightAction.LastResort falls through to legal[0], and
+                // a Skill sitting there would be the very thing the guard is
+                // supposed to have refused.
+                new FightAction(FightActionKind.Move, moveDirection: MoveDirection.Back),
                 new FightAction(FightActionKind.Skill, foes[0], provokeOption.Index),
-                new FightAction(FightActionKind.HoldBack),
             };
             var policy = new GreedyAggressivePolicy();
             var rng = new SeededRandom(1);
@@ -364,8 +368,12 @@ namespace PrincesPalace.Domain.Tests
             var provokeOption = session.SkillOptionsFor(hero).First(o => o.Skill.Effect == SkillEffect.Provoke);
             var legal = new List<FightAction>
             {
+                // MOVE FIRST, deliberately: with no Attack on this hand-built
+                // menu, FightAction.LastResort falls through to legal[0], and
+                // a Skill sitting there would be the very thing the guard is
+                // supposed to have refused.
+                new FightAction(FightActionKind.Move, moveDirection: MoveDirection.Back),
                 new FightAction(FightActionKind.Skill, foes[0], provokeOption.Index),
-                new FightAction(FightActionKind.HoldBack),
             };
             var policy = new GreedyDefensivePolicy();
             var rng = new SeededRandom(1);

@@ -41,20 +41,27 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, FightHudSpec.EnemyPlates);
         }
 
+        // THE REACH RULE ITSELF LIVES ON THE SESSION now (FightSession.
+        // CanReach -- it has to see relics and taunts, which the encounter
+        // cannot). What stayed here is the fact the rule is computed FROM:
+        // the encounter's own living rank.
+
         [Test]
-        public void MeleeCannotReachPastALivingFrontRank()
+        public void RankCountsFromTheFrontInListOrder()
         {
             var player = Fighter("Player", true);
             var front = Fighter("Front", false);
             var back = Fighter("Back", false);
             var encounter = new CombatEncounter(new[] { player }, new[] { front, back });
 
-            Assert.IsTrue(encounter.CanMeleeReach(front), "the front rank is always reachable");
-            Assert.IsFalse(encounter.CanMeleeReach(back), "the front rank has to be cleared first");
+            Assert.AreEqual(0, encounter.LivingRankOf(front));
+            Assert.AreEqual(1, encounter.LivingRankOf(back));
+            Assert.AreSame(front, encounter.FrontEnemy);
+            Assert.AreSame(player, encounter.FrontPartyMember);
         }
 
         [Test]
-        public void ClearingTheFrontRankOpensTheOneBehindIt()
+        public void DeathCompressesTheRanksBehindTheCorpse()
         {
             var player = Fighter("Player", true);
             var front = Fighter("Front", false);
@@ -64,21 +71,40 @@ namespace PrincesPalace.Domain.Tests
             front.CurrentHealth = 0;
 
             Assert.IsFalse(front.IsAlive);
-            Assert.IsTrue(encounter.CanMeleeReach(back),
+            Assert.AreEqual(-1, encounter.LivingRankOf(front), "a corpse has no rank");
+            Assert.AreEqual(0, encounter.LivingRankOf(back),
                 "rank falls out of who is still standing, so a dead front rank blocks nothing");
+            Assert.AreSame(front, encounter.Enemies[0], "and the corpse keeps its slot in the list");
+            Assert.AreSame(back, encounter.Enemies[1], "list order is untouched by a death");
         }
 
         [Test]
-        public void AlliesAndNullAreNotConstrainedByTheFrontRank()
+        public void RankIsAnsweredForAnyoneNotOnTheFieldWithTheSameSentinel()
         {
             var player = Fighter("Player", true);
             var ally = Fighter("Ally", true);
             var front = Fighter("Front", false);
-            var back = Fighter("Back", false);
-            var encounter = new CombatEncounter(new[] { player, ally }, new[] { front, back });
+            var encounter = new CombatEncounter(new[] { player, ally }, new[] { front });
 
-            Assert.IsTrue(encounter.CanMeleeReach(ally), "this rule is about reaching PAST enemies, not about allies");
-            Assert.IsFalse(encounter.CanMeleeReach(null), "nothing is reachable when there is no target");
+            Assert.AreEqual(1, encounter.LivingRankOf(ally), "both sides are ranked the same way");
+            Assert.AreEqual(-1, encounter.LivingRankOf(null));
+            Assert.AreEqual(-1, encounter.LivingRankOf(Fighter("Stranger", false)),
+                "someone who is not in this encounter has no rank in it");
+        }
+
+        [Test]
+        public void SwappingPartySlotsReordersTheListAndNothingElse()
+        {
+            var player = Fighter("Player", true);
+            var ally = Fighter("Ally", true);
+            var encounter = new CombatEncounter(new[] { player, ally }, new[] { Fighter("Front", false) });
+
+            Assert.IsTrue(encounter.SwapPartySlots(0, 1));
+
+            Assert.AreSame(ally, encounter.PlayerParty[0]);
+            Assert.AreSame(player, encounter.PlayerParty[1]);
+            Assert.IsFalse(encounter.SwapPartySlots(0, 0), "a slot cannot trade with itself");
+            Assert.IsFalse(encounter.SwapPartySlots(0, 5), "and an out-of-range slot is refused, not clamped");
         }
     }
 }

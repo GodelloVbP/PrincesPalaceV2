@@ -267,6 +267,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryResolveReach(raw, label, targeting, out var reach, out error)) return false;
+
             // Both Resources-relative. A wrong convention here costs the skill
             // its animation and its sound with no error anywhere — the hit just
             // lands silently.
@@ -305,9 +307,58 @@ namespace PrincesPalace.Domain.Content
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
-                ParseApproach(raw.approach), raw.shake, raw.meleeReach,
+                ParseApproach(raw.approach), raw.shake, reach,
                 raw.bookOnly, raw.bookTier);
             error = null;
+            return true;
+        }
+
+        // WHERE THE TWO REACH CONVENTIONS MEET, and the only place they do.
+        //
+        // meleeReach and reachSlots are two ways of saying the same KIND of
+        // thing and are refused together rather than merged: "the front-rank
+        // rule applies" is a rule with a relic that lifts it (Monkey King's
+        // Scepter), while "positions 2 and 3" is an authored list nothing
+        // lifts. A skill that said both would have to pick one at read time,
+        // and whichever it picked would surprise whoever wrote the other.
+        private static bool TryResolveReach(RawSkillEntry raw, string label, SkillTargeting targeting,
+            out Reach reach, out string error)
+        {
+            reach = raw.meleeReach ? Reach.Melee : Reach.Any;
+            error = null;
+
+            var slots = raw.reachSlots;
+            if (slots == null || slots.Length == 0) return true;
+
+            if (raw.meleeReach)
+            {
+                error = $"{label}: reachSlots and meleeReach both say where this skill can be aimed. " +
+                        "Use meleeReach for the front-rank rule (which Monkey King's Scepter lifts), " +
+                        "or reachSlots for an authored restriction (which nothing lifts) — not both.";
+                return false;
+            }
+
+            // Same "this field has no meaning on that targeting" rule
+            // meleeReach just above already follows: a group cast or a self
+            // buff has no single position to be aimed at.
+            if (targeting != SkillTargeting.SingleEnemy)
+            {
+                error = $"{label}: reachSlots only means anything on a SingleEnemy skill, not {targeting}.";
+                return false;
+            }
+
+            foreach (int slot in slots)
+            {
+                if (slot >= 1 && slot <= Reach.MaxRanks) continue;
+
+                error = $"{label}: reachSlots names position {slot}, and positions are 1-{Reach.MaxRanks} " +
+                        $"counted from the front (a side never fields more than {Reach.MaxRanks}). " +
+                        "A 0 reads as an off-by-one against the 1-based convention; anything higher is a " +
+                        "restriction nothing on the field could ever satisfy.";
+                return false;
+            }
+
+            reach = Reach.FromContent(slots);
             return true;
         }
 
@@ -501,7 +552,12 @@ namespace PrincesPalace.Domain.Content
 
         // So the common case never has to write `targeting` at all — an
         // author who states the effect has already said who it hits.
-        private static SkillTargeting DefaultTargetingFor(SkillEffect effect)
+        // PUBLIC so a caller building a ResolvedSkill by hand (every EditMode
+        // fixture that does) lands on the same targeting the resolver would
+        // have given it. A fixture that guessed SingleEnemy for a HealSelf was
+        // building content skills.json could never produce, and it went
+        // unnoticed until targeting started carrying a rule.
+        public static SkillTargeting DefaultTargetingFor(SkillEffect effect)
         {
             switch (effect)
             {

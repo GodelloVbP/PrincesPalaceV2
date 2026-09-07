@@ -17,9 +17,13 @@ namespace PrincesPalace.Domain.Bot
         // Declaration order is also report order (BalanceBotRunner's cells,
         // the archetype-gap graph) wherever a caller iterates this instead
         // of hand-typing the four names.
+        // APPENDED, never reordered: BalanceBotRunner filters -botArchetypes
+        // against this list, so a name has to be in it to be selectable at
+        // all (`tools/bot.ps1 -Archetypes ProtectTheFront`), and the four
+        // that were here keep both their behaviour and their report column.
         public static readonly IReadOnlyList<string> Names = new[]
         {
-            "RandomLegal", "GreedyAggressive", "GreedyDefensive", "Lookahead2",
+            "RandomLegal", "GreedyAggressive", "GreedyDefensive", "Lookahead2", "ProtectTheFront",
         };
 
         // One object per call, implementing both IFightPolicy and
@@ -38,6 +42,7 @@ namespace PrincesPalace.Domain.Bot
                 case "GreedyAggressive": return new GreedyAggressivePolicy();
                 case "GreedyDefensive": return new GreedyDefensivePolicy();
                 case "Lookahead2": return new Lookahead2Policy();
+                case "ProtectTheFront": return new ProtectTheFrontPolicy();
                 default: return null;
             }
         }

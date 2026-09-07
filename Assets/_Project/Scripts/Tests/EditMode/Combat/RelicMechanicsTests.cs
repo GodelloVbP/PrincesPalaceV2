@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
@@ -19,7 +20,7 @@ namespace PrincesPalace.Domain.Tests
     // Key, Dancer's Anklet and Phoenix Egg. Three don't, and are tested
     // here anyway because "needs a live fight to prove" is the organizing
     // question, not which file the mechanic's code happens to live in:
-    // Monkey King's Scepter is one line in FightSession.cs's CanMeleeReach,
+    // Monkey King's Scepter is one line in FightSession.cs's CanReach,
     // Berserker's Vest lives in FightSession.Ledger.cs, and Jo-Sun's Book
     // of Anatomy / Vampire Dentures are pure numeric RelicModifier stats
     // with no relic hook at all. Pointy Nail on the End of a Stick has no
@@ -351,17 +352,34 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void MeleeReachesAnyEnemyRegardlessOfTheFrontRank()
         {
-            var (session, _, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
+            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
 
-            Assert.IsTrue(session.CanMeleeReach(foe2), "foe2 stands behind the living front rank, foe1");
+            Assert.IsTrue(session.CanReach(hero, Reach.Melee, foe2),
+                "foe2 stands behind the living front rank, foe1");
         }
 
         [Test]
         public void WithoutTheScepterTheFrontRankRuleStillApplies()
         {
-            var (session, _, _, foe2) = FightWithSpeed(RelicEffect.DualWield); // a relic irrelevant to reach
+            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.DualWield); // a relic irrelevant to reach
 
-            Assert.IsFalse(session.CanMeleeReach(foe2), "foe1 is alive and blocks foe2 without the scepter");
+            Assert.IsFalse(session.CanReach(hero, Reach.Melee, foe2),
+                "foe1 is alive and blocks foe2 without the scepter");
+        }
+
+        [Test]
+        public void TheScepterLiftsTheMeleeRuleAndNotAnAuthoredRankRestriction()
+        {
+            // THE KIND DECIDES, NOT THE MASK. Reach.Melee and an authored
+            // front-only restriction (reachSlots: [1] -> FromContent([1]))
+            // carry the identical mask {rank 0}, and the scepter lifts
+            // exactly one of them: its promise is about striking past a
+            // bodyguard, not about ignoring where a spell may be aimed.
+            var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
+
+            Assert.IsTrue(session.CanReach(hero, Reach.Melee, foe2));
+            Assert.IsFalse(session.CanReach(hero, Reach.FromContent(new[] { 1 }), foe2),
+                "an authored front-only reach is not the front-rank RULE, and nothing lifts it");
         }
 
         // ---- jo-sun's book of anatomy (pure CombatMath, no relic hook) --------------
@@ -395,7 +413,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _, _) = FightWithSpeed(RelicEffect.SparringSaber, heroSpeed: 100, foeSpeed: 100);
 
-            session.NotePositionChangedForTest(hero, hero);
+            session.NoteDeliberateMoveForTest(hero, hero);
 
             Assert.AreEqual(30, session.SpeedBonusFrom(hero, RelicEffect.SparringSaber), "30% of a 100 base");
             Assert.AreEqual(130, hero.Speed);
@@ -406,7 +424,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.SparringSaber, heroSpeed: 100);
 
-            session.NotePositionChangedForTest(foe1, hero); // hero's ACTION moved someone else
+            session.NoteDeliberateMoveForTest(foe1, hero); // hero's ACTION moved someone else
 
             Assert.AreEqual(0, session.SpeedBonusFrom(hero, RelicEffect.SparringSaber), "only your OWN position counts");
         }
@@ -418,11 +436,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.SparringBuckler);
 
-            session.NotePositionChangedForTest(foe1, hero); // hero's cast moved foe1
+            session.NoteDeliberateMoveForTest(foe1, hero); // hero's cast moved foe1
 
             // "Ward" reuses this game's existing Shielded status -- spent on
             // the NEXT hit taken, not a passive multiplier -- see
-            // NotePositionChanged's own comment.
+            // NoteDeliberateMove's own comment.
             int reduced = StatusEffects.ConsumeShieldedReduction(hero, 100);
             Assert.AreEqual(85, reduced, "15% off the next hit taken");
         }
@@ -432,10 +450,10 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, foe1, foe2) = FightWithSpeed(RelicEffect.SparringBuckler);
 
-            session.NotePositionChangedForTest(foe1, hero);
+            session.NoteDeliberateMoveForTest(foe1, hero);
             StatusEffects.ConsumeShieldedReduction(hero, 999); // spend it
 
-            session.NotePositionChangedForTest(foe2, hero); // same turn, second trigger
+            session.NoteDeliberateMoveForTest(foe2, hero); // same turn, second trigger
 
             Assert.IsFalse(StatusEffects.IsWarded(hero), "the lock should have refused a second ward this turn");
         }
@@ -571,26 +589,29 @@ namespace PrincesPalace.Domain.Tests
         // ---- dancer's anklet -----------------------------------------------------------
 
         [Test]
-        public void AttackingAutomaticallyRepositionsTheWearerForward()
+        public void AttackingAutomaticallyRepositionsTheWearerForward_AndPaysNoSparringRelic()
         {
-            // Paired with Sparring Buckler rather than Sparring Saber: a
-            // one-turn Speed buff's entire observable lifecycle sits inside
-            // one synchronous round trip (see FightSession.SpeedBuffs' own
-            // header) -- by the time ExecuteAttack returns control, hero's
-            // own NEXT turn has already started (a 2-combatant fight
-            // alternates every action) and already ticked a 1-turn buff
-            // away. Sparring Buckler's ward rides Shielded's own 99-turn
-            // "for the rest of the fight" duration instead, so it survives
-            // the round trip and still proves Dancer's Anklet actually
-            // fired the shared NotePositionChanged event.
+            // THE DECOUPLING, pinned from both sides. The Anklet still pulls
+            // the wearer up the TURN ORDER on their own action, and it no
+            // longer fires the field-move note the two Sparring relics hang
+            // off: a queue position is not a field position, and paying
+            // Sparring Buckler for one was the conflation the rename fixed.
+            //
+            // Buckler rather than Saber for the negative half, for the reason
+            // the old version of this test already gave: a one-turn Speed
+            // buff's whole lifecycle sits inside one synchronous round trip
+            // (see FightSession.SpeedBuffs' own header), while Buckler's ward
+            // rides Shielded's 99-turn duration and survives it.
             var (session, hero, foe1, _) = FightWithSpeed(
                 new[] { RelicEffect.DancersAnklet, RelicEffect.SparringBuckler }, heroSpeed: 100, foeSpeed: 100);
 
             session.ExecuteAttack(foe1);
 
-            int reduced = StatusEffects.ConsumeShieldedReduction(hero, 100);
-            Assert.AreEqual(85, reduced,
-                "Dancer's Anklet's automatic reposition should have fired Sparring Buckler's own ward");
+            Assert.IsTrue(session.DrainBeats().SelectMany(b => b.Messages)
+                    .Any(m => m.Contains("slips a step forward in the order")),
+                "the Anklet still takes its pull");
+            Assert.IsFalse(StatusEffects.IsWarded(hero),
+                "and a turn-order pull is not footwork -- no Sparring ward");
         }
 
         // ---- berserker's vest -----------------------------------------------------------

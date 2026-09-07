@@ -393,8 +393,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
                     AppendMessage($"{caster.Name} shoves {ally.Name} forward - they go next.");
 
-                    // Mechanic: the shared "position changed" event.
-                    NotePositionChanged(ally, caster);
+                    // NO SPARRING NOTE -- "forward" here is the turn order,
+                    // not the battle line. See NoteDeliberateMove.
                     break;
                 }
             }

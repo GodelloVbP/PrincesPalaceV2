@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: sparring_saber
     DisplayName: Sparring Saber
-    Description: Altering your own position in the turn order grants +30% Speed for
-      1 turn.
+    Description: Choosing to Move grants +30% Speed for 1 turn.
     Effect: 24
     SortOrder: 29
     IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png

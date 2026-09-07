@@ -1497,30 +1497,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // Rendered BOTTOM-UP so ATTACK sits nearest the cursor, and tiered so
         // read order matches use frequency: ATTACK loud, SKILL/ITEM neutral,
-        // HOLD BACK quiet. That hierarchy is the main fix over v1's earlier
-        // row of five identical gold buttons.
+        // MOVE quiet. That hierarchy is the main fix over v1's earlier row of
+        // five identical gold buttons.
         //
         // RUN REMOVED, not hidden. It never actually fled a fight -- the
         // handler behind it always answered "There is no way out of this
         // one." and there was no Flee/Run method anywhere in FightSession to
         // wire it to. A command that exists only to refuse itself is worse
-        // than no command, so it is gone rather than joining HOLD BACK's old
-        // spot as a second hidden-but-wired row.
+        // than no command, so it is gone rather than joining the fourth row
+        // as a second hidden-but-wired row. That fourth row read HOLD BACK
+        // until banking was removed; it reads MOVE now, and unlike Hold Back
+        // it nests.
         private IEnumerable<UiNode> BuildVerbColumn()
         {
             var labels = new[]
             {
                 UiStrings.VerbAttack, UiStrings.VerbSkill, UiStrings.VerbItem,
-                UiStrings.VerbHoldBack,
+                UiStrings.VerbMove,
             };
             var hotkeys = new[]
             {
                 UiStrings.HotkeyOne, UiStrings.HotkeyTwo, UiStrings.HotkeyThree,
                 UiStrings.HotkeyFour,
             };
-            var nests = new[] { false, true, true, false };
+            // MOVE NESTS. Hold Back resolved on the press and had no caret;
+            // Move opens a two-row column (FORWARD/BACK), so it wears one.
+            var nests = new[] { false, true, true, true };
 
-            // ATTACK/SKILL/ITEM/HOLD BACK, in BuildVerbColumn's own fixed
+            // ATTACK/SKILL/ITEM/MOVE, in BuildVerbColumn's own fixed
             // order -- no RUN verb to give Silver, so this is four of the
             // kit's six themes rather than the five-verb mapping CLAUDE.md
             // states for a screen that still has one.

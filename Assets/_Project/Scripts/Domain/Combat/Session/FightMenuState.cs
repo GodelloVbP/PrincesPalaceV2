@@ -15,6 +15,11 @@ namespace PrincesPalace.Domain.Combat.Session
         Attack,
         Skill,
         Item,
+
+        // Replaced HOLD BACK on the fourth verb row. It NESTS -- two rows,
+        // FORWARD and BACK -- where Hold Back resolved on the press, so it is
+        // a Skill/Item-shaped branch rather than an Attack-shaped one.
+        Move,
     }
 
     // The command menu, as state rather than as a scatter of controller fields.
@@ -155,6 +160,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch == MenuBranch.Attack ? 0
             : Branch == MenuBranch.Skill ? 1
             : Branch == MenuBranch.Item ? 2
+            : Branch == MenuBranch.Move ? 3
             : -1;
     }
 }

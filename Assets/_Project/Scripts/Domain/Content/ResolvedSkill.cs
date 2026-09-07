@@ -131,8 +131,19 @@ namespace PrincesPalace.Domain.Content
         public string SummonEnemyId = "";
         public int SummonCap;
 
-        // See RawSkillEntry.meleeReach.
-        public bool MeleeReach;
+        // WHERE THIS SKILL CAN BE AIMED. See RawSkillEntry.meleeReach /
+        // reachSlots for the two authored spellings, and Reach for why the
+        // KIND matters and not only the mask.
+        //
+        // REPLACED the old `bool MeleeReach` outright rather than sitting
+        // beside it: two fields answering one question is exactly how a
+        // caller ends up reading the one that has not been kept current.
+        // Every reader (the click gate, plate dimming, the bot's legal menu,
+        // the enemy pool) now asks FightSession.CanReach with this.
+        //
+        // Reach.Any is also default(Reach), so a skill deserialised from an
+        // older asset reads as unrestricted rather than as nothing.
+        public Reach Reach = Reach.Any;
 
         // See RawSkillEntry.bookOnly / bookTier.
         public bool BookOnly;
@@ -184,12 +195,12 @@ namespace PrincesPalace.Domain.Content
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
             int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
-            StageApproach approach = StageApproach.Hold, float shake = 0f, bool meleeReach = false,
+            StageApproach approach = StageApproach.Hold, float shake = 0f, Reach reach = default,
             bool bookOnly = false, int bookTier = 0)
         {
             BookOnly = bookOnly;
             BookTier = bookTier;
-            MeleeReach = meleeReach;
+            Reach = reach;
             CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;
             QueuePushSlots = queuePushSlots;

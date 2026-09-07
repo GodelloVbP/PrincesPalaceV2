@@ -161,19 +161,22 @@ namespace PrincesPalace.Domain.Content
         LoadedDice,
 
         // The wearer's plain attacks reach any enemy regardless of the
-        // front-rank rule (CombatEncounter.CanMeleeReach).
+        // front-rank rule (FightSession.CanReach). Reach.Melee only -- an
+        // authored rank restriction is never lifted; see Reach's own header.
         MonkeyKingsScepter,
 
-        // Altering the wearer's OWN position in the turn order grants +30%
-        // Speed for one turn. Mechanic: the shared "position changed" event
-        // (FightSession.BalanceRelics2.NotePositionChanged), which also
-        // serves Sparring Buckler below.
+        // Choosing to Move grants the mover +30% Speed for one turn.
+        // Mechanic: the shared "an action moved someone on the field" event
+        // (FightSession.RelicMechanics.NoteDeliberateMove), which also
+        // serves Sparring Buckler below. THE MOVER, not the partner they
+        // displaced: this pays for the choice, not for the shove.
         SparringSaber,
 
-        // Casting an ability that alters ANY combatant's position in the
-        // turn order grants a ward worth 15% of the wearer's max health,
-        // once per turn (CombatLocks.OncePerTurn). Same shared event as
-        // Sparring Saber.
+        // Any action of the wearer's that changes a position on the FIELD
+        // grants a ward worth 15% of their max health, once per turn
+        // (CombatLocks.OncePerTurn). Same shared event as Sparring Saber,
+        // and unlike it this pays for the displaced partner too -- it is
+        // about the footwork happening at all, not about whose it was.
         SparringBuckler,
 
         // After an enemy dies (summons excluded), heal 3% of the wearer's

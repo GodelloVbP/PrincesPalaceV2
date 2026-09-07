@@ -261,14 +261,19 @@ namespace PrincesPalace.Domain.Tests
             // inside AdvanceTurn, so without the liveness guard a dead monster
             // still gets one more swing on the strength of having been alive
             // when the schedule picked it.
+            //
+            // THE TANK STANDS IN FRONT, which it did not have to before the
+            // front-rank rule bound the player's own swing: the hero's attack
+            // is only here to hand the turn on, and aiming it past a living
+            // front rank is now refused outright.
             var hero = Hero();
-            var doomed = Monster("Doomed", health: 1000);
             var tank = Monster("Tank", health: 1000);
-            var encounter = new CombatEncounter(new[] { hero }, new[] { doomed, tank });
+            var doomed = Monster("Doomed", health: 1000);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { tank, doomed });
             var session = Session(encounter, new List<EnemyKit>
             {
-                new EnemyKit(Source("doomed"), false),
                 new EnemyKit(Source("tank"), false),
+                new EnemyKit(Source("doomed"), false),
             });
             session.Begin();
 

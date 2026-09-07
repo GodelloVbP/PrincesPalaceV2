@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Bot
@@ -49,10 +50,54 @@ namespace PrincesPalace.Domain.Bot
         // that has stopped answering at all.
         public const int MaxPlayerCommands = 2000;
 
-        public static List<InvariantHit> Check(FightSession session, int commandsIssued)
+        // `startingPartyOrder` is the party list as it stood at fight start,
+        // for PartyOrderIntact below. Optional, and null skips that one check
+        // rather than inventing a baseline: a caller with no snapshot (a test
+        // poking one shape directly) has nothing to compare against, and a
+        // check that quietly compares the list to itself would pass forever.
+        public static List<InvariantHit> Check(FightSession session, int commandsIssued,
+            IReadOnlyList<CombatantState> startingPartyOrder = null)
         {
             var hits = new List<InvariantHit>();
             if (session == null) return hits;
+
+            // PARTY ORDER INTACT. Move REORDERS the party list in place --
+            // the one thing in the game that does -- and the failure it can
+            // produce is silent: a swap that wrote the same combatant into
+            // both slots would leave a duplicate and a vanished character,
+            // with both still alive, both still in the turn order, and
+            // nothing on screen obviously wrong until one of them stopped
+            // taking damage. Membership and multiplicity, not order: the
+            // order changing is the feature.
+            if (startingPartyOrder != null)
+            {
+                var current = session.Encounter.PlayerParty;
+
+                if (current.Count != startingPartyOrder.Count)
+                {
+                    hits.Add(new InvariantHit("PartyOrderIntact",
+                        $"the party holds {current.Count} slots, {startingPartyOrder.Count} at fight start"));
+                }
+
+                for (int i = 0; i < current.Count; i++)
+                {
+                    for (int j = i + 1; j < current.Count; j++)
+                    {
+                        if (!ReferenceEquals(current[i], current[j])) continue;
+
+                        hits.Add(new InvariantHit("PartyOrderIntact",
+                            $"{current[i]?.Name ?? "(null)"} occupies slots {i} and {j}"));
+                    }
+                }
+
+                foreach (var member in startingPartyOrder)
+                {
+                    if (current.Any(c => ReferenceEquals(c, member))) continue;
+
+                    hits.Add(new InvariantHit("PartyOrderIntact",
+                        $"{member?.Name ?? "(null)"} started the fight in the party and is no longer in it"));
+                }
+            }
 
             foreach (var combatant in session.Encounter.PlayerParty.Concat(session.Encounter.Enemies))
             {

@@ -175,6 +175,36 @@ namespace PrincesPalace.Domain.Combat.Session
             return rows;
         }
 
+        // Column B for the move branch. TWO ROWS, ALWAYS BOTH SHOWN, one per
+        // direction -- an illegal one is dimmed with its reason in the cost
+        // column rather than dropped, because a list whose length changes with
+        // the formation is a list the player has to re-read every turn, and
+        // "you cannot go forward, you are already in front" is more use than
+        // a row that quietly is not there.
+        //
+        // Row order is FORWARD then BACK, matching the direction the stage
+        // draws: index 0 is toward rank 0.
+        public static IReadOnlyList<SubmenuRow> MoveRows(FightSession session, CombatantState actor)
+        {
+            return new List<SubmenuRow>
+            {
+                MoveRow(session, actor, MoveDirection.Forward, "FORWARD", "MOVE  ·  TOWARD THE FRONT"),
+                MoveRow(session, actor, MoveDirection.Back, "BACK", "MOVE  ·  TOWARD THE REAR"),
+            };
+        }
+
+        private static SubmenuRow MoveRow(FightSession session, CombatantState actor,
+            MoveDirection direction, string label, string meta)
+        {
+            bool legal = session != null && session.CanMove(actor, direction);
+
+            // ENDS THE TURN is the cost, and the row says so -- Move is the
+            // only command in the menu that spends a whole turn for no number
+            // anywhere, and a blank cost column would read as "free".
+            return new SubmenuRow(label, meta, legal ? "ENDS TURN" : "NO ROOM",
+                canPay: legal, meetsRequirement: true, manaCost: 0);
+        }
+
         // "DamageSingle" + SingleEnemy -> "DAMAGE  ·  SINGLE".
         //
         // Generated from the skill's own fields rather than authored, so it

@@ -22,7 +22,6 @@ namespace PrincesPalace.Domain.Combat.Session
             var actor = Current;
             if (actor == null) return;
 
-            _actionCanBrave = true;
             BeginBeat(actor, actor);
             SetStance(actor, Stances.Cast);
 

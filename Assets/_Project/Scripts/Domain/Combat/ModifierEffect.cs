@@ -321,7 +321,7 @@ namespace PrincesPalace.Domain.Combat
         // hits. Nothing in this pass authors an enemy ability that grants
         // Rooted to a player, so the enemy-only gate this status is read by
         // (FightSession.Enemies.EffectivePoolFor) never has a player-side
-        // case to handle — matching CanMeleeReach, the existing rule this
+        // case to handle — matching FightSession.CanReach, the existing rule this
         // whole status builds on, which is exactly as one-directional.
         RootChancePercent,
     }

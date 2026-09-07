@@ -28,8 +28,8 @@ namespace PrincesPalace.Domain.Bot
 
         // Below this fraction, with nothing restorative left to take, this
         // is as much trouble as the archetype's own read of the fight gets.
-        // See the HoldBack note on Choose() for why that does NOT mean
-        // HoldBack.
+        // See the last-resort note on Choose() for why that does NOT mean
+        // passing the turn.
         private const float DesperateHealthFraction = 0.25f;
 
         // Rest below this fraction of the party's HP, rather than
@@ -217,16 +217,14 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
-            // Not HoldBack, deliberately, even under DesperateHealthFraction:
-            // HoldBack (FightSession.cs:242) banks an action for a later
-            // Brave-boosted swing -- it is an OFFENSIVE economy move, the
-            // same one GreedyAggressive would be just as happy to make, and
-            // "actually defensive" per the brief is exactly what it is not.
-            // Reached only when there is truly nothing left to spend the
-            // turn on that does anything at all -- HoldBack still exists in
-            // `legal` for RandomLegal/GreedyAggressive to reach, and for
-            // FightAction.LegalActions' own "never empty" guarantee.
-            return legal.First(a => a.Kind == FightActionKind.HoldBack);
+            // NOT Move, deliberately, even under DesperateHealthFraction.
+            // Stepping a wounded character behind a healthier one is a real
+            // defensive play and this archetype does not make it: that is
+            // ProtectTheFrontPolicy's whole job, and having two archetypes
+            // that both do it would leave nothing measuring what the greedy
+            // baseline costs. Reached only when there is truly nothing left
+            // to spend the turn on that does anything at all.
+            return FightAction.LastResort(legal);
         }
 
         // The authored skill id behind one legal Skill action -- the key

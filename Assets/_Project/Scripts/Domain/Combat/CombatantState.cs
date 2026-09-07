@@ -131,13 +131,6 @@ namespace PrincesPalace.Domain.Combat
         // times in one fight while this must not reset with it.
         public bool CheatDeathSpent;
 
-        // Brave/Default's banked pool. Zero for everyone who has never
-        // Defaulted, which is everyone at the start of every fight — no
-        // opt-in needed, unlike Signature/BreakShield, because spending a
-        // real turn to bank one is already its own cost; there is no reason
-        // to gate who is allowed to pay it.
-        public int BankedActions;
-
         // Always a real (possibly empty) list rather than nullable — unlike
         // Signature/BreakShield, which are each ONE mechanic a combatant
         // either has or does not, a combatant can pick up any number of

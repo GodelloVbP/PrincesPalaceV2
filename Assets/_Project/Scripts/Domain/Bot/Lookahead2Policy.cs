@@ -266,7 +266,7 @@ namespace PrincesPalace.Domain.Bot
                             // every other legal option this turn -- but
                             // finite, so if it is the ONLY legal action
                             // (FightAction.LegalActions never returns empty;
-                            // HoldBack alone would still beat this) it is
+                            // a Move alone would still beat this) it is
                             // still chosen rather than the loop having
                             // nothing to return.
                             ownEffect -= KillBonus;
@@ -290,7 +290,13 @@ namespace PrincesPalace.Domain.Bot
                     break;
                 }
                 default:
-                    // HoldBack: no direct HP effect either way.
+                    // Move: no direct HP effect on the turn it is spent.
+                    // What it buys -- a healthier body in rank 0 for the
+                    // enemy melee to hit instead -- lands on the NEXT turn,
+                    // which is exactly one step past what a two-ply lookahead
+                    // over one actor's own action can see. Scored 0 rather
+                    // than approximated: an invented number here would be a
+                    // guess dressed as a projection.
                     break;
             }
 

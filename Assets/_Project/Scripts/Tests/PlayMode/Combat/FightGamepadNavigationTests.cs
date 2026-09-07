@@ -62,17 +62,17 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, _fight.FocusedVerbForTest, "starts on ATTACK, index 0");
 
             // UP (delta -1): BuildVerbColumn puts ATTACK at the BOTTOM of the
-            // column and HOLD BACK at the top, so moving the stick toward the
-            // top of the screen has to step toward the HIGHER index -- the
+            // column and MOVE at the top, so moving the stick toward the top
+            // of the screen has to step toward the HIGHER index -- the
             // opposite of a plain top-to-bottom list.
             _fight.MoveFocus(-1);
             Assert.AreEqual(1, _fight.FocusedVerbForTest, "up moves toward the top of a bottom-up column");
 
-            // DOWN (delta +1) from ATTACK wraps to the far end (HOLD BACK)
-            // rather than refusing to move -- a cyclic list, not a clamped one.
+            // DOWN (delta +1) from ATTACK wraps to the far end (MOVE) rather
+            // than refusing to move -- a cyclic list, not a clamped one.
             _fight.MoveFocus(1);
             _fight.MoveFocus(1);
-            Assert.AreEqual(3, _fight.FocusedVerbForTest, "wraps to HOLD BACK, the top of the column");
+            Assert.AreEqual(3, _fight.FocusedVerbForTest, "wraps to MOVE, the top of the column");
         }
 
         [UnityTest]
@@ -106,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // Only the front enemy is reachable by a melee ATTACK
-            // (CombatEncounter.CanMeleeReach) -- cycling past it and
+            // (FightSession.CanReach) -- cycling past it and
             // confirming there is a SEPARATE, already-covered claim
             // (Phase 1's OnEnemyPressed reach gate). This test's own claim
             // is narrower and does not need reach at all: that MoveFocus

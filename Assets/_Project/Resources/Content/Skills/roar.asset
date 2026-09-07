@@ -71,6 +71,8 @@ MonoBehaviour:
     Stance: attack_roar
     SummonEnemyId: rat
     SummonCap: 2
-    MeleeReach: 0
+    Reach:
+      Kind: 0
+      RankMask: 0
     BookOnly: 0
     BookTier: 0

@@ -83,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // Verb1 is SKILL -- OnVerbPressed's own switch: 0 ATTACK, 1 SKILL,
-            // 2 ITEM, 3 HOLD BACK (see FightSubmenuScrollTests for the same
+            // 2 ITEM, 3 MOVE (see FightSubmenuScrollTests for the same
             // convention on Verb2/ITEM).
             Click("Verb1");
             yield return null;

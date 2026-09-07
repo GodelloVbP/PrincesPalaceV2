@@ -277,7 +277,7 @@
     {
       "id": "sparring_saber",
       "displayName": "Sparring Saber",
-      "description": "Altering your own position in the turn order grants +30% Speed for 1 turn.",
+      "description": "Choosing to Move grants +30% Speed for 1 turn.",
       "effect": "SparringSaber",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png"
@@ -285,7 +285,7 @@
     {
       "id": "sparring_buckler",
       "displayName": "Sparring Buckler",
-      "description": "Casting an ability that alters anyone's position grants a 15% ward, once per turn.",
+      "description": "Any action of yours that changes a position on the field grants a 15% ward, once per turn.",
       "effect": "SparringBuckler",
       "rarity": "rare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"

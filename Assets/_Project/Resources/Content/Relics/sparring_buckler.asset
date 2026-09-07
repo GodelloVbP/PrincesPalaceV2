@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sparring_buckler
     DisplayName: Sparring Buckler
-    Description: Casting an ability that alters anyone's position grants a 15% ward,
-      once per turn.
+    Description: Any action of yours that changes a position on the field grants
+      a 15% ward, once per turn.
     Effect: 25
     SortOrder: 30
     IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png

@@ -279,20 +279,24 @@ namespace PrincesPalace.Domain.Tests
                 splashPercent = 100,
             };
 
-            // Bystander sits at index 0, the struck enemy at 1 -- "adjacent"
-            // is index adjacency in Enemies, which is what the stage draws.
+            // The struck enemy sits at index 0 and the bystander at 1 --
+            // "adjacent" is index adjacency in Enemies, which is what the
+            // stage draws. THE PRIMARY IS IN FRONT, which it was not before
+            // the front-rank rule bound the player's own swing: a blow aimed
+            // past a living rank 0 is now refused outright, so a fixture that
+            // struck index 1 would land nothing at all.
             var (session, encounter) = Fight(hero,
                 Kit(new List<ResolvedSkill> { Skill(SkillEffect.Transform, "Ram", transform) }),
-                Foe("Bystander", 1), Foe("Primary", 999999), Foe("Tank", 999999));
+                Foe("Primary", 999999), Foe("Bystander", 1), Foe("Tank", 999999));
 
             session.CastSkill(0, null);
             session.DrainBeats();
             Assert.IsNotNull(hero.Transformation, "fixture: the transform is running");
 
-            session.ExecuteAttack(encounter.Enemies[1]);
+            session.ExecuteAttack(encounter.Enemies[0]);
 
-            Assert.IsTrue(encounter.Enemies[1].IsAlive, "fixture: the PRIMARY survived");
-            Assert.IsFalse(encounter.Enemies[0].IsAlive, "fixture: the splash felled the bystander");
+            Assert.IsTrue(encounter.Enemies[0].IsAlive, "fixture: the PRIMARY survived");
+            Assert.IsFalse(encounter.Enemies[1].IsAlive, "fixture: the splash felled the bystander");
             Assert.AreEqual(1, session.Ledger.For("hero").Kills);
             Assert.AreEqual(1, session.Ledger.For("Bystander").TimesDowned);
             Assert.IsTrue(Trampled(Drain(session)),

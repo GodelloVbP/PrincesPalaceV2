@@ -69,6 +69,80 @@ namespace PrincesPalace.Domain.Tests
                 "two different seeds landing on the same hash would mean the hash ignores the seed");
         }
 
+        // A THREE-MEMBER PARTY, which is what a formation needs to be a
+        // formation. OneOnOne above cannot exercise Move at all.
+        private static FightSession Squad(int foeHealth = 400)
+        {
+            var party = new[]
+            {
+                Fighter("Front", true, maxHealth: 300, attack: 60, speed: 12),
+                Fighter("Middle", true, maxHealth: 300, attack: 60, speed: 11),
+                Fighter("Back", true, maxHealth: 300, attack: 60, speed: 10),
+            };
+            var foe = Fighter("Foe", false, maxHealth: foeHealth, attack: 8, speed: 6);
+
+            var kits = party
+                .Select(p => new PlayerKit(p.Name, CharacterRole.Tank, null, null, DamageType.Physical))
+                .ToList();
+
+            var session = new FightSession(new CombatEncounter(party, new[] { foe }), kits, null,
+                new SeededRandom(3)) { DamageVarianceRange = 0f };
+            session.Begin();
+            return session;
+        }
+
+        [Test]
+        public void Play_MoveThenGreedy_FinishesTwentySeededFightsWithNoInvariantHits()
+        {
+            // A BOUNDED SCRIPT, not an always-Move one. Pacing back and forth
+            // forever is legitimate play, so a policy that never stops moving
+            // would stall honestly and there would be no way to tell that from
+            // a bug. MoveThenGreedyPolicy takes two moves and then plays to
+            // win, which makes "did it finish" a real question again.
+            //
+            // PartyOrderIntact is the invariant this is really here for: Move
+            // is the only thing in the game that reorders the party list, and
+            // a swap that duplicated a member would leave the fight looking
+            // entirely normal.
+            for (ulong seed = 1; seed <= 20; seed++)
+            {
+                var session = Squad();
+                var trace = new FightTrace();
+
+                var hits = FightRunner.Play(session, new MoveThenGreedyPolicy(),
+                    System.Array.Empty<SatchelStack>(), new SeededRandom(seed), trace);
+
+                CollectionAssert.IsEmpty(hits, $"seed {seed}");
+                Assert.IsTrue(session.IsOver, $"seed {seed} did not finish");
+                Assert.IsTrue(trace.TurnTraces.Any(t => t.Action == "Move"),
+                    $"seed {seed} never actually moved, so it proves nothing");
+                Assert.AreEqual(3, session.Encounter.PlayerParty.Distinct().Count(),
+                    $"seed {seed} lost or duplicated a party member");
+            }
+        }
+
+        [Test]
+        public void Check_APartyMemberMissingFromTheCurrentOrder_TripsPartyOrderIntact()
+        {
+            // FORCED, because SwapPartySlots cannot produce it -- which is the
+            // whole reason the invariant is worth having: the failure it names
+            // would be silent if it ever did happen, so the check has to be
+            // shown firing at least once. A stranger in the fight-start
+            // snapshot stands in for a member the list lost.
+            var session = Squad();
+            var startingOrder = session.Encounter.PlayerParty.ToList();
+            startingOrder.Add(Fighter("Ghost", true));
+
+            var hits = FightInvariants.Check(session, 1, startingOrder);
+
+            Assert.IsTrue(hits.Any(h => h.Name == "PartyOrderIntact"),
+                "a member missing from the current list must be reported");
+            CollectionAssert.IsEmpty(
+                FightInvariants.Check(session, 1, session.Encounter.PlayerParty.ToList())
+                    .Where(h => h.Name == "PartyOrderIntact").ToList(),
+                "and an intact party must not");
+        }
+
         [Test]
         public void Check_OnANormalFight_ReportsNoInvariantHits()
         {

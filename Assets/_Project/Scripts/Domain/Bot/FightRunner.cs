@@ -72,6 +72,11 @@ namespace PrincesPalace.Domain.Bot
 
             session.Begin();
 
+            // THE FORMATION AS THE FIGHT OPENED, for PartyOrderIntact. Taken
+            // after Begin() because that is when the roster is settled and
+            // before any player command can have reordered it.
+            var startingPartyOrder = session.Encounter.PlayerParty.ToList();
+
             // A LOCAL copy, decremented as items are used. The real
             // save-side satchel decrement is Core's job, reached through
             // `onItemUsed` above; this exists so a policy asked twice in the
@@ -138,7 +143,7 @@ namespace PrincesPalace.Domain.Bot
                 previousEnemyHp = enemyHp;
                 previousPartyHp = partyHp;
 
-                var turnHits = FightInvariants.Check(session, commands);
+                var turnHits = FightInvariants.Check(session, commands, startingPartyOrder);
                 hits.AddRange(turnHits);
 
                 if (turnHits.Any(h => h.Name == "TooManyCommands"))
@@ -206,7 +211,7 @@ namespace PrincesPalace.Domain.Bot
         // The trace's own name for an action, which is NOT FightAction.ToString.
         //
         // docs/BOT_SUMMARY_SCHEMA.md pins TurnTrace.Action to four shapes --
-        // "Attack" / "Skill:<name>" / "Item:<name>" / "HoldBack" -- and the
+        // "Attack" / "Skill:<name>" / "Item:<name>" / "Move" -- and the
         // summary reads them: consumableUseShare counts entries starting
         // "Item:", skillsNeverUsed collects what follows "Skill:". ToString's
         // debug form ("Skill[0](Rat)") carries the INDEX, which is per-actor
@@ -227,7 +232,7 @@ namespace PrincesPalace.Domain.Bot
                 case FightActionKind.Item:
                     return "Item:" + action.ItemId;
                 default:
-                    return "HoldBack";
+                    return "Move";
             }
         }
 

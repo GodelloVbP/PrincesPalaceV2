@@ -76,7 +76,11 @@ namespace PrincesPalace.Domain.Combat.Session
                     ? Showcase.Next(enemy, pool)
                     : EnemyAbilityDraw.Pick(pool, roll);
 
-                var target = PickRandomLivingPlayerTarget();
+                var ability = pool != null && chosen >= 0 && chosen < pool.Count
+                    ? pool[chosen]
+                    : (EnemyAbility?)null;
+
+                var target = PickIntentTarget(enemy, ability);
                 _intents[enemy] = BuildIntent(enemy, target, pool, chosen);
             }
         }
@@ -95,9 +99,9 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // PHASE D3: also where Rooted excludes the plain-attack entry. A
         // rooted enemy loses its melee option and must draw from whatever
-        // skills remain -- the exact mirror of CanMeleeReach gating the
-        // PLAYER's own plain attack against a living front rank, just read
-        // off the ACTOR instead of the target. `IsPlainSwing` (not
+        // skills remain -- the exact mirror of the front-rank rule gating the
+        // PLAYER's own plain attack, just read off the ACTOR instead of the
+        // target. `IsPlainSwing` (not
         // `IsLegacyAttack`) is the right predicate here: it is the same
         // "ranged" line ResolveEnemyAction already draws for `usingSkill`
         // (`!chosen.Value.IsPlainSwing`), which also treats a legacy scaled
@@ -105,6 +109,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // skill rather than a melee swing. Zeroed with LegacyAttack, not
         // EnemyAbility.Of, to keep HasSkill/Power intact for that entry --
         // only its Weight moves.
+        //
+        // AND WHERE NOTHING IS IN REACH. A SingleEnemy ability with no
+        // eligible target is zero-weighted FOR THIS DRAW ONLY, the same
+        // "capped this turn does not mean gone" treatment the summon cap
+        // already gets. ONLY SingleEnemy: every other targeting category
+        // keeps its existing rule, because none of them has a reach question
+        // to ask (see FightSession.CanReach's own header). And because
+        // EligibleTargets applies the Provoke override, a taunt from the back
+        // rank keeps a front-only ability perfectly legal -- forced onto the
+        // provoker, wherever they are standing.
         private IReadOnlyList<EnemyAbility> EffectivePoolFor(CombatantState enemy, IReadOnlyList<EnemyAbility> abilities)
         {
             if (abilities == null) return null;
@@ -127,6 +141,16 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
                 }
 
+                var reach = SingleOpponentReachOf(ability);
+                if (reach.HasValue && EligibleTargets(enemy, reach.Value).Count == 0)
+                {
+                    effective ??= new List<EnemyAbility>(abilities);
+                    effective[i] = ability.HasSkill
+                        ? EnemyAbility.Of(ability.Skill, 0f)
+                        : EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
+                    continue;
+                }
+
                 if (rooted && ability.IsPlainSwing)
                 {
                     effective ??= new List<EnemyAbility>(abilities);
@@ -140,6 +164,73 @@ namespace PrincesPalace.Domain.Combat.Session
             // draw -- which is the allocation the null-until-needed build
             // directly above exists to avoid.
             return effective ?? abilities;
+        }
+
+        // THE REACH QUESTION FOR ONE DRAWN ABILITY, or null when the ability
+        // is not a single-opponent action and therefore has none.
+        //
+        // Null is not "unrestricted" -- it is "this question does not apply",
+        // which is a different thing and the reason this returns Reach? and
+        // not Reach. A DamageAll or a self-heal has no position to be aimed
+        // at, so nothing about it may be gated on reach.
+        //
+        // A plain swing, and a legacy scaled attack, are both SingleEnemy
+        // with Reach.Melee: the monsters' side of the front-rank rule, stated
+        // as a value rather than as a special case, exactly the way
+        // ExecuteAttack states the player's.
+        private static Reach? SingleOpponentReachOf(EnemyAbility? ability)
+        {
+            if (!ability.HasValue) return Reach.Melee;
+
+            var value = ability.Value;
+            if (!value.HasSkill) return Reach.Melee;
+
+            return value.Skill.Targeting == SkillTargeting.SingleEnemy
+                ? value.Skill.Reach
+                : (Reach?)null;
+        }
+
+        // WHO THE TELEGRAPH PROMISES, and the ONE draw a preparation makes
+        // per enemy.
+        //
+        // The draw happens FIRST, UNCONDITIONALLY, and over the LIVING PARTY
+        // COUNT -- before and regardless of Provoke, of what was drawn, and
+        // of how many targets are actually in reach. That is the whole point:
+        // SeededRandom.NextInt consumes exactly one NextUlong whatever the
+        // bound (SeededRandom.cs:37-46), so keeping one draw of the same
+        // range in the same position keeps the stream byte-identical to what
+        // it was before reach existed. A draw made only when it was needed
+        // would make the rest of a seeded run depend on who happened to be
+        // standing where.
+        //
+        // Only WHICH entry it lands on changes: forced ?? eligible[draw %
+        // eligible.Count].
+        private CombatantState PickIntentTarget(CombatantState enemy, EnemyAbility? ability)
+        {
+            var living = _encounter.LivingPlayerParty.ToList();
+            if (living.Count == 0) return null;
+
+            int draw = _rng == null ? 0 : _rng.NextInt(0, living.Count);
+
+            // A taunt is honoured at TELEGRAPH time, not only at resolution:
+            // the icon promising someone the provoker has already pulled off
+            // the monster is a promise the fight is not going to keep.
+            var forced = ForcedTargetFor(enemy);
+            if (forced != null) return forced;
+
+            var reach = SingleOpponentReachOf(ability);
+            var candidates = reach.HasValue
+                ? EligibleTargets(enemy, reach.Value)
+                : (IReadOnlyList<CombatantState>)living;
+
+            // Empty only when a Showcase forced an ability the field cannot
+            // satisfy -- EffectivePoolFor has already zero-weighted anything
+            // a real draw could land on with nothing in reach. Naming a
+            // living member anyway keeps the telegraph from going blank; the
+            // resolution-time re-check below is what actually decides.
+            if (candidates.Count == 0) candidates = living;
+
+            return candidates[draw % candidates.Count];
         }
 
         // Whether a ROOTED enemy has any legal skill left to draw from, once
@@ -496,11 +587,57 @@ namespace PrincesPalace.Domain.Combat.Session
             //   committed -- what the icon promised, honoured
             //   a re-pick -- only if the promised target died in the meantime,
             //                which is the player having removed it
-            var forced = ForcedTargetFor(enemy);
-            var promised = IntentDetailFor(enemy)?.Target;
-            if (promised != null && !promised.IsAlive) promised = null;
+            // WHAT WAS COMMITTED, resolved BY INDEX before the target is,
+            // because the target has to be re-checked against the committed
+            // ability's own reach and cannot be until that ability is known.
+            // Pure lookups, no draw, so this block moving above the target
+            // selection does not move anything in the RNG stream.
+            //
+            // BY INDEX, not by comparing the label back to a name. That
+            // comparison was sound while a monster had exactly one skill and
+            // its name was therefore unique. A weighted pool can hold two
+            // abilities that share a display name, and matching on text would
+            // resolve the wrong one while the telegraph looked correct -- the
+            // precise failure a telegraph exists to prevent.
+            var enemyKit = SourceFor(enemy);
+            var committed = IntentDetailFor(enemy);
+            var committedPool = enemyKit?.Abilities;
+            var committedAbility = committed.HasValue && committedPool != null
+                                   && committed.Value.AbilityIndex >= 0
+                                   && committed.Value.AbilityIndex < committedPool.Count
+                ? committedPool[committed.Value.AbilityIndex]
+                : (EnemyAbility?)null;
 
-            var target = forced ?? promised ?? PickRandomLivingPlayerTarget();
+            var forced = ForcedTargetFor(enemy);
+            var promised = committed?.Target;
+
+            // THE PROMISE IS RE-VALIDATED ON TWO COUNTS, not one. It always
+            // had to survive the target dying; it now also has to survive the
+            // target MOVING -- the player's whole reason to spend a turn on
+            // Move is to change who the telegraphed blow can land on, and a
+            // promise honoured against a formation that no longer exists
+            // would make Move do nothing.
+            //
+            // THE RE-PICK DRAWS NOTHING. It is the first eligible target in
+            // list order, deliberately: a second draw here would consume from
+            // the seeded stream on a branch whose frequency depends on how the
+            // player is playing, which is the one thing a reproducible run
+            // cannot have.
+            if (promised != null
+                && (!promised.IsAlive || !CanReachWithAbility(enemy, committedAbility, promised)))
+            {
+                promised = FirstEligibleFor(enemy, committedAbility);
+            }
+
+            // THE THIRD PATH, and it is not a re-pick: an enemy that has no
+            // committed intent at all. A monster fast enough to swing during
+            // Begin() (intents are prepared after the opening enemy turns) and
+            // one that joined mid-round both arrive here, and both used to
+            // reach straight past the front rank through a uniform random
+            // pick. It draws ONE value, exactly as that pick did, so the
+            // stream keeps its shape -- it just draws over what is actually
+            // in reach.
+            var target = forced ?? promised ?? PickIntentTarget(enemy, committedAbility);
             if (target == null) return;
 
             BeginBeat(enemy, target);
@@ -519,8 +656,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // only when nothing was declared (an enemy that joined mid-round,
             // say) rather than re-rolling, which would make the shown intent a
             // lie after the fact.
-            var kit = SourceFor(enemy);
-
+            //
             // THE KIT EXISTING IS NOT THE SOURCE EXISTING, and this read
             // `kit != null` while all three uses below dereference `source`.
             // EnemyKit's own constructor is deliberately null-source-tolerant
@@ -528,23 +664,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // rather than throwing"), so the one shape it promises to
             // survive -- a summon handed a kit with no resolved record -- was
             // the one shape that threw here on that combatant's first turn.
+            var kit = enemyKit;
             var source = kit?.Source;
             bool hasSource = source != null;
 
-            // BY INDEX, not by comparing the label back to a name.
-            //
-            // That comparison was sound while a monster had exactly one skill
-            // and its name was therefore unique. A weighted pool can hold two
-            // abilities that share a display name, and matching on text would
-            // resolve the wrong one while the telegraph looked correct -- the
-            // precise failure a telegraph exists to prevent.
-            var committed = IntentDetailFor(enemy);
-            var pool = kit?.Abilities;
-            var chosen = committed.HasValue && pool != null
-                         && committed.Value.AbilityIndex >= 0
-                         && committed.Value.AbilityIndex < pool.Count
-                ? pool[committed.Value.AbilityIndex]
-                : (EnemyAbility?)null;
+            var pool = committedPool;
+            var chosen = committedAbility;
 
             // PHASE D3: a plain-attack commitment made BEFORE this enemy was
             // rooted is no longer legal by the time it resolves -- and this
@@ -779,17 +904,35 @@ namespace PrincesPalace.Domain.Combat.Session
             CommitBeat();
         }
 
+        // The committed ability's own reach question, asked of one target.
+        // True for an ability that has no such question (see
+        // SingleOpponentReachOf) -- a DamageAll does not stop being legal
+        // because somebody moved.
+        private bool CanReachWithAbility(CombatantState enemy, EnemyAbility? ability, CombatantState target)
+        {
+            var reach = SingleOpponentReachOf(ability);
+            return !reach.HasValue || CanReach(enemy, reach.Value, target);
+        }
+
+        // The re-pick: first in LIST ORDER, no draw. See ResolveEnemyAction's
+        // own comment on why this must not roll.
+        private CombatantState FirstEligibleFor(CombatantState enemy, EnemyAbility? ability)
+        {
+            var reach = SingleOpponentReachOf(ability);
+            if (!reach.HasValue) return _encounter.LivingPlayerParty.FirstOrDefault();
+
+            foreach (var candidate in _encounter.LivingPlayerParty)
+            {
+                if (CanReach(enemy, reach.Value, candidate)) return candidate;
+            }
+
+            return null;
+        }
+
         private static CombatantState ForcedTargetFor(CombatantState enemy)
         {
             var provoker = StatusEffects.ProvokedBy(enemy);
             return provoker != null && provoker.IsAlive ? provoker : null;
-        }
-
-        private CombatantState PickRandomLivingPlayerTarget()
-        {
-            var living = _encounter.LivingPlayerParty.ToList();
-            if (living.Count == 0) return null;
-            return _rng == null ? living[0] : living[_rng.NextInt(0, living.Count)];
         }
 
         // The character's authored baseline plus whatever their talents add on

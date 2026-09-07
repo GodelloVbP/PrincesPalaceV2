@@ -20,12 +20,18 @@ namespace PrincesPalace.Domain.Combat
         // the encounter as a whole.
         private readonly List<CombatantState> _enemies;
 
-        public IReadOnlyList<CombatantState> PlayerParty { get; }
+        // A LIST for the same reason _enemies is one, plus a second: the
+        // party's list ORDER is its field formation now, and Move reorders
+        // it in place (SwapPartySlots). Never grows or shrinks -- a Move
+        // swaps two slots and nothing else on this side ever adds or removes.
+        private readonly List<CombatantState> _party;
+
+        public IReadOnlyList<CombatantState> PlayerParty => _party;
         public IReadOnlyList<CombatantState> Enemies => _enemies;
 
         public CombatEncounter(IEnumerable<CombatantState> playerParty, IEnumerable<CombatantState> enemies)
         {
-            PlayerParty = playerParty.ToList();
+            _party = playerParty.ToList();
             _enemies = enemies.ToList();
 
             if (PlayerParty.Count == 0 || _enemies.Count == 0)
@@ -91,20 +97,54 @@ namespace PrincesPalace.Domain.Combat
         // is whoever is still standing nearest the front.
         public CombatantState FrontEnemy => Enemies.FirstOrDefault(e => e.IsAlive);
 
-        // Can a melee attack reach this target? The front-rank rule, which in
-        // v1 lived inline in FightController.Actions.cs as a condition wrapped
-        // around a UI message. It is a combat rule, not a UI concern, so the
-        // rule states itself here and the view asks.
-        //
-        // Anything that is not an enemy is reachable: this constrains reaching
-        // PAST a living front rank, and says nothing about allies or self.
-        public bool CanMeleeReach(CombatantState target)
-        {
-            if (target == null) return false;
-            if (target.IsPlayerSide) return true;
+        // The party's own front rank -- the mirror of FrontEnemy, and what
+        // the enemy side's melee lands on now that the front-rank rule runs
+        // both ways. Null once the whole party is down.
+        public CombatantState FrontPartyMember => PlayerParty.FirstOrDefault(c => c.IsAlive);
 
-            var front = FrontEnemy;
-            return front == null || target == front;
+        // WHERE THIS COMBATANT STANDS, counted among the LIVING on its own
+        // side, from the front, in list order. -1 for null, for the dead, and
+        // for anyone not in this encounter at all -- one sentinel, because
+        // every caller does the same thing with all three answers.
+        //
+        // COMPUTED, NEVER STORED, and that is the whole design: death
+        // compresses the ranks behind the corpse with no bookkeeping to keep
+        // in sync, and the list order itself only ever changes through
+        // SwapPartySlots. A stored rank is a second copy of a fact the list
+        // already holds.
+        public int LivingRankOf(CombatantState combatant)
+        {
+            if (combatant == null || !combatant.IsAlive) return -1;
+
+            var side = combatant.IsPlayerSide ? _party : _enemies;
+
+            int rank = 0;
+            for (int i = 0; i < side.Count; i++)
+            {
+                if (ReferenceEquals(side[i], combatant)) return rank;
+                if (side[i].IsAlive) rank++;
+            }
+
+            return -1;
+        }
+
+        // Two party members trade places on the field. The ONE thing that
+        // reorders the party list.
+        //
+        // NEVER TOUCHES _turnOrder, deliberately. Field position and turn
+        // order are two different things that both used to be called
+        // "position": a Move changes where you stand, not when you act, and
+        // wiring it into the schedule would make stepping back also cost (or
+        // gain) initiative, which nothing in the design says it should.
+        public bool SwapPartySlots(int a, int b)
+        {
+            if (a == b) return false;
+            if (a < 0 || b < 0 || a >= _party.Count || b >= _party.Count) return false;
+
+            var held = _party[a];
+            _party[a] = _party[b];
+            _party[b] = held;
+            return true;
         }
 
         // Adds a combatant to the ENEMY side mid-fight — a summon, so far

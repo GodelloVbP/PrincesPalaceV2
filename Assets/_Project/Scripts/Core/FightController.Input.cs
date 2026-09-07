@@ -264,9 +264,20 @@ namespace PrincesPalace
                     break;
 
                 case 3:
-                    _session.HoldBack();
-                    AfterResolution();
-                    return;
+                    // OPENS A COLUMN, where HOLD BACK resolved on the press.
+                    // Refused with a sentence when neither direction is legal
+                    // -- the same "a submenu that can only be backed out of is
+                    // worse than a refusal that explains itself" rule the Skill
+                    // and Item branches above already state. A solo party and a
+                    // rooted character are both real, reachable cases here.
+                    if (!_session.CanMove(_session.Current, Domain.Combat.MoveDirection.Forward)
+                        && !_session.CanMove(_session.Current, Domain.Combat.MoveDirection.Back))
+                    {
+                        _session.AppendMessage("Nowhere to move.");
+                        break;
+                    }
+                    _menu.OpenBranch(MenuBranch.Move);
+                    break;
             }
 
             RefreshUi();
@@ -295,6 +306,20 @@ namespace PrincesPalace
             if (_menu.Branch == MenuBranch.Item)
             {
                 UseSatchelItem(index);
+                return;
+            }
+
+            // A move likewise has nothing to aim at: the direction IS the
+            // whole command, and who it trades places with falls out of the
+            // formation (FightSession.Move picks the nearest living ally).
+            // Row 0 is FORWARD, row 1 is BACK -- FightHudModel.MoveRows' own
+            // fixed order.
+            if (_menu.Branch == MenuBranch.Move)
+            {
+                _session.Move(index == 0
+                    ? Domain.Combat.MoveDirection.Forward
+                    : Domain.Combat.MoveDirection.Back);
+                AfterResolution();
                 return;
             }
 
@@ -363,20 +388,25 @@ namespace PrincesPalace
                 validSkillRow = row >= 0 && row < options.Count;
             }
 
-            // THE FRONT-RANK RULE, asked about whatever this click would
-            // actually cast. Attack is always the plain Strike, which has
-            // always reached this way. A skill reaches the same way only when
-            // it says meleeReach -- every authored skill that leaves the
-            // field unset is ranged or magical and was never subject to this
-            // rule, so a click on it never asks.
-            bool meleeSelected = _menu.Branch == MenuBranch.Attack
-                || (_menu.Branch == MenuBranch.Skill && validSkillRow && options[row].Skill.MeleeReach);
+            // THE REACH OF WHATEVER THIS CLICK WOULD ACTUALLY DO. Attack is
+            // always the plain Strike (Reach.Melee); a skill carries its own,
+            // which is Reach.Any for every ranged or magical one and was never
+            // a restriction at all. One question, one primitive, whichever
+            // branch is open -- there is no longer a "does this rule apply"
+            // flag to get wrong, because Reach.Any answering true IS the rule
+            // not applying.
+            var reach = _menu.Branch == MenuBranch.Skill && validSkillRow
+                ? options[row].Skill.Reach
+                : Domain.Combat.Reach.Melee;
 
-            // The front-rank rule is the SESSION's to state, not the view's --
-            // it is a combat rule that happens to be enforced at a click.
-            if (meleeSelected && !_session.CanMeleeReach(target))
+            // The rule is the SESSION's to state, not the view's -- it is a
+            // combat rule that happens to be enforced at a click. The command
+            // refuses it a second time on its own (ExecuteAttack/CastSkill);
+            // this exists so the refusal reads as a message rather than as a
+            // click that did nothing.
+            if (!_session.CanReach(_session.Current, reach, target))
             {
-                _session.AppendMessage($"{target.Name} is out of reach behind the front rank.");
+                _session.AppendMessage($"{target.Name} is out of reach.");
                 RefreshUi();
                 return;
             }

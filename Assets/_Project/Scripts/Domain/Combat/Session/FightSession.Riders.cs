@@ -19,11 +19,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // five call sites until 2026-09-06 and one of them had already stopped.
         private bool _killedThisAction;
 
-        // Set when an action is eligible to cash in a banked turn. False for
-        // the hold-back action's own resolution, so the action that JUST earned
-        // a banked point cannot immediately spend it on itself.
-        private bool _actionCanBrave;
-
         private CombatantState _bloodlustChainActor;
         private int _bloodlustChainCount;
         private CombatantState _trampleChainActor;
@@ -36,8 +31,6 @@ namespace PrincesPalace.Domain.Combat.Session
             // Read-then-reset up front, unconditionally, so a flag can never
             // leak into a fight that is ending right here or a turn that has
             // not happened yet -- whichever path below runs, it starts clean.
-            bool canBrave = _actionCanBrave;
-            _actionCanBrave = false;
             bool killedThisAction = _killedThisAction;
             _killedThisAction = false;
 
@@ -50,8 +43,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 ResolveOutcome();
                 return;
             }
-
-            TryGrantBrave(canBrave);
 
             // Trample is tried BEFORE Bloodlust and SHORT-CIRCUITS it, rather
             // than both firing: a Ram wearing the Bloodlust relic would
@@ -153,27 +144,12 @@ namespace PrincesPalace.Domain.Combat.Session
             AppendMessage("Victory!");
         }
 
-        // Brave: cashing in a banked action for an immediate extra turn.
-        //
-        // Granted BEFORE AdvanceTurn -- GrantExtraTurn stacks onto whoever is
-        // still Current, and nothing has moved the queue on yet, so the very
-        // next advance hands the turn straight back rather than to whoever the
-        // schedule says is next.
-        private void TryGrantBrave(bool canBrave)
-        {
-            if (!canBrave) return;
-
-            var actor = _encounter.Current;
-            if (actor.IsPlayerSide && actor.IsAlive && actor.BankedActions > 0 && _encounter.GrantExtraTurn(actor))
-            {
-                actor.BankedActions--;
-                AppendMessage($"{actor.Name} spends a banked action to act again!");
-            }
-        }
-
-        // Trample T3: a kill does not consume the action. Same
-        // GrantExtraTurn-before-AdvanceTurn timing as Brave, and its own cap
-        // for the same reason Bloodlust has one.
+        // Trample T3: a kill does not consume the action. GrantExtraTurn is
+        // called BEFORE AdvanceTurn -- it stacks onto whoever is still
+        // Current, and nothing has moved the queue on yet, so the very next
+        // advance hands the turn straight back rather than to whoever the
+        // schedule says is next. Its own cap, for the same reason Bloodlust
+        // has one.
         private bool TryGrantTrample(CombatantState actor)
         {
             int cap = actor == null ? 0 : actor.Talents.Best(TalentEffectType.ExtraAttackOnKill);

@@ -257,10 +257,11 @@ namespace PrincesPalace.Domain.Content
 
         // DOES THE FRONT-RANK RULE APPLY TO THIS SKILL? False, the default,
         // is every skill authored before this existed and every ranged or
-        // magical one authored after — CombatEncounter.CanMeleeReach only
-        // ever gets asked about a skill that says true here. A hand striking
-        // through a monster's own bodyguard is a different claim than a bolt
-        // of lightning doing it, and only the first one needed a rule.
+        // magical one authored after — FightSession.CanReach only ever gets
+        // asked with Reach.Melee about a skill that says true here. A hand
+        // striking through a monster's own bodyguard is a different claim
+        // than a bolt of lightning doing it, and only the first one needed
+        // a rule.
         //
         // Only means anything on a SingleEnemy skill — see
         // SkillEntryResolver's own check, the same "this field has no
@@ -268,6 +269,25 @@ namespace PrincesPalace.Domain.Content
         // already follow.
         [ContentDoc("Whether the front-rank melee-reach rule applies to this SingleEnemy skill.")]
         public bool meleeReach;
+
+        // WHICH POSITIONS IN THE OPPOSING LINE THIS SKILL CAN BE AIMED AT,
+        // COUNTED FROM THE FRONT AND 1-BASED. [2, 3] is "the back two only"
+        // — a lobbed thing that cannot be aimed at what is right in front of
+        // you. Empty, the default, means no positional restriction at all,
+        // which is every skill authored before this existed.
+        //
+        // 1-BASED HERE AND ZERO-BASED EVERYWHERE ELSE, on purpose: a
+        // designer counts a battle line from one. Reach.FromContent is the
+        // single door that converts, and the resolver is its only caller —
+        // see Reach's own header.
+        //
+        // Refused alongside meleeReach (that IS a reach, stated as a rule
+        // rather than as a list), refused on anything but a SingleEnemy
+        // skill, and refused outside 1..3 — a side never fields more than
+        // FightHudSpec.StageSlotsPerSide, so a 4 is a restriction nothing
+        // could ever satisfy.
+        [ContentDoc("Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere.")]
+        public int[] reachSlots = Array.Empty<int>();
     }
 
     // One typed packet inside a spell. `type` is a DamageType name, matched

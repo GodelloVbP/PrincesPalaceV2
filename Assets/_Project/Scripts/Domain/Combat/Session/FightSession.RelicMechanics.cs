@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // Egg (its relic check lives in FightSession.Ledger.cs, next to the
     // damage funnel it intercepts; the hatch/absorb/tick mechanics are
     // here). Monkey King's Scepter's one line lives in FightSession.cs's
-    // CanMeleeReach, next to the rule it bypasses. Pointy Nail on the End
+    // CanReach, next to the rule it bypasses. Pointy Nail on the End
     // of a Stick, Jo-Sun's Book of Anatomy, and Vampire Dentures have no
     // code here at all -- each is a pure RelicModifier relic, applied at
     // kit-build time exactly like every other numeric-only relic.
@@ -310,16 +310,28 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // ---- the shared "position changed" event ------------------------------------
+        // ---- the shared "an action moved someone on the field" event ----------------
         //
-        // Fired from every place a combatant's spot in the turn order
-        // actually moves: ApplyQueuePush's successful PushBack
-        // (FightSession.Skills.cs), Gift: Haste's successful PullToFront
-        // (FightSession.Talents.cs), and Dancer's Anklet's own automatic
-        // pull below. `mover` is whoever's position changed; `actingCharacter`
-        // is whoever's action caused it -- the same combatant for a
-        // self-reposition, a different one for a shove or a pull.
-        private void NotePositionChanged(CombatantState mover, CombatantState actingCharacter)
+        // RENAMED FROM NotePositionChanged, and the rename is the fix. "A
+        // position changed" was true of four different things -- a push down
+        // the turn order, a pull to the front of it, Dancer's Anklet's own
+        // automatic pull, and a Move -- and only the last of those is a
+        // change of FIELD position, which is what the two Sparring relics
+        // are about ("footwork", "pivots on a boot heel"). The three
+        // turn-order sites no longer fire this: a relic about where you
+        // stand should not pay out for where you stand in a QUEUE.
+        //
+        // `mover` is whoever changed places; `actingCharacter` is whoever's
+        // action did it. Move fires it twice -- once for the character who
+        // chose to move (mover == actingCharacter, which is what Sparring
+        // Saber pays for) and once for the partner they displaced (which
+        // Sparring Buckler pays the acting character for, and Saber does
+        // not). Death compaction deliberately fires nothing: nobody chose
+        // it, and it is not an action.
+        //
+        // Today Move is the only caller. A future shove/swap skill fires the
+        // same note rather than growing a second one.
+        private void NoteDeliberateMove(CombatantState mover, CombatantState actingCharacter)
         {
             // Sparring Saber: altering YOUR OWN position.
             if (actingCharacter != null && ReferenceEquals(mover, actingCharacter)
@@ -334,8 +346,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
             }
 
-            // Sparring Buckler: casting an ability that alters ANY
-            // position, once per turn. "Ward" reuses this game's existing
+            // Sparring Buckler: any action of the acting character's that
+            // changes ANY position on the field, once per turn. "Ward" reuses this game's existing
             // Shielded status (a percent reduction consumed on the next
             // hit, the same shape Magical Shield and Fleece Ward already
             // use) rather than a flat absorb pool -- there is no such pool
@@ -353,12 +365,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- dancer's anklet ----------------------------------------------------------
         //
-        // "You may move one position" has no player-facing input to grant
-        // in this game (no reposition command exists), so this grants it
-        // automatically -- toward the FRONT of the turn order (PullToFront),
-        // the sensible default for a relic about earning tempo from your
-        // own actions. Once per turn, so three actions in one turn cannot
-        // pull three times.
+        // "You may move one position" is granted automatically, toward the
+        // FRONT of the TURN ORDER (PullToFront) -- tempo, not footwork. It
+        // is deliberately NOT wired to the field-position Move the player
+        // now has: the two are different axes, and a relic that quietly
+        // dragged the wearer up the battle line every turn would fight the
+        // formation the player is choosing. Once per turn, so three actions
+        // in one turn cannot pull three times.
+        //
+        // FIRES NO SPARRING NOTE any more (see NoteDeliberateMove): this
+        // moves nobody on the field.
         private void DancersAnkletReposition(CombatantState actor)
         {
             if (actor == null || !HasRelic(actor, RelicEffect.DancersAnklet)) return;
@@ -366,7 +382,6 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!_encounter.PullToFront(actor)) return;
 
             AppendMessage($"{actor.Name} slips a step forward in the order.");
-            NotePositionChanged(actor, actor);
         }
 
         // ---- essence siphon -------------------------------------------------------------
@@ -589,14 +604,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public void TickPhoenixEggForTest(CombatantState actor) => TickPhoenixEgg(actor);
 
-        // Sparring Saber only ever fires through NotePositionChanged, and
-        // the one production caller that fires it with mover == acting
-        // character (a genuine self-reposition) is Dancer's Anklet -- there
-        // is no OTHER self-reposition action in the game yet. A direct seam
-        // lets Sparring Saber's own arithmetic be pinned without also
-        // drafting Dancer's Anklet just to reach it.
-        public void NotePositionChangedForTest(CombatantState mover, CombatantState actingCharacter) =>
-            NotePositionChanged(mover, actingCharacter);
+        // Sparring Saber and Sparring Buckler only ever fire through
+        // NoteDeliberateMove, whose one production caller is Move. A direct
+        // seam lets each relic's own arithmetic be pinned without standing up
+        // a three-member party and a legal move just to reach it.
+        public void NoteDeliberateMoveForTest(CombatantState mover, CombatantState actingCharacter) =>
+            NoteDeliberateMove(mover, actingCharacter);
 
         // Disgruntled Lackey fires from ResolveSummon, which this codebase
         // otherwise only reaches through an authored enemy ability's own AI

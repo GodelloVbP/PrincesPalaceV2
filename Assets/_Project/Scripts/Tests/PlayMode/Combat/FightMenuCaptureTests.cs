@@ -106,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
 
             yield return _rig.Shoot("1_resting");
 
-            // SKILL is Verb1 (0=ATTACK, 1=SKILL, 2=ITEM, 3=RUN, 4=HOLD BACK).
+            // SKILL is Verb1 (0=ATTACK, 1=SKILL, 2=ITEM, 3=MOVE).
             Click("Verb1");
             yield return _rig.Shoot("2_skill_submenu");
 

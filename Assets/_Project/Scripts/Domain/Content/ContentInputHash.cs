@@ -67,6 +67,7 @@ namespace PrincesPalace.Domain.Content
             // lines verbatim in its failure message.
             ("Assets/_Project/Scripts/Domain/Combat/DamageInstance.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/ModifierEffect.cs", null, false),
+            ("Assets/_Project/Scripts/Domain/Combat/Reach.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/ScalingAxis.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/Session/StageApproach.cs", null, false),
             ("Assets/_Project/Scripts/Domain/Combat/SkillEffect.cs", null, false),

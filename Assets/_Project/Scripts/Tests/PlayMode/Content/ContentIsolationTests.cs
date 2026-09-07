@@ -175,7 +175,14 @@ namespace PrincesPalace.PlayModeTests
                     // Enemy turns resolve inside the session after a player
                     // action; reaching here means the session is waiting on
                     // something this driver does not know how to give it.
-                    session.HoldBack();
+                    //
+                    // AutoResolveEnemyTurns, which is what FightRunner and
+                    // FightController's own stalled-turn rescue both do. This
+                    // used to spend a Hold Back, which worked only because
+                    // Hold Back was unconditionally legal -- Move, its
+                    // replacement, is not, and a driver that cannot get past
+                    // an owed enemy turn would spin here.
+                    session.AutoResolveEnemyTurns();
                     continue;
                 }
 

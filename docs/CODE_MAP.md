@@ -307,7 +307,7 @@ milliseconds rather than by loading a scene.
 
 | File | What it owns |
 |---|---|
-| `FightSession.cs` | the session: kits, queries, the plain attack, the generic Skill verb, Hold Back |
+| `FightSession.cs` | the session: kits, reach queries (`CanReach`/`EligibleTargets`), the plain attack, Move |
 | `FightSession.Beats.cs` | beat RECORDING, the retro-attach rule (AUDIT #13), stance and voice capture |
 | `FightSession.Riders.cs` | Brave / Trample / Bloodlust, turn-start bookkeeping, victory resolution |
 | `FightSession.Enemies.cs` | intents, the telegraph, the two skip paths, taunt redirection, the status rider |

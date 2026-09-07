@@ -613,7 +613,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString VerbAttack = UiString.Define("verb_attack", "ATTACK");
         public static readonly UiString VerbSkill = UiString.Define("verb_skill", "SKILL");
         public static readonly UiString VerbItem = UiString.Define("verb_item", "ITEM");
-        public static readonly UiString VerbHoldBack = UiString.Define("verb_hold_back", "HOLD BACK");
+        public static readonly UiString VerbMove = UiString.Define("verb_move", "MOVE");
 
         public static readonly UiString HotkeyOne = UiString.Define("hotkey_1", "1");
         public static readonly UiString HotkeyTwo = UiString.Define("hotkey_2", "2");
@@ -647,6 +647,7 @@ namespace PrincesPalace.Domain.UiKit
         // column can be closed at all.
         public static readonly UiString SubmenuSkillsTitle = UiString.Define("submenu_skills_title", "S K I L L S");
         public static readonly UiString SubmenuItemsTitle = UiString.Define("submenu_items_title", "I T E M S");
+        public static readonly UiString SubmenuMoveTitle = UiString.Define("submenu_move_title", "M O V E");
         public static readonly UiString SubmenuHint = UiString.Define("submenu_hint", "ESC TO GO BACK");
 
         // Detail column labels.
@@ -676,14 +677,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPromptGroup =
             UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
                 "Boulder Slam — confirm on any enemy plate.");
-
-        // HOLD BACK's own label, with the banked-action count folded in --
-        // the resource Hold Back BUILDS was invisible everywhere before this,
-        // including on the one verb that spends a turn creating it. Audit
-        // sample is the cap (FightTuning.MaxBankedActions), not a bigger
-        // number: the count can never exceed it.
-        public static readonly UiString VerbHoldBackWithBank =
-            UiString.Define("verb.hold_back_bank", "HOLD BACK  ·  BANK {0}/{1}", "HOLD BACK  ·  BANK 2/2");
 
         // The transformation strip, fused above the party plate -- the one
         // domain system that was previously invisible even to the character

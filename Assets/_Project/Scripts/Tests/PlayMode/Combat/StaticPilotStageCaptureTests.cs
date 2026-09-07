@@ -137,7 +137,7 @@ namespace PrincesPalace.PlayModeTests
 
             // The scene's own FightBootstrap has already started a fight and is
             // playing its opening beats. Left running, its playback holds
-            // FightController busy and the Hold Back click below is swallowed.
+            // FightController busy and the potion click below is swallowed.
             _player.Flush();
             yield return null;
             yield return null;
@@ -179,11 +179,18 @@ namespace PrincesPalace.PlayModeTests
 
             // ASSERTED RATHER THAN SKIPPED PAST (docs/CODE_STANDARDS.md §8): if
             // initiative ever stops going on Speed the witch's beat is not in
-            // the queue and this fixture would quietly photograph a Hold Back.
+            // the queue and this fixture would quietly photograph an empty
+            // stage.
             Assert.Less(_hero.CurrentHealth, _hero.MaxHealth,
                 "the witch did not win initiative, so its swing is not queued and there is no beat to capture");
 
-            _fight.Bind(session, EncounterClass.Normal);
+            // ONE MANA ELIXIR, and the hero is already at full mana -- see the
+            // click in TheBeat for why this stands in for the Hold Back that
+            // used to open the window.
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>
+            {
+                new SatchelStack("elixir", "Elixir", 1, true),
+            });
             _fight.BindPartyArt(new[] { _hero }, new[] { shawn.Data.BattleSpritePath });
 
             yield return null;
@@ -288,16 +295,28 @@ namespace PrincesPalace.PlayModeTests
 
             Time.captureDeltaTime = SampleSeconds;
 
-            // HOLD BACK (verb index 3 -- see FightController.Hud's
-            // HoldBackVerbIndex) rather than an attack, and the choice is
-            // load-bearing: it drains the queued beats, so the witch's swing
-            // plays first, and the player's own beat that follows it records no
-            // target and no amount. That makes the rest of the capture window
-            // provably free of a second blow, which is what lets the impact
-            // assertion below be an exact count rather than a guess.
-            var verb = Named("Verb3");
-            Assert.IsNotNull(verb, "the fight scene has no Verb3 (HOLD BACK)");
-            verb.GetComponent<Button>().onClick.Invoke();
+            // A MANA ELIXIR ON A HERO WHO IS ALREADY AT FULL MANA, and the
+            // choice is load-bearing in exactly the way HOLD BACK's used to
+            // be: it reaches AfterResolution, which drains the queued beats,
+            // so the witch's swing plays first -- and the player's own beat
+            // that follows it restores nothing, so FightBeatPlayer.ShowAmount
+            // returns before popping a number (`!Missed && Amount <= 0`).
+            // That makes the rest of the capture window provably free of a
+            // second blow, which is what lets the impact assertion below be an
+            // exact count rather than a guess.
+            //
+            // WHY NOT MOVE, the verb that replaced HOLD BACK on row 3: this
+            // party is one character, so there is nobody to trade places with
+            // and Move is refused without spending a turn at all. Fielding a
+            // second party member to make it legal would put a second figure
+            // in the strip and change what the pilot is a picture of.
+            var item = Named("Verb2");
+            Assert.IsNotNull(item, "the fight scene has no Verb2 (ITEM)");
+            item.GetComponent<Button>().onClick.Invoke();
+
+            var row = Named("CharacterSkill0");
+            Assert.IsNotNull(row, "the item submenu did not open its first row");
+            row.GetComponent<Button>().onClick.Invoke();
 
             // The baseline the first frame is compared against, taken BEFORE the
             // click. Without it a popup still in flight from the scene's own

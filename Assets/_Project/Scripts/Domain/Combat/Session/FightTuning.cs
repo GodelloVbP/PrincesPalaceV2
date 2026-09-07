@@ -7,15 +7,8 @@ namespace PrincesPalace.Domain.Combat.Session
     // much armour softens a hit.
     public static class FightTuning
     {
-        // How many turns a character can bank by holding back. A finite,
-        // slow-to-earn resource: banking costs a real turn, which is why Brave
-        // needs no chain cap of its own -- it can never grant more extra turns
-        // than were already paid for in skipped ones.
-        public const int MaxBankedActions = 2;
-
-        // How many extra turns one Bloodlust chain can produce. A kill DOES
-        // need a cap where a banked action does not, because kills are free:
-        // without one, a lucky room turns into an unbounded chain.
+        // How many extra turns one Bloodlust chain can produce. Kills are
+        // free, so without a cap a lucky room turns into an unbounded chain.
         public const int MaxBloodlustChain = 2;
 
         // ---- counting relics -----------------------------------------------------
@@ -186,14 +179,14 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int IceFingernailStackTurns = 5;
         public const string IceFingernailStackKey = "ice_fingernail";
 
-        // Sparring Saber: altering your own position grants this much
-        // Speed for one turn.
+        // Sparring Saber: choosing to Move grants this much Speed for one
+        // turn.
         public const int SparringSaberSpeedPercent = 30;
         public const int SparringSaberSpeedTurns = 1;
 
         // Sparring Buckler: the ward's own strength, as a percent reduction
-        // on the wearer's next hit -- see FightSession.BalanceRelics2.
-        // NotePositionChanged for the "ward" reading taken (this game's
+        // on the wearer's next hit -- see FightSession.RelicMechanics.
+        // NoteDeliberateMove for the "ward" reading taken (this game's
         // existing Shielded status, not a flat absorb pool).
         public const int SparringBucklerWardPercent = 15;
 

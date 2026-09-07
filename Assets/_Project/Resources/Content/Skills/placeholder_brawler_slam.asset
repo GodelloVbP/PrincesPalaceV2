@@ -71,6 +71,8 @@ MonoBehaviour:
     Stance: 
     SummonEnemyId: 
     SummonCap: 0
-    MeleeReach: 1
+    Reach:
+      Kind: 1
+      RankMask: 1
     BookOnly: 0
     BookTier: 0

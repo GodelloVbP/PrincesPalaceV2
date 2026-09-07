@@ -211,8 +211,9 @@ FightTrace
 TurnTrace
   ActorId       string -- combatant id issuing this command
   Action        string -- "Attack" / "Skill:<name>" / "Item:<name>" /
-                          "HoldBack"
-  TargetId      string -- "" for HoldBack
+                          "Move"
+  TargetId      string -- "" for Move (the direction is the command; the
+                          partner it trades with falls out of the formation)
   PartyHpAfter  int    -- party HP total immediately after this command
                           resolved (including the enemy reply, per F6: one
                           command call resolves the whole exchange)

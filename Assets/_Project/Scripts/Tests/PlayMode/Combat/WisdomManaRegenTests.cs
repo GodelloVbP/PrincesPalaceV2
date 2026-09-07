@@ -85,20 +85,24 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
             hero.CurrentMana = 0;
-            // A LARGE speed gap and one banked action, the same fixture shape
-            // TurnRiderTests' own turn-start tests rely on -- hands the very
-            // next turn straight back to the hero rather than letting a real
-            // enemy's turn (or a second one of the hero's own) intervene and
-            // regen twice before the read below.
+            // A LARGE speed gap and one granted extra turn, the same fixture
+            // shape TurnRiderTests' own turn-start tests rely on -- hands the
+            // very next turn straight back to the hero rather than letting a
+            // real enemy's turn (or a second one of the hero's own) intervene
+            // and regen twice before the read below.
+            //
+            // GrantExtraTurn rather than the banked action this used to set:
+            // banking is gone with Hold Back, and the primitive underneath it
+            // is what the fixture actually wanted.
             hero.Speed = 500;
-            hero.BankedActions = 1;
+            session.Encounter.GrantExtraTurn(hero);
 
             // NOT session.Begin() -- Begin() itself calls GrantTurnStart once
             // (FightSession.cs), which would regen BEFORE this action even
-            // resolves and double the read below once the banked action
-            // opens its own turn. TurnRiderTests.TheTurnOpensWithManaRegenerated
-            // exercises the identical shape (BankedActions=1, no Begin()) for
-            // the same reason.
+            // resolves and double the read below once the granted turn opens
+            // its own. TurnRiderTests.TheTurnOpensWithManaRegenerated
+            // exercises the identical shape (one granted extra turn, no
+            // Begin()) for the same reason.
             session.DamageVarianceRange = 0f;
             session.ExecuteAttack(foe);
 

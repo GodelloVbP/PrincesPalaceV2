@@ -100,65 +100,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, encounter.PendingExtraTurns(hero));
         }
 
-        // ---- Brave: spending a banked action ---------------------------------
-
-        [Test]
-        public void HoldingBackBanksAnAction_ButCannotSpendItOnItself()
-        {
-            // The one command that leaves _actionCanBrave false. Without that,
-            // holding back would bank a point and immediately cash it in,
-            // which is a free turn rather than a deferred one.
-            var hero = Hero();
-            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
-
-            var round = Round(session, session.HoldBack);
-
-            Assert.AreEqual(1, hero.BankedActions);
-            Assert.GreaterOrEqual(EnemyTurnsIn(round), 1, "the banked action must not pay for the turn that earned it");
-            Assert.IsTrue(MessagesIn(round).Any(m => m.Contains("holds back")));
-        }
-
-        [Test]
-        public void BankingIsCappedSoTheBankCannotGrowForever()
-        {
-            var hero = Hero();
-            hero.BankedActions = FightTuning.MaxBankedActions;
-            var (session, _, _) = Fight(hero, null, Foe("Tank", 1000));
-
-            session.HoldBack();
-
-            Assert.AreEqual(FightTuning.MaxBankedActions, hero.BankedActions);
-            Assert.IsTrue(AllMessages(session).Any(m => m.Contains("cannot bank")));
-        }
-
-        [Test]
-        public void ABankedActionBuysAnExtraTurnOnTheNextAction()
-        {
-            var hero = Hero();
-            hero.BankedActions = 1;
-            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
-
-            var round = Round(session, () => session.ExecuteAttack(encounter.Enemies[0]));
-
-            Assert.AreEqual(0, EnemyTurnsIn(round), "the banked action hands the turn straight back");
-            Assert.AreEqual(0, hero.BankedActions, "and is spent doing it");
-            Assert.IsTrue(MessagesIn(round).Any(m => m.Contains("banked action")));
-        }
-
-        [Test]
-        public void BraveNeedsNoChainCapBecauseEveryGrantWasPaidForInSkippedTurns()
-        {
-            // Two banked points buy exactly two extra turns and then stop.
-            var hero = Hero();
-            hero.BankedActions = 2;
-            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
-
-            Assert.AreEqual(0, EnemyTurnsIn(Round(session, () => session.ExecuteAttack(encounter.Enemies[0]))));
-            Assert.AreEqual(0, EnemyTurnsIn(Round(session, () => session.ExecuteAttack(encounter.Enemies[0]))));
-
-            var third = Round(session, () => session.ExecuteAttack(encounter.Enemies[0]));
-            Assert.GreaterOrEqual(EnemyTurnsIn(third), 1, "the bank is empty; nothing left to spend");
-        }
+        // ---- Brave: DELETED WITH THE BANK IT SPENT ----------------------------
+        //
+        // Four tests stood here (holding back banks but cannot spend on
+        // itself; the cap; a banked point buys an extra turn; no chain cap
+        // needed because every grant was paid for). Hold Back is gone --
+        // replaced by Move, which spends the turn on position instead of on
+        // tempo -- and with it BankedActions, MaxBankedActions and
+        // TryGrantBrave. There is no reduced version of these tests to keep:
+        // the mechanic they pinned does not exist. The extra-turn PRIMITIVE
+        // they rode on (CombatEncounter.GrantExtraTurn) is still covered by
+        // Trample and Bloodlust below, and is what the three turn-start tests
+        // further down now use directly to hand the turn back.
 
         // ---- Trample: a kill that does not consume the action -----------------
 
@@ -210,15 +163,20 @@ namespace PrincesPalace.Domain.Tests
             // a counter that only resets on the path that increments it never
             // resets at all. This is that bug, pinned.
             //
-            // Two banked actions carry the hero through the killless turn, so
-            // the second kill happens on the same actor's uninterrupted run.
+            // Two granted extra turns carry the hero through the killless
+            // turn, so the second kill happens on the same actor's
+            // uninterrupted run. GrantExtraTurn is the primitive the deleted
+            // Brave rider used to reach; this test never cared about the bank,
+            // only about keeping the turn.
             var hero = Hero();
-            hero.BankedActions = 2;
             GiveTrample(hero, 1);
             var (session, _, encounter) = Fight(hero, null, Foe("Weak", 1), Foe("AlsoWeak", 1), Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
+            encounter.GrantExtraTurn(hero);
+
 
             session.ExecuteAttack(encounter.Enemies[0]);   // kill: chain = 1
-            session.ExecuteAttack(encounter.Enemies[2]);   // no kill: chain reset
+            session.UseConsumable("Potion", 1, false);     // no kill: chain reset
             session.DrainBeats();
 
             var round = Round(session, () => session.ExecuteAttack(encounter.Enemies[1]));   // kill again
@@ -324,8 +282,8 @@ namespace PrincesPalace.Domain.Tests
             var hero = Hero(maxMana: 20);
             hero.CurrentMana = 0;
             hero.ManaRegen = 3;
-            hero.BankedActions = 1;   // hands the turn back so the opening is hero's
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);   // hands the turn back so the opening is hero's
 
             session.ExecuteAttack(encounter.Enemies[0]);
 
@@ -338,9 +296,9 @@ namespace PrincesPalace.Domain.Tests
             // StatusEffects.Tick applies the numbers and reports what it did;
             // the wording is the fight's job, not the status system's.
             var hero = Hero();
-            hero.BankedActions = 1;
             StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
             int before = hero.CurrentHealth;
 
             session.ExecuteAttack(encounter.Enemies[0]);
@@ -356,9 +314,9 @@ namespace PrincesPalace.Domain.Tests
             // decided after the beat committed. Written straight to the
             // immediate list they land OLDER than the blow they follow.
             var hero = Hero();
-            hero.BankedActions = 1;
             StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
 
             session.ExecuteAttack(encounter.Enemies[0]);
 

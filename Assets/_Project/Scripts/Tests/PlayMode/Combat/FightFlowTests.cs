@@ -329,7 +329,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Active("TargetPrompt"), "the target prompt must not survive into its own animation");
             Assert.IsFalse(Active("DetailColumn"), "the skill card must not survive into its own animation");
 
-            // ATTACK/SKILL/ITEM/HOLD BACK too, on the same report: the verb
+            // ATTACK/SKILL/ITEM/MOVE too, on the same report: the verb
             // column used to stay up for the whole animation right alongside
             // the card and the prompt, describing choices the player was not
             // currently making.

@@ -40,6 +40,21 @@ namespace PrincesPalace.Domain.Combat.Session
             var actor = Current;
             if (actor == null) return false;
 
+            // THE REACH CHECK COMES FIRST -- ahead of the cost check, the
+            // resolvability check, the cooldown and the beat. A cast the
+            // field will not allow must not read as a cast the actor cannot
+            // afford, and must spend nothing on the way to being refused.
+            //
+            // ONLY SingleEnemy. Self, Party and AllEnemies have no
+            // single-opponent question to ask (see CanReach's own header),
+            // and asking one about them would refuse every group cast the
+            // moment a taunt was up.
+            if (skill.Targeting == SkillTargeting.SingleEnemy && !CanReach(actor, skill.Reach, target))
+            {
+                AppendMessage($"{(target == null ? "That target" : target.Name)} is out of reach.");
+                return false;
+            }
+
             if (!SkillResolution.CanAfford(actor, skill.ManaCost, skill.ResourceCost))
             {
                 AppendMessage($"{actor.Name} cannot pay for {skill.DisplayName}.");
@@ -56,8 +71,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage(refusal);
                 return false;
             }
-
-            _actionCanBrave = true;
 
             int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
             ChargeSkillMana(actor, skill.ManaCost);
@@ -735,9 +748,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
             AppendMessage($"{target.Name} is knocked back down the order.");
 
-            // Mechanic: the shared "position changed" event -- Sparring
-            // Buckler's own trigger, whoever moved.
-            NotePositionChanged(target, actor);
+            // NO SPARRING NOTE. A push moves the target down the TURN ORDER,
+            // not along the battle line -- see NoteDeliberateMove's own
+            // header for why the two stopped sharing an event.
 
             // Charge T2: the shove does not merely delay the telegraphed
             // action, it takes it away. Removing the committed intent IS that

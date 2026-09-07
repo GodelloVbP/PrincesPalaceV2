@@ -387,6 +387,12 @@ namespace PrincesPalace.Domain.Tests
                 { "GreedyAggressive", 0.5f },
                 { "GreedyDefensive", 0.75f },
                 { "Lookahead2", 0.5f },
+
+                // ProtectTheFront forwards every out-of-fight decision to
+                // GreedyAggressive, this one included -- it differs inside a
+                // fight and nowhere else, which is what makes the Part 3
+                // paired numbers attributable to Move.
+                { "ProtectTheFront", 0.5f },
             };
 
             foreach (string name in Archetypes.Names)

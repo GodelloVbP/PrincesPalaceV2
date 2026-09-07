@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // PHASE D3, the item-modifier plan: Rooted. Builds on the existing
     // melee(plain-attack)/ranged(skill) distinction confirmed at
-    // CombatEncounter.CanMeleeReach/FightController.Input -- a rooted ENEMY
+    // FightSession.CanReach/FightController.Input -- a rooted ENEMY
     // loses its plain-attack option from its own action draw
     // (FightSession.Enemies.EffectivePoolFor) and must act through a skill,
     // or forfeit the turn via the exact mechanism ResolveSkippedTurn already
@@ -279,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
             // SeededRandom(1) stream this class always uses instead: Begin()
             // spends this session's first TWO draws -- one picking the
             // monster's telegraphed intent, one inside
-            // PickRandomLivingPlayerTarget's NextInt (which advances the
+            // PickIntentTarget's NextInt (which advances the
             // stream even with a single living player, since range-1 still
             // calls NextUlong) -- before the swing below spends the THIRD on
             // its own dodge roll. Confirmed by running this suite (not by

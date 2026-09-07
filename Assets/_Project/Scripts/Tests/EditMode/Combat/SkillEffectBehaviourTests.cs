@@ -85,7 +85,7 @@ namespace PrincesPalace.Domain.Tests
             string summonEnemyId = "",
             int summonCap = 0) =>
             new ResolvedSkill("coverage", displayName, "", "hero", 1, effect,
-                SkillTargeting.SingleEnemy, 0, 0, false, power, flatAmount, false,
+                SkillEntryResolver.DefaultTargetingFor(effect), 0, 0, false, power, flatAmount, false,
                 null, SpellPresentation.None, 0,
                 appliesStatus: appliesStatus, statusMagnitude: statusMagnitude,
                 statusDuration: statusDuration, transform: transform,
