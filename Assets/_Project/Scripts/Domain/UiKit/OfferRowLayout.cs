@@ -1,40 +1,23 @@
-using PrincesPalace.Domain.Progression;
-using PrincesPalace.Domain.Rewards;
-
 namespace PrincesPalace.Domain.UiKit
 {
     // Where the Reckoning's offer cards sit, and how wide they are, for a row
     // of any width.
     //
-    // ITS OWN TYPE BECAUSE THE ROW IS NO LONGER ONE WIDTH. The reward track
-    // widens the offer at level 50, and a screen is emitted once at build time
-    // for every save -- so the tree cannot be built at the width a particular
-    // player has earned. The tree is built at the WIDEST the track can grant
-    // and the controller narrows it, which means the same arithmetic runs in
-    // two places and has to be one function or it is two answers.
+    // ITS OWN TYPE BECAUSE THE ROW IS NOT ALWAYS FULL. The tree is built at
+    // ItemOfferTable.OfferCount cards, but a thin content pool can still roll
+    // fewer than that -- and the controller re-centres and resizes the row for
+    // whatever count is actually on screen (ReckoningController.LayOutOfferRow),
+    // from the same arithmetic the tree was built with. One function shared by
+    // both rather than the same numbers written out twice.
     //
     // Pure, engine-free and EditMode-testable, the same posture MapLayout takes
     // for the descent map's tiles.
     //
-    // THE CARDS SHRINK RATHER THAN THE ROW GROWING, and that is forced.
-    // BuildOffer's own comment recorded the constraint before this existed:
-    // "The three cards run to x 540 against a clip half-width of 540.3. That is
-    // deliberate -- the offers are sized to use the full interior -- but it
-    // means widening a card by even a pixel now fails A2." Four cards at the
-    // three-card width need 1450px against a painted interior of 1080.6. So the
-    // budget is fixed and the cards divide it.
-    //
-    // The happy consequence is that the card width this file introduces is not
-    // a number it overrides the old one with -- ~340 FALLS OUT of the budget at
-    // three cards, so a player who has not reached level 50 sees exactly the
-    // row they saw before. What level 50 costs is that all four cards come out
-    // at ~248 instead, about 27% narrower than the art was sized for.
-    //
-    // WHY THE TREE IS BUILT AT THE WIDEST: `UiAudit` re-solves the emitted tree
-    // at four aspects and cannot see a runtime reposition, so the case it
-    // checks should be the one that can fail. Every row spans the same budget,
-    // and the four-card row divides it into the most pieces -- the one where a
-    // label has least room and a rounding error has most places to land.
+    // BuildOffer's own comment records the constraint this arithmetic answers
+    // to: "The three cards run to x 540 against a clip half-width of 540.3.
+    // That is deliberate -- the offers are sized to use the full interior --
+    // but it means widening a card by even a pixel now fails A2." So the
+    // budget is fixed and the cards divide it, at any count.
     public static class OfferRowLayout
     {
         // The painted interior the row has to live inside, edge to edge.
@@ -58,22 +41,6 @@ namespace PrincesPalace.Domain.UiKit
         // name have to stop short of the card edge or they read as touching
         // the next card along.
         public const float LabelInset = 20f;
-
-        // The widest row the reward track can ever ask for, and therefore how
-        // many cards the tree emits.
-        //
-        // Read off the track rather than typed here, so "the track grants a
-        // four-wide offer" and "the screen has four cards" cannot drift into
-        // disagreement -- the failure that would produce is a fourth offer
-        // rolled, chosen by the player, and painted onto a card that does not
-        // exist.
-        // Literally the width at the top of the track, rather than the same
-        // UnlockedAmount call written a second time with MaxLevel in it.
-        public static int MaxCards => CardsFor(RewardTrack.MaxLevel);
-
-        // How wide an offer a character at `level` is shown.
-        public static int CardsFor(int level) =>
-            RewardTrack.UnlockedAmount(TrackReward.WiderOffer, level, ItemOfferTable.OfferCount);
 
         // One card's width in a row of `visibleCount`. The budget divided, less
         // the gaps between them.
@@ -101,9 +68,9 @@ namespace PrincesPalace.Domain.UiKit
         // this exists. ItemIcons.Apply preserves aspect, so an icon box taller
         // than it is wide simply letterboxes: the old 200x250 box drew a
         // 260x384 sheet at 169x250 and the extra height was doing nothing. Tie
-        // the box to the card and a three-card row -- which is every player
-        // below level 50 -- gets art half again as large, while the four-card
-        // row the audit solves still fits.
+        // the box to the card instead and a three-card row gets art half again
+        // as large, while a thinner one -- fewer offers than the pool could
+        // fill -- still fits inside the same budget.
         public static float IconWidth(int visibleCount)
         {
             float width = CardWidth(visibleCount) - IconInset;

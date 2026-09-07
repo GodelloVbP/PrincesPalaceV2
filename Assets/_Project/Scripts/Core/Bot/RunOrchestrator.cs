@@ -6,7 +6,6 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Equipment;
-using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
@@ -73,20 +72,6 @@ namespace PrincesPalace
         {
             var alreadyHeld = RunManager.Run?.relicIds ?? new List<string>();
             var available = AvailableRelicOptions();
-
-            // LEVEL 70: THE WHOLE POOL, IN AUTHORED ORDER, NOT A DRAW.
-            //
-            // "Choose your starting relics (instead of a random draft)" read
-            // literally: at this level there is no roll left to make, so there
-            // is no seed involved either. ContentDatabase.Relics is ordered
-            // content (IOrderedContent), so the order is the one somebody
-            // authored rather than whatever Resources.LoadAll returned -- which
-            // matters more here than usual, because the player is now scanning a
-            // list rather than reacting to three cards.
-            if (SquadTrack.HasUnlocked(TrackReward.ChosenStartingRelics))
-            {
-                return available;
-            }
 
             // Weighted, so a Godlike relic stays a story. The seed is the run's
             // own PLUS the round, so reloading before choosing offers the same
@@ -163,11 +148,16 @@ namespace PrincesPalace
             if (!string.IsNullOrEmpty(relicId)) run.relicIds.Add(relicId);
         }
 
-        // Whether the track has earned another round. The caller decides what
-        // to do when the pool has nothing left to show -- with a pool smaller
-        // than the number of rounds there eventually is not one.
+        // Whether the draft has another round to offer. The caller decides
+        // what to do when the pool has nothing left to show -- with a pool
+        // smaller than the number of rounds there eventually is not one.
+        //
+        // RelicPool.StartingRelicsPerDescent RATHER THAN A REWARD-TRACK READ:
+        // the track used to escalate this per character (see that constant's
+        // own comment for why and where it went, docs/PLAN_REWARD_TRACKS.md
+        // section 3e2); every descent now drafts the same flat count.
         public static bool DraftHasAnotherRound() =>
-            (RunManager.Run?.relicIds?.Count ?? 0) < SquadTrack.StartingRelics();
+            (RunManager.Run?.relicIds?.Count ?? 0) < RelicPool.StartingRelicsPerDescent;
 
         // Persisted BEFORE the next round is painted, so the round a reload
         // comes back to is the one on screen.
@@ -574,8 +564,7 @@ namespace PrincesPalace
             var encounter = session?.EncounterClass ?? EncounterClass.Normal;
 
             int depth = session?.DepthStep ?? 0;
-            return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(),
-                nextIndex, SquadTrack.OfferWidth());
+            return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(), nextIndex);
         }
 
         // Taking one. The screen keeps the "only once" guard and the repaint;

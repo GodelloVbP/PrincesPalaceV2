@@ -215,8 +215,6 @@ namespace PrincesPalace.PlayModeTests
                 "the whole reward track screen depends on this gap being visible");
             Assert.AreEqual(0, character.unspentStatPoints,
                 "stat points arrived without the player collecting them");
-            Assert.AreEqual(0, character.earnedFavor,
-                "Favor arrived without the player collecting them");
         }
 
         // A second payout does not deepen the debt beyond the levels reached
@@ -245,7 +243,6 @@ namespace PrincesPalace.PlayModeTests
             character.level = 30;
             character.claimedTrackLevel = 0;
             character.unspentStatPoints = 0;
-            character.earnedFavor = 0;
 
             RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
 
@@ -253,7 +250,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, character.claimedTrackLevel,
                 "a fight collected the track on the player's behalf");
             Assert.AreEqual(0, character.unspentStatPoints);
-            Assert.AreEqual(0, character.earnedFavor);
 
             // And the debt is still THERE to be collected, which is the half
             // that matters: nothing expires.
@@ -297,69 +293,23 @@ namespace PrincesPalace.PlayModeTests
                 "max health arrived without the player collecting it");
         }
 
-        // ---- the experience nodes -------------------------------------------------
+        // ---- a fight is worth exactly what it paid --------------------------------
+        //
+        // The reward track used to have an experience-find kind, so a payout
+        // could arrive boosted above what the fight actually paid. P1 of
+        // docs/PLAN_REWARD_TRACKS.md retired it along with Favor and six other
+        // over-arching rewards; RewardApplier now hands `payout.Experience`
+        // straight to AddExperience with nothing in between. What is left worth
+        // pinning is that the payout is never anything other than what it says.
 
         [Test]
-        public void ExperienceNodesRaiseWhatAFightIsWorth()
+        public void AFightIsWorthExactlyWhatItPaid()
         {
-            var character = First();
-            character.level = 1;
-            character.claimedTrackLevel = 1;
-            character.exp = 0;
-            character.bonusExpPermille = 200; // +20%
-
-            RewardApplier.Apply(new VictoryRewards.Payout(100, 0), Squad());
-
-            // 120 exp against a level-1 requirement of 109: one level, 11 over.
-            character = First();
-            Assert.AreEqual(2, character.level, "120 experience did not cross the level-1 threshold of 109");
-            Assert.AreEqual(11, character.exp, "the +20% was not applied to the payout");
-        }
-
-        [Test]
-        public void WithoutTheNodesAFightIsWorthExactlyWhatItPaid()
-        {
-            var character = First();
-            character.bonusExpPermille = 0;
-            int before = character.exp;
+            int before = First().exp;
 
             RewardApplier.Apply(new VictoryRewards.Payout(50, 0), Squad());
 
             Assert.AreEqual(before + 50, First().exp);
-        }
-
-        // A node crossed by this very payout cannot boost it.
-        //
-        // THIS USED TO BE A TIMING GUARANTEE and is now a structural one, which
-        // is worth writing down rather than deleting the test over. The bonus
-        // was read from what the character walked IN with, deliberately, so a
-        // node crossed on the way past paid from the next fight -- the ordering
-        // inside Apply was load-bearing. Nothing here grants the bonus at all
-        // now: bonusExpPermille moves only when the track is collected, and the
-        // track cannot be collected from inside a fight.
-        //
-        // Kept because it pins the OUTCOME rather than the mechanism, and the
-        // outcome is the thing that would be a bug either way.
-        [Test]
-        public void ANodeCrossedByThisPayoutDoesNotBoostThisPayout()
-        {
-            var character = First();
-            character.level = 1;
-            character.claimedTrackLevel = 1;
-            character.exp = 0;
-            character.bonusExpPermille = 0;
-
-            RewardApplier.Apply(new VictoryRewards.Payout(20000, 0), Squad());
-
-            character = First();
-            Assert.Greater(character.level, 1, "the fixture did not cross a level, so this proves nothing");
-            Assert.AreEqual(0, character.bonusExpPermille,
-                "an experience node paid out without the player collecting it");
-
-            // And the payout really was worth exactly what it paid: the levels
-            // it bought plus the remainder cannot exceed what was handed over.
-            Assert.LessOrEqual(character.exp + LevelCurve.ExpToNextLevel(character.level - 1), 20000,
-                "this payout was boosted by a node it earned on the way past");
         }
 
         // A respec gives back what was SPENT. Max health was never spent -- the

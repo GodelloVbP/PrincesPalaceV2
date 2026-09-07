@@ -88,13 +88,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.EmptyHint = empty;
             inside.Add(empty);
 
-            // PAGING, for level 70's "choose your starting relics".
+            // PAGING, for an offer wider than the card row can show at once.
             //
-            // The card row is three wide and emitted once at build time, so the
-            // whole pool cannot be shown at once -- and a 13-card grid would be
-            // a second card design competing with the one that already reads
-            // well. Paging reuses the cards exactly as they are and costs two
-            // arrows.
+            // Dormant today -- P1 of docs/PLAN_REWARD_TRACKS.md retired the
+            // reward track's level-70 "choose your starting relics" milestone,
+            // which was the one thing that ever offered more than three -- but
+            // the tree keeps the controls rather than removing them: the card
+            // row is three wide and emitted once at build time, so the whole
+            // pool still cannot be shown at once should a future reward widen
+            // it again, and a 13-card grid would be a second card design
+            // competing with the one that already reads well. Paging reuses
+            // the cards exactly as they are and costs two arrows.
             //
             // Outside the card row, not over it: three 380-wide cards at a 420
             // pitch reach x +/-610. Pulled in from +/-680 to +/-660 when the

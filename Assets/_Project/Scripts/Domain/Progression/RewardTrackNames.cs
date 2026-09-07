@@ -9,9 +9,9 @@ namespace PrincesPalace.Domain.Progression
     // cleanly while displaying as nothing.
     //
     // Upper case like the rest of the game's chrome, and the AMOUNT is folded
-    // in rather than left to the caller to append -- "+5 PRINCE'S FAVOR" and
-    // "3 STARTING RELICS" put the number in different places, so a caller
-    // building the string would have to know which reward it was holding.
+    // in rather than left to the caller to append -- "+15 MAX HEALTH" and
+    // "A STAT POINT" put the number in different places, so a caller building
+    // the string would have to know which reward it was holding.
     public static class RewardTrackNames
     {
         public static string Of(TrackEntry entry) => Of(entry.Reward, entry.Amount);
@@ -23,38 +23,14 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.StatPoint:
                     return amount == 1 ? "A STAT POINT" : $"{amount} STAT POINTS";
 
-                case TrackReward.Favor:
-                    return $"+{amount} PRINCE'S FAVOR";
-
                 case TrackReward.MaxHealth:
                     return $"+{amount} MAX HEALTH";
-
-                case TrackReward.ExpFind:
-                    return $"+{amount / 10}% EXPERIENCE";
 
                 case TrackReward.Respec:
                     return "FREE RESPEC";
 
-                case TrackReward.StartingRelics:
-                    return $"START EVERY RUN WITH {amount} RELICS";
-
-                case TrackReward.RestBeforeBoss:
-                    return "A REST BEFORE EVERY BOSS";
-
-                case TrackReward.OfferReroll:
-                    return amount == 1 ? "AN OFFER REROLL" : $"{amount} OFFER REROLLS";
-
-                case TrackReward.WiderOffer:
-                    return $"CHOOSE FROM {amount} ITEMS";
-
-                case TrackReward.ChosenStartingRelics:
-                    return "CHOOSE YOUR STARTING RELICS";
-
                 case TrackReward.SecondLife:
                     return "A SECOND LIFE, ONCE PER RUN";
-
-                case TrackReward.SecondLifeRefresh:
-                    return "YOUR SECOND LIFE RETURNS AT EVERY BOSS";
 
                 default:
                     return "";

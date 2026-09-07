@@ -170,22 +170,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThereIsOneOfferNodePerOfferTheWidestRowCanProduce()
+        public void ThereIsOneOfferNodePerOfferTheRowShows()
         {
-            // OfferRowLayout.MaxCards is the contract, and it is the WIDEST the
-            // reward track can grant rather than the base three. A tree with
-            // fewer buttons than the roll returns would silently drop an offer
-            // the player was supposed to be choosing between -- and since the
-            // tree is emitted once for every save, "the roll" means the roll
-            // for the most-levelled player, not for a fresh one.
+            // ItemOfferTable.OfferCount is the contract. A tree with fewer
+            // buttons than the roll returns would silently drop an offer the
+            // player was supposed to be choosing between, and since the tree
+            // is emitted once for every save, it has to hold as many as the
+            // roll can ever produce.
             var screen = ReckoningScreen.Build();
 
-            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferButtons.Count);
-            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferNames.Count);
-            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferMetas.Count);
-
-            Assert.Greater(OfferRowLayout.MaxCards, ItemOfferTable.OfferCount,
-                "the track's wider offer grants nothing, so the fourth card is dead weight");
+            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferButtons.Count);
+            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferNames.Count);
+            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferMetas.Count);
         }
 
         [Test]
@@ -320,8 +316,7 @@ namespace PrincesPalace.Domain.Tests
             // UiTreeTestHelpers.UnthemedButtons narrows past a themed
             // button's own "<Name>Label" child, which is Ui.ApplyTheme's
             // real, intended output (see UiNode.Themed), not the
-            // emitter-name collision this check exists to catch
-            // (ReckoningRerollButton wears Violet now).
+            // emitter-name collision this check exists to catch.
             var offenders = UiTreeTestHelpers.UnthemedButtons(Tree())
                 .SelectMany(b => b.Children.Where(c => c.Name == b.Name + "Label").Select(c => c.Name))
                 .ToList();

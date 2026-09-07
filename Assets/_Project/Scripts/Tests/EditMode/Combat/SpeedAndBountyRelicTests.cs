@@ -273,10 +273,10 @@ namespace PrincesPalace.Domain.Tests
         // owes -- 132 total instead of the 114 the two relics together
         // should produce.
         //
-        // NOT A CORNER CASE. SquadTrack.StartingRelics escalates past level
-        // 25 with no cap to lift (RewardTrack.cs), so a character carrying
-        // two relics at once is an ordinary mid-run state, not a
-        // hypothetical.
+        // NOT A CORNER CASE. RunSnapshot.relicIds is an uncapped list --
+        // "infinite slots per run" -- so picking up a second relic from an
+        // elite or a boss on top of the descent's starting draft is an
+        // ordinary mid-run state, not a hypothetical.
         [Test]
         public void TwoSpeedRelicsBothMeasureAgainstTheSameTrueBase()
         {

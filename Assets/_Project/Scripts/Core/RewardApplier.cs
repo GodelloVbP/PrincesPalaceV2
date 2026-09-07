@@ -54,16 +54,14 @@ namespace PrincesPalace
                 // Experience is NOT split across the party -- every fielded
                 // character receives the full amount. A pre-existing design
                 // decision, made visible here rather than changed.
-                // The track's experience nodes applied HERE, per character,
-                // because that is what they are: a property of who earned it
-                // rather than of what the fight paid. Two characters in the
-                // same party can be owed different amounts for the same kill.
                 //
-                // Read from what the character had walking IN, before this
-                // payout's own claim below can raise it -- a node crossed by
-                // this very gain pays out from the next fight, not
-                // retroactively on the one that earned it.
-                int gained = isDowned ? 0 : character.ExperienceWorthOf(payout.Experience);
+                // EXACTLY WHAT THE FIGHT PAID, no more. The reward track used
+                // to carry an experience-find kind that boosted this figure
+                // per character (Character.ExperienceWorthOf); P1 of
+                // docs/PLAN_REWARD_TRACKS.md retired it along with seven other
+                // over-arching reward kinds, so there is nothing left to scale
+                // the payout by.
+                int gained = isDowned ? 0 : payout.Experience;
                 if (gained > 0) character.AddExperience(gained);
 
                 // AND THE TRACK IS **NOT** PAID HERE ANY MORE.

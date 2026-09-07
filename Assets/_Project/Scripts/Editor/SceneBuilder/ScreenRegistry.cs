@@ -1010,10 +1010,6 @@ public static class ScreenRegistry
             .ToArray();
 
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
-        // A button keeps its caption on a generated child, so the label needs
-        // no NodeRef of its own -- but the descent is opted into rather than
-        // assumed. See ExitsController's exitLabels, the other of the two.
-        controller.rerollLabel = result.Tmp(screen.RerollButton, searchChildren: true);
 
         return controller;
     }

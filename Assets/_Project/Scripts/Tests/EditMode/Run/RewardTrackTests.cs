@@ -10,18 +10,23 @@ namespace PrincesPalace.Domain.Tests
         // Pinned by level, because a milestone is a promise about a NUMBER the
         // player is counting toward. Moving one is a design change and should
         // have to be typed twice.
-        [TestCase(10, TrackReward.Favor, 5)]
+        //
+        // NINE OF THE TWELVE ARE MaxHealth 15 -- the interim table's stand-in
+        // for the seven reward kinds this package removed (P1 of
+        // docs/PLAN_REWARD_TRACKS.md). The three that are not are the spine:
+        // Respec at 20, StatPoint at 80, SecondLife at 90.
+        [TestCase(10, TrackReward.MaxHealth, 15)]
         [TestCase(20, TrackReward.Respec, 0)]
-        [TestCase(25, TrackReward.StartingRelics, 2)]
-        [TestCase(30, TrackReward.RestBeforeBoss, 0)]
-        [TestCase(40, TrackReward.OfferReroll, 1)]
-        [TestCase(45, TrackReward.StartingRelics, 3)]
-        [TestCase(50, TrackReward.WiderOffer, 4)]
-        [TestCase(60, TrackReward.StartingRelics, 4)]
-        [TestCase(70, TrackReward.ChosenStartingRelics, 0)]
+        [TestCase(25, TrackReward.MaxHealth, 15)]
+        [TestCase(30, TrackReward.MaxHealth, 15)]
+        [TestCase(40, TrackReward.MaxHealth, 15)]
+        [TestCase(45, TrackReward.MaxHealth, 15)]
+        [TestCase(50, TrackReward.MaxHealth, 15)]
+        [TestCase(60, TrackReward.MaxHealth, 15)]
+        [TestCase(70, TrackReward.MaxHealth, 15)]
         [TestCase(80, TrackReward.StatPoint, 10)]
         [TestCase(90, TrackReward.SecondLife, 1)]
-        [TestCase(100, TrackReward.SecondLifeRefresh, 0)]
+        [TestCase(100, TrackReward.MaxHealth, 15)]
         public void AMilestoneLandsOnItsLevel(int level, TrackReward reward, int amount)
         {
             var entry = RewardTrack.At(level);
@@ -47,64 +52,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(RewardTrack.At(level).IsSomething);
         }
 
-        // ---- the filler mix -----------------------------------------------------
-        //
-        // The mix is the design statement ("thirty stat points across the
-        // track") and the placement is arithmetic, so what is asserted here is
-        // the COUNT, not where any individual one landed. A test that pinned
-        // placements would fail on every retune and tell you nothing.
-        [TestCase(TrackReward.StatPoint, 40 + 1)] // 40 filler nodes plus the level-80 milestone
-        [TestCase(TrackReward.Favor, 23 + 1)]     // 23 filler nodes plus the level-10 milestone
-        [TestCase(TrackReward.MaxHealth, 15)]
-        [TestCase(TrackReward.ExpFind, 7)]
-        public void TheTrackHandsOutTheMixItDescribes(TrackReward reward, int expectedNodes)
-        {
-            int nodes = 0;
-            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (RewardTrack.At(level).Reward == reward) nodes++;
-            }
-
-            Assert.AreEqual(expectedNodes, nodes, $"the track holds the wrong number of {reward} nodes");
-        }
-
-        // 23 nodes at 2 each, plus 5 at the level-10 milestone.
-        //
-        // AND THAT NUMBER IS CHOSEN, not rounded to. LootLadder caps the
-        // per-rung chance at 55 Favor for a normal fight; Sheep is authored at
-        // 4, so 51 from the track puts her at exactly 55 -- the last Favor that
-        // buys anything at all. A 24th node would be worth nothing, which is
-        // why there are 23.
-        [Test]
-        public void AFullTrackTakesSheepToExactlyTheFavorCap()
-        {
-            const int SheepAuthoredFavor = 4;
-            int fromTrack = RewardTrack.GrantedBetween(TrackReward.Favor, 1, RewardTrack.MaxLevel);
-
-            Assert.AreEqual(51, fromTrack);
-
-            float atCap = Rewards.LootLadder.StepChanceFor(
-                Rewards.EncounterClass.Normal, fromTrack + SheepAuthoredFavor);
-            float oneBelow = Rewards.LootLadder.StepChanceFor(
-                Rewards.EncounterClass.Normal, fromTrack + SheepAuthoredFavor - 1);
-
-            Assert.AreEqual(Rewards.LootLadder.MaxStep, atCap, 0.0001f,
-                "a fully-levelled Sheep does not reach the cap, so the track is short of Favor");
-            Assert.Less(oneBelow, Rewards.LootLadder.MaxStep,
-                "she was already capped before the last node, so the track has Favor to spare");
-        }
-
-        // The percentage that does work. Gold is discarded at run end
-        // (RunSettlement records it as GoldLost) and embers pay 1 per unique
-        // boss as an integer, so a percentage of either is arithmetic that
-        // never changes an outcome.
-        [Test]
-        public void AFullTrackIsWorthTwentyOnePercentExperience()
-        {
-            Assert.AreEqual(210, RewardTrack.GrantedBetween(TrackReward.ExpFind, 1, RewardTrack.MaxLevel),
-                "permille, so 210 is +21%");
-        }
-
         // THE REASON Spread() exists rather than filling from level 2 upward.
         //
         // There are more filler levels (87) than rewards to put in them (50)
@@ -124,33 +71,11 @@ namespace PrincesPalace.Domain.Tests
                 "the back half of the track is nearly empty, so the filler is packed into the front");
         }
 
-        // Interleaved, not clumped: the mix should not hand out all thirty stat
-        // points before the first Favor node.
-        [Test]
-        public void TheFillerKindsInterleaveRatherThanClumping()
-        {
-            int firstFavorFiller = 0;
-            for (int level = 11; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (RewardTrack.At(level).Reward == TrackReward.Favor)
-                {
-                    firstFavorFiller = level;
-                    break;
-                }
-            }
-
-            Assert.Greater(firstFavorFiller, 0, "no Favor filler node was placed at all");
-            Assert.Less(firstFavorFiller, 30,
-                "the first Favor filler node arrives after level 30, so the kinds are clumped");
-        }
-
         // ---- grants vs unlocks --------------------------------------------------
 
         [TestCase(TrackReward.StatPoint, true)]
-        [TestCase(TrackReward.Favor, true)]
         [TestCase(TrackReward.MaxHealth, true)]
         [TestCase(TrackReward.Respec, false)]
-        [TestCase(TrackReward.WiderOffer, false)]
         [TestCase(TrackReward.SecondLife, false)]
         [TestCase(TrackReward.None, false)]
         public void QuantitiesAreGrantsAndCapabilitiesAreNot(TrackReward reward, bool isGrant)
@@ -187,7 +112,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnUnlockIsNeverPaidAsAGrant()
         {
-            Assert.AreEqual(0, RewardTrack.GrantedBetween(TrackReward.WiderOffer, 1, RewardTrack.MaxLevel),
+            Assert.AreEqual(0, RewardTrack.GrantedBetween(TrackReward.Respec, 1, RewardTrack.MaxLevel),
                 "an unlock was counted as a claimable quantity");
         }
 
@@ -196,66 +121,11 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(TrackReward.Respec, 19, false)]
         [TestCase(TrackReward.Respec, 20, true)]
         [TestCase(TrackReward.Respec, 99, true)]
-        [TestCase(TrackReward.WiderOffer, 49, false)]
-        [TestCase(TrackReward.WiderOffer, 50, true)]
-        [TestCase(TrackReward.SecondLifeRefresh, 99, false)]
-        [TestCase(TrackReward.SecondLifeRefresh, 100, true)]
+        [TestCase(TrackReward.SecondLife, 89, false)]
+        [TestCase(TrackReward.SecondLife, 90, true)]
         public void ACapabilityTurnsOnAtItsLevelAndStaysOn(TrackReward reward, int level, bool expected)
         {
             Assert.AreEqual(expected, RewardTrack.HasUnlocked(reward, level));
-        }
-
-        // Starting relics are the one unlock that arrives in steps, so the
-        // answer is "the highest reached", not "the first". A character below
-        // the first step still drafts ONE -- the fallback is part of the
-        // answer, and getting it wrong takes the draft away entirely.
-        [TestCase(1, 1)]
-        [TestCase(24, 1)]
-        [TestCase(25, 2)]
-        [TestCase(44, 2)]
-        [TestCase(45, 3)]
-        [TestCase(59, 3)]
-        [TestCase(60, 4)]
-        [TestCase(100, 4)]
-        public void StartingRelicsClimbAndDoNotGoBack(int level, int expected)
-        {
-            Assert.AreEqual(expected, RewardTrack.StartingRelics(level));
-        }
-
-        // THE ONE REAL CHAIN on the track: more relics, then the right to pick
-        // them. Asserted as an ORDERING rather than as fixed levels, so
-        // retuning any of the four keeps the constraint that makes it a chain
-        // rather than four unrelated grants.
-        [Test]
-        public void TheRelicLineClimbsBeforeItLetsYouChoose()
-        {
-            int previousAmount = 0;
-            int lastStep = 0;
-
-            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                var entry = RewardTrack.At(level);
-                if (entry.Reward != TrackReward.StartingRelics) continue;
-
-                Assert.Greater(entry.Amount, previousAmount,
-                    $"the starting-relic step at level {level} does not increase on the one before it");
-                previousAmount = entry.Amount;
-                lastStep = level;
-            }
-
-            Assert.Greater(lastStep, 0, "the track never grants a starting relic step");
-            Assert.Greater(previousAmount, RewardTrack.BaseStartingRelics,
-                "every starting-relic step grants what a level-1 character already has");
-            Assert.Less(lastStep, RewardTrack.UnlockLevel(TrackReward.ChosenStartingRelics),
-                "the track lets you choose your starting relics before it finishes handing them out");
-        }
-
-        [Test]
-        public void ASecondLifeExistsBeforeItCanRefresh()
-        {
-            Assert.Less(RewardTrack.UnlockLevel(TrackReward.SecondLife),
-                RewardTrack.UnlockLevel(TrackReward.SecondLifeRefresh),
-                "the track refreshes a second life before granting one");
         }
 
         // Level 80 grants ten stat points. It USED TO be sized to exactly one
@@ -293,82 +163,6 @@ namespace PrincesPalace.Domain.Tests
             Stats.AbilityDerivation.MaxHealthBonus(
                 new Stats.AbilityScoreBlock(10, 10, 10 + investedConstitution, 10, 10, 10));
 
-        // ---- rerolls accumulate, relics supersede -------------------------------
-        //
-        // The two unlocks-with-amounts on the track combine in OPPOSITE ways,
-        // and confusing them is silent: rerolls would read 1 instead of 3 and
-        // nothing would look broken. That is why both have named accessors
-        // rather than callers choosing between UnlockedAmount and
-        // UnlockedTotal.
-        [TestCase(1, 0)]
-        [TestCase(39, 0)]
-        [TestCase(40, 1)]
-        [TestCase(100, 3)]
-        public void RerollsAddUpAcrossTheTrack(int level, int expected)
-        {
-            Assert.AreEqual(expected, RewardTrack.RerollsPerRun(level));
-        }
-
-        [Test]
-        public void RerollsAccumulateWhereStartingRelicsReplace()
-        {
-            // Three reroll nodes worth 1 each -> 3. Three starting-relic steps
-            // worth 2, 3 and 4 -> 4, not 9. Asserted together because the
-            // distinction only exists in the difference.
-            Assert.AreEqual(3, RewardTrack.UnlockedTotal(TrackReward.OfferReroll, RewardTrack.MaxLevel));
-            Assert.AreEqual(4, RewardTrack.UnlockedAmount(
-                TrackReward.StartingRelics, RewardTrack.MaxLevel, RewardTrack.BaseStartingRelics));
-
-            Assert.AreNotEqual(
-                RewardTrack.UnlockedTotal(TrackReward.StartingRelics, RewardTrack.MaxLevel),
-                RewardTrack.UnlockedAmount(
-                    TrackReward.StartingRelics, RewardTrack.MaxLevel, RewardTrack.BaseStartingRelics),
-                "summing and taking the highest agree, so nothing here proves the two are different");
-        }
-
-        // The milestone alone would make sum and max identical, which is why
-        // the two filler rerolls were added in the same commit that built the
-        // reroll rather than left for the authoring pass.
-        [Test]
-        public void MoreThanOneLevelGrantsAReroll()
-        {
-            int nodes = 0;
-            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (RewardTrack.At(level).Reward == TrackReward.OfferReroll) nodes++;
-            }
-
-            Assert.AreEqual(3, nodes, "the reroll milestone plus its two filler nodes");
-        }
-
-        // NO CAPABILITY ARRIVES BEFORE THE MILESTONE THAT ANNOUNCES IT.
-        //
-        // Written against every unlock rather than against the reroll, because
-        // this is the class of bug and not the instance: the even spread put a
-        // filler reroll at level 39, one level before the milestone introducing
-        // rerolls, and a player would have met the mechanic before the track
-        // claimed to give it to them. Any future unlock with filler nodes has
-        // the same failure available to it.
-        [Test]
-        public void NoUnlockIsHandedOutBeforeItsMilestone()
-        {
-            foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
-            {
-                if (!RewardTrack.IsUnlock(reward)) continue;
-
-                int first = 0;
-                for (int level = 1; level <= RewardTrack.MaxLevel; level++)
-                {
-                    if (RewardTrack.At(level).Reward == reward) { first = level; break; }
-                }
-
-                if (first == 0) continue;
-
-                Assert.AreEqual(RewardTrack.UnlockLevel(reward), first,
-                    $"{reward} first appears at level {first}, which is not where its milestone is");
-            }
-        }
-
         // ---- what the player is told --------------------------------------------
 
         // EVERY reward kind has a name, checked by walking the enum rather than
@@ -400,7 +194,6 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual("A STAT POINT", RewardTrackNames.Of(TrackReward.StatPoint, 1));
             Assert.AreEqual("3 STAT POINTS", RewardTrackNames.Of(TrackReward.StatPoint, 3));
-            Assert.AreEqual("AN OFFER REROLL", RewardTrackNames.Of(TrackReward.OfferReroll, 1));
         }
 
         // "What do I get next" is a question about the next REWARD, not the
@@ -472,27 +265,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the max-health nodes -------------------------------------------------
 
-        [Test]
-        public void TheTrackHandsOutFifteenMaxHealthNodes()
-        {
-            int nodes = 0;
-            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (RewardTrack.At(level).Reward == TrackReward.MaxHealth) nodes++;
-            }
-
-            Assert.AreEqual(15, nodes);
-        }
-
-        [Test]
-        public void AFullTrackIsWorthOneHundredAndFiftyMaxHealth()
-        {
-            Assert.AreEqual(150,
-                RewardTrack.GrantedBetween(TrackReward.MaxHealth, 1, RewardTrack.MaxLevel));
-        }
-
         // A quantity, so it is claimed against the watermark exactly once --
-        // the same rule stat points and Favor follow.
+        // the same rule stat points follow.
         [Test]
         public void MaxHealthIsAGrantRatherThanACapability()
         {
@@ -530,6 +304,23 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(50, points);
             Assert.Less(points, Stats.AbilityScores.All.Length * 10,
                 "the track grants enough points to max every band, so spending them is no longer a choice");
+        }
+
+        // THE INTERIM TABLE, PINNED AS THE TWO TOTALS IT PROMISES.
+        //
+        // P1 of docs/PLAN_REWARD_TRACKS.md retires eight reward kinds and fills
+        // their milestones with MaxHealth so the track still pays every level.
+        // The interim table is deliberately the eventual generated default
+        // (P4's RewardTrackDefinition.Default), so these two literals are the
+        // number that must not drift: 40 filler stat points + level 80's ten =
+        // 50; 47 filler MaxHealth at 2 each + 9 milestones at 15 each = 229.
+        [Test]
+        public void TheTrackStillPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth()
+        {
+            Assert.AreEqual(50, RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
+                "40 filler singles plus level 80's ten");
+            Assert.AreEqual(229, RewardTrack.GrantedBetween(TrackReward.MaxHealth, 1, RewardTrack.MaxLevel),
+                "9 milestone nodes at 15 plus 47 filler nodes at 2");
         }
     }
 }

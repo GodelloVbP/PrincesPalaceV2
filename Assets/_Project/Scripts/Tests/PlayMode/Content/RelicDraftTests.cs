@@ -250,97 +250,40 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(first, second, "the draft re-rolled itself on reload");
         }
 
-        // ---- level 70: choose your starting relics --------------------------------
-
-        private static int VisibleCards() => 3;
-
-        private List<string> OnScreenNames() =>
-            Enumerable.Range(0, VisibleCards())
-                .Select(i => Named($"DraftCard{i}"))
-                .Where(go => go != null && go.activeSelf)
-                .Select(go => go.GetComponentsInChildren<TMPro.TMP_Text>(true)
-                    .First(t => t.name.EndsWith("Name")).text)
-                .ToList();
-
+        // ---- paging: retired along with it -----------------------------------------
+        //
+        // RelicDraftController's paging (DraftNextPage/DraftPrevPage) existed
+        // for exactly one caller: the reward track's level-70 milestone,
+        // TrackReward.ChosenStartingRelics, which handed the whole relic pool
+        // to a high-level character instead of a weighted draw. P1 of
+        // docs/PLAN_REWARD_TRACKS.md retired that milestone -- RunOrchestrator
+        // .RelicDraftOffer always takes RelicPool.DraftWeighted's three-card
+        // path now (see its own comment) -- so PageCount can never exceed 1
+        // any more and the paging controls can never appear. What is left
+        // worth pinning is exactly that: the controls stay hidden.
         [UnityTest]
-        public IEnumerator BelowLevelSeventyTheDraftIsStillThreeRandomCards()
+        public IEnumerator PagingNeverAppearsBecauseNothingEverOffersMoreThanThreeCards()
         {
             yield return OpenTheHub();
+            LevelTheSquadTo(70);
             yield return PressStartRunGateAndWaitForTheDraft();
 
             Assert.IsFalse(Named("DraftNextPage").activeSelf,
-                "an unlevelled squad is shown paging it has not earned");
+                "paging showed up with no milestone left that can ever fill more than one page");
             Assert.IsFalse(Named("DraftPageLabel").activeSelf);
         }
 
-        [UnityTest]
-        public IEnumerator LevelSeventyOffersTheWholePoolInsteadOfADraw()
-        {
-            yield return OpenTheHub();
-            LevelTheSquadTo(70);
-
-            yield return PressStartRunGateAndWaitForTheDraft();
-
-            Assert.IsTrue(Named("DraftNextPage").activeSelf,
-                "the whole pool is on offer and there is no way to page through it");
-
-            // Every relic the player is allowed to see, gathered by paging.
-            var seen = new List<string>();
-            seen.AddRange(OnScreenNames());
-
-            int guard = 0;
-            while (Named("DraftNextPage").GetComponent<Button>().interactable && guard++ < 20)
-            {
-                Click("DraftNextPage");
-                yield return null;
-                seen.AddRange(OnScreenNames());
-            }
-
-            Assert.Less(guard, 20, "paging never reached the end");
-
-            // Mechanic (g): a relic can also be gated on the party having a
-            // convergence/ultimate ability -- this test's squad has none,
-            // so a relic requiring one (Rampaging Bull's Horn) is correctly
-            // absent from the pool even though its own unlockedBy is empty.
-            int expected = ContentDatabase.Relics.Count(r =>
-                r != null && r.Data.IsUnlockedFromTheStart && !r.Data.RequiresConvergenceAbility);
-            Assert.GreaterOrEqual(seen.Distinct().Count(), expected,
-                $"paging showed {seen.Distinct().Count()} relics but {expected} are unlocked from the start");
-        }
-
-        // THE PAGE TURN MUST NOT LOSE THE CHOICE. _selected indexes the whole
-        // offer rather than the three cards, precisely so a player who picks
-        // something and then looks at the next page still has it picked -- the
-        // same trap the deselect-on-second-press rule exists to avoid, arriving
-        // from the other direction.
-        [UnityTest]
-        public IEnumerator AChoiceSurvivesLookingAtTheNextPage()
-        {
-            yield return OpenTheHub();
-            LevelTheSquadTo(70);
-
-            yield return PressStartRunGateAndWaitForTheDraft();
-
-            string picked = OnScreenNames().First();
-            Click("DraftCard0");
-            yield return null;
-
-            Click("DraftNextPage");
-            yield return null;
-            Click("DraftPrevPage");
-            yield return null;
-
-            Click("DraftDescendButton");
-            yield return null;
-
-            Assert.AreEqual(1, RunManager.Run.relicIds.Count,
-                "the selection was lost by paging away and back");
-
-            string takenName = ContentDatabase.Relics.First(r => r.id == RunManager.Run.relicIds[0]).Data.DisplayName;
-            Assert.AreEqual(picked, takenName, "a different relic was taken than the one chosen");
-        }
-
-        // ---- the reward track's starting relics ---------------------------------
+        // ---- the draft is a single flat round -------------------------------------
+        //
+        // The reward track used to escalate this in steps -- 1 relic below
+        // level 25, 2 at 25, 3 at 45, 4 at 60 (TrackReward.StartingRelics) --
+        // which is what made a "second round" and "does the second round
+        // avoid repeating the first" meaningful questions. P1 of
+        // docs/PLAN_REWARD_TRACKS.md retired that grant along with seven other
+        // over-arching reward kinds (see section 3e2): every descent now
+        // drafts RelicPool.StartingRelicsPerDescent, a flat one, regardless of
+        // level. Levelling the squad in these tests would prove nothing, so
+        // it is gone rather than kept as decoration.
 
         private static void LevelTheSquadTo(int level)
         {
@@ -353,40 +296,10 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator ALevelledSquadDraftsMoreThanOneRelic()
+        public IEnumerator TheDraftIsExactlyOneRelicAtAnyLevel()
         {
             yield return OpenTheHub();
-            LevelTheSquadTo(25);
-
-            yield return PressStartRunGateAndWaitForTheDraft();
-
-            // Round one.
-            Click("DraftCard0");
-            yield return null;
-            Click("DraftDescendButton");
-            yield return null;
-
-            Assert.AreEqual(1, RunManager.Run.relicIds.Count, "the first pick did not land");
-            Assert.IsTrue(_draft.gameObject.activeSelf,
-                "the draft closed after one pick, so the level-25 reward hands out nothing");
-
-            // Round two.
-            Click("DraftCard0");
-            yield return null;
-            Click("DraftDescendButton");
-            yield return null;
-
-            Assert.AreEqual(2, RunManager.Run.relicIds.Count);
-            Assert.IsFalse(_draft.gameObject.activeSelf, "the draft ran past the two rounds it was owed");
-            Assert.IsTrue(RunManager.Run.relicDrafted);
-        }
-
-        [UnityTest]
-        public IEnumerator AnUnlevelledSquadStillDraftsExactlyOne()
-        {
-            // The fallback is part of the reward: getting it wrong takes the
-            // draft away from every character below level 25.
-            yield return OpenTheHub();
+            LevelTheSquadTo(60);
             yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftCard0");
@@ -395,51 +308,19 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual(1, RunManager.Run.relicIds.Count);
-            Assert.IsFalse(_draft.gameObject.activeSelf, "one relic is still the whole draft at level 1");
+            Assert.IsFalse(_draft.gameObject.activeSelf,
+                "one relic is still the whole draft, even for a high-level squad");
+            Assert.IsTrue(RunManager.Run.relicDrafted);
         }
 
         [UnityTest]
-        public IEnumerator TheSecondRoundDoesNotOfferWhatWasAlreadyTaken()
-        {
-            // Draft() draws without replacement WITHIN an offer, which was the
-            // whole story when there was only one offer. Across rounds nothing
-            // stopped a relic coming back, and being offered what you are
-            // already carrying reads as a bug.
-            yield return OpenTheHub();
-            LevelTheSquadTo(60);
-
-            yield return PressStartRunGateAndWaitForTheDraft();
-
-            Click("DraftCard0");
-            yield return null;
-            Click("DraftDescendButton");
-            yield return null;
-
-            string taken = RunManager.Run.relicIds[0];
-
-            var offered = Enumerable.Range(0, 3)
-                .Select(i => Named($"DraftCard{i}"))
-                .Where(go => go != null && go.activeSelf)
-                .Select(go => go.GetComponentsInChildren<TMPro.TMP_Text>(true)
-                    .First(t => t.name.EndsWith("Name")).text)
-                .ToList();
-
-            var takenName = ContentDatabase.Relics.First(r => r.id == taken).Data.DisplayName;
-
-            CollectionAssert.DoesNotContain(offered, takenName,
-                "the second round offered the relic the first round just took");
-        }
-
-        [UnityTest]
-        public IEnumerator DecliningEndsTheWholeDraftRatherThanAskingAgain()
+        public IEnumerator DecliningEndsTheDraft()
         {
             // A player who does not want what is on offer should not have to
-            // press Descend four times to say so. The alternative -- re-offering
-            // until they accept -- is a draft they cannot leave, which the
-            // Descend button exists to prevent.
+            // press Descend to say so more than once. The alternative --
+            // re-offering until they accept -- is a draft they cannot leave,
+            // which the Descend button exists to prevent.
             yield return OpenTheHub();
-            LevelTheSquadTo(60);
-
             yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftDescendButton");

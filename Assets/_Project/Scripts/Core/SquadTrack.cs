@@ -6,10 +6,8 @@ namespace PrincesPalace
     //
     // THE HIGHEST LEVEL IN THE SQUAD, NEVER THE SUM, and this exists because
     // that rule was being spelled out for the fourth time. The reward track is
-    // per character; several of its rewards are run-scoped (how many relics a
-    // descent drafts, how wide the item offer is, how many rerolls it gets,
-    // whether a rest is guaranteed before a boss) and a run-scoped reward on a
-    // per-character track has to resolve to ONE number somehow.
+    // per character; a run-scoped reward on a per-character track (how many
+    // second lives a descent has left) has to resolve to ONE number somehow.
     //
     // Highest rather than total for the reason ItemOfferRoll.SquadFavor already
     // gives about Favor: summing would make every reward scale with squad size,
@@ -20,8 +18,8 @@ namespace PrincesPalace
     // This is docs/archive/HANDOVER_PROGRESSION_TRACK.md 4c answered the cheap way
     // while the squad is one character. The other reading -- a benefit that
     // applies only while its owner is fielded -- is more interesting and needs
-    // a per-character notion of whose relic or whose reroll it is, which
-    // nothing in the run state has.
+    // a per-character notion of whose second life it is, which nothing in the
+    // run state has.
     public static class SquadTrack
     {
         // The best level among the characters actually fielded. 1 when there is
@@ -46,29 +44,13 @@ namespace PrincesPalace
         public static bool HasUnlocked(TrackReward reward) =>
             RewardTrack.HasUnlocked(reward, BestLevel());
 
-        // ---- the run-scoped rewards, all asked the same way ---------------------
+        // How many second lives this descent has left. Level 90 grants one.
         //
-        // GATHERED HERE rather than left one per system. These were three
-        // one-liners in three files -- ItemOfferRoll knew about offer width and
-        // rerolls, RelicDraftController about the draft count, and this file
-        // about second lives -- and every one of them was the same sentence:
-        // ask the track a question at BestLevel(). Scattered, the max-not-sum
-        // rule was a comment repeated four times; gathered, it is the type's
-        // header and the four accessors are one line each.
-
-        // How many relics a descent drafts.
-        public static int StartingRelics() => RewardTrack.StartingRelics(BestLevel());
-
-        // How many items a won fight offers.
-        public static int OfferWidth() => Domain.UiKit.OfferRowLayout.CardsFor(BestLevel());
-
-        // How many item-offer rerolls a descent gets.
-        public static int RerollsPerRun() => RewardTrack.RerollsPerRun(BestLevel());
-
-        // How many second lives this descent has left. Level 90 grants one;
-        // level 100 gives it back at every boss, which RunManager does by
-        // clearing the spend count rather than handing out a second charge --
-        // so the ceiling stays one at a time however deep a run goes.
+        // P1 of docs/PLAN_REWARD_TRACKS.md retired the level-100 refresh
+        // (TrackReward.SecondLifeRefresh, which used to give the charge back
+        // on entering every boss) along with seven other over-arching reward
+        // kinds -- so the ceiling is one per descent with no way to renew it
+        // mid-run, and level 100 is a MaxHealth node on the interim table now.
         //
         // No HasUnlocked guard: UnlockedAmount with a fallback of 0 already
         // answers 0 below level 90, and the guard was a second BestLevel() scan

@@ -1,6 +1,4 @@
 using NUnit.Framework;
-using PrincesPalace.Domain.Progression;
-using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -141,27 +139,6 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(ReckoningScreen.ContentHalfWidth * 2f, OfferRowLayout.RowWidth(3), 0.001f);
             Assert.AreEqual(ReckoningScreen.ContentHalfWidth * 2f, OfferRowLayout.RowWidth(4), 0.001f);
-        }
-
-        // ---- what the track grants ----------------------------------------------
-
-        [TestCase(1, 3)]
-        [TestCase(49, 3)]
-        [TestCase(50, 4)]
-        [TestCase(100, 4)]
-        public void TheOfferWidensAtTheTrackLevelAndNotBefore(int level, int expected)
-        {
-            Assert.AreEqual(expected, OfferRowLayout.CardsFor(level));
-        }
-
-        [Test]
-        public void TheCardCountIsReadOffTheTrackRatherThanTypedTwice()
-        {
-            // The failure this prevents: a fourth offer rolled, chosen by the
-            // player, and painted onto a card that does not exist.
-            Assert.AreEqual(
-                RewardTrack.UnlockedAmount(TrackReward.WiderOffer, RewardTrack.MaxLevel, ItemOfferTable.OfferCount),
-                OfferRowLayout.MaxCards);
         }
     }
 }

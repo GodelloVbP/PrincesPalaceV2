@@ -248,8 +248,17 @@ namespace PrincesPalace.PlayModeTests
                 SaveSlotManager.CurrentSave.selectedCharacterIds = squad;
                 SaveSlotManager.SaveCurrent();
 
+                // 500, NOT 30. Below level 70 -- every level, since P1 of
+                // docs/PLAN_REWARD_TRACKS.md retired the reward track's
+                // ChosenStartingRelics milestone -- RelicDraftOffer always
+                // takes RelicPool.DraftWeighted's three-of-many path rather
+                // than ever returning the whole pool deterministically. A
+                // "rare" relic (weight 18 of roughly 1834 total, three drawn
+                // per seed) lands in a given offer about 3% of the time, so
+                // 30 draws had a real chance of never seeing it even with the
+                // wiring correct. 500 pushes the miss probability under 1e-6.
                 seenBullsHorn = false;
-                for (ulong seed = 1; seed <= 30 && !seenBullsHorn; seed++)
+                for (ulong seed = 1; seed <= 500 && !seenBullsHorn; seed++)
                 {
                     foreach (var option in RunOrchestrator.RelicDraftOffer(seed))
                     {
@@ -262,7 +271,7 @@ namespace PrincesPalace.PlayModeTests
 
             SeenAcrossRounds(OneParty(), out bool seenWithoutConvergence);
             Assert.IsFalse(seenWithoutConvergence,
-                "rampaging_bulls_horn was offered to a squad with no convergence ability, across 30 seeds");
+                "rampaging_bulls_horn was offered to a squad with no convergence ability, across 500 seeds");
 
             // Levelled up so the Transform skill is actually AVAILABLE
             // (unlockLevel <= character.level), not just owned by id --
@@ -274,8 +283,8 @@ namespace PrincesPalace.PlayModeTests
 
             SeenAcrossRounds(new List<string> { convergenceCharacter.definitionId }, out bool seenWithConvergence);
             Assert.IsTrue(seenWithConvergence,
-                "rampaging_bulls_horn was never offered to a squad WITH a convergence ability, across 30 seeds -- " +
-                "either the wiring is broken or 30 seeds is not enough draws to see a 1-of-many rare");
+                "rampaging_bulls_horn was never offered to a squad WITH a convergence ability, across 500 seeds -- " +
+                "either the wiring is broken or 500 seeds is not enough draws to see a 1-of-many rare");
         }
     }
 }

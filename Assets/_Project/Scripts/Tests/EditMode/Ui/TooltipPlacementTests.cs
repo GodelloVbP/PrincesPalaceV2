@@ -125,30 +125,6 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The widest row the reward track can grant. Four narrower cards means
-        // four more chances for a flip to land badly.
-        [Test]
-        public void EveryOfferCardInTheWidestRow_PlacesItsTooltipInsideTheFrame()
-        {
-            const float Margin = 8f;
-            float halfW = ReckoningScreen.TooltipWidth * 0.5f;
-
-            for (int i = 0; i < OfferRowLayout.MaxCards; i++)
-            {
-                var at = TooltipPlacement.Beside(
-                    OfferRowLayout.CardX(i, OfferRowLayout.MaxCards), 0f,
-                    OfferRowLayout.CardWidth(OfferRowLayout.MaxCards),
-                    ReckoningScreen.TooltipWidth, ReckoningScreen.TooltipHeight,
-                    -ReckoningScreen.ContentHalfWidth + Margin,
-                    ReckoningScreen.ContentHalfWidth - Margin,
-                    ReckoningScreen.ContentBottom + Margin,
-                    ReckoningScreen.ContentTop - Margin);
-
-                Assert.GreaterOrEqual(at.X - halfW, -ReckoningScreen.ContentHalfWidth, $"card {i}");
-                Assert.LessOrEqual(at.X + halfW, ReckoningScreen.ContentHalfWidth, $"card {i}");
-            }
-        }
-
         // A tooltip must never sit centred on the card it describes -- covering
         // the item you are weighing is the failure the pack's own placement
         // comment records ("the box answering the question was covering the

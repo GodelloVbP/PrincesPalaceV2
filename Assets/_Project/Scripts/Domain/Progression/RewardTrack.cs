@@ -15,31 +15,11 @@ namespace PrincesPalace.Domain.Progression
 
         // ---- GRANTS: a quantity, handed over once, accumulated on the save --
         StatPoint,
-        Favor,
         MaxHealth,
-
-        // Extra experience, in integer PERMILLE, matching the idiom
-        // DifficultyCurve and LevelCurve already use rather than inventing a
-        // percent type for one reward.
-        ExpFind,
 
         // ---- UNLOCKS: a capability, true forever once the level is reached --
         Respec,
-
-        // How many relics the descent begins with. ONE KIND RATHER THAN TWO:
-        // this was a RelicSlot pair at 25/45 and a separate TwoStartingRelics
-        // at 60, on the assumption that holding a relic and being given one
-        // were different capacities. They are not -- there is no slot cap in
-        // the game to lift (AUDIT #50, #51) -- so the three milestones are one
-        // escalating line: 2 at level 25, 3 at 45, 4 at 60.
-        StartingRelics,
-
-        RestBeforeBoss,
-        OfferReroll,
-        WiderOffer,
-        ChosenStartingRelics,
         SecondLife,
-        SecondLifeRefresh,
     }
 
     // One level's worth of reward.
@@ -48,9 +28,9 @@ namespace PrincesPalace.Domain.Progression
         public readonly TrackReward Reward;
 
         // What the reward is worth. A count for grants (one stat point, two
-        // Favor), and for unlocks the PARAMETER of the capability where it has
-        // one -- RelicSlot 2 means "a second slot", WiderOffer 4 means "four
-        // items". Zero where the capability has no number.
+        // max health), and for unlocks the PARAMETER of the capability where
+        // it has one -- SecondLife 1 means "one charge". Zero where the
+        // capability has no number.
         public readonly int Amount;
 
         public TrackEntry(TrackReward reward, int amount)
@@ -74,20 +54,20 @@ namespace PrincesPalace.Domain.Progression
     // GRANTS AND UNLOCKS ARE DIFFERENT THINGS, and keeping them apart removes a
     // whole class of bug rather than merely organising the enum.
     //
-    //   A GRANT is a quantity -- a stat point, two Favor. It has to be handed
-    //   over exactly once, so it needs a watermark on the save
+    //   A GRANT is a quantity -- a stat point, two max health. It has to be
+    //   handed over exactly once, so it needs a watermark on the save
     //   (Character.claimedTrackLevel) recording how far the track has paid out.
     //
-    //   An UNLOCK is a capability -- respec, a wider offer, a second life. It
-    //   is a pure function of the level reached and is stored NOWHERE. Asking
-    //   "is this unlocked" is asking "is level >= the level that grants it".
+    //   An UNLOCK is a capability -- respec, a second life. It is a pure
+    //   function of the level reached and is stored NOWHERE. Asking "is this
+    //   unlocked" is asking "is level >= the level that grants it".
     //
-    // The reason that matters: most of the unlocks are systems that do not
-    // exist yet. If they were claimed once against a watermark, every character
-    // who passed level 50 before the wider offer was built would have spent
-    // their claim on a no-op and never get it. As a pure function of level,
-    // there is nothing to miss -- the capability simply starts working the day
-    // it is implemented, for everyone who has the level.
+    // The reason that matters: an unlock can be a system that does not exist
+    // yet. If it were claimed once against a watermark, every character who
+    // passed its level before it was built would have spent their claim on a
+    // no-op and never get it. As a pure function of level, there is nothing
+    // to miss -- the capability simply starts working the day it is
+    // implemented, for everyone who has the level.
     //
     // Engine-free, so the whole table is pinnable from EditMode.
     public static class RewardTrack
@@ -97,33 +77,35 @@ namespace PrincesPalace.Domain.Progression
         public const int StartingLevel = 1;
         public const int MaxLevel = 100;
 
-        // THE MILESTONES. Tens, plus the two relic steps at 25 and 45 that are
-        // deliberately off them.
+        // THE MILESTONES. Tens, twelve of them.
         //
-        // THE RELIC LINE IS THE TRACK'S ONE REAL CHAIN: 2 relics at 25, 3 at
-        // 45, 4 at 60, and at 70 you stop being offered them at random and
-        // pick. Everything else on the track is independent, and a track of a
-        // hundred independent grants is a checklist rather than a tree -- the
-        // same thing ContentDatabase.OrbCost's comment warns about for the
-        // talent tree.
+        // AN INTERIM TABLE, DELIBERATELY. docs/PLAN_REWARD_TRACKS.md P1 retired
+        // eight over-arching reward kinds -- Favor, ExpFind, StartingRelics,
+        // RestBeforeBoss, OfferReroll, WiderOffer, ChosenStartingRelics,
+        // SecondLifeRefresh -- and the nine milestones that carried them are
+        // filled with MaxHealth 15 rather than left empty, so the track still
+        // pays every level while per-character content (P2-P7 of that plan)
+        // is still to come. THIS TABLE IS THE EVENTUAL GENERATED DEFAULT: P4
+        // lifts it verbatim into RewardTrackDefinition.Default, so the two
+        // totals it produces -- 50 stat points, 229 max health -- are pinned
+        // by RewardTrackTests.TheTrackStillPaysFiftyStatPointsAndTwoHundred-
+        // TwentyNineMaxHealth and must not drift by accident.
         //
-        // 25 and 45 used to grant relic SLOTS, on the reasonable-sounding
-        // theory that capacity and supply were separate rewards. There is no
-        // capacity limit in the game to lift: RunSnapshot.relicIds is a list
-        // whose own header states the design as "infinite slots per run". Both
-        // levels were granting something the player already had. See AUDIT #50
-        // and #51 for how far that got before anyone checked.
+        // THE SPINE IS THE PART THAT IS NOT INTERIM: Respec at 20, StatPoint
+        // at 80, SecondLife at 90 are the same three levels on every track,
+        // authored or generated (see the design handoff's own reasoning for
+        // why those three levels specifically should not be trivia).
         private static readonly (int Level, TrackReward Reward, int Amount)[] Milestones =
         {
-            (10,  TrackReward.Favor, 5),
+            (10,  TrackReward.MaxHealth, 15),
             (20,  TrackReward.Respec, 0),
-            (25,  TrackReward.StartingRelics, 2),
-            (30,  TrackReward.RestBeforeBoss, 0),
-            (40,  TrackReward.OfferReroll, 1),
-            (45,  TrackReward.StartingRelics, 3),
-            (50,  TrackReward.WiderOffer, 4),
-            (60,  TrackReward.StartingRelics, 4),
-            (70,  TrackReward.ChosenStartingRelics, 0),
+            (25,  TrackReward.MaxHealth, 15),
+            (30,  TrackReward.MaxHealth, 15),
+            (40,  TrackReward.MaxHealth, 15),
+            (45,  TrackReward.MaxHealth, 15),
+            (50,  TrackReward.MaxHealth, 15),
+            (60,  TrackReward.MaxHealth, 15),
+            (70,  TrackReward.MaxHealth, 15),
             // TEN IS A KEPT HISTORICAL VALUE, not a live formula link. This
             // used to be sized to exactly match AbilityDerivation's
             // CharacterBand -- the point past which a piecewise curve stopped
@@ -139,78 +121,35 @@ namespace PrincesPalace.Domain.Progression
             // move it here, not by hunting for a constant that no longer
             // exists.
             //
-            // This level used to grant "elites always drop a relic". Cut as too
-            // strong: relics are run-scoped and uncapped (AUDIT #51), elites
-            // recur every 8 steps, and a guaranteed drop on each of them
-            // compounds with 60's four starting relics and 70's picking them
-            // into a run that is decided by its relic stack before the first
-            // boss.
-            //
             // A GRANT rather than an unlock, so it goes through the watermark
             // and can only be paid once -- which is also why it can be this
             // large without needing a cap somewhere.
             (80,  TrackReward.StatPoint, 10),
             (90,  TrackReward.SecondLife, 1),
-            (100, TrackReward.SecondLifeRefresh, 0),
+            (100, TrackReward.MaxHealth, 15),
         };
-
-        // What a descent with no track progress begins with. Named rather than
-        // written as a bare 1 at the call sites, because it is the fallback
-        // UnlockedAmount needs and the two must agree.
-        public const int BaseStartingRelics = 1;
 
         // THE FILLER, as a mix rather than as a placement.
         //
-        // Counts, not levels: "thirty stat points across the track" is the
+        // Counts, not levels: "forty stat points across the track" is the
         // design statement, and where each one lands is arithmetic. Retuning
         // the track is editing these numbers.
         //
-        // COMPLETE: these five counts sum to 87, which is exactly the number
-        // of filler levels, so no level of the track pays nothing.
+        // COMPLETE: these two counts sum to 87, which is exactly the number of
+        // filler levels, so no level of the track pays nothing.
         //
-        // HOW THE LAST TWENTY EMPTY LEVELS WERE FILLED, because two of the
-        // obvious answers turned out to be worth nothing:
-        //
-        //   FAVOR, but only three more nodes. LootLadder.MaxStep caps the
-        //   per-rung chance at 55 Favor for a normal fight, 42 for an elite and
-        //   29 for a boss. The 20 existing nodes plus level 10's milestone are
-        //   45; Sheep is authored at 4, so she reaches 49 and has room for
-        //   exactly 6 more before normal fights stop caring too. Three nodes at
-        //   2 each is that 6 precisely. A fourth would be worth nothing to
-        //   anybody.
-        //
-        //   NOT GOLD. RunSettlement:50 records leftover run gold as GoldLost
-        //   and it never reaches wallet.gold -- the in-run shop is still not
-        //   built, so a gold-yield node would raise a number that is thrown
-        //   away at the end of every descent. That is handover 4b, unchanged.
-        //
-        //   NOT EMBERS. EmberPayout.PerUniqueBoss is 1, paid as an integer, so
-        //   any percentage of it rounds back to 1. A +20% ember node would be
-        //   arithmetic that provably never changes an outcome.
-        //
-        //   EXPERIENCE, which is the percentage that does work: RewardApplier
-        //   applies payout.Experience per character, so a multiplier lands
-        //   exactly where the grant does. Mildly self-accelerating, since the
-        //   track's own cost is experience -- that is a battle pass working as
-        //   intended rather than a loop, and +21% across a hundred levels is
-        //   nowhere near enough to run away with itself.
-        //
-        //   STAT POINTS for the rest, ten more of them.
-        //
-        // The design's 6 signature-at-fight-start nodes were CUT by the author
-        // rather than deferred. Every character's signature meter starts a
-        // fight empty and fills at 1-2 a turn against capacities of 10-20 and
-        // skill costs around 7, so even a handful of points before the first
-        // swing is closer to "your ultimate is ready on turn one" than to
-        // filler -- and a flat +6 is 60% of Sheep's 10-point Wool against 30%
-        // of Turtle's 20-point Shell.
+        // ONLY TWO KINDS EXIST YET. The six over-arching kinds this filler used
+        // to spread across (Favor, ExpFind, OfferReroll among them) were
+        // retired in P1 of docs/PLAN_REWARD_TRACKS.md; per-character rewards
+        // (elemental damage, mana, signature capacity, book skills) are P2-P7.
+        // Until those land, a stat point or two max health is what the track
+        // has to give -- which is also why this table is the generated
+        // default's stand-in rather than a placeholder to be thrown away: see
+        // the Milestones comment above.
         private static readonly (TrackReward Reward, int Amount, int Count)[] FillerMix =
         {
-            (TrackReward.StatPoint,    1, 40),
-            (TrackReward.Favor,        2, 23),
-            (TrackReward.MaxHealth,   10, 15),
-            (TrackReward.ExpFind,     30, 7),
-            (TrackReward.OfferReroll,  1, 2),
+            (TrackReward.StatPoint,  1, 40),
+            (TrackReward.MaxHealth,  2, 47),
         };
 
         private static readonly TrackEntry[] Entries = Build();
@@ -234,9 +173,7 @@ namespace PrincesPalace.Domain.Progression
             switch (reward)
             {
                 case TrackReward.StatPoint:
-                case TrackReward.Favor:
                 case TrackReward.MaxHealth:
-                case TrackReward.ExpFind:
                     return true;
                 default:
                     return false;
@@ -283,9 +220,9 @@ namespace PrincesPalace.Domain.Progression
         // Whether `level` carries a MILESTONE rather than filler.
         //
         // Asked of the Milestones table, which is the only thing that actually
-        // knows. The reward KIND cannot answer it: level 10 is Prince's Favor
-        // +5 and level 80 is ten stat points, and both of those kinds are also
-        // handed out as filler twenty-odd times each. A screen that guessed
+        // knows. The reward KIND cannot answer it: level 10 is +15 max health
+        // and level 80 is ten stat points, and both of those kinds are also
+        // handed out as filler dozens of times each. A screen that guessed
         // from the kind drew level 10 as an ordinary node -- which is how this
         // method came to exist.
         public static bool IsMilestone(int level)
@@ -361,20 +298,6 @@ namespace PrincesPalace.Domain.Progression
             return unlockedAt > 0 && level >= unlockedAt;
         }
 
-        // How many times a descent at `level` may reroll its item offer.
-        //
-        // ACCUMULATES rather than superseding, which is the opposite of
-        // StartingRelics next door and the reason both have named accessors
-        // instead of callers picking an UnlockedAmount/UnlockedTotal pair for
-        // themselves. Getting it the wrong way round is silent: rerolls would
-        // read 1 instead of 3, and nothing would look broken.
-        //
-        // A capability rather than a grant, so it is stored nowhere on the
-        // character -- how many are LEFT is run state (RunSnapshot), and how
-        // many you get is this.
-        public static int RerollsPerRun(int level) =>
-            UnlockedTotal(TrackReward.OfferReroll, level);
-
         // Every Amount for `reward` up to `level`, added together. For rewards
         // that stack; see UnlockedAmount for the ones where a later step
         // replaces an earlier one.
@@ -407,19 +330,8 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
-        // How many relics a descent at `level` begins with.
-        //
-        // Its own named method rather than a raw UnlockedAmount call, because
-        // the fallback is part of the answer: a character below level 25 starts
-        // with one relic, not zero, and a caller passing the wrong fallback
-        // would silently take the draft away.
-        public static int StartingRelics(int level) =>
-            UnlockedAmount(TrackReward.StartingRelics, level, BaseStartingRelics);
-
         // The highest Amount reached for an unlock that comes in steps, or
-        // `fallback` if none has. StartingRelics is the case this exists for:
-        // it appears three times, and the answer to "how many" is the latest
-        // step passed rather than the first.
+        // `fallback` if none has.
         public static int UnlockedAmount(TrackReward reward, int level, int fallback)
         {
             int best = fallback;
@@ -459,36 +371,9 @@ namespace PrincesPalace.Domain.Progression
             return entries;
         }
 
-        // The earliest level a FILLER node of this reward may land on.
-        //
-        // A MILESTONE THAT INTRODUCES A CAPABILITY HAS TO COME FIRST. Level 40
-        // is "you may now reroll the offer"; a filler reroll at level 12 would
-        // hand the player the mechanic before the milestone announcing it, so
-        // the milestone reads as a duplicate of something they already had.
-        // The even spread put one at level 39, which is how this was found.
-        //
-        // Only UNLOCKS are gated. A grant's milestone is an extra helping
-        // rather than an introduction -- level 80's ten stat points do not
-        // introduce stat points, and gating on it would push all thirty filler
-        // stat points past level 80.
-        //
-        // Reads the Milestones table rather than Entries or UnlockLevel,
-        // because this runs DURING Build() and Entries is not assigned yet.
-        private static int EarliestFillerLevel(TrackReward reward)
-        {
-            if (!IsUnlock(reward)) return 0;
-
-            foreach (var milestone in Milestones)
-            {
-                if (milestone.Reward == reward) return milestone.Level;
-            }
-
-            return 0;
-        }
-
         // The filler mix as an ORDER, with the kinds interleaved rather than
-        // clumped: 30 stat points and 20 Favor come out as S F S F S S F ...
-        // rather than as thirty of one followed by twenty of the other.
+        // clumped: 40 stat points and 47 max health come out as S H S H H S H ...
+        // rather than as forty of one followed by forty-seven of the other.
         //
         // Largest-deficit selection, cross-multiplied to stay in integers: at
         // each step, hand the slot to whichever entry is furthest behind the
@@ -536,6 +421,14 @@ namespace PrincesPalace.Domain.Progression
         // leave the back half of the track empty -- which is the half a player
         // grinds hardest for. Bresenham: slot i takes the next reward when the
         // running share crosses an integer boundary.
+        //
+        // NO EARLY-LEVEL GATING HERE ANY MORE. This used to swap a filler
+        // reward past the milestone that first introduced it -- level 40's
+        // "you may now reroll the offer" could not be pre-empted by a filler
+        // reroll at level 12. Both remaining filler kinds are GRANTS
+        // (StatPoint, MaxHealth), and a grant's milestone is an extra helping
+        // rather than an introduction, so there is nothing left to gate: see
+        // RewardTrack.IsUnlock and the Milestones comment above.
         private static void Spread(TrackEntry[] entries, int[] fillerLevels, int fillerCount, TrackEntry[] mixed)
         {
             if (fillerCount <= 0 || mixed.Length == 0) return;
@@ -549,37 +442,8 @@ namespace PrincesPalace.Domain.Progression
 
                 if (after <= before) continue;
 
-                int level = fillerLevels[i];
-
-                // If the next reward in the sequence is not allowed this early,
-                // SWAP it with the first later one that is, rather than
-                // dropping it or leaving the slot empty. A swap keeps every
-                // count intact and every slot used -- it only perturbs the
-                // interleave locally, and the reward that was too early takes
-                // the slot of the one that stood in for it.
-                if (TooEarlyFor(mixed[taken].Reward, level))
-                {
-                    for (int j = taken + 1; j < mixed.Length; j++)
-                    {
-                        if (TooEarlyFor(mixed[j].Reward, level)) continue;
-
-                        var swap = mixed[taken];
-                        mixed[taken] = mixed[j];
-                        mixed[j] = swap;
-                        break;
-                    }
-                }
-
-                // Still not allowed means nothing left in the sequence may land
-                // this early. Leave the slot empty and try the next one; the
-                // remaining rewards will place further down the track.
-                if (TooEarlyFor(mixed[taken].Reward, level)) continue;
-
-                entries[level] = mixed[taken++];
+                entries[fillerLevels[i]] = mixed[taken++];
             }
         }
-
-        private static bool TooEarlyFor(TrackReward reward, int level) =>
-            level < EarliestFillerLevel(reward);
     }
 }

@@ -938,9 +938,7 @@ namespace PrincesPalace.Domain.UiKit
             {
                 case TrackReward.None: return null;
                 case TrackReward.StatPoint: return "proc:track_stat";
-                case TrackReward.Favor: return "proc:track_favor";
                 case TrackReward.MaxHealth: return "proc:track_health";
-                case TrackReward.ExpFind: return "proc:track_exp";
                 default: return "proc:ring_outline";
             }
         }
@@ -961,18 +959,8 @@ namespace PrincesPalace.Domain.UiKit
             {
                 case TrackReward.StatPoint: return Screens.RewardTrackScreen.StatArtKey;
                 case TrackReward.MaxHealth: return Screens.RewardTrackScreen.HealthArtKey;
-                case TrackReward.ExpFind: return Screens.RewardTrackScreen.ExpArtKey;
-                case TrackReward.Favor: return Screens.RewardTrackScreen.FavorArtKey;
                 case TrackReward.Respec: return Screens.RewardTrackScreen.RespecArtKey;
-                case TrackReward.RestBeforeBoss: return Screens.RewardTrackScreen.RestArtKey;
-                case TrackReward.OfferReroll: return Screens.RewardTrackScreen.RerollArtKey;
-                case TrackReward.WiderOffer: return Screens.RewardTrackScreen.OfferArtKey;
-                case TrackReward.StartingRelics: return Screens.RewardTrackScreen.RelicArtKey;
-                case TrackReward.ChosenStartingRelics:
-                    return Screens.RewardTrackScreen.ChosenRelicArtKey;
                 case TrackReward.SecondLife: return Screens.RewardTrackScreen.SecondLifeArtKey;
-                case TrackReward.SecondLifeRefresh:
-                    return Screens.RewardTrackScreen.SecondLifeRefreshArtKey;
                 default: return null;
             }
         }
@@ -988,9 +976,7 @@ namespace PrincesPalace.Domain.UiKit
             switch (RewardTrack.At(level).Reward)
             {
                 case TrackReward.StatPoint: return "#EDE6FF2E";
-                case TrackReward.ExpFind: return "#C8B4DE2E";
                 case TrackReward.MaxHealth: return "#D8B4A82E";
-                case TrackReward.Favor: return "#F2DB9E2E";
                 default: return "#C8B4DE1F";
             }
         }

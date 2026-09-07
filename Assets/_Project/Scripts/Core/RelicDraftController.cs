@@ -23,16 +23,21 @@ namespace PrincesPalace
     // re-roll it by quitting to the menu, which is the same class of problem
     // as a map that regenerates.
     //
-    // ONE OFFER OF THREE, N TIMES -- not one wide offer of N+2.
+    // ONE OFFER OF THREE, ROUNDS RATHER THAN A WIDER OFFER -- not one wide
+    // offer of N+2, even though there is currently only ever one round.
     //
-    // The reward track grants extra starting relics at levels 25, 45 and 60,
-    // so a descent drafts between one and four. Rounds rather than a wider
-    // offer, for three reasons: three separate choices of three is a better
-    // decision than one choice of six; the card row is emitted at
-    // scene-build time from RelicPool.OfferCount and a runtime-variable width
-    // would mean emitting the maximum and hiding the surplus; and the round
-    // number falls out of run.relicIds.Count, which is persisted, so a reload
-    // mid-draft returns to the same round with the same cards.
+    // RelicPool.StartingRelicsPerDescent is flat at one: the reward track
+    // used to escalate it in steps up to level 60 (TrackReward.StartingRelics)
+    // and hand the whole catalogue at level 70 (ChosenStartingRelics), both
+    // retired in P1 of docs/PLAN_REWARD_TRACKS.md (section 3e2). The round
+    // machinery stays because nothing about it was specific to that grant:
+    // three separate choices of three is a better decision than one choice
+    // of six should a future reward escalate the count again; the card row
+    // is emitted at scene-build time from RelicPool.OfferCount and a
+    // runtime-variable width would mean emitting the maximum and hiding the
+    // surplus; and the round number falls out of run.relicIds.Count, which
+    // is persisted, so a reload mid-draft returns to the same round with the
+    // same cards.
     public class RelicDraftController : MonoBehaviour
     {
         [SerializeField] internal Button[] cards;
@@ -50,7 +55,10 @@ namespace PrincesPalace
         [SerializeField] internal GameObject emptyHint;
         [SerializeField] internal Button descendButton;
 
-        // Level 70's paging. See Roll() and StepPage().
+        // Paging past three offered cards. See PageCount and StepPage() --
+        // dormant today since nothing ever offers more than RelicPool.
+        // OfferCount at once (see this file's own header), but the offer is
+        // still walked in pages rather than assumed to fit one screen.
         [SerializeField] internal Button prevPageButton;
         [SerializeField] internal Button nextPageButton;
         [SerializeField] internal TMP_Text pageLabel;
@@ -74,8 +82,9 @@ namespace PrincesPalace
         // a reload; see Roll().
         private ulong _seed;
 
-        // Which page of the offer is on screen. Only ever non-zero once
-        // level 70 turns the offer into the whole pool.
+        // Which page of the offer is on screen. Never non-zero today -- see
+        // this file's own header for why -- but the paint and paging logic
+        // stay written for an offer of any size rather than assuming three.
         private int _page;
 
         // Raised when the player leaves the draft. An event rather than a
@@ -167,9 +176,10 @@ namespace PrincesPalace
             bool anything = _offer.Count > 0;
             if (emptyHint != null) emptyHint.SetActive(!anything);
 
-            // Paging exists only when there is more than one page, which is
-            // only ever once level 70 opens the whole pool. Hidden rather than
-            // disabled, like every other unearned reward on the track.
+            // Paging shows only when there is more than one page. Nothing
+            // offers more than RelicPool.OfferCount at once today -- see this
+            // file's own header -- so this is dormant rather than dead: hidden
+            // is still the right state for a control with nothing to do.
             bool paged = PageCount > 1;
             if (prevPageButton != null)
             {

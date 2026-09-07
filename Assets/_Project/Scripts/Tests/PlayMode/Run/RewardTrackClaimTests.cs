@@ -73,9 +73,7 @@ namespace PrincesPalace.PlayModeTests
                 character.level = level;
                 character.claimedTrackLevel = claimed;
                 character.unspentStatPoints = 0;
-                character.earnedFavor = 0;
                 character.bonusMaxHealth = 0;
-                character.bonusExpPermille = 0;
             }
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
@@ -165,8 +163,6 @@ namespace PrincesPalace.PlayModeTests
                 "pressing collect did not move the watermark to the level reached");
             Assert.Greater(character.unspentStatPoints, 0,
                 "no stat points were handed over for twenty-nine levels of track");
-            Assert.Greater(character.earnedFavor, 0,
-                "no Favor was handed over for twenty-nine levels of track");
         }
 
         // The bug the watermark exists to prevent, now reachable the way a
@@ -181,7 +177,6 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             int points = First().unspentStatPoints;
-            int favor = First().earnedFavor;
 
             // The button has hidden itself by now, which is most of the answer.
             // Pressing it anyway is the half that matters: hiding a control is
@@ -192,8 +187,6 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(points, First().unspentStatPoints,
                 "stat points were paid a second time for levels already collected");
-            Assert.AreEqual(favor, First().earnedFavor,
-                "Favor was paid a second time for levels already collected");
         }
 
         // Nothing owed means nothing to press. The button is the count of what

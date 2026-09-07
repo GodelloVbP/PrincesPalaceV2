@@ -78,33 +78,35 @@ namespace PrincesPalace
         }
 
         // What one character's Favor is worth: what they were AUTHORED with,
-        // plus what the reward track has GRANTED them, plus whatever their
-        // CURRENTLY EQUIPPED gear grants LIVE right now (Fortunate).
+        // plus whatever their CURRENTLY EQUIPPED gear grants LIVE right now
+        // (Fortunate).
         //
-        // Three parts, but only two are stored state: CharacterDefinition.
-        // princesFavor is content, rebuilt from characters.json by
-        // ContentBuilder and the same for every save; Character.earnedFavor
-        // is permanent progress belonging to one profile's one character.
-        // The third part is never stored anywhere -- it is read fresh off
+        // The authored part is content, rebuilt from characters.json by
+        // ContentBuilder and the same for every save. The live part is never
+        // stored anywhere -- it is read fresh off
         // ContentDatabase.ModifierEffects(character) every time this is
         // called, which already reflects only the character's currently
         // equipped, currently LIVE loadout (ActiveLoadout). Unequip
         // Fortunate and the very next call to this method already sees it
         // gone; nothing has to be reset, decremented or expired.
         //
+        // The reward track used to add a third, EARNED part
+        // (Character.earnedFavor) -- P1 of docs/PLAN_REWARD_TRACKS.md retired
+        // that grant along with seven other over-arching reward kinds, so
+        // Favor is back to the two live sources.
+        //
         // Tolerant of every side being missing, the house style: a character
         // whose definition has gone (content edited under a live save) still
-        // contributes what they earned, and a character with nothing
+        // contributes what their gear grants, and a character with nothing
         // equipped still contributes what they were authored with.
         public static int FavorOf(Character character, CharacterDefinition definition)
         {
             int authored = definition == null ? 0 : definition.Data.PrincesFavor;
-            int earned = character == null ? 0 : character.earnedFavor;
             int liveBonus = character == null
                 ? 0
                 : ContentDatabase.ModifierEffects(character).Best(ModifierEffectType.FortunateFavorBonusFlat);
 
-            int total = authored + earned + liveBonus;
+            int total = authored + liveBonus;
             return total < 0 ? 0 : total;
         }
 
@@ -118,8 +120,8 @@ namespace PrincesPalace
         // Favor at all.
         //
         // Takes the per-member totals rather than the definitions it used to,
-        // so that this rule and the authored-plus-earned rule above are two
-        // separate facts in two separate functions. It previously read
+        // so that this rule and FavorOf's rule above are two separate facts in
+        // two separate functions. It previously read
         // princesFavor off the definition itself, which meant "where does a
         // member's Favor come from" and "how does a squad combine it" were the
         // same four lines and could not be changed independently.
@@ -220,9 +222,11 @@ namespace PrincesPalace
         // both Domain tables already take -- so a caller under test can hand in
         // a seeded stand-in and get the same items every time.
         //
-        // `count` defaults to the base three so every existing caller reads as
-        // it did. The live call site passes SquadTrack.OfferWidth(), because
-        // the reward track widens the offer at level 50.
+        // `count` defaults to ItemOfferTable.OfferCount, which is what every
+        // caller wants -- the reward track used to widen this at level 50
+        // (P1 of docs/PLAN_REWARD_TRACKS.md retired that grant), so the
+        // parameter exists for a caller under test that wants a specific
+        // count rather than for any live variation any more.
         public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex,
             int count = ItemOfferTable.OfferCount)
         {

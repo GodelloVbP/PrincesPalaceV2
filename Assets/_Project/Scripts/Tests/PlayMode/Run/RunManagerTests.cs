@@ -432,7 +432,14 @@ namespace PrincesPalace.PlayModeTests
                 "starting a run took away points that were earned and not yet placed");
         }
 
-        // ---- level 30: a rest before every boss ----------------------------------
+        // ---- restBeforeBoss: nothing grants it today -------------------------------
+        //
+        // TrackReward.RestBeforeBoss was retired in P1 of
+        // docs/PLAN_REWARD_TRACKS.md (the eight over-arching rewards) and
+        // RunManager no longer sets this field to anything but its default.
+        // The generator parameter and RunSnapshot.restBeforeBoss itself stay --
+        // see their own comments -- so this test still earns its keep: it pins
+        // that a descent never turns the flag on by itself.
 
         private static void LevelTheSquadTo(int level)
         {
@@ -448,30 +455,19 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(Seed);
 
             Assert.IsFalse(RunManager.Run.restBeforeBoss,
-                "a level-1 squad is getting a reward it has not earned");
-        }
-
-        [Test]
-        public void ALevelThirtySquadDescendsWithTheRestGuaranteed()
-        {
-            // Squad levelled BEFORE the run starts, because the rule is fixed
-            // at StartRun -- which is the point of the next test.
-            RunManager.StartRun(Seed);
-            LevelTheSquadTo(30);
-            RunManager.StartRun(Seed);
-
-            Assert.IsTrue(RunManager.Run.restBeforeBoss,
-                "level 30 granted a rest before every boss and the descent did not take it");
+                "nothing grants a rest before the boss any more -- the field must stay false");
         }
 
         // THE REASON THIS IS SNAPSHOT RATHER THAN READ LIVE.
         //
         // The map is not serialised -- RunManager regenerates it from the seed
         // whenever asked, which is what makes a reloaded descent identical. If
-        // the generator read this rule from the squad each time, a character
-        // levelling to 30 MID-DESCENT would change what it produces, and the
-        // leg the player is standing in would reshape underneath them: rooms
-        // already walked past turning into different rooms.
+        // the generator read restBeforeBoss from the squad each time, a
+        // character levelling mid-descent would change what it produces, and
+        // the leg the player is standing in would reshape underneath them:
+        // rooms already walked past turning into different rooms. Nothing
+        // grants restBeforeBoss today (see above), so this pins the mechanism
+        // the field still exists to support rather than any live rule.
         [Test]
         public void LevellingMidDescentDoesNotReshapeTheLegUnderThePlayer()
         {
@@ -580,7 +576,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(LowestHealth(), 0, "a downed character stayed down across the leg boundary");
         }
 
-        // ---- levels 90 and 100: the second life and its refresh -------------------
+        // ---- level 90: the second life ---------------------------------------------
+        //
+        // Level 100's refresh (TrackReward.SecondLifeRefresh, giving the charge
+        // back on entering every boss) was retired in P1 of
+        // docs/PLAN_REWARD_TRACKS.md along with the reward kind itself -- level
+        // 100 is a MaxHealth node on the interim table now. What is left to pin
+        // is the single charge level 90 grants and RunManager's spend tracking.
 
         [Test]
         public void AnUnlevelledSquadHasNoSecondLife()
@@ -601,56 +603,6 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.secondLivesUsed = 1;
             Assert.AreEqual(0, SquadTrack.SecondLivesLeft(RunManager.Run),
                 "a spent second life is still on offer");
-        }
-
-        // Level 100 gives the charge back at every boss -- on ENTERING it,
-        // because a charge handed back after the boss is dead is a charge for
-        // the fight you already survived.
-        [Test]
-        public void LevelOneHundredGivesTheChargeBackOnEnteringABoss()
-        {
-            RunManager.StartRun(Seed);
-            LevelTheSquadTo(100);
-            RunManager.Run.secondLivesUsed = 1;
-
-            WalkToTheBoss();
-
-            Assert.AreEqual(0, RunManager.Run.secondLivesUsed,
-                "entering the boss did not give the second life back");
-            Assert.AreEqual(1, SquadTrack.SecondLivesLeft(RunManager.Run));
-        }
-
-        [Test]
-        public void LevelNinetyAloneDoesNotRefreshAtTheBoss()
-        {
-            // Non-vacuity for the test above: the refresh has to be level 100's
-            // doing and not something entering a boss does anyway.
-            RunManager.StartRun(Seed);
-            LevelTheSquadTo(90);
-            RunManager.Run.secondLivesUsed = 1;
-
-            WalkToTheBoss();
-
-            Assert.AreEqual(1, RunManager.Run.secondLivesUsed,
-                "a level-90 squad got its second life back without earning the refresh");
-        }
-
-        // Walks to the boss room, which is the last column of leg 2.
-        private static void WalkToTheBoss()
-        {
-            int guard = 0;
-            while (RunManager.CurrentNode.Type != RoomType.Boss && guard++ < 64)
-            {
-                if (RunManager.LegIsOver())
-                {
-                    RunManager.AdvanceLeg();
-                    continue;
-                }
-
-                RunManager.MoveTo(RunManager.Choices().First().Id);
-            }
-
-            Assert.AreEqual(RoomType.Boss, RunManager.CurrentNode.Type, "never reached a boss");
         }
 
         // The other half, and the reason this is two tests rather than one:

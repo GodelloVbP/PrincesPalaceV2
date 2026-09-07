@@ -159,7 +159,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
-        public NodeRef RerollButton;
         public NodeRef OfferTooltip;
         public NodeRef OfferTooltipText;
         public List<NodeRef> OfferHalos = new List<NodeRef>();
@@ -259,32 +258,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.FunctionalHeading);
             screen.LootHeading = lootHeading;
 
-            // REROLL, beside the heading rather than under the cards.
-            //
-            // The interior stops at +/-540.3 and the heading is 700 wide, so
-            // this is the only band with room: 360..530 clears the heading's
-            // right edge by 10px and the border by another 10. Under the cards
-            // is where the hover tooltip lives (y -247, and its own comment
-            // explains why it cannot move further down).
-            //
-            // Always present, hidden when the track has not granted one --
-            // rather than absent and grown later -- because the tree is emitted
-            // once for every save. Same reason the offer row is built four
-            // wide.
-            var reroll = Ui.Button("ReckoningRerollButton", UiString.Runtime,
-                    new UiVec(170f, 40f), 17, Place.At(445f, 248f))
-                .Themed(ButtonTheme.Violet)
-                .Inactive();
-            screen.RerollButton = reroll;
+            var offerChildren = new List<UiNode> { lootHeading };
 
-            var offerChildren = new List<UiNode> { lootHeading, reroll };
-
-            // THE WIDEST the reward track can grant, not the base three. The
-            // tree is emitted once for every save, so a player who has earned
-            // level 50's wider offer needs the fourth card to already exist --
-            // the controller hides it for everyone who has not. See
-            // OfferRowLayout for why the audit wants the wide case built.
-            for (int i = 0; i < OfferRowLayout.MaxCards; i++)
+            // ItemOfferTable.OfferCount cards, edge to edge -- the tree is
+            // emitted once for every save, and that is the only width the
+            // offer roll ever asks for now that the reward track no longer
+            // widens it (P1 of docs/PLAN_REWARD_TRACKS.md). A thinner content
+            // pool still shows fewer; see OfferRowLayout and
+            // ReckoningController.LayOutOfferRow for how the row re-centres
+            // for whatever count actually lands on screen.
+            for (int i = 0; i < ItemOfferTable.OfferCount; i++)
             {
                 offerChildren.Add(screen.BuildOffer(i));
             }
@@ -872,13 +855,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // this calls, so the two widths cannot drift apart.
         private UiNode BuildOffer(int index)
         {
-            // Built at the WIDEST row the track can grant, which is also the
-            // narrowest each card can be. ReckoningController widens them again
-            // for the three-card row every player below level 50 sees, from
+            // Built at the tree's own row width, ItemOfferTable.OfferCount.
+            // ReckoningController resizes them again for whatever count is
+            // actually on screen -- fewer, if the content pool is thin -- from
             // this same OfferRowLayout, so the two cannot drift.
-            float cardWidth = OfferRowLayout.CardWidth(OfferRowLayout.MaxCards);
-            float labelWidth = OfferRowLayout.LabelWidth(OfferRowLayout.MaxCards);
-            float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
+            float cardWidth = OfferRowLayout.CardWidth(ItemOfferTable.OfferCount);
+            float labelWidth = OfferRowLayout.LabelWidth(ItemOfferTable.OfferCount);
+            float x = OfferRowLayout.CardX(index, ItemOfferTable.OfferCount);
 
             // THE ITEM IS THE CARD, so it gets the room -- and it gets the
             // room the hover strip used to hold.
@@ -904,13 +887,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the card's own offset from the phase axis.
             const float IconCentre = IconCentreY - CardCentreY;
 
-            // Built at the four-card row for the same reason the card is: the
-            // audit solves the emitted tree and cannot see the controller widen
-            // it, so what it solves should be the tightest case. See
-            // ReckoningController.LayOutOfferRow for the other half.
-            float iconWidth = OfferRowLayout.IconWidth(OfferRowLayout.MaxCards);
-            float haloSize = OfferRowLayout.HaloDiameter(OfferRowLayout.MaxCards);
-            float burstSize = OfferRowLayout.BurstDiameter(OfferRowLayout.MaxCards);
+            // Built at the same row width as the card for the same reason: the
+            // audit solves the emitted tree and cannot see the controller
+            // resize it. See ReckoningController.LayOutOfferRow for the other
+            // half.
+            float iconWidth = OfferRowLayout.IconWidth(ItemOfferTable.OfferCount);
+            float haloSize = OfferRowLayout.HaloDiameter(ItemOfferTable.OfferCount);
+            float burstSize = OfferRowLayout.BurstDiameter(ItemOfferTable.OfferCount);
 
             // TWO layers behind the icon, because one was not readable.
             //

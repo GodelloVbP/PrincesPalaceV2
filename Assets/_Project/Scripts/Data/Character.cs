@@ -111,27 +111,6 @@ namespace PrincesPalace
         // attack/speed/health with no separate stat pathway of its own.
         public AbilityScoreBlock investedAbilityScores;
 
-        // Prince's Favor earned from the reward track, ADDED TO the authored
-        // CharacterDefinition.princesFavor rather than replacing it.
-        //
-        // The reason this field has to exist: Favor was authored-only. It is a
-        // field on CharacterDefinition, which is a ScriptableObject built by
-        // ContentBuilder and immutable at runtime, and the reward track grants
-        // Favor at 21 of its 100 nodes -- none of which had anywhere to write.
-        //
-        // PER CHARACTER, which is the whole point rather than an
-        // implementation detail. ItemOfferRoll.SquadFavor takes the fielded
-        // party's HIGHEST Favor and never the sum, precisely so that Favor is
-        // a reason to field a particular character. Earning it per character
-        // keeps that true: a levelled character becomes the one you bring for
-        // loot. A profile-wide pool would make it a reason to field nobody in
-        // particular.
-        //
-        // Purely additive, so SaveData.CurrentVersion does not move: an older
-        // save has no such field, JsonUtility leaves it at zero, and zero is
-        // exactly "has earned none yet".
-        public int earnedFavor;
-
         // Max health granted by the reward track, on top of everything the
         // character's definition, talents, gear and ability scores already give
         // them.
@@ -151,17 +130,6 @@ namespace PrincesPalace
         //
         // Purely additive, so SaveData.CurrentVersion does not move.
         public int bonusMaxHealth;
-
-        // Extra experience from the reward track, in integer PERMILLE -- the
-        // same notation DifficultyCurve and LevelCurve use, so the three curves
-        // that govern levelling are all read in one unit.
-        //
-        // A GRANT, claimed once against the watermark, and not refunded by a
-        // respec for the same reason bonusMaxHealth is not: the player never
-        // chose where it went.
-        //
-        // Purely additive, so SaveData.CurrentVersion does not move.
-        public int bonusExpPermille;
 
         // How far up the reward track this character has been PAID.
         //
@@ -231,20 +199,6 @@ namespace PrincesPalace
         public static int ExpToNextLevel(int level)
         {
             return LevelCurve.ExpToNextLevel(level);
-        }
-
-        // What `amount` of raw experience is actually worth to this character,
-        // after the reward track's experience nodes.
-        //
-        // Floored, like every other curve here, and never below the raw amount
-        // -- a corrupt negative permille must not turn a reward into a
-        // punishment.
-        public int ExperienceWorthOf(int amount)
-        {
-            if (amount <= 0 || bonusExpPermille <= 0) return amount;
-
-            long boosted = (long)amount + (long)amount * bonusExpPermille / 1000L;
-            return boosted > int.MaxValue ? int.MaxValue : (int)boosted;
         }
 
         // Adds exp and applies every level-up it earns (a big enough gain
@@ -391,17 +345,13 @@ namespace PrincesPalace
             if (throughLevel <= claimedTrackLevel) return false;
 
             int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, throughLevel);
-            int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, throughLevel);
             int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, throughLevel);
-            int expFind = RewardTrack.GrantedBetween(TrackReward.ExpFind, claimedTrackLevel, throughLevel);
 
             unspentStatPoints += points;
-            earnedFavor += favor;
             bonusMaxHealth += health;
-            bonusExpPermille += expFind;
             claimedTrackLevel = throughLevel;
 
-            return points > 0 || favor > 0 || health > 0 || expFind > 0;
+            return points > 0 || health > 0;
         }
 
         // Everything owed, which is what a collect-all button asks for.

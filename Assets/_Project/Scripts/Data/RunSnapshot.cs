@@ -120,29 +120,33 @@ namespace PrincesPalace
 
         // How many item-offer rerolls this descent has spent.
         //
-        // USED rather than remaining, so the allowance stays a pure function of
-        // the reward track (RewardTrack.RerollsPerRun) and is never copied onto
-        // the run. A remaining-count would be a snapshot of the track taken at
-        // the moment the run started -- so a character who reached level 40
-        // mid-descent would finish that run with nothing, and one who was
-        // levelled by a debug grant would keep a stale allowance forever.
-        //
-        // Run-scoped, so it resets for free: StartRun replaces this whole
-        // snapshot. That is the same reason relicIds lives here.
+        // DEAD WEIGHT SINCE P1 OF docs/PLAN_REWARD_TRACKS.md, kept rather than
+        // deleted. The reward track's offer-reroll grant and the Reckoning's
+        // reroll button were both retired -- nothing sets this above zero any
+        // more -- but the field stays: removing it would drop the value
+        // JsonUtility already wrote for an in-flight run on an old save, for
+        // no gain.
         //
         // Purely additive, so CurrentVersion does not move -- an older save's
         // in-flight run has no such field and JsonUtility leaves it at zero,
         // which is exactly "has rerolled nothing yet".
         public int offerRerollsUsed;
 
-        // Whether this descent guarantees a rest on the step before each boss
-        // -- level 30 of the reward track.
+        // Whether this descent guarantees a rest on the step before each boss.
+        //
+        // NOTHING GRANTS THIS TODAY. It was level 30 of the reward track;
+        // P1 of docs/PLAN_REWARD_TRACKS.md retired that milestone along with
+        // seven other over-arching reward kinds, so RunManager.StartRun now
+        // leaves this at its default (false) rather than reading the squad.
+        // The field and the generator parameter it feeds both stay, so a
+        // future reward can wire back into StartRun without DescentMap
+        // changing at all.
         //
         // SNAPSHOT AT StartRun RATHER THAN READ LIVE, which is the opposite of
         // how the reroll allowance works, and the difference matters. The map
         // is not serialised: RunManager regenerates it from the seed whenever
         // it is asked (that is what makes a reloaded descent identical). If
-        // this were read from the squad each time, a character levelling to 30
+        // this were read from the squad each time, a character levelling
         // MID-DESCENT would change what the generator produces -- and the leg
         // the player is standing in would silently reshape underneath them,
         // rooms they had already seen turning into different rooms.
@@ -157,7 +161,13 @@ namespace PrincesPalace
         public bool restBeforeBoss;
 
         // How many second lives this descent has spent -- level 90 of the
-        // reward track, with level 100 giving the charge back at every boss.
+        // reward track.
+        //
+        // P1 of docs/PLAN_REWARD_TRACKS.md retired the level-100 refresh
+        // (TrackReward.SecondLifeRefresh, which gave the charge back on
+        // entering every boss) along with seven other over-arching reward
+        // kinds -- so this now climbs at most once per descent with nothing
+        // to clear it back to zero mid-run.
         //
         // USED rather than remaining, the same shape as offerRerollsUsed and
         // for the same reason: the allowance stays a pure function of the
