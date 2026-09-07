@@ -172,10 +172,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // toast included -- "top-most" per the P4 brief.
             children.Add(BuildDragGhost(screen));
 
-            // A SILVER 2:1 CONTAINER, the same hosted-pane shape every other
-            // system menu tab uses -- see RunStatsScreen's own comment on why
-            // no size nudge is needed against the kit's measured aspect.
-            var ground = Ui.SystemMenuPane("PartyPane", "PartyPaneContent", ButtonTheme.Silver,
+            // BARE, not a kit container (owner's call, 2026-09-07 -- every
+            // frame inside the system menu read as ugly). This pane sits on
+            // the shared SystemMenuFill with no ground of its own, same as
+            // the dossier always did.
+            var ground = Ui.SystemMenuPane("PartyPane", "PartyPaneContent",
                 new UiVec(PartyLayout.PaneWidth, PartyLayout.PaneHeight), children.ToArray());
 
             screen.Root = ground;

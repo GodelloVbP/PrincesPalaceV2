@@ -298,19 +298,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.AddRange(BuildRibbon(screen));
             children.AddRange(BuildSummaryRow(screen));
 
-            // A GOLD 2:1 CONTAINER now (balance-bot, 2026-09-02), not the
-            // flat #120A18FA Solid ground -- same conversion as Exits/
-            // Options/RunStats/Dossier (see SystemMenuLayout.PaneInset's own
-            // comment). It still opens OVER the dossier and needs the same
-            // opacity that flat ground existed for -- three columns of
-            // numbers must not read through a hundred captions -- and the
-            // container's own painted art is fully opaque, so that job
-            // carries over without a second ground underneath it.
-            // PanelWidth x ContentHeight (1600x804) still needs no aspect
-            // nudge: it is the same valid 2:1 box every other pane's ground
-            // already is.
-            var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent", ButtonTheme.Gold,
+            // BARE, not a kit container (owner's call, 2026-09-07 -- every
+            // frame inside the system menu read as ugly), UNLIKE THE OTHER
+            // FOUR HOSTED PANES this still needs an opaque ground of its own:
+            // it opens OVER the dossier's own content within the same parent
+            // pane rather than sitting only on the shared, translucent
+            // SystemMenuFill (#1A1024F5, 96%) every other pane relies on --
+            // three columns of numbers must not read through a hundred
+            // captions underneath. The Gold container's own painted art used
+            // to carry that opacity; the flat #120A18FA Solid ground is what
+            // did the same job before the container existed (git history),
+            // so it comes back below as this pane's own first child.
+            var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent",
                 new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), children.ToArray());
+            ground.Children.Insert(0, Ui.Solid("RewardTrackPanelFill", Ground + "FA",
+                    new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), Place.At(0f, 0f))
+                .AsDecor());
             ground.Inactive();
 
             screen.Root = ground;

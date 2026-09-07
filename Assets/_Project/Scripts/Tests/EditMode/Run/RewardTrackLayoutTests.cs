@@ -144,17 +144,18 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheBandsSitWhereTheHandoffPutsThem()
         {
-            // Panel 1600x804, y measured down from the CONTAINER's own
-            // content top now (balance-bot, 2026-09-02) -- not the raw
-            // panel top-left the handoff states it against. Each of these
-            // four moves by exactly the same delta (-44.22, ContentTop's
-            // drop from 402 to 357.78, the outer Gold 2:1 container's own
-            // inset): the yFromTop constants themselves (43, 193, 396) are
-            // untouched, only the reference they are read against shifted.
-            // RibbonCentreY moves further, because RibbonTopFromTop/
-            // BottomFromTop were ALSO pulled up 60px on top of that -- see
-            // their own comment for why the ribbon needed more than the
-            // uniform shift to clear the container's tighter bottom inset.
+            // Panel 1600x804, y measured down from the PANE's own content
+            // top now (balance-bot, 2026-09-02) -- not the raw panel
+            // top-left the handoff states it against. Each of these four
+            // moves by exactly the same delta (-44.22, ContentTop's drop
+            // from 402 to 357.78, SystemMenuLayout.PaneContentHalfHeight's
+            // own declared inset): the yFromTop constants themselves (43,
+            // 193, 396) are untouched, only the reference they are read
+            // against shifted. RibbonCentreY moves further, because
+            // RibbonTopFromTop/BottomFromTop were ALSO pulled up 60px on top
+            // of that -- see their own comment for why the ribbon needed
+            // more than the uniform shift to clear the pane's tighter
+            // bottom inset.
             Assert.AreEqual(314.78f, RewardTrackLayout.SummaryCentreY, 0.001f, "summary band, was 359");
             Assert.AreEqual(164.78f, RewardTrackLayout.CardCentreY, 0.001f, "focus card, was 209");
             Assert.AreEqual(-38.22f, RewardTrackLayout.BandCentreY, 0.001f, "rail band, was 6");
@@ -175,7 +176,8 @@ namespace PrincesPalace.Domain.Tests
             // comment), so RailOffsetY reduces to -BandCentreY exactly. The
             // sign flip is real, not a typo: the band moved from just below
             // the true centre (BandCentreY was +6) to just above it
-            // (-38.22) once the container's inset pulled ContentTop down.
+            // (-38.22) once the pane's own content inset pulled ContentTop
+            // down.
             Assert.AreEqual(38.22f, RewardTrackLayout.RailOffsetY, 0.001f);
         }
 
@@ -288,7 +290,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BothButtonsKeepTheSameClearanceFromThePanelsEdge()
         {
-            // The container's own content half-width now (balance-bot,
+            // The pane's own declared content half-width now (balance-bot,
             // 2026-09-02), not the raw panel's -- see CollectCentreX/
             // CloseCentreX's own comment.
             float half = SystemMenuLayout.PaneContentHalfWidth;

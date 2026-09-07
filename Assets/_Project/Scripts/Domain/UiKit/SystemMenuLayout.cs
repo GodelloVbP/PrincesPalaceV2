@@ -60,32 +60,31 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float ContentCentreY => HalfHeight - BarHeight - ContentHeight * 0.5f;
 
-        // ---- the shared pane ground, as a themed 2:1 container -------------------
+        // ---- the shared pane ground, bare since 2026-09-07 ------------------------
         //
-        // PanelWidth x ContentHeight (1600x804, aspect 1.99) ALREADY hits the
-        // kit's 2:1 aspect within 0.5% -- it was 0.5% off the spliced
-        // delivery's measured 1.98 and is 0.5% off the regenerated kit's true
-        // 2.0, comfortably inside Ui.Container's 5% band either way, so
-        // unlike every other conversion in this series, no size nudge is
-        // needed here at all. That settles the "804
-        // vs 1592" question the balance-bot brief posed: neither literal moves,
-        // because the pane's existing frame size was already a valid 2:1 box.
+        // WAS a themed 2:1 Container's own measured inset boundary until the
+        // owner called every kit frame inside the system menu ugly and asked
+        // for the bare violet pane the design pass actually specified
+        // (docs/handoffs/system_menu/README.md). PaneContentHalfWidth/
+        // HalfHeight kept the exact numbers the container's border used to
+        // leave -- 744/357.78, PanelWidth/ContentHeight against the container
+        // kit's old 3.5%/5.5% side/top insets -- so removing the frame moved
+        // no label, card or button in any hosted pane. They are DECLARED now
+        // rather than derived from ContainerArt, because there is no longer
+        // an art asset to measure them from; if a pane's content ever needs
+        // to reach further into its box, change these two numbers and every
+        // hosted pane moves together.
         //
-        // PaneContentHalfWidth/HalfHeight are the ONE inset boundary every
-        // hosted pane's own HalfWidth/HalfHeight now reads instead of Width *
-        // 0.5f / Height * 0.5f -- CharacterDossierScreen, RewardTrackScreen,
-        // OptionsScreen, RunStatsScreen and ExitsScreen all lay their content
-        // out against these, so a pane's declared frame (Width/Height, still
-        // PanelWidth x ContentHeight -- SystemMenuPaneTests.EveryHostedPane
-        // IsTheSizeOfTheContentArea pins this) and its usable content region
-        // stop being the same rect the way they used to be, now that the
-        // ground is themed art with a painted border rather than a flat fill.
-        public static readonly ContentInsetFrac PaneInset =
-            Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+        // Every hosted pane's own HalfWidth/HalfHeight reads these instead of
+        // Width * 0.5f / Height * 0.5f -- CharacterDossierScreen,
+        // RewardTrackScreen, OptionsScreen, PartyScreen, RunStatsScreen and
+        // ExitsScreen all lay their content out against these, so a pane's
+        // declared frame (Width/Height, still PanelWidth x ContentHeight --
+        // SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
+        // this) and its usable content region are not the same rect.
+        public const float PaneContentHalfWidth = 744f;
 
-        public static float PaneContentHalfWidth => PanelWidth * 0.5f - PanelWidth * PaneInset.Left;
-
-        public static float PaneContentHalfHeight => ContentHeight * 0.5f - ContentHeight * PaneInset.Top;
+        public const float PaneContentHalfHeight = 357.78f;
 
         // The row the tabs live in, inside the insets.
         public const float RowWidth = PanelWidth - BarInsetLeft - BarInsetRight;   // 1520

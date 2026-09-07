@@ -312,5 +312,36 @@ namespace PrincesPalace.Domain.Tests
                     : "Floor map is still a placeholder, so the mid-run default has to fall back "
                       + "to the dossier rather than open on 'CONTENT TO COME'");
         }
+
+        // ---- no frame anywhere in the menu ---------------------------------------
+
+        private static IEnumerable<UiNode> Walk(UiNode node)
+        {
+            yield return node;
+            foreach (var child in node.Children)
+            {
+                foreach (var found in Walk(child)) yield return found;
+            }
+        }
+
+        // THE MECHANISED FORM OF THE OWNER'S RULE (2026-09-07): "containers in
+        // the menu should be removed because it looks bad." Exits, Options,
+        // Party, Run statistics, Reward track and the dossier's column A frame
+        // all lost their kit art in the same pass this test was added by --
+        // this is what stops a future pane from quietly growing one back,
+        // rather than relying on everybody who touches this tree remembering
+        // a rule stated only in a doc and a commit message.
+        [Test]
+        public void NoSystemMenuNodeUsesAContainerOrFlagBannerSprite()
+        {
+            var offenders = Walk(SystemMenuScreen.Build().Root)
+                .Where(n => !string.IsNullOrEmpty(n.SpriteKey)
+                            && (n.SpriteKey.Contains("container_") || n.SpriteKey.Contains("banner_flag_")))
+                .Select(n => $"{n.Name} ({n.SpriteKey})")
+                .ToList();
+
+            CollectionAssert.IsEmpty(offenders,
+                "the system menu should have no kit frames -- " + string.Join(", ", offenders));
+        }
     }
 }

@@ -98,12 +98,16 @@ namespace PrincesPalace.Domain.UiKit
         //
         // 3x2 AND 2x1 KEEP THE INSETS THEY ALREADY HAD (0.035/0.04/0.045 and
         // 0.035/0.055) rather than dropping to raw*1.25: their frames are
-        // hairlines, the existing pins clear them several times over, and
-        // those two ratios are what SystemMenuLayout.PaneInset -- and through
-        // it every hosted pane's content bound -- lays out against. Same
-        // "already comfortably safe, so leave it" call the previous delivery
-        // made; the difference is that the raw number backing it is now a
-        // real measurement rather than a scanner artifact.
+        // hairlines and the existing pins clear them several times over.
+        // 2x1 was also what SystemMenuLayout's own pane content bound used
+        // to lay out against, back when every system-menu pane's ground was
+        // a themed 2:1 Container -- that ground is bare now (owner's call,
+        // 2026-09-07), so this ratio's remaining callers are FightScreen's
+        // PartyPlate and anything else outside the menu that still wants a
+        // 2:1 frame. Same "already comfortably safe, so leave it" call the
+        // previous delivery made; the difference is that the raw number
+        // backing it is now a real measurement rather than a scanner
+        // artifact.
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Inset;
 
         // THE VISIBLE EDGE, not the rect edge -- every one of these PNGs

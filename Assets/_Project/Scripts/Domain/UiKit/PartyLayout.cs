@@ -19,14 +19,16 @@ namespace PrincesPalace.Domain.UiKit
         public const float PaneWidth = SystemMenuLayout.PanelWidth;
         public static float PaneHeight => SystemMenuLayout.ContentHeight;
 
-        // THE CONTAINER'S OWN INSET BOUNDARY, not PaneWidth/PaneHeight * 0.5f --
-        // see SystemMenuLayout.PaneInset's own comment. Every hosted pane reads
-        // this rather than restating the Silver 2:1 kit's measured border.
+        // THE PANE'S OWN DECLARED CONTENT HALF-EXTENTS, not PaneWidth/
+        // PaneHeight * 0.5f -- see SystemMenuLayout.PaneContentHalfWidth/
+        // HalfHeight's own comment. Every hosted pane reads this rather than
+        // restating the number.
         public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
         public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
-        // A small slack margin over the container's own inset, not a second
-        // authored pad -- same pattern as RunStatsLayout.PadX/PadTop/PadBottom.
+        // A small slack margin over the pane's own content inset, not a
+        // second authored pad -- same pattern as RunStatsLayout.PadX/
+        // PadTop/PadBottom.
         public const float PadX = 4f;
         public const float PadTop = 4f;
         public const float PadBottom = 4f;

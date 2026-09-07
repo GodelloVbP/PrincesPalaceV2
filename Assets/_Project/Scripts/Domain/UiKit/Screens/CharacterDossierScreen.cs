@@ -220,21 +220,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column A: identity ---------------------------------------------------
 
-        // BLUE, 3:4 CONTAINER ART. Column A had no flat panel or outline of
-        // its own before this -- it sat directly on the shared DossierGround/
-        // DossierVeil the whole 1600x804 pane draws first -- so this is a new
-        // frame rather than a replacement of one. The identity content moves
-        // INSIDE it via Ui.ContainerContent, at cx = 0 (column A's own centre,
-        // not the dossier's), the same convention BuildPackPanel already uses
-        // for content that lives on a panel placed at ColumnACentreX.
+        // GRAPHIC-LESS since 2026-09-07 (owner's call: every kit frame inside
+        // the system menu read as ugly). Column A kept a Blue 3:4 Container
+        // here until then; the RECT survives at the exact same size and place
+        // -- DossierLayout.ColumnAFrameHeight still derives from the 3:4
+        // aspect it was authored to fill, ColumnATop/ColumnABottom still
+        // measure against it -- only the painted border and the separate
+        // inset content panel are gone. The identity content (portrait, name,
+        // pager, XP, nav rows) is a direct child of this one panel now, at
+        // cx = 0 (column A's own centre, not the dossier's), the same
+        // convention BuildPackPanel already uses for content that lives on a
+        // panel placed at ColumnACentreX. CharacterDossierScreenTests.
+        // ColumnAIdentityContentRidesInsideTheFrame pins that the identity
+        // content still rides inside this one named parent, so moving or
+        // hiding it cannot strand a label over the sky beside it.
         private UiNode BuildColumnAFrame()
         {
-            var frame = Ui.Container("DossierColumnAFrame", ButtonTheme.Blue, ContainerRatio.ThreeByFour,
+            return Ui.Panel("DossierColumnAFrame",
                 Place.At(DossierLayout.ColumnACentreX, 0f),
-                new UiVec(DossierLayout.ColumnAWidth, DossierLayout.ColumnAFrameHeight));
-
-            Ui.ContainerContent(frame, ContainerRatio.ThreeByFour, "DossierColumnAContent", BuildColumnA().ToArray());
-            return frame;
+                UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.ColumnAFrameHeight),
+                BuildColumnA().ToArray());
         }
 
         private IEnumerable<UiNode> BuildColumnA()
