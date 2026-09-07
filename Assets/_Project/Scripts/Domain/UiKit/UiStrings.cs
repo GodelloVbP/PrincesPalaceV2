@@ -699,6 +699,8 @@ namespace PrincesPalace.Domain.UiKit
         // so a separate Inventory tab was a second door onto the same room.
         public static readonly UiString SystemTabCharacterInventory =
             UiString.Define("system.tab.character_inventory", "CHARACTER & INVENTORY");
+        public static readonly UiString SystemTabParty =
+            UiString.Define("system.tab.party", "PARTY");
         public static readonly UiString SystemTabFloorMap =
             UiString.Define("system.tab.floor_map", "FLOOR MAP");
         public static readonly UiString SystemTabRunStats =
@@ -842,6 +844,94 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PackFilterArmour = UiString.Define("dossier.filter_armour", "Armour");
         public static readonly UiString PackFilterWeapons = UiString.Define("dossier.filter_weapons", "Weapons");
         public static readonly UiString PackFilterSalves = UiString.Define("dossier.filter_salves", "Salves");
+
+        // ---- the Party pane --------------------------------------------------
+        //
+        // Seat labels are FRONT/MIDDLE/REAR, not the handoff's role-neutral
+        // "Position 1/2/3" -- this game's positions ARE mechanically different
+        // (the front-rank rule, landed 2026-09-07), and the handoff's own
+        // escape clause says to rename them the moment that is true. See
+        // docs/handoffs/party_screen/DECISIONS.md.
+        public static readonly UiString PartyBannerDefault =
+            UiString.Define("party.banner.default", "Select a companion, then choose a position.");
+        public static readonly UiString PartyBannerSelected =
+            UiString.Define("party.banner.selected", "{0} selected — choose a position.",
+                "Placeholder Brawler selected - choose a position.");
+        public static readonly UiString PartyCancel = UiString.Define("party.cancel", "Cancel");
+        public static readonly UiString PartySendToBench = UiString.Define("party.send_to_bench", "Send to bench");
+
+        // Three modes, not two -- Camp (hub, swap freely), Run (map, reposition
+        // only) and ViewOnly (fight, the live encounter owns the order so this
+        // pane changes nothing and is not one of these three pill states; a
+        // fight never opens this pane in a way that needs its own copy here).
+        public static readonly UiString PartyStatusCamp =
+            UiString.Define("party.status.camp", "AT CAMP — Swap freely.");
+        public static readonly UiString PartyStatusRun =
+            UiString.Define("party.status.run", "IN A RUN — Reposition only.");
+        public static readonly UiString PartyStatusFight =
+            UiString.Define("party.status.fight", "IN A FIGHT — Formation fixed.");
+
+        public static readonly UiString PartyFormationHeading =
+            UiString.Define("party.formation.heading", "FORMATION");
+        public static readonly UiString PartyFormationSubtitle =
+            UiString.Define("party.formation.subtitle",
+                "The front rank takes the enemies' blows. Some skills reach only from the rank they name.");
+        public static readonly UiString PartyFilledCount =
+            UiString.Define("party.formation.filled_count", "{0}/3 positions filled", "3/3 positions filled");
+        public static readonly UiString PartyFacingRibbon =
+            UiString.Define("party.formation.facing_ribbon", "FACING THE ENEMY ->");
+
+        public static readonly UiString PartySeatFront = UiString.Define("party.seat.front", "FRONT");
+        public static readonly UiString PartySeatMiddle = UiString.Define("party.seat.middle", "MIDDLE");
+        public static readonly UiString PartySeatRear = UiString.Define("party.seat.rear", "REAR");
+
+        public static readonly UiString PartyBadgeReplace =
+            UiString.Define("party.badge.replace", "Replace {0}", "Replace Placeholder Brawler");
+        public static readonly UiString PartyBadgeSwap =
+            UiString.Define("party.badge.swap", "Swap with {0}", "Swap with Placeholder Brawler");
+        public static readonly UiString PartyBadgePlace =
+            UiString.Define("party.badge.place", "Place {0} here", "Place Placeholder Brawler here");
+
+        public static readonly UiString PartyRosterHeading = UiString.Define("party.roster.heading", "ROSTER");
+        public static readonly UiString PartyCardTagInParty =
+            UiString.Define("party.card.tag_in_party", "In party · {0}", "In party · Placeholder Brawler");
+        public static readonly UiString PartyCardTagArtPending =
+            UiString.Define("party.card.tag_art_pending", "Art pending");
+        public static readonly UiString PartyCardTagBenched = UiString.Define("party.card.tag_benched", "Benched");
+        public static readonly UiString PartySelectedTag = UiString.Define("party.card.selected_tag", "SELECTED");
+
+        public static readonly UiString PartyScrimLocked = UiString.Define("party.scrim.locked", "Locked this run");
+        public static readonly UiString PartyScrimClosed = UiString.Define("party.scrim.closed", "No seat yet");
+
+        // ---- the toast, one entry per outcome kind ---------------------------
+        public static readonly UiString PartyToastPlaced =
+            UiString.Define("party.toast.placed", "{0} takes the {1} position.",
+                "Placeholder Brawler takes the front position.");
+        public static readonly UiString PartyToastMoved =
+            UiString.Define("party.toast.moved", "{0} takes the {1} position.",
+                "Placeholder Brawler takes the front position.");
+        public static readonly UiString PartyToastSwapped =
+            UiString.Define("party.toast.swapped", "Swapped {0} and {1}.",
+                "Swapped Placeholder Brawler and Placeholder Brawler.");
+        public static readonly UiString PartyToastReplaced =
+            UiString.Define("party.toast.replaced", "{1} steps aside for {0}.",
+                "Placeholder Brawler steps aside for Placeholder Brawler.");
+        public static readonly UiString PartyToastBenched =
+            UiString.Define("party.toast.benched", "{0} returns to the bench.",
+                "Placeholder Brawler returns to the bench.");
+        public static readonly UiString PartyToastFormationFixedInFight =
+            UiString.Define("party.toast.formation_fixed_in_fight", "The formation is fixed during a fight.");
+        public static readonly UiString PartyToastSeatNotOpen =
+            UiString.Define("party.toast.seat_not_open", "That seat is not open yet.");
+        public static readonly UiString PartyToastSeatLocked =
+            UiString.Define("party.toast.seat_locked", "{0} is locked in this run.",
+                "Placeholder Brawler is locked in this run.");
+        public static readonly UiString PartyToastBenchedDuringRun =
+            UiString.Define("party.toast.benched_during_run", "New companions join between runs.");
+        public static readonly UiString PartyToastRepositionOnlyDuringRun =
+            UiString.Define("party.toast.reposition_only_during_run", "Mid-run you can only reposition.");
+        public static readonly UiString PartyToastPartyNeverEmpty =
+            UiString.Define("party.toast.party_never_empty", "The party can never be empty.");
 
         // Every entry declared above, derived rather than restated.
         //

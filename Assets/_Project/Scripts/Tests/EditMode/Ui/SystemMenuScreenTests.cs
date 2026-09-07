@@ -76,30 +76,47 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The design states these outright, so they are pinned as literals
-        // rather than recomputed -- a test that re-derives the formula only
-        // proves the formula equals itself.
+        // The design stated the ORIGINAL three/five-tab numbers outright, so
+        // those were pinned as literals rather than recomputed. Party has no
+        // such design table (docs/handoffs/party_screen has none for the bar
+        // itself) -- adding a fourth out-of-run tab is what pushed this row
+        // out of Mode A (three tabs or fewer) into Mode B, a real behaviour
+        // change the arithmetic is built to absorb, not a bug. These literals
+        // are hand-derived from SystemMenuLayout's own published formula
+        // (MeasuredPadX/MeasuredRounding/GapFor) once, off to the side, the
+        // same role the design's table played before Party existed -- a
+        // caught regression, not a formula proving itself.
         [Test]
-        public void TheThreeTabRowMatchesTheDesignsNumbers()
+        public void TheOutOfRunRowMatchesItsOwnArithmetic()
         {
             var lefts = SystemMenuLayout.TabLefts(OutOfRun);
             var widths = SystemMenuLayout.TabWidths(OutOfRun);
 
-            Assert.AreEqual(3, OutOfRun.Count, "out of a run the menu should have three tabs");
-            CollectionAssert.AreEqual(new[] { 40f, 590f, 1140f }, lefts.Select(l => (float)l).ToArray());
-            Assert.That(widths, Is.All.EqualTo(420f));
+            Assert.AreEqual(4, OutOfRun.Count,
+                "out of a run the menu should have four tabs now Party is always visible");
+            CollectionAssert.AreEqual(new[] { 320f, 116f, 140f, 168f }, widths);
+            AssertNearlyEqual(new[] { 40f, 618.6667f, 993.3333f, 1392f }, lefts);
         }
 
         [Test]
-        public void TheFiveTabRowMatchesTheDesignsNumbers()
+        public void TheInRunRowMatchesItsOwnArithmetic()
         {
             var lefts = SystemMenuLayout.TabLefts(InRun);
             var widths = SystemMenuLayout.TabWidths(InRun);
 
-            Assert.AreEqual(5, InRun.Count, "in a run the menu should have five tabs");
-            CollectionAssert.AreEqual(new[] { 320f, 168f, 216f, 140f, 168f }, widths);
-            CollectionAssert.AreEqual(new[] { 40f, 487f, 782f, 1125f, 1392f }, lefts);
-            Assert.AreEqual(127f, SystemMenuLayout.GapFor(InRun), 0.01f);
+            Assert.AreEqual(6, InRun.Count, "in a run the menu should have six tabs now Party is among them");
+            CollectionAssert.AreEqual(new[] { 320f, 116f, 168f, 216f, 140f, 168f }, widths);
+            AssertNearlyEqual(new[] { 40f, 438.4f, 632.8f, 879.2f, 1173.6f, 1392f }, lefts);
+            Assert.AreEqual(78.4f, SystemMenuLayout.GapFor(InRun), 0.01f);
+        }
+
+        private static void AssertNearlyEqual(float[] expected, IReadOnlyList<float> actual)
+        {
+            Assert.AreEqual(expected.Length, actual.Count, "different number of tabs than expected");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Assert.AreEqual(expected[i], actual[i], 0.01f, $"tab {i}'s left edge");
+            }
         }
 
         // The underline marks the WORD, not the box. In the three-tab mode the
@@ -142,7 +159,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(SystemMenuTabs.Count, wordy.Count, "the count is unchanged");
             Assert.IsFalse(SystemMenuLayout.StripFits(wordy),
-                "five 448px boxes need 2336px in a 1520px row and the guard let them through");
+                "six 448px boxes need 2808px in a 1520px row and the guard let them through");
         }
 
         [Test]
@@ -154,7 +171,7 @@ namespace PrincesPalace.Domain.Tests
             }).ToList();
 
             Assert.IsTrue(SystemMenuLayout.StripFits(plusOne),
-                "a sixth tab no longer fits, so the bar is full at five");
+                "a seventh tab no longer fits, so the bar is full at six");
         }
 
         // ---- the tree matches the table ----------------------------------------
