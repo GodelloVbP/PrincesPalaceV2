@@ -93,7 +93,11 @@ public static class ScreenRegistry
             ScenePath = FightScene,
             BuildTree = () =>
             {
-                screen = FightScreen.Build();
+                // ContentDatabase.Characters.Count, not the 3-character
+                // compatibility default HubScreen/MapScreen/FightScreen.Build
+                // fall back to when called with no argument -- see
+                // SystemMenuScreen.Build's own partyRosterCardCount comment.
+                screen = FightScreen.Build(ContentDatabase.Characters.Count);
                 return screen.Root;
             },
             Wire = result =>
@@ -331,7 +335,7 @@ public static class ScreenRegistry
             ScenePath = HubScene,
             BuildTree = () =>
             {
-                screen = HubScreen.Build();
+                screen = HubScreen.Build(ContentDatabase.Characters.Count);
                 return screen.Root;
             },
             Wire = result =>
@@ -516,7 +520,7 @@ public static class ScreenRegistry
             ScenePath = MapScene,
             BuildTree = () =>
             {
-                screen = MapScreen.Build();
+                screen = MapScreen.Build(ContentDatabase.Characters.Count);
                 return screen.Root;
             },
             Wire = result =>
@@ -856,7 +860,34 @@ public static class ScreenRegistry
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
         if (menu.RunStats != null) WireRunStats(result, menu.RunStats);
+        if (menu.Party != null) WireParty(result, menu.Party, controller, lockedForFight);
         if (menu.Exits != null) WireExits(result, menu.Exits, controller);
+
+        return controller;
+    }
+
+    // The Party pane, inside the system menu.
+    //
+    // `menu` and `lockedForFight` are the two fields UiAutoBind cannot
+    // reach -- the same residual ExitsController.menu and CharacterDossier
+    // Controller.lockedForFight already carry, for the same reason: neither
+    // is a NodeRef, so nothing on PartyScreen has a same-named member for the
+    // binder to match against.
+    //
+    // `seatBadgeTexts` is the one PARTY-SPECIFIC residual: PartyScreen.
+    // BuildSeat parents a text label under each badge's OutlineBox but never
+    // captures a NodeRef for it (only the badge box itself, as SeatBadges),
+    // so it is reached here the same way ExitsController.exitLabels reaches
+    // a button's own child label -- `searchChildren: true`.
+    private static PartyController WireParty(
+        UiEmitResult result, PartyScreen party, SystemMenuController menu, bool lockedForFight)
+    {
+        var controller = result.Attach<PartyController>(party.Root);
+        UiAutoBind.Bind(result, controller, party);
+
+        controller.menu = menu;
+        controller.lockedForFight = lockedForFight;
+        controller.seatBadgeTexts = party.SeatBadges.Select(badge => result.Tmp(badge, searchChildren: true)).ToArray();
 
         return controller;
     }

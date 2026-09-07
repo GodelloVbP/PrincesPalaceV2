@@ -64,7 +64,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // cannot end up playing a different building's frames.
         public readonly List<(NodeRef Node, string Folder)> BuildingArt = new List<(NodeRef, string)>();
 
-        public static HubScreen Build()
+        // partyRosterCardCount threads straight through to SystemMenuScreen.
+        // Build -- see that parameter's own comment for why it defaults to 3
+        // (a compatibility default, not a design choice) and who is meant to
+        // override it (ScreenRegistry, with ContentDatabase.Characters.Count).
+        public static HubScreen Build(int partyRosterCardCount = 3)
         {
             var screen = new HubScreen();
 
@@ -142,7 +146,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The overarching menu, LAST in this scene's children so it draws
             // over everything it can be opened on top of.
-            var systemMenu = SystemMenuScreen.Build();
+            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount);
             screen.SystemMenu = systemMenu;
 
             // The old paperdoll is gone; the system menu's Character pane is

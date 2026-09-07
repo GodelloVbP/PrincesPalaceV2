@@ -29,7 +29,8 @@ controller (+ its own parts, for Fight), its tests, and its content data
 | Hub | `Domain/UiKit/Screens/HubScreen.cs` + `HubAmbience.cs` | `HubController.cs`, `HubBuildingLooper.cs` | — |
 | Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
 | Relics (start-of-run draft) | `Domain/UiKit/Screens/RelicDraftScreen.cs` (wired into Hub via `ScreenRegistry.cs`) | `RelicDraftController.cs` | `relics.json` |
-| System Menu (Pause replacement — tabs: Dossier/RewardTrack/Options/RunStats/Exits) | `Domain/UiKit/Screens/SystemMenuScreen.cs` (wired into Fight/Map/Hub via `ScreenRegistry.cs`) | `SystemMenuController.cs` | — |
+| System Menu (Pause replacement — tabs: Dossier/RewardTrack/Party/Options/RunStats/Exits) | `Domain/UiKit/Screens/SystemMenuScreen.cs` (wired into Fight/Map/Hub via `ScreenRegistry.cs`) | `SystemMenuController.cs` | — |
+| Party (roster & formation, a System Menu tab) | `Domain/UiKit/Screens/PartyScreen.cs` + `Domain/UiKit/PartyLayout.cs`, model in `Domain/Party/` (`PartyFormation.cs`, `PartyMode.cs`, `PartyOutcome.cs`, `PartyCardState.cs`, `PartyRosterEntry.cs`, `PartySeat.cs`, `PartySelectionSource.cs`), wired via `ScreenRegistry.cs`'s `WireParty` | `PartyController.cs` | `characters.json` |
 
 Generic building-block primitives (`CreateButtonStrip`, `AssertColumnClears`,
 `CreateFramedPanel`, the `Hud*`/`Suite*` color palette, `CreateGearCell`/`Icon`/`Text`, etc.) live
@@ -134,6 +135,7 @@ EditMode-testable):
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
 | `Equipment/` | `EquipmentSlot(s)`, `EquipmentLoadout` |
+| `Party/` | The Party screen's model, engine-free: `PartyFormation` (the 3-seat state machine — click-to-select-then-place, seats are mechanical since squad index 0 is the front rank, `PartyFormation.Drop` is the drag entry point a later package uses), `PartyMode` (Camp/Run/ViewOnly), `PartyOutcome`/`PartyToastKind` (what a command did, as data — display copy lives in `UiStrings`), `PartyCardState`/`PartySeatBadge`, `PartyRosterEntry` (id/name/`HasArt`, supplied by the caller — Domain cannot see `Resources`), `PartySeat` (Front/Middle/Rear constants), `PartySelectionSource` (Roster vs. a seat index) |
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |

@@ -211,7 +211,7 @@ namespace PrincesPalace.PlayModeTests
         // and these are the only things standing between that and a player.
 
         [UnityTest]
-        public IEnumerator BetweenRunsTheBarHasThreeTabs()
+        public IEnumerator BetweenRunsTheBarHasFourTabs()
         {
             yield return OpenTheHub();
 
@@ -223,11 +223,13 @@ namespace PrincesPalace.PlayModeTests
                 new[]
                 {
                     SystemMenuTabs.IndexOf(SystemMenuTab.CharacterInventory),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Party),
                     SystemMenuTabs.IndexOf(SystemMenuTab.Options),
                     SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu),
                 },
                 _menu.VisibleTabs.ToArray(),
-                "out of a run the bar should carry exactly the three tabs that have something to show");
+                "out of a run the bar should carry exactly the four tabs that have something to show " +
+                "(Party joined this set - it is meaningful at camp, see docs/handoffs/party_screen/DECISIONS.md)");
         }
 
         [UnityTest]
@@ -273,7 +275,7 @@ namespace PrincesPalace.PlayModeTests
             _menu.Open();
             yield return null;
 
-            Assert.AreEqual(3, _menu.VisibleTabs.Count,
+            Assert.AreEqual(4, _menu.VisibleTabs.Count,
                 "the hub showed the descent tabs; it has no descent to describe");
 
             foreach (var absent in new[] { SystemMenuTab.FloorMap, SystemMenuTab.RunStats })

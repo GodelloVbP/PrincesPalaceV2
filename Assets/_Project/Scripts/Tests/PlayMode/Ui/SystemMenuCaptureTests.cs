@@ -10,6 +10,7 @@ using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Party;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -315,6 +316,81 @@ namespace PrincesPalace.PlayModeTests
             hold.Cancel();
             RunManager.EndRun();
             SaveSlotManager.Forget();
+        }
+
+        // The Party pane, in three states.
+        //
+        // CONTENT-SHAPE NOTE: the handoff's second state names is "a bench
+        // card selected showing the Replace badges". characters.json authors
+        // exactly 3 characters against 3 seats, so nothing is ever benched
+        // today (see docs/handoffs/party_screen/DECISIONS.md's P3 section) --
+        // "Replace" only ever shows for a ROSTER-sourced selection, which
+        // needs a benched card to exist. The closest real state is a SEATED
+        // card selected, which shows the same badge mechanism ("Swap with
+        // X") on the other two positions. Substituted rather than faked.
+        [UnityTest]
+        public IEnumerator CaptureTheParty()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            // STATE 1: default camp, nothing selected.
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            menu.Open();
+            menu.Select(SystemMenuTab.Party);
+            yield return null;
+
+            var party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(party, "the Party tab has no PartyController");
+
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            Directory.CreateDirectory(OutputDir);
+            yield return Capture("SystemMenu_party_camp_default.png", canvas);
+
+            // STATE 2: a seated card selected -- every position it could swap
+            // with shows its live "Swap with {name}" badge and a gold ring.
+            party.ClickSeat(PartySeat.Front);
+            yield return null;
+            yield return Capture("SystemMenu_party_swap_preview.png", canvas);
+            party.Cancel();
+            yield return null;
+
+            // STATE 3: in a run -- reposition only, captured from the map so
+            // the five-tab bar and the in-run lintel are in shot with it.
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the map has no SystemMenuController");
+            menu.Open();
+            menu.Select(SystemMenuTab.Party);
+            yield return null;
+
+            canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            yield return Capture("SystemMenu_party_run_mode.png", canvas);
+        }
+
+        private static IEnumerator Capture(string fileName, Canvas canvas)
+        {
+            string path = Path.Combine(OutputDir, fileName);
+            CanvasCapture.RenderToFile(canvas, path);
+            Assert.IsTrue(File.Exists(path), $"no capture written to {path}");
+            Debug.Log($"[SystemMenuCapture] wrote {path}");
+            yield return null;
         }
 
         // One fight's worth of numbers, invented. A CombatLedger rather than

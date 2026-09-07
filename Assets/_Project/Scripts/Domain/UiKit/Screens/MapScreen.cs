@@ -166,7 +166,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private static Place OnContent(float x, float y) =>
             Place.Pin(ContentEdge, UiVec.Centre, new UiVec(x, y));
 
-        public static MapScreen Build()
+        // partyRosterCardCount threads straight through to SystemMenuScreen.
+        // Build -- see HubScreen.Build's identical parameter for why it
+        // defaults to 3 and who is meant to override it.
+        public static MapScreen Build(int partyRosterCardCount = 3)
         {
             var screen = new MapScreen();
 
@@ -271,7 +274,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // that made having it in the fight only half an answer.
             // The overarching menu, LAST in this scene's children so it draws
             // over everything it can be opened on top of.
-            var systemMenu = SystemMenuScreen.Build();
+            var systemMenu = SystemMenuScreen.Build(partyRosterCardCount);
             screen.SystemMenu = systemMenu;
 
             var shop = ShopScreen.Build();

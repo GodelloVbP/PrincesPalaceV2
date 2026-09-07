@@ -96,3 +96,55 @@ No controller, no domain model, no `ScreenRegistry` wiring. Those are later
 packages' jobs. This package only adds the declared tree
 (`PartyScreen.cs`/`PartyLayout.cs`), the `SystemMenuTab.Party` entry, its
 strings, and the tests that pin the tree's geometry and state coverage.
+
+## P3 (integration): decisions made while wiring the controller
+
+Recorded because the brief left them open, not because any of them override
+something already decided above.
+
+- **Role display text.** Nothing in the codebase turns `CharacterRole` into
+  words — the fight HUD's own class row was cut before this package
+  (`PartyScreen`'s `RoleText`/`PartyClassText` comment). `PartyController.
+  RoleDisplayName` is a small local switch (`CrowdControl` → "Crowd Control",
+  the rest unchanged) rather than `role.ToString()`. If a real role-display
+  convention shows up elsewhere later, this should move to wherever that
+  lives instead of staying a Party-local switch.
+- **The toast is a hard show/hide, not a fade.** The design's own copy says
+  "fades after ~2.4s", but the toast node carries no `CanvasGroup` and
+  nothing in `CODE_STANDARDS.md` SS2's reuse-first registry is a drop-in
+  "fade this out" primitive that doesn't already assume a battle-stage
+  component (`BeaconPulse`, `StageDeathFade`). Scoped down to show/hide on a
+  timer; a real fade is a small follow-up if the design still wants one.
+- **Seat/card art is bottom-aligned to the SLOT's floor, not to each actor's
+  FEET.** `FightController.StageVisuals.cs` grounds a stage figure against a
+  per-actor manifest offset (`StanceManifestLoader.Manifest.GroundLineFor`)
+  because delivered art does not put its own feet on its own canvas edge —
+  the golem's is 52px off, Shawn's 33px. `PartyController.AlignArtSlots`
+  does not read that manifest; it pins each sprite's own canvas bottom to
+  the slot's floor once, at wire time. That is a real gap: with more than
+  sheep/owl in play, two actors whose canvases carry different amounts of
+  headroom under their feet will NOT show their feet on the same line here,
+  even though they do on the fight stage. Worth revisiting if a screenshot
+  of a taller/shorter pair shows it — today's content (sheep, owl, and
+  placeholder_brawler wearing sheep's own sprite) cannot exercise the gap.
+- **`placeholder_brawler` resolves real art today.** `characters.json` points
+  its `battleSpritePath` at `Characters/sheep` (the same reuse-Shawn's-face
+  move already made for `portraitPath`), so with today's content every
+  roster card and every seat shows a sprite — the monogram fallback path is
+  real code (`PartyRosterEntry.HasArt`, `PartyController.ArtFor`/
+  `MonogramFor`) but currently unreachable through the game itself. Flagged
+  rather than special-cased: the moment any future character ships with no
+  `battleSpritePath`, the fallback is already live.
+- **Glow colours.** `PartyScreen`'s own `GlowNeutral` is `private`; the
+  occupied (green) and selected/valid-destination (gold) tokens the design
+  calls for aren't declared anywhere accessible to a controller, so
+  `PartyController` declares its own three hex constants read off the
+  handoff's own "Ground-glow accents" token table rather than adding public
+  surface to `PartyScreen` for two colours.
+- **No genuinely benched roster card exists to test today.** Seats and the
+  roster are both sized at 3, and `characters.json` authors exactly 3
+  characters, so every character is always seated in both Camp and Run —
+  `SystemMenuPartyTests` says this plainly rather than skipping the
+  "benched card is not selectable" case quietly; that state is covered at
+  the model level by `PartyFormationTests` instead, against a formation
+  built directly rather than through a save.
