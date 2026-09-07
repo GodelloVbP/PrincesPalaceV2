@@ -227,6 +227,76 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightHudSpec.InitiativeSlots, beat.TurnOrder.Count);
         }
 
+        // A whole round in one pass, which is the case the recorded order
+        // exists for and the one nothing pinned until now. The test above
+        // asserts a single beat carries A queue; this asserts that two beats of
+        // the same chain carry DIFFERENT ones, and that neither is the order
+        // the chain finished on.
+        //
+        // Without that, painting the tracker from live state during playback
+        // looks right in every one-beat fixture and is wrong in every real
+        // round: the monster is still mid-swing on screen while the row has
+        // already moved past its turn.
+        [Test]
+        public void EachBeatOfAChainCarriesTheQueueAsItStoodAtThatBeat()
+        {
+            // Matched speeds so the reply lands in the SAME pass as the swing
+            // that provoked it, a tough foe so the fight is not over before the
+            // queue means anything, and a feeble one so the hero survives being
+            // hit back.
+            var hero = Fighter("Hero", true, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 1000, attack: 1, speed: 10);
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
+            session.Begin();
+
+            Assert.IsTrue(session.IsPlayerTurn, "fixture check: the hero should hold turn one");
+
+            session.ExecuteAttack(foe);
+            var beats = session.DrainBeats();
+
+            Assert.AreEqual(2, beats.Count,
+                "fixture check: one swing and one reply, both resolved before any of it is drawn");
+
+            Assert.AreSame(hero, beats[0].Actor);
+            Assert.AreSame(hero, beats[0].TurnOrder[0],
+                "the beat's own actor holds slot 0 -- the queue is captured before the turn advances");
+
+            Assert.AreSame(foe, beats[1].Actor);
+            Assert.AreSame(foe, beats[1].TurnOrder[0],
+                "the monster's reply must show the monster acting, not whoever acts after it");
+
+            // AND NEITHER IS THE END OF THE ROUND, which is what a view reading
+            // live state would have painted on both of them.
+            var afterwards = session.Encounter.UpcomingTurns(FightHudSpec.InitiativeSlots);
+            Assert.AreSame(hero, afterwards[0], "fixture check: the turn came back to the hero");
+            Assert.AreNotSame(afterwards[0], beats[1].TurnOrder[0],
+                "the reply's recorded queue is a different moment from the one the chain ended on");
+        }
+
+        [Test]
+        public void ABeatsTurnOrderIsACopy_AndDoesNotFollowTheQueueOnwards()
+        {
+            // The same rule BeatFormation states for position: a beat holds a
+            // MATERIALISED order, never a live view or a deferred query, or
+            // every beat of a chain would report the same list -- whatever the
+            // queue held when the view first asked.
+            var hero = Fighter("Hero", true, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 1000, attack: 1, speed: 10);
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
+            session.Begin();
+
+            session.ExecuteAttack(foe);
+            var first = session.DrainBeats()[0];
+            var recorded = first.TurnOrder.ToList();
+
+            // Another full round, which really does advance the schedule.
+            session.ExecuteAttack(foe);
+            session.DrainBeats();
+
+            CollectionAssert.AreEqual(recorded, first.TurnOrder.ToList(),
+                "the first beat's queue moved when the schedule did");
+        }
+
         [Test]
         public void DrainingIsDestructive_SoNoBeatPlaysTwice()
         {

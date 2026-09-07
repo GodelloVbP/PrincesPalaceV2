@@ -133,5 +133,59 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, recorded, "the snapshot must not move when live state does");
             Assert.AreEqual(1, target.CurrentHealth);
         }
+
+        // --- QueueToShow ------------------------------------------------------
+        //
+        // The initiative tracker's recorded-or-live rule, which is the whole of
+        // what FightController.Hud decides before painting the row. Here rather
+        // than in Core because Core needs an engine to compile and this is a
+        // decision, not a picture -- the same split ImpactFraction sits on.
+
+        [Test]
+        public void QueueToShow_PaintsTheBeatsOwnQueueWhileOneIsPlaying()
+        {
+            var hero = Fighter("Hero", true);
+            var foe = Fighter("Foe", false);
+
+            // The order as the FOE's beat recorded it, against the order the
+            // round finished on. The row must show the first while that beat
+            // is being drawn -- otherwise the monster mid-swing has already
+            // dropped off the front of its own queue.
+            var recorded = new[] { foe, hero };
+            var live = new[] { hero, foe };
+
+            CollectionAssert.AreEqual(recorded, CombatBeat.QueueToShow(recorded, live));
+        }
+
+        [Test]
+        public void QueueToShow_FallsBackToLiveWhenNothingIsPlaying()
+        {
+            var hero = Fighter("Hero", true);
+            var foe = Fighter("Foe", false);
+            var live = new[] { hero, foe };
+
+            // The input phase: no beat, so live state IS the moment on screen.
+            CollectionAssert.AreEqual(live, CombatBeat.QueueToShow(null, live));
+        }
+
+        [Test]
+        public void QueueToShow_FallsBackToLiveForABeatThatRecordedNothing()
+        {
+            var hero = Fighter("Hero", true);
+            var live = new[] { hero };
+
+            // A beat committed with no encounter behind it (a fixture) or with
+            // the fight already decided. Blanking the row on that would read as
+            // a broken HUD; graceful degradation is the house style.
+            CollectionAssert.AreEqual(live,
+                CombatBeat.QueueToShow(new CombatantState[0], live));
+        }
+
+        [Test]
+        public void QueueToShow_WithNeitherIsEmptyRatherThanNull()
+        {
+            // The view indexes what comes back without checking it.
+            CollectionAssert.IsEmpty(CombatBeat.QueueToShow(null, null));
+        }
     }
 }

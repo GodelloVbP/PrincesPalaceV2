@@ -805,7 +805,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 float pad = FightStageAnchors.InitiativeRingPadding;
 
-                var ring = Ui.Sprite($"InitiativeRing{i}", null,
+                // The hairline ring every other emphasis ring in the game wears
+                // (talent orbs, reward-track pulse, dossier rift glow). It was
+                // declared with a NULL key from the port onward, and since
+                // nothing runtime-side ever assigns a ring sprite, ShowSprite
+                // could never switch it on -- the acting combatant was never
+                // ringed. The controller only decides WHICH slot shows it.
+                var ring = Ui.Sprite($"InitiativeRing{i}", "proc:ring_hairline",
                         Place.Stretch(-pad, -pad, -pad, -pad), UiSize.Fill)
                     .Inactive()
                     .AllowOverflow("the emphasis ring frames the icon from OUTSIDE it, which is what makes the acting combatant pop");

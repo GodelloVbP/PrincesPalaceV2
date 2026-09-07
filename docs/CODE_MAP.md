@@ -344,7 +344,7 @@ milliseconds rather than by loading a scene.
 | `VictoryRewards.cs` | the payout arithmetic (elite × depth), drop rolls, who earns what |
 | `FightHudSpec.cs` | HUD capacities both the tree and the session read |
 | `FightTuning.cs` | balance constants, out of the controller |
-| `CombatBeat.cs` (`Formation` records list ORDER — copied with `ToArray` at `CommitBeat`, not `BeginBeat`, because a `Move` writes the swap between the two — so the view, not `CombatEncounter.LivingRankOf`, decides who still occupies a rank; a formation of the living alone would compact the line the instant a kill lands, before the corpse's own death fade has started) / `Vitals.cs` / `VoiceLine.cs` / `CombatantKit.cs` | the engine-free beat vocabulary |
+| `CombatBeat.cs` (`TurnOrder` is READ by the view — `FightBeatPlayer.PaintTurnOrder` hands each beat's queue to `FightController.PaintTurnOrder`, and `CombatBeat.QueueToShow` states the recorded-or-live rule `RefreshInitiative` paints by; before that it was recorded and read by nothing but its own tests, so the tracker painted live `UpcomingTurns` through a playback whose round had already finished. `Formation` records list ORDER — copied with `ToArray` at `CommitBeat`, not `BeginBeat`, because a `Move` writes the swap between the two — so the view, not `CombatEncounter.LivingRankOf`, decides who still occupies a rank; a formation of the living alone would compact the line the instant a kill lands, before the corpse's own death fade has started) / `Vitals.cs` / `VoiceLine.cs` / `CombatantKit.cs` | the engine-free beat vocabulary |
 
 `Domain/Stage/FightStageAnchors.cs` holds the stage's pixel anchors, and
 **formally supersedes** `StageLayout`'s header note that anchors stay in
@@ -419,7 +419,7 @@ are plain logic; only the PAINTING needs Unity.
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else |
 | `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place |
-| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils |
+| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends |
 | `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |

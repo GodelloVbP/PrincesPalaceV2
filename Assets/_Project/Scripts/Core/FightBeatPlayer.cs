@@ -141,6 +141,18 @@ namespace PrincesPalace
         // view is told what to paint and never given the beat to interpret.
         internal Action<BeatFormation> PaintFormation;
 
+        // AND THE SAME FOR THE TURN QUEUE: which upcoming-turns list the
+        // initiative tracker should be drawing. Called at the top of each beat
+        // with what that beat recorded, and with null when playback ends.
+        //
+        // The third thing that has to be told the moment rather than allowed to
+        // read live state, and the last one still doing so: the chain resolves
+        // in one pass, so the row showed the order the ROUND finished on for
+        // every beat of it. Same shape as PaintFormation beside it -- payload,
+        // not the beat -- and driven from the same call sites, so there is one
+        // notion of "the beat being shown" rather than two that can drift.
+        internal Action<IReadOnlyList<CombatantState>> PaintTurnOrder;
+
         // Whether the stage is still walking figures to the marks that
         // formation implies. Playback waits it out before going on -- see the
         // call site.
@@ -259,8 +271,11 @@ namespace PrincesPalace
             StopVfx?.Invoke();
 
             // An abandoned round leaves the stage on live state, same rule as
-            // the normal completion path below and for the same reason.
+            // the normal completion path below and for the same reason. The
+            // tracker with it: a queue frozen on a beat that will now never
+            // finish playing would outlive the round it described.
             PaintFormation?.Invoke(null);
+            PaintTurnOrder?.Invoke(null);
 
             IsPlaying = false;
 
@@ -310,6 +325,14 @@ namespace PrincesPalace
                 // reason the vitals are -- a Move rewrites the party order in
                 // place, so live state is the order the ROUND finished on.
                 PaintFormation?.Invoke(beat.Formation);
+
+                // AND WHO IS UP NEXT AS OF THIS BEAT, from the same moment and
+                // for the same reason -- see PaintTurnOrder's own header. Sent
+                // here beside the formation rather than at the impact frame
+                // because the queue describes the beat as a whole rather than
+                // any instant inside it: whoever held the turn when it resolved
+                // holds slot 0 for as long as the beat is drawn.
+                PaintTurnOrder?.Invoke(beat.TurnOrder);
 
                 // AND THE FIGURES HAVE TO ARRIVE BEFORE THE BEAT GOES ON.
                 //
@@ -545,8 +568,13 @@ namespace PrincesPalace
             // round finished on is now the order on screen -- and the stage
             // must not go on drawing the last beat's copy of it, or a Move
             // made on the final beat of a round would be undone the moment
-            // anything repainted from live data.
+            // anything repainted from live data. The queue goes back with it,
+            // and unlike the formation it visibly MOVES when it does: the last
+            // beat of a round is the last enemy's, so slot 0 holds that
+            // monster until this line hands the row back to whoever the
+            // schedule says acts next. That step is the point of the tracker.
             PaintFormation?.Invoke(null);
+            PaintTurnOrder?.Invoke(null);
 
             var finished = _onFinished;
             _onFinished = null;

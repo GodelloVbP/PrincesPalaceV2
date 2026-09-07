@@ -1661,13 +1661,41 @@ namespace PrincesPalace
         // chip already has a graphic to tint for that.
         private static readonly Color InitiativeGhost = Hex(FightHudPalette.TargetAmber);
 
+        // WHICH MOMENT THE TRACKER IS DRAWING: the turn queue a beat recorded,
+        // or null for "whatever is live". PaintFormation's twin for the row of
+        // chips, set from the same place in playback and cleared at the same
+        // one -- see FightBeatPlayer.PaintTurnOrder.
+        //
+        // THE BUG IT EXISTS FOR. A whole round -- the player's action and every
+        // enemy reply -- resolves in one synchronous pass before a single beat
+        // is drawn, and RefreshInitiative read Encounter.UpcomingTurns. So the
+        // row showed the order the ROUND ENDED on from the moment the player
+        // clicked: the monster that was about to swing had already dropped off
+        // the front of the queue while its swing was still animating, and NOW
+        // pointed at whoever acts after all of it. FightSession has recorded
+        // the per-beat order since the beats existed (CombatBeat.TurnOrder) and
+        // nothing outside its own tests had ever read it.
+        private IReadOnlyList<CombatantState> _playingTurnOrder;
+
+        internal void PaintTurnOrder(IReadOnlyList<CombatantState> turnOrder)
+        {
+            _playingTurnOrder = turnOrder;
+            RefreshInitiative();
+        }
+
         private void RefreshInitiative()
         {
             if (initiativeIcons == null || _session == null) return;
 
-            var upcoming = _session.IsOver
+            var live = _session.IsOver
                 ? new List<CombatantState>()
                 : new List<CombatantState>(_session.Encounter.UpcomingTurns(initiativeIcons.Length));
+
+            // The beat being played owns the row while one is; live state owns
+            // it the rest of the time. CombatBeat.QueueToShow states the whole
+            // of that rule, including what a beat that recorded nothing falls
+            // back to.
+            var upcoming = new List<CombatantState>(CombatBeat.QueueToShow(_playingTurnOrder, live));
 
             // THE GHOST PREVIEW. Only while a push-flagged skill is both
             // selected (Target depth) AND a specific enemy plate is under the
@@ -1676,9 +1704,17 @@ namespace PrincesPalace
             // no target to preview a push against before one plate is
             // actually being pointed at. Nothing here commits anything: the
             // real queue is untouched, see TurnOrder.ProjectWith's own header.
+            //
+            // AND ONLY OVER THE LIVE QUEUE. A projection is a question about
+            // what the player is ABOUT to do, so it has no meaning painted on
+            // top of a beat that already happened -- and UpcomingTurnsPushed
+            // answers from live state, which during playback is a different
+            // round from the one on screen. _menu.IsTargeting is already false
+            // through playback (AfterResolution resets the menu), so this is
+            // the second lock on the same door rather than the only one.
             var previewed = upcoming;
             int pushSlots = SelectedSkillPushSlots();
-            if (pushSlots > 0 && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
+            if (pushSlots > 0 && _playingTurnOrder == null && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
             {
                 var enemies = Enemies;
                 if (_hoveredEnemyIndex < enemies.Count && enemies[_hoveredEnemyIndex].IsAlive)
@@ -1692,17 +1728,59 @@ namespace PrincesPalace
             {
                 bool filled = i < previewed.Count;
 
-                // Both of these are built with a NULL sprite and no portrait art
-                // exists yet, so neither may simply be switched on -- see
-                // ShowSprite. The letter below is what actually identifies the
-                // combatant today.
+                // THE LINE THE v2 PORT DROPPED. v1's tracker read as "who is
+                // next" because every chip carried that combatant's own idle
+                // pose -- v1 FightController.Hud.cs RefreshInitiativeTracker,
+                // `icon.sprite = LoadStanceSprite(combatant, StanceIdle)`,
+                // under a comment saying exactly that. v2 declared the Image
+                // with a null sprite key (FightScreen.BuildInitiativeTracker)
+                // and then never assigned one anywhere, and ShowSprite refuses
+                // to switch on an Image with nothing to draw -- so no chip has
+                // ever been visible in this tree, and the whole tracker
+                // rendered as a row of bare capital letters.
+                //
+                // Read through StanceSpriteFor, the same lookup the enemy
+                // plates already use one method up, so a chip and a plate
+                // cannot start disagreeing about what a monster looks like.
+                //
+                // ASSIGNED EVEN WHEN NULL: a slot that showed real art last
+                // repaint and resolves to nothing this one must drop the stale
+                // drawing, or ShowSprite would happily keep painting the wrong
+                // combatant.
+                //
+                // NEVER MIRRORED, deliberately -- the queue is a reading aid,
+                // and a row where half the figures face left is harder to scan
+                // than one where they all face the same way. v1 made the same
+                // call in the same place.
+                var art = filled ? StanceSpriteFor(previewed[i], FightSession.Stances.Idle) : null;
+                if (initiativeIcons[i] != null)
+                {
+                    initiativeIcons[i].sprite = art;
+                    if (art != null)
+                    {
+                        initiativeIcons[i].preserveAspect = true;
+
+                        // The chip sits over the top-left corner of the stage
+                        // and explains it; it must never eat a click meant for
+                        // what is behind it. Same reason the spell VFX images
+                        // are cleared in ScreenRegistry.
+                        initiativeIcons[i].raycastTarget = false;
+                    }
+                }
+
+                // The ring's art is baked by the tree (proc:ring_hairline,
+                // FightScreen.BuildInitiativeTracker); this only decides which
+                // slot shows it.
                 ShowSprite(initiativeIcons[i], filled);
                 ShowSprite(initiativeRings[i], filled && i == 0);
 
-                // The initial, as the fallback for a combatant with no portrait
-                // art. Written even when an icon exists, because the icon is
-                // Resources-loaded and may legitimately not be there yet.
-                initiativeLabels[i].SetContent(filled && previewed[i].Name.Length > 0
+                // The initial, and ONLY as the fallback its own comment always
+                // said it was. It is layered over the middle of the chip, so
+                // now that a chip can actually carry art, writing the letter
+                // unconditionally would stamp a capital over every portrait.
+                // A combatant whose idle art is missing still gets one, which
+                // is the case it was added for.
+                initiativeLabels[i].SetContent(filled && art == null && previewed[i].Name.Length > 0
                     ? previewed[i].Name.Substring(0, 1).ToUpperInvariant()
                     : "");
 
