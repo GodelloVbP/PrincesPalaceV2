@@ -80,6 +80,42 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, wallet.Get(CurrencyType.Gold));
         }
 
+        // THE OTHER END OF THE SAME CLAMP. Set already refuses to go below
+        // zero; without a ceiling, Add wrapped past int.MaxValue into a
+        // negative and Set then clamped THAT to zero -- a purse that empties
+        // itself on the transaction that should have filled it. Every other
+        // curve in this codebase that compounds off a save carries an
+        // explicit ceiling for exactly this reason (DifficultyCurve's
+        // MaxScaledValue, LevelCurve's MaxCost); the wallet is where the
+        // money actually accumulates and had none.
+        [Test]
+        public void Add_SaturatesRatherThanWrappingPastTheCeiling()
+        {
+            var wallet = new Wallet();
+            wallet.Set(CurrencyType.Gold, int.MaxValue - 10);
+
+            wallet.Add(CurrencyType.Gold, 100);
+
+            Assert.AreEqual(int.MaxValue, wallet.Get(CurrencyType.Gold),
+                "An award that overflows must cap the purse, never empty it");
+        }
+
+        [Test]
+        public void BankFrom_SaturatesRatherThanWrappingPastTheCeiling()
+        {
+            var save = new Wallet();
+            save.Set(CurrencyType.Gold, int.MaxValue - 10);
+
+            var run = new Wallet();
+            run.Add(CurrencyType.Gold, 500);
+
+            int banked = save.BankFrom(run, CurrencyType.Gold, CurrencyType.Gold);
+
+            Assert.AreEqual(500, banked, "The run still hands over everything it had");
+            Assert.AreEqual(int.MaxValue, save.Get(CurrencyType.Gold));
+            Assert.AreEqual(0, run.Get(CurrencyType.Gold));
+        }
+
         [Test]
         public void Set_ClampsAtZero()
         {

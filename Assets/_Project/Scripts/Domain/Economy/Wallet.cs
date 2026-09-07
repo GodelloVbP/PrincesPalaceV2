@@ -52,6 +52,20 @@ namespace PrincesPalace.Domain.Economy
         // Negative and zero amounts are ignored rather than silently
         // subtracting: an "award" that takes money away is a caller bug, and
         // routing it through Add would hide it.
+        //
+        // SUMMED IN long AND SATURATED, which is the other end of Set's own
+        // clamp. `Get(type) + amount` in int wraps NEGATIVE past the ceiling,
+        // and Set then clamps that to zero -- so the transaction that should
+        // have filled the purse emptied it instead, silently, with no
+        // exception and nothing in the log. Not a hypothetical at the depths
+        // this game reaches: DifficultyCurve.ScaleReward rides the health
+        // curve, so a step-200 fight pays roughly two million times a step-0
+        // one (capped per payout at MaxScaledValue, a billion), and the
+        // endless descent has no floor that stops a long run getting there.
+        // Every other curve that compounds off a save carries an explicit
+        // ceiling for this reason -- DifficultyCurve's MaxScaledValue,
+        // LevelCurve's MaxCost. The wallet is where it actually accumulates
+        // and had none.
         public void Add(CurrencyType type, int amount)
         {
             if (amount <= 0)
@@ -59,7 +73,8 @@ namespace PrincesPalace.Domain.Economy
                 return;
             }
 
-            Set(type, Get(type) + amount);
+            long total = (long)Get(type) + amount;
+            Set(type, total > int.MaxValue ? int.MaxValue : (int)total);
         }
 
         public bool CanAfford(CurrencyType type, int amount)
