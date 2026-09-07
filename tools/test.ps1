@@ -80,7 +80,7 @@ param(
 #                                    does the gate still refuse what it claims
 #                                    to? Points discovery at
 #                                    tools/test_areas_fixture -- a tree broken
-#                                    six ways on purpose, outside Assets/ so
+#                                    eight ways on purpose, outside Assets/ so
 #                                    Unity never compiles it -- and asserts
 #                                    each refusal fires. Prints SELF-CHECK: ok
 #                                    or names every miss, and exits non-zero.
@@ -146,6 +146,10 @@ function Invoke-SelfCheck {
     $expectations = @(
         @{ Name = "[TestCase]-only fixture is discovered"
            Ok   = { $Index.ContainsKey("TestCaseOnlyFixtureTests") } }
+        @{ Name = "a .cs file directly in a platform folder, in no area, is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'EditMode/LooseFixtureTests\.cs is not in an area folder' }).Count -eq 1 } }
+        @{ Name = "a ninth folder beside the eight is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'PlayMode/Rogue/ is not an area folder' }).Count -eq 1 } }
         @{ Name = "a folder nested in an area folder is refused"
            Ok   = { ($structural | Where-Object { $_ -match 'Run/Nested/ is nested inside an area folder' }).Count -eq 1 } }
         @{ Name = "a .cs file two folders deep is refused"
@@ -170,8 +174,8 @@ function Invoke-SelfCheck {
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalOnlyFixtureTests is declared here' }).Count -eq 1 } }
         @{ Name = "the public fixture beside it is NOT a blind spot"
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalFixtureTests is' }).Count -eq 0 } }
-        @{ Name = "nothing else is refused (6 structural, 1 duplicate, 1 blind spot)"
-           Ok   = { $structural.Count -eq 6 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
+        @{ Name = "nothing else is refused (8 structural, 1 duplicate, 1 blind spot)"
+           Ok   = { $structural.Count -eq 8 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
     )
 
     $misses = @()
