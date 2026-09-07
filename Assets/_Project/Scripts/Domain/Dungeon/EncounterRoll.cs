@@ -119,6 +119,29 @@ namespace PrincesPalace.Domain.Dungeon
                 }
             }
 
+            // A BOSS ROOM NEEDS ITS OWN FALLBACK, because the one above only
+            // fires when NOTHING at all is in band. A leg ends on a forced
+            // boss room every eight steps, floor 1 included, so a content set
+            // whose shallowest BOSS starts deeper than its shallowest regular
+            // -- one edit to a minFloor -- left the boss node falling through
+            // to the ordinary draw below: rats on the boss room, Result.IsBoss
+            // false, so RarityTable pays Normal instead of honouring the
+            // absolute tier-3 boss floor, RecordBossKill credits nothing, and
+            // the Ember that boss owed never drops. Every part of that is
+            // silent.
+            //
+            // Out of band beats absent, same trade the band fallback above
+            // makes: a boss the player meets early is a hard fight, and the
+            // difficulty curve scales it to the depth anyway.
+            if (roomType == RoomType.Boss && bosses.Count == 0)
+            {
+                foreach (var candidate in pool)
+                {
+                    if (string.IsNullOrEmpty(candidate.Id) || !candidate.IsBoss) continue;
+                    bosses.Add(candidate);
+                }
+            }
+
             if (roomType == RoomType.Boss && bosses.Count > 0)
             {
                 return new Result(new List<string> { ResolveBoss(bosses, rng, declaredBossId) },

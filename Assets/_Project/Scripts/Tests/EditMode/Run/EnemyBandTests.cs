@@ -84,6 +84,34 @@ namespace PrincesPalace.Domain.Tests
                 "nothing was in band and the room fielded nobody at all");
         }
 
+        // THE BAND FALLBACK HAS TO COVER THE BOSS ROOM ON ITS OWN.
+        //
+        // The existing fallback fires only when NOTHING is in band. A boss
+        // room whose bosses are all too deep but whose regulars are not
+        // slipped past it and fell through to the ordinary draw: rats on the
+        // boss node, Result.IsBoss false, so RarityTable pays Normal rather
+        // than the absolute tier-3 boss floor, RecordBossKill credits
+        // nothing, and no Ember drops. Silent, and a leg ends on a forced
+        // boss room every eight steps -- floor 1 included -- so raising a
+        // boss's minFloor is all it takes.
+        [Test]
+        public void ABossRoomWithNoBossInBandStillFieldsABoss()
+        {
+            // Rat is in band at floor 1; both bosses are not.
+            var bossesTooDeep = new List<EnemyCandidate>
+            {
+                Rat,
+                new EnemyCandidate("hollow_choir", isBoss: true, minFloor: 4),
+                Colossus,
+            };
+
+            var roll = EncounterRoll.Roll(RoomType.Boss, bossesTooDeep, new SeededRandom(11),
+                declaredBossId: null, floor: 1);
+
+            Assert.IsTrue(roll.IsBoss, "a boss room that fields no boss pays out as an ordinary fight");
+            CollectionAssert.Contains(new[] { "hollow_choir", "throne_colossus" }, roll.EnemyIds.Single());
+        }
+
         // A leg is eight rooms, and legStartStep moves by exactly that.
         [Test]
         public void FloorFollowsTheLegBoundary()
