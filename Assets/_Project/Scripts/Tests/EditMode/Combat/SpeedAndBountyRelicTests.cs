@@ -124,6 +124,58 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, hero.Speed, "the pipe's speed survived past its own next turn");
         }
 
+        // A SECOND GRANT REFRESHES THE CLOCK, IT DOES NOT DOUBLE THE SPEED --
+        // the promise GrantSpeedPercent's own header makes ("REFRESHED, NOT
+        // STACKED, when it is a timed buff") and the one the Tin-Foil Pipe's
+        // call site cites by name instead of restating.
+        //
+        // REACHABLE, not theoretical: Fleece Ward T3 hands out a free action,
+        // so a second cast can land inside the same turn as the first -- and
+        // a turns: 1 buff is only revoked at the NEXT turn start, which has
+        // not happened yet. Two casts, one turn, and the old code added a
+        // second full 20% on top of the first.
+        //
+        // Both halves are asserted because they can fail apart: Speed is what
+        // the fight actually runs on, Granted is what RevokeSpeedBuff will
+        // later hand back, and a fix that corrected one while leaving the
+        // other would leave the combatant permanently fast (or permanently
+        // slow) the turn the buff expires.
+        [Test]
+        public void ASecondPipeGrantInTheSameTurnRefreshesRatherThanStacking()
+        {
+            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+
+            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
+                FightTuning.PipePercent, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
+                FightTuning.PipePercent, FightTuning.PipeTurns);
+
+            Assert.AreEqual(24, hero.Speed,
+                "20 base + one 20% grant = 24; the second cast refreshed the clock, it did not stack the speed");
+            Assert.AreEqual(4, session.SpeedBonusFrom(hero, RelicEffect.TinFoilPipe),
+                "the pipe should be recorded as owing back one grant, not two");
+        }
+
+        // AND THE REFRESH LEAVES NOTHING BEHIND. The half a stacking bug hides
+        // in is the expiry: a doubled Granted that is only half revoked (or a
+        // Speed that never came back down) is drift nobody sees until a long
+        // fight ends with the wearer permanently quick.
+        [Test]
+        public void APipeRefreshedTwiceStillFadesAllTheWayBack()
+        {
+            var (session, hero, _) = Fight(RelicEffect.TinFoilPipe, heroSpeed: 20);
+
+            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
+                FightTuning.PipePercent, FightTuning.PipeTurns);
+            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe,
+                FightTuning.PipePercent, FightTuning.PipeTurns);
+
+            session.TickSpeedBuffsForTest(hero);
+
+            Assert.AreEqual(20, hero.Speed, "a refreshed pipe left speed behind when it expired");
+            Assert.AreEqual(0, session.SpeedBonusFrom(hero, RelicEffect.TinFoilPipe));
+        }
+
         // THE WIRING, not just the arithmetic: casting with the Pipe equipped
         // has to actually reach GrantSpeedPercent. Checked through the full
         // API for the one thing that IS observable there -- SpeedBonusFrom
