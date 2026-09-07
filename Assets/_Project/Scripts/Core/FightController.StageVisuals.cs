@@ -110,18 +110,14 @@ namespace PrincesPalace
             return false;
         }
 
-        // The order a side stood in for the moment being drawn.
-        //
-        // Falls back to live state for an empty recorded formation rather than
-        // blanking the stage -- a beat built by a fixture with no encounter
-        // behind it carries BeatFormation.Empty, and graceful degradation on
-        // missing content is the house style.
+        // The order a side stood in for the moment being drawn. The
+        // recorded-or-live rule, including what an empty recording falls back
+        // to and why, lives in CombatBeat.QueueToShow.
         private IReadOnlyList<CombatantState> OrderOf(bool playerSide)
         {
-            var recorded = _playingFormation?.SideOf(playerSide);
-            if (recorded != null && recorded.Count > 0) return recorded;
-
-            return playerSide ? _session.Encounter.PlayerParty : _session.Encounter.Enemies;
+            return CombatBeat.QueueToShow(
+                _playingFormation?.SideOf(playerSide),
+                playerSide ? _session.Encounter.PlayerParty : _session.Encounter.Enemies);
         }
 
         // WHETHER THIS FIGURE IS STILL ON ITS FEET, as far as the stage knows.

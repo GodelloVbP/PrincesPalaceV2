@@ -69,7 +69,8 @@ namespace PrincesPalace.Domain.UiKit
         // column above and below it, and everything measured from
         // ColumnATop/ColumnABottom moves in with it. What actually absorbs
         // the 165px is the portrait, per PortraitHeight's own note.
-        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 598.67, was 763.61
+        public static float ColumnAFrameHeight =>
+            Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, ColumnAWidth).Y;   // 598.67, was 763.61
         public const float ColumnCWidth = 480f;
 
         public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 671

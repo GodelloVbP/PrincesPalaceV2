@@ -149,7 +149,10 @@ namespace PrincesPalace.Domain.UiKit
         // -- so a future row insertion (or a font-size change moving a box's
         // own height) cannot silently reopen either defect the way two
         // independently-authored constants could.
-        public const float PanelPathY = 422f;   // was 430, follows PanelHeaderY down
+        // 42 under the header: half the header row (22) + the 3px gap + half
+        // the path row (17). Derived off PanelHeaderY so moving the header
+        // takes the path with it instead of reopening that gap by hand.
+        public const float PanelPathY = PanelHeaderY - 42f;
         private const float PanelHeaderHeight = 44f;
         private const float PanelPathHeight = 34f;
         private const float PanelKickerHeight = 22f;

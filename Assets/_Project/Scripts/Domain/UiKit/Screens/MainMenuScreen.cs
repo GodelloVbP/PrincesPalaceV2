@@ -268,8 +268,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // kit's 3:2 aspect -- past the 5% band Ui.Container refuses --
             // and was nudged to 834x560 to hit the spliced delivery's
             // measured 1.49. The 2026-09-07 repin puts the art at a true 1.5,
-            // so this goes to 840x560 (exactly 1.5) rather than being left
-            // 0.7% off. Width still moves and height still does not: nothing
+            // so the width is asked of the kit instead of authored -- 840x560,
+            // exactly 1.5, rather than being left 0.7% off. Height is the
+            // fixed side and width follows it: nothing
             // is declared INSIDE this rect (the title/menu column are
             // separate siblings positioned independently, not children of
             // it), so there is nothing to re-fit either way.
@@ -278,7 +279,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // flat scrim did -- an opaque background the title is allowed to
             // sit on top of without an overlap exemption.
             var scrim = Ui.Container("TextScrim", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
-                    Place.At(LeftEdgeX + 380f, 60f), new UiVec(840f, 560f))
+                    Place.At(LeftEdgeX + 380f, 60f),
+                    Ui.ContainerSizeForHeight(ContainerRatio.ThreeByTwo, 560f))
                 .AsDecor();
 
             // --- the menu itself ---------------------------------------------

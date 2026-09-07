@@ -95,12 +95,15 @@ namespace PrincesPalace.Domain.UiKit
         {
             switch (shape)
             {
-                case ButtonPlateShape.ThreeByOne:
-                    return new ContentInsetFrac(left: 0.0034f, right: 0.0033f, top: 0.0101f, bottom: 0.0098f);
                 case ButtonPlateShape.FiveByOne:
                     return new ContentInsetFrac(left: 0.0020f, right: 0.0019f, top: 0.0093f, bottom: 0.0098f);
                 case ButtonPlateShape.Row6x1:
                     return new ContentInsetFrac(left: 0.0020f, right: 0.0020f, top: 0.0117f, bottom: 0.0117f);
+
+                // ThreeByOne shares Legacy's literal because it shares
+                // Legacy's file: the two PNGs are byte-identical for all six
+                // themes since the 2026-09-07 regeneration.
+                case ButtonPlateShape.ThreeByOne:
                 default:
                     return new ContentInsetFrac(left: 0.0034f, right: 0.0033f, top: 0.0101f, bottom: 0.0098f);
             }

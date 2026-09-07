@@ -321,6 +321,14 @@ namespace PrincesPalace.Domain.UiKit
         public static ContentInsetFrac PlateVisiblePad(ButtonPlateShape shape) =>
             ButtonPlateArt.VisiblePad(shape);
 
+        // The plate's measured width/height. Containers already expose theirs
+        // through ContainerSizeForHeight; plates have no size helper because
+        // no caller sizes a button from its art, so the aspect is forwarded
+        // directly -- UiKitAspectPinTests needs it to check the literal
+        // against the PNG on disk, and ButtonPlateArt is internal to this
+        // assembly.
+        public static float PlateAspect(ButtonPlateShape shape) => ButtonPlateArt.Aspect(shape);
+
         // Where a rect's CENTRE has to sit so that its VISIBLE bottom edge
         // (rect bottom + height * the art's own bottom VisiblePad fraction)
         // lands exactly on `visibleBottomLine`. One line, but it is the one

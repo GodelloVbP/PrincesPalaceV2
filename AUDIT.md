@@ -684,33 +684,55 @@ or compares it.
 
 ### 80. The six-theme container kit's LEFT pad is asymmetric on two ratios
 
-`Assets/_Project/Scripts/Tests/EditMode/Ui/UiKitVisiblePadTests.cs:41` --
-`KnownLeftAsymmetryBandPx = 4f` -- and lines 83-95, where the ThreeByFour and
-NineBySixteen `Container` groups both carry `LeftEdgeKnownAsymmetric = true`.
-`tools/measure_ui_kit.py`'s per-edge scan found silver and violet spliced
-with 3-4px less left padding than the other four themes on exactly these two
-ratios (confirmed on raw alpha, not a threshold artifact — the column jumps
-0→255 at a different column per theme); every other edge of both groups, and
-every edge of the other eight ratio groups, agrees within 1px. The test
-widens its own tolerance on this one known edge rather than asserting a
-wrong number; nothing in the emitted screens currently depends on the
-disagreeing edge, but the asymmetry itself is unfixed art, flagged for
-whoever next touches the container kit's silver/violet 3x4 and 9x16 sheets.
+`Assets/_Project/Scripts/Tests/EditMode/Ui/UiKitVisiblePadTests.cs:47` --
+`KnownLeftAsymmetryBandPx = 7f` -- and lines 103, 111, where the ThreeByFour
+and NineBySixteen `Container` groups both carry
+`LeftEdgeKnownAsymmetric = true`. `tools/measure_ui_kit.py`'s per-edge scan
+finds silver and violet spliced with less left padding than the other four
+themes on exactly these two ratios (confirmed on raw alpha, not a threshold
+artifact — the column jumps 0→255 at a different column per theme).
+
+**The 2026-09-07 regeneration made it worse, not better.** The spread was
+3-4px against the delivery this finding was first written for; it is now
+**7-9px on `container_*_3x4` and 4-5px on `container_*_9x16`**, and the band
+had to go from 4px to 7px to keep the test honest about what the art
+actually is. The same regeneration added a second, smaller exemption:
+`KnownTopAsymmetryBandPx = 2f` (line 56) covers two groups' TOP edge —
+`banner_flag_*_3x4` (crimson and gold start 2px lower than the other four)
+and `container_*_3x4` (blue starts 2px lower than crimson) — where 1px no
+longer holds.
+
+`tools/splice_ui_kit.py` has **no per-theme offset knob** to fix this with:
+it finds six connected non-transparent blobs on the source sheet and crops
+each one tight (`splice_ui_kit.py:8`, and the crop at :297), so a theme
+whose painted border starts further out on the source sheet carries that
+straight through to `Processed/`. The fix is in the source sheets, not in
+the slicer. Every other edge of both groups, and every edge of the other
+eight ratio groups, still agrees within 1px. Nothing in the emitted screens
+currently depends on a disagreeing edge; the asymmetry itself is unfixed
+art, flagged for whoever next touches the container kit's silver/violet 3x4
+and 9x16 sheets.
 
 ### 81. The Skill submenu frame is locked to the container kit's 3x4 aspect, with 9-slice off
 
-`FightSubmenuLayout.FrameHeight` (`Domain/UiKit/FightSubmenuLayout.cs:196-198`)
-derives the frame's height from `ContainerRatio.ThreeByFour` at the frame's
-own width via `Ui.ContainerSizeForWidth`, so the frame can only ever be as
-tall as a 3:4 container scales to at that width. `UiEmitter.cs:353-357`
+`FightSubmenuLayout.FrameHeight` (`Domain/UiKit/FightSubmenuLayout.cs:208-209`)
+is **height-bound**: it grows the 500-tall inner box out by the 3:4
+container's own top/bottom content insets (`ContainerHeight / (1 -
+FrameInset.Top - FrameInset.Bottom)`), and `FrameWidth` (:211-212) then
+follows from that height through `Ui.ContainerSizeForHeight(ThreeByFour,
+FrameHeight)`. Height leads, width is whatever 3:4 makes of it — so the
+frame's width is the free variable and the ratio is still the thing that
+cannot be chosen. `UiEmitter.cs:353-357`
 renders every container sprite `Image.Type.Simple`, not `Sliced` --
 deliberately, per its own comment ("v1 shipped an invisible button on every
 screen through Sliced and never found a fix") -- so there is no 9-slice
 available to decouple the frame's height from its width even if a taller
-ratio were picked. The skill list wants more vertical room than 3:4 gives it
-at the submenu's width; the fix needs a ~4:5 container variant added at the
-next kit regeneration (or working 9-slice, which is the larger, unscheduled
-fix), not a `FrameHeight` rewrite against the ratios the kit currently ships.
+ratio were picked. Height-bound, the cost lands on width instead: 3:4 makes
+the 500-tall frame ~420 wide around a 316-wide inner box, ~23px of slack a
+side (see `FrameWidth`'s own comment). A ~4:5 container variant added at the
+next kit regeneration would take that back; working 9-slice would too and is
+the larger, unscheduled fix. Neither is a `FrameHeight` rewrite against the
+ratios the kit currently ships.
 
 ### 82. `ProtectTheFrontPolicy` loses to both greedy archetypes, not just fails to beat them
 

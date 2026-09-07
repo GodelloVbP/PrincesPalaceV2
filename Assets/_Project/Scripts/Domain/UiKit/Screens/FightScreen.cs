@@ -821,7 +821,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // a fight that has not started drew six white squares across the
                 // top-left corner -- caught by looking at the screenshot, which
                 // no audit would have flagged because the box is the right size.
-                var icon = Ui.Sprite($"InitiativeIcon{i}", null, Place.Stretch(), UiSize.Fill).Inactive();
+                //
+                // PreserveAspect fits a portrait inside the square chip
+                // instead of stretching it, and AsDecor keeps the chip from
+                // eating a click meant for the stage behind it. Both are the
+                // slot's shape, not something the round changes, so they
+                // belong here where UiAudit can see them rather than being
+                // re-set on every repaint from RefreshInitiative.
+                var icon = Ui.Sprite($"InitiativeIcon{i}", null, Place.Stretch(), UiSize.Fill)
+                    .Inactive()
+                    .AsDecor();
+                icon.PreserveAspect = true;
 
                 var label = Ui.Label($"InitiativeLabel{i}", UiString.Runtime,
                         new UiVec(FightStageAnchors.InitiativeIconSize, 24f), 14,

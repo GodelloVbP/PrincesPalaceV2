@@ -94,10 +94,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ExactlyAtAShapesOwnAspect_PicksThatShape()
         {
-            // 3.0 resolves to Legacy rather than ThreeByOne -- see
-            // LegacyAndThreeByOne_TieAt3_0_AndLegacyWins for why that is the
-            // pin rather than an accident.
-            Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(300f, 100f));
+            // 3.0 is pinned by LegacyAndThreeByOne_TieAt3_0_AndLegacyWins,
+            // which owns that case and says why Legacy is the answer.
             Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(500f, 100f));
             Assert.AreEqual(ButtonPlateShape.Row6x1, Ui.PlateShapeFor(600f, 100f));
         }

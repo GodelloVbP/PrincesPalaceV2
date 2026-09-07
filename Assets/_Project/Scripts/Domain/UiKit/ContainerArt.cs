@@ -196,8 +196,11 @@ namespace PrincesPalace.Domain.UiKit
             // unreferenced. Insets are the plain raw*1.25: there is no caller
             // to tune them against, and unlike 3x2/2x1 no prior pin to
             // preserve. The frame is a 5-9px hairline on a 1530px bar.
+            // Per side, raw*1.25 to three decimals: L .0052 -> 0.007,
+            // R .0065 -> 0.008, T .0261 -> 0.033, B .0327 -> 0.041. Left and
+            // right were both authored 0.009, which is neither side's number.
             [(ContainerKind.Container, ContainerRatio.FiveByOne)] = new ContainerSpec(
-                ContainerAspect5x1, new ContentInsetFrac(left: 0.009f, right: 0.009f, top: 0.033f, bottom: 0.041f),
+                ContainerAspect5x1, new ContentInsetFrac(left: 0.007f, right: 0.008f, top: 0.033f, bottom: 0.041f),
                 new ContentInsetFrac(left: 0.0013f, right: 0.0013f, top: 0.0065f, bottom: 0.0065f), "5x1"),
             [(ContainerKind.FlagBanner, ContainerRatio.ThreeByFour)] = new ContainerSpec(
                 BannerAspect3x4, new ContentInsetFrac(left: 0.072f, right: 0.072f, top: 0.052f, bottom: 0.185f),

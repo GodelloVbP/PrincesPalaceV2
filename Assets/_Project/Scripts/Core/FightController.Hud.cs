@@ -1695,7 +1695,7 @@ namespace PrincesPalace
             // it the rest of the time. CombatBeat.QueueToShow states the whole
             // of that rule, including what a beat that recorded nothing falls
             // back to.
-            var upcoming = new List<CombatantState>(CombatBeat.QueueToShow(_playingTurnOrder, live));
+            IReadOnlyList<CombatantState> upcoming = CombatBeat.QueueToShow(_playingTurnOrder, live);
 
             // THE GHOST PREVIEW. Only while a push-flagged skill is both
             // selected (Target depth) AND a specific enemy plate is under the
@@ -1709,12 +1709,13 @@ namespace PrincesPalace
             // what the player is ABOUT to do, so it has no meaning painted on
             // top of a beat that already happened -- and UpcomingTurnsPushed
             // answers from live state, which during playback is a different
-            // round from the one on screen. _menu.IsTargeting is already false
-            // through playback (AfterResolution resets the menu), so this is
-            // the second lock on the same door rather than the only one.
+            // round from the one on screen. IsTargeting alone covers that:
+            // targeting is only entered through OnRowPressed, which CanAct
+            // gates on !_isBusy, and _isBusy is true for the whole playback
+            // window.
             var previewed = upcoming;
             int pushSlots = SelectedSkillPushSlots();
-            if (pushSlots > 0 && _playingTurnOrder == null && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
+            if (pushSlots > 0 && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
             {
                 var enemies = Enemies;
                 if (_hoveredEnemyIndex < enemies.Count && enemies[_hoveredEnemyIndex].IsAlive)
@@ -1752,21 +1753,12 @@ namespace PrincesPalace
                 // and a row where half the figures face left is harder to scan
                 // than one where they all face the same way. v1 made the same
                 // call in the same place.
+                //
+                // ONLY THE SPRITE. preserveAspect and raycastTarget are the
+                // chip's shape and are declared on the tree
+                // (FightScreen.BuildInitiativeTracker), not re-set per repaint.
                 var art = filled ? StanceSpriteFor(previewed[i], FightSession.Stances.Idle) : null;
-                if (initiativeIcons[i] != null)
-                {
-                    initiativeIcons[i].sprite = art;
-                    if (art != null)
-                    {
-                        initiativeIcons[i].preserveAspect = true;
-
-                        // The chip sits over the top-left corner of the stage
-                        // and explains it; it must never eat a click meant for
-                        // what is behind it. Same reason the spell VFX images
-                        // are cleared in ScreenRegistry.
-                        initiativeIcons[i].raycastTarget = false;
-                    }
-                }
+                if (initiativeIcons[i] != null) initiativeIcons[i].sprite = art;
 
                 // The ring's art is baked by the tree (proc:ring_hairline,
                 // FightScreen.BuildInitiativeTracker); this only decides which
