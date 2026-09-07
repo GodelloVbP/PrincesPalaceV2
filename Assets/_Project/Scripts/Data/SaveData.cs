@@ -380,10 +380,21 @@ namespace PrincesPalace
                 ResetTalentProgress();
             }
 
-            if (version < 3)
-            {
-                MoveEmbersOntoTheRoster();
-            }
+            // 2 -> 3 (the ember move) IS DEFERRED PAST Reconcile, alone
+            // among these steps, and the flag is captured here so the
+            // gate still reads the version the save CAME FROM -- the same
+            // reason the 1 -> 2 step above is expressed as a range rather
+            // than an equality.
+            //
+            // It is the only step that MOVES something rather than clearing
+            // it, so it is the only one that cares whether the roster it is
+            // moving onto survives. Run here, it handed the whole pooled
+            // balance to the first roster member on disk and then Reconcile
+            // deleted that member for naming content that no longer exists --
+            // which is an ordinary rename, and took the embers with it. An
+            // empty roster lost them the same way one step earlier, with the
+            // wallet cleared and nobody to have received it.
+            bool moveEmbers = version < 3;
 
             if (version < 4)
             {
@@ -397,6 +408,13 @@ namespace PrincesPalace
 
             version = CurrentVersion;
             Reconcile();
+
+            // AFTER Reconcile, which is what guarantees a roster to move them
+            // onto: it drops members naming content that is gone and adds one
+            // for every authored character, so by here the list is exactly
+            // what this build can hold.
+            if (moveEmbers) MoveEmbersOntoTheRoster();
+
             return true;
         }
 
@@ -475,9 +493,16 @@ namespace PrincesPalace
             int pooled = wallet.embers;
             if (pooled <= 0) return;
 
+            // THE SOURCE IS NOT CLEARED UNTIL SOMEBODY HAS TAKEN IT. The
+            // clear used to happen either way, so a roster with nobody in it
+            // emptied the wallet into nothing. Its caller now runs this after
+            // Reconcile, which should make an empty roster impossible -- this
+            // is the guard that keeps "should" from being the only thing
+            // standing between a player and their whole ember balance.
             var first = roster?.FirstOrDefault(c => c != null);
-            if (first != null) first.embers += pooled;
+            if (first == null) return;
 
+            first.embers += pooled;
             wallet.embers = 0;
         }
 
