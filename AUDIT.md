@@ -766,6 +766,223 @@ lands on ranks 2-3 only instead of anywhere, which changes what
 the owner, not something to resolve by editing `skills.json` further without
 asking.
 
+## Findings from the overnight bug hunt, 2026-09-08
+
+Six Opus hunters (combat; run/dungeon/economy/progression; UiKit/stage/audio/party; the
+Core→Domain seam; tools/; a speed-buff/reach follow-up) each found a defect, fixed it, and
+also found a few things that are not bugs — a comment or a mechanism that quietly stopped
+matching intent, left exactly as found because deciding differently is the owner's call, not
+the hunter's. Full write-up: `docs/BUG_HUNT_2026-09-08.md`.
+
+### 84. `FightHudModel.MoveRow` cannot tell "no room" from "rooted", though its own header promises a reason
+
+`Domain/Combat/Session/FightHudModel.cs:196-206`. `MoveRow` asks one boolean —
+`session.CanMove(actor, direction)` (`:199`) — and on failure always writes the literal
+`"NO ROOM"` into the row's cost column (`:204`). `FightSession.CanMove` (`Session/FightSession.cs:383-388`)
+returns false for two different reasons: no move partner exists in that direction, or either
+combatant in the swap is Rooted. The header two rows above (`FightHudModel.cs:178-183`) states
+the design intent directly — "an illegal one is dimmed with its reason in the cost column …
+'you cannot go forward, you are already in front' is more use than a row that quietly is not
+there" — but a Rooted refusal reads "NO ROOM" on screen, which is not why the move failed.
+Unreachable today (nothing currently roots a combatant on the player's own move-eligible turn),
+which is why this is filed rather than fixed blind.
+
+**Why it is the owner's:** fixing it means deciding what a rooted party member's row should say
+("ROOTED" is the obvious answer, but that is new player-facing copy this register does not get
+to author) and whether that is worth doing before anything can actually reach the dead path.
+
+### 85. `ModifierTable.MaxStep = 0.22` was tuned against a Favor ceiling that no longer exists
+
+`Domain/Rewards/ModifierTable.cs:118`. The constant's own header (`:60-81`) already documents the
+retraction: the affix-roll ceiling used to read "55 (cap)" on the claim that 55 was the highest
+Favor a real save could carry, but `TrackReward` no longer has a Favor member at all — the
+realistic ceiling today is Shawn's authored 4 plus one worn Fortunate's `.Best` (~10 typical, 41
+absolute, per the same comment, `:67-73`). `MaxStep` itself — the value every encounter class's
+3-affix odds converge toward, chosen at `:101-116` specifically so three rungs stay a genuine
+jackpot at the *old* Favor range — was left at `0.22` when the ceiling that shaped it moved.
+`:79-81` flags this directly: "Worth a designer's eye before the next retune of `MaxStep`: at 41
+Boss and Elite still reach the cap, Normal … never does."
+
+**Why it is the owner's:** `0.22` is a balance number tuned against a jackpot feel, not a
+correctness bug — whether the new, lower realistic ceiling (~10) makes the top rung too hard to
+ever see, or whether that is exactly the intended rarity, is a design call the doc fix (`3428bdc1`)
+correctly declined to make unilaterally.
+
+### 86. `RewardTrackEntryResolver` never validates a milestone's or filler row's `amount`
+
+`Domain/Content/RewardTrackEntryResolver.cs:302-387` (`TryResolveEntry`). Every other field on a
+track entry is checked — `reward` against the `TrackReward` enum (`:308`), one-shot-as-filler
+(`:324`), `against` against `DamageType` (`:333`), the element-unlocked-at-level-1 rule (`:346`),
+the signature-resource rule (`:357`), `skillId` against the skill catalogue (`:368`) — but `amount`
+(the `int` parameter carried straight through to `ResolvedEntryCore` at `:384` with no comparison
+anywhere above it) is never read by any `if`. A `SecondLife` milestone authored with no `amount`
+key resolves cleanly and grants a squad zero extra lives — content that validates and then does
+nothing, silently.
+
+**Why it is the owner's:** the right rule depends on the reward kind (some grants are legitimately
+amount-less, e.g. a pure unlock), so a blanket "amount > 0" check would need per-`TrackReward`
+carve-outs only the design of `reward_tracks.json` can specify.
+
+### 87. `RunSnapshot.bossEnemyId` and `RngStreams.Boss` are dead machinery, the same shape as #50
+
+`Data/RunSnapshot.cs:58` declares `public string bossEnemyId = "";` and nothing in the tree ever
+assigns it anything else — it is read at `Core/RunEncounter.cs:74` and
+`Core/Bot/RunOrchestrator.cs:518`, always as its own default. `Domain/Rng/RngStreams.cs:30`
+declares `public const uint Boss = 2;`; grepping every non-test file in
+`Assets/_Project/Scripts` for `RngStreams.Boss` returns zero readers. Both are wired for a
+declared-boss descent design (`Domain/Dungeon/EncounterRoll.cs:79`'s own comment names
+`declaredBossId` as reading this exact field) that nothing populates yet — the identical
+write-nothing-or-read-nothing pattern #50 already named for `SaveData.relicLoadout`.
+
+**Why it is the owner's:** whether the declared-boss feature is still planned (keep both, wire the
+write side when it lands) or was dropped (delete both, plus the `EncounterRoll` comment naming
+them) is a roadmap question, not something inferable from the code.
+
+### 88. `RewardTrackDefinition.UnlockedAmount` has no caller
+
+`Domain/Progression/RewardTrackDefinition.cs:277-288`. The method's own comment states its
+purpose precisely — "`SquadTrack.SecondLivesLeft`'s 'how many charges has this squad earned'
+question" — but grepping the whole tree (tests included) for `.UnlockedAmount(` returns nothing.
+Either `SquadTrack.SecondLivesLeft` was built to answer that question a different way and the
+comment is stale, or it was never built and the question is still open.
+
+**Why it is the owner's:** deleting a documented-but-uncalled method risks deleting the one piece
+of a still-planned feature that already works; keeping it risks the same fate as #50 and #87 above
+if nobody ever wires it. Needs the SecondLife/squad-charges design confirmed either way.
+
+### 89. `StageSlotsPerSide` is restated as the literal `3` in three separate places
+
+`Domain/Combat/Session/FightHudSpec.cs:51` (`public const int StageSlotsPerSide = 3;`, the
+canonical source) is correctly *derived from* by `Domain/Combat/Reach.cs:86`
+(`MaxRanks = Session.FightHudSpec.StageSlotsPerSide`). But `Domain/UiKit/PartyLayout.cs:95`
+(`public const int SeatCount = 3;`) and `Domain/Party/PartySeat.cs:17`
+(`public const int Count = 3;`) both restate the same fact as their own literal `3` — each with a
+comment pointing at `StageSlotsPerSide` by name (`PartyLayout.cs:91-94`, `PartySeat.cs:14-16`)
+rather than reading it. A change to how many party members fight at once has to be made in three
+places to actually take, and only one of the three would fail to compile if missed.
+
+**Why it is the owner's:** collapsing two of the three into `= Session.FightHudSpec.StageSlotsPerSide`
+is mechanical and safe, but `Domain/UiKit` and `Domain/Party` referencing `Domain/Combat` at all
+is an assembly-layering call this register does not get to make unasked.
+
+### 90. `FightSubmenuLayout.FrameContentCentreY`'s comment states a kit-delivery-old inset split
+
+`Domain/UiKit/FightSubmenuLayout.cs:240-246`. The comment reads "the top and bottom insets differ
+(4.5% vs 4%)", but the insets it is describing — `FrameInset` at `:218-219`, resolved from
+`Ui.ContainerContentInset(ContainerRatio.ThreeByFour)` — are documented three lines above as
+`.052`/`.055` (`:195-199`, "500 / (1 - .052 - .055) = 559.9"): 5.2%/5.5%, not 4.5%/4%. The
+container kit was re-spliced at least once between the two comments being written and the numbers
+were never reconciled — the arithmetic on `:246` (`FrameHeight * (FrameInset.Bottom - FrameInset.Top) * 0.5f`)
+is still correct, only the prose restating it is stale.
+
+**Why it is the owner's:** a one-line comment fix, but it is the kind of drift `docs/AUDIT.md`'s own
+`CODE_STANDARDS.md` §9 rule ("prefer a reference to a restatement in prose") argues should be
+replaced with a live read of `FrameInset.Top`/`.Bottom` rather than re-typed numbers again — that's
+a small design choice about this file's comment style, not just a typo fix.
+
+### 91. `SystemMenuLayout.StripFits` cannot return false while uniform mode is active
+
+`Domain/UiKit/SystemMenuLayout.cs:315-316`. In uniform mode (`IsUniformMode`, count ≤
+`UniformModeMaxTabs` = 3, `:104,127`), `TabWidths` (`:148-152`) divides the row evenly —
+`uniform = (RowWidth - UniformGap * (count-1)) / count` — regardless of what the labels actually
+need, so every tab is forced into that width whether or not the text fits. `StripWidth`
+(`:306-313`) then sums those forced widths and adds `MinimumGap * (count-1)` (`:115`, 24px) rather
+than the `UniformGap` (`:107`, 130px) actually used to compute them, so the total it reports is
+always `RowWidth - (UniformGap - MinimumGap) * (count-1)` — strictly less than `RowWidth` for any
+count ≤ 3. `StripFits` (`:315-316`) checks that sum against `RowWidth`, so for three tabs or fewer
+it is mathematically incapable of returning false: a label too wide for its uniform box is
+silently squeezed (or overflows the box visually) rather than tripping the fits-check the design
+comment (`:301-305`) says exists precisely to catch that.
+
+**Why it is the owner's:** the fix depends on what "fits" should mean in uniform mode — measure the
+label against its forced-uniform width instead of against the whole row, or accept that uniform
+mode is exempt from the check by design because it never had a real per-label budget to overflow.
+Both are legitimate readings of "ARITHMETIC, not a fixed count" (`:301`).
+
+### 92. `StanceManifest`'s `_hovers` map can pair a stale hover with a later duplicate's ground line
+
+`Domain/Stage/StanceManifest.cs:44-67`. The constructor's per-actor loop writes
+`_groundLines[path]`, `_groundLineSources[path]` and `_breaths[path]` unconditionally on every
+iteration (`:59-61`), so a duplicate `spritePath` across two authored actors always leaves the
+*last* entry's ground line and breath in place — straightforward last-write-wins. `_hovers[path]`
+(`:62-65`) is written only `if (actor.hover != null)`, so if the first of two duplicate entries
+carries a hover block and the second does not, the dictionary ends up with the second entry's
+ground line and breath paired against the *first* entry's hover — a record that never existed in
+the authored data.
+
+**Why it is the owner's:** the real fix is refusing a duplicate `spritePath` at content-build time
+(the same shape `ContentDatabase.ValidateContent`'s cross-catalogue id check already takes,
+finding #77), which is a validation-rule addition, not a `StanceManifest` bug fix — and whether a
+duplicate `spritePath` is ever legitimately authored (two stances sharing art) is a content-authoring
+question this register can't answer from the code alone.
+
+### 93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen
+
+`Core/PartyController.cs:395`: `save.selectedCharacterIds = Formation.SeatIds.Where(id => id !=
+null).ToList();` — every save writes the seat list with empty seats filtered out entirely, rather
+than keeping their position. Benching the Front-seat member and reloading therefore promotes
+whoever was in Middle into Front, silently, because the gap that used to separate them is gone
+from the persisted list. `Tests/EditMode/Run/PartySeatGapRoundTripTests.cs` pins the round-trip
+and is marked `[Ignore]`, added deliberately alongside the finding (`64dab014`, "Owner's call: an
+empty seat is a state the model has and the save cannot").
+
+**Why it is the owner's:** already labelled as such at the commit that added the failing-but-ignored
+test — whether a benched hole should survive a save/load round trip (needs a nullable/sentinel
+slot in `selectedCharacterIds`) or compaction-on-save is the intended behaviour is a save-format
+design decision, not a bug fix.
+
+### 94. `unity_lock.ps1`'s `Certain`/`Ambiguous` fields have no reader, so a guess and a real hold look identical
+
+`tools/unity_lock.ps1:78-79` computes `Certain = $held` (a Unity.exe process actually matched to
+this project path) and `Ambiguous = ($ambiguous -and -not $held)` (a Unity.exe process whose command
+line could not be parsed or read — the file's own comment at `:49-51` names "a permissions quirk,
+usually" as the cause) as two distinct diagnostic fields, but every caller
+(`tools/build_content.ps1:33`, `tools/preview.ps1:163,274,404`) reads only `.Held`, which is
+`($held -or $ambiguous)` — so an ambiguous case (a Hub window's own `Unity.exe`, which carries no
+`-projectPath` at all) is indistinguishable downstream from a confirmed hold on this exact project.
+`preview.ps1` responds to `.Held` by falling back to the slower Editor-attached route rather than
+batchmode, which is the plausible cause of "preview.ps1 takes 180-900s" the tools hunt flagged as
+tonight's best candidate for the preview stall.
+
+**Why it is the owner's:** the mechanical fix (have callers branch on `.Certain` vs `.Ambiguous`, or
+have `Get-UnityLockState` try harder to identify a Hub window specifically) changes what `preview.ps1`
+does when it cannot be sure, which trades a slower-but-safe default for a faster-but-occasionally-wrong
+one — a risk tolerance call, not a bug.
+
+### 95. `test_areas.ps1` treats a changed `.meta` file as unable to affect test behaviour, contradicting gotcha 3
+
+`tools/test_areas.ps1:560`: `$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|
+tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$)'` (documented at `:541` as "cannot affect
+test behaviour"), so `-Changed` never maps a modified `.meta` file to any test area. `CLAUDE.md`'s
+gotcha 3 says the opposite about one specific class of `.meta` change: `LoadSprite()` silently
+flips a texture importer from Default to Sprite, which changes runtime behaviour (what a sprite
+IS) and is exactly the kind of thing `UiAudit`'s zero-sized-graphic check or an art-referencing
+PlayMode test could catch or miss depending on whether it ran.
+
+**Why it is the owner's:** most `.meta` churn genuinely is inert (a GUID stamp, an unrelated import
+setting), so blanket-including `.meta` in `-Changed` would make the area-mapping noisy for no
+benefit most of the time — narrowing the ignore to exclude only an importer-type change (the one
+gotcha 3 warns about) needs a design for detecting that specific diff shape, not a one-line regex
+edit.
+
+### 96. `splice_ui_kit.py`'s `measure_inset` returns a 50% sentinel that is indistinguishable from real data
+
+`tools/splice_ui_kit.py:233-237` (`scan`): when the border-vs-interior walk never finds an interior
+pixel within half the cell's own dimension, it falls through to `return axis_len // 2` rather than
+signalling "no border found". `:247-248` then divides that sentinel by the same `w`/`h` it came
+from — `"left": left / w` — turning "the scan gave up" into an inset fraction of exactly `0.5`,
+which reads as a plausible (if large) real measurement to anything downstream that consumes the
+report, rather than as the "this cell could not be measured" case it actually is. The function's
+own docstring (`:210-217`) already documents one prior false reading this exact shape of bug
+produced (`.008`/`.003` "implausible" fractions before the alpha gate was added) — a hard-to-reach
+interior on a differently-cropped source sheet reproduces the same class of problem with a
+different, still-plausible-looking wrong number.
+
+**Why it is the owner's:** the mechanical fix (return `None`/`NaN` and have the caller print
+"unmeasured" instead of a number) is straightforward, but deciding what the *report* should do with
+an unmeasured cell — fail the splice, flag it for manual review, fall back to a default inset — is
+a tooling-workflow call about how strict `splice_ui_kit.py` should be, not a pure bug fix.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
