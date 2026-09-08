@@ -1,0 +1,38 @@
+{
+  "_notes": [
+    "ONE FRAME, HELD -- same shape as prismatic_orb_water_wake.json. A folder",
+    "rather than a bare PNG for the identical mechanical reason (SpellVfxRecipe",
+    "DriftTests matches a played path's LAST segment against recipe filenames).",
+    "",
+    "CONTENT_CROP. fire_wake.png is 2172x724; the drawing's ink bbox is",
+    "(114,226)-(2055,503), 1941x277 of the 2172x724 canvas -- more than half the",
+    "canvas height is empty margin above and below a long low ribbon of flame.",
+    "Cropped to content plus 8px, the box's aspect becomes the ribbon's own rather",
+    "than the padded canvas's.",
+    "",
+    "THICK END IS AT THE RIGHT, per the pack's README, and it is a bright rounded",
+    "mass rather than a taper -- centred around x=1950-2050 of the 2172-wide sheet,",
+    "i.e. essentially the right edge of the cropped content. Authored as dx in",
+    "skills.json against the rendered width, same as water's wake; no pivot or",
+    "impact point here for the same reason water's has none -- a follower's",
+    "position is its source's plus (dx, dy), so impactX/impactY never reach it.",
+    "",
+    "Delivered with its own alpha; keyed is false, like the rest of the pack."
+  ],
+  "sheet": "Spells/prismatic_bolt/fire/fire_wake.png",
+  "grid": [
+    1,
+    1
+  ],
+  "names": [
+    "wake"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "wake"
+    }
+  ]
+}

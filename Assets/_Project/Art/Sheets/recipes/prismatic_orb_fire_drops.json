@@ -1,0 +1,118 @@
+{
+  "_notes": [
+    "THE EMBER ATLAS -- eight stills, one per cell, NOT a sequence: the emitter",
+    "picks one per particle by hash (SpellEmitterSim.At, channel 6), so the folder",
+    "is a palette and the order only decides which index a hash lands on.",
+    "",
+    "EXPLICIT RECTS, the README's own boundaries -- same 1774x887 4x2 delivery,",
+    "same 444/443 alternation as water's and the contact sheet above. Checked:",
+    "none of the eight cells' ink bboxes touch a rect edge at this size, so unlike",
+    "water's drops sheet there is no measured neighbour-bleed here -- rects are",
+    "still stated because the sheet genuinely does not divide evenly and a floor",
+    "grid would silently drift by the fourth column regardless of what today's",
+    "content happens to reach.",
+    "",
+    "WHAT EACH CELL ACTUALLY IS, looked at rather than assumed uniform: c0 a round",
+    "ember ball; c1 an elongated spark streak; c2 a glowing coal fragment (angular,",
+    "reads as a cooling chunk rather than a lick of flame); c3 and c4 crescent arc",
+    "streaks; c5 and c6 upright flame licks (c6 a taller double-lick, closer to a",
+    "small phoenix-wing shape); c7 a small coal chip with two tiny attached sparks.",
+    "Named for what they are rather than left as f0..f7, so the shed and the spray",
+    "in skills.json can be read without opening the sheet.",
+    "",
+    "NO CANVAS STATED: the rects give 444x444/443x443 cells and nothing here",
+    "scales, so the automatic pad onto the largest (444x444) is sufficient.",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/fire/fire_particles_8.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "ember_round",
+    "spark_streak",
+    "coal_chunk",
+    "arc_streak_a",
+    "arc_streak_b",
+    "flame_lick_a",
+    "flame_lick_b",
+    "coal_chip"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "ember_round"
+    },
+    {
+      "from": "spark_streak"
+    },
+    {
+      "from": "coal_chunk"
+    },
+    {
+      "from": "arc_streak_a"
+    },
+    {
+      "from": "arc_streak_b"
+    },
+    {
+      "from": "flame_lick_a"
+    },
+    {
+      "from": "flame_lick_b"
+    },
+    {
+      "from": "coal_chip"
+    }
+  ]
+}

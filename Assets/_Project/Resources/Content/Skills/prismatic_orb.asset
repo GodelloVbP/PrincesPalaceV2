@@ -370,9 +370,239 @@ MonoBehaviour:
         groundAspect: 0
         groundImpactY: -1
         castSfxPath: 
-        layers: []
-        layerFormat: 0
-        hitCueSeconds: 0
+        layers:
+        - id: core
+          render: sprite
+          place: caster-centre
+          follow: 0
+          at: release
+          offset: 0
+          path: Spells/prismatic_orb_fire_core
+          seconds: 0
+          fps: 24
+          startFrame: 0
+          until: loop
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 175
+          facing: auto
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0.25
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: wake
+          render: still
+          place: layer:core
+          follow: 1
+          at: release
+          offset: 0
+          path: Spells/prismatic_orb_fire_wake
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: hold
+          fade: 0.08
+          dx: -96
+          dy: 0
+          scale: 0.55
+          size: 0
+          facing: auto
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: shed
+          render: emitter
+          place: layer:core
+          follow: 0
+          at: release
+          offset: 0
+          path: 
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: 
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 0
+          facing: 
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: Spells/prismatic_orb_fire_drops
+            rate: 24
+            burst: 0
+            window: 0.25
+            sourceDx: -35
+            sourceDy: 0
+            spreadDegrees: 50
+            aimDegrees: 200
+            speedMin: 70
+            speedMax: 160
+            inherit: 0.3
+            drag: 2.5
+            gravity: 250
+            lifeMin: 0.15
+            lifeMax: 0.28
+            sizeMin: 0.3
+            sizeMax: 0.6
+            spinMin: -150
+            spinMax: 150
+            fadeFrom: 0.55
+            endScale: 0.6
+            seed: 0
+        - id: splash
+          render: sprite
+          place: target-centre
+          follow: 0
+          at: arrival
+          offset: 0
+          path: Spells/prismatic_orb_fire_contact
+          seconds: 0
+          fps: 32
+          startFrame: 2
+          until: once
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 230
+          facing: auto
+          sort: effects
+          impactX: 0.5
+          impactY: 0.48
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: spray
+          render: emitter
+          place: target-centre
+          follow: 0
+          at: hit
+          offset: 0
+          path: 
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: 
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 0
+          facing: 
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: Spells/prismatic_orb_fire_drops
+            rate: 0
+            burst: 14
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 160
+            aimDegrees: 90
+            speedMin: 140
+            speedMax: 380
+            inherit: 0
+            drag: 2.5
+            gravity: 180
+            lifeMin: 0.2
+            lifeMax: 0.35
+            sizeMin: 0.35
+            sizeMax: 0.85
+            spinMin: -300
+            spinMax: 300
+            fadeFrom: 0.5
+            endScale: 0.65
+            seed: 0
+        layerFormat: 1
+        hitCueSeconds: 0.33
     - Type: 8
       Vfx:
         path: 

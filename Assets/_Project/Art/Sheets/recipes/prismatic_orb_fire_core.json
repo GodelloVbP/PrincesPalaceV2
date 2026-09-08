@@ -1,0 +1,63 @@
+{
+  "_notes": [
+    "THE FLIGHT LOOP, ALONE -- same shape as prismatic_orb_water_core.json: one",
+    "layer's folder, cut from fire_core_6f.png and nothing composed.",
+    "",
+    "SIX CELLS, IN ORDER. fire_core_6f.png is 1536x1024 over 3x2 and divides exactly",
+    "into 512px cells, like every core sheet in this pack. No rects, no canvas, no",
+    "scale steps.",
+    "",
+    "MEASURED: all six cells are a tapered, forward-pointing flame spearhead with a",
+    "white-hot tip, ink coverage 13.2-14.2% of the cell and NONE of the six bboxes",
+    "touch a cell edge (checked against the alpha channel at threshold 8) -- so",
+    "there is no clipped fringe to correct, unlike the contact sheet below.",
+    "",
+    "LOOP SEAM: f0 and f5 read as the same silhouette (a compact arrow-flame,",
+    "identical taper and tip position, only the internal lick pattern differs frame",
+    "to frame) -- visually the cleanest loop candidate of the three new packs, at",
+    "least as clean as water's own six-frame core.",
+    "",
+    "ALPHA IS MOSTLY BINARY like water's: 82.3% of the full sheet is alpha 0, 13.7%",
+    "is above 128, and only 0.8% sits in the 8-127 middle band, so the flame's edge",
+    "is a hard cut rather than a wide soft falloff -- no rectangle-against-dark-stage",
+    "risk the way wind's core has (see prismatic_orb_wind_core.json's notes).",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA; keyed is false, nothing re-keyed."
+  ],
+  "sheet": "Spells/prismatic_bolt/fire/fire_core_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "core_f0",
+    "core_f1",
+    "core_f2",
+    "core_f3",
+    "core_f4",
+    "core_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "core_f0"
+    },
+    {
+      "from": "core_f1"
+    },
+    {
+      "from": "core_f2"
+    },
+    {
+      "from": "core_f3"
+    },
+    {
+      "from": "core_f4"
+    },
+    {
+      "from": "core_f5"
+    }
+  ]
+}

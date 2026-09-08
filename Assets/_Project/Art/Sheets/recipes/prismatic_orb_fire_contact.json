@@ -1,0 +1,142 @@
+{
+  "_notes": [
+    "THE CONTACT BURST, ALONE. fire_contact_8f.png is 1774x887 over 4x2, same",
+    "non-dividing sheet shape as water's and the same README-stated boundaries",
+    "(x: 0, 444, 887, 1331, 1774; y: 0, 444, 887, 444/443 alternating). Explicit",
+    "rects, the README's own numbers, for the same reason water's notes give:",
+    "a floor-divided grid drifts two pixels short of the true cell by the fourth",
+    "column.",
+    "",
+    "MEASURED: unlike water's contact sheet (5 of 8 cells touching a cell edge)",
+    "and unlike wind's and earth's below, NONE of fire's eight cells touch an edge",
+    "at alpha threshold 8. The flame burst stays inside its own cell at every stage,",
+    "so explicit rects here are the README's convention rather than a clipping",
+    "correction -- stated for consistency and because the boundaries genuinely are",
+    "444/443 alternating, not because a defect was found.",
+    "",
+    "THE SEQUENCE, cell by cell: c0 is a forward-pointing flame identical in",
+    "silhouette to the core's own projectile -- the APPROACHING pose, same role as",
+    "water's contact_f0 and the reason the played layer starts at startFrame 2.",
+    "c1 is a compact spike just beginning to flare. c2 opens into a six-petalled",
+    "burst. c3 is the WIDEST frame in the sheet -- 26.2% ink coverage, the",
+    "runner-up (c2) is 13.8% -- a full flower of flame petals radiating outward,",
+    "same peak position (source frame 4, one-indexed) every README in this pack",
+    "names. c4-c7 break the petals apart into separate embers and thin them out;",
+    "c7 is functionally empty (0.0% ink), just a couple of drifting sparks.",
+    "",
+    "CANVAS 512, same headroom reasoning as water's notes: the scale step below",
+    "grows c3 about its own centre inside the 444x444 cell and feathers the ring,",
+    "and the split-per-layer recipe's own largest cell is 444, so the padding has",
+    "to be stated rather than inferred.",
+    "",
+    "contact_f0 IS NOT SCALE-CORRECTED. Water's 1.10 on its own frame 0 was a",
+    "measured bridge between two separate sheets sharing ONE combined sequence",
+    "(D21 in docs/PLAN_SPELL_LAYERS.md); the layered presentation never plays that",
+    "join because core and splash are separate layers with separate boxes, and this",
+    "recipe never played a combined sequence to begin with. Nothing to correct.",
+    "",
+    "contact_f3 GETS hold: 2 AND A MODEST GROWTH (1.06), same trick as water and",
+    "safe here because f3 has headroom to spare -- it is the one frame with no",
+    "edge touch, so growing it about its own centre does not clip anything that",
+    "was not already clipped."
+  ],
+  "sheet": "Spells/prismatic_bolt/fire/fire_contact_8f.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "contact_f0",
+    "contact_f1",
+    "contact_f2",
+    "contact_f3",
+    "contact_f4",
+    "contact_f5",
+    "contact_f6",
+    "contact_f7"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "contact_f0"
+    },
+    {
+      "from": "contact_f1"
+    },
+    {
+      "from": "contact_f2"
+    },
+    {
+      "from": "contact_f3",
+      "hold": 2,
+      "scale": [
+        1.0,
+        1.06
+      ]
+    },
+    {
+      "from": "contact_f4"
+    },
+    {
+      "from": "contact_f5"
+    },
+    {
+      "from": "contact_f6"
+    },
+    {
+      "from": "contact_f7"
+    }
+  ]
+}
