@@ -71,13 +71,16 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.25f, Named(performance, "splash").StartSeconds, 1e-5f);
             Assert.AreEqual(0.5576923f, Named(performance, "splash").EndSeconds, 1e-5f);
 
-            // A burst at the hit cue plus the longest life it can throw.
-            Assert.AreEqual(0.35f, Named(performance, "spray").StartSeconds, 1e-5f);
-            Assert.AreEqual(0.69f, Named(performance, "spray").EndSeconds, 1e-5f);
+            // A burst at the hit cue plus the longest life it can throw. Cue
+            // moved from 0.35 to 0.327 (arrival + two contact frames rather
+            // than +0.10s) in the 2026-09-08 battle-speed recording fix, so
+            // 0.35+0.34=0.69 became 0.327+0.34=0.667.
+            Assert.AreEqual(0.327f, Named(performance, "spray").StartSeconds, 1e-5f);
+            Assert.AreEqual(0.667f, Named(performance, "spray").EndSeconds, 1e-5f);
 
-            Assert.AreEqual(0.69f, performance.ClearedSeconds, 1e-5f,
-                "the last of the cast clears a quarter-second after the beat's 0.45s hold, which is the " +
-                "tail outliving its beat that the no-flush contract exists to allow");
+            Assert.AreEqual(0.667f, performance.ClearedSeconds, 1e-5f,
+                "the last of the cast clears about a fifth of a second after the beat's 0.45s hold, " +
+                "which is the tail outliving its beat that the no-flush contract exists to allow");
         }
 
         [Test]
@@ -317,7 +320,7 @@ namespace PrincesPalace.Domain.Tests
             var water = SpellLayerFixtures.Water();
             foreach (var layer in water.layers) layer.path = "Spells/does_not_exist";
 
-            Assert.AreEqual(0.35f, Resolve(water).HitCueSeconds, 1e-5f);
+            Assert.AreEqual(0.327f, Resolve(water).HitCueSeconds, 1e-5f);
         }
 
         [Test]

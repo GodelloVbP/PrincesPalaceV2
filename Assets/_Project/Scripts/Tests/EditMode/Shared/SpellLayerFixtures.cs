@@ -35,7 +35,13 @@ namespace PrincesPalace.Domain.Tests
         {
             layerFormat = 1,
             sfxPath = "Audio/Sfx/water_impact",
-            hitCueSeconds = 0.35f,
+
+            // 0.327 = arrival (0.25s) + two contact frames at 26fps (0.0769s),
+            // pulled from the old 0.35 (arrival + 0.10s) so the rat's reaction
+            // reads on frame 22-23 instead of frame 30 -- 2026-09-08 battle-speed
+            // recording fix. Kept the same by hand as skills.json's Water block;
+            // see the file header.
+            hitCueSeconds = 0.327f,
             layers = new[]
             {
                 new SpellLayer

@@ -197,7 +197,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.Greater(DrawnDrops(), 0,
                 "nothing was drawn 0.65s in, past the shed's last drop and inside the impact burst's " +
-                "own 0.18-0.34s lives from the 0.35s cue");
+                "own 0.18-0.34s lives from the 0.327s cue"); // cue moved from 0.35 -- 2026-09-08
         }
 
         // AND THEY ARE ALL GONE WHEN THE CAST IS. A particle that outlives its

@@ -52,9 +52,10 @@ namespace PrincesPalace.PlayModeTests
         // rate it was authored at.
         private const int CaptureFps = 60;
 
-        // 0.75s at 60fps. The pilot's last droplet clears at 0.69s (the spray
-        // bursts at the 0.35s cue and lives up to 0.34s), so this is the whole
-        // cast plus a few frames of empty stage to prove it ended.
+        // 0.75s at 60fps. The pilot's last droplet clears at 0.667s (the spray
+        // bursts at the 0.327s cue -- was 0.35s, pulled tighter 2026-09-08 --
+        // and lives up to 0.34s), so this is the whole cast plus a few frames
+        // of empty stage to prove it ended.
         private const int Frames = 45;
 
         // The spell whose composition this exists to show. Not a parameter:
@@ -64,7 +65,7 @@ namespace PrincesPalace.PlayModeTests
         // is for.
         private const string SpellId = "prismatic_orb";
 
-        // 1.25s at 60fps, which holds one whole pilot cast (0.69s) plus a
+        // 1.25s at 60fps, which holds one whole pilot cast (0.667s) plus a
         // second one opened half a second in.
         private const int OverlapFrames = 75;
 
@@ -223,7 +224,7 @@ namespace PrincesPalace.PlayModeTests
             // activated at all.
             Assert.Greater(lit, 20,
                 "only " + lit + " of " + Frames + " recorded frames had anything drawn on them. The " +
-                "pilot's layers span 0.69s, which is 41 frames at " + CaptureFps + "fps, so a series " +
+                "pilot's layers span 0.667s, which is 40 frames at " + CaptureFps + "fps, so a series " +
                 "this empty is a recording of the stage rather than of the cast.");
 
             Debug.Log("[SpellRuntime] wrote " + Frames + " frames to " + OutputDir + " (" + lit +
@@ -236,7 +237,7 @@ namespace PrincesPalace.PlayModeTests
 
         // THE CASE THE POOLING EXISTS FOR, and the one a single-cast recording
         // cannot show: a second cast opening over a tail that has not finished.
-        // The pilot's last droplet clears 0.69s after its release and a beat's
+        // The pilot's last droplet clears 0.667s after its release and a beat's
         // hold is 0.45s, so this is not a contrived overlap -- it is what two
         // party members casting in one round already produce.
         //
@@ -294,7 +295,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(owned, 0,
                 "on the frame the second cast opened, the first cast owned no particles at all -- so " +
                 "this recording is of two casts in a row rather than of two casts overlapping. The " +
-                "pilot's shed and spray clear at 0.69s and the second opens at " +
+                "pilot's shed and spray clear at 0.667s and the second opens at " +
                 (SecondCastFrame / (float)CaptureFps).ToString("F2") + "s.");
 
             Assert.IsTrue(second.IsLive, "the second cast never opened");

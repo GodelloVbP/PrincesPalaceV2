@@ -502,7 +502,7 @@
           "type": "Earth",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.32,
+            "hitCueSeconds": 0.225,
             "layers": [
               {
                 "id": "core",
@@ -608,7 +608,7 @@
           "type": "Water",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.35,
+            "hitCueSeconds": 0.327,
             "layers": [
               {
                 "id": "core",
@@ -712,7 +712,7 @@
           "type": "Fire",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.33,
+            "hitCueSeconds": 0.281,
             "layers": [
               {
                 "id": "core",
@@ -816,7 +816,7 @@
           "type": "Wind",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.33,
+            "hitCueSeconds": 0.286,
             "layers": [
               {
                 "id": "core",
