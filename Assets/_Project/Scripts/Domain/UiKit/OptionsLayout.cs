@@ -37,26 +37,9 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float ColumnGap = 40f;
 
-        // TWO COLUMNS as of docs/PLAN_BATTLE_SPEED.md -- option B, shipped
-        // after option A (one column, every row shrunk to fit a sixth) put
-        // the restore button's bottom edge and the footer note within
-        // 3.56px of each other and the reworded (longer) footer text landed
-        // visibly UNDER the button in the G4 screenshot rather than below
-        // it. Option A's own margin arithmetic was correct -- 704 of
-        // 707.56 fit -- but "fits without overlapping the audit's overlap
-        // check" and "reads as cramped by eye" are different questions, and
-        // G4 is what decides between them.
-        //
-        // B keeps every row at its ORIGINAL height, which is what makes it
-        // safe: column 0 (Audio, Display) is back to exactly the two-card
-        // arrangement that shipped before this plan touched anything, 694 of
-        // 707.56, footer and button with the same clearance they always had.
-        // Column 1 holds Gameplay alone -- one card, one row, plenty of
-        // room. Two columns put Audio's two rows beside Display's three
-        // before there was a third group, which is why this project had
-        // gone to one column in the first place; a lone Gameplay card in
-        // its own column does not repeat that problem, because it does not
-        // compete with anything else for column 1's height.
+        // Two columns, each row at its full authored height: column 0 carries
+        // Audio and Display, column 1 carries Gameplay alone, so the lone card
+        // never competes with the pair for height.
         public const float ColumnCount = 2f;
 
         // HalfWidth * 2f, not PaneWidth -- the content region is the pane's
@@ -114,13 +97,8 @@ namespace PrincesPalace.Domain.UiKit
         public const float LabelWidth = 320f;
         public static float LabelCentreX => -CardContentHalf + LabelWidth * 0.5f;
 
-        // NARROWED for option B, per its own header on ColumnCount: a
-        // 620-wide control block plus a 320-wide label is 940, and a
-        // 720-wide two-column card only has 660 of content width to spend
-        // in total. 280 leaves the label's own right edge (-10) and the
-        // control block's left edge (CardContentHalf - 280 = 50) 60px apart
-        // -- narrower than the old single-column row, which is the whole
-        // trade B makes.
+        // Narrow enough to leave clearance between the label's right edge and
+        // the control block's left edge inside CardContentWidth.
         public const float ControlBlockWidth = 280f;
         public static float ControlLeft => CardContentHalf - ControlBlockWidth;
 
@@ -136,10 +114,8 @@ namespace PrincesPalace.Domain.UiKit
         public static float StepPrevCentreX => ControlLeft + StepButtonSize * 0.5f;
         public static float StepNextCentreX => CardContentHalf - StepButtonSize * 0.5f;
 
-        // 200, not 420 -- the gap between the two step buttons at this
-        // ControlBlockWidth is 212 (ControlBlockWidth - 2*StepButtonSize -
-        // the two half-button overlaps the centre formulas already account
-        // for), so 420 would print outside its own buttons.
+        // Narrow enough that the step value prints between the two step
+        // buttons rather than past them.
         public const float StepValueWidth = 200f;
         public static float StepValueCentreX =>
             (StepPrevCentreX + StepNextCentreX) * 0.5f;
