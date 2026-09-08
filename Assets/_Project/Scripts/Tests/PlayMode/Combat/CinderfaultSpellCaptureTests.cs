@@ -120,7 +120,7 @@ namespace PrincesPalace.PlayModeTests
             // The scene's own FightBootstrap has already started a fight and
             // is playing its opening beats. Left running, its playback holds
             // FightController busy and every click below is swallowed.
-            _player.Flush();
+            _player.EndFight();
             yield return null;
             yield return null;
 
@@ -228,7 +228,11 @@ namespace PrincesPalace.PlayModeTests
                     if (previous.GroundEnabled && !sample.GroundEnabled)
                     {
                         onGroundTurnedOff?.Invoke(next);
-                        _player.Flush();
+
+                        // ENDFIGHT, because Flush no longer cancels visuals --
+                        // and a "cooled stage" whose fault was left drawing is
+                        // exactly the sample this line exists to prevent.
+                        _player.EndFight();
                     }
 
                     previous = sample;

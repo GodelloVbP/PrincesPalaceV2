@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -13,16 +15,23 @@ namespace PrincesPalace
     // found by an effect erupting somewhere anatomically wrong.
     public partial class FightController
     {
-        // The box the effect is fitted into. Square, and the art is not always.
+        // The box a layer's art is fitted into.
         //
-        // AUTHORED PER SPELL NOW. This was a constant for every effect there
-        // had ever been -- fine for a bolt, wrong in both directions for a
-        // boss's slam and for a status glint.
-        private static Vector2 BoxFor(CombatBeat beat)
+        // AUTHORED PER LAYER. This was a constant for every effect there had
+        // ever been -- fine for a bolt, wrong in both directions for a boss's
+        // slam and for a status glint -- then per spell, and now per layer,
+        // because a compact core and the crown it breaks into are two sizes in
+        // one cast.
+        //
+        // SQUARE UNLESS THE LAYER SAYS OTHERWISE. `aspect` 0 means "the box is
+        // square and preserveAspect fits the drawing inside it", which is what
+        // every sheet before the ground fault was drawn for; an authored aspect
+        // is for art whose box must differ from the frame.
+        private static Vector2 BoxForLayer(SpellLayer layer)
         {
-            float size = beat?.Vfx?.size ?? SpellPresentation.DefaultSize;
-            if (size <= 0f) size = SpellPresentation.DefaultSize;
-            return new Vector2(size, size);
+            float size = layer.size > 0f ? layer.size : SpellPresentation.DefaultSize;
+            float aspect = layer.aspect;
+            return aspect > 0f ? new Vector2(size, size / aspect) : new Vector2(size, size);
         }
 
         // A per-pixel scan of every frame of a sheet, asked for on every cast.
@@ -40,14 +49,33 @@ namespace PrincesPalace
         // content and not a view decision.
         //
         // Public, so a test can assert the plain-swing case without reflection.
-        public float ImpactDelayFor(CombatBeat beat)
-        {
-            var primary = PrimaryPlayer;
-            if (primary == null || beat == null || !beat.HasSpellAnimation) return 0f;
+        // NO LONGER A FUNCTION OF PNGs ON DISK, for a spell that authors its cue
+        // in seconds. A pre-layer block still derives it from impactFrame over
+        // the frame count -- exactly the expression that used to live here --
+        // because changing that would retime five shipped spells whose art went
+        // momentarily unreadable. Both derivations live in SpellPerformance,
+        // which is the only thing in the program that reads layerFormat.
+        public float ImpactDelayFor(CombatBeat beat) => ResolveCast(beat)?.HitCueSeconds ?? 0f;
 
-            int frameCount = primary.Frames(beat.Vfx.path)?.Length ?? 0;
-            return beat.Vfx.seconds * CombatBeat.ImpactFraction(beat.Vfx.impactFrame, frameCount);
+        // Every layer of this beat's cast, fanned out to the targets it struck,
+        // with every time already absolute. Pure apart from the frame counts it
+        // reads off disk, so calling it twice for one beat -- the beat player
+        // asks for the cue after it asks for the drawing -- gives the same
+        // answer both times rather than two schedules that could disagree.
+        private SpellPerformance ResolveCast(CombatBeat beat)
+        {
+            if (beat?.Vfx == null) return null;
+
+            int struck = 0;
+            foreach (var _ in StruckBy(beat)) struck++;
+
+            return SpellPerformance.Resolve(beat.Vfx, struck, FrameCountOf);
         }
+
+        // How many frames a Resources folder holds. Frames are a property of
+        // the SHEET, so asking any pool member gives the same answer -- asking
+        // a fixed one keeps that obvious.
+        private int FrameCountOf(string path) => PrimaryPlayer?.Frames(path)?.Length ?? 0;
 
         // ---- seams for the PlayMode tests -----------------------------------------
         //
@@ -56,7 +84,18 @@ namespace PrincesPalace
         // depth scaling and on where the slots actually landed, neither of which
         // an EditMode test can build. InternalsVisibleTo names the EDITOR
         // assembly only, so a PlayMode test reaches these or reaches nothing.
-        public void PlaySpellVfxForTest(CombatBeat beat) => PlaySpellVfx(beat);
+
+        // RETURNS THE HANDLE, because "did this cast keep its own renderers
+        // while that one drew" is the whole of the ownership contract and is
+        // unaskable without one. Callers that only wanted the drawing ignore
+        // the value, which is why widening it broke nothing.
+        public CastHandle PlaySpellVfxForTest(CombatBeat beat) => PlaySpellVfx(beat);
+
+        // The module itself, for the tests that ask which member a cast holds.
+        // Public for the reason every seam in this file is: InternalsVisibleTo
+        // names the EDITOR assembly only, so a PlayMode test reaches this or
+        // reaches nothing.
+        public SpellPerformancePlayer PerformancePlayerForTest => performancePlayer;
 
         public RectTransform SlotForTest(CombatantState combatant) => SlotFor(combatant);
 
@@ -76,38 +115,118 @@ namespace PrincesPalace
         private SpellVfxPlayer PrimaryPlayer =>
             spellVfxPlayers != null && spellVfxPlayers.Length > 0 ? spellVfxPlayers[0] : null;
 
-        // ONE EFFECT PER THING THE SPELL LANDED ON.
+        // EVERY LAYER OF THE CAST, PLACED, THEN HANDED TO THE MODULE.
         //
-        // The beat's Target is the primary and gets member 0; SplashTargets is
-        // everyone else an all-enemies cast struck, and each gets its own
-        // member. Beyond what the pool holds the extras are simply not drawn --
-        // the pool is sized to the stage, so running out means more combatants
-        // than there are slots to stand in, and a silent drop beats an
-        // exception mid-fight.
-        private void PlaySpellVfx(CombatBeat beat)
+        // What this replaces walked the struck list handing out pool members by
+        // POSITION IN THAT WALK, so every cast started again at member 0 and a
+        // second cast on a live member restarted it. Ownership is the cast now,
+        // and this file keeps the half it is actually about -- WHERE the bottom
+        // of an effect is, which is the question every bug in it came from --
+        // while SpellPerformancePlayer owns when things start, when they stop
+        // and which renderer they hold.
+        private CastHandle PlaySpellVfx(CombatBeat beat)
         {
-            if (beat == null) return;
+            if (performancePlayer == null) return CastHandle.None;
 
-            // FIRST, and outside the path guard below, because the two layers
-            // are independent: a spell is allowed to author a ground fault and
-            // no per-target sheet, or the reverse. Missing art on either side
-            // costs that side and nothing else.
-            PlaySpellGroundVfx(beat);
+            var performance = ResolveCast(beat);
+            if (performance == null || performance.Instances.Count == 0) return CastHandle.None;
 
-            if (PrimaryPlayer == null || string.IsNullOrEmpty(beat.Vfx.path) || beat.Target == null) return;
+            PlaceCast(beat, performance);
+            return performancePlayer.Begin(performance);
+        }
 
-            int member = 0;
-            foreach (var struck in StruckBy(beat))
+        // WHERE EACH INSTANCE'S BOX GOES, written onto the instance once.
+        //
+        // Here rather than inside the module, because every line of it depends
+        // on the stage's depth scaling, on where the slots actually landed and
+        // on a sheet's own transparent margins -- the three things this file
+        // exists to measure and the module has no opinion about.
+        private void PlaceCast(CombatBeat beat, SpellPerformance performance)
+        {
+            var parent = PrimaryPlayer != null ? PrimaryPlayer.transform.parent : null;
+            if (parent == null) return;
+
+            var struck = new List<CombatantState>();
+            foreach (var one in StruckBy(beat)) struck.Add(one);
+
+            var casterRect = SlotFor(beat.Actor);
+            float casterX = casterRect == null
+                ? 0f
+                : parent.InverseTransformPoint(casterRect.TransformPoint(Vector3.zero)).x;
+
+            // FACING IS A PROPERTY OF THE CAST, decided once and before any box
+            // is placed -- the horizontal impact correction depends on it, and
+            // a projectile and the wake riding it must not disagree about which
+            // way they point. Read off the PRIMARY target, since a caster never
+            // stands between two of its own targets: both racks are on one side
+            // of the stage. If a formation ever straddles a caster, the
+            // per-cast answer becomes the wrong one for the far target and the
+            // fix is to decide it per struck slot again.
+            float facing = 1f;
+            if (casterRect != null && struck.Count > 0)
             {
-                if (member >= spellVfxPlayers.Length) break;
+                var primaryRect = SlotFor(struck[0]);
+                if (primaryRect != null)
+                {
+                    facing = AimPoint(parent, primaryRect, centred: true).x >= casterX ? 1f : -1f;
+                }
+            }
 
-                PlaySpellVfxOn(beat, struck, member);
-                member++;
+            foreach (var instance in performance.Instances)
+            {
+                instance.Facing = facing;
+                PlaceOne(instance, performance, parent, struck, casterRect, casterX);
             }
         }
 
-        // ---- the shared ground layer ---------------------------------------------
-        //
+        private void PlaceOne(SpellLayerInstance instance, SpellPerformance performance, Transform parent,
+            List<CombatantState> struck, RectTransform casterRect, float casterX)
+        {
+            var layer = instance.Layer;
+
+            if (layer.Place == SpellPlace.Formation)
+            {
+                PlaceOnFormation(instance, parent, struck);
+                return;
+            }
+
+            // WHOSE BODY. A caster-anchored effect moves its origin, not its
+            // shape. A travelling one always AIMS at the target however
+            // caster-side its placement is -- `caster` says where the box
+            // starts, and a cast reaching three enemies needs three boxes
+            // leaving the same point.
+            var targetRect = instance.TargetIndex >= 0 && instance.TargetIndex < struck.Count
+                ? SlotFor(struck[instance.TargetIndex])
+                : struck.Count > 0 ? SlotFor(struck[0]) : null;
+
+            var on = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels
+                ? casterRect ?? targetRect
+                : targetRect;
+
+            if (on == null) return;
+
+            var box = BoxForLayer(layer);
+            var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
+            float facing = layer.Facing == SpellFacing.None ? 1f : instance.Facing;
+
+            var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing,
+                standing: !SpellPlaceNames.Centred(layer.Place));
+
+            to += new Vector2(layer.dx, layer.dy);
+
+            instance.Box = new UiVec(box.x, box.y);
+            instance.To = new UiVec(to.x, to.y);
+
+            // THE LAUNCH IS NOT IMPACT-CORRECTED, and the asymmetry is on
+            // purpose. `to` is placed so the sheet's impact sits on the target;
+            // the same offset at the other end would shift a DIFFERENT part of
+            // the drawing -- the conjuring glyph -- away from the caster rather
+            // than onto them.
+            instance.From = layer.Travels && casterRect != null
+                ? new UiVec(casterX, to.y)
+                : instance.To;
+        }
+
         // ONE FAULT UNDER THE WHOLE FORMATION, sized to the enemies actually
         // standing in it rather than to a slot or to a constant.
         //
@@ -115,35 +234,27 @@ namespace PrincesPalace
         // three figures at different depths, and a fault authored wide enough
         // for three reaches half the stage past a lone rat -- the effect then
         // describes ground nothing is standing on, which is the same class of
-        // wrongness as an impact landing off the target. The slots know where
-        // they are; nothing else does.
+        // wrongness as an impact landing off the target.
         //
         // MEASURED THROUGH EACH SLOT'S OWN EDGES, not from its centre plus a
         // margin. A back-row slot is depth-scaled, so its half-width in the
-        // renderer's coordinates is not the same number as a front-row slot's
-        // -- one authored margin would over-reach on one rank and under-reach
-        // on the other. Transforming xMin and xMax gets both for free and
-        // leaves no constant to be wrong.
-        private void PlaySpellGroundVfx(CombatBeat beat)
+        // renderer's coordinates is not a front-row slot's -- one authored
+        // margin would over-reach on one rank and under-reach on the other.
+        private void PlaceOnFormation(SpellLayerInstance instance, Transform parent,
+            List<CombatantState> struck)
         {
-            var player = spellGroundVfxPlayer;
-            if (player == null || beat?.Vfx == null || !beat.Vfx.HasGroundLayer) return;
-
-            var parent = player.transform.parent;
-            if (parent == null) return;
-
-            // THE PRE-DAMAGE SNAPSHOT, which is the whole reason the beat
-            // carries one: an enemy killed by this very cast still stood in the
-            // fault when it opened, and reading the living list here would
-            // shrink the fault away from a corpse that is still on screen.
             float left = float.MaxValue;
             float right = float.MinValue;
             float ground = 0f;
             int standing = 0;
 
-            foreach (var struck in StruckBy(beat))
+            // THE PRE-DAMAGE SNAPSHOT, which is why the beat carries one: an
+            // enemy killed by this very cast still stood in the fault when it
+            // opened, and reading the living list would shrink the fault away
+            // from a corpse that is still on screen.
+            foreach (var one in struck)
             {
-                var slot = SlotFor(struck);
+                var slot = SlotFor(one);
                 if (slot == null) continue;
 
                 var rect = slot.rect;
@@ -161,8 +272,8 @@ namespace PrincesPalace
                 standing++;
             }
 
-            // Nobody with a slot: an off-stage or synthetic target. Drawing a
-            // fault of no width would be a zero-sized graphic, so draw none.
+            // Nobody with a slot: an off-stage or synthetic target. A fault of
+            // no width would be a zero-sized graphic, so draw none.
             if (standing == 0 || right <= left) return;
 
             // THE AVERAGE GROUND LINE across the ranks it opens under, not the
@@ -173,23 +284,19 @@ namespace PrincesPalace
             // same small amount at both ends.
             ground /= standing;
 
-            var box = GroundBoxFor(beat.Vfx, right - left);
+            var box = GroundBoxFor(instance.Layer, right - left);
             if (box.x <= 0f || box.y <= 0f) return;
 
-            // The sheet's own ground line onto the formation's, the same
-            // arithmetic BoxCentreFor does for an authored impact point --
-            // against the RENDERED size rather than the box, because a box
-            // whose aspect the author overrode letterboxes inside itself.
-            var art = RenderedSize(beat.Vfx.groundPath, box);
-            float sheetGround = beat.Vfx.HasGroundImpactY ? beat.Vfx.groundImpactY : 0.5f;
+            // The sheet's own ground line onto the formation's, against the
+            // RENDERED size rather than the box, because a box whose aspect the
+            // author overrode letterboxes inside itself.
+            var art = RenderedSize(instance.Layer.path, box);
+            float sheetGround = instance.Layer.HasImpactY ? instance.Layer.impactY : 0.5f;
 
-            // A fault is symmetrical about the rack it opens under, so it has
-            // no direction to mirror -- set anyway, because a pool member keeps
-            // whatever facing the last thing to use it left behind.
-            player.SetFacing(1f);
-            player.PlayAt(beat.Vfx.groundPath, beat.Vfx.GroundSeconds,
-                new Vector2((left + right) * 0.5f, ground + (0.5f - sheetGround) * art.y),
-                box);
+            instance.Box = new UiVec(box.x, box.y);
+            instance.To = new UiVec((left + right) * 0.5f + instance.Layer.dx,
+                ground + (0.5f - sheetGround) * art.y + instance.Layer.dy);
+            instance.From = instance.To;
         }
 
         // Everyone this beat's effect is drawn on, primary first. The same walk
@@ -220,13 +327,13 @@ namespace PrincesPalace
         // and not a fallback: a frame's width over its height IS the shape the
         // artist drew, and authoring a second copy of it would be a number with
         // two homes. Authored only where the box must differ from the frame.
-        private Vector2 GroundBoxFor(SpellPresentation vfx, float span)
+        private Vector2 GroundBoxFor(SpellLayer layer, float span)
         {
-            float aspect = vfx.groundAspect;
+            float aspect = layer.aspect;
 
             if (aspect <= 0f)
             {
-                var frames = PrimaryPlayer?.Frames(vfx.groundPath);
+                var frames = PrimaryPlayer?.Frames(layer.path);
                 var frame = frames != null && frames.Length > 0 ? frames[0] : null;
                 aspect = frame != null && frame.rect.height > 0f
                     ? frame.rect.width / frame.rect.height
@@ -236,65 +343,6 @@ namespace PrincesPalace
             if (aspect <= 0f) aspect = 1f;
 
             return new Vector2(span, span / aspect);
-        }
-
-        private void PlaySpellVfxOn(CombatBeat beat, CombatantState target, int member)
-        {
-            var spellVfxPlayer = spellVfxPlayers[member];
-            if (spellVfxPlayer == null) return;
-
-            // The SLOT, not the sprite Image inside it. The Image is the art's
-            // raw canvas and its bottom edge is wherever the sheet happened to
-            // be cut; the slot's bottom edge is the stage's ground line, which
-            // the stage visuals stand every frame's feet on. Aiming at the
-            // canvas put a strike below the feet by whatever padding that sheet
-            // carried -- and a MOVING amount, since the offset is per frame.
-            var targetRect = SlotFor(target);
-            if (targetRect == null) return;
-
-            // The slot is nested inside the stage and scaled by depth, so its
-            // anchoredPosition alone is not where the sprite actually appears.
-            // Converting through the shared parent keeps the effect ON the
-            // target rather than near it.
-            var parent = spellVfxPlayer.transform.parent;
-            if (parent == null) return;
-
-            // The box first: every measurement below depends on it, and it
-            // stopped being a constant when spells got their own sizes.
-            var box = BoxFor(beat);
-
-            // WHERE THE ART HAPPENS, which is not the same question as who the
-            // skill hits -- see SpellAnchor. Three independent choices, read as
-            // three: whose body, where on it, and whether it flies there.
-            var anchor = beat.Vfx.Anchor;
-
-            // WHOSE BODY. A caster-anchored effect moves its origin, not its
-            // shape: a self-buff aura belongs on whoever cast it even when the
-            // skill is aimed at an ally. Falling back to the target when the
-            // caster has no slot -- an off-stage or synthetic actor -- is the
-            // same graceful default the travelling branch takes.
-            //
-            // A travelling effect always AIMS at the target; where it comes
-            // from is the travelling branch's business, not this one's.
-            var on = SpellAnchorNames.OnCaster(anchor) && !SpellAnchorNames.Travels(anchor)
-                ? SlotFor(beat.Actor) ?? targetRect
-                : targetRect;
-
-            // WHERE ON IT: the point the effect is supposed to touch. The
-            // ground line under the body, or the middle of it.
-            var aim = AimPoint(parent, on, SpellAnchorNames.Centred(anchor));
-
-            if (SpellAnchorNames.Travels(anchor))
-            {
-                PlayTravellingVfx(beat, spellVfxPlayer, parent, aim, box,
-                    standing: !SpellAnchorNames.Centred(anchor));
-                return;
-            }
-
-            spellVfxPlayer.SetFacing(1f);
-
-            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds,
-                BoxCentreFor(beat, aim, box, facing: 1f, standing: !SpellAnchorNames.Centred(anchor)), box);
         }
 
         // ---- the house's own contact language, for a swing that authored none --
@@ -323,51 +371,110 @@ namespace PrincesPalace
         // undecided change to that shared curve.
         private void PlayContactFx(CombatBeat beat)
         {
-            if (beat?.Target == null) return;
-            if (spellVfxPlayers == null || spellVfxPlayers.Length < 2) return;
+            if (beat?.Target == null || performancePlayer == null) return;
 
-            var arc = spellVfxPlayers[0];
-            var burst = spellVfxPlayers[1];
-            if (arc == null || burst == null) return;
-
-            var parent = arc.transform.parent;
+            var parent = PrimaryPlayer != null ? PrimaryPlayer.transform.parent : null;
             if (parent == null) return;
 
             var targetRect = SlotFor(beat.Target);
             if (targetRect == null) return;
 
+            // THROUGH THE SAME ALLOCATOR AS EVERY OTHER CAST, which is a change
+            // and a necessary one. This used to take pool members 0 and 1 by
+            // index, safe only because the beat player calls it exclusively for
+            // beats with no authored VFX -- and once a tail is allowed to
+            // outlive the beat that cast it, member 0 can still be holding a
+            // spell from the previous round when the next melee blow lands.
+            // Borrowing it then would steal a live renderer.
+            //
+            // A PRESENTATION RATHER THAN TWO DIRECT CALLS, because the arc and
+            // the burst ARE two sprite layers on the target: one mirrored by
+            // the attacker's side, one symmetrical. Saying so in the same
+            // vocabulary every spell uses is what keeps this from being a
+            // second orchestration path for the house's own contact language.
+            var contact = ContactPresentation(beat);
+            var performance = SpellPerformance.Resolve(contact, 1, FrameCountOf);
+
             // THE CONTENT CENTRE, not the ground line. A slash lands on the
-            // body; the standing/letterbox correction BoxCentreFor applies is
-            // for an effect drawn erupting from a floor, and neither of these
-            // sheets is. Both are generated with their impact at the exact
-            // centre of the frame (tools/make_contact_fx.py), so the aim point
-            // IS the box centre and there is no offset to cancel.
+            // body; the standing/letterbox correction is for an effect drawn
+            // erupting from a floor, and neither of these sheets is. Both are
+            // generated with their impact at the exact centre of the frame
+            // (tools/make_contact_fx.py), so the aim point IS the box centre
+            // and there is no offset to cancel.
             var aim = AimPoint(parent, targetRect, centred: true);
             var box = ContactBoxFor(targetRect, AnimatorFor(beat.Target));
 
-            bool wantsArc = beat.Approach != StageApproach.Charge;
+            // MIRRORED FOR A MONSTER: the arc is drawn sweeping left to right,
+            // so a blow coming back across the stage has to run the other way
+            // or the sweep trails the strike instead of leading it. Read off
+            // which SIDE the attacker is on rather than off slot positions, so
+            // a back-row monster hit by a status tick cannot flip it.
+            float facing = beat.Actor != null && !beat.Actor.IsPlayerSide ? -1f : 1f;
 
-            if (wantsArc)
+            foreach (var instance in performance.Instances)
             {
-                // MIRRORED FOR A MONSTER, the same rule PlayTravellingVfx
-                // follows and for the same reason: the arc is drawn sweeping
-                // left to right, so a blow coming back across the stage has
-                // to run the other way or the sweep trails the strike instead
-                // of leading it. Read off which SIDE the attacker is on
-                // rather than off slot positions, so a back-row monster hit
-                // by a status tick cannot flip it (the identical trap
-                // Recoil's own header records).
-                arc.SetFacing(beat.Actor != null && !beat.Actor.IsPlayerSide ? -1f : 1f);
-                arc.PlayAt(ContactCues.SlashArcPath, ContactCues.SlashSeconds, aim, box);
+                instance.Facing = facing;
+                instance.Box = new UiVec(box.x, box.y);
+                instance.To = new UiVec(aim.x, aim.y);
+                instance.From = instance.To;
+            }
+
+            performancePlayer.Begin(performance);
+
+            SoundController.PlayClip(ContactCues.ThudClipPath);
+        }
+
+        // THE HOUSE'S DEFAULT CONTACT LANGUAGE, said in layers. Built in code
+        // rather than authored, because it is what a blow that authored NOTHING
+        // gets -- there is no content row for it to live on, and inventing one
+        // would put a house rule in a file a designer edits.
+        //
+        // THE ARC IS SKIPPED FOR A CHARGE. The slash arc reads a lean-and-cut
+        // and a Charge is a bump rather than a cut; the same table's "Blunt"
+        // row calls for a burst and a longer hit-stop instead of an arc. This
+        // is the burst half of that distinction.
+        private static SpellPresentation ContactPresentation(CombatBeat beat)
+        {
+            var layers = new List<SpellLayer>(2);
+
+            if (beat.Approach != StageApproach.Charge)
+            {
+                layers.Add(new SpellLayer
+                {
+                    id = "arc",
+                    render = "sprite",
+                    place = "target-centre",
+                    at = "release",
+                    path = ContactCues.SlashArcPath,
+                    seconds = ContactCues.SlashSeconds,
+                    until = "once",
+                    facing = "auto",
+                    sort = "effects",
+                });
             }
 
             // The burst is radially symmetrical, so it has no direction to
-            // mirror -- set anyway, because the pool member keeps whatever
-            // facing the last thing to use it left behind.
-            burst.SetFacing(1f);
-            burst.PlayAt(ContactCues.ImpactBurstPath, ContactCues.BurstSeconds, aim, box);
+            // mirror -- which is what `none` says, rather than being a defensive
+            // SetFacing(1f) undoing whatever the last user of a pool member
+            // left behind.
+            layers.Add(new SpellLayer
+            {
+                id = "burst",
+                render = "sprite",
+                place = "target-centre",
+                at = "release",
+                path = ContactCues.ImpactBurstPath,
+                seconds = ContactCues.BurstSeconds,
+                until = "once",
+                facing = "none",
+                sort = "effects",
+            });
 
-            SoundController.PlayClip(ContactCues.ThudClipPath);
+            return new SpellPresentation
+            {
+                layerFormat = SpellLayerRules.CurrentLayerFormat,
+                layers = layers.ToArray(),
+            };
         }
 
         // The effect box, shrunk to the depth the target is standing at.
@@ -457,21 +564,41 @@ namespace PrincesPalace
         // the other edge, so the box has to sit on the other side of the target.
         // Getting this wrong is invisible on Shawn (who always casts rightward)
         // and doubles the error on every enemy.
-        private Vector2 BoxCentreFor(CombatBeat beat, Vector2 aim, Vector2 box, float facing, bool standing)
+        private Vector2 BoxCentreForLayer(SpellLayer layer, SpellPerformance performance,
+            SpellLayerInstance instance, Vector2 aim, Vector2 box, float facing, bool standing)
         {
-            var vfx = beat.Vfx;
-
-            if (vfx.HasImpactPoint)
+            if (layer.HasImpactPoint)
             {
-                var art = RenderedSize(vfx.path, box);
+                var art = RenderedSize(layer.path, box);
                 return new Vector2(
-                    aim.x + (0.5f - vfx.impactX) * art.x * (facing < 0f ? -1f : 1f),
-                    aim.y + (0.5f - vfx.impactY) * art.y);
+                    aim.x + (0.5f - layer.impactX) * art.x * (facing < 0f ? -1f : 1f),
+                    aim.y + (0.5f - layer.impactY) * art.y);
             }
 
             if (!standing) return aim;
 
-            return new Vector2(aim.x, aim.y + box.y * 0.5f - VfxDeadSpaceBelow(vfx.path, box, vfx.impactFrame));
+            return new Vector2(aim.x,
+                aim.y + box.y * 0.5f - VfxDeadSpaceBelow(layer.path, box, LandedFrame(layer, performance, instance)));
+        }
+
+        // WHICH FRAME OF THIS LAYER THE BLOW LANDS ON, 1-based, for the scan
+        // below that measures the LANDED effect's own ground line.
+        //
+        // Derived from the cast's hit cue rather than authored, and that is the
+        // point rather than a convenience: a pre-layer block's cue IS
+        // seconds * impactFrame / frameCount, so dividing it back by the
+        // per-frame time returns exactly the impactFrame it was authored with
+        // and no shipped sheet moves. A layered spell gets the same question
+        // answered from the one number it does author.
+        private int LandedFrame(SpellLayer layer, SpellPerformance performance, SpellLayerInstance instance)
+        {
+            int frames = FrameCountOf(layer.path);
+            float length = instance.EndSeconds - instance.StartSeconds;
+            if (frames <= 0 || length <= 0f) return 0;
+
+            float perFrame = length / frames;
+            int landed = Mathf.RoundToInt((performance.HitCueSeconds - instance.StartSeconds) / perFrame);
+            return Mathf.Clamp(landed, 0, frames);
         }
 
         // How big the art actually draws once preserveAspect has fitted it into
@@ -496,76 +623,6 @@ namespace PrincesPalace
             return frameAspect <= boxAspect
                 ? new Vector2(box.y * frameAspect, box.y)
                 : new Vector2(box.x, box.x / frameAspect);
-        }
-
-        // ---- an effect that CROSSES the stage ------------------------------------
-        //
-        // Everything above puts an effect where it lands. This one starts where
-        // it was cast and flies, and the difference is not a nicety: mud_blast
-        // is drawn as a conjuring glyph, a lance leaving it, and an impact.
-        // Played on the target the glyph appears in open air with nothing
-        // between it and the caster, and the spell reads as arriving from
-        // somewhere rather than as being cast by anybody.
-        //
-        // The box does not change size or shape -- see SpellVfxPlayer.PlayFrom
-        // for the stretched version that was tried first and for the
-        // measurement that killed it.
-        private void PlayTravellingVfx(CombatBeat beat, SpellVfxPlayer spellVfxPlayer, Transform parent,
-                                       Vector2 aim, Vector2 box, bool standing)
-        {
-            var casterRect = SlotFor(beat.Actor);
-
-            // No slot for the caster -- an off-stage or synthetic actor -- means
-            // falling back to the placement every other spell uses rather than
-            // flying in from an origin that does not exist.
-            if (casterRect == null)
-            {
-                spellVfxPlayer.SetFacing(1f);
-                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds,
-                    BoxCentreFor(beat, aim, box, facing: 1f, standing), box);
-                return;
-            }
-
-            float casterX = parent.InverseTransformPoint(casterRect.TransformPoint(Vector3.zero)).x;
-
-            // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The sheet fires left to
-            // right; the Bog Witch casts the same spell back across the stage,
-            // and unmirrored her glyph would form facing away from the thing it
-            // is about to hit.
-            //
-            // DECIDED BEFORE the arrival is placed, not after, because the
-            // horizontal impact correction depends on it: a mirrored sheet's
-            // point of contact is the same distance in from the OTHER edge.
-            float facing = aim.x >= casterX ? 1f : -1f;
-            spellVfxPlayer.SetFacing(facing);
-
-            var to = BoxCentreFor(beat, aim, box, facing, standing);
-
-            // THE LAUNCH IS NOT IMPACT-CORRECTED, and that asymmetry is on
-            // purpose. `to` is placed so the sheet's IMPACT sits on the target;
-            // the same offset applied at the other end would shift the sheet's
-            // conjuring glyph -- a different part of the drawing entirely --
-            // away from the caster by that amount rather than onto them. For
-            // mud_burst that would drag the glyph a further sixth of a box out
-            // into open air, which is the exact complaint the travelling anchor
-            // was written to fix.
-            //
-            // Correcting the launch properly needs a second authored point (the
-            // sheet's origin, as against its impact), and no sheet has yet
-            // wanted one. Until one does, the launch keeps the rule it has
-            // always had: the box centred on the caster.
-            var from = new Vector2(casterX, to.y);
-
-            // LEAVES ON THE DEPARTURE FRAME AND ARRIVES ON THE IMPACT ONE. The
-            // second is the frame the damage number is already timed to (see
-            // ImpactDelayFor), so tying the flight to it keeps the burst and the
-            // hit from drifting apart when a spell is retuned; the first is what
-            // holds the charge where it was cast instead of letting it drift
-            // through its own wind-up.
-            //
-            // Both are 1-based in content, like the golem's impact frame.
-            spellVfxPlayer.PlayFrom(beat.Vfx.path, beat.Vfx.seconds, from, to, box,
-                beat.Vfx.departFrame - 1, beat.Vfx.impactFrame - 1);
         }
 
         // How much empty box sits BELOW the visible art once preserveAspect has

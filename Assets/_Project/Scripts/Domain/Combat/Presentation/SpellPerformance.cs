@@ -50,6 +50,23 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // velocity is zero, through the identical arithmetic.
         public UiVec From;
         public UiVec To;
+
+        // The box the art is fitted into, and which way it points. Written by
+        // Core beside From/To and for the same reason: both depend on the
+        // stage's depth scaling and on the sheet's own transparent margins,
+        // neither of which Domain can measure.
+        //
+        // ON THE INSTANCE rather than in a parallel array handed alongside the
+        // performance. Two arrays keyed by the same index is the shape this
+        // codebase already removed once -- `string[] iconIds` beside
+        // `Sprite[] iconSprites` across five controllers -- and it fails the
+        // same way: nothing makes the two lengths agree.
+        public UiVec Box;
+
+        // +1 as drawn, -1 mirrored. A property of the CAST rather than of a
+        // target, so a projectile and the wake riding it cannot disagree about
+        // which way they point.
+        public float Facing = 1f;
     }
 
     // A PRESENTATION, RESOLVED: every layer fanned out, every time absolute,

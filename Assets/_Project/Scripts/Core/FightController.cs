@@ -334,6 +334,11 @@ namespace PrincesPalace
         [SerializeField] internal Image spellGroundVfx;
         [SerializeField] internal SpellVfxPlayer spellGroundVfxPlayer;
 
+        // WHO OWNS A SPELL WHILE IT IS DRAWING. Lives on the effects pool node,
+        // so it ticks from its own Update and this controller gains no
+        // responsibility for a clock it has no opinion about.
+        [SerializeField] internal SpellPerformancePlayer performancePlayer;
+
         // The plate every combatant with no authored battle art falls back to.
         // Assigned at build time from the same sprite the enemy plates use, so a
         // slot with nothing behind it reads as a real combatant rather than
@@ -545,7 +550,11 @@ namespace PrincesPalace
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
             beatPlayer.FlashTarget = FlashCombatant;
-            beatPlayer.PlayVfx = PlaySpellVfx;
+            // A lambda rather than the method group, because the cast handle
+            // PlaySpellVfx returns is for the tests that ask about ownership --
+            // the beat player has nothing to do with it and is deliberately not
+            // given a way to hold one.
+            beatPlayer.PlayVfx = beat => PlaySpellVfx(beat);
             beatPlayer.PlayContactFx = PlayContactFx;
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
@@ -711,21 +720,16 @@ namespace PrincesPalace
             }
         }
 
+        // EVERY LIVING CAST, ABANDONED. Wired to the beat player's EndFight
+        // rather than to its Flush: a tail from the previous round is supposed
+        // to survive the start of the next one, and stopping every visual when
+        // a new playback begins is precisely the beat-end cleanup the brief
+        // asks to remove. What this is still for is the abandoned fight -- a
+        // scene change mid-round must not leave a fault frozen mid-rupture
+        // behind an empty stage.
         private void StopSpellVfx()
         {
-            if (spellVfxPlayers != null)
-            {
-                foreach (var player in spellVfxPlayers)
-                {
-                    if (player != null) player.StopImmediately();
-                }
-            }
-
-            // The ground layer clears with them. It is a separate node with a
-            // separate lifetime, so an abandoned fight would otherwise leave a
-            // fault frozen mid-rupture behind an empty stage -- the exact case
-            // FightBeatPlayer.Flush calls this for.
-            if (spellGroundVfxPlayer != null) spellGroundVfxPlayer.StopImmediately();
+            if (performancePlayer != null) performancePlayer.CancelAll();
         }
 
         // Three backdrops on ONE Image, swapped by encounter class -- v1's

@@ -105,6 +105,20 @@ namespace PrincesPalace
         public static float Scaled(float seconds) =>
             BeatSpeedMultiplier <= 0f ? 0f : seconds / BeatSpeedMultiplier;
 
+        // THE SAME CONVERSION READ THE OTHER WAY, for the one caller that has
+        // an engine duration and needs the authored seconds behind it: the
+        // spell module holds a schedule in authored seconds and a clock in
+        // engine ones, and asking "how far into the cast are we" is exactly
+        // this division undone.
+        //
+        // Here rather than at that call site because BeatSpeedMultiplier must
+        // be read in ONE place. A module multiplying by it directly would be a
+        // second home for the conversion, and the two would be free to
+        // disagree the moment either changed -- which is the failure the beat
+        // and the spell crossing their cue on the same frame depends on not
+        // happening.
+        public static float Unscaled(float engineSeconds) => engineSeconds * BeatSpeedMultiplier;
+
         public bool IsPlaying { get; private set; }
 
         // A read-only view of the pool, for the tests that assert it comes back
@@ -265,11 +279,6 @@ namespace PrincesPalace
                 }
             }
 
-            // An abandoned fight must not leave a spell frozen mid-frame over an
-            // empty stage. Same rule as the popups, and the same reason it is
-            // here rather than at the call sites.
-            StopVfx?.Invoke();
-
             // An abandoned round leaves the stage on live state, same rule as
             // the normal completion path below and for the same reason. The
             // tracker with it: a queue frozen on a beat that will now never
@@ -294,11 +303,30 @@ namespace PrincesPalace
             finished?.Invoke();
         }
 
+        // SUPERSEDING A PLAYBACK AND ABANDONING A FIGHT ARE TWO THINGS, and
+        // Flush used to be both.
+        //
+        // Flush runs from Play, which is the start of the NEXT round -- so
+        // stopping every visual there is what killed a tail the instant the
+        // following round began. Combat completion and visual completion are
+        // distinct; a droplet still falling from the last blow is not a bug for
+        // the next beat to clean up.
+        //
+        // TWO NAMES RATHER THAN Flush(bool endingTheFight). A bool that selects
+        // the behaviour rather than being the state is refused by
+        // docs/CODE_STANDARDS.md section 5, and `Flush(true)` at a call site
+        // would tell a reader nothing.
+        public void EndFight()
+        {
+            Flush();
+            StopVfx?.Invoke();
+        }
+
         private void OnDisable()
         {
             // A scene change mid-round is exactly the abandoned-fight case, and
             // it must not be the caller's job to remember.
-            Flush();
+            EndFight();
         }
 
         private IEnumerator PlayBeats(IReadOnlyList<CombatBeat> beats)

@@ -78,6 +78,19 @@ namespace PrincesPalace.PlayModeTests
             SpellVfxPlayer.ClockOverride = () => past;
         }
 
+        // BETWEEN TWO CASTS IN ONE TEST, because a cast now OWNS the renderers
+        // it obtained until its own lifetime ends. Two casts back to back
+        // inside a single frame is not something a fight does -- beats are
+        // BeatHoldSeconds apart and these sequences are milliseconds long at
+        // the 60x this fixture runs -- and the second one deliberately gets its
+        // OWN member rather than restarting the first's, which is the
+        // "a second cast must neither restart nor steal" rule. So a test that
+        // reads a fixed pool member after a second cast would be reading the
+        // FIRST cast unless the first has ended, which is what a beat boundary
+        // does for free in a real fight.
+        private void LetTheLastCastFinish() =>
+            _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true).EndFight();
+
         // A sheet of a given aspect with a given transparent margin along the
         // bottom, in frame-height fractions. The two things the correction is
         // built out of, made explicit.
@@ -616,6 +629,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(_player.Image.rectTransform.localScale.x, 0f,
                 "the hero casts left to right, which is how the sheet is drawn");
 
+            LetTheLastCastFinish();
             _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
             yield return null;
             Assert.Less(_player.Image.rectTransform.localScale.x, 0f,
@@ -705,6 +719,7 @@ namespace PrincesPalace.PlayModeTests
             _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
             yield return null;
 
+            LetTheLastCastFinish();
             _fight.PlaySpellVfxForTest(TravellingBeat(fromCaster: false));
             yield return null;
 
@@ -1214,6 +1229,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             float alone = Ground.Image.rectTransform.sizeDelta.x;
 
+            LetTheLastCastFinish();
             _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
             yield return null;
             float formation = Ground.Image.rectTransform.sizeDelta.x;
@@ -1346,9 +1362,15 @@ namespace PrincesPalace.PlayModeTests
             _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
             yield return null;
 
-            Assert.IsTrue(Ground.Image.enabled, "nothing was playing, so this would prove nothing about Flush");
+            Assert.IsTrue(Ground.Image.enabled, "nothing was playing, so this would prove nothing about EndFight");
 
-            _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true).Flush();
+            // ENDFIGHT RATHER THAN FLUSH, and the name change is the point.
+            // Flush supersedes a playback and runs at the start of the NEXT
+            // round, where killing a living tail is the beat-end cleanup this
+            // design removes. Abandoning a fight is what EndFight is, and
+            // abandoning a fight is what this test is about -- the header and
+            // every assertion below are unchanged.
+            _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true).EndFight();
 
             Assert.IsFalse(Ground.Image.enabled, "the fault is still drawing over an abandoned fight");
             Assert.IsEmpty(DrawnEruptions(), "an eruption is still drawing over an abandoned fight");

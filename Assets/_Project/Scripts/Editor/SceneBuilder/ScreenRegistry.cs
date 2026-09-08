@@ -181,6 +181,17 @@ public static class ScreenRegistry
                 fight.spellGroundVfxPlayer.fade.preserveAspect = true;
                 fight.spellGroundVfxPlayer.fade.enabled = false;
 
+                // THE MODULE, ON THE EFFECTS POOL NODE. It ticks from its own
+                // Update, so it lives on a node that exists for the whole
+                // fight and is disabled with it -- which is what makes
+                // "nothing survives teardown" a property of the tree rather
+                // than something the controller has to remember. Handed both
+                // bands because ownership is per cast and a cast can hold
+                // members of either.
+                fight.performancePlayer = result.Attach<SpellPerformancePlayer>(screen.SpellVfxPool);
+                fight.performancePlayer.effectRenderers = fight.spellVfxPlayers;
+                fight.performancePlayer.groundRenderers = new[] { fight.spellGroundVfxPlayer };
+
                 // The popups own their own rise-and-fade, so each gets its
                 // component and its label here rather than being animated by the
                 // controller. The player lives on the POOL node, which is what

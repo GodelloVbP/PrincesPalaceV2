@@ -57,7 +57,13 @@ namespace PrincesPalace
         // GlobalStateLintTests like every other global a test can flip.
         public static Func<float> ClockOverride;
 
-        private static float Now() => ClockOverride != null ? ClockOverride() : Time.realtimeSinceStartup;
+        // INTERNAL RATHER THAN PRIVATE, because the module that schedules a
+        // cast has to be on the same clock as the renderer it drives. Two
+        // clocks is what a scheduler advancing on wall time beside a renderer
+        // advancing on a held override would be, and every "is it drawn" test
+        // in this project holds that override precisely so the answer stops
+        // being a race.
+        internal static float Now() => ClockOverride != null ? ClockOverride() : Time.realtimeSinceStartup;
 
         private Coroutine _playing;
 
