@@ -1,7 +1,10 @@
-# Plan: layered spell presentation — revision 3
+# Plan: layered spell presentation — revision 4
 
-**Status:** design gate, revision 3, 2026-09-08. Not started. Supersedes
-revisions 1 and 2 of this file in full.
+**Status:** design gate, revision 4, 2026-09-08. Not started. Supersedes
+revisions 1 and 2 of this file in full. Revision 4 is a **targeted amendment**
+of revision 3, not a rewrite: the owner approved the direction and named seven
+gaps to close before coding. Everything revision 3 said stands except where
+the revision-4 log below says otherwise.
 **Answers:** `docs/handoffs/spell_layers/BRIEF.md` (owner, 2026-09-08).
 **Extends, does not contradict:** `docs/PLAN_SPELL_FEEL.md` §"Revised cast
 model" (four moments, `FightBeatPlayer` stays the clock) and §"Minimum
@@ -12,6 +15,136 @@ repetition budget; nothing below relaxes either.
 **Pilot:** `prismatic_orb`, Water element. **Second validation case:**
 `cinderfault`. **Third:** a synthetic caster-anchored two-burst built from art
 that already ships.
+
+---
+
+## Review log, revision 4 — owner's gap list
+
+Seven gaps the owner named after approving revision 3's direction, closed here
+and nowhere else. No section was restructured, no milestone hour moved, and
+nothing was added that a gap did not force.
+
+- **G1 — finite core/wake lifetimes.** Revision 3 spread "when does a layer
+  end" across `until`, `seconds`, `fade` and §2c, and left two of its own Water
+  layers open-ended: `core` is `until: loop` with no `seconds`, `wake` is
+  `until: hold` with no `seconds`. **§2b** now carries the one lifetime table
+  for all six kinds — a travelling layer ends **at arrival** unless it authors a
+  longer finite `seconds` (which is exactly what the adapter does, §2f, and what
+  keeps five shipped spells from being cut short), a follower ends **with the
+  layer it follows**, and `fade` is an ending capped at
+  `SpellLayerRules.MaxFadeSeconds = 0.5f`, derived from
+  `BeatHoldSeconds + BeatGapSeconds` (`FightBeatPlayer.cs:31-32`). **§2d** gains
+  two refusals — an unbounded non-emitter layer, and a `fade` past the cap.
+  **§6d** and **§8** now state where each of their layers ends, in seconds.
+- **G2 — following flight emission with birth-time source sampling.** Revision
+  3 had `place: layer:<id>` and `inherit` but never said *when* the source was
+  read, so a long tick would have stacked a whole tick's droplets at the step's
+  end position. **§3 T13** states it as trigger → condition → outcome: the spawn
+  clock is the shared cast clock, particle `i` is born at
+  `windowStart + i / rate`, and its `p0`/`v0` are sampled **once, at that
+  birth time**, back-dated along the source's path. **§5a** and **§5b** name
+  where the source position comes from —
+  `SpellPerformance.PositionOf`/`VelocityOf`, the closed form of §2b's `t*t`
+  ease and its exact derivative, **the same function the sprite renderer places
+  the source with**. The one thing it cannot back-date (a `follow: true`
+  anchor that moved) is stated rather than hidden.
+- **G3 — unambiguous arrival ownership.** Revision 3 said arrival three times
+  and differently each time, including "three targets have three arrival times",
+  which nothing in the model made true. **§3's new "Who owns arrival"** gives one
+  owner (`SpellPerformance.ArrivalSeconds`, computed once in
+  `ResolveAgainstFrames`), one computation (the **first** `travelSeconds > 0`
+  layer in authored order — no new field, because **§2d** now refuses a second
+  traveller in any cast that schedules `at: arrival`), one publisher and one
+  consumer (`SpellSchedule`, nobody else), and `arrival = release` when nothing
+  travels. **§2b**'s per-target paragraph is corrected to "one time, N places".
+- **G4 — validation consistent with the examples.** Every JSON block in §6d, §7
+  and §8 and every adapter row in §2f walked against every rule in **§2d**.
+  Six inconsistencies, each fixed in the direction the code supports and each
+  listed with its rule and its example below. **§2d** also gains the two
+  `ArtPathConvention.Kinds` entries the layer paths need and the sweep branch
+  that keeps `ArtPathConventionTests` honest about them.
+- **G5 — explicit beat-speed synchronization.** Revision 3 said "the clock reads
+  `Time.time`" and stopped, which is half an answer: the beat's waits are
+  `Scaled(seconds)`, so a scheduler holding authored seconds against `Time.time`
+  is 60× out under a test multiplier. **§3's new contract C1** names one clock
+  (`Time.time`, or `ClockOverride`), one conversion
+  (`FightBeatPlayer.Scaled`, `:105-106`, the only reader of
+  `BeatSpeedMultiplier`), how pause and `Time.captureFramerate` reach every
+  layer through it, and what is out of contract. **§10 L1** cross-references it;
+  **§9 M4** carries `ASpellAndItsBeatCrossTheHitCueOnTheSameFrame` at
+  multiplier 1 and 60, with an exact-arithmetic half and a frame-count half.
+- **G6 — overlap/pooling tests including the ground layer.** The ground band was
+  a pool of exactly one (`FightScreen.cs:2432`) and no revision-3 test touched
+  it under overlap. **§4** adds `SpellGroundRenderers = 2` — forced by per-cast
+  ownership, and bounded by `2 × BeatHoldSeconds > 0.78s` so a third fault
+  cannot overlap — and extends the content-derived pin to count **per band**.
+  **§9 M4** adds the four cases: two Cinderfaults back to back (the second gets
+  its own member, it does not supersede), Cinderfault over a live Water tail on
+  one target, exhaustion where the **ground** member is the one denied (the cue
+  still fires exactly once), and `EndFight` mid-fade. Every one has an
+  observable assertion.
+- **G7 — actual allocation measurement.** Revision 3 measured
+  `GC.GetTotalMemory(false)` — retained memory, which reads the collector's mood
+  rather than the code. **§4** replaces it with per-frame GC allocation:
+  `ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame")`
+  (Unity 6 core module; the older `UnityEngine.Profiling.Recorder` on `GC.Alloc`
+  is rejected because it reports counts, not bytes), a four-part definition of
+  where warm-up ends, 120 frames of a Water cast over a live Cinderfault tail,
+  and two assertions — **zero** bytes from `Tick` via
+  `Is.Not.AllocatingGCMemory()`, and a **zero difference** between casting and
+  idle for the whole frame, because a Unity frame in this scene is not
+  allocation-free and pretending otherwise would make the test a lie. **§9 M8**
+  carries it.
+
+**The six inconsistencies G4 found**, each with the rule and the example:
+
+1. **`at: arrival` was layer-scoped and refused Water's own splash.** The rule
+   read "a layer scheduled `at: arrival` **belongs to, or references**, a layer
+   with `travelSeconds > 0`". §6d's `splash` is `place: target-centre`,
+   `at: arrival`, and neither travels nor names `core`. As written,
+   `prismatic_orb` fails its own content build. **Fixed toward the example**:
+   arrival is a cast-level time (G3), so the rule is cast-scoped.
+2. **`impactX`/`impactY` both-or-neither refused Cinderfault's fault.** §7's
+   `fault` states `impactY: 0.063` alone, and so does §2f's adapter row for the
+   ground layer — the legacy block has a `groundImpactY` and **no
+   `groundImpactX` at all**. **Fixed toward the examples**: `place: formation`
+   is exempt, because its horizontal centre is the measured span's midpoint
+   (`GroundBoxFor`, `FightController.SpellVfx.cs:223-236`) and there is nothing
+   for an `impactX` to correct.
+3. **The emitter-inertness rule refused every sprite layer.** "Emitter fields
+   set on a non-emitter layer" against zero would fire on §6d's `core`,
+   `splash`, §7's `fault` and `erupt` and every adapter output, because
+   `SpellEmitter.sizeMin`, `sizeMax` and `fadeFrom` all initialise to `1f`.
+   **Fixed in the rule**: compared against a default-constructed `SpellEmitter`.
+4. **`sort`, `until` and `facing` were mandatory by accident.** §8's two layers
+   author none of them; the `sort` rule as written ("is `ground` or `effects`")
+   refuses a blank. **Fixed in the rule**, to the shape the codebase already
+   uses: `SpellAnchorNames.IsKnown` returns true for blank
+   (`SpellAnchor.cs:84-85`) precisely so an unauthored word means the default.
+   Blank `render` and `place` stay refused — there is no safe default for what
+   draws or where.
+5. **`until` and `facing` had no rule at all**, while `render`, `place`, `at`
+   and `sort` had four. G1 needs `until` parsed — a lifetime rule stated in
+   terms of a word nothing validates is not a rule — and `facing` rides the same
+   row because it is the same one-predicate, one-message shape. Two more name
+   tables in **§5a**'s row, no new mechanism.
+6. **A `still`'s `path` was documented as a sprite and authored as a folder.**
+   The field comment said "single sprite (still)"; §6d's `wake` names
+   `Spells/prismatic_orb_water_wake`. **Fixed toward the example**, on
+   mechanical grounds: `SpellVfxRecipeDriftTests` matches a played path's last
+   segment against recipe filenames (`:140-144`) and requires it to be a
+   directory on disk (`:170-172`), so `…_wake/f0` would fail both.
+
+**Three citations corrected in passing**, all found while grounding the above:
+the non-travelling `SetFacing(1f)` is `FightController.SpellVfx.cs:294` (and
+`:523`), not `:494`, which is inside `RenderedSize` (§2f); the beat's impact
+wait is `FightBeatPlayer.cs:458`, not `:459` (§3 C1); and §6d's "droplets clear
+about 0.73s after release" is 0.69s once each layer's end is computed (§6d).
+
+**Not closed, and why.** Nothing in the seven. The two things revision 3
+recorded as unverifiable without running Unity — the 24 `SpellVfxTests`
+assertions through a new path, and the allocation figures — are unchanged in
+status: G7 specifies *how* to measure, not what the number will be.
 
 ---
 
@@ -521,7 +654,7 @@ public class SpellLayer
     public bool follow;             // re-read the anchor every tick, vs sample once
     public string at = "";          // release | arrival | hit
     public float offset;            // seconds added to `at`
-    public string path = "";        // Resources folder (sprite) or single sprite (still)
+    public string path = "";        // Resources FOLDER, for sprite and still alike
     public float seconds;           // total playback length; 0 = derive from fps and frames
     public float fps;               // 0 = fit the whole folder into `seconds`
     public int startFrame;          // 1-based; 0 means frame 1
@@ -569,6 +702,51 @@ number that would otherwise have had two homes** (`docs/CODE_STANDARDS.md`
   still apply. A fault authored wide enough for three reaches half the stage
   past a lone rat, which is why the number is measured and not authored, and
   authoring a second copy of it would be the restatement §6 forbids.
+- **A `still`'s `path` names a FOLDER, exactly like a `sprite`'s**, and the
+  still draws that folder's `startFrame`. Not a sprite file, and the reason is
+  mechanical rather than tidy: `SpellVfxRecipeDriftTests
+  .EveryFolderASkillPlaysHasARecordedProvenance` matches a played path's **last
+  segment** against recipe filenames (`SpellVfxRecipeDriftTests.cs:140-144`)
+  and `NoSkillTimesABeatToAFrameItsFolderDoesNotHave` requires it to be a
+  **directory on disk** (`:170-172`). A wake authored as
+  `Spells/prismatic_orb_water_wake/f0` would present `f0` as its provenance id,
+  find no recipe of that name, and fail both. So §6d's `path`, which names the
+  folder, is right and revision 3's field comment ("single sprite") was wrong.
+  One loader for both kinds — `FrameSequenceLoader.Load`
+  (`FrameSequenceLoader.cs:49`) — and one path convention.
+
+#### Every non-emitter layer's lifetime is finite
+
+**The one place that says so.** Revision 3 spread this across `until`, `fade`,
+`seconds` and §2c, and left two of §6d's own layers open-ended: `core` is
+`until: loop` with no `seconds`, and `wake` is `until: hold` with no `seconds`.
+Read literally, both draw for the rest of the fight. They do not, and here is
+the rule rather than the accident:
+
+| the layer | when it ends |
+|---|---|
+| `travelSeconds > 0` (**the core**) | **at its arrival** — `start + travelDelay + travelSeconds` — whatever `until` says. `until: loop` describes what the sheet does *while it crosses the stage*, not how long the layer lives. An authored `seconds` may extend it past arrival, and must then be `>= travelDelay + travelSeconds`; it may never be open-ended |
+| `until: once`, no travel | `start + seconds`, where `seconds` is authored or derived as `frames.Length / fps` (§2f) |
+| `until: loop`, no travel | `start + seconds`, and **`seconds` is required** — a loop with no stated end is the unbounded case the rule below refuses |
+| `until: hold`, no travel | `start + seconds`, and `seconds` is required — **unless** the layer is placed on `layer:<id>`, which is the next row |
+| `place: layer:<id>` (**the wake**) | **with the layer it follows**, and never after it. It ends when its source ends, then fades |
+| `render: emitter` | `window + lifeMax` (§2c) — the one kind whose end is derived rather than authored, because the brief requires emission to stop while particles finish |
+
+**The fade is bounded too.** `fade` is an alpha ramp-out that **begins at the
+end computed above and extends the layer by at most `fade` seconds**; it is not
+a second lifetime. `SpellLayerRules.MaxFadeSeconds = 0.5f`, derived rather than
+picked: longer than any authored tail in this plan (the splash's 0.31s, the
+droplets' 0.38s) and shorter than `BeatHoldSeconds + BeatGapSeconds = 0.75s`
+(`FightBeatPlayer.cs:31-32`), so a fade can outlive the beat that cast it — T5
+requires that — but cannot still be running when the beat *after* the next one
+opens, which is the point at which a tail stops being attributable to a cast by
+eye. A follower's fade is additionally clipped to `MaxFadeSeconds` from its
+source's end, so the wake cannot outlive the core by more than a tenth of a
+second at its authored `fade: 0.10`.
+
+So §6d's two layers are bounded, and the numbers are checkable: `core` ends at
+`0 + 0 + 0.25 = 0.25s`; `wake` ends at `0.25s` and is gone by `0.35s`. §2d
+carries the two rules that refuse the alternative.
 
 **Deferred until a second user, with the reason** — both were in revision 2
 and neither has a consumer in Water, Cinderfault or the synthetic proof:
@@ -589,7 +767,7 @@ Every discriminator is a **string parsed case-insensitively**, never the enum
 itself, for the reason `SpellPresentation.anchor` already gives at `:62-67`:
 `JsonUtility` writes an enum as its **ordinal**, so the file would read
 `"render": 2` and reordering the enum would silently repoint every spell. The
-parse helpers follow `SpellAnchorNames`' shape exactly (`SpellAnchor.cs:78-86`):
+parse helpers follow `SpellAnchorNames`' shape exactly (`SpellAnchor.cs:77-85`):
 a `Parse` and an `IsKnown` beside it, because "Parse cannot both fall back
 safely AND report a typo".
 
@@ -624,16 +802,22 @@ thing that can cycle (`a` placed on `b` placed on `a`). One rule in §2d
 refuses it; the schedule has no references at all, so there is nothing else to
 check.
 
-**`arrival` is per target, the hit cue is not.** A cast that travels to three
-enemies has three projectiles with three arrival times (the slots sit at
-different depths and distances), so a target-placed layer scheduled
-`at: arrival` opens at *its own* target's arrival. The hit cue is one time for
-the whole cast — `FightBeatPlayer`'s impact block runs once (`:473-507`) and
-the per-target numbers already come from `beat.Results`
-(`CombatBeat.cs:170-175`). Where the two disagree by more than a frame, the
-authored `hitCueSeconds` wins and the near target's splash simply holds a beat
-longer; that is a design constraint on travelling multi-target spells, and
-none exists today.
+**`arrival` is one time for the whole cast, at N places.** Revision 3 said a
+cast travelling to three enemies "has three arrival times (the slots sit at
+different depths and distances)". **That was wrong, and nothing in the model
+made it true**: `travelSeconds` is an authored number, not a distance divided
+by a speed, and today's travel is likewise the same `seconds` and the same
+frame indices whatever the distance (`SpellVfxPlayer.PlayFrom` is handed
+`beat.Vfx.seconds` per target, `FightController.SpellVfx.cs:567-568`). Three
+projectiles leave one caster and land on three slots **at the same instant, at
+three different points**. A target-placed layer scheduled `at: arrival`
+therefore opens at one time for every instance, and only its *position*
+differs. §3 says who computes that time. The hit cue is a second, independent
+authored time — `FightBeatPlayer`'s impact block runs once (`:473-507`) and the
+per-target numbers already come from `beat.Results` (`CombatBeat.cs:170-175`).
+Nothing reconciles the two: an author who wants compression before the blow
+sets `hitCueSeconds` later than arrival, which is exactly what §6d does
+(arrival 0.25, cue 0.35).
 
 A projectile is not a placement word — it is a `sprite` layer with
 `place: caster` (or `caster-centre`), a `travelSeconds`, and an `at: release`,
@@ -698,7 +882,15 @@ can emit**, not `window`. The brief asks for exactly this — "emission can stop
 while already emitted particles finish" — and it is the difference between a
 shed that stops at the target and a shed whose last drops vanish in mid-air.
 `until` and `fade` do not apply to an emitter; a particle's own `fadeFrom`
-and `endScale` are its ending. §3 T12 states the cancellation half.
+and `endScale` are its ending. §3 T12 states the cancellation half, and §2b's
+lifetime table is the one place all six kinds of ending are listed together.
+`window + lifeMax` is finite by construction, which is why the emitter is the
+one layer kind §2d's unbounded-lifetime rule does not have to police.
+
+**`follow` is inert on an emitter**, and reading it would be the wrong
+question. A sprite follows or samples its anchor; an emitter's particles are
+detached the instant they exist, and what matters instead is *where the source
+was when each particle was born*. §3 T13 is that rule and §5b is its maths.
 
 ### 2d. Validation rules, with the error text shape
 
@@ -712,6 +904,9 @@ path list). Every message names the skill, the layer, and the field:
 | `render` is one of three words | `` `frost_flare`: vfx.layers[2].render 'beam' is not a renderer. Known: sprite, still, emitter. `` |
 | `place` parses, or is `layer:<id>` | `` `prismatic_orb` element #2: vfx.layers[1].place 'projectile' is not a placement. Known: caster, caster-centre, target, target-centre, formation, layer:<id>. `` |
 | `at` parses | `` …vfx.layers[3].at 'impact' is not a schedule point. Known: release, arrival, hit. `` |
+| `until` and `facing` parse | `` …vfx.layers[2].until 'forever' is not an end policy. Known: once, loop, hold. `` |
+| a non-emitter layer's lifetime is bounded: `until: loop` or `until: hold` needs either `seconds > 0`, a `travelSeconds > 0`, or `place: layer:<id>` | `` …vfx.layers[1] is until 'loop' with no seconds, no travel and nothing to follow, so it would draw for the rest of the fight. Give it seconds, give it travelSeconds, or place it on a layer. `` |
+| `fade` is `0 <= fade <= SpellLayerRules.MaxFadeSeconds` (0.5) | `` …vfx.layers[1].fade 1.2 is longer than the 0.5s a layer's ending may take. `` |
 | every `layer:` reference names a declared layer | `` …vfx.layers[3].place 'layer:core' names no layer. Declared: wake, splash. `` |
 | `layer:` references form no cycle | `` …vfx.layers: 'a' is placed on 'b' which is placed on 'a'. `` |
 | `place: formation` authors no `size` or `dx` | `` …vfx.layers[0] is placed on the formation and authors size 380, which the measured span overrides. Remove it. `` |
@@ -719,14 +914,24 @@ path list). Every message names the skill, the layer, and the field:
 | `id` unique when non-empty; required when referenced | `` …vfx.layers[1].id 'core' is used twice. `` |
 | `seconds`, `fps`, `travelSeconds`, `window`, `lifeMin/Max`, `rate` non-negative; `lifeMax >= lifeMin`; `speedMax >= speedMin` | `` …vfx.layers[0].fps -12 cannot be negative. `` |
 | `render: sprite\|still` requires `path`; `render: emitter` requires `emitter.path` and (`rate > 0` or `burst > 0`) | `` …vfx.layers[2] is an emitter and authors neither rate nor burst, so it emits nothing. `` |
-| emitter fields set on a non-emitter layer, or sprite fields (`fps`, `startFrame`, `until`) on an emitter | `` …vfx.layers[0] is a sprite and authors emitter.gravity, which is inert. Remove it or change render to emitter. `` |
-| `impactX`/`impactY` both or neither (existing rule, `SpellPresentation.cs:206-212`) | `` …vfx.layers[1] states impactX and not impactY. `` |
+| emitter fields set on a non-emitter layer, or sprite fields (`fps`, `startFrame`, `until`) on an emitter. **Compared against a default-constructed `SpellEmitter`, not against zero** — `sizeMin`, `sizeMax` and `fadeFrom` all initialise to `1f`, so a "non-zero" test would refuse every sprite layer in §6d | `` …vfx.layers[0] is a sprite and authors emitter.gravity, which is inert. Remove it or change render to emitter. `` |
+| `impactX`/`impactY` both or neither (existing rule, `SpellPresentation.cs:206-212`), **except on `place: formation`, which may state `impactY` alone** | `` …vfx.layers[1] states impactX and not impactY. `` |
 | `travelSeconds > 0` only on `render: sprite\|still` with a caster-side `place`; `travelDelay > 0` only with `travelSeconds > 0` | `` …vfx.layers[4] travels but is placed on the target, so it has nowhere to travel from. `` |
 | every `path` and `emitter.path` passes `ArtPathConvention` | reuses `SpellPresentationPaths.Check`'s existing text |
 | `layers` non-empty and legacy `path` non-empty together | `` `cinderfault`: vfx authors both layers and the single-block path. Move the block into a layer or delete it. `` |
 | `sort` is `ground` or `effects` | `` …vfx.layers[0].sort 'overlay' is not a draw band. Known: ground, effects. `` |
 | `hitCueSeconds >= 0`, and `> 0` only when `layerFormat >= 1` | `` `cinderfault`: vfx.hitCueSeconds 0.433 needs layerFormat 1; a pre-layer block derives its cue from impactFrame. `` |
-| a layer scheduled `at: arrival` belongs to, or references, a layer with `travelSeconds > 0` | `` …vfx.layers[3] fires at arrival, but nothing in this spell travels. Use release, or give a layer travelSeconds. `` |
+| **any** layer scheduled `at: arrival` requires **some** layer in the cast to have `travelSeconds > 0` — cast-scoped, not layer-scoped | `` …vfx.layers[3] fires at arrival, but nothing in this spell travels. Use release, or give a layer travelSeconds. `` |
+| at most one layer has `travelSeconds > 0` while any layer is scheduled `at: arrival` | `` `prismatic_orb` element #2: vfx.layers 'core' and 'shard' both travel, so 'arrival' names two instants. Give one of them travelSeconds 0, or schedule off release with an offset. `` |
+
+**A blank discriminator is the documented default, not an error.** Every
+`Parse`/`IsKnown` pair follows `SpellAnchorNames`, whose `IsKnown` returns true
+for null or whitespace (`SpellAnchor.cs:84-85`) precisely so an unauthored word
+means the default rather than a refusal. So the four rows above refuse a
+**non-empty unknown** word only: blank `sort` is `effects`, blank `until` is
+`once`, blank `facing` is `auto`, blank `at` is `release`. Blank `render` and
+blank `place` are still refused — there is no safe default for what draws or
+where. This is what makes §8's two layers legal, which author none of the four.
 
 `SpellPresentationPaths.Check` (`SpellPresentationPaths.cs:22-31`) grows one
 loop over `layers` — it is already the type that owns "which of my fields are
@@ -734,6 +939,28 @@ paths", and its own header says a fifth path added elsewhere would be
 forgotten per caller. Note its current shape is `&&`-chained short-circuits,
 so it stops at the first bad path; the loop keeps that shape rather than
 changing it here.
+
+**Two `ArtPathConvention` entries and one sweep extension, neither free.**
+`ArtPathConvention.Check` errors on a field name its table does not classify
+(`ArtPathConvention.cs:112-118`), so `vfx.layers[].path` and
+`vfx.layers[].emitter.path` must be added to `Kinds` as
+`ArtPathKind.RuntimeLoaded` beside `vfx.path` (`:75`) or every layered spell
+fails its own path check. The guard that would normally have caught the
+omission **cannot see them**: `ArtPathConventionTests.PathFieldsOnRawEntries`
+skips array fields outright (`ArtPathConventionTests.cs:67`) and descends
+exactly one level (`:70-76`), so it never reaches `SpellLayer`. Worse, adding
+the two keys without extending it makes
+`EveryClassifiedFieldNameStillExistsOnSomeRawEntry` (`:123`) fail them as
+orphans. So the sweep gains one branch — descend into a `Domain.Content`
+array's element type, reported with the `[]` in the dotted name — and that is
+an M1 deliverable, not a footnote.
+
+**These rules police authored `layers` only.** `ToLayers()` output never meets
+them: it is built at runtime inside `Begin` (§2f) from a block the resolver
+already validated, so there is no author to report an error to and no asset to
+refuse. Its correctness is pinned instead by M3's regression list, which is the
+right instrument — an adapter that emitted an illegal layer would show up as a
+retimed spell, not as a message nobody reads.
 
 **`startFrame`'s range check is not a resolver rule** and cannot be: the
 frame count is on disk, which Domain cannot see. It goes where the identical
@@ -751,7 +978,8 @@ extension it rides along with.
   `TryResolveAll`'s (`:28-42`) and is not changed here.
 - `ContentSchema.EnumBackedFields` (`ContentSchema.cs:58-91`) prints
   `Enum.GetNames` (`:96-99`), so it can only document a **closed** set. The
-  four discriminators get real enums for their closed words — and `place`'s
+  six discriminators — `render`, `place`, `at`, `sort`, `until`, `facing` — get
+  real enums for their closed words, and `place`'s
   `layer:<id>` and any future open form live in the field's `[ContentDoc]`
   string instead, because there is no enum member that could spell them.
   `SpellPresentation.anchor` is not in that table today; adding it is a
@@ -768,7 +996,7 @@ block that authors no layers. A block with `layers` non-empty must state
 
 The policy, stated so a future change cannot be argued about:
 
-- **Adding a word** to `render`, `place`, `at` or `sort`, or a new field with
+- **Adding a word** to `render`, `place`, `at`, `sort`, `until` or `facing`, or a new field with
   an inert default, keeps `layerFormat: 1`. Old content still means what it
   meant.
 - **Changing what an existing word or field means** increments to
@@ -806,8 +1034,8 @@ contradicted two of its own validation rules — see R1.) Mapping:
 
 | legacy field | becomes |
 |---|---|
-| `path`, `seconds` | one `render: sprite` layer, `at: release`, `seconds` as given, `fps: 0` (fit to `seconds`), `until: once` |
-| `anchor` = `target` / `caster` / `target-centre` / `caster-centre` | that layer's `place`, verbatim, and **`facing: none`** — today a non-travelling effect is unconditionally `SetFacing(1f)` (`FightController.SpellVfx.cs:494`), and `AnOrdinaryEffectAfterAMirroredOneIsNotItselfMirrored` (`SpellVfxTests.cs:701`) is the test that says so |
+| `path`, `seconds` | one `render: sprite` layer, `at: release`, `seconds` as given, `fps: 0` (fit to `seconds`), `until: once`. **The authored `seconds` is what ends it, including for a travelling block** — today a travelling sheet arrives on frame `impactFrame - 1` and keeps playing the frames after it at the target until the sequence runs out — the flight fraction is `Clamp01`ed (`SpellVfxPlayer.cs:240`) so it sits on `to` from arrival onward while the loop runs to `total`, and `:248` snaps it there for the last time. That is §2b's "unless it authors a longer finite `seconds`" clause, and it is the clause that keeps the five shipped travelling spells from being cut off at arrival |
+| `anchor` = `target` / `caster` / `target-centre` / `caster-centre` | that layer's `place`, verbatim, and **`facing: none`** — today a non-travelling effect is unconditionally `SetFacing(1f)` (`FightController.SpellVfx.cs:294`, and again in the caster-less fallback at `:523`; revision 3 cited `:494`, which is inside `RenderedSize`), and `AnOrdinaryEffectAfterAMirroredOneIsNotItselfMirrored` (`SpellVfxTests.cs:701`) is the test that says so |
 | `anchor` = `travel` / `travel-centre` | `place: caster` / `caster-centre`, **`facing: auto`**, plus `travelSeconds` and `travelDelay`, computed below |
 | `departFrame` | **`travelDelay`**, not a schedule offset: the sheet is drawn and animating on the caster from frame 0 and only its *motion* waits. `travelDelay = seconds * (departFrame - 1) / frameCount`, and `travelSeconds` below is measured from the end of it |
 | `impactFrame` | the cast's **hit cue**, at `seconds * ImpactFraction(impactFrame, frameCount)` — the identical expression `ImpactDelayFor` uses today (`FightController.SpellVfx.cs:49`). Left as `impactFrame` on the presentation rather than baked into `hitCueSeconds`, because `frameCount` is not knowable at content-build time |
@@ -938,12 +1166,55 @@ Four times, all measured from the beat opening, all independent:
 |---|---|---|
 | **release** | the beat's `PlayVfx` instant | `FightBeatPlayer.cs:434`, unchanged |
 | **departure** | a projectile layer starts moving | that layer's `travelDelay`, measured from its own start |
-| **arrival** | a projectile layer reaches its destination | departure + the layer's `travelSeconds` |
+| **arrival** | the cast's projectile reaches its destination | `SpellPerformance.ArrivalSeconds`, one number for the cast — see below |
 | **contact start** | a target-placed sequence begins playing | that layer's `at` + `offset` |
 | **hit cue** | the one instant the blow lands | the presentation, authored once |
 
 Five, not four: revision 2 folded departure into arrival and lost the ability
 to reproduce a wind-up held at the caster (R2).
+
+### Who owns arrival
+
+Revision 3 named `arrival` in three places — the table above, §2b's per-target
+paragraph and §2d's validation row — and each said something slightly
+different. One owner, one computation:
+
+- **Computed by:** `SpellPerformance`, in Domain, once, inside
+  `ResolveAgainstFrames` at `Begin` (§2f). Nowhere else. It is a **field on the
+  resolved performance**, `float ArrivalSeconds`, not a function anyone can call
+  with different arguments and get a different answer.
+- **Computed from:** the **arrival layer** — the first layer in authored array
+  order with `travelSeconds > 0` — as
+  `arrivalLayer.offset + arrivalLayer.travelDelay + arrivalLayer.travelSeconds`,
+  all measured from the beat opening. Nothing about distance, depth or the
+  target enters it, because nothing in the runtime makes travel time a function
+  of distance: `PlayFrom` is handed one `seconds` and one pair of frame indices
+  per target today (`FightController.SpellVfx.cs:567-568`).
+- **Why "first in authored order" and not a new `arrivalLayer` field:**
+  because §2d now refuses a second traveller in any cast that schedules
+  `at: arrival`, so "first in authored order" never has to break a tie that
+  content can produce. A field that can only ever name one candidate is a field
+  with no user. When a second traveller does want its own arrival, the additive
+  answer under `layerFormat: 1` is an `arrivalLayer` id on the presentation, and
+  the rule that made "first" safe is what gets deleted to allow it. Authored
+  order is already load-bearing elsewhere (draw order, §4), so this adds no new
+  concept.
+- **Published by:** the performance itself, read once by `SpellSchedule` when
+  it converts `at: arrival` cues into absolute times.
+- **Consumed by:** `SpellSchedule` and nothing else. Not `FightBeatPlayer`,
+  which reads only `HitCueSeconds` (T1); not `FightController`; not a renderer;
+  not `SpellEmitterSim`. A layer never asks "when did I arrive" — it is
+  scheduled at a time the performance already resolved.
+- **When no layer travels:** `ArrivalSeconds = 0`, which is release. Defined
+  rather than undefined, so the adapter's output (every legacy layer is
+  `at: release`, §2f) and any future non-authored path have no hole to fall
+  into. §2d's refusal of `at: arrival` in a cast with no traveller stands
+  alongside it as a **typo check**, not as the definition: an author who writes
+  `arrival` in a spell that does not travel meant `release` and should be told
+  so, but the value they would have got is release anyway.
+- **Per instance, not per time.** A `target`-placed layer at `at: arrival` gets
+  N instances, all opening at `ArrivalSeconds`, each at its own target's
+  position (§2b).
 
 Written as trigger → condition → outcome:
 
@@ -1035,6 +1306,99 @@ Written as trigger → condition → outcome:
   while already emitted particles finish", which revision 2 did not answer.
   `Cancel(handle)` (T9) is the exception: it releases living particles
   immediately, because a visual-only stop means *stop*.
+- **T13.** Trigger: an emitter layer placed on `layer:<id>` has its window open
+  across a tick `(prev, now]`. Condition: the source layer is travelling, so
+  its position is moving during that tick — and the tick may be long (a scene
+  load, `BeatSpeedMultiplier = 60`). Outcome, in four parts:
+
+  1. **The spawn clock is the shared cast clock, not the tick.** Particle `i`
+     of the layer is born at `t(i) = windowStart + i / rate`, a time, not an
+     event. A tick births every `i` whose `t(i)` lands in `(prev, now]` — so a
+     tick spanning six spawn intervals births six particles, at six different
+     times, and a tick spanning none births none. `burst` is `t(i) =
+     windowStart` for its whole count.
+  2. **Each particle is born where the source WAS at `t(i)`, sampled once.**
+     Its spawn point is `PositionOf(source, t(i))` — **back-dated**, not the
+     source's position at `now`. A long tick therefore lays the six drops
+     *along the path the core took during that tick*, which is the difference
+     between a shed and six drops stacked at the step's end position. This is
+     the one thing that makes emission-during-flight look like emission during
+     flight rather than a burst.
+  3. **It inherits `inherit` × the source's velocity at that same instant**,
+     `inherit * VelocityOf(source, t(i))`, added to its own hashed direction
+     and speed (§5b). Also sampled once.
+  4. **After birth it is detached, and simulates in stage space** as a pure
+     function of `(spawn point, spawn velocity, age)` (§4, §5b). It does not
+     follow the source, does not re-read it, and does not move when the source
+     is released at arrival. Its age on the tick it is born is `now - t(i)`,
+     not zero, so the back-dating survives the first frame as well as the
+     birth.
+
+  **Where `PositionOf` lives, and why it is the same function the sprite
+  renderer uses.** `SpellPerformance.PositionOf(instance, t)` and
+  `VelocityOf(instance, t)`, in Domain, pure, engine-free (`UiVec`, §5a). Every
+  layer instance's `from` and `to` are resolved into stage-space constants at
+  `Begin` from `SpellCastContext` (§5d), so the pair is arithmetic over the
+  authored schedule:
+
+  ```
+  u        = clamp01((t - start - travelDelay) / travelSeconds)
+  Position = Lerp(from, to, u * u)                        // §2b's one house ease
+  Velocity = (to - from) * 2u / travelSeconds             // its exact derivative
+  ```
+
+  `SpellPerformancePlayer` calls the same `PositionOf` every tick to place the
+  sprite it hands to `SpellVfxPlayer.Show` (§5c), and `SpellEmitterSim` calls it
+  at each `t(i)`. **One function, two callers** — which is what keeps the ease
+  from having two homes, the failure R3 caught revision 2 committing. A
+  non-travelling source has `travelSeconds = 0`, `u` is 1, and `PositionOf`
+  returns its anchor with `VelocityOf` returning zero, so `place: target-centre`
+  emitters like §6d's `spray` go through the identical path.
+
+  **The one thing it cannot back-date, stated rather than hidden:** a
+  `follow: true` source whose *anchor* moved during the tick (a `Move` beat
+  rewrites slot positions mid-round, `FightBeatPlayer.cs:327`, `:353`).
+  `PositionOf` back-dates the **travel** term only; the anchor term is the
+  current sample. Keeping an anchor history would be a per-tick ring buffer
+  nothing else in this design needs, and it buys nothing for either proof
+  spell — Water's emitter source is a projectile launched from a caster whose
+  slot does not move during a cast, so every metre of its motion is in the
+  travel term.
+
+**The clock contract, C1 — one time source, one conversion.**
+
+Revision 3 said "the clock reads `Time.time`" (§10 L1) and "`ClockOverride`
+governs every layer" and left the reader to assume the beat and the spell would
+agree. They agree because of this, and only this:
+
+| the rule | the citation |
+|---|---|
+| Authored seconds become engine seconds **exactly once**, at `Begin`, through `FightBeatPlayer.Scaled` — the same function the beat's own waits go through. `SpellSchedule` stores engine-second deadlines, never authored ones | `FightBeatPlayer.cs:105-106`, `Scaled(s) = s / BeatSpeedMultiplier`; the beat's wait at `:458` |
+| **`BeatSpeedMultiplier` is read inside `Scaled` and nowhere else.** No renderer, no sim and no scheduler multiplies by it a second time | `FightBeatPlayer.cs:103` |
+| The scheduler, the sprite renderer and the emitter sim read **one** clock: `SpellPerformancePlayer.Now()`, which is `ClockOverride ?? Time.time`. `Tick(now)` passes that single float down; neither `SpellVfxPlayer` nor `SpellParticleRenderer` calls a clock of its own | §5c; the statics move off `SpellVfxPlayer.cs:58`, `:60` |
+| **Pause** reaches every layer for free: `Time.timeScale = 0` stops `Time.time` and stops `WaitForSeconds`, so the beat and the spell freeze on the same mechanism and resume together. This is what today's `Time.realtimeSinceStartup` cannot do | `SystemMenuController.cs:226`; §10 L1 |
+| **Capture** likewise: `Time.captureFramerate = 60` advances `Time.time` by exactly 1/60 per frame, so a `-Runtime` recording samples the spell at the pace it draws | `RuntimeScreenshotTests.cs:26` |
+| **`ClockOverride` substitutes `Time.time` and nothing else.** Deadlines stay `Scaled`-converted, so a test that holds the clock and a test that runs at multiplier 60 exercise the same arithmetic rather than two code paths | §5c, `TestGlobals.cs:71`, `GlobalStateLintTests.cs:92-94` |
+
+**Out of contract, named:** changing `BeatSpeedMultiplier` *during* a beat.
+`Begin` converts the schedule at `FightBeatPlayer.cs:434` and the impact wait
+converts at `:458`; a multiplier changed between the two would leave them
+disagreeing. It is a test seam set before a fight and reset after — policed as
+a global at `GlobalStateLintTests.cs:52-54` — and no production code writes it.
+
+**The test that proves it** (M4): `ASpellAndItsBeatCrossTheHitCueOnTheSameFrame`,
+PlayMode, `Time.captureFramerate = 60` so the step is exact. Two halves, both
+observable:
+
+- *Arithmetic*: `FightBeatPlayer.Scaled(HitCueSeconds(performance))` equals the
+  engine-second offset `SpellSchedule` gives its `hit` cue, at
+  `BeatSpeedMultiplier = 1` **and** at `60`. An equality on two floats, not a
+  tolerance.
+- *Runtime*: record `Time.frameCount` when the module dispatches the `hit` cue
+  and when `FightBeatPlayer`'s impact block runs (hooked on `PaintVitals`,
+  `:481`), at both multipliers. Assert the two frame counts are **equal** —
+  both land inside one frame because both deadlines came from the same
+  `Scaled` call and `Time.time` is the accumulator behind both.
 
 **What `FightBeatPlayer` keeps owning**, unchanged: the beat loop, the pre-
 and post-snapshot paints (`:355`, `:481`), the wind-up waits (`:449-450`), the
@@ -1149,10 +1513,26 @@ Revision 2 derived these from "Water on three targets is 3 core + 3 wake +
 3 splash = 9". **`prismatic_orb` is `DamageSingle`** (`skills.json`), so that
 cast cannot happen; the arithmetic described no spell. The real worst case
 today is Cinderfault: `1 fault + 3 eruptions = 4`, plus the melee borrow's 2,
-plus one Water cast's 3 overlapping as a tail — nine. So:
+plus one Water cast's 3 overlapping as a tail — nine. **Counted per band** now
+that the two bands have separate constants, that nine is 8 in `effects` (the
+fault is the one member in `ground`) — the effects reservation below is
+unchanged, because it was already three clear of the total and the split can
+only lower it. So:
 
-- `SpellLayerRenderers = 12`, which is `StageSlotsPerSide * 4` and leaves
-  three spare over the measured nine.
+- `SpellLayerRenderers = 12`, which is `StageSlotsPerSide * 4` and leaves four
+  spare over the measured eight.
+- `SpellGroundRenderers = 2`, up from today's pool of exactly one
+  (`Ui.Pool("SpellGroundVfx", 1, …)`, `FightScreen.cs:2432`, and the single
+  `spellGroundVfxPlayer` field at `FightController.cs:335`). **Forced by
+  ownership, not by taste:** a second Cinderfault opening while the first
+  fault is still cooling must get its own member, because a cast that took over
+  a live one would be exactly the `SpellVfxPlayer.cs:123` restart §0.5 exists to
+  remove. Two and not more, and the arithmetic is checkable: the fault runs
+  0.78s while the shortest possible gap between two beats opening is
+  `BeatHoldSeconds` 0.45s (`FightBeatPlayer.cs:31`, and the real gap is larger —
+  hit-stop, settle and `BeatGapSeconds` all sit on top), so `2 * 0.45 > 0.78`
+  and a third fault can never overlap the first. The ground band stays one
+  semantic category with two members; it does not become a pool of twelve.
 - `SpellParticles = 64`. One Water cast's steady state is
   `rate * window = 40 * 0.25 = 10` alive during the shed (every droplet's
   `lifeMin` exceeds the window, so all ten are), plus an 18-drop burst = 28
@@ -1162,11 +1542,15 @@ plus one Water cast's 3 overlapping as a tail — nine. So:
 A content test computes, over every skill and element:
 
 ```
-cast-level layers + target-level layers * StageSlotsPerSide
-ceil(rate * window) + burst, summed over emitter layers, likewise fanned out
+sort:effects  cast-level layers + target-level layers * StageSlotsPerSide
+sort:ground   cast-level layers + target-level layers * StageSlotsPerSide
+particles     ceil(rate * window) + burst, summed over emitters, likewise fanned out
 ```
 
-and fails naming the skill when either exceeds its constant. That makes the
+— counted **per band**, because a spell whose ground layers outgrew
+`SpellGroundRenderers` would otherwise be found by a player rather than by the
+build — and fails naming the skill when any of the three exceeds its constant.
+That makes the
 capacity **derived from content** (§6 grade 1) rather than a number somebody
 re-measured by hand, which is the failure mode the tab-width table already
 demonstrated. Both remain **reservations**, not counts — the rule `WoolPips`
@@ -1193,12 +1577,67 @@ the same comment again at `:364-366`). One test asserts the full list, and the
 two defensive `SetFacing(1f)` calls are then deletable — that is the T2 fix in
 `docs/CODE_STANDARDS.md` §9's ladder: one code path owns restoration.
 
-**Allocation measurement.** A PlayMode test that warms up (one full cast of
-the heaviest spell, discarded), then measures `GC.GetTotalMemory(false)` before
-and after ten further casts driven through the injected clock, asserting the
-delta is under a stated ceiling. The point is the *class* — no `new` in the
-tick path — so the assertion is "no growth beyond a small fixed budget", and
-the budget is a named constant with its measured basis beside it.
+**Allocation measurement — per frame, not retained.** Revision 3 measured
+`GC.GetTotalMemory(false)` across ten casts. That is **retained** memory: it
+reads whatever the collector happened not to have swept, so a tick path
+allocating a kilobyte every frame passes whenever a GC lands inside the window,
+and a test that quietly measures the collector's mood instead of the code is
+worse than no test. Replaced with the thing actually asked for — bytes
+allocated **in a frame**.
+
+**The API, chosen and cited.** `Unity.Profiling.ProfilerRecorder.StartNew(
+ProfilerCategory.Memory, "GC Allocated In Frame")`, reading `LastValue` once per
+frame. It is in the `UnityEngine` core module on Unity 6 (6000.5.7f1,
+`ProjectSettings/ProjectVersion.txt`) — no package to add, and nothing in
+`Packages/manifest.json` changes. The older `UnityEngine.Profiling.Recorder.Get(
+"GC.Alloc")` is rejected on a checkable ground: it reports sample **counts** and
+nanoseconds, not bytes, so it cannot answer "how many bytes". `ProfilerRecorder
+.Valid` is checked and a `false` **fails with a message** rather than passing —
+a recorder that never started would otherwise make every assertion below read
+zero.
+
+**Where warm-up ends**, stated so the steady state is a defined thing and not a
+vibe. Warm-up is over once all four have happened:
+
+1. one full cast of the heaviest performance has been begun, ticked to its last
+   layer's end and released;
+2. `FrameSequenceLoader` holds a cache entry for every folder both performances
+   touch — it caches on first probe and caches even an empty result
+   (`FrameSequenceLoader.cs:56`, `:78`), so the first draw of any folder is a
+   one-off disk cost that belongs to no frame under test;
+3. both pool nodes have been activated once (`SetActive`, the wake-up
+   `SpellVfxPlayer.PlayFrom` performs at `:129`), so no first-activation cost
+   lands in the window;
+4. five further frames have passed and been discarded.
+
+**The measurement.** `N = 120` steady-state frames, `Time.captureFramerate = 60`
+(`RuntimeScreenshotTests.cs:26`) so the window is a fixed two seconds of game
+time, during a Water cast with a Cinderfault ground layer still cooling from the
+previous beat — the overlapping case, because the empty case would prove
+nothing about pooling.
+
+**Two assertions, and only one of them is "zero".**
+
+- **Zero, on the module's own tick.** `Assert.That(() => player.Tick(now),
+  UnityEngine.TestTools.Constraints.Is.Not.AllocatingGCMemory())` —
+  `com.unity.test-framework` 1.7.0 (`Packages/manifest.json`), available in
+  PlayMode, and it measures the delegate rather than the frame. This is the
+  assertion that carries the meaning: **no `new` in the tick path**, including
+  no `List`/array/closure/boxed enumerator per tick, which is the class of bug
+  the design's pooling exists to prevent.
+- **A difference of zero, on the whole frame.** A Unity frame in this scene is
+  not allocation-free and never was — `FightBeatPlayer` news a `WaitForSeconds`
+  per wait (`:458`), `StruckBy` is an iterator (`FightController.SpellVfx.cs:198`),
+  Canvas and TMP rebuild on their own schedule. So the recorder measures the same
+  scene twice for the same N frames, idle and during the overlapping cast, and
+  asserts **`median(during) - median(idle) == 0` bytes**, with the max-frame
+  delta reported in the failure message. Comparing against itself rather than
+  against a made-up ceiling is what keeps the number from being a constant
+  somebody re-measured once and then defended.
+
+This is a milestone evidence line and one test (M8). It adds no subsystem: no
+profiler wrapper, no allocation budget type, no per-frame counter shipped in the
+build.
 
 ---
 
@@ -1209,12 +1648,12 @@ the budget is a named constant with its measured basis beside it.
 | type | file | what it owns |
 |---|---|---|
 | `SpellLayer`, `SpellEmitter` | `Domain/Content/SpellLayer.cs` | the authored shape |
-| `SpellLayerNames`, `SpellPlaceNames`, `SpellCueNames`, `SpellSortNames` | `Domain/Content/SpellLayerNames.cs` | `Parse` + `IsKnown` per discriminator, `SpellAnchorNames`' shape (`SpellAnchor.cs:78-86`) |
+| `SpellLayerNames`, `SpellPlaceNames`, `SpellCueNames`, `SpellSortNames`, `SpellEndNames`, `SpellFacingNames` | `Domain/Content/SpellLayerNames.cs` | `Parse` + `IsKnown` per discriminator, `SpellAnchorNames`' shape (`SpellAnchor.cs:77-85`) — six, not four: `until` is what §2b's lifetime rule is stated in terms of, and `facing` is the same shape in the same examples |
 | `SpellPresentation.ToLayers()` | `Domain/Content/SpellPresentation.cs` | the legacy adapter |
 | `SpellLayerRules` | `Domain/Content/SpellLayerRules.cs` | every rule in §2d, returning `List<string>` |
-| `SpellPerformance` | `Domain/Combat/Presentation/SpellPerformance.cs` | the **resolved** model: layers with absolute times, instance counts and anchor kinds already decided |
+| `SpellPerformance` | `Domain/Combat/Presentation/SpellPerformance.cs` | the **resolved** model: layers with absolute times, instance counts and anchor kinds already decided; owns `ArrivalSeconds` (§3) and `PositionOf`/`VelocityOf`, the one evaluation of a layer's eased path at any `t` that both the sprite renderer and the emitter sim read (§3 T13) |
 | `SpellSchedule` | `Domain/Combat/Presentation/SpellSchedule.cs` | `Events Crossed(float from, float to)` — pure, half-open, deterministic |
-| `SpellEmitterSim` | `Domain/Combat/Presentation/SpellEmitterSim.cs` | `Particle At(SpellEmitter spec, int seed, int index, float age)` — pure math |
+| `SpellEmitterSim` | `Domain/Combat/Presentation/SpellEmitterSim.cs` | `float BirthOf(SpellEmitter spec, int index)` and `Particle At(SpellEmitter spec, int seed, int index, UiVec p0, UiVec v0, float age)` — pure math. The birth-sampled `p0`/`v0` are **arguments**, so the sim never reaches for a source and stays a function of its inputs (§3 T13, §5b) |
 
 `Domain/Combat/Presentation/` is a new folder inside the existing
 `PrincesPalace.Domain` asmdef, so no `.asmdef` is added anywhere near a
@@ -1247,10 +1686,19 @@ A particle's state is computed from its age, never integrated:
 ```
 k     = drag                       (per second, linear)
 a     = (0, gravity)
-v0    = direction(seed, index) * speed(seed, index) + inherit * sourceVelocity
-p(t)  = p0 + (v0 - a/k)/k * (1 - e^(-k t)) + (a/k) * t      for k > 0
+birth = windowStart + index / rate                  the particle's own birth time
+p0    = PositionOf(source, birth) + (sourceDx, sourceDy)
+v0    = direction(seed, index) * speed(seed, index)
+        + inherit * VelocityOf(source, birth)
+age   = now - birth
+p(t)  = p0 + (v0 - a/k)/k * (1 - e^(-k t)) + (a/k) * t      for k > 0, t = age
 p(t)  = p0 + v0 t + a t^2 / 2                                for k = 0
 ```
+
+`p0` and `v0` are **sampled once, at `birth`, not at the tick that discovers
+the particle** — §3 T13 is the rule and `SpellPerformance.PositionOf`
+/`VelocityOf` are where the sampling comes from, the same pair the sprite
+renderer places the source with.
 
 Three things follow, all of them requirements the brief states:
 
@@ -1561,9 +2009,11 @@ which is the cheapest way to make the seam question decidable. The hit cue at
 0.35s is arrival plus 0.10s — at 26fps that is 2-3 contact frames of
 compression and crown-rise before the peak, and the recipe's own `_notes`
 identify `contact_f3` as the peak (27% ink coverage against the runner-up's
-23%). Droplets live 0.18-0.38s, so the last one clears about 0.73s after
+23%). Droplets live 0.18-0.38s, so the last one clears 0.69s after
 release against a 0.45s beat hold (`FightBeatPlayer.BeatHoldSeconds`, `:31`) —
-the tail genuinely outlives the beat, which is the point. `size: 190` for the
+the tail genuinely outlives the beat, which is the point. (Revision 3 said
+"about 0.73s" here, which took the shed's `lifeMax` and the spray's start time;
+the layer-by-layer arithmetic is below.) `size: 190` for the
 core against `SpellPresentation.DefaultSize`'s 380 (`:202`) makes the ball a
 compact mass rather than a screen-filling glow; `size: 300` for the splash is
 below the default so the crown does not swallow the target's head. `gravity`
@@ -1571,6 +2021,17 @@ is in reference-frame units per second squared, so -1400 falls about 175 units
 in 0.5s — roughly a third of a slot's height. **Every one of these is a first
 guess to be tuned at battlefield scale against the captures, not a
 measurement.**
+
+**Where each layer ends, since two of the five state no `seconds`.** By §2b's
+lifetime table, not by anything special to Water: `core` is `until: loop` but
+travels, so it ends **at arrival, 0.25s**, having looped its six frames at 24fps
+exactly once on the way; `wake` follows `core`, so it ends when `core` does and
+its `fade: 0.10` clears it by **0.35s**; `splash` runs eight of nine frames at
+26fps from `arrival`, ending at **0.558s**; `shed` is `window + lifeMax`,
+**0.63s**; `spray` is `burst` at the cue plus `lifeMax`, **0.69s**. Nothing here
+is open-ended, and the last of it clears about a quarter-second after the 0.45s
+beat hold (`FightBeatPlayer.cs:31`) — the tail outliving the beat that T5 exists
+to allow.
 
 ### 6e. In-game preview instructions
 
@@ -1633,6 +2094,17 @@ Cinderfault is also re-authored as explicit layers so the model is proven to
   `[Test]` living in the PlayMode fixture, not in `CinderfaultSpellTests` as
   revision 2 said — is the test that says the two must peak together).
   Authored once now rather than defaulted twice.
+- **`fault` states `impactY` and no `impactX`, and that is legal**, by the
+  `place: formation` exemption §2d now carries. A formation's horizontal centre
+  is the *measured* midpoint of the struck span (`GroundBoxFor`,
+  `FightController.SpellVfx.cs:223-236`), so there is nothing for an `impactX`
+  to correct — and the legacy block it replaces has no `groundImpactX` field to
+  map from either (§2f's ground row), so the adapter would have produced the
+  same shape. Revision 3's rule was a straight both-or-neither and would have
+  refused this block, its own second proof spell.
+- Neither layer travels and neither schedules `at: arrival`, so
+  `ArrivalSeconds` is 0 and nothing reads it (§3). Cinderfault is the case that
+  proves arrival is not load-bearing for a spell that does not use it.
 
 Must still pass, unmodified: `AFullFormationGetsThreeEruptionsAndExactlyOne
 Fault` (`SpellVfxTests.cs:1120`), `ALoneEnemyGetsOneEruptionAndStillOneFault`
@@ -1661,6 +2133,12 @@ layer B: render sprite, place caster-centre, at release, offset 0.18, path Vfx/i
 (`offset`, not a `<id>:start` reference — those are deferred, §2b. This is the
 proof that the *scheduler* handles overlapping instances, which is the part
 the brief asks for; it needs no dependency graph to show it.)
+
+Both layers author **no `sort`, no `until` and no `facing`**, deliberately: they
+are the case that pins §2d's blank-word defaults (effects / once / auto), which
+revision 3's rule table would have refused as unknown draw bands. Both state
+`seconds`, so both are bounded by §2b's `until: once` row without needing travel
+or a source to follow.
 
 `Vfx/impact_burst` (`ContactCues.ImpactBurstPath`, `ContactCues.cs:21`) is six
 frames — `Resources/Vfx/impact_burst/f0..f5`, counted on disk — at
@@ -1695,8 +2173,8 @@ committed under `tools/screenshots/preview/`, plus Cinderfault's `timing.json`.
 *Half an hour because it is five scripted runs and no code.*
 
 **M1 — Content shape, rules, adapter (2.5 h).** `SpellLayer`, `SpellEmitter`,
-the four name tables and their four enums, `SpellLayerRules`, `ToLayers()`,
-`Copy()` deep-copying `layers`, the four `ContentSchema.EnumBackedFields`
+the six name tables and their six enums, `SpellLayerRules`, `ToLayers()`,
+`Copy()` deep-copying `layers`, the six `ContentSchema.EnumBackedFields`
 entries, `SpellPresentationPaths` extended,
 `docs/CONTENT_SCHEMA.md` regenerated. *Evidence:* new EditMode tests for every
 rule in §2d, each asserting the **message text shape** and not just the
@@ -1706,14 +2184,37 @@ refusal; the reflection pin that every public instance field of
 neither); `ContentSchemaTests.GeneratedMarkdownMatchesCommittedFile` (`:82`)
 green; `ContentInputCoverageTests` (`:53`) green;
 `CinderfaultSpellTests.ThePresentationCopiesEveryNewFieldAcrossABoundary`
-(`:150`) green. *Two and a half hours because it is ~16 validation rules with
-their messages, and the adapter's departure/travel split needs care.*
+(`:150`) green. Plus, from revision 4's §2d: a test per new row — the
+unbounded-lifetime refusal, the `fade` ceiling, the `until`/`facing` parse, the
+two-travellers-with-arrival refusal, the `formation` exemption from
+`impactX`/`impactY` **and** the `place: target` case still refusing a lone
+`impactX`, and one that pins the blank-word defaults (a layer authoring none of
+`sort`/`until`/`facing`/`at` resolves to effects/once/auto/release and is
+**not** refused); the emitter-inertness rule asserted against a
+default-constructed `SpellEmitter` rather than against zero, with §6d's `core`
+as the case that must pass; the two `ArtPathConvention.Kinds` entries with
+`ArtPathConventionTests.EveryClassifiedFieldNameStillExistsOnSomeRawEntry`
+(`:123`) green, which requires the array-descent branch at
+`ArtPathConventionTests.cs:67` in the same commit. *Still two and a half hours:
+~22 rules rather than ~16, but the six added are the cheapest shape in the set
+(one predicate, one message) and the sweep branch is four lines. The adapter's
+departure/travel split remains the part that needs care.*
 
 **M2 — The scheduler (1.5 h).** `SpellPerformance` and `SpellSchedule` in
 Domain, with no Core caller yet. *Evidence:* EditMode tests, no scene, for:
 exact cue delivery; a step spanning three cues delivering each once in order;
 a zero-delay cue; two concurrent performances not interfering; a cue at
-exactly the window boundary delivered once and not twice. *Down from revision
+exactly the window boundary delivered once and not twice. Plus revision 4's
+lifetime and arrival contracts, both pure and both EditMode: **every layer of
+§6d and §7 has a finite end**, asserted as literal seconds against §2b's table
+(`core` 0.25, `wake` 0.25 with the fade clearing by 0.35, `splash` 0.308 — `startFrame: 2` is
+1-based, so eight of the contact folder's nine frames at 26fps — `shed`
+`window + lifeMax` 0.63, `fault` and `erupt`
+0.78) — literals, not the production expression recomputed (`CLAUDE.md` gotcha
+5); **a follower ends with its source** when the source is cancelled early
+rather than running its authored length; **`ArrivalSeconds` is one number**,
+equal for every instance of a three-target `at: arrival` layer, computed from
+the first travelling layer, and **0 when nothing travels**. *Down from revision
 2's two hours: cutting `<id>:start`/`<id>:end` removed the dependency graph,
 the dangling-reference rule, the cycle rule and the topological order, leaving
 arithmetic over a sorted list.*
@@ -1743,15 +2244,65 @@ promoted here from M8, because it is the same edit as taking the clock and
 because `GlobalStateLintTests.cs:92-94` and `TestGlobals.cs:71` have to move
 in the same commit or the lint fails); `SpellParticleRenderer`;
 `SpellEmitterSim` with its own EditMode tests (closed-form position at t, seed
-repeatability, a 50-tick step matching a 1-tick step); the two `FightHudSpec`
-constants and the **content-derived** pins of §4; the enlarged sprite pool and
-the new particle pool in `FightScreen`; `ScreenRegistry` wiring.
+repeatability, a 50-tick step matching a 1-tick step); the **three**
+`FightHudSpec` constants and the **content-derived, per-band** pins of §4; the
+enlarged sprite pool, the enlarged ground pool and the new particle pool in
+`FightScreen`; `ScreenRegistry` wiring.
 *Evidence:* the restore-on-release test with the full list from §4; the two
 defensive `SetFacing(1f)` calls deleted; the authored-order draw test; the
 pool-exhaustion test proving the hit cue still fires; the pause test
 (`Time.timeScale = 0`, advance frames, assert the frame index does not move);
-`run_tests_parallel.ps1 -BuildScenes`. *Four hours: revision 2's three and a
-half plus the clock move it had parked in a one-hour milestone.*
+`run_tests_parallel.ps1 -BuildScenes`.
+
+*Plus revision 4's three groups, all with observable assertions and none "by
+eye":*
+
+**Birth-time source sampling (§3 T13).** One tick of 0.20s taken across a
+0.25s flight with `rate: 40`: assert **eight** particles exist (0.20 × 40), that
+their eight `p0` values are eight *distinct* points, and that each equals
+`PositionOf(core, birth)` for its own birth time — so the drops lie along the
+core's path and not stacked at the step's end. A second assertion on the same
+tick: the ages descend from 0.20 to 0.005, none of them zero. A third: with
+`inherit: 0.35`, a particle born at `t` has
+`v0 - direction*speed == 0.35 * VelocityOf(core, t)`, which is non-zero at
+mid-flight and larger later, because the `t*t` ease accelerates. And a fourth,
+the one that would have caught the whole class: **fifty 4ms ticks and one 200ms
+tick produce the same eight `p0` values**.
+
+**Overlap and pooling, the ground band included (the brief's Cinderfault
+proof).** Four PlayMode tests:
+
+1. *Two Cinderfaults back to back*, the second beginning while the first fault
+   is still cooling. **The second gets its own ground member; it does not
+   supersede.** Assert the two casts hold *different* members of the ground
+   pool, that the first's frame index keeps advancing after the second begins
+   (it was not restarted — the `SpellVfxPlayer.cs:123` behaviour this design
+   removes), and that both are released at their own ends.
+2. *Cinderfault and a Water tail overlapping on one target.* Assert the Water
+   cast's core/wake/splash and the Cinderfault's eruption on that same slot hold
+   distinct `effects` members, that the fault holds a `ground` member while they
+   do, that neither cast's handle owns a renderer belonging to the other, and
+   that both hit cues fired once each.
+3. *Pool exhaustion where the ground member is the one that cannot be
+   allocated.* Drive `SpellGroundRenderers` casts to hold every ground member,
+   then cast Cinderfault. Assert: no ground layer drawn, one line logged, and —
+   the point — `PaintVitals`/`ShowAmount` still fire **exactly once** at the
+   authored cue time (T7), the beat's duration unchanged to the frame. Not
+   suppressed, not duplicated, not delayed.
+4. *`EndFight` mid-fade on a ground member.* Begin Cinderfault, tick to inside
+   the fault's `fade`, call `EndFight()`. Assert the member is released, the
+   full restore list of §4 applied to it (sprite null, alpha 1, `localScale.x`
+   1, parent and `sizeDelta` back to the pool's), and the ground pool reports
+   every member free — the state the *next* fight starts from.
+
+**Beat-speed synchronization (§3 C1).**
+`ASpellAndItsBeatCrossTheHitCueOnTheSameFrame`, both halves, at
+`BeatSpeedMultiplier = 1` and at `60`.
+
+*Four hours still: revision 2's three and a half plus the clock move it had
+parked in a one-hour milestone. The seven tests above are assertions against
+machinery this milestone already builds — the pools, the sim and the clock —
+rather than new machinery, which is why they do not move the number.*
 
 **M5 — Water (3 h).** Four recipes, four folders, the `skills.json` element
 block of §6d, the extra preview sample, tuning against captures. Both drift
@@ -1776,8 +2327,17 @@ this is a content edit.*
 which is what makes this milestone mean anything. `tools/screenshot.ps1
 -Runtime -RuntimeFilter SpellRuntimeCaptureTests` records a fight at
 `Time.captureFramerate = 60` (`RuntimeScreenshotTests.cs:26`) including **two
-consecutive casts while the first cast's droplets are still visible**. The
-allocation test of §4. *Evidence, so this is an observation and not a
+consecutive casts while the first cast's droplets are still visible**.
+
+**The allocation test of §4**, as one PlayMode test: `ProfilerRecorder` on
+`ProfilerCategory.Memory` / "GC Allocated In Frame", the four-part warm-up, 120
+frames at `Time.captureFramerate = 60` of a Water cast over a live Cinderfault
+tail, measured twice (idle and casting). Two assertions: `Tick` allocates zero
+via `Is.Not.AllocatingGCMemory()`, and the per-frame median difference between
+the two runs is zero bytes, with the worst frame's delta in the failure message.
+A recorder that reports `Valid == false` fails the test rather than passing it.
+
+*Evidence, so this is an observation and not a
 judgement:* the recording's own fixture asserts, on the frame the second cast
 opens, that at least one particle owned by the first cast's handle is still
 alive — the pictures then show a human what the assert already knows.
@@ -1858,6 +2418,14 @@ advances frames, and asserts the layer's frame index does not move
 prerequisite". It is not a prerequisite bolted onto a recording milestone — it
 is the same edit as moving the clock out of the renderer, and doing it
 anywhere else means the lint is red for a commit.
+
+**"Reads `Time.time`" is half the answer; §3's C1 is the other half.** A clock
+alone does not make a spell and its beat agree — the *conversion* has to be
+shared too, because the beat's waits are `Scaled(seconds)` and a scheduler
+holding authored seconds against `Time.time` would be 60× out under a test
+multiplier. C1 names `FightBeatPlayer.Scaled` (`:105-106`) as the one
+conversion, `Time.time` as the one clock, and the test that asserts the two
+cross the cue on the same frame at multiplier 1 and 60.
 
 **L2 — The impact delay is a function of PNGs on disk.**
 `ImpactDelayFor` (`FightController.SpellVfx.cs:43-50`) multiplies
