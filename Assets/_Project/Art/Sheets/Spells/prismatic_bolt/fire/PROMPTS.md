@@ -1,0 +1,17 @@
+# Generation prompts
+
+## core
+
+Use case: stylized-concept. Production hand-painted 2D fantasy RPG VFX, crisp readable silhouette, restrained detail and glow, warm storybook painterly shading. Actual TRANSPARENT RGBA PNG background, no matte, no checkerboard, no scenery ground characters text labels borders grid or numbers. All sprites safely inside their cells with generous padding. FIRE: pointed concentrated flame spear travelling RIGHT, short tail left. Crimson edges, orange body, gold centre and tiny white-hot core. Compact forceful flame, no smoke cloud, no round fireball. SIX-frame flight LOOP sprite sheet, exact 3 columns 2 rows, 1536x1024, square cells. Same centered compact spear shape size camera and direction every frame. Subtle cycling flame tongues and internal heat motion; frame 6 leads smoothly to frame 1. No detached particles or long trail. Occupy central 60 percent of each cell.
+
+## contact
+
+Use case: stylized-concept. Production hand-painted 2D fantasy RPG VFX, crisp readable silhouette, restrained detail and glow, warm storybook painterly shading. Actual TRANSPARENT RGBA PNG background, no matte, no checkerboard, no scenery ground characters text labels borders grid or numbers. All sprites safely inside their cells with generous padding. FIRE: pointed concentrated flame spear travelling RIGHT, short tail left. Crimson edges, orange body, gold centre and tiny white-hot core. Compact forceful flame, no smoke cloud, no round fireball. EIGHT chronological IMPACT frames, 4 columns 2 rows 2048x1024 equal cells. Fixed contact center, incoming direction RIGHT. 1 short spear touching contact, 2 compact compressed hot pointed flash, 3 small flower-shaped flame crown opening, 4 peak sharp-petal fire burst expanding vertically and back LEFT, 5 petals tear into short tongues, 6 scattered dying tongues and embers, 7 few embers, 8 tiny dim embers only. No lasting fire. Central 65% per cell. No broad external glow.
+
+## particles
+
+Use case: stylized-concept. Production hand-painted 2D fantasy RPG VFX, crisp readable silhouette, restrained detail and glow, warm storybook painterly shading. Actual TRANSPARENT RGBA PNG background, no matte, no checkerboard, no scenery ground characters text labels borders grid or numbers. All sprites safely inside their cells with generous padding. FIRE particle atlas exactly 8 independent shapes 4 columns 2 rows equal cells 2048x1024. One shape per cell in central 45%. Reading order: tiny round orange ember, elongated gold spark, crimson cooling cinder, curved orange spark streak, reversed curved spark streak, short pointed flame tongue, forked flame tongue, small angular charcoal fleck with glowing rim. Crimson orange gold tiny white core palette, painterly. No smoke, no broad glow. Shape library not animation.
+
+## wake
+
+Use case: stylized-concept. Production hand-painted 2D fantasy RPG VFX, crisp readable silhouette, restrained detail and glow, warm storybook painterly shading. Actual TRANSPARENT RGBA PNG background, no matte, no checkerboard, no scenery ground characters text labels borders grid or numbers. All sprites safely inside their cells with generous padding. ONE FIRE wake ribbon, single sprite on 3:1 landscape canvas, thin horizontal short flame streak thickest on RIGHT attachment end tapering to fine LEFT tip. Crimson outside orange gold middle small bright highlight. Gentle curve, central narrow band with generous margins. No projectile no particles no broad glow. Suitable attached rear wake.
