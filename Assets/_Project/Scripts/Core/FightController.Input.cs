@@ -868,6 +868,14 @@ namespace PrincesPalace
             ShowBark(true);
         }
 
+        // docs/PLAN_BATTLE_SPEED.md G5: the one door onto the visible bark
+        // feed a PlayMode test can reach -- PlayMode has no InternalsVisibleTo
+        // grant, same reason every other *ForTest method on this controller
+        // exists. Used to burn the preset's name into the runtime capture's
+        // own frames, so a viewer scrubbing the assembled GIF can read which
+        // preset is playing without a caption baked in after the fact.
+        public void PushLogLineForTest(string line) => PushLogLine(line);
+
         // The banner is HIDDEN until it has something to say.
         //
         // It is an 840x104 painted strip across the top centre of the screen and
