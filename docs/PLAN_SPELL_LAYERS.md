@@ -1859,6 +1859,27 @@ converts at `:458`; a multiplier changed between the two would leave them
 disagreeing. It is a test seam set before a fight and reset after — policed as
 a global at `GlobalStateLintTests.cs:52-54` — and no production code writes it.
 
+**UPDATE, `docs/PLAN_BATTLE_SPEED.md`: the case above is now IN contract, not
+out of it, because production code writes a second factor.** `FightBeatPlayer.
+Pace` is now `BeatSpeedMultiplier * PlayerSpeedMultiplier` — the player-facing
+preset joins the product `Scaled` reads, and `FightBootstrap.Start` installs a
+settings-backed source that changes while a fight is open (a player can step
+the row mid-fight). This is exactly the "multiplier changed between the two"
+case this section named as out of contract for the TEST seam alone, now
+happening for real. The fix is the same shape C1 already argued for a
+DIFFERENT clock problem: **the product is read in exactly three places, not
+one.** `Scaled`/`Unscaled` still read it live, for a BEAT's own waits (which
+only ever spans one adoption, since `AdoptPlayerSpeed` runs once at the beat's
+own top and nothing re-adopts mid-beat). `SpellPerformancePlayer.Begin` is the
+THIRD reader C1's own table did not have a row for, and it does not read it
+live: `Cast.PaceAtStart` captures `FightBeatPlayer.Pace` once, at `Begin`, and
+`Tick` converts age as `(now - StartedAt) * PaceAtStart` rather than through
+`FightBeatPlayer.Unscaled`'s live product. A cast can now outlive several
+adoptions (a player stepping the row while it draws), and PaceAtStart is what
+keeps its age monotone and continuous across every one of them — the same
+guarantee C1's own "one conversion" argued for, extended to a clock that now
+changes mid-flight for a reason nothing here anticipated.
+
 **The test that proves it** (M4): `ASpellAndItsBeatCrossTheHitCueOnTheSameFrame`,
 PlayMode, `Time.captureFramerate = 60` so the step is exact. Two halves, both
 observable:

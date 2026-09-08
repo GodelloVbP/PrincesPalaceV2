@@ -94,34 +94,40 @@ Layout `2a`, no scrolling, applies immediately, `RESTORE DEFAULTS` — but in
 `GameSettings` had been fully implemented for a while with **no UI at all**;
 this is the first screen that reaches it.
 
-**Two groups survived, because `GameSettings` holds five values and nothing
-else exists to bind to.** The design's own rule for Run statistics — every row
-binds to a tracked field or gets cut — is what decided it: a control that
-stores nothing is worse than an absent one, because the player moves it,
-believes something changed, and is wrong.
+**Three groups survive as of `docs/PLAN_BATTLE_SPEED.md`, because
+`GameSettings` now holds six values and nothing else exists to bind to.** The
+design's own rule for Run statistics — every row binds to a tracked field or
+gets cut — is what decided it: a control that stores nothing is worse than an
+absent one, because the player moves it, believes something changed, and is
+wrong. Battle speed was the row this document itself named as "the one with a
+consumer already waiting" — it no longer waits.
 
 | Group | Rows | Status |
 |---|---|---|
 | Audio | Sound, Music | Built. **Two sliders, not three** — there are two channels; `AudioLevels` is a per-sound gain table, not a third bus. Music is labelled "Stored - no music yet", which `GameSettings`' own header asks for. |
 | Display | Resolution, Window, Frame limit | Built. **Frame limit replaces v-sync**, which is not stored; the frame limit is the real setting sitting next to it. |
+| Gameplay | battle speed | **Built** (`docs/PLAN_BATTLE_SPEED.md`). One stepper, four rows (0.5x/1x/1.5x/2x), in-fight only — `FightBeatPlayer.PlayerSpeedSource`, installed by `FightBootstrap.Start` from `GameSettings.BattleSpeed`. "show tooltips" stays cut below; it never had a value either. |
 | Readability | text size, tooltip delay | **Cut.** Neither value exists anywhere. |
-| Gameplay | battle speed, show tooltips | **Cut.** Neither value exists anywhere. |
+| show tooltips | (was bundled under Gameplay) | **Cut.** No value exists. |
 | Keybinds | rebind door, conflict count | **Cut.** No rebind screen and no keybind storage; the design lists that screen as still open, so this would be a door to a room and a number counting nothing. |
 | Language | stepper | **Cut.** No localisation table — `UiString`'s key is described in its own header as "the seam a localisation table would key on later". A stepper with one entry is not a choice. |
 
-**One column rather than the design's two, and that is what lets five settings
-fill the pane.** Side by side, Audio's two rows and Display's three both stopped
-less than halfway down, and no row height closes an 804px pane from a card three
-rows deep without a control you could lose a hand in. Stacked at full width the
-two cards and the restore button reach 694 of the 696 available, and a row with
-its label at the left and its control at the right is the shape every settings
-screen has rather than a compromise. `CardsFit()` is what keeps that true — at
-two pixels of slack, the next group added fails the build rather than the eye.
+**Two columns, not the one this document originally shipped with.** Audio and
+Display share column 0 exactly as before (694 of 707.56, unchanged); Gameplay
+sits alone in column 1. A first pass tried keeping one column and shrinking
+every row to fit a sixth (`CardPadY`/`HeadingHeight`/`RowHeight`/`CardGap` all
+smaller) — it fit by the numbers (704 of 707.56) but a screenshot at G4 showed
+the restore button and its footer note only 3.56px apart, and the reworded,
+longer footer text ("Changes apply immediately. Battle speed applies from the
+next action.") rendered visibly UNDER the button rather than below it. Two
+columns keeps every existing row exactly the size it always was, because
+column 0 never grew a third card. `CardsFit()` is what keeps this true — the
+next group added fails the build rather than the eye, at whichever column it
+lands in.
 
-What that does NOT fix is that there are five settings. Each cut row above is a
-small feature rather than a UI job, and `battle speed` is the one with a consumer
-already waiting (`SystemMenuController.Resume` restores the previous `timeScale`
-specifically so a speed setting would survive the menu).
+What this does NOT fix is that there are still five cut rows. Each is a small
+feature rather than a UI job; none currently has a consumer waiting the way
+battle speed did.
 
 ## Run statistics — built, seventeen figures and no header
 

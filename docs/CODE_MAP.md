@@ -31,6 +31,7 @@ controller (+ its own parts, for Fight), its tests, and its content data
 | Relics (start-of-run draft) | `Domain/UiKit/Screens/RelicDraftScreen.cs` (wired into Hub via `ScreenRegistry.cs`) | `RelicDraftController.cs` | `relics.json` |
 | System Menu (Pause replacement — tabs: Dossier/RewardTrack/Party/Options/RunStats/Exits) | `Domain/UiKit/Screens/SystemMenuScreen.cs` (wired into Fight/Map/Hub via `ScreenRegistry.cs`) | `SystemMenuController.cs` | — |
 | Party (roster & formation, a System Menu tab) | `Domain/UiKit/Screens/PartyScreen.cs` + `Domain/UiKit/PartyLayout.cs`, model in `Domain/Party/` (`PartyFormation.cs`, `PartyMode.cs`, `PartyOutcome.cs`, `PartyCardState.cs`, `PartyRosterEntry.cs`, `PartySeat.cs`, `PartySelectionSource.cs`), wired via `ScreenRegistry.cs`'s `WireParty`; handoff + gap audit at `docs/handoffs/party_screen/` | `PartyController.cs`, `PartyDragSource.cs`, `PartyToast.cs` | `characters.json` |
+| Options (a System Menu tab — Audio/Display two-column-0, Gameplay alone in column 1 as of `docs/PLAN_BATTLE_SPEED.md`) | `Domain/UiKit/Screens/OptionsScreen.cs` + `Domain/UiKit/OptionsLayout.cs`, rows declared in `Domain/UiKit/OptionRows.cs`, wired via `ScreenRegistry.cs`'s `WireOptions` | `Core/OptionsController.cs`, backed by `Core/GameSettings.cs` (PlayerPrefs; the one row's setting that reaches gameplay — `SetBattleSpeed` — is `GameSettings.BattleSpeed`, an in-fight-only preset display number consumed by `FightBeatPlayer.PlayerSpeedSource`) | — |
 
 Generic building-block primitives (`CreateButtonStrip`, `AssertColumnClears`,
 `CreateFramedPanel`, the `Hud*`/`Suite*` color palette, `CreateGearCell`/`Icon`/`Text`, etc.) live
@@ -610,6 +611,17 @@ the CAST rather than the stage slot, so two casts on one target coexist and a
 second cast never restarts the first's renderer. And the clock is `Time.time`
 with one conversion (`FightBeatPlayer.Scaled`), so a pause freezes the beat and
 the spell together.
+
+`FightBeatPlayer.Scaled`'s own product grew a second factor as of
+`docs/PLAN_BATTLE_SPEED.md`: `Pace = BeatSpeedMultiplier * PlayerSpeedMultiplier`,
+the second being the player's own in-fight preset (`FightBeatPlayer.
+PlayerSpeedSource`, installed by `FightBootstrap.Start` from `GameSettings.
+BattleSpeed`). A cast does NOT read the live `Pace` after it begins —
+`SpellPerformancePlayer.Begin` captures `Cast.PaceAtStart` once, and `Tick`
+converts age against that frozen value — so a preset stepped mid-cast (the
+system menu holds `Time.timeScale = 0` while it is open) cannot retroactively
+retime a spell already drawing. `docs/PLAN_SPELL_LAYERS.md`'s C1 contract has
+an UPDATE note recording this as the third reader of the product.
 
 One Image per sprite layer, re-pointed frame by frame. No Animator: that would
 put the timing in an asset instead of beside the spell that owns it, and a

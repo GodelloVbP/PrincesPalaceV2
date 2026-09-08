@@ -275,3 +275,126 @@ wanted: the same setting as a HUD control in the fight, one more caller of `SetB
   scope grows to name them).
 - Known residual: the badge pop's one-beat lag (contract 5).
 - Known cost under A: every option row shorter; under B: a shorter slider track. G4 decides.
+
+## Deviations (implementation, one Sonnet agent, commits `8f598ee1`..`b9ffa4ad`)
+
+Every place the delivered code reads differently from this document as
+written, and why. Nothing here weakens a contract or a test; each is either
+an assumption in the plan that did not hold once read against the tree, or a
+call this document explicitly left to the implementer (G4's A/B fork).
+
+1. **Contract 2's ordering claim does not hold under Unity's own lifecycle.**
+   "`FightBeatPlayer.OnEnable`... after `FightBootstrap.Start` installed the
+   production source" assumes `Start` can run before another object's
+   `OnEnable` on the same scene load. Unity runs every object's `OnEnable`
+   before ANY object's `Start`, so `FightBeatPlayer.OnEnable` cannot
+   literally observe `FightBootstrap.Start`'s install on the SAME load.
+   `OnEnable`'s adoption is still correct and still worth having — it
+   prevents a fresh fight from opening on a STALE value the previous fight
+   left in `PlayerSpeedMultiplier` (a static that outlives a scene) — but the
+   "opening glide runs at the chosen speed" claim is honoured from the first
+   BEAT onward (contract 1's own per-beat adoption), not from the literal
+   instant `OnEnable` fires. Recorded in `FightBeatPlayer.OnEnable`'s own
+   comment.
+
+2. **No shared PlayMode fight-loading helper existed.** Revision 3 point 1
+   said "the shared PlayMode helper (`LoadFight` in `Tests/PlayMode/Shared/`
+   — find it)" as though one already did; none does — every one of the ~30
+   existing Fight-scene PlayMode fixtures (Combat and Art) defines its own
+   private, unshared `LoadFight`-shaped coroutine. Retrofitting all of them
+   onto one helper is an unrelated multi-file refactor with its own review
+   burden (`docs/WORKFLOW.md` §4's freeze protocol would apply to a change
+   that size). `Tests/PlayMode/Shared/FightSceneFixture.cs` is new, built
+   only for this plan's own new timing fixtures (T4/T5/T6/T8); the other ~30
+   fixtures are untouched and still safe, because each one that needed a pin
+   for its OWN timing assumptions got one directly (see item 8).
+
+3. **T4 needed a production seam outside the plan's stated line ranges.**
+   Proving "the hit cue fires once" needed an observable nothing in the
+   architecture provides: `SpellPerformancePlayer.Advance`'s `HitCue` case
+   was, and remains, a no-op in production (the beat player owns the impact
+   block through its own independent wait). Added `HitCueCrossedForTest`, a
+   public test-only hook invoked from that existing case — `Advance` sits
+   outside the plan's own Seams section (`98-105,152-164,196-208`), so this
+   is new territory, not a line range the plan already claimed.
+
+4. **`OptionsController.Step` promoted `private` → `public`.** Needed so T3
+   and T6 can step a row directly rather than finding and clicking its
+   `Button` (PlayMode has no `InternalsVisibleTo` grant to reach it at
+   `internal`). Not named in the plan's own Seams section for
+   `OptionsController.cs`, which only mentions "label and clamped step cases;
+   restore" — the promotion is a natural consequence of testing them for
+   real rather than a design change.
+
+5. **`DamagePopup.LifeSeconds` promoted `private` → `internal`**, not its
+   value — `FightBeatPlayer.PopNumber` needs to read it to compute
+   `Scaled(LifeSeconds)`; both classes are in the same assembly, so
+   `internal` is the narrowest accessibility that compiles.
+
+6. **G4: option A was built first, and rejected.** The plan's own layout
+   section led with option A (one column, every row shrunk to 58px) and
+   described its arithmetic as fitting (704 of 707.56). It does fit by
+   `CardsFit()`'s own check — but a screenshot against a freshly built scene
+   (option A's own `UiKitAuditTests`/`CardsFit` pass had only ever run
+   against the SCREEN TREE in code, not the checked-in scene, which needed
+   `-BuildScenes` to reflect any of this) showed the restore button and its
+   reworded, longer footer note ("...Battle speed applies from the next
+   action.") only 3.56px apart — the footer text rendered visibly UNDER the
+   button. Option B (two columns, Gameplay alone in column 1, every OTHER
+   row at its original size) ships instead; both photographs are in this
+   session's scratchpad. This is the fork the plan's own G4 instruction
+   named ("if A reads cramped, build B"), decided in the direction the plan
+   left open.
+
+7. **G3's fixture review scope: 7 of 31 fixtures needed a fix, not all 31.**
+   Read each of the 31 PlayMode fixtures that set `BeatSpeedMultiplier`
+   before deciding: a fixture using a POLLING wait (a deadline loop against
+   `Time.realtimeSinceStartup`) self-corrects at any pace and needed
+   nothing; several waits turned out to run through `Time.unscaledDeltaTime`
+   (`ThemedButtonState`'s fades) rather than `FightBeatPlayer.Scaled` at all,
+   confirmed by reading `ThemedButtonState.cs`, not assumed from the word
+   "BeatSpeedMultiplier" appearing nearby. `EnemyStanceCaptureTests.cs`,
+   `PreviewCaptureTests.cs`, `StageAnimationTests.cs`,
+   `CinderfaultSpellCaptureTests.cs`, `StaticPilotStageCaptureTests.cs`,
+   `FightBeatPacingTests.cs` and `SpellVfxTests.cs` all pin
+   `FightBeatPlayer.PlayerSpeedSource = () => 1f` now, alongside their
+   existing `BeatSpeedMultiplier` assignment. Full reasoning per file: commit
+   `6b20a05c`.
+
+8. **G5's three rows (0.5x/1x/2x), not all four.** The plan says "0.5x, 1x,
+   2x" for the Water captures; the table's fourth row (1.5x, today's
+   relabelled pace) is deliberately not a separate capture, since the
+   deliverable is evidence of the NEW range this plan adds, not a fourth
+   near-duplicate of the shipped pace under a new name.
+
+9. **G5 needed a new public test seam**, `FightController.
+   PushLogLineForTest` (wraps the existing internal `PushLogLine`), to
+   satisfy "the preset visible in the frame via the fight's log line" —
+   literally burning the preset name onto the fight's own visible bark
+   banner rather than only into the Unity console log. Not in the plan's own
+   Seams section, which did not anticipate this literal a reading of "the
+   fight's log line."
+
+10. **`tools/screenshot.ps1`'s own runtime copy-back does not recurse.** G5's
+    fixture first wrote into a `battle_speed/` subfolder for tidiness;
+    `screenshot.ps1`'s success check (`Get-ChildItem $runnerOut -Filter
+    *.png`, no `-Recurse`) could not see it and reported "No runtime
+    captures were produced" even though all five tests passed and wrote 500
+    frames. Not a battle-speed bug — worked around by writing flat into
+    `tools/screenshots/runtime/`, the convention every other `*CaptureTests`
+    fixture already follows, rather than patching the tool.
+
+11. **Found and committed separately, outside this plan, per its own
+    Sequencing note:** the `-Element` preview-capture coverage
+    (`PreviewCaptureTests.cs`) was sitting uncommitted in the tree before
+    this session started (`AUDIT.md` #107's own test-side half). Committed
+    as `d8754775` before this plan's own G3 review touched the same file, so
+    the two pieces of work do not land in one commit.
+
+12. **`SystemMenuCaptureTests.CaptureTheSkeletonOnEachTab` fails under real
+    graphics, pre-existing and unrelated to battle speed** ("the pack click
+    changed nothing on the character") — invisible to every gate this plan
+    runs (`-nographics` skips it before reaching that assertion). Extracted
+    the Options capture into its own test method, `CaptureTheOptionsPane`,
+    so this unrelated failure cannot block G4's own evidence; flagged
+    separately as `task_d0555f54` rather than fixed here (out of scope).
