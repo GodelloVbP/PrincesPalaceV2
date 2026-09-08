@@ -110,23 +110,20 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellAnchor.Target;
 
-            switch (name.Trim().ToLowerInvariant().Replace("_", "-"))
-            {
-                case "target": return SpellAnchor.Target;
-                case "caster": return SpellAnchor.Caster;
-                case "travel": return SpellAnchor.Travel;
+            if (SpellWord.Is(name, "target")) return SpellAnchor.Target;
+            if (SpellWord.Is(name, "caster")) return SpellAnchor.Caster;
+            if (SpellWord.Is(name, "travel")) return SpellAnchor.Travel;
 
-                case "travel-centre":
-                case "travel-center": return SpellAnchor.TravelCentre;
+            if (SpellWord.Is(name, "travel-centre") ||
+                SpellWord.Is(name, "travel-center")) return SpellAnchor.TravelCentre;
 
-                case "target-centre":
-                case "target-center": return SpellAnchor.TargetCentre;
+            if (SpellWord.Is(name, "target-centre") ||
+                SpellWord.Is(name, "target-center")) return SpellAnchor.TargetCentre;
 
-                case "caster-centre":
-                case "caster-center": return SpellAnchor.CasterCentre;
+            if (SpellWord.Is(name, "caster-centre") ||
+                SpellWord.Is(name, "caster-center")) return SpellAnchor.CasterCentre;
 
-                default: return fallback;
-            }
+            return fallback;
         }
     }
 }
