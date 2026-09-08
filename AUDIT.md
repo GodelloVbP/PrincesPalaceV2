@@ -1103,3 +1103,32 @@ policy questions about how paranoid this hook should be, not bugs in what it cur
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — fixed as a symptom of #13 (pre-v2 history, no sha in this tree): a message-buffer trim discarded the Bloodlust line before the assertion read it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why~~ — fixed in `d0f9944`: `FightBeatPlayer.Charge` now returns the `outSeconds` `PlayBeats` waits out before firing impact, burst only (no slash arc) per `docs/ART_PIPELINE.md`'s Blunt row; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+
+## Findings from the Prismatic Orb pass, 2026-09-08
+
+### 104. The dossier's unassigned spell-book list reads as empty when it is not
+
+Reported from play with a screenshot: the map's status line says `SPELL BOOKS
+TO PLACE: 6`, the dossier's SPELL BOOKS panel shows three `EMPTY` slots and an
+`UNASSIGNED` header with nothing under it, and "whatever I press nothing
+happens". The owner's own read: books have no art, so an owned book looks like
+nothing.
+
+Verified so far, not yet diagnosed: `CharacterDossierController.RefreshSpells`
+(`CharacterDossierController.cs:411-481`) paints one row per entry in
+`run.unassignedSpellBooks`, setting the row's name label to the skill's
+display name (`:470-474`) and the empty hint only when the list is empty
+(`:466`). `CharacterDossierScreen.BuildSpellsPanel` declares five rows
+(`CharacterDossierScreen.cs:629`, `:719-744`). Skills author no `iconPath`
+(`ShopController.cs:36-39`), so a book row and a book card have no picture
+anywhere in the game. Whether the six rows were painted invisibly (text
+colour, row height, panel clipping) or not painted at all (wiring, a stale
+generated scene) is the open question; neither the empty hint nor a row was
+visible in the screenshot, which rules out "list was empty" and points at the
+panel rather than the data.
+
+Owner's call on the fix shape, recorded rather than actioned: at minimum a
+book row must read as an object (an icon, or a plate with a title) and a
+selected row must look selected; the three slot boxes should look like
+boxes. Related: the shop's book cards fall back to the no-art slot art for
+the same reason.
