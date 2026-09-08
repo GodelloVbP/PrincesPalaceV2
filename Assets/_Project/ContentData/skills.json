@@ -568,11 +568,11 @@
                 "startFrame": 2,
                 "fps": 22,
                 "until": "once",
-                "size": 310,
+                "size": 260,
                 "facing": "auto",
                 "sort": "effects",
                 "impactX": 0.5,
-                "impactY": 0.51
+                "impactY": 0.65
               },
               {
                 "id": "spray",
