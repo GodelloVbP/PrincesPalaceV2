@@ -202,6 +202,16 @@ not this tree; the live register starts at #37.)
   possible: `UiAudit`, `UiWiringSweep`, the area-coverage refusal in
   `run_tests_parallel.ps1`, and the two git hooks all exist for this reason.
 - Graceful degradation on missing content is the house style.
+- **Build the model, not the patch.** Before extending a system, check
+  whether its model still fits the request and the known next ones; if it
+  does not, say so and propose a proportionate change rather than adding a
+  flag, a hardcoded slot, a special case or a parallel implementation.
+  Reusable behaviour is code, combinations of it are content. Validate a
+  model against two materially different uses, define ownership, lifecycle
+  and failure, keep one implementation per shared rule, count total cost
+  (code, art, content, tests, rework), and never quietly shrink the asked-for
+  experience to fit an inadequate implementation. Routine changes skip this;
+  repeated special cases trigger it. Full text: `docs/CODE_STANDARDS.md` §10.
 - The `ui-ugui` skill's scene/prefab-editing steps are overridden here by rule 1 above: never edit a scene or prefab directly, edit the screen's tree in `Domain/UiKit/Screens/` and its wiring in `ScreenRegistry.cs` instead.
 - The `anti-ui-slop` skill is written for web/iOS coding agents with a UIZZE MCP; it is inert here without that MCP, and its "never report missing evidence" policy is not followed in this project — missing evidence gets reported, per this file's pushback rules.
 

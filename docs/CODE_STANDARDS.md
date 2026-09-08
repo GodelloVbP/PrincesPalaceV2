@@ -422,3 +422,59 @@ rules, because statics are the one place the compiler stops helping:
   regex only approximates intent. A rule that can't be mechanised at all
   still wants a greppable exemption (`AllowOverlap("reason")`) rather than a
   silent one-off deviation.
+
+## 10. Architecture and long-term maintainability
+
+Owner's standing instruction, 2026-09-08, recorded after the spell player
+had grown four spell-specific patches in a month and could still only "shoot
+a blob". Prince's Palace is a growing product. Build coherent systems that
+support foreseeable variation, rather than narrowly solving each request
+through another flag, hardcoded slot, special case or parallel
+implementation.
+
+**Before extending a system**, inspect its existing design, its documented
+decisions (`docs/`, `AUDIT.md`, `architecture_audit.md`) and the known
+upcoming requirements. Decide whether the underlying model still fits. If it
+does not, say what the limitation is and recommend a proportionate
+architectural change. Never silently reduce the requested experience to fit
+an inadequate implementation -- that is the failure that hides, because the
+output looks finished.
+
+**Separate reusable behaviour from authored content.** New combinations of
+supported behaviour should normally cost a data or configuration change.
+New behaviour may cost code, but that code should be local, testable and
+compatible with existing content.
+
+**For a meaningful architectural decision:**
+
+- Identify what stays consistent and what varies across the relevant uses.
+- Validate the model against at least two materially different known uses,
+  where they exist (the spell layers plan uses Water and Cinderfault).
+- Explain how the next foreseeable requirement would fit and where its code
+  would belong.
+- Define ownership, lifecycle, failure handling and compatibility, not only
+  the successful path.
+- Keep one authoritative implementation of every shared rule.
+
+**SOLID through clear responsibilities, cohesive modules and small
+interfaces.** No speculative frameworks, no abstraction without a second
+concrete user, no configurability without a demonstrated purpose.
+Flexibility is only good when it makes the project easier to read and
+extend.
+
+**Evaluate total project cost**: code, art and content authoring,
+integration, testing, maintenance and likely rework. The smallest patch
+today is not automatically the simplest solution overall.
+
+**Preserve working behaviour** with verification appropriate to the change,
+and with an explicit migration when one is needed. Record consequential
+design decisions, tradeoffs and deliberate limitations in tracked
+documentation (a plan under `docs/`, a finding in `AUDIT.md`, or the commit
+message), not in chat.
+
+**Scale this to the task.** A routine change needs no architecture exercise.
+Repeated special cases, duplicated logic, or a request that strains the
+existing model do require stepping back before the next patch.
+
+Success means the current feature works well, foreseeable variations fit
+naturally, and future changes have clear, predictable places to go.
