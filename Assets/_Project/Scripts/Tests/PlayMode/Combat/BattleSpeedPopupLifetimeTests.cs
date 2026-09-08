@@ -101,17 +101,26 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadAndBind();
 
-            var cases = new (float playerSpeed, bool missed)[]
+            // expectedLife is a LITERAL per row, not FightBeatPlayer.Scaled(0.85f)
+            // called here -- CODE_STANDARDS Sec8 refuses recomputing the
+            // production formula to build a test's own expected value, because
+            // a test that used the same arithmetic on both sides would still
+            // pass if that arithmetic were wrong (the Mathf.RoundToInt /
+            // Math.Round divergence Sec8 cites is exactly this shape). Pinned
+            // by hand at BeatSpeedMultiplier 1 (this fixture never touches
+            // it): Pace = BeatSpeedMultiplier * playerSpeed, and
+            // 0.85s / Pace is 2.55 at player 1/3 and 0.6375 at player 4/3.
+            var cases = new (float playerSpeed, bool missed, float expectedLife)[]
             {
-                (1f / 3f, false),
-                (1f / 3f, true),
-                (4f / 3f, false),
-                (4f / 3f, true),
+                (1f / 3f, false, 2.55f),
+                (1f / 3f, true, 2.55f),
+                (4f / 3f, false, 0.6375f),
+                (4f / 3f, true, 0.6375f),
             };
 
             bool checkedThePause = false;
 
-            foreach (var (playerSpeed, missed) in cases)
+            foreach (var (playerSpeed, missed, expectedLife) in cases)
             {
                 FightBeatPlayer.PlayerSpeedSource = () => playerSpeed;
                 FightBeatPlayer.AdoptPlayerSpeedForTest();
@@ -154,12 +163,12 @@ namespace PrincesPalace.PlayModeTests
                     Time.timeScale = 1f;
                 }
 
-                // Scaled(0.85) as a LITERAL, per CODE_STANDARDS Sec8 -- not
-                // read off DamagePopup.LifeSeconds (internal, and PlayMode
-                // has no InternalsVisibleTo grant regardless), and not
-                // recomputed from anything else this test could also get
-                // wrong the same way.
-                float expectedLife = FightBeatPlayer.Scaled(0.85f);
+                // expectedLife came in with the case above -- a literal, not
+                // DamagePopup.LifeSeconds (internal, and PlayMode has no
+                // InternalsVisibleTo grant regardless) and not
+                // FightBeatPlayer.Scaled(0.85f) recomputed here, which would
+                // make this assertion true by construction rather than by
+                // measurement.
                 // Generous rather than exactly "one frame": batchmode frame
                 // pacing is uneven (SpellPerformancePlayer's own header cites
                 // a single frame measured at 24ms and another at 57ms), and
