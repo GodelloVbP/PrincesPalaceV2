@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Bot
 {
@@ -43,6 +45,14 @@ namespace PrincesPalace.Domain.Bot
         // CastSkill(int, CombatantState) both use.
         public readonly int SkillIndex;
 
+        // Valid only when Kind == Skill, and only for a skill that authored an
+        // elements list -- null for every other cast, which is every cast but
+        // the orb's. Carried on the action rather than decided at Apply time
+        // because it is part of WHICH command this is: four elements against
+        // one enemy are four different things a policy can weigh, exactly the
+        // way four targets are.
+        public readonly DamageType? Element;
+
         // Valid only when Kind == Item.
         public readonly string ItemId;
         public readonly string ItemDisplayName;
@@ -67,8 +77,10 @@ namespace PrincesPalace.Domain.Bot
             string itemId = null,
             string itemDisplayName = null,
             bool itemRestoresMana = false,
-            MoveDirection moveDirection = MoveDirection.Forward)
+            MoveDirection moveDirection = MoveDirection.Forward,
+            DamageType? element = null)
         {
+            Element = element;
             Kind = kind;
             Target = target;
             MoveDirection = moveDirection;
@@ -83,7 +95,10 @@ namespace PrincesPalace.Domain.Bot
             switch (Kind)
             {
                 case FightActionKind.Attack: return $"Attack({Target?.Name})";
-                case FightActionKind.Skill: return $"Skill[{SkillIndex}]({Target?.Name})";
+                case FightActionKind.Skill:
+                    return Element.HasValue
+                        ? $"Skill[{SkillIndex}]:{Element.Value}({Target?.Name})"
+                        : $"Skill[{SkillIndex}]({Target?.Name})";
                 case FightActionKind.Item: return $"Item({ItemDisplayName})";
                 default: return $"Move({MoveDirection})";
             }
@@ -142,15 +157,33 @@ namespace PrincesPalace.Domain.Bot
                 // a different enemy's name. A Skill Choose() has to filter
                 // "which candidates target enemy X" now leans on that Target
                 // meaning something -- see DamagingTargetSelection.
+                // ONE ACTION PER ELEMENT, on top of whatever target loop the
+                // skill would have got anyway. A skill that offers no choice
+                // yields the single null-element action it always did, so every
+                // existing kit's legal list is unchanged entry for entry.
+                //
+                // A CAST WITH NO ELEMENT IS NOT OFFERED for a skill that asks
+                // for one: FightSession refuses it, so a policy that picked it
+                // would burn a turn on a refusal that spends nothing and never
+                // advances the fight.
+                var elements = ElementsOf(option.Skill);
+
                 if (option.Skill.Targeting != SkillTargeting.SingleEnemy)
                 {
-                    actions.Add(new FightAction(FightActionKind.Skill, actor, option.Index));
+                    foreach (var element in elements)
+                    {
+                        actions.Add(new FightAction(FightActionKind.Skill, actor, option.Index, element: element));
+                    }
+
                     continue;
                 }
 
                 foreach (var target in session.EligibleTargets(actor, option.Skill.Reach))
                 {
-                    actions.Add(new FightAction(FightActionKind.Skill, target, option.Index));
+                    foreach (var element in elements)
+                    {
+                        actions.Add(new FightAction(FightActionKind.Skill, target, option.Index, element: element));
+                    }
                 }
             }
 
@@ -181,6 +214,35 @@ namespace PrincesPalace.Domain.Bot
 
             return actions;
         }
+
+        // The elements a skill can be cast as, as a list a caller can always
+        // loop over: exactly one entry -- null -- for a skill that offers no
+        // choice, which keeps the two cases one loop instead of two branches.
+        private static IReadOnlyList<DamageType?> ElementsOf(ResolvedSkill skill)
+        {
+            if (skill == null || !skill.HasElementChoice) return NoElement;
+
+            var elements = new List<DamageType?>(skill.Elements.Length);
+            foreach (var choice in skill.Elements)
+            {
+                if (choice != null) elements.Add(choice.Type);
+            }
+
+            return elements.Count == 0 ? NoElement : elements;
+        }
+
+        private static readonly DamageType?[] NoElement = { null };
+
+        // THE SKILL AS THIS ACTION WOULD ACTUALLY CAST IT -- retyped when the
+        // action names an element, the option's own skill otherwise. Every
+        // policy that scores a cast through the session's preview goes through
+        // here, so a scoring read and the cast that follows it describe the
+        // same spell. Same seam FightController.Hud.AsChosen is on the view
+        // side.
+        public static ResolvedSkill CastAs(ResolvedSkill skill, FightAction action) =>
+            action.Element.HasValue && skill != null && skill.Offers(action.Element.Value)
+                ? skill.AsElement(action.Element.Value)
+                : skill;
 
         // THE LAST THING LEFT ON THE MENU, for a policy whose own scoring has
         // run out of opinions.
@@ -214,7 +276,7 @@ namespace PrincesPalace.Domain.Bot
                     session.ExecuteAttack(action.Target);
                     break;
                 case FightActionKind.Skill:
-                    session.CastSkill(action.SkillIndex, action.Target);
+                    session.CastSkill(action.SkillIndex, action.Target, action.Element);
                     break;
                 case FightActionKind.Item:
                     session.UseConsumable(action.ItemDisplayName, ItemAmountProxy, action.ItemRestoresMana);

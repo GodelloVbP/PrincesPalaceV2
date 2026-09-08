@@ -154,6 +154,39 @@ namespace PrincesPalace.Domain.Combat.Session
             return rows;
         }
 
+        // Column B at Element depth: one row per element the skill offers, in
+        // the order it authored them.
+        //
+        // NO COST TEXT AND ALWAYS AFFORDABLE. The choice is free -- the skill's
+        // own cost was already shown on the row that led here, and repeating it
+        // four times would read as four prices. Affordability was decided one
+        // depth up too: an unaffordable skill's row cannot be pressed, so no
+        // element list is ever reached for one.
+        //
+        // The meta line is the skill's, restated once per row rather than left
+        // blank, so the column still says what is being cast while the skill
+        // list is folded away behind it.
+        public static IReadOnlyList<SubmenuRow> ElementRows(ResolvedSkill skill)
+        {
+            var rows = new List<SubmenuRow>();
+            if (skill == null || !skill.HasElementChoice) return rows;
+
+            foreach (var choice in skill.Elements)
+            {
+                if (choice == null) continue;
+
+                rows.Add(new SubmenuRow(
+                    choice.Type.ToString().ToUpperInvariant(),
+                    MetaLine(skill),
+                    "",
+                    canPay: true,
+                    meetsRequirement: true,
+                    manaCost: 0));
+            }
+
+            return rows;
+        }
+
         // Column B for the item branch. Items never cost mana, so nothing here
         // previews on the bar.
         public static IReadOnlyList<SubmenuRow> ItemRows(IReadOnlyList<SatchelStack> satchel)
@@ -385,6 +418,17 @@ namespace PrincesPalace.Domain.Combat.Session
         public static string DamageTypeLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
         {
             if (!skill.IsDamaging) return "";
+
+            // A CHOICE NOT YET MADE LISTS THE CHOICES, joined the same way a
+            // multi-packet spell's types already are -- the row is answering
+            // "what element is this", and "all four, you pick" is the true
+            // answer until one is picked. Once it is, the card is built on
+            // AsElement's copy, which offers nothing further and falls through
+            // to the fixed-packet branch below with one type in it.
+            if (skill.HasElementChoice)
+            {
+                return string.Join("/", skill.Elements.Where(e => e != null).Select(e => e.Type));
+            }
 
             if (skill.HasFixedDamage)
             {
@@ -732,9 +776,21 @@ namespace PrincesPalace.Domain.Combat.Session
                 : menu.Branch == MenuBranch.Item ? "I T E M"
                 : "A T T A C K";
 
-            return menu.Depth == MenuDepth.Sub
-                ? "C O M M A N D  ›  " + word
-                : "C O M M A N D  ›  " + word + "  ›  T A R G E T";
+            string trail = "C O M M A N D  ›  " + word;
+
+            // THE ELEMENT STEP IS SHOWN AT BOTH DEPTHS IT IS TRUE AT: standing
+            // on the element list, and standing on the target list having come
+            // through it. A breadcrumb that dropped the element on the way to
+            // targeting would be the one line on screen still claiming the
+            // player has a choice left to make.
+            if (menu.Depth == MenuDepth.Element || menu.ChosenElement.HasValue)
+            {
+                trail += "  ›  E L E M E N T";
+            }
+
+            return menu.Depth == MenuDepth.Sub || menu.Depth == MenuDepth.Element
+                ? trail
+                : trail + "  ›  T A R G E T";
         }
 
         // How many enemies are still up, for the hint above the plates.

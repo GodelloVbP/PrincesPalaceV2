@@ -215,5 +215,91 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(hits.Any(h => h.Name == "TooManyCommands"),
                 "a fight that was progressing every single command was called stuck");
         }
+
+        // ---- a caster whose ONLY skill asks which element it is ----------------
+
+        // ODETTE'S WHOLE KIT IS ONE ELEMENT SKILL, so the element fan-out is not
+        // an extra option beside her ordinary ones -- it IS her skill list. If a
+        // policy could not pick one of those, or if the picked element never
+        // reached CastSkill, the fight would stall on her turn every time and
+        // FightInvariants' NoLegalAction is what says so.
+        //
+        // All three archetypes, because each scores a cast through its own copy
+        // of the preview read and only one of them was edited by hand first.
+        [TestCase("aggressive")]
+        [TestCase("defensive")]
+        [TestCase("lookahead")]
+        public void Play_ACasterWhoseOnlySkillNeedsAnElement_NeverStalls(string archetype)
+        {
+            IFightPolicy policy = archetype == "aggressive" ? new GreedyAggressivePolicy()
+                : archetype == "defensive" ? (IFightPolicy)new GreedyDefensivePolicy()
+                : new Lookahead2Policy();
+
+            var hero = Fighter("Odette", true, maxHealth: 4000, attack: 10, speed: 12);
+            var foe = Fighter("Foe", false, maxHealth: 200, attack: 1, speed: 1);
+            var kit = new PlayerKit("owl", CharacterRole.Utility,
+                new List<ResolvedSkill> { Orb() }, new List<ResolvedRelic>(), null);
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            var trace = new FightTrace();
+            var hits = FightRunner.Play(session, policy, System.Array.Empty<SatchelStack>(),
+                new SeededRandom(5), trace);
+
+            CollectionAssert.IsEmpty(hits.Select(h => h.Name).ToList(),
+                "an element skill left a policy with nothing legal to do");
+            Assert.IsTrue(session.IsOver && session.PlayerWon, "the fight did not resolve");
+        }
+
+        // The trace label is the SKILL ID and stays the skill id -- docs/
+        // BOT_SUMMARY_SCHEMA.md pins "Skill:<id>" and the summary's
+        // skillsNeverUsed differences it against the catalogue. Four elements
+        // must not become four spellings of one spell.
+        [Test]
+        public void Play_AnElementSkill_IsTracedUnderOneSkillId()
+        {
+            var hero = Fighter("Odette", true, maxHealth: 4000, attack: 10, speed: 12);
+            var foe = Fighter("Foe", false, maxHealth: 200, attack: 1, speed: 1);
+            var kit = new PlayerKit("owl", CharacterRole.Utility,
+                new List<ResolvedSkill> { Orb() }, new List<ResolvedRelic>(), null);
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(5)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            var trace = new FightTrace();
+            FightRunner.Play(session, new GreedyAggressivePolicy(), System.Array.Empty<SatchelStack>(),
+                new SeededRandom(5), trace);
+
+            var castLabels = trace.TurnTraces.Select(t => t.Action)
+                .Where(a => a != null && a.StartsWith("Skill:"))
+                .Distinct()
+                .ToList();
+
+            CollectionAssert.AreEqual(new[] { "Skill:prismatic_orb" }, castLabels);
+        }
+
+        private static ResolvedSkill Orb()
+        {
+            var raw = new RawSkillEntry
+            {
+                id = "prismatic_orb", displayName = "Prismatic Orb", characterId = "owl",
+                effect = "DamageSingle", manaCost = 1,
+                damageInstances = new[] { new RawDamageInstance { type = "Earth", amount = 16 } },
+                elements = new[]
+                {
+                    new RawElementChoice { type = "Earth" },
+                    new RawElementChoice { type = "Water" },
+                    new RawElementChoice { type = "Fire" },
+                    new RawElementChoice { type = "Wind" },
+                },
+            };
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { raw }, out var resolved, out var errors);
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            return resolved[0];
+        }
     }
 }

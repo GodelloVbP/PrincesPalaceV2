@@ -164,7 +164,9 @@ namespace PrincesPalace.Domain.Bot
                     bool previewable = option.Skill.Effect == SkillEffect.DamageSingle
                                     || option.Skill.Effect == SkillEffect.DamageAll;
 
-                    return previewable ? session.PreviewSkillPower(actor, option.Skill) : 0;
+                    return previewable
+                        ? session.PreviewSkillPower(actor, FightAction.CastAs(option.Skill, action))
+                        : 0;
                 default:
                     return 0;
             }

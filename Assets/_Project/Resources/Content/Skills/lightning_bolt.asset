@@ -79,3 +79,4 @@ MonoBehaviour:
       RankMask: 0
     BookOnly: 1
     BookTier: 3
+    Elements: []

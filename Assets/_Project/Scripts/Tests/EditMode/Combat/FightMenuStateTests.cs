@@ -244,6 +244,168 @@ namespace PrincesPalace.Domain.Tests
             menu.Back();
             Assert.AreEqual(-1, menu.ActiveVerbIndex, "nothing is lit at the root");
         }
+
+        // ---- the element depth -------------------------------------------------
+
+        // ONLY A SKILL THAT ASKS STOPS HERE, and the CALLER is what decides
+        // that -- FightMenuState holds no content and asks no content
+        // question. These drive the transitions the controller drives on an
+        // element skill's row.
+        [Test]
+        public void AnElementSkillStopsBetweenTheSkillListAndTheTarget()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(2, 0);
+            menu.EnterElementChoice();
+
+            Assert.AreEqual(MenuDepth.Element, menu.Depth);
+            Assert.IsTrue(menu.SubmenuOpen, "the column stays up showing a different list");
+            Assert.IsFalse(menu.IsTargeting);
+            Assert.AreEqual(2, menu.Selection, "the skill row is still the selected skill row");
+            Assert.IsNull(menu.ChosenElement);
+
+            menu.ChooseElement(DamageType.Fire);
+
+            Assert.AreEqual(MenuDepth.Target, menu.Depth);
+            Assert.AreEqual(DamageType.Fire, menu.ChosenElement);
+        }
+
+        // The two indices are kept apart precisely so this holds: four call
+        // sites in FightController read Selection to find the selected SKILL,
+        // and hovering an element must not move any of them onto another one.
+        [Test]
+        public void HoveringAnElementRowLeavesTheSkillSelectionAlone()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(3, 0);
+            menu.EnterElementChoice();
+
+            Assert.IsTrue(menu.Select(1, 0));
+            Assert.AreEqual(3, menu.Selection);
+            Assert.AreEqual(1, menu.ElementSelection);
+            Assert.AreEqual(1, menu.RowSelection, "the row pool is painting the element list");
+
+            Assert.IsFalse(menu.Select(1, 0), "hovering the row already hovered changes nothing");
+        }
+
+        [Test]
+        public void BackFromATargetLandsOnTheElementListAndUndoesTheChoice()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(0, 0);
+            menu.EnterElementChoice();
+            menu.ChooseElement(DamageType.Water);
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Element, menu.Depth);
+            Assert.IsNull(menu.ChosenElement,
+                "standing on the element list still holding the element just undone would describe a " +
+                "decision the player has taken back");
+        }
+
+        [Test]
+        public void BackFromTheElementListLandsOnTheSkillListWithTheSkillStillLit()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(2, 0);
+            menu.EnterElementChoice();
+            menu.Select(1, 0);
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Sub, menu.Depth);
+            Assert.AreEqual(MenuBranch.Skill, menu.Branch);
+            Assert.AreEqual(2, menu.Selection);
+            Assert.AreEqual(-1, menu.ElementSelection);
+            Assert.IsNull(menu.ChosenElement);
+        }
+
+        // Every other command's path is what it always was: a plain skill at
+        // Target depth backs out to its own list, not to an element list it
+        // never visited.
+        [Test]
+        public void BackFromAPlainSkillsTargetStillLandsOnTheSkillList()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(0, 0);
+            menu.EnterTargeting();
+
+            Assert.IsTrue(menu.Back());
+            Assert.AreEqual(MenuDepth.Sub, menu.Depth);
+        }
+
+        [Test]
+        public void ResetForgetsTheChosenElement()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterElementChoice();
+            menu.ChooseElement(DamageType.Wind);
+
+            menu.Reset();
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.IsNull(menu.ChosenElement);
+            Assert.AreEqual(-1, menu.ElementSelection);
+        }
+
+        // Opening any branch clears it too -- an element left over from last
+        // turn would be handed to a cast that never asked for one, which
+        // FightSession refuses outright.
+        [Test]
+        public void OpeningAnyBranchForgetsTheChosenElement()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterElementChoice();
+            menu.ChooseElement(DamageType.Wind);
+
+            menu.OpenBranch(MenuBranch.Item);
+            Assert.IsNull(menu.ChosenElement);
+
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterElementChoice();
+            menu.ChooseElement(DamageType.Wind);
+            menu.OpenAttack();
+            Assert.IsNull(menu.ChosenElement);
+        }
+
+        [Test]
+        public void TheBreadcrumbNamesTheElementStepAtBothDepthsItIsTrueAt()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterElementChoice();
+
+            StringAssert.Contains("E L E M E N T", FightHudModel.Breadcrumb(menu));
+            StringAssert.DoesNotContain("T A R G E T", FightHudModel.Breadcrumb(menu));
+
+            menu.ChooseElement(DamageType.Fire);
+
+            StringAssert.Contains("E L E M E N T", FightHudModel.Breadcrumb(menu),
+                "a breadcrumb that dropped the element on the way to targeting would be the one line " +
+                "on screen still claiming the player has a choice left to make");
+            StringAssert.Contains("T A R G E T", FightHudModel.Breadcrumb(menu));
+        }
+
+        // And nothing else grew a step.
+        [Test]
+        public void TheBreadcrumbIsUnchangedForASkillThatAsksNothing()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            StringAssert.DoesNotContain("E L E M E N T", FightHudModel.Breadcrumb(menu));
+
+            menu.EnterTargeting();
+            StringAssert.DoesNotContain("E L E M E N T", FightHudModel.Breadcrumb(menu));
+            StringAssert.Contains("T A R G E T", FightHudModel.Breadcrumb(menu));
+        }
     }
 
     // What the submenu and detail column actually say, derived from a session.
@@ -703,6 +865,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Giant Rat 2", FightHudModel.DisplayNameOf(all, second),
                 "the survivor was renumbered, so the name the player learned now means something else");
         }
+
 
         private static CombatantState Foe(string name) =>
             new CombatantState(name, false, 40, 0, 5, 3);

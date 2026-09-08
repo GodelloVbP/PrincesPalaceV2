@@ -581,6 +581,13 @@ namespace PrincesPalace.Content
                     {
                         if (skill.Data.CharacterId != track.Data.CharacterId || skill.Data.UnlockLevel > 1) continue;
                         foreach (var instance in skill.Data.DamageInstances) level1Types.Add(instance.type);
+
+                        // An element a skill lets the player CHOOSE is one the
+                        // character can deal -- the authored packet is only one
+                        // of them. Mirrors RewardTrackEntryResolver.
+                        // RewardTrackCharacterContext.BuildAll, which is the
+                        // copy that decides; this one only has to agree.
+                        foreach (var choice in skill.Data.Elements) level1Types.Add(choice.Type);
                     }
                 }
 

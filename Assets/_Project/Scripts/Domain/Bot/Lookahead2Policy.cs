@@ -175,7 +175,7 @@ namespace PrincesPalace.Domain.Bot
 
                     if (isDamage)
                     {
-                        int dmg = session.PreviewSkillPower(actor, option.Skill);
+                        int dmg = session.PreviewSkillPower(actor, FightAction.CastAs(option.Skill, action));
                         ownEffect = dmg;
                         killsTarget = action.Target != null && dmg >= action.Target.CurrentHealth;
                     }

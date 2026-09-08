@@ -189,6 +189,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `bookTier` | int | `0` | The shop's price band (1-4) for this spell as a book; 0 means not book-eligible. |  |
 | `meleeReach` | bool | `false` | Whether the front-rank melee-reach rule applies to this SingleEnemy skill. |  |
 | `reachSlots` | int[] | `[]` | Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere. |  |
+| `elements` | RawElementChoice[] (below) | `[]` | Elements the player chooses between before targeting; each retypes every authored damage packet. |  |
 
 ## spells.json -- `RawSpellTierEntry`
 
@@ -273,6 +274,13 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `type` | string | `""` | A DamageType name this packet is typed as, matched case-insensitively ('Frost' is accepted for Ice). | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 | `amount` | int | `0` | The flat amount this packet deals, on the same x10 scale as every other damage number. |  |
+
+### `RawElementChoice`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `type` | string | `""` | A DamageType name this choice retypes the skill's packets to, matched case-insensitively ('Frost' is accepted for Ice). |  |
+| `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | How this element's cast looks and sounds; omitted, the skill's own vfx plays for every element. |  |
 
 ### `RawEnemyAbility`
 

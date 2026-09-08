@@ -26,16 +26,23 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Casts the actor's Nth authored skill. Returns false when the cast was
         // refused outright, so the caller knows the turn was not spent.
-        public bool CastSkill(int index, CombatantState target)
+        //
+        // `element` is the choice the player made at Element depth, and is null
+        // for every skill that does not offer one -- which is every skill but
+        // the orb. A DEFAULT PARAMETER rather than a second overload: the
+        // element is not a different command, it is the same cast with one more
+        // thing said about it, and two overloads would give the bot and the
+        // controller two doors into one gate.
+        public bool CastSkill(int index, CombatantState target, DamageType? element = null)
         {
             var actor = Current;
             var kit = KitFor(actor);
             if (kit == null || index < 0 || index >= kit.Skills.Count) return false;
 
-            return CastSkill(kit.Skills[index], target);
+            return CastSkill(kit.Skills[index], target, element);
         }
 
-        public bool CastSkill(ResolvedSkill skill, CombatantState target)
+        public bool CastSkill(ResolvedSkill skill, CombatantState target, DamageType? element = null)
         {
             var actor = Current;
             if (actor == null) return false;
@@ -54,6 +61,21 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"{(target == null ? "That target" : target.Name)} is out of reach.");
                 return false;
             }
+
+            // THE ELEMENT GATE SITS BETWEEN THE REACH CHECK AND THE COST CHECK,
+            // and the order is the point: a cast the menu should never have
+            // offered must not read to the player as a cast they cannot afford.
+            // Nothing is spent on the way to any of these three refusals.
+            if (!TryTakeElementChoice(actor, skill, element, out var chosen))
+            {
+                return false;
+            }
+
+            // THE CHOICE MADE, THEN THE ORDINARY CAST. AsElement's copy offers
+            // no further choice (see its own header), so this recursion runs
+            // the identical path every other skill takes -- one cast pipeline,
+            // not a parallel one for typed spells.
+            if (chosen != null) return CastSkill(chosen, target);
 
             if (!SkillResolution.CanAfford(actor, skill.ManaCost, skill.ResourceCost))
             {
@@ -116,6 +138,49 @@ namespace PrincesPalace.Domain.Combat.Session
 
             CommitBeat();
             AdvanceAfterAction();
+            return true;
+        }
+
+        // The three ways an element and a skill can fail to agree, and the copy
+        // to cast when they do agree.
+        //
+        // `chosen` comes back null for the overwhelmingly common case -- a
+        // skill that offers no choice, cast with no element -- which is what
+        // lets the caller fall straight through to the cast it has always done.
+        //
+        // ALL THREE ARE PROGRAMMER-OR-MENU MISTAKES rather than things a player
+        // can do, since the menu only offers Element depth for a skill that
+        // asks for one. They are refused with a message anyway rather than
+        // thrown on: Domain throws for a caller misusing a pure library, and
+        // this is reached from a click handler and from the bot, where a
+        // refusal that costs nothing is the house's graceful-degradation
+        // posture.
+        private bool TryTakeElementChoice(CombatantState actor, ResolvedSkill skill, DamageType? element,
+            out ResolvedSkill chosen)
+        {
+            chosen = null;
+
+            if (!skill.HasElementChoice)
+            {
+                if (element == null) return true;
+
+                AppendMessage($"{skill.DisplayName} has no element to choose.");
+                return false;
+            }
+
+            if (element == null)
+            {
+                AppendMessage($"{actor.Name} must choose an element for {skill.DisplayName}.");
+                return false;
+            }
+
+            if (!skill.Offers(element.Value))
+            {
+                AppendMessage($"{skill.DisplayName} cannot be cast as {element.Value}.");
+                return false;
+            }
+
+            chosen = skill.AsElement(element.Value);
             return true;
         }
 

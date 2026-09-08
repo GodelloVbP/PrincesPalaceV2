@@ -1,3 +1,5 @@
+using PrincesPalace.Domain.Stats;
+
 namespace PrincesPalace.Domain.Combat.Session
 {
     // How deep into the command menu the player is.
@@ -5,6 +7,17 @@ namespace PrincesPalace.Domain.Combat.Session
     {
         Root,
         Sub,
+
+        // ONLY A SKILL THAT OFFERS A CHOICE STOPS HERE (ResolvedSkill.
+        // HasElementChoice). Every other command's path is exactly what it has
+        // always been -- Root to Sub to Target, or an instant resolve for
+        // Self/Party -- because nothing else can enter this depth.
+        //
+        // BETWEEN Sub AND Target rather than after it: the element decides what
+        // the cast IS, and the detail card has to be able to describe the thing
+        // before the player is asked to point it at something.
+        Element,
+
         Target,
     }
 
@@ -43,7 +56,34 @@ namespace PrincesPalace.Domain.Combat.Session
         // Which submenu row the detail column is describing. Set by HOVERING as
         // well as by clicking: selection-by-hover is what makes the detail
         // column feel instant, and confirming is a separate click.
+        //
+        // THE SUB ROW, AND IT STAYS THE SUB ROW through Element and Target
+        // depth. Four call sites in FightController read this to find the
+        // selected SKILL -- its reach, its targeting, its queue push, its
+        // detail card -- so reusing the field for the element row would have
+        // made every one of them read the wrong list the moment an element
+        // skill existed. The element row has its own index below.
         public int Selection { get; private set; } = -1;
+
+        // Which ELEMENT row the detail column is describing, at Element depth.
+        // Separate from Selection for the reason above, and cleared whenever
+        // the element flow is left.
+        public int ElementSelection { get; private set; } = -1;
+
+        // The element the player committed to at Element depth, carried into
+        // Target depth and handed to FightSession.CastSkill by the enemy click.
+        // Null at every other depth and for every other command.
+        //
+        // REMEMBERED RATHER THAN RE-DERIVED from ElementSelection later: the
+        // row list is rebuilt on every repaint, and an index into a list that
+        // no longer exists is precisely the disagreement the split above
+        // avoids once already.
+        public DamageType? ChosenElement { get; private set; }
+
+        // Which row of the list CURRENTLY on screen is lit. One row pool serves
+        // the skill list and the element list, so the view asks this rather
+        // than picking between the two indices itself.
+        public int RowSelection => Depth == MenuDepth.Element ? ElementSelection : Selection;
 
         public bool IsOpen => Branch != MenuBranch.None;
 
@@ -67,7 +107,9 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // ATTACK was already excluded, because it skips the submenu on the way
         // in. That exception is now the rule.
-        public bool SubmenuOpen => IsOpen && Depth == MenuDepth.Sub;
+        // Element depth keeps the column up: it is the same column showing a
+        // different list, not a second piece of chrome.
+        public bool SubmenuOpen => IsOpen && (Depth == MenuDepth.Sub || Depth == MenuDepth.Element);
 
         // The detail column is populated for ATTACK too, through a synthetic
         // "Strike" entry: a verb that jumps straight to targeting would
@@ -82,6 +124,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = MenuBranch.Attack;
             Depth = MenuDepth.Target;
             Selection = -1;
+            ForgetElement();
         }
 
         public void OpenBranch(MenuBranch branch)
@@ -96,6 +139,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = branch;
             Depth = MenuDepth.Sub;
             Selection = -1;
+            ForgetElement();
         }
 
         // Hovering or arrowing onto a row. Returns false when nothing changed,
@@ -103,6 +147,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // across one row.
         public bool Select(int index, int manaCost)
         {
+            if (Depth == MenuDepth.Element)
+            {
+                if (index == ElementSelection) return false;
+
+                ElementSelection = index;
+                return true;
+            }
+
             if (Depth != MenuDepth.Sub || index == Selection) return false;
 
             Selection = index;
@@ -116,6 +168,26 @@ namespace PrincesPalace.Domain.Combat.Session
             Depth = MenuDepth.Target;
         }
 
+        // Committing a SKILL that asks which element it is. WHETHER a skill
+        // asks is the caller's read of the skill (ResolvedSkill.
+        // HasElementChoice) -- this type holds no content and asks no content
+        // question, the same way it does not know what a skill costs.
+        public void EnterElementChoice()
+        {
+            if (!IsOpen) return;
+            Depth = MenuDepth.Element;
+            ForgetElement();
+        }
+
+        // Committing an element row, which is what carries the menu into
+        // targeting.
+        public void ChooseElement(DamageType element)
+        {
+            if (!IsOpen) return;
+            ChosenElement = element;
+            Depth = MenuDepth.Target;
+        }
+
         // One step back up the graph. Returns false at the root, where there is
         // nothing to back out of -- the caller uses that to decide whether the
         // press was consumed.
@@ -124,6 +196,19 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (Depth)
             {
                 case MenuDepth.Target:
+                    // BACK RETRACES THE WAY IN, whichever way that was. An
+                    // element skill came through Element depth, so that is
+                    // where it lands -- with the choice cleared, because
+                    // standing on the element list still holding the element
+                    // just undone would make the detail card describe a
+                    // decision the player has taken back.
+                    if (ChosenElement.HasValue)
+                    {
+                        Depth = MenuDepth.Element;
+                        ChosenElement = null;
+                        return true;
+                    }
+
                     // ATTACK skipped the submenu on the way in, so it skips it
                     // on the way out. Anything else lands back on its list.
                     Depth = Branch == MenuBranch.Attack ? MenuDepth.Root : MenuDepth.Sub;
@@ -132,6 +217,14 @@ namespace PrincesPalace.Domain.Combat.Session
                         Branch = MenuBranch.None;
                         Selection = -1;
                     }
+                    return true;
+
+                case MenuDepth.Element:
+                    // Back to the skill list with the skill still selected --
+                    // Selection was never the element's, so the row the player
+                    // pressed is still lit and still described.
+                    Depth = MenuDepth.Sub;
+                    ForgetElement();
                     return true;
 
                 case MenuDepth.Sub:
@@ -152,6 +245,13 @@ namespace PrincesPalace.Domain.Combat.Session
             Depth = MenuDepth.Root;
             Branch = MenuBranch.None;
             Selection = -1;
+            ForgetElement();
+        }
+
+        private void ForgetElement()
+        {
+            ElementSelection = -1;
+            ChosenElement = null;
         }
 
         // Which verb row is lit. Exactly one can be, so this is an index rather

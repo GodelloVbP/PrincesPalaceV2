@@ -180,6 +180,30 @@ namespace PrincesPalace
             OnVerbPressed(1);
             OnRowPressed(row);
 
+            // AN ELEMENT SKILL STOPS ONE DEPTH SHORT of the plate, so the
+            // forced path presses an element too -- the same row press a hand
+            // would make, not a shortcut past the menu.
+            //
+            // THE FIRST ELEMENT, AND IT SAYS SO. A preview cannot ask which
+            // one, and picking silently would put a Fire number on a picture
+            // captioned "prismatic_orb" with nothing on screen explaining
+            // where Fire came from. Named in the log, the way every other
+            // accommodation a preview makes is (PreviewFight.Notes).
+            if (_menu.Depth == MenuDepth.Element)
+            {
+                var elements = options[row].Skill?.Elements;
+                if (elements == null || elements.Length == 0 || elements[0] == null)
+                {
+                    _session.AppendMessage($"preview: '{skillId}' asks for an element and offers none.");
+                    RefreshUi();
+                    return;
+                }
+
+                _session.AppendMessage($"preview: casting {options[row].Skill.DisplayName} as " +
+                                       $"{elements[0].Type} -- the first element it offers.");
+                OnRowPressed(0);
+            }
+
             // Self and Party resolved inside OnRowPressed; everything else is
             // waiting on a plate. Any living enemy will do -- ResolveDamageAll
             // ignores which one confirmed it, and a single-target cast against
@@ -302,6 +326,21 @@ namespace PrincesPalace
 
             _menu.Select(index, rows[index].ManaCost);
 
+            // AN ELEMENT ROW COMMITS THE ELEMENT AND MOVES ON TO THE MARK. The
+            // element is read off the skill rather than parsed back out of the
+            // row's own text: FightHudModel.ElementRows builds those names from
+            // this same list in this same order, and a label round-trip is a
+            // second home for the mapping.
+            if (_menu.Depth == Domain.Combat.Session.MenuDepth.Element)
+            {
+                var elements = SelectedSkill()?.Elements;
+                if (elements == null || index >= elements.Length || elements[index] == null) return;
+
+                _menu.ChooseElement(elements[index].Type);
+                RefreshUi();
+                return;
+            }
+
             // An item resolves on the actor immediately; a skill needs a mark.
             if (_menu.Branch == MenuBranch.Item)
             {
@@ -352,6 +391,17 @@ namespace PrincesPalace
                     {
                         _session.CastSkill(options[index].Index, _session.Current);
                         AfterResolution();
+                        return;
+                    }
+
+                    // WHICH ELEMENT, THEN WHICH ENEMY. Only a skill that
+                    // authored a choice stops here; every other skill falls
+                    // through to EnterTargeting below on exactly the path it
+                    // always took.
+                    if (options[index].Skill.HasElementChoice)
+                    {
+                        _menu.EnterElementChoice();
+                        RefreshUi();
                         return;
                     }
                 }
@@ -418,7 +468,11 @@ namespace PrincesPalace
                     break;
 
                 case MenuBranch.Skill:
-                    if (validSkillRow) _session.CastSkill(options[row].Index, target);
+                    // The element the player picked one depth up, or null for
+                    // every skill that never asked. FightSession refuses a
+                    // mismatch outright and spends nothing -- see
+                    // TryTakeElementChoice.
+                    if (validSkillRow) _session.CastSkill(options[row].Index, target, _menu.ChosenElement);
                     break;
 
                 default:
@@ -890,6 +944,7 @@ namespace PrincesPalace
                     RefreshUi();
                     break;
 
+                case MenuDepth.Element:
                 case MenuDepth.Sub:
                     var rows = CurrentRows();
                     if (rows.Count == 0) return;
@@ -898,7 +953,9 @@ namespace PrincesPalace
                     // stick can walk the selection clean off the window, and
                     // until it followed, a long list was navigable only for the
                     // eight rows that happened to be on screen.
-                    int row = Wrap(_menu.Selection + delta, rows.Count);
+                    // RowSelection, because at Element depth the list under
+                    // the stick is the element list -- see FightMenuState.
+                    int row = Wrap(_menu.RowSelection + delta, rows.Count);
                     OnRowHovered(row);
                     ScrollSubmenuRowIntoView(row);
                     break;
@@ -927,12 +984,13 @@ namespace PrincesPalace
                     OnVerbPressed(_focusedVerb);
                     break;
 
+                case MenuDepth.Element:
                 case MenuDepth.Sub:
                     // Nothing hovered yet (a branch just opened, the stick has
                     // not moved) presses row 0 rather than doing nothing --
                     // the same "the first press should work" reasoning
                     // MoveFocus' Wrap already leans on.
-                    OnRowPressed(_menu.Selection >= 0 ? _menu.Selection : 0);
+                    OnRowPressed(_menu.RowSelection >= 0 ? _menu.RowSelection : 0);
                     break;
 
                 case MenuDepth.Target:

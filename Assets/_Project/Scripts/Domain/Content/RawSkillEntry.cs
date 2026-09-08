@@ -288,6 +288,38 @@ namespace PrincesPalace.Domain.Content
         // could ever satisfy.
         [ContentDoc("Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere.")]
         public int[] reachSlots = Array.Empty<int>();
+
+        // THE ELEMENTS THE PLAYER PICKS BETWEEN AFTER CHOOSING THIS SKILL AND
+        // BEFORE CHOOSING A TARGET. Empty, the default, is every skill that has
+        // ever existed: one cast, one authored typing, no question asked.
+        //
+        // A CHOICE RETYPES THE AUTHORED PACKETS AND NOTHING ELSE, which is why
+        // the resolver requires damageInstances alongside it. An Attack-scaled
+        // skill has no packet to retype -- it rides the caster's own attackType
+        // at cast time (FightSession.ActorAttackType) -- so an elements list on
+        // one would have to invent a second retyping rule for a case nobody
+        // authored. Refused instead, along with a single-entry list (a choice of
+        // one is not a choice) and a packet typed as something the list does not
+        // offer (the JSON would then read as one thing and play as another the
+        // moment the first element is picked).
+        //
+        // Each entry may carry its own vfx, so the day four sheets exist the art
+        // lands as four blocks here and no C#.
+        [ContentDoc("Elements the player chooses between before targeting; each retypes every authored damage packet.")]
+        public RawElementChoice[] elements = Array.Empty<RawElementChoice>();
+    }
+
+    // One option in a skill's `elements` list: the element itself, and
+    // optionally how that element's cast looks. The vfx block is the SAME type
+    // the skill's own is, so an element that authors one needs no new field
+    // anywhere in the chain -- see SpellPresentation.
+    [Serializable]
+    public class RawElementChoice
+    {
+        [ContentDoc("A DamageType name this choice retypes the skill's packets to, matched case-insensitively ('Frost' is accepted for Ice).")]
+        public string type = "";
+        [ContentDoc("How this element's cast looks and sounds; omitted, the skill's own vfx plays for every element.")]
+        public SpellPresentation vfx = new SpellPresentation();
     }
 
     // One typed packet inside a spell. `type` is a DamageType name, matched

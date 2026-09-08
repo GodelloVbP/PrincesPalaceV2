@@ -176,6 +176,97 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(ok);
             Assert.AreEqual(2, errors.Count, "A hand-edited file should say everything wrong with it in one pass");
         }
+
+        // ---- elements: the rules a choice has to satisfy ------------------------
+
+        // The shape the orb authors, and the one every assertion below breaks
+        // in exactly one way.
+        private static RawSkillEntry Choosing(params string[] elements)
+        {
+            var entry = Minimal("orb", "owl");
+            entry.damageInstances = new[] { new RawDamageInstance { type = "Earth", amount = 16 } };
+            entry.elements = elements.Select(e => new RawElementChoice { type = e }).ToArray();
+            return entry;
+        }
+
+        private static string ErrorFrom(RawSkillEntry entry)
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+            Assert.IsFalse(ok, "the entry was expected to be refused");
+            return errors[0];
+        }
+
+        [Test]
+        public void Elements_FourValidTypes_Resolve()
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { Choosing("Earth", "Water", "Fire", "Wind") },
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].HasElementChoice);
+            Assert.AreEqual(4, resolved[0].Elements.Length);
+        }
+
+        // The same friendlier spelling damageInstances already accepts, out of
+        // the same parser -- an author who has learned to write Frost in one
+        // field should not discover the other one wants Ice.
+        [Test]
+        public void Elements_AcceptFrostForIce()
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { Choosing("Earth", "Frost") }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(DamageType.Ice, resolved[0].Elements[1].Type);
+        }
+
+        [Test]
+        public void Elements_UnknownType_IsRefusedNamingTheEntryAndTheWord()
+        {
+            string error = ErrorFrom(Choosing("Earth", "Custard"));
+
+            StringAssert.Contains("orb", error);
+            StringAssert.Contains("Custard", error);
+        }
+
+        [Test]
+        public void Elements_ADuplicateType_IsRefused()
+        {
+            StringAssert.Contains("twice", ErrorFrom(Choosing("Earth", "Water", "Earth")));
+        }
+
+        // A choice of one is not a choice: it puts a whole menu depth in front
+        // of the player with a single row on it.
+        [Test]
+        public void Elements_ASingleEntry_IsRefused()
+        {
+            StringAssert.Contains("not a choice", ErrorFrom(Choosing("Earth")));
+        }
+
+        // An Attack-scaled skill rides the caster's own attackType and has no
+        // authored packet a choice could retype.
+        [Test]
+        public void Elements_WithoutDamageInstances_IsRefused()
+        {
+            var entry = Choosing("Earth", "Fire");
+            entry.damageInstances = Array.Empty<RawDamageInstance>();
+            entry.flatAmount = 20;
+
+            StringAssert.Contains("needs damageInstances", ErrorFrom(entry));
+        }
+
+        // The file has to read as what happens when the first element is
+        // picked. A packet typed outside the list is a spell that never once
+        // deals what its own damageInstances say.
+        [Test]
+        public void Elements_APacketTypedOutsideTheList_IsRefused()
+        {
+            string error = ErrorFrom(Choosing("Water", "Fire"));
+
+            StringAssert.Contains("Earth", error);
+            StringAssert.Contains("elements does not offer", error);
+        }
     }
 
     public class SkillResolutionTests

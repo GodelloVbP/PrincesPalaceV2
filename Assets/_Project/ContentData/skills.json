@@ -462,44 +462,33 @@
       "resourceCost": 0
     },
     {
-      "id": "placeholder_caster_bolt",
-      "displayName": "Arcane Bolt",
-      "description": "Placeholder kit. A plain ranged hit, typed to match her attackType.",
+      "id": "prismatic_orb",
+      "displayName": "Prismatic Orb",
+      "description": "A held light Odette tunes to whichever element the moment wants, then throws. It never hits hard; it hits where it hurts.",
       "characterId": "owl",
       "unlockLevel": 1,
       "effect": "DamageSingle",
       "manaCost": 8,
       "damageInstances": [
         {
-          "type": "Arcane",
-          "amount": 18
+          "type": "Earth",
+          "amount": 16
         }
-      ]
-    },
-    {
-      "id": "placeholder_caster_firebolt",
-      "displayName": "Firebolt",
-      "description": "Placeholder kit. A second element so a fight can show off weakness/resistance on her.",
-      "characterId": "owl",
-      "unlockLevel": 1,
-      "effect": "DamageSingle",
-      "manaCost": 9,
-      "damageInstances": [
+      ],
+      "elements": [
         {
-          "type": "Fire",
-          "amount": 20
+          "type": "Earth"
+        },
+        {
+          "type": "Water"
+        },
+        {
+          "type": "Fire"
+        },
+        {
+          "type": "Wind"
         }
       ]
-    },
-    {
-      "id": "placeholder_caster_mend",
-      "displayName": "Mend",
-      "description": "Placeholder kit. A party heal so a three-member squad has one to lean on.",
-      "characterId": "owl",
-      "unlockLevel": 1,
-      "effect": "HealParty",
-      "manaCost": 10,
-      "flatAmount": 25
     }
   ]
 }

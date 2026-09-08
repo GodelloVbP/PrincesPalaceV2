@@ -651,6 +651,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SubmenuSkillsTitle = UiString.Define("submenu_skills_title", "S K I L L S");
         public static readonly UiString SubmenuItemsTitle = UiString.Define("submenu_items_title", "I T E M S");
         public static readonly UiString SubmenuMoveTitle = UiString.Define("submenu_move_title", "M O V E");
+        public static readonly UiString SubmenuElementTitle = UiString.Define("submenu_element_title", "E L E M E N T");
         public static readonly UiString SubmenuHint = UiString.Define("submenu_hint", "ESC TO GO BACK");
 
         // Detail column labels.

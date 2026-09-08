@@ -294,10 +294,12 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.groundPath", raw.vfx.groundPath, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.castSfxPath", raw.vfx.castSfxPath, out error)) return false;
+            if (!SpellPresentationPaths.Check(label, raw.vfx, out error)) return false;
+
+            if (!TryResolveElements(raw, label, instances, out var elements, out error))
+            {
+                return false;
+            }
 
             resolvedSkill = new ResolvedSkill(raw.id, raw.displayName, raw.description ?? "", raw.characterId.Trim(),
                 unlockLevel, effect, targeting, manaCost, resourceCost, raw.spendsAllResource,
@@ -308,8 +310,92 @@ namespace PrincesPalace.Domain.Content
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
                 ParseApproach(raw.approach), raw.shake, reach,
-                raw.bookOnly, raw.bookTier);
+                raw.bookOnly, raw.bookTier, elements);
             error = null;
+            return true;
+        }
+
+        // THE FIVE RULES A CHOICE OF ELEMENT HAS TO SATISFY, all of them about
+        // the same thing: the JSON must read as what actually happens when the
+        // first element is picked.
+        //
+        // Nothing here is orb-specific. A skill says it offers a choice by
+        // listing more than one element beside packets to retype; every
+        // consumer downstream (the menu depth, the bot's legal list, the cast
+        // gate) reads ResolvedSkill.HasElementChoice and never an id.
+        private static bool TryResolveElements(RawSkillEntry raw, string label, DamageInstance[] instances,
+            out ElementChoice[] elements, out string error)
+        {
+            elements = System.Array.Empty<ElementChoice>();
+            error = null;
+
+            var authored = raw.elements;
+            if (authored == null || authored.Length == 0) return true;
+
+            // A CHOICE OF ONE IS NOT A CHOICE. It would put a menu depth in
+            // front of the player with a single row on it, and the same spell
+            // authored as a typed packet plays identically with one fewer
+            // click.
+            if (authored.Length == 1)
+            {
+                error = $"{label}: elements lists one element, which is not a choice — " +
+                        "author the packet as that type instead, or list a second element.";
+                return false;
+            }
+
+            // RETYPING IS THE WHOLE MECHANIC, so there has to be something to
+            // retype. An Attack-scaled skill (power/flatAmount) rides the
+            // caster's own attackType at cast time and has no authored packet
+            // a choice could touch -- see RawSkillEntry.elements.
+            if (instances == null || instances.Length == 0)
+            {
+                error = $"{label}: elements needs damageInstances to retype — an Attack-scaled skill " +
+                        "rides the caster's own attackType and has no packet a choice could change.";
+                return false;
+            }
+
+            var resolved = new ElementChoice[authored.Length];
+            var seen = new List<DamageType>();
+
+            for (int i = 0; i < authored.Length; i++)
+            {
+                var choice = authored[i];
+                if (choice == null || !TryParseDamageType(choice.type, out var type))
+                {
+                    error = $"{label}: element #{i + 1} has an unknown type '{choice?.type}'. " +
+                            $"Valid options: {string.Join(", ", System.Enum.GetNames(typeof(DamageType)))}, Frost.";
+                    return false;
+                }
+
+                if (seen.Contains(type))
+                {
+                    error = $"{label}: elements lists {type} twice — the menu would show the same row " +
+                            "twice and the second one could never be told from the first.";
+                    return false;
+                }
+
+                seen.Add(type);
+
+                if (!SpellPresentationPaths.Check($"{label} element #{i + 1}", choice.vfx, out error)) return false;
+
+                resolved[i] = new ElementChoice(type, choice.vfx);
+            }
+
+            // THE AUTHORED PACKETS MUST BE ONE OF THE OFFERED ELEMENTS. The
+            // file is read by a human as "this is what the spell does"; a
+            // packet typed as something the list does not offer would be a
+            // spell that never once deals what its own damageInstances say.
+            foreach (var instance in instances)
+            {
+                if (seen.Contains(instance.type)) continue;
+
+                error = $"{label}: a damage packet is typed {instance.type}, which elements does not offer " +
+                        $"({string.Join(", ", seen)}). Type the packets as one of the choices, so the file " +
+                        "reads as what happens when that element is picked.";
+                return false;
+            }
+
+            elements = resolved;
             return true;
         }
 

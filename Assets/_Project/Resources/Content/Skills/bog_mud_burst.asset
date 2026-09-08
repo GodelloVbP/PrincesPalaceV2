@@ -77,3 +77,4 @@ MonoBehaviour:
       RankMask: 6
     BookOnly: 0
     BookTier: 0
+    Elements: []

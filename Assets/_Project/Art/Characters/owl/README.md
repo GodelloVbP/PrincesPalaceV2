@@ -85,9 +85,16 @@ with no correction.
 ## Content
 
 She replaced `placeholder_caster` in `characters.json` (id `owl`) with that
-entry's INT/WIS build kept as her starting numbers and its three skills
-(`placeholder_caster_bolt`, `_firebolt`, `_mend`) re-pointed at her. Two
-things are still borrowed and say so: the skill ids and descriptions still
-read "placeholder", and her portrait is Shawn's neutral until an owl
-portrait exists. A proper design pass on stats, skill ids and an INT-scaled
-kit is the next step, not this one.
+entry's INT/WIS build kept as her starting numbers.
+
+Her three borrowed `placeholder_caster_*` skills are **gone** as of
+`docs/PLAN_PRISMATIC_ORB.md` (2026-09-08). Her level-1 kit is one authored
+skill, `prismatic_orb`: 8 mana, one 16-point packet, and a choice of Earth,
+Water, Fire or Wind made after the skill and before the target, which
+retypes the packet. Nothing in her kit reads "placeholder" any more.
+
+Still borrowed: her portrait is Shawn's neutral (`Portraits/sheep`) until an
+owl portrait exists. The orb also ships with no `vfx` — one element's frames
+are cut (`Resources/Spells/prismatic_orb_water/`) but nothing is wired; the
+seat the art takes is `elements[].vfx` in `skills.json`, one block per
+element, no C#.

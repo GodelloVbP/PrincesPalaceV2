@@ -247,11 +247,17 @@ namespace PrincesPalace
 
             var rows = CurrentRows();
 
-            submenuTitle.Set(_menu.Branch == MenuBranch.Item
-                ? UiStrings.SubmenuItemsTitle
-                : _menu.Branch == MenuBranch.Move
-                    ? UiStrings.SubmenuMoveTitle
-                    : UiStrings.SubmenuSkillsTitle);
+            // ELEMENT DEPTH TITLES ITSELF, ahead of the branch: the column is
+            // still the Skill branch's, but what is in it is a list of
+            // elements, and a header reading SKILLS over four element names is
+            // the header describing the depth the player just left.
+            submenuTitle.Set(_menu.Depth == MenuDepth.Element
+                ? UiStrings.SubmenuElementTitle
+                : _menu.Branch == MenuBranch.Item
+                    ? UiStrings.SubmenuItemsTitle
+                    : _menu.Branch == MenuBranch.Move
+                        ? UiStrings.SubmenuMoveTitle
+                        : UiStrings.SubmenuSkillsTitle);
             // The truncation is reported HERE, beside the list it truncates,
             // rather than into the combat log. It used to AppendMessage on every
             // refresh, so the bark spent the fight repeating "9 more entr(y/ies)
@@ -297,7 +303,11 @@ namespace PrincesPalace
                 // the selected row, Idle for every other one. Called AFTER
                 // the interactable write above, per ApplySelection's own
                 // ordering contract.
-                ThemedButtonState.ApplySelection(submenuRows[i], i == _menu.Selection);
+                // RowSelection, not Selection: at Element depth these rows are
+                // the element list and Selection is still pointing at the skill
+                // row that opened it -- see FightMenuState's own note on why
+                // the two indices are kept apart.
+                ThemedButtonState.ApplySelection(submenuRows[i], i == _menu.RowSelection);
 
                 // The row's whole state, in one channel. It used to carry the
                 // name at full strength, the meta dimmed and the cost
@@ -1813,11 +1823,54 @@ namespace PrincesPalace
         // ---- what the model needs -------------------------------------------
 
         private IReadOnlyList<SubmenuRow> CurrentRows() =>
-            _menu.Branch == MenuBranch.Item
-                ? FightHudModel.ItemRows(_satchel)
-                : _menu.Branch == MenuBranch.Move
-                    ? FightHudModel.MoveRows(_session, ActingCharacter())
-                    : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
+            _menu.Depth == MenuDepth.Element
+                ? FightHudModel.ElementRows(SelectedSkill())
+                : _menu.Branch == MenuBranch.Item
+                    ? FightHudModel.ItemRows(_satchel)
+                    : _menu.Branch == MenuBranch.Move
+                        ? FightHudModel.MoveRows(_session, ActingCharacter())
+                        : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
+
+        // The skill the SUB row selection names, or null when the open branch
+        // is not Skill or the selection points at nothing. The element list,
+        // the element press and the detail card all need the same answer, and
+        // this is the one place any of them asks for it.
+        private Domain.Content.ResolvedSkill SelectedSkill()
+        {
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return null;
+
+            var options = SkillOptions(ActingCharacter());
+            int row = _menu.Selection;
+            return row >= 0 && row < options.Count ? options[row].Skill : null;
+        }
+
+        // THE SKILL AS IT WOULD ACTUALLY BE CAST RIGHT NOW: retyped to whatever
+        // element is in hand, so the POWER row, the SCALES row and the damage
+        // type all describe the click rather than the menu entry.
+        //
+        // Two elements can be "in hand": the one being HOVERED at Element depth
+        // (nothing committed yet, the card previews it) and the one already
+        // CHOSEN at Target depth. Neither is a different rule -- both are "the
+        // element this cast would carry" -- so they resolve through one call.
+        internal static Domain.Content.ResolvedSkill AsChosen(
+            Domain.Content.ResolvedSkill skill, Domain.Combat.Session.FightMenuState menu)
+        {
+            if (skill == null || !skill.HasElementChoice) return skill;
+
+            if (menu.ChosenElement.HasValue && skill.Offers(menu.ChosenElement.Value))
+            {
+                return skill.AsElement(menu.ChosenElement.Value);
+            }
+
+            int row = menu.ElementSelection;
+            if (menu.Depth == Domain.Combat.Session.MenuDepth.Element
+                && row >= 0 && row < skill.Elements.Length && skill.Elements[row] != null)
+            {
+                return skill.AsElement(skill.Elements[row].Type);
+            }
+
+            return skill;
+        }
 
         // Same seam as HoveredEnemyIndexForTest/FocusedVerbForTest
         // (FightController.Input.cs) -- the click handler stays private
@@ -1834,6 +1887,18 @@ namespace PrincesPalace
         {
             var actor = ActingCharacter();
             if (_menu.Branch == MenuBranch.Attack) return FightHudModel.DetailForStrike(actor);
+
+            // THE ELEMENT LIST DESCRIBES THE SKILL, not the row. There is
+            // nothing to say about "Fire" on its own; what the player is
+            // weighing is the same cast with a different element on it, which
+            // is exactly what AsChosen hands over.
+            if (_menu.Depth == MenuDepth.Element)
+            {
+                var chosen = AsChosen(SelectedSkill(), _menu);
+                return chosen == null
+                    ? FightHudModel.DetailForNoSelection(_menu.Branch)
+                    : FightHudModel.DetailForSkill(_session, actor, chosen, actor?.Signature?.DisplayName);
+            }
 
             var rows = CurrentRows();
             int index = _menu.Selection;
@@ -1859,7 +1924,7 @@ namespace PrincesPalace
             var options = _session != null ? SkillOptions(actor) : null;
             if (options != null && index < options.Count)
             {
-                var skill = options[index].Skill;
+                var skill = AsChosen(options[index].Skill, _menu);
                 return FightHudModel.DetailForSkill(_session, actor, skill, actor?.Signature?.DisplayName);
             }
 

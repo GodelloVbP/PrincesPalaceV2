@@ -73,6 +73,14 @@ namespace PrincesPalace.Domain.Content
                 {
                     if (skill.UnlockLevel > 1) continue;
                     foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
+
+                    // AN ELEMENT SHE CAN CHOOSE IS AN ELEMENT SHE CAN DEAL.
+                    // The authored packet is only ONE of the types a choice
+                    // skill can land -- reading the packets alone would say
+                    // Odette deals nothing but Earth at level 1 while the orb
+                    // lets her pick Fire on any turn, and rule 4 would refuse a
+                    // filler row for damage she demonstrably does.
+                    foreach (var choice in skill.Elements) level1Types.Add(choice.Type);
                 }
 
                 contexts[character.Id] = new RewardTrackCharacterContext

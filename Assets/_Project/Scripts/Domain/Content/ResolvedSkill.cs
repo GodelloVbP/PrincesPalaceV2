@@ -149,6 +149,12 @@ namespace PrincesPalace.Domain.Content
         public bool BookOnly;
         public int BookTier;
 
+        // WHAT THE PLAYER PICKS BETWEEN BEFORE TARGETING. Empty for every
+        // skill that does not ask -- which is all of them but the orb. See
+        // RawSkillEntry.elements for why a list of one is refused and why
+        // this requires authored packets to retype.
+        public ElementChoice[] Elements = Array.Empty<ElementChoice>();
+
         // The nullable reading of the Status/HasStatus pair, kept because it is
         // the shape both consumers (FightSession.Skills, FightSession.Enemies)
         // already ask in and the one the resolver hands in.
@@ -180,6 +186,68 @@ namespace PrincesPalace.Domain.Content
         // place both a skill AND a caster are in hand together.
         public DamageType? FixedDamageType => HasFixedDamage ? DamageInstances[0].type : (DamageType?)null;
 
+        // Whether casting this asks the player for an element first. The one
+        // question every menu depth, the bot's legal list and the session's
+        // cast gate all ask, so none of them tests `Elements.Length` itself.
+        public bool HasElementChoice => Elements != null && Elements.Length > 0;
+
+        // Whether `element` is one of the choices this skill actually offers.
+        // The session refuses a cast that says otherwise; the menu should
+        // never have offered it.
+        public bool Offers(DamageType element)
+        {
+            if (Elements == null) return false;
+            foreach (var choice in Elements)
+            {
+                if (choice != null && choice.Type == element) return true;
+            }
+
+            return false;
+        }
+
+        // THIS SKILL WITH THE CHOICE MADE: every authored packet retyped to
+        // `element`, and that element's own presentation in place of the
+        // skill's if it authored one. Id, cost, cooldown, reach, requirements
+        // and everything else are the skill's own, so a cast copy still spends
+        // what the skill costs and comes back when the skill does.
+        //
+        // MemberwiseClone RATHER THAN A HAND-WRITTEN FIELD COPY. A 40-field
+        // copy is the shape AUDIT #60 records twice over: the missing line is
+        // invisible, and the next field authored on skills.json would have to
+        // be remembered here as well. The clone carries every field this type
+        // will ever have; the three lines below are the only ones a choice
+        // changes.
+        //
+        // THE COPY OFFERS NO FURTHER CHOICE -- Elements is emptied. The choice
+        // has been made, so `HasElementChoice` on the result is false, which is
+        // what lets the cast go back through the ordinary CastSkill path
+        // without a second element gate, and what makes the detail card's
+        // damage-type row read "FIRE" rather than re-listing all four.
+        public ResolvedSkill AsElement(DamageType element)
+        {
+            var copy = (ResolvedSkill)MemberwiseClone();
+
+            var packets = DamageInstances ?? Array.Empty<DamageInstance>();
+            var retyped = new DamageInstance[packets.Length];
+            for (int i = 0; i < packets.Length; i++)
+            {
+                retyped[i] = new DamageInstance(element, packets[i].amount);
+            }
+
+            copy.DamageInstances = retyped;
+            copy.Elements = Array.Empty<ElementChoice>();
+
+            // A COPY EITHER WAY, never the catalogue's own object -- the same
+            // rule the constructor states, and the reason a cast cannot edit
+            // the content it was dealt from.
+            var chosen = Elements == null ? null : System.Array.Find(Elements, e => e != null && e.Type == element);
+            copy.Vfx = (chosen != null && chosen.Vfx != null && !string.IsNullOrEmpty(chosen.Vfx.path)
+                ? chosen.Vfx
+                : Vfx ?? SpellPresentation.None).Copy();
+
+            return copy;
+        }
+
         // For the serialiser only. Every field carries its own initialiser so
         // an instance built this way is still safe to read before Unity fills
         // it in.
@@ -196,8 +264,9 @@ namespace PrincesPalace.Domain.Content
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
             int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
             StageApproach approach = StageApproach.Hold, float shake = 0f, Reach reach = default,
-            bool bookOnly = false, int bookTier = 0)
+            bool bookOnly = false, int bookTier = 0, ElementChoice[] elements = null)
         {
+            Elements = elements ?? Array.Empty<ElementChoice>();
             BookOnly = bookOnly;
             BookTier = bookTier;
             Reach = reach;
@@ -237,6 +306,39 @@ namespace PrincesPalace.Domain.Content
             Shake = shake < 0f ? 0f : (shake > 1f ? 1f : shake);
             SummonEnemyId = summonEnemyId ?? "";
             SummonCap = summonCap;
+        }
+    }
+
+    // One element a skill offers, and how that element's cast looks.
+    //
+    // A CLASS BESIDE ResolvedSkill RATHER THAN A CONTENT-SIDE MIRROR. It is
+    // [Serializable] for the same reason ResolvedSkill is -- SkillDefinition
+    // stores the resolved record itself, so a mirror carrier here would be the
+    // exact restatement AUDIT #60 deleted from TalentEffect and RelicModifier.
+    // System.Serializable is BCL, so Domain stays engine-free.
+    [Serializable]
+    public sealed class ElementChoice
+    {
+        public DamageType Type;
+
+        // Empty for every element that has not been drawn yet. When it carries
+        // a path, ResolvedSkill.AsElement puts it in place of the skill's own
+        // -- which is what makes four sheets a content edit rather than a
+        // chain change (docs/PLAN_PRISMATIC_ORB.md, draw policy).
+        public SpellPresentation Vfx = new SpellPresentation();
+
+        // For the serialiser only.
+        public ElementChoice()
+        {
+        }
+
+        public ElementChoice(DamageType type, SpellPresentation vfx = null)
+        {
+            Type = type;
+
+            // COPIED, not aliased -- see ResolvedSkill's constructor for the
+            // fight-edits-the-catalogue case this closes.
+            Vfx = (vfx ?? SpellPresentation.None).Copy();
         }
     }
 }

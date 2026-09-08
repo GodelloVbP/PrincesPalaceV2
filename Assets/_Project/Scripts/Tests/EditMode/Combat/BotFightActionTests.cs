@@ -149,5 +149,138 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.Less(foe.CurrentHealth, before, "an attack must land some damage on its target");
         }
+
+        // ---- a skill that asks which element it is -----------------------------
+
+        // FOUR ELEMENTS TIMES TWO REACHABLE ENEMIES IS EIGHT DIFFERENT
+        // COMMANDS, and they have to be eight entries: a policy weighing
+        // "orb the beetle" against "orb the rat" is already weighing a target,
+        // and which element it carries is the same kind of decision.
+        [Test]
+        public void LegalActions_AnElementSkill_OffersOnePerElementPerTarget()
+        {
+            var (session, foes) = WithKit(Orb(), foeCount: 2);
+
+            var legal = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>());
+            var casts = legal.Where(a => a.Kind == FightActionKind.Skill).ToList();
+
+            Assert.AreEqual(8, casts.Count, "four elements against two reachable enemies");
+            foreach (var foe in foes)
+            {
+                CollectionAssert.AreEquivalent(
+                    new DamageType?[] { DamageType.Earth, DamageType.Water, DamageType.Fire, DamageType.Wind },
+                    casts.Where(a => a.Target == foe).Select(a => a.Element).ToList());
+            }
+        }
+
+        // A CAST WITH NO ELEMENT IS NOT ON THE MENU for a skill that asks for
+        // one: FightSession refuses it, so a policy that picked it would burn a
+        // turn on a refusal that spends nothing and never advances the fight.
+        [Test]
+        public void LegalActions_AnElementSkill_NeverOffersAnElementlessCast()
+        {
+            var (session, _) = WithKit(Orb(), foeCount: 1);
+
+            var legal = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>());
+
+            Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Skill && a.Element == null));
+        }
+
+        // And a kit that asks nothing has exactly the list it always had --
+        // one cast per reachable enemy, carrying no element.
+        [Test]
+        public void LegalActions_APlainSkill_IsUnchangedEntryForEntry()
+        {
+            var (session, foes) = WithKit(PlainBolt(), foeCount: 2);
+
+            var casts = FightAction.LegalActions(session, session.Current, System.Array.Empty<SatchelStack>())
+                .Where(a => a.Kind == FightActionKind.Skill)
+                .ToList();
+
+            Assert.AreEqual(2, casts.Count);
+            CollectionAssert.AreEquivalent(foes, casts.Select(a => a.Target).ToList());
+            Assert.IsTrue(casts.All(a => a.Element == null));
+        }
+
+        [Test]
+        public void Apply_AnElementSkill_CastsItAsTheElementTheActionNames()
+        {
+            var (session, foes) = WithKit(Orb(), foeCount: 1);
+            int before = foes[0].CurrentHealth;
+
+            FightAction.Apply(session, new FightAction(
+                FightActionKind.Skill, foes[0], skillIndex: 0, element: DamageType.Fire));
+
+            Assert.Less(foes[0].CurrentHealth, before,
+                "an element that never reached CastSkill would be refused, and the cast would land nothing");
+            StringAssert.Contains("Fire",
+                string.Join(" ", session.DrainBeats().SelectMany(b => b.Messages)),
+                "the log names the element the cast actually carried");
+        }
+
+        // The debug form has to show it, or two of the eight actions above read
+        // identically in a trace.
+        [Test]
+        public void ToString_NamesTheElementWhenThereIsOne()
+        {
+            var foe = Fighter("Foe", false);
+
+            StringAssert.Contains("Fire", new FightAction(
+                FightActionKind.Skill, foe, skillIndex: 0, element: DamageType.Fire).ToString());
+            StringAssert.DoesNotContain(":", new FightAction(
+                FightActionKind.Skill, foe, skillIndex: 0).ToString(),
+                "a skill that asks nothing keeps the shape it had");
+        }
+
+        // ---- fixtures for the two skills above ---------------------------------
+
+        private static ResolvedSkill Resolve(RawSkillEntry raw)
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { raw }, out var resolved, out var errors);
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            return resolved[0];
+        }
+
+        private static ResolvedSkill Orb() => Resolve(new RawSkillEntry
+        {
+            id = "prismatic_orb", displayName = "Prismatic Orb", characterId = "owl",
+            effect = "DamageSingle", manaCost = 8,
+            damageInstances = new[] { new RawDamageInstance { type = "Earth", amount = 16 } },
+            elements = new[]
+            {
+                new RawElementChoice { type = "Earth" },
+                new RawElementChoice { type = "Water" },
+                new RawElementChoice { type = "Fire" },
+                new RawElementChoice { type = "Wind" },
+            },
+        });
+
+        private static ResolvedSkill PlainBolt() => Resolve(new RawSkillEntry
+        {
+            id = "plain_bolt", displayName = "Plain Bolt", characterId = "owl",
+            effect = "DamageSingle", manaCost = 8,
+            damageInstances = new[] { new RawDamageInstance { type = "Arcane", amount = 16 } },
+        });
+
+        // One caster with `skill` and nothing else, against `foeCount` enemies
+        // with no reach restriction between them, so the legal list is exactly
+        // the fan-out being counted.
+        private static (FightSession session, List<CombatantState> foes) WithKit(
+            ResolvedSkill skill, int foeCount)
+        {
+            var hero = new CombatantState("Odette", true, 500, 999, 20, 10);
+            var foes = Enumerable.Range(0, foeCount)
+                .Select(i => new CombatantState($"Foe{i}", false, 500, 0, 1, 1))
+                .ToList();
+
+            var kit = new PlayerKit("owl", CharacterRole.Utility,
+                new List<ResolvedSkill> { skill }, new List<ResolvedRelic>(), null);
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, foes.ToArray()),
+                new List<PlayerKit> { kit }, null, new SeededRandom(7)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            return (session, foes);
+        }
     }
 }
