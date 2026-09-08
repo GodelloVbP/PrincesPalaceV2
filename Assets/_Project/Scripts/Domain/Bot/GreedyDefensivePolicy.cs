@@ -267,9 +267,6 @@ namespace PrincesPalace.Domain.Bot
 
         // Same pre-mitigation reading GreedyAggressivePolicy.EstimateDamage
         // uses, and for the same reason -- see that method's own header.
-        // Duplicated rather than shared because the two archetypes may
-        // legitimately diverge on which skills count as "damage" later, and
-        // a shared helper would couple them without either asking for it.
         private static int EstimateDamage(FightSession session, CombatantState actor, FightAction action)
         {
             switch (action.Kind)
@@ -278,11 +275,7 @@ namespace PrincesPalace.Domain.Bot
                     return CombatMath.ComputeAttackDamage(actor, action.Target);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
-                    bool previewable = option.Skill.Effect == SkillEffect.DamageSingle
-                                    || option.Skill.Effect == SkillEffect.DamageAll;
-                    return previewable
-                        ? session.PreviewSkillPower(actor, FightAction.CastAs(option.Skill, action))
-                        : 0;
+                    return FightAction.PreviewDamage(session, actor, option, action);
                 default:
                     return 0;
             }

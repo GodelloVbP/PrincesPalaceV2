@@ -244,6 +244,19 @@ namespace PrincesPalace.Domain.Bot
                 ? skill.AsElement(action.Element.Value)
                 : skill;
 
+        // THE ONE PLACE A POLICY ASKS "what would this Skill action deal" --
+        // 0 for a non-damaging skill, same as the three call sites this
+        // replaces (GreedyAggressivePolicy.EstimateDamage, GreedyDefensivePolicy.
+        // EstimateDamage, Lookahead2Policy.ScoreOf/NonProgressingSkillKey), all
+        // of which hand-rolled option.Skill.Effect == DamageSingle ||
+        // == DamageAll before asking PreviewSkillPower. ResolvedSkill.IsDamaging
+        // is that same test, named once.
+        public static int PreviewDamage(
+            FightSession session, CombatantState actor, ResolvedSkillOption option, FightAction action) =>
+            option.Skill.IsDamaging
+                ? session.PreviewSkillPower(actor, CastAs(option.Skill, action))
+                : 0;
+
         // THE LAST THING LEFT ON THE MENU, for a policy whose own scoring has
         // run out of opinions.
         //

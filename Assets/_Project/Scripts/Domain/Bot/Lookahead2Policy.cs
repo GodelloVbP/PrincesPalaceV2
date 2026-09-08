@@ -124,9 +124,8 @@ namespace PrincesPalace.Domain.Bot
             if (action.Kind != FightActionKind.Skill) return null;
 
             var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
-            bool isDamage = option.Skill.Effect == SkillEffect.DamageSingle || option.Skill.Effect == SkillEffect.DamageAll;
 
-            return isDamage ? null : option.Skill.Id;
+            return option.Skill.IsDamaging ? null : option.Skill.Id;
         }
 
         // The expected party HP swing of taking `action` right now: this
@@ -169,13 +168,13 @@ namespace PrincesPalace.Domain.Bot
                     // strength of the incoming-damage term alone (casting it
                     // costs a turn, same as everything else on the menu, and
                     // no action here removes that cost from the comparison).
-                    bool isDamage = effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
+                    bool isDamage = option.Skill.IsDamaging;
                     bool isHeal = effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty
                                                                   || effect == SkillEffect.RestorePartyMana;
 
                     if (isDamage)
                     {
-                        int dmg = session.PreviewSkillPower(actor, FightAction.CastAs(option.Skill, action));
+                        int dmg = FightAction.PreviewDamage(session, actor, option, action);
                         ownEffect = dmg;
                         killsTarget = action.Target != null && dmg >= action.Target.CurrentHealth;
                     }

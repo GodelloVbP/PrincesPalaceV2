@@ -161,12 +161,7 @@ namespace PrincesPalace.Domain.Bot
                     // a real limit of the archetype and is the kind of thing
                     // Phase 6's GreedyDefensive/Lookahead2 exist to cover,
                     // not something to paper over with a preview that throws.
-                    bool previewable = option.Skill.Effect == SkillEffect.DamageSingle
-                                    || option.Skill.Effect == SkillEffect.DamageAll;
-
-                    return previewable
-                        ? session.PreviewSkillPower(actor, FightAction.CastAs(option.Skill, action))
-                        : 0;
+                    return FightAction.PreviewDamage(session, actor, option, action);
                 default:
                     return 0;
             }
