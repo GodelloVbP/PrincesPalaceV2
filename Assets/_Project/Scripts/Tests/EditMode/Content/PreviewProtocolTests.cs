@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -158,6 +160,64 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNull(PreviewProtocol.Screen(request));
             Assert.AreNotEqual(PreviewAction.Unknown, PreviewProtocol.ActionOf(action));
             Assert.IsNotEmpty(PreviewProtocol.TargetIdOf(request, PreviewProtocol.ActionOf(action)));
+        }
+
+        // THE WRITE RETRY. The watcher publishes its result by File.Replace
+        // onto Temp/pp_result.json while preview.ps1 reads that same path
+        // every 300ms; a Windows read handle grants no DELETE sharing, so the
+        // replace throws IOException whenever a poll lands inside it. The
+        // watcher caught that as a warning AFTER consuming the request file,
+        // which left the caller waiting out its full timeout for an answer
+        // that would never be rewritten. These pin the recovery, not the
+        // collision -- the collision needs two processes.
+
+        [Test]
+        public void AWriteThatCollidesOnceIsRetriedUntilItLands()
+        {
+            int attempts = 0;
+            var naps = new List<int>();
+
+            PreviewProtocol.WriteWithRetry(
+                () =>
+                {
+                    attempts++;
+                    if (attempts < 3) throw new IOException("the process cannot access the file");
+                },
+                naps.Add);
+
+            Assert.AreEqual(3, attempts, "the write stopped retrying before it succeeded.");
+            Assert.AreEqual(2, naps.Count, "one backoff per failed attempt, and none after the one that landed.");
+            CollectionAssert.AreEqual(new[] { PreviewProtocol.WriteRetryMs, PreviewProtocol.WriteRetryMs }, naps);
+        }
+
+        [Test]
+        public void AWriteThatNeverLandsRethrowsSoTheWatcherCanSayWhy()
+        {
+            int attempts = 0;
+
+            Assert.Throws<IOException>(() =>
+                PreviewProtocol.WriteWithRetry(
+                    () => { attempts++; throw new IOException("still locked"); },
+                    _ => { }));
+
+            Assert.AreEqual(PreviewProtocol.WriteAttempts, attempts,
+                "a write that never lands must exhaust exactly WriteAttempts, then surface -- " +
+                "silently giving up is the stall this retry exists to end.");
+        }
+
+        [Test]
+        public void OnlyAnIOExceptionIsRetried()
+        {
+            int attempts = 0;
+
+            // A serialization failure or a missing Temp/ is not a reader
+            // collision, and four more attempts only delay the warning.
+            Assert.Throws<InvalidOperationException>(() =>
+                PreviewProtocol.WriteWithRetry(
+                    () => { attempts++; throw new InvalidOperationException("not a collision"); },
+                    _ => Assert.Fail("a non-IO failure must not sleep and retry.")));
+
+            Assert.AreEqual(1, attempts);
         }
 
         [Test]

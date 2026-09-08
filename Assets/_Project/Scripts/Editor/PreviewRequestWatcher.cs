@@ -303,6 +303,16 @@ public static class PreviewRequestWatcher
     // Temp-then-replace, so a reader polling this file every 300ms can never
     // catch it half written. File.Replace rather than Move because Move onto
     // an existing path throws on Windows.
+    //
+    // AND RETRIED, because that same 300ms poll is what breaks the replace.
+    // Get-Content holds a read handle on pp_result.json without granting
+    // DELETE sharing, so a poll landing inside File.Replace throws IOException
+    // -- and this method used to swallow that as a warning at the exact point
+    // where the request file had already been consumed. The ask was gone, the
+    // answer was never published, and preview.ps1 burned its whole timeout
+    // waiting for a result nobody was going to write again. Tonight's Editor
+    // stall had that shape. PreviewProtocol.WriteWithRetry owns the policy
+    // because a retry loop written inline here is one no test can reach.
     private static void WriteResult(string requestId, string state, string message) =>
         Write(PreviewProtocol.Result(requestId, state, message));
 
@@ -311,20 +321,35 @@ public static class PreviewRequestWatcher
         try
         {
             Directory.CreateDirectory("Temp");
-            File.WriteAllText(ResultTemp, JsonUtility.ToJson(result, true));
+            string json = JsonUtility.ToJson(result, true);
 
-            if (File.Exists(ResultFile))
-            {
-                File.Replace(ResultTemp, ResultFile, null);
-            }
-            else
-            {
-                File.Move(ResultTemp, ResultFile);
-            }
+            // The temp file is rewritten per attempt rather than once up
+            // front: a failed File.Replace can leave it consumed, and a
+            // second attempt against a source that is no longer there fails
+            // for a reason that has nothing to do with the collision.
+            PreviewProtocol.WriteWithRetry(
+                () =>
+                {
+                    File.WriteAllText(ResultTemp, json);
+
+                    if (File.Exists(ResultFile))
+                    {
+                        File.Replace(ResultTemp, ResultFile, null);
+                    }
+                    else
+                    {
+                        File.Move(ResultTemp, ResultFile);
+                    }
+                },
+                System.Threading.Thread.Sleep);
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"[PreviewRequestWatcher] could not write {ResultFile}: {e.Message}");
+            // Still reached when every attempt collided, or when the failure
+            // was never a collision at all. The caller is going to time out
+            // either way; this is the only place that says why.
+            Debug.LogWarning($"[PreviewRequestWatcher] could not write {ResultFile} " +
+                             $"after {PreviewProtocol.WriteAttempts} attempts: {e.Message}");
         }
     }
 

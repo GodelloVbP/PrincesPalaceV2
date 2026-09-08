@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace PrincesPalace.Domain.Preview
 {
@@ -160,6 +161,53 @@ namespace PrincesPalace.Domain.Preview
         public static PreviewResult InPlayMode(PreviewRequest request) =>
             Result(request?.requestId, StateFailed,
                 "the Editor is in Play mode -- exit Play mode first, then re-run preview.ps1");
+
+        // WRITING THE RESULT IS THE ONE STEP THAT CANNOT BE ALLOWED TO FAIL
+        // QUIETLY, and until 2026-09-08 it was the only one that could.
+        //
+        // The watcher publishes a result by writing Temp/pp_result.tmp and
+        // File.Replace-ing it onto Temp/pp_result.json. preview.ps1 reads that
+        // same destination every 300ms with Get-Content, and a Windows handle
+        // opened for reading does not grant DELETE sharing -- so a poll that
+        // lands inside the replace makes it throw IOException. The watcher
+        // caught that as a Debug.LogWarning and moved on, having ALREADY
+        // deleted the request file: the ask was gone, the answer was never
+        // published, and the caller sat there until its full timeout with a
+        // message naming nothing. That is the stall shape, and it is
+        // unrecoverable by construction -- there is nothing left on disk for
+        // the next tick to re-answer.
+        //
+        // The collision is milliseconds wide (one Get-Content of a 200-byte
+        // file), so retrying across it is enough. Five attempts at 60ms covers
+        // roughly a full poll period; a failure that survives all five is not a
+        // reader collision and is rethrown for the caller to log.
+        public const int WriteAttempts = 5;
+        public const int WriteRetryMs = 60;
+
+        // The retry itself lives here rather than in the watcher because the
+        // watcher's copy would be untestable: it names two hardcoded paths
+        // under Temp/ and only an open Editor calls it. `sleep` is a parameter
+        // for the same reason -- a test drives the backoff without waiting on
+        // it.
+        //
+        // IOException ONLY. A serialization failure or a missing Temp/ is not
+        // a transient reader collision and retrying it four more times just
+        // delays the warning.
+        public static void WriteWithRetry(Action write, Action<int> sleep)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    write();
+                    return;
+                }
+                catch (IOException) when (attempt < WriteAttempts)
+                {
+                    sleep(WriteRetryMs);
+                }
+            }
+        }
 
         // SCREENING, in the order the watcher applies it: is there an id to
         // answer, is the action one we implement, does that action have the
