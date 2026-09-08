@@ -101,7 +101,15 @@ namespace PrincesPalace.Domain.UiKit
             // battle speed does not retime a beat already under way (contract
             // 4), so "applies immediately" would be wrong here even though
             // it is true of every other row on this screen.
-            new OptionGroupDef("Gameplay", UiStrings.OptionsGameplay, column: 0,
+            //
+            // COLUMN 1, not 0 -- option B (OptionsLayout.ColumnCount's own
+            // header): a third card sharing column 0 with Audio and Display
+            // pushed the restore button and its footer note within 3.56px
+            // of each other, and G4's screenshot showed the reworded, longer
+            // footer note landing visibly under the button rather than below
+            // it. Its own column, it does not compete with anything for
+            // height.
+            new OptionGroupDef("Gameplay", UiStrings.OptionsGameplay, column: 1,
                 new OptionRowDef("battlespeed", UiStrings.OptionsBattleSpeed, OptionKind.Stepper,
                     note: UiStrings.OptionsBattleSpeedNote)),
         };

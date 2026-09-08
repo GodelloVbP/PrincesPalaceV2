@@ -220,16 +220,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(File.Exists(equipPath));
             Debug.Log($"[SystemMenuCapture] wrote {equipPath}");
 
-            // And the Options pane, which is the other half of what this menu
-            // now carries.
-            menu.Select(SystemMenuTab.Options);
-            yield return new WaitForSecondsRealtime(0.3f);
-
-            string optionsPath = Path.Combine(OutputDir, "SystemMenu_options.png");
-            CanvasCapture.RenderToFile(canvas, optionsPath);
-            Assert.IsTrue(File.Exists(optionsPath));
-            Debug.Log($"[SystemMenuCapture] wrote {optionsPath}");
-
             // NO try/finally: an assertion thrown between BackupSave() and here
             // would skip this restore and leave the real save mutated. Known
             // and accepted for this capture (equip is a single step with a
@@ -237,6 +227,57 @@ namespace PrincesPalace.PlayModeTests
             // backup/restore across a longer sequence of commits and DOES wrap
             // it, because that window is wide enough to matter.
             RestoreSave(backup);
+        }
+
+        // docs/PLAN_BATTLE_SPEED.md G4: the Options pane, on its own rather
+        // than tacked onto the end of CaptureTheSkeletonOnEachTab the way an
+        // earlier pass here had it. That test's own equip-and-verify step
+        // ("the pack click changed nothing on the character") is a
+        // pre-existing failure under real graphics, unrelated to battle
+        // speed and unrelated to Options -- entangling this capture with it
+        // meant a bug in equipment gear pack clicking could silently block
+        // the one piece of evidence this plan's G4 needs. Standalone, it
+        // does not.
+        [UnityTest]
+        public IEnumerator CaptureTheOptionsPane()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController - the menu was never embedded");
+
+            menu.Open();
+            menu.Select(SystemMenuTab.Options);
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            Directory.CreateDirectory(OutputDir);
+
+            // Captured at UiFrames.FourThree (1920x1440, ratio 1.333), the
+            // NARROWEST of the four aspects UiAudit solves every screen at.
+            // Explicit width/height rather than the default (current screen
+            // size) so this capture is pinned to that aspect regardless of
+            // what resolution the runner's own window happens to be at.
+            // UiFrames' own header notes flow content inside a fixed-size
+            // panel is aspect-invariant -- the Options pane is exactly that
+            // (OptionsLayout.PaneHeight is an authored constant, not derived
+            // from the canvas frame) -- so this is not expected to change
+            // what the pane itself looks like, only to prove it, rather than
+            // assume it, against the aspect the plan named.
+            string path = Path.Combine(OutputDir, "SystemMenu_options.png");
+            CanvasCapture.RenderToFile(canvas, path, (int)UiFrames.FourThree.X, (int)UiFrames.FourThree.Y);
+            Assert.IsTrue(File.Exists(path));
+            Debug.Log($"[SystemMenuCapture] wrote {path}");
         }
 
         // Backs up save_slot_{CurrentSlot}.json verbatim, and restores it

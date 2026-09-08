@@ -37,20 +37,27 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float ColumnGap = 40f;
 
-        // ONE COLUMN, not two, and that is what lets six settings fill an
-        // 804-tall pane.
+        // TWO COLUMNS as of docs/PLAN_BATTLE_SPEED.md -- option B, shipped
+        // after option A (one column, every row shrunk to fit a sixth) put
+        // the restore button's bottom edge and the footer note within
+        // 3.56px of each other and the reworded (longer) footer text landed
+        // visibly UNDER the button in the G4 screenshot rather than below
+        // it. Option A's own margin arithmetic was correct -- 704 of
+        // 707.56 fit -- but "fits without overlapping the audit's overlap
+        // check" and "reads as cramped by eye" are different questions, and
+        // G4 is what decides between them.
         //
-        // Two columns put Audio's two rows beside Display's three and left both
-        // stopping less than halfway down: a card cannot be made tall enough to
-        // close the pane without rows deep enough to lose the control in. Full
-        // width, stacked, and a wide row with its label at the left and its
-        // control at the right is the shape every settings screen has, rather
-        // than a compromise.
-        //
-        // What this does NOT fix is that there are six settings. The three cut
-        // groups are in REMAINING.md and each is a feature rather than a layout
-        // job; this is the honest arrangement of what exists.
-        public const float ColumnCount = 1f;
+        // B keeps every row at its ORIGINAL height, which is what makes it
+        // safe: column 0 (Audio, Display) is back to exactly the two-card
+        // arrangement that shipped before this plan touched anything, 694 of
+        // 707.56, footer and button with the same clearance they always had.
+        // Column 1 holds Gameplay alone -- one card, one row, plenty of
+        // room. Two columns put Audio's two rows beside Display's three
+        // before there was a third group, which is why this project had
+        // gone to one column in the first place; a lone Gameplay card in
+        // its own column does not repeat that problem, because it does not
+        // compete with anything else for column 1's height.
+        public const float ColumnCount = 2f;
 
         // HalfWidth * 2f, not PaneWidth -- the content region is the pane's
         // own declared inset, narrower than the declared frame. Comes out at
@@ -77,26 +84,20 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float CardPadX = 30f;
 
-        // 18/36/28/58, not 24/40/36/78 -- docs/PLAN_BATTLE_SPEED.md's option
-        // A. A third card (Gameplay) landed a sixth row and a third card's
-        // own padding onto a column that had 694 of 707.56 to spend on five
-        // rows across two cards; the four constants below all shrink
-        // together so the third card fits at 704 of 707.56 rather than
-        // overflowing UiAudit. Every existing row gets shorter as a result --
-        // G4 photographs the pane at the narrowest audited aspect to judge
-        // whether that reads as cramped.
-        public const float CardPadY = 18f;
-        public const float HeadingHeight = 36f;
-        public const float RowHeight = 58f;
+        // UNTOUCHED by option B, by design -- see ColumnCount's own header.
+        // Every row is exactly the size it always was.
+        public const float CardPadY = 24f;
+        public const float HeadingHeight = 40f;
+        public const float RowHeight = 78f;
 
-        public static float CardContentWidth => ColumnWidth - CardPadX * 2f;            // 612
-        public static float CardContentHalf => CardContentWidth * 0.5f;                 // 306
+        public static float CardContentWidth => ColumnWidth - CardPadX * 2f;            // 660 at two columns
+        public static float CardContentHalf => CardContentWidth * 0.5f;                 // 330
 
         public static float CardHeight(int rows) =>
             CardPadY * 2f + HeadingHeight + rows * RowHeight;
 
         // Cards stack down their column with this between them.
-        public const float CardGap = 28f;
+        public const float CardGap = 36f;
 
         // Row `index` inside a card of `rows`, measured from the CARD's centre.
         public static float RowCentreY(int rows, int index) =>
@@ -113,25 +114,33 @@ namespace PrincesPalace.Domain.UiKit
         public const float LabelWidth = 320f;
         public static float LabelCentreX => -CardContentHalf + LabelWidth * 0.5f;
 
-        // The controls sit in the card's RIGHT-HAND third rather than just
-        // right of the label. On a 1420px row a control that starts where the
-        // label ends leaves 800px of nothing after it, which reads as a row
-        // that failed to finish rather than as a wide one.
-        public const float ControlBlockWidth = 620f;
+        // NARROWED for option B, per its own header on ColumnCount: a
+        // 620-wide control block plus a 320-wide label is 940, and a
+        // 720-wide two-column card only has 660 of content width to spend
+        // in total. 280 leaves the label's own right edge (-10) and the
+        // control block's left edge (CardContentHalf - 280 = 50) 60px apart
+        // -- narrower than the old single-column row, which is the whole
+        // trade B makes.
+        public const float ControlBlockWidth = 280f;
         public static float ControlLeft => CardContentHalf - ControlBlockWidth;
 
-        public const float TrackWidth = 380f;
+        public const float TrackWidth = 170f;
         public const float TrackHeight = 6f;
         public static float TrackCentreX => ControlLeft + TrackWidth * 0.5f;
         public static float TrackLeft => TrackCentreX - TrackWidth * 0.5f;
 
-        public const float ValueWidth = 90f;
+        public const float ValueWidth = 70f;
         public static float SliderValueCentreX => CardContentHalf - ValueWidth * 0.5f;
 
         public const float StepButtonSize = 34f;
         public static float StepPrevCentreX => ControlLeft + StepButtonSize * 0.5f;
         public static float StepNextCentreX => CardContentHalf - StepButtonSize * 0.5f;
-        public const float StepValueWidth = 420f;
+
+        // 200, not 420 -- the gap between the two step buttons at this
+        // ControlBlockWidth is 212 (ControlBlockWidth - 2*StepButtonSize -
+        // the two half-button overlaps the centre formulas already account
+        // for), so 420 would print outside its own buttons.
+        public const float StepValueWidth = 200f;
         public static float StepValueCentreX =>
             (StepPrevCentreX + StepNextCentreX) * 0.5f;
 
