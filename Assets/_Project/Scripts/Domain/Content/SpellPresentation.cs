@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -194,6 +195,56 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Resources-relative path to the sound that runs through the cast, ending before the rupture.")]
         public string castSfxPath = "";
 
+        // ---- the layered format ------------------------------------------------
+        //
+        // EXTENDING THIS TYPE RATHER THAN SUCCEEDING IT, and the argument is a
+        // measurement rather than a preference. AUDIT #60 counted what a field
+        // on this chain costs: vfx.groundPath was 8 file mentions where
+        // cooldownTurns was 41, "lower because SpellPresentation had already
+        // collapsed the middle". A parallel presentation type means a second
+        // field on RawSkillEntry, on RawElementChoice, on ResolvedSkill, on
+        // CombatBeat and a second Copy() -- the exact restatement #60 exists to
+        // stop. And RawElementChoice.vfx is a whole SpellPresentation, so every
+        // element of an elemental spell gets a full layer list for free with no
+        // change anywhere in the chain.
+
+        // AN ARRAY, NOT A LIST, AND THAT IS FORCED. ContentSchema.ElementType
+        // unwraps arrays only, so a List<SpellLayer> would print as List`1 in
+        // docs/CONTENT_SCHEMA.md and its element type would never be expanded
+        // into a table.
+        [ContentDoc("Ordered layers this spell draws; empty means the single-block fields above are used as-is.")]
+        public SpellLayer[] layers = Array.Empty<SpellLayer>();
+
+        // WHICH REVISION OF THE VOCABULARY THIS BLOCK WAS AUTHORED AGAINST.
+        //
+        // 0 is every block written before layers existed and every block that
+        // authors none; a block with layers must say 1, and SpellLayerRules
+        // refuses it otherwise. The policy the number exists to make arguable:
+        // ADDING a word to a discriminator, or a field with an inert default,
+        // keeps version 1 -- old content still means what it meant. CHANGING
+        // what an existing word or field means increments it, and version 1
+        // blocks are then refused with a migration message or converted, never
+        // reinterpreted silently. No migration function is written here,
+        // because there is no version 2 to migrate to and naming one now would
+        // be a framework with no user.
+        [ContentDoc("Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format.")]
+        public int layerFormat;
+
+        // THE ONE AUTHORITATIVE IMPACT CUE, in seconds after the beat opens.
+        //
+        // A PROPERTY OF THE CAST AND NOT OF ANY LAYER, precisely because the
+        // brief demands one cue: a layer could own it, and then two layers
+        // could disagree about when the blow landed. 0 is legal and common --
+        // it is what every melee beat does today.
+        //
+        // A version-0 block leaves this at 0 and derives its cue from
+        // impactFrame instead, exactly as today. That derivation is a function
+        // of the number of PNGs on disk, which is the accident the layered
+        // format removes: a version-1 spell whose art fails to load still
+        // lands its blow when it said it would.
+        [ContentDoc("Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame.")]
+        public float hitCueSeconds;
+
         // Left unset, a spell runs for this long and lands on this frame. Both
         // were the resolver's private constants and belong beside the fields
         // they default, so a new caller cannot invent a different silence.
@@ -262,9 +313,159 @@ namespace PrincesPalace.Domain.Content
             };
         }
 
+        // Whether this block was authored in the layered vocabulary. The one
+        // question the runtime asks before deciding whether the adapter has to
+        // run -- asked rather than compared, so "which version is this" has one
+        // home.
+        public bool HasLayers => layers != null && layers.Length > 0;
+
+        // ---- the legacy adapter --------------------------------------------------
+
+        // A PRE-LAYER BLOCK, SAID IN LAYERS. Pure, engine-free, and its output
+        // is NEVER STORED: authored content stays exactly what an author typed,
+        // and the runtime sees layers and only layers. That is what makes one
+        // orchestration path rather than two -- the alternative, running this
+        // in the resolver and writing the result back, would put every shipped
+        // spell in the state SpellLayerRules refuses (layers with layerFormat
+        // 0, and layers beside a single-block path).
+        //
+        // TAKES THE FRAME COUNT, which the plan's signature did not. Two of the
+        // three numbers a version-0 block needs -- the hold before the flight
+        // and the flight's own length -- are `seconds` times a FRAME INDEX over
+        // the frame count, because that is what today's player does: it departs
+        // on frame departFrame-1 and arrives on frame impactFrame-1 at
+        // seconds/frames.Length each. Domain cannot read a folder, so the count
+        // is an argument rather than a lookup; the arithmetic stays here, where
+        // an EditMode test can reach it, instead of being split across the
+        // Domain/Core line where the departure half is the part that needs care.
+        //
+        // A count of 0 -- art that failed to load -- yields a non-travelling
+        // layer, which is what the player does today: PlayRoutine returns
+        // before it computes anything when the frame array is empty.
+        public SpellLayer[] ToLayers(int frameCount)
+        {
+            var built = new List<SpellLayer>(2);
+
+            if (!string.IsNullOrWhiteSpace(path)) built.Add(PerTargetLayer(frameCount));
+            if (!string.IsNullOrWhiteSpace(groundPath)) built.Add(GroundLayer());
+
+            return built.ToArray();
+        }
+
+        private SpellLayer PerTargetLayer(int frameCount)
+        {
+            var anchor = Anchor;
+            bool travels = SpellAnchorNames.Travels(anchor);
+            bool centred = SpellAnchorNames.Centred(anchor);
+
+            var layer = new SpellLayer
+            {
+                id = "vfx",
+                render = "sprite",
+
+                // A TRAVELLING ANCHOR BECOMES A CASTER-SIDE PLACE PLUS A
+                // TRAVEL TIME, because travel is a behaviour and not a kind of
+                // placement. Which caster point it leaves from is the same
+                // centred/standing axis the anchor already carried.
+                place = travels
+                    ? (centred ? "caster-centre" : "caster")
+                    : PlaceWordFor(anchor),
+
+                at = "release",
+                path = path,
+                seconds = seconds,
+
+                // FIT THE FOLDER INTO `seconds`, which reproduces
+                // perFrame = total / frames.Length exactly. The frame rate of
+                // a pre-layer block IS its duration divided by its frame count
+                // and was never authored, so anything else here would retime
+                // every shipped spell.
+                fps = 0f,
+                until = "once",
+                size = size,
+                impactX = impactX,
+                impactY = impactY,
+                sort = "effects",
+
+                // A NON-TRAVELLING EFFECT IS UNCONDITIONALLY SetFacing(1f)
+                // today, which is 'none' and not 'auto'. Mapping it to auto
+                // would mirror a monster's flare and break
+                // AnOrdinaryEffectAfterAMirroredOneIsNotItselfMirrored.
+                facing = travels ? "auto" : "none",
+            };
+
+            if (!travels || frameCount <= 0) return layer;
+
+            // THE SAME CLAMPS THE PLAYER APPLIES, in the same order: the
+            // arrival is held inside the sequence and the departure is held
+            // below the arrival, so the two can never cross and produce a
+            // negative flight.
+            int arrivalIndex = Clamp(impactFrame - 1, 0, frameCount - 1);
+            int departIndex = Clamp(departFrame - 1, 0, arrivalIndex);
+
+            float perFrame = seconds / frameCount;
+            layer.travelDelay = departIndex * perFrame;
+            layer.travelSeconds = (arrivalIndex - departIndex) * perFrame;
+
+            // A sheet whose departure and arrival land on one frame does not
+            // move at all today (the lerp is guarded on arrival > departure),
+            // so it must not become a projectile with a zero-length flight
+            // that snaps. It keeps the caster placement and simply stays.
+            return layer;
+        }
+
+        private SpellLayer GroundLayer() => new SpellLayer
+        {
+            id = "ground",
+            render = "sprite",
+
+            // ONE FAULT HOWEVER MANY ENEMIES STAND IN IT, and the width is the
+            // measured span rather than an authored number -- which is why no
+            // size, no dx and no impactX come across. The pre-layer block has
+            // no groundImpactX field to have brought one from.
+            place = "formation",
+            at = "release",
+            path = groundPath,
+            seconds = GroundSeconds,
+            fps = 0f,
+            until = "once",
+            aspect = groundAspect,
+            impactY = groundImpactY,
+            facing = "none",
+            sort = "ground",
+        };
+
+        private static string PlaceWordFor(SpellAnchor anchor)
+        {
+            switch (anchor)
+            {
+                case SpellAnchor.Caster: return "caster";
+                case SpellAnchor.CasterCentre: return "caster-centre";
+                case SpellAnchor.TargetCentre: return "target-centre";
+                default: return "target";
+            }
+        }
+
+        private static int Clamp(int value, int low, int high) =>
+            value < low ? low : value > high ? high : value;
+
         // A copy, for every boundary a presentation crosses. Cheap, and it is
         // what keeps a combat beat from holding the same object a content asset
         // does -- a fight could otherwise edit the catalogue it was dealt from.
+        //
+        // THE LAYER ARRAY IS DEEP-COPIED, and it matters more here than for the
+        // scalar fields. Copy() is the ONLY boundary, three call sites go
+        // through it, and the first is reached from AsElement's
+        // MemberwiseClone() -- which shares every reference type it does not
+        // overwrite. A shallow array copy would alias the catalogue's own layer
+        // objects into every beat, which is the exact bug this method exists to
+        // prevent, one level down.
+        //
+        // Still a hand-written field list, which is the shape AUDIT #60 records
+        // dropping fields twice. What closes it is
+        // SpellPresentationCopyTests' reflection pin: every public instance
+        // field of this type must come across, so a field added and not copied
+        // fails rather than going quiet.
         public SpellPresentation Copy() => new SpellPresentation
         {
             path = path,
@@ -282,6 +483,22 @@ namespace PrincesPalace.Domain.Content
             groundAspect = groundAspect,
             groundImpactY = groundImpactY,
             castSfxPath = castSfxPath,
+            layerFormat = layerFormat,
+            hitCueSeconds = hitCueSeconds,
+            layers = CopyOf(layers),
         };
+
+        private static SpellLayer[] CopyOf(SpellLayer[] source)
+        {
+            if (source == null || source.Length == 0) return Array.Empty<SpellLayer>();
+
+            var copied = new SpellLayer[source.Length];
+            for (int i = 0; i < source.Length; i++)
+            {
+                copied[i] = source[i] == null ? new SpellLayer() : source[i].Copy();
+            }
+
+            return copied;
+        }
     }
 }

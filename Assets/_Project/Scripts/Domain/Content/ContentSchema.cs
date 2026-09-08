@@ -88,6 +88,20 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawTrackMilestone), nameof(RawTrackMilestone.against))] = typeof(Stats.DamageType),
                 [(typeof(RawTrackFiller), nameof(RawTrackFiller.reward))] = typeof(Progression.TrackReward),
                 [(typeof(RawTrackFiller), nameof(RawTrackFiller.against))] = typeof(Stats.DamageType),
+
+                // A presentation's own word, and the six a layer is authored
+                // in. `place` is here for its CLOSED half only -- its open
+                // 'layer:<id>' form has no enum member that could spell it and
+                // lives in the field's own [ContentDoc] instead, because this
+                // column is Enum.GetNames and cannot document an open
+                // vocabulary.
+                [(typeof(SpellPresentation), nameof(SpellPresentation.anchor))] = typeof(SpellAnchor),
+                [(typeof(SpellLayer), nameof(SpellLayer.render))] = typeof(SpellRender),
+                [(typeof(SpellLayer), nameof(SpellLayer.place))] = typeof(SpellPlace),
+                [(typeof(SpellLayer), nameof(SpellLayer.at))] = typeof(SpellCue),
+                [(typeof(SpellLayer), nameof(SpellLayer.until))] = typeof(SpellEnd),
+                [(typeof(SpellLayer), nameof(SpellLayer.facing))] = typeof(SpellFacing),
+                [(typeof(SpellLayer), nameof(SpellLayer.sort))] = typeof(SpellSort),
             };
 
         private static readonly StringComparer NameOrder = StringComparer.Ordinal;

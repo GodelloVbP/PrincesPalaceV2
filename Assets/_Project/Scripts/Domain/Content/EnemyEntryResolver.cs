@@ -256,10 +256,15 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.groundPath", raw.vfx.groundPath, out error)) return false;
-            if (!ArtPathConvention.Check(label, "vfx.castSfxPath", raw.vfx.castSfxPath, out error)) return false;
+            // AN ENEMY'S vfx IS THE SAME SpellPresentation A SKILL CARRIES, so
+            // it goes through the same two checks rather than through a
+            // hand-written copy of the first one. The four ArtPathConvention
+            // calls that used to sit here were exactly the restatement
+            // SpellPresentationPaths' own header names -- and they proved it by
+            // going stale: a layered enemy ability's frames would have reached
+            // a player unchecked while every skill's were guarded.
+            if (!SpellPresentationPaths.Check(label, raw.vfx, out error)) return false;
+            if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
 
             var baseStats = new StatBlock(raw.maxHealth, speed, attack,
                 physicalDefense: physicalDefense, magicalDefense: magicalDefense);

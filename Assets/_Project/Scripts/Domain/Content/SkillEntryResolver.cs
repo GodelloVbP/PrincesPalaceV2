@@ -296,6 +296,8 @@ namespace PrincesPalace.Domain.Content
 
             if (!SpellPresentationPaths.Check(label, raw.vfx, out error)) return false;
 
+            if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
+
             if (!TryResolveElements(raw, label, instances, out var elements, out error))
             {
                 return false;
@@ -377,6 +379,8 @@ namespace PrincesPalace.Domain.Content
                 seen.Add(type);
 
                 if (!SpellPresentationPaths.Check($"{label} element #{i + 1}", choice.vfx, out error)) return false;
+
+                if (!SpellLayerRules.TryCheck($"{label} element #{i + 1}", choice.vfx, out error)) return false;
 
                 resolved[i] = new ElementChoice(type, choice.vfx);
             }

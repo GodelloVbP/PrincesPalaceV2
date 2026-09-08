@@ -347,6 +347,62 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `against` | string | `""` | The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
 | `skillId` | string | `""` | The skill id this reward unlocks; only UnlockSkill reads this, empty otherwise. |  |
 
+### `SpellEmitter`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `path` | string | `""` | Resources-relative folder of particle stills; each particle picks one by hash, so a folder of one selects that one. |  |
+| `rate` | float | `0` | Particles emitted per second while the window is open. |  |
+| `burst` | int | `0` | Particles emitted the instant the window opens. |  |
+| `window` | float | `0` | Seconds of emission; 0 means burst only. |  |
+| `sourceDx` | float | `0` | Offset from the source anchor that particles are born at, in reference-frame units. |  |
+| `sourceDy` | float | `0` | Offset from the source anchor that particles are born at, in reference-frame units. |  |
+| `spreadDegrees` | float | `0` | Full cone width of the emission spread, in degrees. |  |
+| `aimDegrees` | float | `0` | Centre of the emission cone, in degrees; 0 means along the cast's facing. |  |
+| `speedMin` | float | `0` | Slowest initial speed, in reference-frame units per second. |  |
+| `speedMax` | float | `0` | Fastest initial speed, in reference-frame units per second. |  |
+| `inherit` | float | `0` | Fraction of the source's forward velocity a particle carries away, 0..1. |  |
+| `drag` | float | `0` | Linear drag per second. |  |
+| `gravity` | float | `0` | Acceleration in reference-frame units per second squared; negative falls. |  |
+| `lifeMin` | float | `0` | Shortest particle lifetime, in seconds. |  |
+| `lifeMax` | float | `0` | Longest particle lifetime, in seconds; also what an emitter layer's own lifetime adds to its window. |  |
+| `sizeMin` | float | `1` | Smallest particle scale. |  |
+| `sizeMax` | float | `1` | Largest particle scale. |  |
+| `spinMin` | float | `0` | Slowest spin, in degrees per second; may be negative. |  |
+| `spinMax` | float | `0` | Fastest spin, in degrees per second. |  |
+| `fadeFrom` | float | `1` | Fraction of life at which alpha starts falling, 0..1. |  |
+| `endScale` | float | `1` | Scale at the end of life, relative to the particle's own. |  |
+| `seed` | int | `0` | Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly. |  |
+
+### `SpellLayer`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable name for this layer; required only when another layer references it through place 'layer:<id>'. |  |
+| `render` | string | `""` | What draws: sprite (an animated folder), still (one frame of a folder) or emitter (ballistic particles). No default -- a blank is refused. | Sprite, Still, Emitter |
+| `place` | string | `""` | Where it belongs: caster, caster-centre, target, target-centre, formation, or 'layer:<id>' to ride another layer. No default -- a blank is refused. | Caster, CasterCentre, Target, TargetCentre, Formation, Layer |
+| `follow` | bool | `false` | Re-read the anchor every tick (true) rather than sampling its position once when the layer opens (false). |  |
+| `at` | string | `""` | When it starts: release (the beat opens), arrival (the cast's projectile lands) or hit (the authoritative impact cue). Blank means release. | Release, Arrival, Hit |
+| `offset` | float | `0` | Seconds added to `at`. |  |
+| `path` | string | `""` | Resources-relative FOLDER of frames, for sprite and still alike; a still draws that folder's startFrame. |  |
+| `seconds` | float | `0` | Total playback length in seconds; 0 derives it from fps and the folder's frame count. |  |
+| `fps` | float | `0` | Frames per second; 0 means fit the whole folder into `seconds`, which is what every pre-layer block becomes. |  |
+| `startFrame` | int | `0` | Which frame the layer starts on, counting from 1; 0 means frame 1. |  |
+| `until` | string | `""` | End policy: once, loop or hold. Blank means once. A travelling layer ends at its arrival whatever this says. | Once, Loop, Hold |
+| `fade` | float | `0` | Seconds of alpha ramp-out after the layer's end; 0 means cut. Capped at SpellLayerRules.MaxFadeSeconds. |  |
+| `dx` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
+| `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
+| `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
+| `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
+| `facing` | string | `""` | Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto. | Auto, None, Reverse |
+| `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
+| `impactX` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored. |  |
+| `impactY` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the bottom edge; -1 means unauthored. |  |
+| `aspect` | float | `0` | Width-over-height of the box; 0 means take the sheet's own frame aspect. |  |
+| `travelSeconds` | float | `0` | Seconds this layer takes to cross from its anchor to the target, departure to arrival; 0 means it does not travel. |  |
+| `travelDelay` | float | `0` | Seconds after this layer starts before its motion begins; the wind-up held at the caster. |  |
+| `emitter` | SpellEmitter (below) | (zero -- see SpellEmitter) | Ballistic particle settings; inert unless render is 'emitter'. |  |
+
 ### `SpellPresentation`
 
 | Field | Type | Default | Description | Values |
@@ -354,7 +410,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `path` | string | `""` | Resources-relative folder of this spell's animation frames; empty means no visual. |  |
 | `seconds` | float | `0.6` | How long the whole per-target animation takes, in seconds. |  |
 | `impactFrame` | int | `3` | Which frame (1-based) the spell actually lands on. |  |
-| `anchor` | string | `""` | Where the effect happens: a SpellAnchor name (Target, Caster, ...), parsed case-insensitively; unrecognised falls back to Target. |  |
+| `anchor` | string | `""` | Where the effect happens: a SpellAnchor name (Target, Caster, ...), parsed case-insensitively; unrecognised falls back to Target. | Target, Caster, TargetCentre, CasterCentre, Travel, TravelCentre |
 | `size` | float | `380` | The square box the art is fitted into, in reference-frame units; 0 means the default size. |  |
 | `departFrame` | int | `0` | Which frame (1-based) a from-caster effect leaves on; 0 means from the first frame. |  |
 | `impactX` | float | `-1` | Where the blow lands inside the sheet, as a fraction from the left edge; -1 means unauthored (use the measured fallback). |  |
@@ -366,4 +422,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `groundAspect` | float | `0` | Width-over-height of the ground layer's box; 0 means take the sheet's own frame aspect. |  |
 | `groundImpactY` | float | `-1` | Where the ground layer's own ground line sits, as a fraction from the bottom edge; -1 means unauthored. |  |
 | `castSfxPath` | string | `""` | Resources-relative path to the sound that runs through the cast, ending before the rupture. |  |
+| `layers` | SpellLayer[] (below) | `[]` | Ordered layers this spell draws; empty means the single-block fields above are used as-is. |  |
+| `layerFormat` | int | `0` | Which revision of the layer vocabulary this block was authored against; 0 means the pre-layer format. |  |
+| `hitCueSeconds` | float | `0` | Seconds after the cast opens that the blow lands; the one authoritative impact cue. Ignored for a pre-layer block, which derives the cue from impactFrame. |  |
 

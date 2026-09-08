@@ -1,0 +1,349 @@
+using System;
+
+namespace PrincesPalace.Domain.Content
+{
+    // THE SIX WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
+    // Parse/IsKnown pair beside it.
+    //
+    // The shape is SpellAnchorNames' exactly (SpellAnchor.cs), and it is copied
+    // deliberately rather than generalised: a Parse that falls back safely
+    // cannot also report a typo, so the two callers -- the view, which wants to
+    // keep going, and the validator, which wants to complain -- get one function
+    // each. Every table below is `Lookup(name, fallback)` plus two readers of
+    // it, so a word added to the switch is answered by both without either
+    // being edited.
+    //
+    // A BLANK WORD IS KNOWN, and that is the documented default rather than an
+    // oversight: an author who omits `sort` means "effects", and refusing an
+    // omission would make every optional word mandatory. SpellLayerRules is
+    // where blank `render` and blank `place` are refused instead, because
+    // those two have no safe default -- a misplaced effect is still an effect,
+    // and a layer that does not say what it draws is nothing at all.
+    //
+    // REAL ENUMS RATHER THAN BARE STRINGS because ContentSchema.EnumBackedFields
+    // documents a field by calling Enum.GetNames on the type behind it
+    // (ContentSchema.cs), so a word with no enum member has no representation in
+    // docs/CONTENT_SCHEMA.md. `place`'s open `layer:<id>` form is the one thing
+    // that cannot be an enum member and lives in the field's [ContentDoc]
+    // instead.
+
+    // ---- what draws ----------------------------------------------------------
+
+    public enum SpellRender
+    {
+        // An animated folder, played at `fps` or fitted into `seconds`. What
+        // every spell in the game is today.
+        Sprite,
+
+        // ONE frame of a folder -- the folder's `startFrame` -- held rather
+        // than played. A wake, a ribbon, a glow that does not animate.
+        //
+        // A FOLDER AND NOT A SPRITE FILE, which is mechanical rather than
+        // tidy: SpellVfxRecipeDriftTests matches a played path's LAST SEGMENT
+        // against recipe filenames and requires it to be a directory on disk,
+        // so `..._wake/f0` would present `f0` as its provenance id, find no
+        // recipe of that name, and fail both halves. One loader
+        // (FrameSequenceLoader) and one path convention for both kinds.
+        Still,
+
+        // Ballistic particles. The one kind whose end is derived rather than
+        // authored -- see SpellEmitter -- because the brief requires emission
+        // to stop while already-emitted particles finish.
+        Emitter,
+    }
+
+    public static class SpellRenderNames
+    {
+        public static SpellRender Parse(string name) => Lookup(name, SpellRender.Sprite);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellRender)(-1)) != (SpellRender)(-1);
+
+        public static string[] All => new[] { "sprite", "still", "emitter" };
+
+        private static SpellRender Lookup(string name, SpellRender fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellRender.Sprite;
+
+            switch (name.Trim().ToLowerInvariant().Replace("_", "-"))
+            {
+                case "sprite": return SpellRender.Sprite;
+                case "still": return SpellRender.Still;
+                case "emitter": return SpellRender.Emitter;
+                default: return fallback;
+            }
+        }
+    }
+
+    // ---- where it belongs ----------------------------------------------------
+
+    public enum SpellPlace
+    {
+        // Standing on the caster's ground line. ONE INSTANCE per cast, however
+        // many targets were struck -- unless the layer travels, which is the
+        // single exception in this table and is a property of travelSeconds
+        // rather than of any word here.
+        Caster,
+
+        // Centred on the caster's middle. Cast-level, same as Caster.
+        CasterCentre,
+
+        // Standing on a struck target's ground line. ONE INSTANCE PER STRUCK
+        // TARGET, which is what makes a per-target fan-out a placement fact
+        // rather than a spell id somebody branched on.
+        Target,
+
+        // Centred on a struck target's middle. Target-level.
+        TargetCentre,
+
+        // THE MEASURED SPAN of every struck slot, and its average ground line.
+        // Cast-level: one fault however many enemies stand in it.
+        //
+        // IGNORES `size` AND `dx`, which is why SpellLayerRules refuses both on
+        // it rather than quietly overriding them. A fault authored wide enough
+        // for three reaches half the stage past a lone rat, so the width is
+        // MEASURED off the slots; authoring a second copy of it would be a
+        // number with two homes.
+        Formation,
+
+        // Riding another layer, named as `layer:<id>`. INHERITS THE SCOPE of
+        // the layer it names -- an emitter on a per-target projectile is
+        // per-target, and would be cast-level if the projectile were -- so
+        // "does this repeat per enemy" is answered by the thing being followed
+        // rather than by a rule somebody has to remember.
+        Layer,
+    }
+
+    public static class SpellPlaceNames
+    {
+        // The prefix that turns a placement into a reference. One string,
+        // read by Parse and by LayerReference, so the two cannot disagree
+        // about where the id starts.
+        public const string LayerPrefix = "layer:";
+
+        public static SpellPlace Parse(string name) => Lookup(name, SpellPlace.Target);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) ||
+            !string.IsNullOrWhiteSpace(LayerReference(name)) ||
+            Lookup(name, (SpellPlace)(-1)) != (SpellPlace)(-1);
+
+        // The id after `layer:`, or empty for any other placement. Empty for
+        // a bare `layer:` too, which is a reference to nothing and is refused
+        // by the declared-reference rule rather than parsed into a blank id.
+        public static string LayerReference(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "";
+
+            string trimmed = name.Trim();
+            if (!trimmed.StartsWith(LayerPrefix, StringComparison.OrdinalIgnoreCase)) return "";
+
+            return trimmed.Substring(LayerPrefix.Length).Trim();
+        }
+
+        // Whether the word puts the layer on the CASTER's side of the stage,
+        // which is the only place a projectile may leave from. Asked rather
+        // than compared, so the two caster values cannot drift apart at the
+        // several sites that branch on this.
+        public static bool OnCaster(SpellPlace place) =>
+            place == SpellPlace.Caster || place == SpellPlace.CasterCentre;
+
+        // Whether the word draws one instance per struck target. `Layer` is
+        // absent on purpose: it inherits its source's scope and answering here
+        // would be a second, disagreeing home for that rule.
+        public static bool PerTarget(SpellPlace place) =>
+            place == SpellPlace.Target || place == SpellPlace.TargetCentre;
+
+        public static bool Centred(SpellPlace place) =>
+            place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre;
+
+        public static string[] All =>
+            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "layer:<id>" };
+
+        private static SpellPlace Lookup(string name, SpellPlace fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellPlace.Target;
+            if (!string.IsNullOrWhiteSpace(LayerReference(name))) return SpellPlace.Layer;
+
+            switch (name.Trim().ToLowerInvariant().Replace("_", "-"))
+            {
+                case "caster": return SpellPlace.Caster;
+
+                case "caster-centre":
+                case "caster-center": return SpellPlace.CasterCentre;
+
+                case "target": return SpellPlace.Target;
+
+                case "target-centre":
+                case "target-center": return SpellPlace.TargetCentre;
+
+                case "formation": return SpellPlace.Formation;
+
+                default: return fallback;
+            }
+        }
+    }
+
+    // ---- when it runs --------------------------------------------------------
+
+    public enum SpellCue
+    {
+        // The beat's PlayVfx instant. The default, and what every adapted
+        // pre-layer block schedules on.
+        Release,
+
+        // The instant the cast's projectile lands. ONE TIME FOR THE WHOLE
+        // CAST at N places -- three projectiles leave one caster and land on
+        // three slots at the same instant, because travelSeconds is an
+        // authored number and not a distance divided by a speed.
+        Arrival,
+
+        // The one authoritative impact cue, authored in seconds on the
+        // presentation. Independent of arrival on purpose: an author who wants
+        // compression before the blow sets the cue later than the arrival.
+        Hit,
+    }
+
+    public static class SpellCueNames
+    {
+        public static SpellCue Parse(string name) => Lookup(name, SpellCue.Release);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellCue)(-1)) != (SpellCue)(-1);
+
+        public static string[] All => new[] { "release", "arrival", "hit" };
+
+        private static SpellCue Lookup(string name, SpellCue fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellCue.Release;
+
+            switch (name.Trim().ToLowerInvariant())
+            {
+                case "release": return SpellCue.Release;
+                case "arrival": return SpellCue.Arrival;
+                case "hit": return SpellCue.Hit;
+                default: return fallback;
+            }
+        }
+    }
+
+    // ---- how it ends ---------------------------------------------------------
+
+    public enum SpellEnd
+    {
+        // Play the folder through and stop. The default.
+        Once,
+
+        // Repeat the folder for the layer's whole life. Describes what the
+        // sheet does WHILE it is alive, never how long it lives -- a loop with
+        // no stated end is the unbounded case SpellLayerRules refuses.
+        Loop,
+
+        // Hold the last frame for the layer's whole life. Same bound.
+        Hold,
+    }
+
+    public static class SpellEndNames
+    {
+        public static SpellEnd Parse(string name) => Lookup(name, SpellEnd.Once);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellEnd)(-1)) != (SpellEnd)(-1);
+
+        public static string[] All => new[] { "once", "loop", "hold" };
+
+        private static SpellEnd Lookup(string name, SpellEnd fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellEnd.Once;
+
+            switch (name.Trim().ToLowerInvariant())
+            {
+                case "once": return SpellEnd.Once;
+                case "loop": return SpellEnd.Loop;
+                case "hold": return SpellEnd.Hold;
+                default: return fallback;
+            }
+        }
+    }
+
+    // ---- which way it points -------------------------------------------------
+
+    public enum SpellFacing
+    {
+        // Take the cast's own facing. The default, and right for anything with
+        // a direction: a projectile, a wake, a sheet drawn firing left to
+        // right.
+        Auto,
+
+        // Never mirror. What every pre-layer non-travelling effect becomes,
+        // because those are unconditionally SetFacing(1f) today and a sheet
+        // drawn symmetrical about the thing it lands on has no direction to
+        // mirror.
+        None,
+
+        // Mirror against the cast's facing. No spell wants this yet; it is
+        // here because "auto" and "none" leave the third case unsayable, and a
+        // word costs one switch arm where a later field would cost a format
+        // version.
+        Reverse,
+    }
+
+    public static class SpellFacingNames
+    {
+        public static SpellFacing Parse(string name) => Lookup(name, SpellFacing.Auto);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellFacing)(-1)) != (SpellFacing)(-1);
+
+        public static string[] All => new[] { "auto", "none", "reverse" };
+
+        private static SpellFacing Lookup(string name, SpellFacing fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellFacing.Auto;
+
+            switch (name.Trim().ToLowerInvariant())
+            {
+                case "auto": return SpellFacing.Auto;
+                case "none": return SpellFacing.None;
+                case "reverse": return SpellFacing.Reverse;
+                default: return fallback;
+            }
+        }
+    }
+
+    // ---- which band it draws in ----------------------------------------------
+
+    public enum SpellSort
+    {
+        // Behind every figure. The band FightScreen declares before the racks,
+        // which is the only reason a fault reads as opening UNDER an enemy
+        // rather than in front of it.
+        Ground,
+
+        // Over the HUD and under the damage numbers. The default, and where
+        // every spell that is not a shared ground layer belongs.
+        Effects,
+    }
+
+    public static class SpellSortNames
+    {
+        public static SpellSort Parse(string name) => Lookup(name, SpellSort.Effects);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellSort)(-1)) != (SpellSort)(-1);
+
+        public static string[] All => new[] { "ground", "effects" };
+
+        private static SpellSort Lookup(string name, SpellSort fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellSort.Effects;
+
+            switch (name.Trim().ToLowerInvariant())
+            {
+                case "ground": return SpellSort.Ground;
+                case "effects": return SpellSort.Effects;
+                default: return fallback;
+            }
+        }
+    }
+}

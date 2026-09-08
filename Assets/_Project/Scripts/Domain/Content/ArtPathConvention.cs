@@ -81,6 +81,17 @@ namespace PrincesPalace.Domain.Content
                 // showed nothing. See SpellPresentation.groundPath.
                 { "vfx.groundPath", ArtPathKind.RuntimeLoaded },
                 { "vfx.castSfxPath", ArtPathKind.RuntimeLoaded },
+
+                // A LAYER'S OWN FRAMES AND ITS EMITTER'S, two levels further
+                // in. The `[]` is in the key because that is what the sweep in
+                // ArtPathConventionTests reports an array hop as, and the two
+                // have to agree or a live field reads as an orphan.
+                //
+                // Not optional and not a footnote: Check FAILS CLOSED on a
+                // field name this table does not classify, so every layered
+                // spell would refuse its own content build without these.
+                { "vfx.layers[].path", ArtPathKind.RuntimeLoaded },
+                { "vfx.layers[].emitter.path", ArtPathKind.RuntimeLoaded },
             };
 
         // Extensions checked for explicitly rather than "contains a dot",

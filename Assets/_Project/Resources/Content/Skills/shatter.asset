@@ -44,6 +44,9 @@ MonoBehaviour:
       groundAspect: 0
       groundImpactY: -1
       castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0
     SortOrder: 13
     Status: 0
     HasStatus: 0

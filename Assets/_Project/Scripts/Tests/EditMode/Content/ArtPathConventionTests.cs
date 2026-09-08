@@ -45,10 +45,21 @@ namespace PrincesPalace.Domain.Tests
         // reverse test below declare "vfx.path" orphaned while the resolver was
         // checking it on every skill in the game.
         //
-        // One level, not arbitrary depth: the content DTOs are flat by
-        // convention and the one exception is a presentation. A recursive walk
-        // would be guarding against a shape nobody has proposed, and would need
-        // its own cycle check to be correct.
+        // ARRAYS TOO, since a presentation's layers are one. The walk used to
+        // stop at arrays outright and descend exactly one level, which was
+        // right while the only nesting was a flat "vfx" block -- and became a
+        // blind spot the moment that block gained SpellLayer[]: the two paths a
+        // layer carries would have read as unclassified to the resolver and as
+        // orphans to the reverse test, with neither able to see the other's
+        // half.
+        //
+        // BOUNDED RATHER THAN ARBITRARY. MaxDepth stops the walk, and the chain
+        // of types already visited on the way down is what makes a self-
+        // referencing DTO terminate rather than recurse forever -- the cycle
+        // check the old "one level" comment correctly said a deeper walk would
+        // need.
+        private const int MaxDepth = 4;
+
         private static List<(string Type, string Field)> PathFieldsOnRawEntries()
         {
             var found = new List<(string, string)>();
@@ -56,28 +67,42 @@ namespace PrincesPalace.Domain.Tests
             foreach (var type in typeof(RawEnemyEntry).Assembly.GetTypes()
                          .Where(t => t.Namespace == "PrincesPalace.Domain.Content" && t.Name.StartsWith("Raw")))
             {
-                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
-                {
-                    if (field.FieldType == typeof(string))
-                    {
-                        if (IsPathShaped(field.Name)) found.Add((type.Name, field.Name));
-                        continue;
-                    }
-
-                    if (field.FieldType.IsPrimitive || field.FieldType.IsEnum || field.FieldType.IsArray) continue;
-                    if (field.FieldType.Namespace != "PrincesPalace.Domain.Content") continue;
-
-                    foreach (var nested in field.FieldType.GetFields(BindingFlags.Public | BindingFlags.Instance))
-                    {
-                        if (nested.FieldType == typeof(string) && IsPathShaped(nested.Name))
-                        {
-                            found.Add((type.Name, $"{field.Name}.{nested.Name}"));
-                        }
-                    }
-                }
+                Descend(type, type.Name, "", new List<Type> { type }, found);
             }
 
             return found;
+        }
+
+        private static void Descend(Type type, string reportedAs, string prefix, List<Type> chain,
+            List<(string, string)> found)
+        {
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (field.FieldType == typeof(string))
+                {
+                    if (IsPathShaped(field.Name)) found.Add((reportedAs, prefix + field.Name));
+                    continue;
+                }
+
+                if (field.FieldType.IsPrimitive || field.FieldType.IsEnum) continue;
+
+                bool isArray = field.FieldType.IsArray;
+                var element = isArray ? field.FieldType.GetElementType() : field.FieldType;
+                if (element == null || element.Namespace != "PrincesPalace.Domain.Content") continue;
+                if (chain.Count >= MaxDepth || chain.Contains(element)) continue;
+
+                // A Raw* type is swept as its OWN root, so descending into one
+                // would report every entry's fields a second time under the
+                // wrapper file's name ("RawEnemyFile.enemies[].spritePath")
+                // and make the reverse test declare every real key an orphan.
+                if (element.Name.StartsWith("Raw")) continue;
+
+                // The "[]" says an array hop happened, so the reported name is
+                // the one an author's error message will carry and the one
+                // ArtPathConvention.Kinds has to be keyed by.
+                string nextPrefix = $"{prefix}{field.Name}{(isArray ? "[]" : "")}.";
+                Descend(element, reportedAs, nextPrefix, new List<Type>(chain) { element }, found);
+            }
         }
 
         // ---- the table keeps up with the content types -------------------------
@@ -112,6 +137,12 @@ namespace PrincesPalace.Domain.Tests
                 "in this file.");
             CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "vfx.path",
                 "the sweep stopped descending into nested blocks, so a presentation's paths are unguarded");
+            CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "vfx.layers[].path",
+                "the sweep stopped at the array, so a layer's own frames are unguarded -- and " +
+                "ArtPathConvention.Check fails closed on an unclassified field name, so every layered " +
+                "spell would refuse its own content build");
+            CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "vfx.layers[].emitter.path",
+                "the sweep stopped one level short of an emitter's atlas");
             CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "iconSheet",
                 "iconSheet is the field whose name does not end in 'Path'; if the sweep misses it the suffix " +
                 "matching has regressed.");
