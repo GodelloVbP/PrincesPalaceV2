@@ -199,14 +199,24 @@ namespace PrincesPalace.Domain.Combat.Presentation
             for (int i = 0; i < weights.Length; i++)
             {
                 cumulative += weights[i];
-                if (r < cumulative) return i;
+                // CLAMPED TO THE FOLDER, not to the authored array: `weights`
+                // is content, and content can author more cells than the
+                // folder a path resolves to actually has (or fewer -- the
+                // fallthrough below already handles that end). Indexing
+                // `frames[FrameOf(...)]` with an unclamped `i` was reachable
+                // the moment weights.Length > frameCount and threw out of
+                // SpellPerformancePlayer.Tick's loop, which is the class of
+                // mistake a clamp removes rather than one call site's fix.
+                if (r < cumulative) return i < frameCount ? i : frameCount - 1;
             }
 
             // Float rounding can leave `r` a hair past the last partial sum
             // even though Hashed() is strictly < 1 -- the last weighted cell
             // is the correct answer, not cell 0, which would silently favour
-            // the first index every time that happens.
-            return weights.Length - 1;
+            // the first index every time that happens. Clamped for the same
+            // reason as the loop above.
+            int last = weights.Length - 1;
+            return last < frameCount ? last : frameCount - 1;
         }
 
         // Full strength until `fadeFrom` of the way through life, then down to

@@ -327,6 +327,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.Less(fraction, 0.55f, $"cell 0 was picked {fraction:P1} of the time, far over half");
         }
 
+        // A WEIGHTS ARRAY LONGER THAN THE FOLDER IS AUTHORABLE (a spell tuned
+        // against a bigger atlas, then pointed at a smaller `path`), and the
+        // picked index must never reach a cell the folder does not have --
+        // `frames[FrameOf(...)]` in SpellPerformancePlayer.PaintEmitter has no
+        // bounds check of its own. Five weights, two frames: every draw must
+        // land in {0, 1}, and the top-weighted cell (index 4, past frameCount)
+        // must clamp to the last real frame rather than throwing.
+        [Test]
+        public void AWeightsArrayLongerThanFrameCountClampsToTheLastFrame()
+        {
+            var spec = new SpellEmitter
+            {
+                burst = 1, lifeMin = 1f, lifeMax = 1f, sizeMin = 1f, sizeMax = 1f,
+                weights = new float[] { 0f, 0f, 0f, 0f, 1f },
+            };
+
+            for (int index = 0; index < 500; index++)
+            {
+                var drop = SpellEmitterSim.At(spec, index, index, UiVec.Zero, UiVec.Zero, 0.01f, 2);
+                Assert.AreEqual(1, drop.Frame, $"index {index} did not clamp to the last of 2 frames");
+            }
+        }
+
         // THE WHOLE FIELD, launches included. A helper handing every drop the
         // same v0 would compare ten copies of one trajectory and call them
         // repeatable -- which they are, and which proves nothing about the
