@@ -27,6 +27,52 @@ namespace PrincesPalace.Domain.Content
     // that cannot be an enum member and lives in the field's [ContentDoc]
     // instead.
 
+
+    // ---- reading an authored word without allocating -------------------------
+
+    // WHETHER AN AUTHORED WORD IS THIS ONE, character by character rather than
+    // by normalising a copy of it.
+    //
+    // The six tables below used to switch on
+    // `name.Trim().ToLowerInvariant().Replace("_", "-")`, which is correct and
+    // costs a STRING PER CALL -- ToLowerInvariant allocates whether or not the
+    // word was already lower case. That is invisible at content-build time and
+    // is not invisible in the tick path: SpellLayer.Render, .Sort, .Until and
+    // .Facing are computed properties, the renderer reads several per layer per
+    // frame, and a three-plume cinderfault was handing the collector a dozen
+    // strings every frame it drew. Measured, not guessed --
+    // SpellAllocationTests failed on the module's tick until this, and the
+    // failure bisected to exactly here.
+    //
+    // The comparison is the same one: leading and trailing whitespace ignored,
+    // case ignored, and an underscore reading as a hyphen so `caster_centre`
+    // and `caster-centre` are one word. Every `word` passed in is already
+    // lower case with hyphens, which is what lets the loop compare against it
+    // directly.
+    internal static class SpellWord
+    {
+        internal static bool Is(string authored, string word)
+        {
+            if (authored == null || word == null) return false;
+
+            int start = 0;
+            int end = authored.Length;
+            while (start < end && char.IsWhiteSpace(authored[start])) start++;
+            while (end > start && char.IsWhiteSpace(authored[end - 1])) end--;
+
+            if (end - start != word.Length) return false;
+
+            for (int i = 0; i < word.Length; i++)
+            {
+                char c = authored[start + i];
+                if (c == '_') c = '-';
+                if (char.ToLowerInvariant(c) != word[i]) return false;
+            }
+
+            return true;
+        }
+    }
+
     // ---- what draws ----------------------------------------------------------
 
     public enum SpellRender
@@ -65,13 +111,10 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellRender.Sprite;
 
-            switch (name.Trim().ToLowerInvariant().Replace("_", "-"))
-            {
-                case "sprite": return SpellRender.Sprite;
-                case "still": return SpellRender.Still;
-                case "emitter": return SpellRender.Emitter;
-                default: return fallback;
-            }
+            if (SpellWord.Is(name, "sprite")) return SpellRender.Sprite;
+            if (SpellWord.Is(name, "still")) return SpellRender.Still;
+            if (SpellWord.Is(name, "emitter")) return SpellRender.Emitter;
+            return fallback;
         }
     }
 
@@ -165,22 +208,19 @@ namespace PrincesPalace.Domain.Content
             if (string.IsNullOrWhiteSpace(name)) return SpellPlace.Target;
             if (!string.IsNullOrWhiteSpace(LayerReference(name))) return SpellPlace.Layer;
 
-            switch (name.Trim().ToLowerInvariant().Replace("_", "-"))
-            {
-                case "caster": return SpellPlace.Caster;
+            if (SpellWord.Is(name, "caster")) return SpellPlace.Caster;
 
-                case "caster-centre":
-                case "caster-center": return SpellPlace.CasterCentre;
+            if (SpellWord.Is(name, "caster-centre") ||
+                SpellWord.Is(name, "caster-center")) return SpellPlace.CasterCentre;
 
-                case "target": return SpellPlace.Target;
+            if (SpellWord.Is(name, "target")) return SpellPlace.Target;
 
-                case "target-centre":
-                case "target-center": return SpellPlace.TargetCentre;
+            if (SpellWord.Is(name, "target-centre") ||
+                SpellWord.Is(name, "target-center")) return SpellPlace.TargetCentre;
 
-                case "formation": return SpellPlace.Formation;
+            if (SpellWord.Is(name, "formation")) return SpellPlace.Formation;
 
-                default: return fallback;
-            }
+            return fallback;
         }
     }
 
@@ -217,13 +257,10 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellCue.Release;
 
-            switch (name.Trim().ToLowerInvariant())
-            {
-                case "release": return SpellCue.Release;
-                case "arrival": return SpellCue.Arrival;
-                case "hit": return SpellCue.Hit;
-                default: return fallback;
-            }
+            if (SpellWord.Is(name, "release")) return SpellCue.Release;
+            if (SpellWord.Is(name, "arrival")) return SpellCue.Arrival;
+            if (SpellWord.Is(name, "hit")) return SpellCue.Hit;
+            return fallback;
         }
     }
 
@@ -256,13 +293,10 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellEnd.Once;
 
-            switch (name.Trim().ToLowerInvariant())
-            {
-                case "once": return SpellEnd.Once;
-                case "loop": return SpellEnd.Loop;
-                case "hold": return SpellEnd.Hold;
-                default: return fallback;
-            }
+            if (SpellWord.Is(name, "once")) return SpellEnd.Once;
+            if (SpellWord.Is(name, "loop")) return SpellEnd.Loop;
+            if (SpellWord.Is(name, "hold")) return SpellEnd.Hold;
+            return fallback;
         }
     }
 
@@ -301,13 +335,10 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellFacing.Auto;
 
-            switch (name.Trim().ToLowerInvariant())
-            {
-                case "auto": return SpellFacing.Auto;
-                case "none": return SpellFacing.None;
-                case "reverse": return SpellFacing.Reverse;
-                default: return fallback;
-            }
+            if (SpellWord.Is(name, "auto")) return SpellFacing.Auto;
+            if (SpellWord.Is(name, "none")) return SpellFacing.None;
+            if (SpellWord.Is(name, "reverse")) return SpellFacing.Reverse;
+            return fallback;
         }
     }
 
@@ -338,12 +369,9 @@ namespace PrincesPalace.Domain.Content
         {
             if (string.IsNullOrWhiteSpace(name)) return SpellSort.Effects;
 
-            switch (name.Trim().ToLowerInvariant())
-            {
-                case "ground": return SpellSort.Ground;
-                case "effects": return SpellSort.Effects;
-                default: return fallback;
-            }
+            if (SpellWord.Is(name, "ground")) return SpellSort.Ground;
+            if (SpellWord.Is(name, "effects")) return SpellSort.Effects;
+            return fallback;
         }
     }
 }
