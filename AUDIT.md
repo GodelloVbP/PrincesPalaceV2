@@ -1005,6 +1005,50 @@ having adds), pay a summon once regardless of how many are cast, or pay a flat f
 summon's authored reward. `FightOutcomeTests.ASummonedBodyDoesNotPayItsOwnReward` (`[Ignore]`,
 `6cdd8678`) pins today's behaviour and turns red the moment one of those is picked.
 
+### 98. `tools/measure_stage.py` is not wired into the gate, which is how it rotted silently
+
+The eighth hunter (Core runtime relayout) found the tool itself dead (fixed, `cd6f6f67`; see
+`docs/BUG_HUNT_2026-09-08.md`), but fixing the tool does not fix the fact that nothing runs it.
+It answers the one clearance question `UiAudit` structurally cannot (a stage slot's declared
+320x200 is a placeholder the runtime replaces with the real sprite canvas, so `UiAudit` measures
+a box that never appears on screen) and it failed loud, exit 1, for however long the 2x1 plate
+conversion has been in the tree -- loud is the one thing that went right, and still nobody heard
+it because no script in `run_tests_parallel.ps1` calls it.
+
+**Why it is the owner's:** wiring it into the gate needs Pillow available on whatever machine
+runs the gate, which is an environment decision, not a code one.
+
+### 99. `SystemMenuController.MeasuredLabelWidths` has no fallback for a zero-width live measurement
+
+`SystemMenuController.cs:339-352`. The fallback to `defs[slot].LabelWidth` fires only when a
+label is null or its text is empty (`:348-350`); it does not fire when `TMP_Text.GetPreferredValues`
+legitimately returns 0 for a label that has text but has never been active. `ApplyContext()` is
+called before `panel.SetShown(true)` on the open path (`:186-187`), so the first `ApplyContext`
+after opening measures every tab label before any of them have been active in the hierarchy --
+exactly the condition TMPro's own measurement is unreliable under. A 0 width collapses that
+tab and its underline.
+
+**Why it is the owner's:** the fix is either reordering `SetShown`/`ApplyContext` or adding a
+second fallback branch, and both are cheap; filed because nothing in the tree currently proves
+which labels are actually hit by this on a real first open.
+
+### 100. `IdleBreathing` puts an opposing slot-0 pair in phase with each other
+
+`FightController.StageVisuals.cs:963,966`. The enemy loop and the party loop both pass their own
+loop index into `BreatheIdle(combatant, index)`, and `BreathCurve.PhaseFor(index)` is keyed only
+on that index -- so enemy slot 0 and party slot 0 breathe in phase with each other, though
+`BreathCurve`'s own header (`Domain/Stage/BreathCurve.cs`) argues against two figures on the SAME
+side breathing in lockstep, not against the two sides mirroring each other. Cosmetic, and
+plausibly nobody would notice at a glance; filed rather than fixed because it may be intended.
+
+### 101. `CombatEncounter.UpcomingTurns` throws on a zero-length ask, and its one caller has no guard
+
+`CombatEncounter.cs:193-197` throws `ArgumentOutOfRangeException` for `count <= 0`.
+`RefreshInitiative` (`FightController.Hud.cs:1698`) always calls it with `initiativeIcons.Length`,
+which is 6 today and therefore never zero -- unreachable in production, but the call site trusts
+a `[SerializeField] Image[]` to never come back empty, and nothing states that assumption where
+the call is made.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
