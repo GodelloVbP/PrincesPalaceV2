@@ -140,15 +140,37 @@
         }
       ],
       "vfx": {
-        "path": "Spells/cinderfault_eruption",
-        "seconds": 0.78,
-        "impactFrame": 5,
-        "impactX": 0.5,
-        "impactY": 0.129,
+        "layerFormat": 1,
         "sfxPath": "Audio/Sfx/cinderfault_impact",
-        "groundPath": "Spells/cinderfault_ground",
-        "groundImpactY": 0.063,
-        "castSfxPath": "Audio/Sfx/cinderfault_pressure"
+        "castSfxPath": "Audio/Sfx/cinderfault_pressure",
+        "hitCueSeconds": 0.43333334,
+        "layers": [
+          {
+            "id": "fault",
+            "render": "sprite",
+            "place": "formation",
+            "at": "release",
+            "path": "Spells/cinderfault_ground",
+            "seconds": 0.78,
+            "until": "once",
+            "impactY": 0.063,
+            "facing": "none",
+            "sort": "ground"
+          },
+          {
+            "id": "erupt",
+            "render": "sprite",
+            "place": "target",
+            "at": "release",
+            "path": "Spells/cinderfault_eruption",
+            "seconds": 0.78,
+            "until": "once",
+            "impactX": 0.5,
+            "impactY": 0.129,
+            "facing": "none",
+            "sort": "effects"
+          }
+        ]
       },
       "bookTier": 2
     },

@@ -62,7 +62,6 @@ namespace PrincesPalace.Domain.Tests
         [TestCase("lightning_bolt", "Spells/lightning_bolt", 0.52, 5, 9, 0.28888889)]
         [TestCase("frost_flare", "Spells/frost_flare", 0.52, 5, 9, 0.28888889)]
         [TestCase("mud_burst", "Spells/mud_burst", 0.65, 13, 26, 0.325)]
-        [TestCase("cinderfault", "Spells/cinderfault_eruption", 0.78, 5, 9, 0.43333334)]
         public void TheImpactDelayOfEveryBaselineSpellIsWhatItWasBeforeTheLayers(
             string skillId, string path, double seconds, int impactFrame, int frames, double delaySeconds)
         {
@@ -83,24 +82,71 @@ namespace PrincesPalace.Domain.Tests
                 $"{skillId}: the impact delay is no longer the baseline this branch started from");
         }
 
-        // The ground layer rides the per-target sequence's numbers today
-        // (SpellPresentation.GroundSeconds / GroundImpactFrame fall back), so
-        // the fault and the eruption rupture on the same instant. The layered
-        // re-authoring in M6 states 0.433 explicitly; this is the number it
-        // has to equal.
+        // WHAT M6 PUT WHERE CINDERFAULT'S OWN BASELINE ROW WAS, on the same
+        // terms M5 replaced the pilot's: the fifth TestCase above read
+        // path/seconds/impactFrame off a pre-layer block cinderfault no longer
+        // authors, so deleting it would have deleted the only committed record
+        // of what the re-authoring had to reproduce.
+        //
+        // THE NUMBER THAT MATTERS IS 0.43333334, and it is stated twice on
+        // purpose. Once as what the legacy derivation produced -- 0.78s times
+        // ImpactFraction(5, 9), the expression this spell's cue came out of for
+        // its whole life -- and once as what skills.json now authors outright.
+        // A layered block owes nothing to a frame index, which is the brief's
+        // point 6; what it owes is landing the blow on the same instant, and
+        // that is an equality between two literals rather than a claim.
+        //
+        // The frame counts stay pinned even though timing no longer depends on
+        // them: with `seconds` authored and `fps` unauthored the folder is
+        // FITTED into 0.78s, so a re-cut sheet changes the per-frame rate of
+        // both layers, and this is where that becomes visible rather than a
+        // capture nobody diffs.
         [Test]
-        public void TheCinderfaultGroundLayerRupturesOnTheSameInstantAsItsPlumes()
+        public void TheCinderfaultLayersRuptureOnTheInstantItsLegacyBlockDid()
         {
-            string vfx = VfxOf("cinderfault");
+            string skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
+                .FirstOrDefault(s => JsonBlocks.String(s, "id") == "cinderfault");
+            Assert.IsNotNull(skill, "skills.json has no cinderfault");
 
-            Assert.AreEqual("Spells/cinderfault_ground", JsonBlocks.String(vfx, "groundPath"));
-            Assert.IsNull(JsonBlocks.Number(vfx, "groundSeconds"),
-                "cinderfault authors no groundSeconds, so the fault inherits the eruption's 0.78s");
-            Assert.IsNull(JsonBlocks.Number(vfx, "groundImpactFrame"),
-                "cinderfault authors no groundImpactFrame, so the fault inherits the eruption's frame 5");
+            var vfx = SpellVfxJson.OwnVfx(skill);
+            Assert.IsNotNull(vfx, "cinderfault authors no vfx block");
+
+            Assert.AreEqual(1, vfx.layerFormat, "cinderfault is the second spell through the layered model");
+            Assert.IsEmpty(vfx.path,
+                "a layered block authors no single-block path; the rules refuse one that authors both");
+            Assert.IsEmpty(vfx.groundPath,
+                "the shared fault is a layer placed on the formation now, not a second block beside the first");
+
+            Assert.AreEqual(0.43333334f, vfx.hitCueSeconds, 1e-6f,
+                "the authored cue moved off the instant the legacy block landed the blow on");
+            Assert.AreEqual(0.43333334, 0.78 * CombatBeat.ImpactFraction(5, 9), 1e-6,
+                "and that instant is 5/9 of 0.78s, which is what impactFrame 5 over nine frames meant");
+
+            Assert.AreEqual(2, vfx.layers.Length, "one shared fault and one plume per struck target");
+            CollectionAssert.AreEqual(new[] { "fault", "erupt" }, vfx.layers.Select(l => l.id).ToList());
+
+            Assert.AreEqual("formation", vfx.layers[0].place,
+                "one fault however many enemies stand in it -- the property that needs no spell id");
+            Assert.AreEqual("ground", vfx.layers[0].sort);
+            Assert.AreEqual("Spells/cinderfault_ground", vfx.layers[0].path);
+
+            Assert.AreEqual("target", vfx.layers[1].place, "the plumes fan out over the struck slots");
+            Assert.AreEqual("Spells/cinderfault_eruption", vfx.layers[1].path);
+
+            foreach (var layer in vfx.layers)
+            {
+                Assert.AreEqual("release", layer.at,
+                    "both open with the beat, which is what makes their peaks share an instant");
+                Assert.AreEqual(0.78f, layer.seconds, 1e-6f);
+                Assert.AreEqual(0f, layer.fps,
+                    "an unauthored rate fits the folder into `seconds`, which is what the pre-layer " +
+                    "block's own frame rate was");
+                Assert.AreEqual("none", layer.facing,
+                    "a fault is symmetrical about the rack it opens under, and so is what erupts out of it");
+            }
+
             Assert.AreEqual(9, FramesOnDisk("Spells/cinderfault_ground"));
-
-            Assert.AreEqual(0.43333334, 0.78 * CombatBeat.ImpactFraction(5, 9), 1e-6);
+            Assert.AreEqual(9, FramesOnDisk("Spells/cinderfault_eruption"));
         }
 
         // WHAT M5 PUT WHERE THE BASELINE'S ABSENCE WAS. This assertion used to

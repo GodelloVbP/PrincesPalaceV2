@@ -33,24 +33,116 @@ MonoBehaviour:
     - type: 3
       amount: 10
     Vfx:
-      path: Spells/cinderfault_eruption
-      seconds: 0.78
-      impactFrame: 5
+      path: 
+      seconds: 0.6
+      impactFrame: 3
       anchor: 
       size: 380
       departFrame: 0
-      impactX: 0.5
-      impactY: 0.129
+      impactX: -1
+      impactY: -1
       sfxPath: Audio/Sfx/cinderfault_impact
-      groundPath: Spells/cinderfault_ground
+      groundPath: 
       groundSeconds: 0
       groundImpactFrame: 0
       groundAspect: 0
-      groundImpactY: 0.063
+      groundImpactY: -1
       castSfxPath: Audio/Sfx/cinderfault_pressure
-      layers: []
-      layerFormat: 0
-      hitCueSeconds: 0
+      layers:
+      - id: fault
+        render: sprite
+        place: formation
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/cinderfault_ground
+        seconds: 0.78
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        facing: none
+        sort: ground
+        impactX: -1
+        impactY: 0.063
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+      - id: erupt
+        render: sprite
+        place: target
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/cinderfault_eruption
+        seconds: 0.78
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        facing: none
+        sort: effects
+        impactX: 0.5
+        impactY: 0.129
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+      layerFormat: 1
+      hitCueSeconds: 0.43333334
     SortOrder: 7
     Status: 0
     HasStatus: 0

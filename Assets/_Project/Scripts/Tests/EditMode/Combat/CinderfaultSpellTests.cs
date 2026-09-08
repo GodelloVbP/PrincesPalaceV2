@@ -80,24 +80,52 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE TWO LAYERS SHARE ONE IMPACT INSTANT, and the content is where
-        // that is settled: the ground sheet and the eruption sheet are both cut
-        // to nine frames peaking on five, so Cinderfault authors impactFrame
-        // once and leaves groundImpactFrame/groundSeconds unset. Authoring
-        // either of them would be the one edit that can put the number on the
-        // enemy at a different moment from the rock hitting it.
+        // that is settled.
+        //
+        // WHAT M6 CHANGED, AND WHAT IT DID NOT. Until M6 this read: the ground
+        // sheet and the eruption sheet are both cut to nine frames peaking on
+        // five, so Cinderfault authors impactFrame ONCE and leaves
+        // groundImpactFrame/groundSeconds unset, and the presentation's
+        // fallbacks make the second layer inherit the first's numbers. The
+        // claim is unchanged -- one instant, stated once, for both layers --
+        // but the mechanism is no longer an inheritance between two blocks. The
+        // spell authors two LAYERS that both open at release and both run
+        // 0.78s, and the cue is a number in seconds rather than a frame index,
+        // which is the coupling the layered format exists to remove.
+        //
+        // AnUnsetGroundTimingFallsBackToThePerTargetSequence below still pins
+        // the fallback itself, because every pre-layer spell in the game is
+        // still resolved through it.
         [Test]
-        public void TheGroundLayerInheritsThePerTargetTiming()
+        public void TheTwoLayersRuptureOnOneAuthoredInstant()
         {
             string entry = CinderfaultEntry();
 
-            StringAssert.Contains("\"groundPath\": \"Spells/cinderfault_ground\"", entry);
+            StringAssert.Contains("\"layerFormat\": 1", entry);
+            StringAssert.Contains("\"path\": \"Spells/cinderfault_ground\"", entry);
             StringAssert.Contains("\"path\": \"Spells/cinderfault_eruption\"", entry);
-            StringAssert.Contains($"\"impactFrame\": {RuptureFrame}", entry);
             StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/cinderfault_pressure\"", entry);
             StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_impact\"", entry);
 
-            StringAssert.DoesNotContain("groundImpactFrame", entry);
+            // ONE CUE, AUTHORED, and it is the instant the pre-layer block
+            // landed on: 0.78s x 5/9. SpellBaselineTimingTests holds that
+            // equality against the old expression; here it is the file's own
+            // text, so an edit to the number has to pass both.
+            StringAssert.Contains("\"hitCueSeconds\": 0.43333334", entry);
+
+            // NEITHER LAYER STATES A FRAME INDEX. impactFrame is what the cue
+            // used to be derived from, and a layered block that still carried
+            // one would be two answers to "when does the blow land".
+            StringAssert.DoesNotContain("impactFrame", entry);
+            StringAssert.DoesNotContain("groundPath", entry);
             StringAssert.DoesNotContain("groundSeconds", entry);
+
+            // BOTH LAYERS OPEN AT RELEASE AND RUN 0.78s. That is what makes
+            // their peaks land together now -- matching starts and matching
+            // durations over two nine-frame sheets, rather than one field
+            // being read twice.
+            StringAssert.Contains("\"at\": \"release\"", entry);
+            StringAssert.Contains("\"seconds\": 0.78", entry);
         }
 
         // The presentation's own fallbacks, which is the mechanism the test
@@ -466,15 +494,22 @@ namespace PrincesPalace.Domain.Tests
         // set of fields the file actually states. Sliced to ONE record so a
         // field authored on a neighbouring skill cannot satisfy an assertion
         // about this one.
+        //
+        // BY BRACE DEPTH RATHER THAN BY THE NEXT `"id":`, which is what this
+        // did until M6. A layered vfx block gives its layers ids of their own,
+        // so the first `"id"` after the skill's is now `"fault"` INSIDE this
+        // record -- the old slice ended there and threw away everything from
+        // the vfx block to bookTier, quietly turning three StringAssert.Contains
+        // into assertions about text that was no longer being read.
         private static string CinderfaultEntry()
         {
             string json = File.ReadAllText(SkillsJsonPath());
 
-            int start = json.IndexOf("\"id\": \"cinderfault\"", StringComparison.Ordinal);
-            Assert.Greater(start, 0, "skills.json has no cinderfault entry");
+            string entry = JsonBlocks.ObjectsInArray(json, "skills")
+                .FirstOrDefault(s => JsonBlocks.String(s, "id") == "cinderfault");
 
-            int next = json.IndexOf("\"id\":", start + 1, StringComparison.Ordinal);
-            return next < 0 ? json.Substring(start) : json.Substring(start, next - start);
+            Assert.IsNotNull(entry, "skills.json has no cinderfault entry");
+            return entry;
         }
 
         private static string SkillsJsonPath()
