@@ -1032,6 +1032,14 @@ tab and its underline.
 second fallback branch, and both are cheap; filed because nothing in the tree currently proves
 which labels are actually hit by this on a real first open.
 
+**Cleared, 2026-09-08, by test rather than struck with a sha:** a live `TMP_Text.GetPreferredValues`
+does not in fact return 0 for a label that has never been active in this tree --
+`SystemMenuLabelWidthTests.TheUnderlineIsTheWidthOfTheWordItMarks` measures exactly that call
+shape and would itself fail on a 0. The zero-width path this finding worried about is not
+reachable as described. Kept rather than struck because the underlying claim ("TMPro's
+measurement is unreliable before `SetShown(true)`") was never shown false in general, only in
+this one call shape -- a struck-with-sha entry implies a fix landed, and none did.
+
 ### 100. `IdleBreathing` puts an opposing slot-0 pair in phase with each other
 
 `FightController.StageVisuals.cs:963,966`. The enemy loop and the party loop both pass their own
@@ -1048,6 +1056,45 @@ plausibly nobody would notice at a glance; filed rather than fixed because it ma
 which is 6 today and therefore never zero -- unreachable in production, but the call site trusts
 a `[SerializeField] Image[]` to never come back empty, and nothing states that assumption where
 the call is made.
+
+### 102. `SaveSystem.Save`'s in-memory backend stores the caller's live object, not a copy
+
+`Core/SaveSystem.cs:149`. The in-memory branch is `Memory[slot] = data` -- the store IS the
+caller's `SaveData`, not a snapshot of it. `Load` holds up the other half of the contract on
+both backends (round-trips through `JsonUtility`, per the header's own stated reason: two
+callers holding one `SaveData` is the shape of "my gold reset when I left the shop"), but
+`Save` does not: every mutation the caller makes to `data` after the write is retroactively
+saved in memory, while the same sequence against the disk backend loses those mutations,
+because the file was serialized at the moment of the write. The two backends answer the same
+call sequence differently, which is the one thing an in-memory mode is not allowed to do -- it
+exists so BalanceBot can measure this game, and a bot run that silently keeps unsaved state is
+measuring a different one.
+
+**Why it is the owner's:** copying on write restores parity, at the cost of the exact
+`JsonUtility.ToJson` this mode was added to skip, on a write path a bot run takes 28 times --
+that cost is the finding `BotPhaseTimers` was instrumented to produce, and trading it away is a
+tuning call, not a bug fix. `SaveSystemTests.OnDisk_AMutationAfterTheSaveIsNotInTheSave` pins
+the disk half (passes today); `InMemory_AMutationAfterTheSaveIsNotInTheSaveEither` asserts the
+same claim against the in-memory backend and is `[Ignore]`d pending this decision (`248e7f43`).
+
+### 103. `deny_broad_staging.py` scans commit-message text too, and a refused `add` does not stop the `commit` chained after it
+
+`tools/githooks/deny_broad_staging.py` matches its banned flags (`-a`, `-A`, `--all`, ...)
+against the whole command line it is handed, not just the staging arguments -- so
+`git add <paths> && git commit -F - <<'EOF'` was refused tonight purely because the commit
+MESSAGE happened to contain the substring `-a`, nothing about the staging itself. That refusal
+alone is a nuisance. The second half is the actual risk: because the `add` in that chain was
+refused, nothing new got staged, and the bare `git commit` a hunter then tried as a workaround
+had no `add` in the same command for the hook to refuse -- it went through and committed
+whatever was already staged in this shared working tree, which was another agent's in-flight
+docs changes. Caught before anything left the tree (`git reset --soft HEAD~1`, recommitted by
+explicit pathspec); nothing lost. See `docs/BUG_HUNT_2026-09-08.md` (f) for the incident.
+
+**Why it is the owner's:** two independent design calls -- whether the hook should scan commit
+message text at all (a false positive costs a blocked commit; not scanning risks missing a
+`-a` disguised some other way), and whether it should also refuse a bare `commit` whenever the
+`add` immediately before it in the same chained command was the one just refused. Both are
+policy questions about how paranoid this hook should be, not bugs in what it currently does.
 
 ## Open investigations
 
