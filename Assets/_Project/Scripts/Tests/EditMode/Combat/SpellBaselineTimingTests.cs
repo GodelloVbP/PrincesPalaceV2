@@ -186,13 +186,13 @@ namespace PrincesPalace.Domain.Tests
                 .First(e => JsonBlocks.String(e, "type") == "Water"));
 
             Assert.AreEqual(1, water.layerFormat);
-            // Was 0.35 (arrival + 0.10s); pulled to arrival + two contact frames
-            // at 26fps so the hit flash lands on frame 22-23 instead of frame 30
-            // -- 2026-09-08 battle-speed recording fix.
-            Assert.AreEqual(0.327f, water.hitCueSeconds, 1e-6f,
-                "the cue is arrival (0.25s) plus two contact frames at 26fps (0.077s), authored in " +
-                "seconds rather than derived from a frame index -- which is the whole of the brief's " +
-                "point 6");
+            // Was 0.327 (arrival + two contact frames at 26fps); pulled to
+            // arrival exactly so the flinch lands on the touch (frame 20-22)
+            // rather than the end of the crown's opening (frame 27) -- 2026-09-08
+            // second battle-speed pass, measured against the 1x strip.
+            Assert.AreEqual(0.25f, water.hitCueSeconds, 1e-6f,
+                "the cue is arrival (0.25s) exactly -- the reaction is timed to the touch, not to the " +
+                "contact art finishing -- authored in seconds rather than derived from a frame index");
             Assert.IsEmpty(water.path,
                 "a layered block authors no single-block path; the rules refuse one that authors both");
 

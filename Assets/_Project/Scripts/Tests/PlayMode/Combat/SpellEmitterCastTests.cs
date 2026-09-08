@@ -189,15 +189,22 @@ namespace PrincesPalace.PlayModeTests
             _fight.PlaySpellVfxForTest(WaterBeat());
             yield return null;
 
-            // Past the shed's own window and lifeMax (0.25 + 0.38 = 0.63), so
-            // anything drawn here is the burst rather than a leftover of the
-            // flight.
-            HoldTheClockAt(0.65f);
+            // 0.05s after the 0.25s cue -- arrival exactly, tightened from
+            // 0.327 in the 2026-09-08 second battle-speed pass. That pull
+            // means the burst's whole life (cue + lifeMax 0.34 = 0.59) now
+            // ends BEFORE the shed's own window+lifeMax clear (0.63s), so a
+            // sample point that is past the shed's clear and inside the
+            // burst's window no longer exists -- this reads the burst's
+            // guaranteed-alive stretch instead (every particle's lifeMin is
+            // 0.18s, so all 18 are still drawing this soon after birth), and
+            // gives up proving isolation from a shed straggler that the
+            // flight-shed test above already covers on its own.
+            HoldTheClockAt(0.30f);
             yield return null;
 
             Assert.Greater(DrawnDrops(), 0,
-                "nothing was drawn 0.65s in, past the shed's last drop and inside the impact burst's " +
-                "own 0.18-0.34s lives from the 0.327s cue"); // cue moved from 0.35 -- 2026-09-08
+                "nothing was drawn 0.05s after the impact burst's 0.25s cue, inside every particle's " +
+                "guaranteed 0.18s lifeMin");
         }
 
         // AND THEY ARE ALL GONE WHEN THE CAST IS. A particle that outlives its

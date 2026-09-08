@@ -36,12 +36,13 @@ namespace PrincesPalace.Domain.Tests
             layerFormat = 1,
             sfxPath = "Audio/Sfx/water_impact",
 
-            // 0.327 = arrival (0.25s) + two contact frames at 26fps (0.0769s),
-            // pulled from the old 0.35 (arrival + 0.10s) so the rat's reaction
-            // reads on frame 22-23 instead of frame 30 -- 2026-09-08 battle-speed
-            // recording fix. Kept the same by hand as skills.json's Water block;
-            // see the file header.
-            hitCueSeconds = 0.327f,
+            // 0.25 = arrival exactly, pulled from 0.327 (arrival + two contact
+            // frames) so the flinch lands on the touch instead of the end of
+            // the crown's opening -- 2026-09-08 second battle-speed pass, the
+            // 1x strip showed the rat reacting at frame 27 (crown fully open)
+            // rather than frame 20-22 (first touch). Kept the same by hand as
+            // skills.json's Water block; see the file header.
+            hitCueSeconds = 0.25f,
             layers = new[]
             {
                 new SpellLayer

@@ -72,15 +72,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.5576923f, Named(performance, "splash").EndSeconds, 1e-5f);
 
             // A burst at the hit cue plus the longest life it can throw. Cue
-            // moved from 0.35 to 0.327 (arrival + two contact frames rather
-            // than +0.10s) in the 2026-09-08 battle-speed recording fix, so
-            // 0.35+0.34=0.69 became 0.327+0.34=0.667.
-            Assert.AreEqual(0.327f, Named(performance, "spray").StartSeconds, 1e-5f);
-            Assert.AreEqual(0.667f, Named(performance, "spray").EndSeconds, 1e-5f);
+            // moved from 0.327 to 0.25 (arrival exactly, not arrival plus two
+            // contact frames) in the 2026-09-08 second battle-speed pass, so
+            // 0.327+0.34=0.667 became 0.25+0.34=0.59 -- now under the shed's
+            // own 0.63s clear, so the shed is the last layer standing rather
+            // than the spray.
+            Assert.AreEqual(0.25f, Named(performance, "spray").StartSeconds, 1e-5f);
+            Assert.AreEqual(0.59f, Named(performance, "spray").EndSeconds, 1e-5f);
 
-            Assert.AreEqual(0.667f, performance.ClearedSeconds, 1e-5f,
-                "the last of the cast clears about a fifth of a second after the beat's 0.45s hold, " +
-                "which is the tail outliving its beat that the no-flush contract exists to allow");
+            Assert.AreEqual(0.63f, performance.ClearedSeconds, 1e-5f,
+                "the last of the cast to clear is now the shed (window + lifeMax), not the burst -- " +
+                "the tightened cue moved the burst's own clear ahead of it");
         }
 
         [Test]
@@ -320,7 +322,7 @@ namespace PrincesPalace.Domain.Tests
             var water = SpellLayerFixtures.Water();
             foreach (var layer in water.layers) layer.path = "Spells/does_not_exist";
 
-            Assert.AreEqual(0.327f, Resolve(water).HitCueSeconds, 1e-5f);
+            Assert.AreEqual(0.25f, Resolve(water).HitCueSeconds, 1e-5f);
         }
 
         [Test]

@@ -353,7 +353,7 @@ MonoBehaviour:
             - 15
             - 2
         layerFormat: 1
-        hitCueSeconds: 0.225
+        hitCueSeconds: 0.18
     - Type: 7
       Vfx:
         path: 
@@ -608,7 +608,7 @@ MonoBehaviour:
             seed: 0
             weights: []
         layerFormat: 1
-        hitCueSeconds: 0.327
+        hitCueSeconds: 0.25
     - Type: 1
       Vfx:
         path: 
@@ -863,7 +863,7 @@ MonoBehaviour:
             seed: 0
             weights: []
         layerFormat: 1
-        hitCueSeconds: 0.281
+        hitCueSeconds: 0.25
     - Type: 8
       Vfx:
         path: 
@@ -1118,4 +1118,4 @@ MonoBehaviour:
             seed: 0
             weights: []
         layerFormat: 1
-        hitCueSeconds: 0.286
+        hitCueSeconds: 0.25
