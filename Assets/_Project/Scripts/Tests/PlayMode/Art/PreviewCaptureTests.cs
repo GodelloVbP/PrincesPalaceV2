@@ -51,6 +51,12 @@ namespace PrincesPalace.PlayModeTests
         private const string SpellVariable = "PP_PREVIEW_SPELL";
         private const string CharacterVariable = "PP_PREVIEW_CHARACTER";
 
+        // OPTIONAL, AND THEREFORE NOT THROUGH RequiredIds. Every other
+        // PP_PREVIEW_* variable answers "is this run asking for my mode"; this
+        // one narrows a mode that is already asked for, so an empty value is a
+        // legal -Spell run rather than a reason to ignore the test.
+        private const string ElementVariable = "PP_PREVIEW_ELEMENT";
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "preview"));
@@ -283,9 +289,11 @@ namespace PrincesPalace.PlayModeTests
 
             Directory.CreateDirectory(OutputDir);
 
+            string element = Requested(ElementVariable).FirstOrDefault();
+
             foreach (string id in ids)
             {
-                yield return CaptureOneSpell(id);
+                yield return CaptureOneSpell(id, element);
             }
         }
 
@@ -322,13 +330,15 @@ namespace PrincesPalace.PlayModeTests
         // cast that is still after the ball has landed.
         private const int FlightSample = 3;
 
-        private IEnumerator CaptureOneSpell(string id)
+        private IEnumerator CaptureOneSpell(string id, string element)
         {
             // THE PLAN IS THE SAME ONE -Launch USES, refusals included. A
             // capture that quietly built a fight the Editor route would have
             // refused is exactly the "evidence about something the author
-            // cannot reproduce" this fixture's other test guards against.
-            var plan = PreviewFight.ForSpell(id);
+            // cannot reproduce" this fixture's other test guards against. That
+            // includes -Element: an element the skill does not offer is a
+            // refusal here, not a picture of whatever it does offer.
+            var plan = PreviewFight.ForSpell(id, element);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
             Debug.Log("[PreviewCapture] " + PreviewFight.Describe(plan));
 
@@ -407,12 +417,12 @@ namespace PrincesPalace.PlayModeTests
             {
                 Actor = built.Party.FirstOrDefault(),
                 Target = built.Session.Encounter.LivingEnemies.FirstOrDefault(),
-                Vfx = PreviewFight.PreviewPresentationOf(plan.Skill),
+                Vfx = PreviewFight.PreviewPresentationOf(plan.Skill, plan.Element),
             });
 
             int impactSample = Mathf.Max(FlankSamples, Mathf.RoundToInt(impactSeconds / SpellSampleSeconds));
 
-            fight.ForceFirstAction(id);
+            fight.ForceFirstAction(id, plan.Element);
 
             // Wait for the press to be taken: the controller polls it in
             // Update and refuses while anything else is still playing.
@@ -420,7 +430,13 @@ namespace PrincesPalace.PlayModeTests
             while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
             Assert.IsTrue(fight.IsBusy, "'" + id + "' was never cast -- the log says what the caster refused");
 
-            string prefix = "spell_" + id;
+            // THE ELEMENT IS IN THE FILENAME, when one was asked for. Four
+            // elements over one prefix would mean each capture overwrote the
+            // last, and the four sets exist precisely to be compared -- the
+            // delivery that found AUDIT #107 was reordering skills.json between
+            // runs partly because the pictures collided as well.
+            string prefix = "spell_" + id +
+                (string.IsNullOrEmpty(plan.Element) ? "" : "_" + plan.Element.ToLowerInvariant());
             var wanted = new Dictionary<int, string>
             {
                 { impactSample - FlankSamples, prefix + "_before.png" },
