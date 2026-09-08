@@ -1,0 +1,131 @@
+{
+  "_notes": [
+    "THE CONTACT BURST, ALONE. earth_contact_8f.png is 1774x887 over 4x2, same",
+    "non-dividing sheet shape and the same README-stated boundaries as the rest",
+    "of the pack. Explicit rects, for the same reason water's and fire's notes",
+    "give.",
+    "",
+    "THE SEQUENCE: c0 the approaching rock with a motion trail (same role as",
+    "water's and fire's contact_f0 -- the played layer starts at startFrame 2).",
+    "c1 the rock beginning to crack and spark at its tip. c2 the crack widening,",
+    "chunks starting to separate. c3 is the WIDEST frame -- 30.7% ink, runner-up",
+    "c2 at 24.3% -- the rock broken fully into flying pieces, source frame 4",
+    "one-indexed, the same peak position fire's and water's own contact_f3 land",
+    "on. c4 continues the scatter (23.3% ink). c5-c7 thin the debris field out;",
+    "c7 is nearly empty.",
+    "",
+    "THE README'S OWN WARNING, CONFIRMED RATHER THAN JUST QUOTED: 'Peak impact",
+    "approaches the source top edge; inspect for clipped fragments before",
+    "finalizing the recipe.' Checked -- BOTH c3 (the peak) and c4 touch the TOP",
+    "edge of their own cells, and looking at the composited grid at least one",
+    "flying rock fragment in each is visibly cut by the cell's top boundary. This",
+    "is baked into the delivered pixels, not an artifact of this recipe's slicing",
+    "-- explicit rects do not recover a fragment the source sheet never drew past",
+    "its own edge. Reported plainly rather than hidden: the earth impact's",
+    "flying debris is measurably and visibly clipped at the top in both of its",
+    "two widest frames.",
+    "",
+    "GIVEN THAT CLIP, c3 gets NO hold-and-grow step (unlike fire's and water's",
+    "matching hold+scale on their own clean peak frame) -- growing an already",
+    "clipped frame about its own centre inside a 444 cell would clip more",
+    "fragments, not just add weight. c3 keeps hold: 2 for a beat on the blow",
+    "without the extra scale.",
+    "",
+    "CANVAS 512, same headroom reasoning as the rest of the pack."
+  ],
+  "sheet": "Spells/prismatic_bolt/earth/earth_contact_8f.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "contact_f0",
+    "contact_f1",
+    "contact_f2",
+    "contact_f3",
+    "contact_f4",
+    "contact_f5",
+    "contact_f6",
+    "contact_f7"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "contact_f0"
+    },
+    {
+      "from": "contact_f1"
+    },
+    {
+      "from": "contact_f2"
+    },
+    {
+      "from": "contact_f3",
+      "hold": 2
+    },
+    {
+      "from": "contact_f4"
+    },
+    {
+      "from": "contact_f5"
+    },
+    {
+      "from": "contact_f6"
+    },
+    {
+      "from": "contact_f7"
+    }
+  ]
+}

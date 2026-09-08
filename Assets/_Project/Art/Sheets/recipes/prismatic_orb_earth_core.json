@@ -1,0 +1,59 @@
+{
+  "_notes": [
+    "THE FLIGHT LOOP, ALONE. earth_core_6f.png is 1536x1024 over 3x2 and divides",
+    "exactly into 512px cells. No rects, no canvas, no scale steps.",
+    "",
+    "MEASURED: a packed, forward-pointing rock arrowhead, ink coverage 24.5-25.0%",
+    "of the cell -- roughly double fire's and water's core ink density, which",
+    "reads as intended: a dense rigid mass rather than a wispy glow. None of the",
+    "six bboxes touch a cell edge.",
+    "",
+    "LOOP SEAM: all six frames are near-identical rock silhouettes -- the same",
+    "arrowhead, the same crack lines, only the rim-light and shading shifting",
+    "frame to frame. The cleanest loop candidate of the four packs by a wide",
+    "margin, because there is almost no pose change to create a seam; the risk",
+    "runs the other way -- six frames this similar read as a held pose rather than",
+    "a loop unless played fast enough to sell the shimmer in the rim light.",
+    "",
+    "ALPHA: mostly binary like fire's and water's (73.3% at 0, 24.8% above 128,",
+    "only 0.4% in the 8-127 middle band) -- a hard edge, not a soft halo.",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/earth/earth_core_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "core_f0",
+    "core_f1",
+    "core_f2",
+    "core_f3",
+    "core_f4",
+    "core_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "core_f0"
+    },
+    {
+      "from": "core_f1"
+    },
+    {
+      "from": "core_f2"
+    },
+    {
+      "from": "core_f3"
+    },
+    {
+      "from": "core_f4"
+    },
+    {
+      "from": "core_f5"
+    }
+  ]
+}

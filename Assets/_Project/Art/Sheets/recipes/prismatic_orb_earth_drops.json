@@ -1,0 +1,124 @@
+{
+  "_notes": [
+    "THE ROCK ATLAS -- eight stills, one per cell, NOT a sequence: the emitter",
+    "picks one per particle by hash, so the folder is a palette.",
+    "",
+    "EXPLICIT RECTS, the README's own boundaries, same 1774x887 4x2 delivery as",
+    "the rest of the pack.",
+    "",
+    "WHAT EACH CELL IS, and this is the one atlas in the pack where it matters:",
+    "c0-c5 are six individual rock chunks of visibly INCREASING size and ink",
+    "coverage (c0 10.1% up to c2's 34.3%) -- small pebble through a fist-sized",
+    "boulder fragment. c6 is a scattered grit cluster (several small chips, not",
+    "one shape). c7 is a soft dust puff, diffuse rather than solid.",
+    "",
+    "THE README'S OWN WARNING: 'avoid uniformly random selection across all",
+    "eight if it produces oversized dust or too many heavy chunks.' Named here",
+    "because it could not be resolved in content -- see the report's headline",
+    "finding. SpellEmitter's frame pick is one hash mod frameCount",
+    "(SpellEmitterSim.At, channel 6) with no per-cell weight field, so every one",
+    "of these eight -- pebble through boulder through soft dust puff -- is equally",
+    "likely per particle, and the same sizeMin/sizeMax range in skills.json scales",
+    "all eight identically even though their own ink footprints differ by more",
+    "than 3x. Kept as all eight named cells rather than dropping any, because",
+    "trimming the palette in the recipe would be quietly overruling the artist's",
+    "atlas rather than reporting the gap; skills.json's emitters instead choose a",
+    "conservative size range and hold the earth spray's burst count down",
+    "(see the vfx block's own commentary).",
+    "",
+    "NO CANVAS STATED: the rects give 444x444/443x443 cells and nothing scales,",
+    "so the automatic pad onto the largest cell is sufficient.",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/earth/earth_particles_8.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "rock_a",
+    "rock_b",
+    "rock_c",
+    "rock_d",
+    "rock_e",
+    "rock_f",
+    "grit_cluster",
+    "dust_puff"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "rock_a"
+    },
+    {
+      "from": "rock_b"
+    },
+    {
+      "from": "rock_c"
+    },
+    {
+      "from": "rock_d"
+    },
+    {
+      "from": "rock_e"
+    },
+    {
+      "from": "rock_f"
+    },
+    {
+      "from": "grit_cluster"
+    },
+    {
+      "from": "dust_puff"
+    }
+  ]
+}

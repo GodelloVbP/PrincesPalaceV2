@@ -1,0 +1,35 @@
+{
+  "_notes": [
+    "ONE FRAME, HELD -- same shape as prismatic_orb_water_wake.json.",
+    "",
+    "CONTENT_CROP. earth_wake.png is 2172x724; ink bbox (73,243)-(2118,515), so",
+    "2045x272 of the 2172x724 canvas -- a dust trail, thin sand grains at the left",
+    "thickening into a solid dust cloud at the right. Matches the README's 'keep",
+    "dust wake subtle' -- the trail itself is low-opacity haze rather than a hard",
+    "shape (mid-band alpha 5.8% of the whole sheet, more graded than fire's crisp",
+    "flame ribbon, less extreme than wind's core residue).",
+    "",
+    "THICK END: the dust cloud mass sits at the right, roughly x=1900-2050 of the",
+    "2172-wide sheet -- the README's 'thick right end' reads accurately here,",
+    "unlike wind's frayed ribbon. Authored as dx against the rendered width in",
+    "skills.json; no impact point, same reason as the other wakes.",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/earth/earth_wake.png",
+  "grid": [
+    1,
+    1
+  ],
+  "names": [
+    "wake"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "wake"
+    }
+  ]
+}

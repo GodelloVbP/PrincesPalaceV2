@@ -499,7 +499,108 @@
       ],
       "elements": [
         {
-          "type": "Earth"
+          "type": "Earth",
+          "vfx": {
+            "layerFormat": 1,
+            "hitCueSeconds": 0.32,
+            "layers": [
+              {
+                "id": "core",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "travelSeconds": 0.18,
+                "path": "Spells/prismatic_orb_earth_core",
+                "fps": 0,
+                "until": "loop",
+                "size": 210,
+                "facing": "auto",
+                "sort": "effects"
+              },
+              {
+                "id": "wake",
+                "render": "still",
+                "place": "layer:core",
+                "follow": true,
+                "at": "release",
+                "path": "Spells/prismatic_orb_earth_wake",
+                "until": "hold",
+                "fade": 0.08,
+                "dx": -112,
+                "scale": 0.65,
+                "facing": "auto",
+                "sort": "effects"
+              },
+              {
+                "id": "shed",
+                "render": "emitter",
+                "place": "layer:core",
+                "at": "release",
+                "sort": "effects",
+                "emitter": {
+                  "path": "Spells/prismatic_orb_earth_drops",
+                  "rate": 10,
+                  "window": 0.18,
+                  "sourceDx": -45,
+                  "spreadDegrees": 35,
+                  "aimDegrees": 205,
+                  "speedMin": 60,
+                  "speedMax": 150,
+                  "inherit": 0.25,
+                  "drag": 1.5,
+                  "gravity": -900,
+                  "lifeMin": 0.18,
+                  "lifeMax": 0.3,
+                  "sizeMin": 0.4,
+                  "sizeMax": 0.8,
+                  "spinMin": -120,
+                  "spinMax": 120,
+                  "fadeFrom": 0.6,
+                  "endScale": 0.75
+                }
+              },
+              {
+                "id": "splash",
+                "render": "sprite",
+                "place": "target-centre",
+                "at": "arrival",
+                "path": "Spells/prismatic_orb_earth_contact",
+                "startFrame": 2,
+                "fps": 22,
+                "until": "once",
+                "size": 310,
+                "facing": "auto",
+                "sort": "effects",
+                "impactX": 0.5,
+                "impactY": 0.51
+              },
+              {
+                "id": "spray",
+                "render": "emitter",
+                "place": "target-centre",
+                "at": "hit",
+                "sort": "effects",
+                "emitter": {
+                  "path": "Spells/prismatic_orb_earth_drops",
+                  "burst": 14,
+                  "spreadDegrees": 140,
+                  "aimDegrees": 90,
+                  "speedMin": 150,
+                  "speedMax": 420,
+                  "drag": 2.0,
+                  "gravity": -2400,
+                  "lifeMin": 0.22,
+                  "lifeMax": 0.36,
+                  "sizeMin": 0.4,
+                  "sizeMax": 0.85,
+                  "spinMin": -260,
+                  "spinMax": 260,
+                  "fadeFrom": 0.55,
+                  "endScale": 0.7
+                }
+              }
+            ]
+          }
         },
         {
           "type": "Water",
