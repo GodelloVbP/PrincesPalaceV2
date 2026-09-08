@@ -60,10 +60,21 @@ namespace PrincesPalace.PlayModeTests
         // so the effect is still mid-playback however long the frame takes.
         // Nothing else about the cast changes: image.enabled, the pool walk and
         // the placement arithmetic all run exactly as they do in a fight.
-        private static void HoldTheClockAtTheCast()
+        //
+        // The instant the clock was pinned to, and the instant it is now
+        // reading. Kept as fields rather than captured in the lambda because
+        // the second helper below has to measure from the FIRST one -- and
+        // measuring from Time.time instead reads a frame of real time as
+        // sixty cast-seconds at this fixture's speed, which puts every sample
+        // past the end of the spell it meant to look at.
+        private float _castAt;
+        private float _held;
+
+        private void HoldTheClockAtTheCast()
         {
-            float instant = Time.time;
-            SpellPerformancePlayer.ClockOverride = () => instant;
+            _castAt = Time.time;
+            _held = _castAt;
+            SpellPerformancePlayer.ClockOverride = () => _held;
         }
 
         // The other half of the same seam: jump the clock well past any budget
@@ -76,6 +87,24 @@ namespace PrincesPalace.PlayModeTests
         {
             float past = Time.time + 600f;
             SpellPerformancePlayer.ClockOverride = () => past;
+        }
+
+        // THE THIRD FORM: held, then MOVED TO A NAMED INSTANT OF THE CAST.
+        //
+        // Anything reading state a cast only has WHILE IT IS LIVE has to hold
+        // the clock, and the mirror is the sharpest case -- a released renderer
+        // has its facing put back, which is the whole point of the restore
+        // list, and at this fixture's 60x a 0.65s flight is 11ms, shorter than
+        // one batchmode frame. So `cast; yield; read the mirror` reads a
+        // RESTORED member about as often as a live one, and passes or fails on
+        // how long that frame took.
+        //
+        // `castSeconds` is measured from the cast, absolutely, so two calls
+        // name two instants rather than accumulating.
+        private void HoldTheClockAt(float castSeconds)
+        {
+            _held = _castAt + FightBeatPlayer.Scaled(castSeconds);
+            _fight.PerformancePlayerForTest.Tick(_held);
         }
 
         // BETWEEN TWO CASTS IN ONE TEST, because a cast now OWNS the renderers
@@ -626,12 +655,14 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadFight();
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TravellingBeat());
             yield return null;
             Assert.Greater(_player.Image.rectTransform.localScale.x, 0f,
                 "the hero casts left to right, which is how the sheet is drawn");
 
             LetTheLastCastFinish();
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
             yield return null;
             Assert.Less(_player.Image.rectTransform.localScale.x, 0f,
@@ -718,10 +749,12 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadFight();
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
             yield return null;
 
             LetTheLastCastFinish();
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TravellingBeat(fromCaster: false));
             yield return null;
 
@@ -928,6 +961,7 @@ namespace PrincesPalace.PlayModeTests
             beat.Vfx.impactX = 0.75f;
             beat.Vfx.impactY = 0.5f;
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(beat);
             yield return null;
 
@@ -939,20 +973,29 @@ namespace PrincesPalace.PlayModeTests
             // the left. Read at the END of the flight, which is where the
             // arrival is placed.
             //
-            // BOUNDED ON THE PLAYER'S OWN STATE -- see the sibling test above
-            // for why a fixed 1.4s real wait was ~130x longer than the scaled
-            // flight it was waiting for.
-            float waited = 0f;
-            while (_player.IsPlaying && waited < 2f)
-            {
-                waited += Time.unscaledDeltaTime;
-                yield return null;
-            }
+            // MOVED TO A NAMED INSTANT RATHER THAN WAITED OUT, and the instant
+            // matters: 0.5s is PAST the arrival (frame 13 of 26 over 0.65s is
+            // 0.3s) and BEFORE the layer's own end. A released renderer keeps
+            // the last position it was given rather than being moved home, so
+            // sampling after the end would read whatever the final tick left --
+            // which is the launch, not the arrival, for a cast whose last tick
+            // was its first.
+            HoldTheClockAt(0.5f);
+            yield return null;
 
-            Assert.IsFalse(_player.IsPlaying, "the effect never finished its flight inside the timeout");
             Assert.AreEqual(hero + 95f, _player.Image.rectTransform.anchoredPosition.x, 2f,
                 "the mirrored cast corrected the same way an unmirrored one does, which puts the " +
                 "impact twice as far off as leaving it uncorrected would have");
+
+            // AND PAST THE LAYER'S OWN END, 0.65s, so the cast releases what it
+            // held. Asserted at a named instant for the same reason the
+            // position above is: waiting the flight out at 60x is a race
+            // against one batchmode frame, not a measurement of an ending.
+            HoldTheClockAt(0.7f);
+            yield return null;
+
+            Assert.IsFalse(_player.IsPlaying,
+                "the cast was still drawing 0.7s in, past the 0.65s its own sheet authors");
         }
 
         // A beat aimed at the fixture's one enemy with a sheet whose frames are
