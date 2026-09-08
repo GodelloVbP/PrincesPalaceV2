@@ -393,6 +393,25 @@ namespace PrincesPalace.Domain.Content
             bool hasX = layer.impactX >= 0f;
             bool hasY = layer.impactY >= 0f;
 
+            // THE UPPER HALF OF THE SAME BOUND SpellLayer.HasImpactPoint
+            // already enforces (impactX/impactY <= 1f, both axes). Without
+            // this, a value like 65 -- a pixel coordinate typed where a
+            // fraction belonged -- passed CheckPlacement as "authored" and
+            // failed silently at runtime instead: HasImpactPoint would read
+            // false for it, and the layer would fall back to whatever an
+            // unauthored impact point does, with no error pointing at why.
+            if (layer.impactX > 1f)
+            {
+                problems.Add($"{at} authors impactX {Num(layer.impactX)}, outside 0..1 -- it is a fraction " +
+                             "of the frame, not a pixel coordinate.");
+            }
+
+            if (layer.impactY > 1f)
+            {
+                problems.Add($"{at} authors impactY {Num(layer.impactY)}, outside 0..1 -- it is a fraction " +
+                             "of the frame, not a pixel coordinate.");
+            }
+
             if (hasX && !hasY)
             {
                 problems.Add($"{at} states impactX and not impactY. A sheet corrected on one axis and left " +

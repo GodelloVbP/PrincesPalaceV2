@@ -329,6 +329,47 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("vfx.layers[0] states impactX and not impactY", message);
         }
 
+        // AN IMPACT POINT ABOVE 1 IS A PIXEL COORDINATE TYPED WHERE A
+        // FRACTION BELONGED. SpellLayer.HasImpactPoint already refuses it at
+        // runtime (impactX/impactY <= 1f), so an author who typed 65 instead
+        // of 0.65 used to get no error at build time and a silently
+        // unauthored impact point at runtime -- CheckPlacement's own hasX/
+        // hasY test only asked ">= 0", never "<= 1".
+        [Test]
+        public void AnImpactXAbove1IsRefused()
+        {
+            var layer = Sprite();
+            layer.impactX = 1.5f;
+            layer.impactY = 0.5f;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0] authors impactX 1.5, outside 0..1", message);
+        }
+
+        [Test]
+        public void AnImpactYAbove1IsRefused()
+        {
+            var layer = Sprite();
+            layer.impactX = 0.5f;
+            layer.impactY = 65f;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0] authors impactY 65", message);
+            StringAssert.Contains("outside 0..1", message);
+        }
+
+        // THE BOUNDARY ITSELF IS LEGAL. 0 and 1 are both valid fractions --
+        // this is a "> 1", not a ">= 1", rule.
+        [Test]
+        public void ImpactPointsOfExactly0And1AreAccepted()
+        {
+            var layer = Sprite();
+            layer.impactX = 0f;
+            layer.impactY = 1f;
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
         // ---- what each kind needs -----------------------------------------------
 
         [Test]
