@@ -46,6 +46,41 @@ namespace PrincesPalace.Domain.Tests
                 "a target-placed layer draws on the struck target just like a pre-layer path does");
         }
 
+        // THE FOLLOWER-CHAIN GAP this pins: a layer's own Travels/Place can
+        // both say "not per-target" while it still lands on the struck
+        // target, because it rides one that does. A still authors neither
+        // -- it is not itself per-target-placed and it does not travel --
+        // but `place: layer:core` means it draws wherever `core` ends up,
+        // and `core` is a caster-placed sprite that travels TO the target
+        // (Travels counts as per-target scope on its own, same as an
+        // explicit target/target-centre place). HasPerTargetArt used to
+        // check only a layer's own Travels/Place and miss this entirely.
+        [Test]
+        public void AStillFollowingAPerTargetLayerHasPerTargetArt()
+        {
+            var vfx = new SpellPresentation
+            {
+                layerFormat = SpellLayerRules.CurrentLayerFormat,
+                layers = new[]
+                {
+                    new SpellLayer
+                    {
+                        id = "core", render = "sprite", place = "caster-centre",
+                        path = "Spells/prismatic_orb_water", travelSeconds = 0.25f,
+                    },
+                    new SpellLayer
+                    {
+                        id = "wake", render = "still", place = "layer:core",
+                        path = "Spells/prismatic_orb_water_wake", until = "hold", fade = 0.1f,
+                    },
+                },
+            };
+
+            Assert.IsTrue(vfx.HasPerTargetArt,
+                "the still follows a layer that travels to the target -- it lands on the struck target too, " +
+                "even though its own place is a layer reference rather than target/target-centre");
+        }
+
         [Test]
         public void ACastLevelOnlyLayeredBlockHasNoPerTargetArt()
         {

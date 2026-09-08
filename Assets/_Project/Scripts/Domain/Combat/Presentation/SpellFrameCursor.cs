@@ -71,7 +71,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             // and require it to be a directory on disk, so `..._wake/f0` would
             // present `f0` as its provenance and fail both.
             int first = FirstIndex(layer, frameCount);
-            if (layer.Render == SpellRender.Still)
+            if (instance.RenderKind == SpellRender.Still)
             {
                 return new SpellFrameSample(true, first, -1, 0f, alpha);
             }
@@ -93,7 +93,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             // the sequence runs out.
             int index;
             float within;
-            bool loops = layer.Until == SpellEnd.Loop;
+            bool loops = instance.UntilKind == SpellEnd.Loop;
 
             if (loops)
             {

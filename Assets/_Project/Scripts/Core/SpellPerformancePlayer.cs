@@ -109,6 +109,20 @@ namespace PrincesPalace
         // the same reason ClockOverride above is.
         public Action<CastHandle> HitCueCrossedForTest;
 
+        // A drop born by an emitter: which particle-pool member it drew (or
+        // -1, when the pool was exhausted) plus its two closed-form birth
+        // inputs. Position-at-birth and velocity-at-birth are pure functions
+        // of (spec, seed, source, birth) -- they never change once the drop
+        // exists, so PaintEmitter computes them once, here, at TakeDrop time
+        // rather than re-deriving them (a follower-chain PositionOf read
+        // among them) for every live drop on every frame of its life.
+        private struct Drop
+        {
+            internal int Member;
+            internal UiVec P0;
+            internal UiVec V0;
+        }
+
         private sealed class Cast
         {
             internal int Generation;
@@ -131,16 +145,28 @@ namespace PrincesPalace
             // zero -- which every melee beat has -- lands in the first window.
             internal float Cursor;
 
+            // Where SpellSchedule.Crossed left off scanning its own events
+            // array, so the NEXT call resumes there instead of rescanning
+            // from 0 -- safe because Cursor above only ever grows across a
+            // cast's life. Reset to 0 at Begin, alongside Cursor itself.
+            internal int ScheduleCursor;
+
             // Per instance: which member of its band this instance holds, or
             // -1. An array rather than a dictionary because a cast's instance
             // count is known the moment it begins and never changes.
             internal int[] Members;
 
+            // Per instance: the ultimate root of its SourceInstance chain --
+            // itself, for an instance that follows nothing. Resolved once
+            // here rather than walked per frame per call; see the local
+            // PositionOf below.
+            internal int[] RootSource;
+
             // Per instance: the emitter's own seed, and the particle members it
             // holds. Null for every instance that is not an emitter, which is
             // most of them.
             internal int[] Seeds;
-            internal List<int>[] Drops;
+            internal List<Drop>[] Drops;
         }
 
         private readonly List<Cast> _casts = new List<Cast>();
@@ -201,15 +227,33 @@ namespace PrincesPalace
             cast.StartedAt = Now();
             cast.PaceAtStart = pace;
             cast.Cursor = SpellSchedule.BeforeAnything;
+            cast.ScheduleCursor = 0;
 
             int count = performance.Instances.Count;
             cast.Members = new int[count];
+            cast.RootSource = new int[count];
             cast.Seeds = new int[count];
-            cast.Drops = new List<int>[count];
+            cast.Drops = new List<Drop>[count];
 
             for (int i = 0; i < count; i++)
             {
                 cast.Members[i] = -1;
+
+                // THE SAME WALK THE LOCAL PositionOf USED TO MAKE PER FRAME,
+                // paid once per instance here instead: an instance's ultimate
+                // SourceInstance root, itself when it follows nothing. Bounded
+                // by `count` the same way that walk was, so a resolver run on
+                // content the build-time validator never saw cannot hang on a
+                // cycle either.
+                int root = i;
+                int guard = 0;
+                while (performance.Instances[root].SourceInstance >= 0 && guard++ <= count)
+                {
+                    root = performance.Instances[root].SourceInstance;
+                }
+
+                cast.RootSource[i] = root;
+
                 var emitter = performance.Instances[i].Layer.emitter;
                 cast.Seeds[i] = emitter != null && emitter.seed != 0
                     ? emitter.seed
@@ -299,7 +343,7 @@ namespace PrincesPalace
             var cast = _casts[handle.Slot];
             if (instance < 0 || instance >= cast.Performance.Instances.Count) return false;
 
-            return cast.Performance.Instances[instance].Layer.Sort == SpellSort.Ground;
+            return cast.Performance.Instances[instance].SortKind == SpellSort.Ground;
         }
 
         // How many particles this cast currently owns. What proves a tail is
@@ -339,7 +383,7 @@ namespace PrincesPalace
             var cast = _casts[slot];
             var schedule = cast.Performance.Schedule;
 
-            schedule.Crossed(cast.Cursor, seconds, _crossed);
+            schedule.Crossed(cast.Cursor, seconds, _crossed, ref cast.ScheduleCursor);
             if (seconds > cast.Cursor) cast.Cursor = seconds;
 
             for (int i = 0; i < _crossed.Count; i++)
@@ -414,7 +458,7 @@ namespace PrincesPalace
                     return;
                 }
 
-                cast.Drops[index] = cast.Drops[index] ?? new List<int>();
+                cast.Drops[index] = cast.Drops[index] ?? new List<Drop>();
                 return;
             }
 
@@ -459,7 +503,7 @@ namespace PrincesPalace
             if (member < 0) return;
 
             var instance = cast.Performance.Instances[index];
-            bool ground = instance.Layer.Sort == SpellSort.Ground;
+            bool ground = instance.SortKind == SpellSort.Ground;
             var owners = ground ? _groundOwners : _effectOwners;
             var pool = ground ? groundRenderers : effectRenderers;
 
@@ -480,7 +524,7 @@ namespace PrincesPalace
             {
                 var instance = instances[i];
 
-                if (instance.Layer.Render == SpellRender.Emitter)
+                if (instance.RenderKind == SpellRender.Emitter)
                 {
                     PaintEmitter(cast, slot, i, instance, seconds);
                     continue;
@@ -489,7 +533,7 @@ namespace PrincesPalace
                 int member = cast.Members[i];
                 if (member < 0) continue;
 
-                var pool = instance.Layer.Sort == SpellSort.Ground ? groundRenderers : effectRenderers;
+                var pool = instance.SortKind == SpellSort.Ground ? groundRenderers : effectRenderers;
                 var renderer = pool[member];
                 if (renderer == null) continue;
 
@@ -506,7 +550,7 @@ namespace PrincesPalace
                 renderer.SetFacing(instance.DrawFacing);
 
                 var next = sample.Next >= 0 && sample.Next < frameCount ? frames[sample.Next] : null;
-                var at = PositionOf(cast, instance, seconds);
+                var at = PositionOf(cast, i, instance, seconds);
 
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
                     new Vector2(at.X, at.Y), new Vector2(instance.Box.X, instance.Box.Y));
@@ -518,15 +562,14 @@ namespace PrincesPalace
         // SpellPerformance.PositionOf, and a follower reading it for its source
         // rather than keeping a path of its own is what keeps the wake glued to
         // the core through a retune of either.
-        private static UiVec PositionOf(Cast cast, SpellLayerInstance instance, float seconds)
+        //
+        // `index` READS Cast.RootSource RATHER THAN WALKING THE CHAIN HERE --
+        // Begin resolved every instance's ultimate follower-chain root once,
+        // so this is one array read per call instead of the same walk paid
+        // again on every frame of the layer's life.
+        private static UiVec PositionOf(Cast cast, int index, SpellLayerInstance instance, float seconds)
         {
-            var source = instance;
-            int guard = 0;
-
-            while (source.SourceInstance >= 0 && guard++ <= cast.Performance.Instances.Count)
-            {
-                source = cast.Performance.Instances[source.SourceInstance];
-            }
+            var source = cast.Performance.Instances[cast.RootSource[index]];
 
             // dx IS LOCAL, so it mirrors with the cast -- a wake authored 118
             // units behind a rightward core has to sit 118 units behind a
@@ -554,34 +597,41 @@ namespace PrincesPalace
             // the source was at its own instant. That back-dating is what makes
             // a shed look like emission during flight rather than six drops
             // stacked where the step ended.
+            //
+            // P0/V0 COMPUTED ONCE, HERE, AT BIRTH -- both are pure functions
+            // of (spec, seed, source, birth), so a drop's whole life reads
+            // the same two values every frame rather than re-deriving them
+            // (a follower-chain PositionOf/VelocityOf read among them) on
+            // every one of them. See the Drop struct's own header.
+            var source = SourceOf(cast, instance);
             while (drops.Count < total)
             {
                 int particle = drops.Count;
                 float birth = SpellEmitterSim.BirthOf(spec, particle, instance.StartSeconds);
                 if (birth > seconds) break;
 
-                drops.Add(TakeDrop(slot, index, particle));
+                var p0 = SpellPerformance.PositionOf(source, birth)
+                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy);
+                var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
+                         + SpellPerformance.VelocityOf(source, birth) * spec.inherit;
+
+                drops.Add(new Drop { Member = TakeDrop(slot, index, particle), P0 = p0, V0 = v0 });
             }
 
             for (int i = 0; i < drops.Count; i++)
             {
+                var held = drops[i];
                 float birth = SpellEmitterSim.BirthOf(spec, i, instance.StartSeconds);
-                var source = SourceOf(cast, instance);
+                var drop = SpellEmitterSim.At(spec, seed, i, held.P0, held.V0, seconds - birth, frameCount);
 
-                var p0 = SpellPerformance.PositionOf(source, birth)
-                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy);
-                var v0 = SpellEmitterSim.LaunchOf(spec, seed, i, instance.DrawFacing)
-                         + SpellPerformance.VelocityOf(source, birth) * spec.inherit;
-
-                var drop = SpellEmitterSim.At(spec, seed, i, p0, v0, seconds - birth, frameCount);
-
-                int member = drops[i];
+                int member = held.Member;
                 if (member < 0) continue;
 
                 if (!drop.Alive)
                 {
                     GiveBackDrop(member);
-                    drops[i] = -1;
+                    held.Member = -1;
+                    drops[i] = held;
                     continue;
                 }
 
@@ -693,8 +743,9 @@ namespace PrincesPalace
             _casts.Add(new Cast
             {
                 Members = Array.Empty<int>(),
+                RootSource = Array.Empty<int>(),
                 Seeds = Array.Empty<int>(),
-                Drops = Array.Empty<List<int>>(),
+                Drops = Array.Empty<List<Drop>>(),
             });
             return _casts.Count - 1;
         }

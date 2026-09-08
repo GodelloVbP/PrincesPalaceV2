@@ -19,6 +19,19 @@ namespace PrincesPalace.Domain.Combat.Presentation
     {
         public SpellLayer Layer;
 
+        // Layer.Render/Place/At/Until/Facing/Sort, PARSED ONCE HERE rather
+        // than read as computed properties on the frame path -- content is
+        // immutable after load, so Resolve (below) is the one place any of
+        // the six needs to touch a string. "Kind" suffixed because Facing
+        // already names the per-instance CAST direction (below); these six
+        // are the content's own authored word, resolved to its enum.
+        public SpellRender RenderKind;
+        public SpellPlace PlaceKind;
+        public SpellCue AtKind;
+        public SpellEnd UntilKind;
+        public SpellFacing FacingKind;
+        public SpellSort SortKind;
+
         // AUTHORED ARRAY ORDER, kept because it is draw order. A cast allocates
         // its renderers in this order from the lowest free member, so a spray
         // authored after its splash gets the higher index and draws over it --
@@ -236,8 +249,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
                 if (!string.IsNullOrWhiteSpace(layer.id)) byId[layer.id.Trim()] = i;
             }
 
+            // ONE LOOKUP CLOSURE, built once rather than once per layer --
+            // SpellLayer.IsPerTarget takes `idOf` this way so
+            // SpellPresentation.HasPerTargetArt's one-shot content check can
+            // hand it a plain array scan instead, without either caller
+            // needing to know the other exists.
+            int IdOf(string id) => byId.TryGetValue(id, out int at) ? at : -1;
+
             var perTarget = new bool[layers.Length];
-            for (int i = 0; i < layers.Length; i++) perTarget[i] = IsPerTarget(layers, i, byId, 0);
+            for (int i = 0; i < layers.Length; i++) perTarget[i] = SpellLayer.IsPerTarget(layers, i, IdOf);
 
             for (int i = 0; i < layers.Length; i++)
             {
@@ -250,6 +270,12 @@ namespace PrincesPalace.Domain.Combat.Presentation
                     built.Add(new SpellLayerInstance
                     {
                         Layer = layer,
+                        RenderKind = layer.Render,
+                        PlaceKind = layer.Place,
+                        AtKind = layer.At,
+                        UntilKind = layer.Until,
+                        FacingKind = layer.Facing,
+                        SortKind = layer.Sort,
                         LayerIndex = i,
                         TargetIndex = perTarget[i] ? t : -1,
                         SourceInstance = -1,
@@ -259,29 +285,6 @@ namespace PrincesPalace.Domain.Combat.Presentation
 
             LinkFollowers(built, byId);
             return built;
-        }
-
-        // A follower INHERITS THE SCOPE of the layer it names, which is a
-        // property of the placement word and not of any spell id: an emitter on
-        // a per-target projectile is per-target, and would be cast-level if the
-        // projectile were.
-        //
-        // `depth` bounds the walk. Content that cycles is refused at build time
-        // by SpellLayerRules, so this can only be reached by the adapter's own
-        // output, which never references anything -- but a resolver that ran on
-        // unvalidated content must not hang, and stopping at the chain length
-        // costs one int.
-        private static bool IsPerTarget(SpellLayer[] layers, int index,
-            Dictionary<string, int> byId, int depth)
-        {
-            var layer = layers[index];
-            if (layer.Travels) return true;
-            if (SpellPlaceNames.PerTarget(layer.Place)) return true;
-
-            string source = layer.FollowsLayerId;
-            if (string.IsNullOrWhiteSpace(source) || depth > layers.Length) return false;
-
-            return byId.TryGetValue(source, out int at) && IsPerTarget(layers, at, byId, depth + 1);
         }
 
         private static void LinkFollowers(List<SpellLayerInstance> built, Dictionary<string, int> byId)

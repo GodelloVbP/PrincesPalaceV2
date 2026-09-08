@@ -259,8 +259,7 @@ namespace PrincesPalace.Domain.Content
         // that states its height and not its width would be corrected on one
         // axis and left on the other, which lands the effect somewhere neither
         // rule intended and looks like a third bug.
-        public bool HasImpactPoint =>
-            impactX >= 0f && impactX <= 1f && impactY >= 0f && impactY <= 1f;
+        public bool HasImpactPoint => SpellLayer.IsUnitFraction(impactX) && SpellLayer.IsUnitFraction(impactY);
 
         // The parsed anchor. Case-insensitive, because "Travel" and "travel"
         // are the same intent and refusing one of them teaches nothing.
@@ -348,6 +347,12 @@ namespace PrincesPalace.Domain.Content
         // layer answers the same question the pre-layer `path` field always
         // did -- SpellLayerRules refuses authoring both, so checking either is
         // exhaustive without checking layers AND path together.
+        // WALKS FOLLOWER CHAINS, the same SpellLayer.IsPerTarget walk
+        // SpellPerformance.FanOut resolves a cast's own per-instance scope
+        // with -- a caster-placed still that rides a per-target sprite (an
+        // emitter following a projectile, say) lands on the target exactly
+        // as the thing it follows does, and checking only a layer's own
+        // Travels/Place used to miss that entirely.
         public bool HasPerTargetArt
         {
             get
@@ -355,14 +360,32 @@ namespace PrincesPalace.Domain.Content
                 if (!string.IsNullOrWhiteSpace(path)) return true;
                 if (!HasLayers) return false;
 
-                foreach (var layer in layers)
+                for (int i = 0; i < layers.Length; i++)
                 {
-                    if (layer == null) continue;
-                    if (layer.Travels || SpellPlaceNames.PerTarget(layer.Place)) return true;
+                    if (SpellLayer.IsPerTarget(layers, i, IdOf)) return true;
                 }
 
                 return false;
             }
+        }
+
+        // A ONE-SHOT SCAN, not a prebuilt dictionary -- HasPerTargetArt runs
+        // once per beat off content that rarely exceeds a handful of layers,
+        // where SpellPerformance.FanOut's own byId lookup earns its keep
+        // resolving every struck target's whole fan-out in the same pass.
+        private int IdOf(string id)
+        {
+            for (int i = 0; i < layers.Length; i++)
+            {
+                var layer = layers[i];
+                if (layer != null && !string.IsNullOrWhiteSpace(layer.id) &&
+                    string.Equals(layer.id.Trim(), id, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         // ---- the legacy adapter --------------------------------------------------

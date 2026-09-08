@@ -400,13 +400,13 @@ namespace PrincesPalace.Domain.Content
             // failed silently at runtime instead: HasImpactPoint would read
             // false for it, and the layer would fall back to whatever an
             // unauthored impact point does, with no error pointing at why.
-            if (layer.impactX > 1f)
+            if (hasX && !SpellLayer.IsUnitFraction(layer.impactX))
             {
                 problems.Add($"{at} authors impactX {Num(layer.impactX)}, outside 0..1 -- it is a fraction " +
                              "of the frame, not a pixel coordinate.");
             }
 
-            if (layer.impactY > 1f)
+            if (hasY && !SpellLayer.IsUnitFraction(layer.impactY))
             {
                 problems.Add($"{at} authors impactY {Num(layer.impactY)}, outside 0..1 -- it is a fraction " +
                              "of the frame, not a pixel coordinate.");

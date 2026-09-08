@@ -103,19 +103,39 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // this design exists to earn -- and a method returning a List or an
         // iterator allocates one per frame per cast whatever the caller does
         // with it.
+        //
+        // SCANS FROM 0 EVERY CALL. Correct for any (from, to), including a
+        // caller with no cursor of its own to carry between calls -- see the
+        // cursor overload below for the one caller that has one.
         public void Crossed(float from, float to, List<SpellEvent> into)
+        {
+            int cursor = 0;
+            Crossed(from, to, into, ref cursor);
+        }
+
+        // THE SAME WINDOW, RESUMED FROM WHERE THE CALLER LEFT OFF. A live
+        // cast's own `from` is monotone -- SpellPerformancePlayer.Advance
+        // only ever grows cast.Cursor, never rewinds it -- so an event this
+        // call skips as `Seconds <= from` can never fall inside a LATER
+        // call's window either. `cursor` is the caller's own state (one int
+        // per cast, reset to 0 at Begin): advancing it here rather than
+        // restarting at index 0 turns a cast's whole tick lifetime from
+        // O(events) rescanned every frame into O(events) total.
+        public void Crossed(float from, float to, List<SpellEvent> into, ref int cursor)
         {
             if (into == null) return;
             into.Clear();
             if (to <= from) return;
 
-            for (int i = 0; i < _events.Length; i++)
+            if (cursor < 0) cursor = 0;
+            while (cursor < _events.Length && _events[cursor].Seconds <= from) cursor++;
+
+            for (int i = cursor; i < _events.Length; i++)
             {
                 float at = _events[i].Seconds;
 
                 // Sorted, so the first event past the window ends the walk.
                 if (at > to) break;
-                if (at <= from) continue;
 
                 into.Add(_events[i]);
             }

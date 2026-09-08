@@ -164,10 +164,45 @@ namespace PrincesPalace.Domain.Content
         // SpellPresentation.HasImpactPoint states, for the same reason: a sheet
         // corrected on one axis and left on the other lands somewhere neither
         // rule intended and reads as a third bug.
-        public bool HasImpactPoint =>
-            impactX >= 0f && impactX <= 1f && impactY >= 0f && impactY <= 1f;
+        public bool HasImpactPoint => IsUnitFraction(impactX) && IsUnitFraction(impactY);
 
         public bool HasImpactY => impactY >= 0f && impactY <= 1f;
+
+        // THE [0,1] BOUND impactX/impactY ARE AUTHORED IN, stated once for
+        // this type, SpellPresentation.HasImpactPoint and SpellLayerRules.
+        // CheckPlacement to share -- a fraction of the frame, not a pixel
+        // coordinate.
+        public static bool IsUnitFraction(float value) => value >= 0f && value <= 1f;
+
+        // WHETHER layers[index]'S ART LANDS PER STRUCK TARGET -- its own
+        // placement (Travels or a per-target Place), or inherited by riding a
+        // layer that does. SpellPerformance.FanOut's per-instance scope and
+        // SpellPresentation.HasPerTargetArt's content-time "does this block
+        // put anything on a target" question are the same walk over the same
+        // array, so this is the one home for it -- the second copy is what
+        // let HasPerTargetArt check only a layer's own placement and miss a
+        // follower chain that lands on a per-target source.
+        //
+        // `idOf` resolves an authored id to its index in `layers`, however
+        // the caller wants to look it up -- a prebuilt dictionary for
+        // FanOut's hot path, a linear scan for HasPerTargetArt's one-shot
+        // content check. `depth` bounds the walk: content that cycles is
+        // refused at build time by SpellLayerRules, but a reader of
+        // unvalidated content must not hang on one that does anyway.
+        public static bool IsPerTarget(SpellLayer[] layers, int index, Func<string, int> idOf, int depth = 0)
+        {
+            if (layers == null || index < 0 || index >= layers.Length) return false;
+
+            var layer = layers[index];
+            if (layer == null) return false;
+            if (layer.Travels || SpellPlaceNames.PerTarget(layer.Place)) return true;
+
+            string source = layer.FollowsLayerId;
+            if (string.IsNullOrWhiteSpace(source) || depth > layers.Length) return false;
+
+            int at = idOf(source);
+            return at >= 0 && IsPerTarget(layers, at, idOf, depth + 1);
+        }
     }
 
     // WHAT A BALLISTIC EMITTER NEEDS, and nothing else. The brief's minimum
