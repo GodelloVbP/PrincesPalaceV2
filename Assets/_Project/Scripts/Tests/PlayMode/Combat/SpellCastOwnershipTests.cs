@@ -44,19 +44,19 @@ namespace PrincesPalace.PlayModeTests
         public void Restore()
         {
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
-            SpellVfxPlayer.ClockOverride = null;
+            SpellPerformancePlayer.ClockOverride = null;
         }
 
         private static void HoldTheClockAtTheCast()
         {
-            float instant = Time.realtimeSinceStartup;
-            SpellVfxPlayer.ClockOverride = () => instant;
+            float instant = Time.time;
+            SpellPerformancePlayer.ClockOverride = () => instant;
         }
 
         private static void RunTheClockPastTheEnd()
         {
-            float past = Time.realtimeSinceStartup + 600f;
-            SpellVfxPlayer.ClockOverride = () => past;
+            float past = Time.time + 600f;
+            SpellPerformancePlayer.ClockOverride = () => past;
         }
 
         private IEnumerator LoadFight(int enemyCount = 3)
@@ -111,7 +111,7 @@ namespace PrincesPalace.PlayModeTests
 
         private IReadOnlyList<SpellVfxPlayer> Effects =>
             _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
-                .Where(p => !ReferenceEquals(p, _fight.GroundVfxPlayerForTest))
+                .Where(p => !_fight.GroundVfxPlayersForTest.Contains(p))
                 .ToList();
 
         private int Drawn => Effects.Count(p => p.Image != null && p.Image.enabled);

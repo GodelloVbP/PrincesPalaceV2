@@ -234,11 +234,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SpellVfx = new List<NodeRef>();
         public List<NodeRef> SpellVfxNext = new List<NodeRef>();
 
-        // The shared ground layer -- ONE of it, however many enemies are hit,
-        // and behind all of them. See BuildSpellGroundVfx.
+        // DETACHED DROPS, in the same band as the sprite layers and declared
+        // immediately after them -- so a spray draws over the crown it came out
+        // of and under the damage number. A node, not a third semantic
+        // category.
+        public NodeRef SpellParticlePool;
+        public List<NodeRef> SpellParticles = new List<NodeRef>();
+
+        // The shared ground layer -- one per formation, however many enemies
+        // are hit, and behind all of them. See BuildSpellGroundVfx.
         public NodeRef SpellGroundVfxPool;
-        public NodeRef SpellGroundVfx;
-        public NodeRef SpellGroundVfxNext;
+        public List<NodeRef> SpellGroundVfx = new List<NodeRef>();
+        public List<NodeRef> SpellGroundVfxNext = new List<NodeRef>();
         public NodeRef DamagePopupPool;
         public List<NodeRef> DamagePopups = new List<NodeRef>();
         public List<NodeRef> DamagePopupLabels = new List<NodeRef>();
@@ -314,6 +321,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildIntentTooltip());
             hud.Add(s.BuildStatusTooltip());
             hud.Add(s.BuildSpellVfx());
+            hud.Add(s.BuildSpellParticles());
             hud.Add(s.BuildDamagePopups());
 
             // The character sheet, reachable mid-fight.
@@ -2374,7 +2382,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // one took the spell. Three is the most that can ever be standing
             // on either side (FightHudSpec.StageSlotsPerSide), which covers a
             // full sweep of enemies and a party-wide effect alike.
-            var pool = Ui.Pool("SpellVfx", FightHudSpec.StageSlotsPerSide, i =>
+            var pool = Ui.Pool("SpellVfx", FightHudSpec.SpellLayerRenderers, i =>
             {
                 var image = Ui.Sprite($"SpellVfx{i}", null, new UiVec(380f, 380f), Place.At(0f, 0f)).Inactive();
 
@@ -2429,7 +2437,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // for and the case UiAudit cannot solve statically.
         private UiNode BuildSpellGroundVfx()
         {
-            var pool = Ui.Pool("SpellGroundVfx", 1, i =>
+            var pool = Ui.Pool("SpellGroundVfx", FightHudSpec.SpellGroundRenderers, i =>
             {
                 // NO AUTHORED SIZE WORTH THE NAME. The per-target pool's 380
                 // square is a starting point a spell then overrides; this one
@@ -2449,12 +2457,43 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AsDecor();
                 image.Children.Add(next);
 
-                SpellGroundVfx = image;
-                SpellGroundVfxNext = next;
+                SpellGroundVfx.Add(image);
+                SpellGroundVfxNext.Add(next);
                 return image;
             }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
             SpellGroundVfxPool = pool;
+            return pool;
+        }
+
+        // DETACHED DROPS, AND A BARE Image EACH.
+        //
+        // A SEPARATE NODE FROM THE SPRITE POOL rather than more members of it,
+        // because every member of that pool carries a dissolve child and a
+        // renderer component -- all of which is dead weight on a droplet, which
+        // draws one still and never cross-fades. Sixty-four of them carrying a
+        // second Image apiece would double the canvas's rebuild for nothing.
+        //
+        // A LATER SIBLING THAN THE SPRITE POOL AND AN EARLIER ONE THAN THE
+        // NUMBERS, which is the whole of its draw order: spray over the crown
+        // it came out of, under the damage figure. That is the brief's
+        // "appropriate contact/foreground spray" as a node inside the effects
+        // band, not as a third band.
+        private UiNode BuildSpellParticles()
+        {
+            var pool = Ui.Pool("SpellParticles", FightHudSpec.SpellParticles, i =>
+            {
+                // The size here only has to be non-zero, which is UiAudit's
+                // rule about zero-sized graphics: every drop's real box is
+                // computed per frame from its own size variation.
+                var image = Ui.Sprite($"SpellParticle{i}", null, new UiVec(64f, 64f), Place.At(0f, 0f))
+                    .Inactive();
+
+                SpellParticles.Add(image);
+                return image;
+            }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
+
+            SpellParticlePool = pool;
             return pool;
         }
 

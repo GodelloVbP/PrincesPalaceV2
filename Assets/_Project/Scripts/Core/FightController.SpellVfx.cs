@@ -29,7 +29,8 @@ namespace PrincesPalace
         // is for art whose box must differ from the frame.
         private static Vector2 BoxForLayer(SpellLayer layer)
         {
-            float size = layer.size > 0f ? layer.size : SpellPresentation.DefaultSize;
+            float size = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
+                         * (layer.scale > 0f ? layer.scale : 1f);
             float aspect = layer.aspect;
             return aspect > 0f ? new Vector2(size, size / aspect) : new Vector2(size, size);
         }
@@ -107,7 +108,19 @@ namespace PrincesPalace
         // are: InternalsVisibleTo names the EDITOR assembly only, so a PlayMode
         // test reaches this or reaches nothing -- and "is there exactly one
         // fault, behind everyone" is only answerable from a running scene.
-        public SpellVfxPlayer GroundVfxPlayerForTest => spellGroundVfxPlayer;
+        public SpellVfxPlayer GroundVfxPlayerForTest =>
+            spellGroundVfxPlayers != null && spellGroundVfxPlayers.Length > 0
+                ? spellGroundVfxPlayers[0]
+                : null;
+
+        // THE WHOLE BAND, because it stopped being a pool of one. A fixture
+        // that wants "a per-target renderer" has to exclude every ground
+        // member, not the first: they carry the same component and are declared
+        // FIRST in the tree (behind the racks), so excluding one by identity
+        // silently hands back the next one -- a member a per-target cast never
+        // touches, which reads as "the effect was never drawn".
+        public IReadOnlyList<SpellVfxPlayer> GroundVfxPlayersForTest =>
+            spellGroundVfxPlayers ?? System.Array.Empty<SpellVfxPlayer>();
 
         // Index 0, and the only one the measurement helpers ever touch. Frames
         // and dead space are properties of the SHEET, so asking any member
@@ -212,8 +225,6 @@ namespace PrincesPalace
             var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing,
                 standing: !SpellPlaceNames.Centred(layer.Place));
 
-            to += new Vector2(layer.dx, layer.dy);
-
             instance.Box = new UiVec(box.x, box.y);
             instance.To = new UiVec(to.x, to.y);
 
@@ -294,8 +305,7 @@ namespace PrincesPalace
             float sheetGround = instance.Layer.HasImpactY ? instance.Layer.impactY : 0.5f;
 
             instance.Box = new UiVec(box.x, box.y);
-            instance.To = new UiVec((left + right) * 0.5f + instance.Layer.dx,
-                ground + (0.5f - sheetGround) * art.y + instance.Layer.dy);
+            instance.To = new UiVec((left + right) * 0.5f, ground + (0.5f - sheetGround) * art.y);
             instance.From = instance.To;
         }
 

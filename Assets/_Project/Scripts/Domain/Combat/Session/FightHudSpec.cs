@@ -50,6 +50,50 @@ namespace PrincesPalace.Domain.Combat.Session
         // many slots is the consequence, not the cause.
         public const int StageSlotsPerSide = 3;
 
+        // ---- what a cast may draw at once ---------------------------------------
+        //
+        // All three are RESERVATIONS, not counts, the same rule WoolPips
+        // follows -- and none of them is trusted. SpellPoolCapacityTests counts
+        // what the authored content of every skill and element actually asks
+        // for, per band, and fails NAMING THE SKILL when it outgrows one. That
+        // pin is what carries the weight; the numbers below are headroom over a
+        // measurement rather than a measurement somebody re-did by hand, which
+        // is the failure mode the hand-measured tab-width table already
+        // demonstrated.
+
+        // The `effects` band: everything drawn over the HUD and under the
+        // damage numbers.
+        //
+        // The measured worst case is Cinderfault's three eruptions plus one
+        // Water cast's three per-target layers overlapping as a tail -- six --
+        // against a stage that can field StageSlotsPerSide combatants. Four per
+        // slot leaves six clear of that, which covers a second overlapping cast
+        // rather than only the one this plan authors.
+        public const int SpellLayerRenderers = StageSlotsPerSide * 4;
+
+        // The `ground` band: shared formation layers, behind every figure.
+        //
+        // TWO, AND FORCED BY OWNERSHIP RATHER THAN BY TASTE. A second
+        // Cinderfault opening while the first fault is still cooling must get
+        // its OWN member, because a cast taking over a live one is exactly the
+        // restart per-cast ownership exists to remove. Two and not more, and
+        // the arithmetic is checkable: a fault runs 0.78s while the shortest
+        // possible gap between two beats opening is BeatHoldSeconds -- and the
+        // real gap is larger, since hit-stop, the settle and BeatGapSeconds all
+        // sit on top -- so two of those gaps already exceed one fault's life
+        // and a third can never overlap the first.
+        public const int SpellGroundRenderers = 2;
+
+        // Detached droplets, in the same band as the sprite layers and in their
+        // own pool node.
+        //
+        // One Water cast's steady state is rate * window = 10 alive during the
+        // shed (every droplet's lifeMin exceeds the window, so all ten are)
+        // plus an 18-drop burst at the cue: 28 at peak. 64 holds two
+        // overlapping casts, which is the case the allocation measurement
+        // records.
+        public const int SpellParticles = 64;
+
         // One plate per enemy stage slot; v1 tied these together with
         // `EnemyPlateCount = EnemyStageSlots` and so does this.
         public const int EnemyPlates = StageSlotsPerSide;

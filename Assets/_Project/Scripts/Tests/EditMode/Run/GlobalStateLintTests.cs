@@ -89,9 +89,9 @@ namespace PrincesPalace.Domain.Tests
             // a test that wants to see one on screen holds this rather than
             // racing a frame against it. Left held, every later test in the
             // process gets a spell that never finishes.
-            ("SpellVfxPlayer.ClockOverride",
-                @"SpellVfxPlayer\.ClockOverride\s*=",
-                @"SpellVfxPlayer\.ClockOverride\s*=\s*null"),
+            ("SpellPerformancePlayer.ClockOverride",
+                @"SpellPerformancePlayer\.ClockOverride\s*=",
+                @"SpellPerformancePlayer\.ClockOverride\s*=\s*null"),
 
             ("RequirementCurve.GearRequirementsEnabled",
                 @"GearRequirementsEnabled\s*=",

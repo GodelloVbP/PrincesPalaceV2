@@ -326,13 +326,22 @@ namespace PrincesPalace
         // only ever run for an effect that lands on more than one thing.
         [SerializeField] internal SpellVfxPlayer[] spellVfxPlayers;
 
-        // THE SHARED GROUND LAYER, and there is exactly one of it. A fault
-        // opening under the whole enemy formation is one drawing however many
-        // enemies stand on it -- see FightScreen.BuildSpellGroundVfx for why it
-        // is a separate node at a different depth rather than a fourth member
-        // of the pool above.
-        [SerializeField] internal Image spellGroundVfx;
-        [SerializeField] internal SpellVfxPlayer spellGroundVfxPlayer;
+        // THE SHARED GROUND BAND. A fault opening under the whole enemy
+        // formation is ONE drawing however many enemies stand on it -- see
+        // FightScreen.BuildSpellGroundVfx for why it is a separate node at a
+        // different depth rather than more members of the pool above.
+        //
+        // A BAND OF TWO RATHER THAN A POOL OF ONE, and the second member is
+        // forced by ownership: a Cinderfault opening while the previous one's
+        // fault is still cooling must get its own member, because a cast taking
+        // over a live one is the restart per-cast ownership exists to remove.
+        // See FightHudSpec.SpellGroundRenderers for why two is also the
+        // ceiling.
+        [SerializeField] internal Image[] spellGroundVfx;
+        [SerializeField] internal SpellVfxPlayer[] spellGroundVfxPlayers;
+
+        // Every pooled drop's Image, bound from the particle pool node.
+        [SerializeField] internal Image[] spellParticles;
 
         // WHO OWNS A SPELL WHILE IT IS DRAWING. Lives on the effects pool node,
         // so it ticks from its own Update and this controller gains no

@@ -162,8 +162,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(s.TargetPrompt.IsValid);
             Assert.IsTrue(s.SpellVfxPool.IsValid);
             Assert.IsTrue(s.SpellGroundVfxPool.IsValid);
-            Assert.IsTrue(s.SpellGroundVfx.IsValid, "the shared ground layer was never assigned a node");
-            Assert.IsTrue(s.SpellGroundVfxNext.IsValid, "its dissolve layer was never assigned a node");
+            Assert.AreEqual(FightHudSpec.SpellGroundRenderers, s.SpellGroundVfx.Count,
+                "the shared ground band was never filled");
+            Assert.AreEqual(FightHudSpec.SpellGroundRenderers, s.SpellGroundVfxNext.Count,
+                "its dissolve layers were never filled");
+            Assert.AreEqual(FightHudSpec.SpellLayerRenderers, s.SpellVfx.Count);
+            Assert.IsTrue(s.SpellParticlePool.IsValid, "the drops were given no pool node");
+            Assert.AreEqual(FightHudSpec.SpellParticles, s.SpellParticles.Count);
             Assert.IsTrue(s.ContinueButton.IsValid);
         }
 
@@ -485,7 +490,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void PoolMembersAreTheOnlyRuntimePositionedElements()
         {
-            // The exemption's whole boundary, asserted. If a FOURTH pool ever
+            // The exemption's whole boundary, asserted. If a FIFTH pool ever
             // appears, this test is where the decision gets re-made rather than
             // where it quietly widens.
             //
@@ -496,9 +501,19 @@ namespace PrincesPalace.Domain.Tests
             // UiSolver cannot compute -- and it could not be a member of the
             // SpellVfx pool beside it, because depth in uGUI is sibling order
             // and this one has to draw BEHIND the racks that one draws over.
+            //
+            // SpellParticles is the fourth, and its argument is the same one
+            // read from the other side: a droplet's position comes from a
+            // closed-form ballistic path evaluated per frame, which nothing
+            // static can solve. It is a separate NODE from SpellVfx rather than
+            // more members of it because every member of that pool carries a
+            // dissolve child and a renderer component -- dead weight on a drop
+            // that draws one still and never cross-fades -- and it sits between
+            // that pool and the damage numbers, which is its whole draw order.
             var pools = AllNodes(Screen().Root).Where(n => n.Kind == UiNodeKind.Pool).Select(n => n.Name).ToList();
 
-            CollectionAssert.AreEquivalent(new[] { "SpellVfx", "SpellGroundVfx", "DamagePopups" }, pools);
+            CollectionAssert.AreEquivalent(
+                new[] { "SpellVfx", "SpellParticles", "SpellGroundVfx", "DamagePopups" }, pools);
         }
 
         // ---- the tree does not restate a string ------------------------------------

@@ -38,7 +38,7 @@ namespace PrincesPalace.PlayModeTests
         public void Restore()
         {
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
-            SpellVfxPlayer.ClockOverride = null;
+            SpellPerformancePlayer.ClockOverride = null;
         }
 
         // ---- seeing an effect that lasts 13ms ------------------------------------
@@ -62,8 +62,8 @@ namespace PrincesPalace.PlayModeTests
         // the placement arithmetic all run exactly as they do in a fight.
         private static void HoldTheClockAtTheCast()
         {
-            float instant = Time.realtimeSinceStartup;
-            SpellVfxPlayer.ClockOverride = () => instant;
+            float instant = Time.time;
+            SpellPerformancePlayer.ClockOverride = () => instant;
         }
 
         // The other half of the same seam: jump the clock well past any budget
@@ -74,8 +74,8 @@ namespace PrincesPalace.PlayModeTests
         // to have a full coroutine tick behind it.
         private static void RunTheClockPastTheEnd()
         {
-            float past = Time.realtimeSinceStartup + 600f;
-            SpellVfxPlayer.ClockOverride = () => past;
+            float past = Time.time + 600f;
+            SpellPerformancePlayer.ClockOverride = () => past;
         }
 
         // BETWEEN TWO CASTS IN ONE TEST, because a cast now OWNS the renderers
@@ -496,7 +496,7 @@ namespace PrincesPalace.PlayModeTests
             // would be measuring a layer PlaySpellVfx never puts a per-target
             // effect on.
             _player = _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
-                .FirstOrDefault(p => !ReferenceEquals(p, _fight.GroundVfxPlayerForTest));
+                .FirstOrDefault(p => !_fight.GroundVfxPlayersForTest.Contains(p));
 
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
             // The first stays "Front": a sibling test looks its stage slot up
@@ -539,7 +539,9 @@ namespace PrincesPalace.PlayModeTests
             // sheet is authored yet. It has to be a no-op, not an exception.
             yield return LoadFight();
 
-            _player.PlayAt("Vfx/does_not_exist", 0.6f, Vector2.zero, new Vector2(380f, 380f));
+            var missing = AimedBeat(impactX: 0.5f, impactY: 0.25f);
+            missing.Vfx.path = "Vfx/does_not_exist";
+            _fight.PlaySpellVfxForTest(missing);
 
             Assert.IsFalse(_player.IsPlaying);
             Assert.IsFalse(_player.Image.enabled);
@@ -1042,8 +1044,19 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadFight();
 
-            // Slowed right down, so the sampling below lands where it means to.
-            _player.PlayAt("Spells/mud_burst", 8f, Vector2.zero, new Vector2(380f, 380f));
+            // STEPPED THROUGH A REAL CAST rather than driven at the renderer.
+            // The renderer no longer owns a schedule to be "playing" against --
+            // the module decides which frame and how far into its dissolve, and
+            // the renderer draws that answer -- so sampling means holding the
+            // module's clock and walking it. Which is also what makes the walk
+            // deterministic: every sample below lands where it means to instead
+            // of wherever the next frame happened to arrive.
+            var beat = AimedBeat(impactX: 0.5f, impactY: 0.25f);
+            float start = Time.time;
+            float clock = start;
+            SpellPerformancePlayer.ClockOverride = () => clock;
+
+            _fight.PlaySpellVfxForTest(beat);
 
             var fade = FadeLayer();
             Assert.IsNotNull(fade, "the player has no dissolve layer - see FightScreen.BuildSpellVfx");
@@ -1051,15 +1064,15 @@ namespace PrincesPalace.PlayModeTests
             bool sawBlend = false;
             bool sawClean = false;
 
-            // BOUNDED ON THE PLAYER'S OWN STATE, not a fixed 1.6s guess. This
-            // inherits [SetUp]'s 60x, so PlayRoutine's whole 8s-authored
-            // sequence runs in ~0.13s -- the fixed wait used to spend the
-            // other ~1.47s sampling nothing. The 2f ceiling is a failure
-            // timeout: if the effect never finishes, sawBlend/sawClean stay
-            // false and the asserts below say why.
-            float watched = 0f;
-            while (_player.IsPlaying && watched < 2f)
+            // The cast's whole scaled budget, in forty steps -- enough that
+            // several fall inside a frame's held 55% and several inside its
+            // dissolving 45%.
+            float budget = FightBeatPlayer.Scaled(0.52f);
+            for (int i = 0; i <= 40; i++)
             {
+                clock = start + budget * i / 40f;
+                _fight.PerformancePlayerForTest.Tick(clock);
+
                 if (fade.enabled && fade.color.a > 0.05f && fade.color.a < 0.95f) sawBlend = true;
 
                 // AND IT IS NOT ALWAYS BLENDING. A frame that dissolves from the
@@ -1067,9 +1080,6 @@ namespace PrincesPalace.PlayModeTests
                 // drawings share the screen at half strength and neither is
                 // legible, which for a lightning bolt means two bolts.
                 if (!fade.enabled || fade.color.a <= 0.01f) sawClean = true;
-
-                watched += Time.unscaledDeltaTime;
-                yield return null;
             }
 
             Assert.IsTrue(sawBlend, "no frame ever blended into the next - the sequence is still a slideshow");
@@ -1084,7 +1094,8 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadFight();
 
-            _player.PlayAt("Spells/mud_burst", 8f, Vector2.zero, new Vector2(380f, 380f));
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(AimedBeat(impactX: 0.5f, impactY: 0.25f));
             yield return null;
 
             _player.StopImmediately();

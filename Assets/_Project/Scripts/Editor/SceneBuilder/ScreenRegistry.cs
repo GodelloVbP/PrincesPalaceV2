@@ -167,19 +167,41 @@ public static class ScreenRegistry
                     })
                     .ToArray();
 
-                // THE SHARED GROUND LAYER. Same component, same three settings,
-                // one instance -- the difference is where it sits in the tree
-                // (behind the racks; see FightScreen.BuildSpellGroundVfx) and
-                // that its size is recomputed per cast rather than authored.
-                fight.spellGroundVfxPlayer = result.Attach<SpellVfxPlayer>(screen.SpellGroundVfx);
-                fight.spellGroundVfxPlayer.image = fight.spellGroundVfx;
-                fight.spellGroundVfxPlayer.image.raycastTarget = false;
-                fight.spellGroundVfxPlayer.image.preserveAspect = true;
-                fight.spellGroundVfxPlayer.image.enabled = false;
-                fight.spellGroundVfxPlayer.fade = result.Image(screen.SpellGroundVfxNext);
-                fight.spellGroundVfxPlayer.fade.raycastTarget = false;
-                fight.spellGroundVfxPlayer.fade.preserveAspect = true;
-                fight.spellGroundVfxPlayer.fade.enabled = false;
+                // THE SHARED GROUND BAND. Same component, same three settings
+                // -- the difference is where it sits in the tree (behind the
+                // racks; see FightScreen.BuildSpellGroundVfx) and that each
+                // member's size is recomputed per cast rather than authored.
+                fight.spellGroundVfxPlayers = screen.SpellGroundVfx
+                    .Select((node, i) =>
+                    {
+                        var player = result.Attach<SpellVfxPlayer>(node);
+                        player.image = fight.spellGroundVfx[i];
+                        player.image.raycastTarget = false;
+                        player.image.preserveAspect = true;
+                        player.image.enabled = false;
+
+                        player.fade = result.Image(screen.SpellGroundVfxNext[i]);
+                        player.fade.raycastTarget = false;
+                        player.fade.preserveAspect = true;
+                        player.fade.enabled = false;
+
+                        return player;
+                    })
+                    .ToArray();
+
+                // THE DROPS. A bare Image each, on their own node between the
+                // sprite pool and the damage numbers -- see
+                // FightScreen.BuildSpellParticles for why they are not more
+                // members of the pool above.
+                foreach (var drop in fight.spellParticles)
+                {
+                    drop.raycastTarget = false;
+                    drop.preserveAspect = true;
+                    drop.enabled = false;
+                }
+
+                var particles = result.Attach<SpellParticleRenderer>(screen.SpellParticlePool);
+                particles.particles = fight.spellParticles;
 
                 // THE MODULE, ON THE EFFECTS POOL NODE. It ticks from its own
                 // Update, so it lives on a node that exists for the whole
@@ -190,7 +212,8 @@ public static class ScreenRegistry
                 // members of either.
                 fight.performancePlayer = result.Attach<SpellPerformancePlayer>(screen.SpellVfxPool);
                 fight.performancePlayer.effectRenderers = fight.spellVfxPlayers;
-                fight.performancePlayer.groundRenderers = new[] { fight.spellGroundVfxPlayer };
+                fight.performancePlayer.groundRenderers = fight.spellGroundVfxPlayers;
+                fight.performancePlayer.particleRenderer = particles;
 
                 // The popups own their own rise-and-fade, so each gets its
                 // component and its label here rather than being animated by the
