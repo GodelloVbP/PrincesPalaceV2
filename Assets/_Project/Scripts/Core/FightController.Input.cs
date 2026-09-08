@@ -385,8 +385,7 @@ namespace PrincesPalace
                     int row = _menu.Selection;
                     if (row < 0 || row >= options.Count) return;
 
-                    _session.CastSkill(options[row].Index, _session.Current, _menu.ChosenElement);
-                    AfterResolution();
+                    TryResolveInstant(options[row], _menu.ChosenElement);
                     return;
                 }
 
@@ -481,8 +480,7 @@ namespace PrincesPalace
                     if (targeting == Domain.Combat.SkillTargeting.Self
                         || targeting == Domain.Combat.SkillTargeting.Party)
                     {
-                        _session.CastSkill(options[index].Index, _session.Current);
-                        AfterResolution();
+                        TryResolveInstant(options[index], null);
                         return;
                     }
                 }
@@ -688,6 +686,27 @@ namespace PrincesPalace
         }
 
         public System.Action<string> ItemUsed;
+
+        // SELF/PARTY CASTS RESOLVE THE INSTANT THEY ARE PICKED -- neither
+        // targeting has a mark left to aim at (see the two call sites' own
+        // headers for why), so the click that reaches this method IS the
+        // whole command. Shared by the Element-depth branch (a self/party
+        // skill with an element choice, where the element press itself
+        // commits) and the plain row-select branch (a self/party skill with
+        // no choice at all) so the cast-and-repaint pair has one home.
+        private bool TryResolveInstant(ResolvedSkillOption option, DamageType? element)
+        {
+            var targeting = option.Skill.Targeting;
+            if (targeting != Domain.Combat.SkillTargeting.Self
+                && targeting != Domain.Combat.SkillTargeting.Party)
+            {
+                return false;
+            }
+
+            _session.CastSkill(option.Index, _session.Current, element);
+            AfterResolution();
+            return true;
+        }
 
         // Every path that resolves an action ends here: the menu closes, the
         // recorded beats are handed to playback, and the screen repaints.
