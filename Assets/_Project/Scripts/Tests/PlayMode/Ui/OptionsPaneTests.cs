@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -18,6 +19,20 @@ namespace PrincesPalace.PlayModeTests
     public class OptionsPaneTests
     {
         private OptionsController _options;
+        private float _savedBattleSpeed;
+
+        // BattleSpeed is the one GameSettings value on this pane with a
+        // production-timing consequence once FightBootstrap.Start reads it
+        // (docs/PLAN_BATTLE_SPEED.md) -- every OTHER row this file pokes
+        // (sound, fps, window, resolution) is inert outside a real device, so
+        // this is the first setting here that actually needs the capture/
+        // restore pattern GameSettingsTests already established, rather than
+        // being left wherever the last case in this file put it.
+        [SetUp]
+        public void SaveBattleSpeed() => _savedBattleSpeed = GameSettings.BattleSpeed;
+
+        [TearDown]
+        public void RestoreBattleSpeed() => GameSettings.SetBattleSpeed(_savedBattleSpeed);
 
         private IEnumerator OpenOptions()
         {
@@ -55,6 +70,7 @@ namespace PrincesPalace.PlayModeTests
             GameSettings.SetMusicVolume(0.22f);
             GameSettings.SetFpsLimitIndex(GameSettings.FpsLimits.Length - 1);
             GameSettings.SetWindowModeIndex(0);
+            GameSettings.SetBattleSpeed(2f);
 
             _options.RestoreDefaults();
 
@@ -62,6 +78,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(GameSettings.DefaultVolume, GameSettings.MusicVolume, 0.001f);
             Assert.AreEqual(GameSettings.DefaultFpsLimitIndex, GameSettings.FpsLimitIndex);
             Assert.AreEqual(GameSettings.DefaultWindowModeIndex, GameSettings.WindowModeIndex);
+            Assert.AreEqual(BattleSpeed.DefaultDisplay, GameSettings.BattleSpeed, 0f);
         }
 
         // Ends are ends. Wrapping would drop a player from 4K to 1280x720 on one
@@ -80,6 +97,18 @@ namespace PrincesPalace.PlayModeTests
             GameSettings.SetResolutionIndex(-1);
             Assert.AreEqual(0, GameSettings.ResolutionIndex,
                 "stepping below the smallest resolution wrapped to the largest");
+
+            // T3, docs/PLAN_BATTLE_SPEED.md: the battle-speed row is a
+            // stepper too, so it must clamp at both ends the same way.
+            GameSettings.SetBattleSpeed(BattleSpeed.Rows[BattleSpeed.Rows.Count - 1].Display);
+            _options.Step("battlespeed", +1);
+            Assert.AreEqual(BattleSpeed.Rows[BattleSpeed.Rows.Count - 1].Display, GameSettings.BattleSpeed, 0f,
+                "stepping past the fastest preset wrapped to the slowest");
+
+            GameSettings.SetBattleSpeed(BattleSpeed.Rows[0].Display);
+            _options.Step("battlespeed", -1);
+            Assert.AreEqual(BattleSpeed.Rows[0].Display, GameSettings.BattleSpeed, 0f,
+                "stepping below the slowest preset wrapped to the fastest");
         }
 
         // Every group the pane draws has to bind to something. The design's own

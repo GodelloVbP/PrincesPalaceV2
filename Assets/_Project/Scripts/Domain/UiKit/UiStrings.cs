@@ -741,10 +741,29 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString OptionsResolution = UiString.Define("options.resolution", "Resolution");
         public static readonly UiString OptionsWindow = UiString.Define("options.window", "Window");
         public static readonly UiString OptionsFrameLimit = UiString.Define("options.frame_limit", "Frame limit");
+        public static readonly UiString OptionsGameplay = UiString.Define("options.gameplay", "GAMEPLAY");
+        public static readonly UiString OptionsBattleSpeed =
+            UiString.Define("options.battle_speed", "Battle speed");
+        // "{0}x", sample "1.5x" -- docs/PLAN_BATTLE_SPEED.md's own sample
+        // rule. {0} is BattleSpeed.Preset.DisplayNumber, already formatted
+        // with "0.##" so "1" prints "1x" rather than "1.00x"; this template
+        // only adds the "x".
+        public static readonly UiString OptionsBattleSpeedValue =
+            UiString.Define("options.battle_speed.value", "{0}x", "1.5x");
+        // Distinct from every other row's footer claim: contract 4 means a
+        // beat already under way finishes on the pace it started at, so
+        // "applies immediately" would describe a beat that has not opened
+        // yet, not the one on screen when the player steps this row.
+        public static readonly UiString OptionsBattleSpeedNote =
+            UiString.Define("options.battle_speed.note", "Applies from the next action");
         public static readonly UiString OptionsRestoreDefaults =
             UiString.Define("options.restore_defaults", "RESTORE DEFAULTS");
+        // Reworded, docs/PLAN_BATTLE_SPEED.md: the blanket claim stopped
+        // being true the moment one row on this screen no longer retimes
+        // whatever beat is already playing.
         public static readonly UiString OptionsAppliesImmediately =
-            UiString.Define("options.applies", "Changes apply immediately.");
+            UiString.Define("options.applies",
+                "Changes apply immediately. Battle speed applies from the next action.");
 
         // ---- the Run statistics pane ---------------------------------------
         //

@@ -37,18 +37,17 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float ColumnGap = 40f;
 
-        // ONE COLUMN, not two, and that is what lets five settings fill an
+        // ONE COLUMN, not two, and that is what lets six settings fill an
         // 804-tall pane.
         //
         // Two columns put Audio's two rows beside Display's three and left both
         // stopping less than halfway down: a card cannot be made tall enough to
         // close the pane without rows deep enough to lose the control in. Full
-        // width, stacked, the two cards and the restore button reach 694 of 696
-        // -- and a wide row with its label at the left and its control at the
-        // right is the shape every settings screen has, rather than a
-        // compromise.
+        // width, stacked, and a wide row with its label at the left and its
+        // control at the right is the shape every settings screen has, rather
+        // than a compromise.
         //
-        // What this does NOT fix is that there are five settings. The four cut
+        // What this does NOT fix is that there are six settings. The three cut
         // groups are in REMAINING.md and each is a feature rather than a layout
         // job; this is the honest arrangement of what exists.
         public const float ColumnCount = 1f;
@@ -77,13 +76,18 @@ namespace PrincesPalace.Domain.UiKit
         public const float HeadingWidth = 320f;
 
         public const float CardPadX = 30f;
-        public const float CardPadY = 24f;
-        public const float HeadingHeight = 40f;
 
-        // 78 rather than 56, chosen against the pane rather than by eye: two
-        // cards of two and three rows, their gaps, and the restore button come
-        // to 694 of the 696 the pane has. CardsFit() is what keeps that true.
-        public const float RowHeight = 78f;
+        // 18/36/28/58, not 24/40/36/78 -- docs/PLAN_BATTLE_SPEED.md's option
+        // A. A third card (Gameplay) landed a sixth row and a third card's
+        // own padding onto a column that had 694 of 707.56 to spend on five
+        // rows across two cards; the four constants below all shrink
+        // together so the third card fits at 704 of 707.56 rather than
+        // overflowing UiAudit. Every existing row gets shorter as a result --
+        // G4 photographs the pane at the narrowest audited aspect to judge
+        // whether that reads as cramped.
+        public const float CardPadY = 18f;
+        public const float HeadingHeight = 36f;
+        public const float RowHeight = 58f;
 
         public static float CardContentWidth => ColumnWidth - CardPadX * 2f;            // 612
         public static float CardContentHalf => CardContentWidth * 0.5f;                 // 306
@@ -92,7 +96,7 @@ namespace PrincesPalace.Domain.UiKit
             CardPadY * 2f + HeadingHeight + rows * RowHeight;
 
         // Cards stack down their column with this between them.
-        public const float CardGap = 36f;
+        public const float CardGap = 28f;
 
         // Row `index` inside a card of `rows`, measured from the CARD's centre.
         public static float RowCentreY(int rows, int index) =>

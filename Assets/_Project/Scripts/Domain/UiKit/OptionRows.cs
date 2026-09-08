@@ -58,13 +58,13 @@ namespace PrincesPalace.Domain.UiKit
     // that stores nothing is worse than an absent one, because the player moves
     // it, believes something changed, and is wrong.
     //
-    // The design asked for six groups. Two survive, because GameSettings holds
-    // five values and nothing else exists to bind to. What was cut and what
-    // each would need is written down in
-    // docs/handoffs/system_menu/REMAINING.md rather than shipped as furniture:
+    // The design asked for six groups. Three survive, because GameSettings
+    // now holds six values (docs/PLAN_BATTLE_SPEED.md added BattleSpeed) and
+    // nothing else exists to bind to. What was cut and what each would need
+    // is written down in docs/handoffs/system_menu/REMAINING.md rather than
+    // shipped as furniture:
     //
     //   Readability (text size, tooltip delay)  - neither value exists
-    //   Gameplay (battle speed, show tooltips)  - neither value exists
     //   Keybinds                                - no rebind screen and no
     //                                             keybind storage; the design
     //                                             lists that screen as open
@@ -94,6 +94,16 @@ namespace PrincesPalace.Domain.UiKit
                 new OptionRowDef("resolution", UiStrings.OptionsResolution, OptionKind.Stepper),
                 new OptionRowDef("window", UiStrings.OptionsWindow, OptionKind.Stepper),
                 new OptionRowDef("fps", UiStrings.OptionsFrameLimit, OptionKind.Stepper)),
+
+            // docs/PLAN_BATTLE_SPEED.md: the one Gameplay setting that binds
+            // to a real value. The note says what the design's own footer
+            // now also says for this one row specifically -- a stepped
+            // battle speed does not retime a beat already under way (contract
+            // 4), so "applies immediately" would be wrong here even though
+            // it is true of every other row on this screen.
+            new OptionGroupDef("Gameplay", UiStrings.OptionsGameplay, column: 0,
+                new OptionRowDef("battlespeed", UiStrings.OptionsBattleSpeed, OptionKind.Stepper,
+                    note: UiStrings.OptionsBattleSpeedNote)),
         };
 
         // Flattened, in build order, so the controller's arrays and the tree

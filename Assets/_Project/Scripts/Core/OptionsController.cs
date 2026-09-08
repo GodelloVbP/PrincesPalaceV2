@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -177,6 +178,14 @@ namespace PrincesPalace
                 case "resolution": return GameSettings.Resolutions[GameSettings.ResolutionIndex].Label;
                 case "window": return GameSettings.WindowModeLabels[GameSettings.WindowModeIndex];
                 case "fps": return GameSettings.FpsLimits[GameSettings.FpsLimitIndex] + " fps";
+                // BattleSpeed.Nearest rather than IndexOf(GameSettings.BattleSpeed)
+                // directly: the stored value is already an exact row's Display
+                // (GameSettings.Load/SetBattleSpeed both route through Nearest),
+                // but reading it back through Nearest again is what keeps this
+                // label honest if that guarantee is ever violated from outside.
+                case "battlespeed":
+                    return UiStrings.OptionsBattleSpeedValue.Format(
+                        BattleSpeed.Nearest(GameSettings.BattleSpeed).DisplayNumber);
                 default: throw new ArgumentOutOfRangeException(nameof(key), key,
                     "an Options stepper has no GameSettings value behind it");
             }
@@ -185,7 +194,12 @@ namespace PrincesPalace
         // CLAMPED, not wrapped. Wrapping a resolution list means one click past
         // 4K silently drops the player to 1280x720, which on a stepper they are
         // holding down is a nasty surprise; the ends of these lists are ends.
-        private void Step(string key, int delta)
+        //
+        // Public, like Refresh and RestoreDefaults beside it: T3 and T6
+        // (docs/PLAN_BATTLE_SPEED.md) both step a row directly rather than
+        // finding and clicking its Button, and PlayMode has no
+        // InternalsVisibleTo grant to reach this at `internal`.
+        public void Step(string key, int delta)
         {
             switch (key)
             {
@@ -201,6 +215,20 @@ namespace PrincesPalace
                     GameSettings.SetFpsLimitIndex(
                         Clamp(GameSettings.FpsLimitIndex + delta, GameSettings.FpsLimits.Length));
                     break;
+                case "battlespeed":
+                {
+                    // The CURRENT row's index, by identity (Nearest of an
+                    // already-exact value returns that row), stepped and
+                    // clamped exactly like every other stepper here, then
+                    // handed to SetBattleSpeed as a DISPLAY number -- Nearest
+                    // there maps an exact row's own Display back to itself,
+                    // so this never drifts off the table it just walked.
+                    int index = BattleSpeed.IndexOf(BattleSpeed.Nearest(GameSettings.BattleSpeed));
+                    if (index < 0) index = BattleSpeed.IndexOf(BattleSpeed.Default);
+                    index = Clamp(index + delta, BattleSpeed.Rows.Count);
+                    GameSettings.SetBattleSpeed(BattleSpeed.Rows[index].Display);
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException(nameof(key), key,
                         "an Options stepper has no GameSettings setter behind it");
@@ -221,6 +249,7 @@ namespace PrincesPalace
             GameSettings.SetWindowModeIndex(GameSettings.DefaultWindowModeIndex);
             GameSettings.SetFpsLimitIndex(GameSettings.DefaultFpsLimitIndex);
             GameSettings.SetResolutionIndex(GameSettings.DefaultResolutionIndexForDisplay());
+            GameSettings.SetBattleSpeed(BattleSpeed.DefaultDisplay);
             Refresh();
         }
     }
