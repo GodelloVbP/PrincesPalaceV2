@@ -360,17 +360,36 @@ namespace PrincesPalace
 
             _menu.Select(index, rows[index].ManaCost);
 
-            // AN ELEMENT ROW COMMITS THE ELEMENT AND MOVES ON TO THE MARK. The
-            // element is read off the skill rather than parsed back out of the
-            // row's own text: FightHudModel.ElementRows builds those names from
-            // this same list in this same order, and a label round-trip is a
-            // second home for the mapping.
+            // AN ELEMENT ROW COMMITS THE ELEMENT. The element is read off the
+            // skill rather than parsed back out of the row's own text:
+            // FightHudModel.ElementRows builds those names from this same
+            // list in this same order, and a label round-trip is a second
+            // home for the mapping.
             if (_menu.Depth == Domain.Combat.Session.MenuDepth.Element)
             {
-                var elements = SelectedSkill()?.Elements;
+                var elementSkill = SelectedSkill();
+                var elements = elementSkill?.Elements;
                 if (elements == null || index >= elements.Length || elements[index] == null) return;
 
                 _menu.ChooseElement(elements[index].Type);
+
+                // SELF/PARTY RESOLVES HERE, same as it always has for an
+                // element-less Self/Party skill -- there is still nothing a
+                // Target-depth click could change, elements[] or not. A
+                // SingleEnemy skill has a mark to pick, so it falls through
+                // to Target depth exactly like the non-element case does.
+                if (elementSkill.Targeting == Domain.Combat.SkillTargeting.Self
+                    || elementSkill.Targeting == Domain.Combat.SkillTargeting.Party)
+                {
+                    var options = SkillOptions(_session.Current);
+                    int row = _menu.Selection;
+                    if (row < 0 || row >= options.Count) return;
+
+                    _session.CastSkill(options[row].Index, _session.Current, _menu.ChosenElement);
+                    AfterResolution();
+                    return;
+                }
+
                 RefreshUi();
                 return;
             }
@@ -419,23 +438,51 @@ namespace PrincesPalace
                 var options = SkillOptions(_session.Current);
                 if (index < options.Count)
                 {
+                    // WHICH ELEMENT, THEN WHICHEVER TARGETING THE SKILL
+                    // ACTUALLY HAS. This used to run AFTER the Self/Party
+                    // instant-resolve below, which meant a Self/Party skill
+                    // that also authored elements[] never reached here at
+                    // all -- it cast on the row press with whatever element
+                    // ResolvedSkill defaulted to, uncastable from the menu on
+                    // any other element even though FightAction.LegalActions
+                    // enumerates every one of them for the bot. Checking the
+                    // choice first, for any targeting shape, is what makes
+                    // the element press (above) the place that decides
+                    // Self/Party-resolves-now versus SingleEnemy-needs-a-mark.
+                    if (options[index].Skill.HasElementChoice)
+                    {
+                        _menu.EnterElementChoice();
+                        RefreshUi();
+                        return;
+                    }
+
+                    // Self and Party resolve the same way -- Wool Gathering
+                    // (HealSelf) was routing through the enemy-target prompt
+                    // regardless, so the player clicked an enemy plate for a
+                    // self-heal that ignored the click and healed the caster
+                    // anyway (ResolveCharacterSkillInner's HealSelf case
+                    // never reads its target argument). Neither has anything
+                    // to aim at: the target set is fixed the instant the
+                    // skill is picked, so there is nothing a Target-depth
+                    // click could change.
+                    //
+                    // AllEnemies no longer joins them here. An earlier
+                    // version of this check routed every non-SingleEnemy
+                    // skill through the same instant-resolve path, which
+                    // meant a group cast -- real mana cost, real variance,
+                    // the most expensive miscast in the menu -- had LESS
+                    // confirmation friction than a single-target one. It now
+                    // enters Target depth exactly like SingleEnemy does; the
+                    // click that confirms it can land on any enemy plate,
+                    // because ResolveDamageAll already hits every living
+                    // opponent and ignores which one was actually clicked --
+                    // see its own header.
                     var targeting = options[index].Skill.Targeting;
                     if (targeting == Domain.Combat.SkillTargeting.Self
                         || targeting == Domain.Combat.SkillTargeting.Party)
                     {
                         _session.CastSkill(options[index].Index, _session.Current);
                         AfterResolution();
-                        return;
-                    }
-
-                    // WHICH ELEMENT, THEN WHICH ENEMY. Only a skill that
-                    // authored a choice stops here; every other skill falls
-                    // through to EnterTargeting below on exactly the path it
-                    // always took.
-                    if (options[index].Skill.HasElementChoice)
-                    {
-                        _menu.EnterElementChoice();
-                        RefreshUi();
                         return;
                     }
                 }
