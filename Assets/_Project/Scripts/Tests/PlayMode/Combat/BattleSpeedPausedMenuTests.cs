@@ -23,7 +23,7 @@ namespace PrincesPalace.PlayModeTests
     //
     // NOT SYNTHETIC (unlike BattleSpeedSpellClockTests): contract 4 is about
     // three real production pieces agreeing -- FightBeatPlayer only adopting
-    // once per beat, SystemMenuController genuinely freezing the clock, and
+    // once per beat, SystemMenuController freezing the clock, and
     // OptionsController.Step writing through GameSettings -- so this drives
     // all three for real, in the Fight scene the game actually opens the
     // menu in (ScreenRegistry.cs:126 wires a real SystemMenuController there,
@@ -124,7 +124,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1f / 1.5f, paceAtBeat0Top, 1e-4f,
                 "fixture: beat 0 did not adopt the display-1 row it opened at");
 
-            // Give beat 0 real time to be genuinely IN FLIGHT -- past its own
+            // Give beat 0 real time to be IN FLIGHT -- past its own
             // top, short of its own end -- rather than pausing on the frame
             // it started. At this pace (0.667x) the whole beat runs well
             // over a second of real time, so 0.15s is comfortably inside it.
@@ -159,7 +159,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(paceAtBeat0Top, FightBeatPlayer.PlayerSpeedMultiplier, 0f,
                 "stepping the row while paused retroactively changed the beat already in flight");
 
-            // And the pause genuinely holds game time -- the mechanism
+            // And the pause holds game time -- the mechanism
             // contract 4 leans on (SystemMenuController.cs:225-237).
             yield return null;
             yield return null;

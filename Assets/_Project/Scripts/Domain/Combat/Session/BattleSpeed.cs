@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // THE BASELINE IS 1.5, NOT 1. Today's shipped pace -- the one the fight
     // has always run at, internally a factor of 1.0 -- reads to the owner as
     // too fast, and is being relabelled "1.5x" so the player's honest
-    // complaint ("turn it down to 1x") lands on a genuinely slower row
+    // complaint ("turn it down to 1x") lands on a slower row
     // instead of on the number that was already running. Multiplier is
     // Display / TodaysPaceDisplay for exactly this reason: the row that
     // reproduces today's speed is the one whose multiplier comes out to 1,
