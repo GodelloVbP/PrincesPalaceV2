@@ -54,6 +54,16 @@ namespace PrincesPalace.PlayModeTests
         private FightBeatPlayer _beats;
         private Canvas _canvas;
 
+        // Set by StandTheFightUp from the plan it resolved, so a caller that
+        // asked for an element (RecordWaterAt, the pause-step-resume test)
+        // presses the SAME one on ForceFirstAction rather than letting the
+        // forced path fall back to "the first that draws" -- which is Earth,
+        // authored first among prismatic_orb's four elements. Before this
+        // field existed, every "water" capture in this fixture cast
+        // unelemented and silently recorded Earth's art under a Water
+        // filename. 2026-09-08.
+        private string _planElement;
+
         [TearDown]
         public void Restore()
         {
@@ -63,10 +73,11 @@ namespace PrincesPalace.PlayModeTests
             TestGlobals.ResetAll();
         }
 
-        private IEnumerator StandTheFightUp(int enemies)
+        private IEnumerator StandTheFightUp(int enemies, string element = null)
         {
-            var plan = PreviewFight.ForSpell(SpellId);
+            var plan = PreviewFight.ForSpell(SpellId, element);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            _planElement = plan.Element;
 
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             Time.captureFramerate = CaptureFps;
@@ -178,13 +189,13 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator RecordWaterAt(float display, int frameCount)
         {
             RefuseWithoutGraphics();
-            yield return StandTheFightUp(1);
+            yield return StandTheFightUp(1, "Water");
 
             SetPreset(display);
             string label = PresetLabel(display);
             _fight.PushLogLineForTest("Battle speed " + label);
 
-            _fight.ForceFirstAction(SpellId);
+            _fight.ForceFirstAction(SpellId, _planElement);
 
             float armed = Time.realtimeSinceStartup;
             while (!_fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
@@ -230,12 +241,12 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator AWaterTailLivesAcrossAPauseStepResumeFromHalfToDoubleSpeed()
         {
             RefuseWithoutGraphics();
-            yield return StandTheFightUp(1);
+            yield return StandTheFightUp(1, "Water");
 
             SetPreset(0.5f);
             _fight.PushLogLineForTest("Battle speed 0.5x");
 
-            _fight.ForceFirstAction(SpellId);
+            _fight.ForceFirstAction(SpellId, _planElement);
             float armed = Time.realtimeSinceStartup;
             while (!_fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
             Assert.IsTrue(_fight.IsBusy, "'" + SpellId + "' was never cast -- the log says what was refused");
