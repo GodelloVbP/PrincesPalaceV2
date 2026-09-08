@@ -43,6 +43,19 @@ folder with different timing and both be right (`mud_burst` and
 hold is arithmetic -- a skill cannot land its impact on a frame the folder
 does not have -- and that is all `SpellVfxRecipeDriftTests` checks.
 
+A recipe names ONE sheet (`"sheet"`, `"grid"`, `"names"`) unless the delivery
+itself was more than one sheet -- a flight loop cut from one PNG and a
+contact burst from another, say -- in which case `"sources"` replaces all
+three: a list of `{"sheet", "grid", "names"}` entries, one per sheet, cut in
+order and merged into one cell dict (a name repeated across sources is
+refused). If the sources' cells are not all the same size, each is padded
+with transparency onto a shared canvas sized to the largest one -- centred,
+nothing scaled -- because every frame of one sequence has to share one
+canvas or the played spell visibly resizes frame to frame. Every recipe key
+after that (`keyed`, `base_align`, `content_crop`, `sequence`) means what it
+always has and applies across every source the same way; there is no
+per-source override.
+
 So `--new` writes the recipe and PRINTS the `skills.json` block. Pasting the
 second by hand is accepted friction: it is content, its numbers are
 judgements, and a tool that edited it would turn a review of five lines into
@@ -116,7 +129,14 @@ def _load_recipes():
         except (OSError, ValueError) as problem:
             sys.exit(f"cannot read recipe {path}: {problem}")
 
-        spec["grid"] = tuple(spec["grid"])
+        # "grid" is top-level for a single-sheet recipe and per-entry for a
+        # multi-source one (see `sources` below) -- never both, so each is
+        # tupled only where it actually appears.
+        if "grid" in spec:
+            spec["grid"] = tuple(spec["grid"])
+        for source in spec.get("sources", ()):
+            source["grid"] = tuple(source["grid"])
+
         recipes[name[:-5]] = spec
 
     return recipes
@@ -126,7 +146,7 @@ def write_recipe(vfx_id, spec):
     """Record a recipe, in the same key order the migration wrote."""
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
-    for key in ("_notes", "sheet", "grid", "names", "keyed", "base_align", "content_crop", "sequence"):
+    for key in ("_notes", "sheet", "grid", "names", "sources", "keyed", "base_align", "content_crop", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -561,9 +581,14 @@ def crop_to_shared_content(frames, pad=8):
     return [f.crop((left, top, right, bottom)) for f in frames]
 
 
-def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
-                base_align=False, content_crop=False, preview=False, vfx_id=None):
-    """Cut a sheet into frames.
+def cut_cells(sheet_path, rows, cols, names, keyed=True):
+    """Cut one sheet into its named cells: {name: RGBA frame}.
+
+    Everything a SINGLE SHEET needs -- the Resources/ guard, the divides-evenly
+    warning, the keying-or-authored-alpha split, the line- and border-erasure
+    passes -- lives here so a multi-source recipe (see `sources` in
+    `slice_sheet`) can call it once per sheet and just merge the dicts. A
+    single-sheet recipe is the degenerate case: one call, one dict, no merge.
 
     `keyed` picks between the two kinds of sheet this has to handle:
 
@@ -620,8 +645,6 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
         cut = source.convert("RGBA")
         print("authored alpha: keeping it, and skipping the sheet-wide line pass")
 
-    os.makedirs(out_dir, exist_ok=True)
-
     cell_w = width // cols
     cell_h = height // rows
 
@@ -653,6 +676,84 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
             print(f"  {name}: erased {borders} cell border line(s)")
 
         cells[name] = frame
+
+    return cells
+
+
+def pad_to_common_canvas(cells):
+    """Centre every cell, transparent-padded, onto one shared canvas: the
+    largest cell any of them measures.
+
+    ONLY A MULTI-SOURCE RECIPE NEEDS THIS. A single sheet's cells are already
+    the same size by construction -- one grid, one cell_w/cell_h. Cells drawn
+    from two different sheets are not: water's core cells are 512x512 and its
+    contact cells truncate to 443x443 (see the 443/444 alternation warning),
+    and SpellVfxPlayer fits every frame of a sequence into ONE box, so a
+    frame-to-frame size change would visibly resize the spell mid-flight.
+
+    Padded rather than resized, so nothing the artist drew is scaled: the
+    extra margin is plain transparency, which is invisible against anything
+    behind it.
+    """
+    sizes = {cell.size for cell in cells.values()}
+    if len(sizes) <= 1:
+        return cells
+
+    max_w = max(w for w, h in sizes)
+    max_h = max(h for w, h in sizes)
+
+    padded = {}
+    for name, cell in cells.items():
+        w, h = cell.size
+        if (w, h) == (max_w, max_h):
+            padded[name] = cell
+            continue
+
+        canvas = Image.new("RGBA", (max_w, max_h), (0, 0, 0, 0))
+        canvas.paste(cell, ((max_w - w) // 2, (max_h - h) // 2))
+        padded[name] = canvas
+        print(f"  {name}: padded {w}x{h} -> {max_w}x{max_h} (centred)")
+
+    return padded
+
+
+def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
+                base_align=False, content_crop=False, preview=False, vfx_id=None,
+                sources=None):
+    """Cut a sheet -- or several -- into frames.
+
+    `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
+    entirely: a list of `{"sheet", "grid": [rows, cols], "names": [...]}`
+    dicts, one per sheet a recipe draws cells from. Each is cut with
+    `cut_cells` under the one `keyed` flag the whole recipe declares, the
+    dicts are merged (a name repeated across sources is refused -- the merge
+    would silently keep whichever source lost), and if the sources' cells
+    are not all one size they are padded onto a shared canvas by
+    `pad_to_common_canvas` before anything else runs. Everything after that
+    point -- base_align, sequence, content_crop -- reads `cells` and `names`
+    exactly as it always has and cannot tell a merged dict from a plain one.
+    """
+    if sources:
+        cells = {}
+        names = []
+        for source in sources:
+            src_rows, src_cols = source["grid"]
+            src_names = source["names"]
+
+            repeats = set(cells) & set(src_names)
+            if repeats:
+                sys.exit(f"Cell name(s) {sorted(repeats)} appear in more than one source -- "
+                          f"names must be unique across sources.")
+
+            cells.update(cut_cells(os.path.join(SOURCE_DIR, source["sheet"]), src_rows, src_cols,
+                                    src_names, keyed=keyed))
+            names.extend(src_names)
+
+        cells = pad_to_common_canvas(cells)
+    else:
+        cells = cut_cells(sheet_path, rows, cols, names, keyed=keyed)
+
+    os.makedirs(out_dir, exist_ok=True)
 
     # AFTER the border pass and BEFORE the sequence, which is the only order
     # that works: a border still welded to a cell's bottom edge would be read
@@ -1032,14 +1133,25 @@ def main():
         if vfx_id not in VFX:
             sys.exit(f"Unknown VFX '{vfx_id}'. Known: {', '.join(sorted(VFX))}")
         spec = VFX[vfx_id]
-        rows, cols = spec["grid"]
-        print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
-        slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
-                    os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
-                    keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
-                    base_align=spec.get("base_align", False),
-                    content_crop=spec.get("content_crop", False),
-                    preview=args.preview, vfx_id=vfx_id)
+        out_dir = os.path.join(OUTPUT_ROOT, vfx_id)
+
+        if "sources" in spec:
+            described = ", ".join(f"{s['sheet']} {s['grid'][0]}x{s['grid'][1]}" for s in spec["sources"])
+            print(f"[{vfx_id}] {described}")
+            slice_sheet(None, out_dir, None, None, None,
+                        keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
+                        base_align=spec.get("base_align", False),
+                        content_crop=spec.get("content_crop", False),
+                        preview=args.preview, vfx_id=vfx_id, sources=spec["sources"])
+        else:
+            rows, cols = spec["grid"]
+            print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
+            slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
+                        out_dir, rows, cols, spec["names"],
+                        keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
+                        base_align=spec.get("base_align", False),
+                        content_crop=spec.get("content_crop", False),
+                        preview=args.preview, vfx_id=vfx_id)
 
 
 if __name__ == "__main__":

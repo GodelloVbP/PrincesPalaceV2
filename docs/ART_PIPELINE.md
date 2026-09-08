@@ -312,6 +312,16 @@ nothing else, so a record beside the tool is invisible to the C# suite.
 `--new <id> --sheet <p.png>` writes the recipe and prints the `skills.json`
 block.
 
+A recipe names one sheet (`sheet`/`grid`/`names`) unless the delivery itself
+was more than one — `prismatic_orb_water` cuts a travelling-ball loop from one
+PNG and its contact burst from another — in which case `sources` replaces all
+three: a list of `{"sheet", "grid", "names"}` entries, cut in order under the
+recipe's one `keyed` flag and merged into a single cell dict (a name reused
+across sources is refused). Cells that come out different sizes — one sheet's
+grid truncated tighter than another's — are centred, transparent-padded onto
+a shared canvas sized to the largest cell before anything downstream runs, so
+one sequence never changes box size frame to frame.
+
 > **The recipe describes how frames are PRODUCED. The skill's `vfx` block
 > describes how they PLAY.** A skill may override a recipe's intent
 > deliberately, and two skills may share one frame folder with different
