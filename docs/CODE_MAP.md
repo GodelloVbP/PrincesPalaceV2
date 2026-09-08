@@ -439,7 +439,7 @@ creature: a `StageApproach.Lunge` at a target that is somebody else.
 | `Core/StaticSwing.cs` | the wind-up a still cannot draw — reports anticipation + travel as one number, which is what moves the impact instant to when the figure actually arrives, and plays the whoosh at the top of the crouch |
 | `Core/StageActorAnimator.cs` | `Play`'s optional `leadSeconds` (the crouch before the snap, `Anticipate`), and one afterimage at the contact position when `TweenBack` opens |
 | `Core/FightBeatPlayer.cs` | `IsStaticSwing`, the `PlayContactFx` delegate and `WantsContactFx` |
-| `Core/FightController.SpellVfx.cs` | `PlayContactFx`/`ContactBoxFor` — the arc and the burst through spell-pool members 0 and 1 |
+| `Core/FightController.SpellVfx.cs` | `PlayContactFx`/`ContactBoxFor` — the arc and the burst as a two-layer presentation through the same allocator every spell uses (they used to be pool members 0 and 1, taken by index) |
 | Tests | `FightContactCueTests` (which beats get the effects), the `StaticSwing` timing pin in `FightBeatPacingTests`, `AnAnticipatedLungeStillEndsExactlyOnItsMark` in `StageAnimationTests`, and `StaticPilotStageCaptureTests` (the whole beat, sampled and photographed) |
 
 Two measurements the plan said to make rather than predict, both now made --
@@ -543,12 +543,43 @@ combat logic could not leave the controller.
 `FightStageVisualTests` covers the view side; the rules themselves already had
 EditMode tests.
 
-### Spell VFX (`SpellVfxPlayer` + `FightController.SpellVfx.cs`)
+### Spell VFX (the layered presentation)
 
-One Image, re-pointed frame by frame. No Animator: that would put the timing in
-an asset instead of beside the spell that owns it, and `vfxSeconds` is authored
-in skills.json next to the damage, which is where someone tuning the spell is
-looking.
+A spell is an **ordered array of layers**, each independently choosing what
+renders, where it belongs and when it runs. Four files hold the model and three
+hold the runtime; nothing else in the game knows a spell has layers at all.
+
+| File | What it owns |
+|---|---|
+| `Domain/Content/SpellLayer.cs` | `SpellLayer` and `SpellEmitter` — the authored shape |
+| `Domain/Content/SpellLayerNames.cs` | the six discriminators (`render`, `place`, `at`, `until`, `facing`, `sort`), each a closed enum with a `Parse`/`IsKnown` pair, `SpellAnchorNames`' shape exactly |
+| `Domain/Content/SpellLayerRules.cs` | every validation rule, collected in one pass, refused at content build with the skill, the layer and the field named |
+| `Domain/Content/SpellPresentation.cs` | `layers`/`layerFormat`/`hitCueSeconds`, and `ToLayers(frameCount)` — the pre-layer format said in layers, at runtime, never stored |
+| `Domain/Combat/Presentation/SpellPerformance.cs` | the resolved model: fan-out, absolute times, the lifetime table, `ArrivalSeconds`, `HitCueSeconds`, and `PositionOf`/`VelocityOf` — the ONE evaluation of an eased flight |
+| `Domain/Combat/Presentation/SpellSchedule.cs` | `Crossed(previous, now]` — pure, half-open, each cue delivered exactly once whatever the clock did |
+| `Domain/Combat/Presentation/SpellFrameCursor.cs` | which drawing is on screen at time t, and how far into its dissolve |
+| `Domain/Combat/Presentation/SpellEmitterSim.cs` | ballistic drops as a closed form over `(spec, seed, index, age)` |
+| `Core/SpellPerformancePlayer.cs` | the module: owns the clock (`Time.time`), the handles, the schedule tick, and the two renderer bands plus the particle pool |
+| `Core/SpellVfxPlayer.cs` | the sprite/still renderer, and nothing else — `Show(frame, next, blend, alpha, at, size)` |
+| `Core/SpellParticleRenderer.cs` | N pooled `Image`s driven from the sim |
+| `Core/FightController.SpellVfx.cs` | placement only: where the bottom of an effect is, which is the question every bug in it came from |
+
+Design and milestones: `docs/PLAN_SPELL_LAYERS.md`. Handoff:
+`docs/handoffs/spell_layers/BRIEF.md`.
+
+**Three properties worth knowing before changing any of it.** The schedule is a
+function of a WINDOW rather than of "is now past t", so a long frame or a test
+at 60x delivers every cue it crossed, once, in order — the coroutines this
+replaced could not state that, and `AUDIT.md` #61 is what it cost. Ownership is
+the CAST rather than the stage slot, so two casts on one target coexist and a
+second cast never restarts the first's renderer. And the clock is `Time.time`
+with one conversion (`FightBeatPlayer.Scaled`), so a pause freezes the beat and
+the spell together.
+
+One Image per sprite layer, re-pointed frame by frame. No Animator: that would
+put the timing in an asset instead of beside the spell that owns it, and a
+spell's `seconds` is authored in skills.json next to the damage, which is where
+someone tuning the spell is looking.
 
 Almost all of the controller half is one question -- **where is the bottom of
 the effect** -- and each answer came from an effect erupting somewhere
@@ -579,13 +610,16 @@ it and nothing else knows it exists —
 | File | What it owns |
 |---|---|
 | `Domain/Content/SpellPresentation.cs` | `groundPath`/`groundSeconds`/`groundImpactFrame`/`groundAspect`/`groundImpactY`/`castSfxPath`, and `HasGroundLayer` — the one gate the view asks |
-| `Domain/UiKit/Screens/FightScreen.cs` | `BuildSpellGroundVfx` — a pool of ONE, declared *before* the racks so uGUI draws it behind the figures standing on it |
-| `Core/FightController.SpellVfx.cs` | `PlaySpellGroundVfx`/`GroundBoxFor`/`StruckBy` — the fault sized to the slots the living targets actually occupy, not to a slot and not to a constant |
+| `Domain/UiKit/Screens/FightScreen.cs` | `BuildSpellGroundVfx` — a band of `FightHudSpec.SpellGroundRenderers`, declared *before* the racks so uGUI draws it behind the figures standing on it |
+| `Core/FightController.SpellVfx.cs` | `PlaceOnFormation`/`GroundBoxFor`/`StruckBy` — the fault sized to the slots the living targets actually occupy, not to a slot and not to a constant |
 
 Wired in `ScreenRegistry.cs` to the same `SpellVfxPlayer` the per-target pool
 uses; the differences are its depth in the tree and that its size is recomputed
-per cast. `FightController.StopSpellVfx` clears it with the pool, so
-`FightBeatPlayer.Flush` reclaims both.
+per cast. A SECOND member exists because ownership is per cast: a fault opening
+while the previous one is still cooling must get its own. `StopSpellVfx` is
+`SpellPerformancePlayer.CancelAll`, wired to `FightBeatPlayer.EndFight` rather
+than `Flush` — abandoning a fight cancels visuals, superseding a playback does
+not, because a tail is allowed to outlive the beat that cast it.
 
 **Per-target results (`Domain/Combat/Session/BeatTargetResult.cs`).** A sweep
 records what EACH enemy took, beside the beat's single `Amount` rather than

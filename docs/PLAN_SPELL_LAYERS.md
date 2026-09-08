@@ -148,6 +148,134 @@ status: G7 specifies *how* to measure, not what the number will be.
 
 ---
 
+## Deviations from revision 4 — M0 through M4, as built
+
+Written by the implementing session. Everything revision 4 specified was built
+except where a line below says otherwise; each is the smallest honest thing the
+tree allowed, with what forced it. M5 onward is untouched.
+
+**D1 — M0's captures cannot be committed, so the baseline is numbers.**
+`tools/screenshots/` is gitignored (`.gitignore:18`), so "five capture sets
+committed under `tools/screenshots/preview/`" is not a thing the repository can
+hold. The captures were taken and live locally under
+`tools/screenshots/preview/_baseline_M0/` with cinderfault's `timing.json`.
+What is committed is `SpellBaselineTimingTests`: `seconds`, `impactFrame`, the
+frame count on disk and the resulting delay, per spell, as literals — which is
+what M3 actually had to compare against, and a picture never could be.
+
+**D2 — the pilot's temporary `vfx` block was not authored.** M0 would have put a
+single-block presentation on `prismatic_orb`'s Water element purely to
+photograph. It is left undone by the owner's instruction and because the honest
+baseline is the one L7 records: the orb authors nothing, so its "before" is no
+art and a zero cue. That is asserted instead
+(`ThePilotSpellStillAuthorsNoPresentationAtAll`), and it is the assertion M5
+should replace rather than delete.
+
+**D3 — `ToLayers` takes the frame count.** §2f's signature is `ToLayers()`, and
+the same section lists three numbers a version-0 block needs that all depend on
+`frames.Length`. Two of them — `travelDelay` and `travelSeconds` — are `seconds`
+times a frame INDEX over that count, so a zero-argument version could not
+compute them and the departure/travel split would have had to live in Core,
+where no EditMode test reaches it. `ToLayers(int frameCount)`; Core supplies the
+count.
+
+**D4 — `ResolveAgainstFrames` is in Domain, as `SpellPerformance.Resolve`.** §5c
+placed it in Core. Every line of it is arithmetic over authored content plus a
+frame count, and the count arrives as a `Func<string,int>` rather than as a
+folder read — so Domain costs nothing and buys the lifetime table, the arrival
+rule and the adapter's own output an EditMode test. It is still ONE function,
+still called once from `Begin`, and still the only place `layerFormat` is read
+at runtime.
+
+**D5 — `SpellCastContext` collapsed into fields on the instance.** §5d describes
+a context carrying the caster's slot, the struck slots and the facing sign, with
+the module resolving placement from them. §5c says the opposite in the same
+document: `FightController.SpellVfx.cs` "keeps the placement measurement" and
+"loses the orchestration". Taken the §5c way, because every line of that
+measurement depends on the stage's depth scaling, on where the slots landed and
+on a sheet's own transparent margins. `Begin(performance)` takes one argument,
+and Core writes `From`/`To`/`Box`/`Facing` onto each instance — on the instance
+rather than in a parallel array keyed by index, which is the shape this codebase
+already removed once (`string[] iconIds` beside `Sprite[] iconSprites`).
+
+**D6 — the clock is converted, not the deadlines.** C1 says `SpellSchedule`
+stores engine-second deadlines. It stores authored seconds and the module
+converts the WINDOW instead, through a new `FightBeatPlayer.Unscaled` beside
+`Scaled` — so `BeatSpeedMultiplier` still has exactly one reader, and a
+performance stays a pure content-derived value that a test can resolve without a
+speed setting. Identical arithmetic; C1's out-of-contract case (changing the
+multiplier mid-beat) is unchanged.
+
+**D7 — `SpellLayerNames.cs` declares `SpellRenderNames`, not `SpellLayerNames`.**
+§5a names six tables and calls the first one after the file. The word it parses
+is `render`, so the table is `SpellRenderNames`; the file keeps the planned name.
+
+**D8 — three existing tests needed a cast boundary, and two more needed a
+different fixture line.** §2f lists tests whose assertions stay untouched. They
+do — every `Assert` line is unchanged — but five bodies are not:
+
+- `ATravellingEffectFiresTheWayTheCasterIsFacing`,
+  `AnOrdinaryEffectAfterAMirroredOneIsNotItselfMirrored` and
+  `TheFaultIsWiderUnderThreeEnemiesThanUnderOne` each cast TWICE inside one
+  frame and then read a FIXED pool member. Under per-cast ownership the second
+  cast correctly gets its own member, so the fixed one still shows the first.
+  Each gained one line ending the previous cast — which is what a beat boundary
+  does for free in a real fight, since beats are `BeatHoldSeconds` apart and
+  these sequences are milliseconds at 60x.
+- `TheIncomingFrameFadesUpOverTheOutgoingOne` and
+  `StoppingClearsTheDissolveLayerTooNotJustTheFrame` drove `SpellVfxPlayer
+  .PlayAt`, which M4 deletes along with the coroutine. Both drive a real cast
+  now; the dissolve one walks the module's held clock in forty steps, which also
+  makes every sample land where it means to rather than wherever the next frame
+  arrived. `AMissingSheetIsSilentRatherThanThrowing` follows for the same reason.
+
+**D9 — the ground band stopped being a pool of one, and six tests found out the
+hard way.** `SpellGroundRenderers = 2` means a fixture excluding "the ground
+player" by identity silently keeps the SECOND ground member as its "per-target
+renderer" — a member no per-target cast ever touches, which reads as "the effect
+was never drawn". `FightController.GroundVfxPlayersForTest` exposes the whole
+band and the fixtures exclude all of it.
+
+**D10 — the content-derived pool pin fans out by each skill's own targeting.**
+§4's counting rule multiplies target-level layers by `StageSlotsPerSide`
+unconditionally. Applied to the pilot that reports 84 particles against a
+reservation of 64 — and `prismatic_orb` is single-target, so it describes a cast
+the game cannot produce, which is R8's own complaint arriving in the pin that
+was supposed to replace the arithmetic R8 rejected. `SpellPoolCapacityTests`
+reads each skill's real fan-out through `SkillEntryResolver.DefaultTargetingFor`
+(rather than a second copy of that mapping) because `targeting` is almost always
+unauthored and derived from `effect`.
+
+**D11 — `SpellLayerRules.MaxFadeSeconds` is a literal with an assertion, not a
+derivation.** §2b derives 0.5 from `BeatHoldSeconds + BeatGapSeconds`, which are
+Core's constants; Domain is engine-free and cannot see them. The bracket the
+number actually claims — longer than a beat's hold, shorter than hold plus gap —
+is asserted from PlayMode instead (`SpellLayerFadeBoundTests`), so the claim
+fails when either beat constant moves rather than rotting in prose.
+
+**D12 — `EnemyEntryResolver` was hand-writing `SpellPresentationPaths`' list.**
+Not a plan deviation but a defect the work uncovered: four `ArtPathConvention`
+calls restated per resolver, which is exactly what that type's header says it
+exists to prevent, and it had gone stale — a layered enemy ability's frames
+would have reached a player unchecked while every skill's were guarded. Both
+resolvers call the same two functions now.
+
+**Not built, and named rather than implied.** The M4 evidence line that remains
+open is the allocation measurement: §4's `ProfilerRecorder` harness and its two
+assertions are M8's deliverable and were not attempted here, so "the tick path
+allocates nothing" is a design property with no test behind it yet. The tick
+path was written for it — `SpellSchedule.Crossed` fills a caller's buffer rather
+than returning a collection, and no per-frame allocation was introduced
+knowingly — but that is an intention, not a measurement. Also not built:
+`ASpellAndItsBeatCrossTheHitCueOnTheSameFrame`'s *frame-count* half, which hooks
+`PaintVitals`; the arithmetic half is asserted at multiplier 1 and 60, the
+runtime half is not. And the four birth-time source-sampling assertions of §9 M4
+exist as EditMode tests over `SpellEmitterSim` rather than against a live cast
+with a live projectile — the back-dating is pinned as arithmetic, not yet as a
+picture, because no spell authors an emitter until M5.
+
+---
+
 ## Review log, revision 3
 
 An adversarial pass over revision 2 against the tree, section by section.
