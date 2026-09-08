@@ -156,11 +156,14 @@ namespace PrincesPalace.Domain.Tests
         //
         // ON THE ELEMENT AND NOT ON THE SKILL, which is the whole shape of the
         // pilot: the orb itself draws nothing and each element may bring its
-        // own art. Water is the one that has any, and the other three staying
-        // empty is what makes "one element authored, three not" a case the
-        // resolver and the pool pin both have to handle.
+        // own art. Water was the only one that had any through M9; Fire, Wind
+        // and Earth each got the same four-recipe, five-layer treatment as a
+        // content-only delivery afterward (no C# touched), so all four of the
+        // orb's elements now author their own presentation and this pin was
+        // updated to say so -- it was a literal list of "today"'s state, not a
+        // rule that a fourth element could not be added.
         [Test]
-        public void ThePilotSpellAuthorsItsWaterElementAndOnlyThat()
+        public void ThePilotSpellAuthorsAllFourElementsAndTheOrbItselfNone()
         {
             string skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
                 .FirstOrDefault(s => JsonBlocks.String(s, "id") == "prismatic_orb");
@@ -176,8 +179,8 @@ namespace PrincesPalace.Domain.Tests
                 if (SpellVfxJson.OwnVfx(element) != null) authored.Add(JsonBlocks.String(element, "type"));
             }
 
-            CollectionAssert.AreEqual(new[] { "Water" }, authored,
-                "exactly one of the orb's four elements has art today");
+            CollectionAssert.AreEqual(new[] { "Earth", "Water", "Fire", "Wind" }, authored,
+                "all four of the orb's elements have art today, in authored order");
 
             var water = SpellVfxJson.OwnVfx(JsonBlocks.ObjectsInArray(skill, "elements")
                 .First(e => JsonBlocks.String(e, "type") == "Water"));
