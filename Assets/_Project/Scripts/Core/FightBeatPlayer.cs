@@ -103,10 +103,9 @@ namespace PrincesPalace
         public static float BeatSpeedMultiplier = 1f;
 
         // THE PLAYER-FACING HALF OF THE PRODUCT (docs/PLAN_BATTLE_SPEED.md
-        // contract 10). Never written directly -- AdoptPlayerSpeed and its
-        // ForTest twin, below, are the only writers, so nothing outside them
-        // can leave this disagreeing with what PlayerSpeedSource would
-        // currently say.
+        // contract 10). Never written directly -- AdoptPlayerSpeed, below,
+        // is the only writer, so nothing outside it can leave this
+        // disagreeing with what PlayerSpeedSource would currently say.
         public static float PlayerSpeedMultiplier { get; private set; } = 1f;
 
         // The seam FightBootstrap installs the settings-backed reader
@@ -125,26 +124,19 @@ namespace PrincesPalace
         // PlayerSpeedMultiplier can never disagree with what it would
         // currently say between one adoption and the next.
         //
-        // INTERNAL, NOT PRIVATE: FightBootstrap is the one production caller
-        // outside this class, immediately after it installs a new
-        // PlayerSpeedSource (see the call site's own comment). Without that
-        // call, OnEnable's own adoption -- which runs before FightBootstrap
-        // .Start on a fresh scene load, against whatever source was still
-        // installed from the PREVIOUS fight or the static default -- is the
-        // value the FIRST badge pop reads from Bind, one adoption stale.
-        internal static void AdoptPlayerSpeed()
+        // PUBLIC: called by FightBootstrap.Start, immediately after it
+        // installs a new PlayerSpeedSource (see that call site's own
+        // comment), by the per-beat loop below, and by any test that changes
+        // PlayerSpeedSource mid-test and needs the change to stick in
+        // PlayerSpeedMultiplier without waiting for the next beat (T5's
+        // "changing the delegate alone changes nothing" case, revision 3
+        // point 2) -- PlayMode has no InternalsVisibleTo grant, so a test
+        // caller needs this to be public, not a wrapper method that forwards
+        // to an internal one.
+        public static void AdoptPlayerSpeed()
         {
             PlayerSpeedMultiplier = PlayerSpeedSource != null ? PlayerSpeedSource() : 1f;
         }
-
-        // The same adoption, public: a fixture that changes PlayerSpeedSource
-        // mid-test needs a way to make that change stick in
-        // PlayerSpeedMultiplier without waiting for the next beat or a fresh
-        // OnEnable to trigger it on their own (T5's "changing the delegate
-        // alone changes nothing" case, revision 3 point 2). PlayMode has no
-        // InternalsVisibleTo grant, which is why this wrapper exists rather
-        // than a test calling AdoptPlayerSpeed itself.
-        public static void AdoptPlayerSpeedForTest() => AdoptPlayerSpeed();
 
         // THE PRODUCT, read in exactly one place -- Scaled/Unscaled below,
         // and SpellPerformancePlayer.Begin's own capture of a cast's
@@ -364,25 +356,15 @@ namespace PrincesPalace
             StopVfx?.Invoke();
         }
 
-        // Contract 2: opens the fight already on the chosen speed. Ordering
-        // caveat, recorded rather than silently assumed: Unity runs OnEnable
-        // for every object in a freshly loaded scene before ANY object's
-        // Start(), so this adoption can race ahead of FightBootstrap.Start
-        // installing the production source on the SAME load -- the plan's
-        // own "after FightBootstrap.Start installed the production source"
-        // ordering does not hold for that first instant. What this call
-        // still buys: PlayerSpeedMultiplier is a static that outlives a
-        // scene, so without it a fresh fight would open still carrying
-        // whatever the PREVIOUS fight last adopted. The opening glide and
-        // first badge pop run before Bind, which runs after Start, so by the
-        // time either actually paints anything the source is already
-        // installed and contract 1's own per-beat adoption has long since
-        // caught up.
-        private void OnEnable()
-        {
-            AdoptPlayerSpeed();
-        }
-
+        // NO OnEnable ADOPTION HERE. FightBootstrap.Start owns the first
+        // adoption of a fresh fight (installs PlayerSpeedSource, then calls
+        // AdoptPlayerSpeed explicitly before Bind paints anything), and
+        // PlayBeats' own per-beat call (below) owns every one after that --
+        // an OnEnable adoption would only ever run before FightBootstrap.
+        // Start on the same load (Unity runs every OnEnable before any
+        // Start) and read whichever source the PREVIOUS fight left behind,
+        // a value nothing here paints before the bootstrap's own call
+        // overwrites it.
         private void OnDisable()
         {
             // A scene change mid-round is exactly the abandoned-fight case, and

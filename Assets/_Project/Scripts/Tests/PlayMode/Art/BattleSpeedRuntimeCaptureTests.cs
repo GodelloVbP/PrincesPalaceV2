@@ -127,12 +127,12 @@ namespace PrincesPalace.PlayModeTests
         // Adopts immediately -- the caller decides when, which is what makes
         // the pause-step-resume sequence possible: this is called again mid-
         // capture, after the source has already changed, exactly like
-        // AdoptPlayerSpeedForTest everywhere else in this plan's tests.
+        // AdoptPlayerSpeed everywhere else in this plan's tests.
         private static void SetPreset(float display)
         {
             float multiplier = BattleSpeed.Nearest(display).Multiplier;
             FightBeatPlayer.PlayerSpeedSource = () => multiplier;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
         }
 
         private static string PresetLabel(float display) => BattleSpeed.Nearest(display).DisplayNumber + "x";

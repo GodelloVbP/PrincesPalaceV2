@@ -21,7 +21,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TheSharedHelperPinsThePace()
         {
             FightBeatPlayer.PlayerSpeedSource = () => 4f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
             Assert.AreEqual(4f, FightBeatPlayer.PlayerSpeedMultiplier, 0f, "fixture: poisoning did not take");
 
             yield return FightSceneFixture.LoadFight();
@@ -38,7 +38,7 @@ namespace PrincesPalace.PlayModeTests
             yield return FightSceneFixture.LoadFight();
 
             FightBeatPlayer.PlayerSpeedSource = () => 4f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
             Assert.AreEqual(4f, FightBeatPlayer.PlayerSpeedMultiplier, 0f, "fixture: poisoning did not take");
 
             TestGlobals.ResetAll();

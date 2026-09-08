@@ -125,7 +125,7 @@ namespace PrincesPalace.PlayModeTests
                 foreach (float playerSpeed in playerSpeeds)
                 {
                     FightBeatPlayer.PlayerSpeedSource = () => playerSpeed;
-                    FightBeatPlayer.AdoptPlayerSpeedForTest();
+                    FightBeatPlayer.AdoptPlayerSpeed();
 
                     string because = $"at BeatSpeedMultiplier {beatSpeed}, player {playerSpeed}";
 
@@ -187,7 +187,7 @@ namespace PrincesPalace.PlayModeTests
             HoldTheClock();
 
             FightBeatPlayer.PlayerSpeedSource = () => 1f / 3f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
 
             var beatA = WaterAt(Hero, Foes[0]);
             float authoredCueA = _fight.ImpactDelayFor(beatA);
@@ -201,10 +201,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, cueCountA, "A fired before its own cue, before any adoption happened at all");
 
             // Adoption 1, in the FASTER direction: changing the delegate
-            // alone changes nothing (revision 3 point 2) -- AdoptPlayerSpeedForTest
+            // alone changes nothing (revision 3 point 2) -- AdoptPlayerSpeed
             // is what makes it stick.
             FightBeatPlayer.PlayerSpeedSource = () => 4f / 3f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
 
             var beatB = WaterAt(Hero, Foes[1]);
             float authoredCueB = _fight.ImpactDelayFor(beatB);
@@ -216,7 +216,7 @@ namespace PrincesPalace.PlayModeTests
             // Adoption 2, back to the SLOWER direction, while A is still
             // live and B has only just begun.
             FightBeatPlayer.PlayerSpeedSource = () => 1f / 3f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
 
             float epsilonA = Mathf.Max((authoredCueA / paceA) * 0.02f, 0.0001f);
             AdvanceEngineTo(tCueA - epsilonA);

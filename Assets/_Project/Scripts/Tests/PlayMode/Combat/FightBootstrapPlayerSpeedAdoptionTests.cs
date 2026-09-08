@@ -59,5 +59,48 @@ namespace PrincesPalace.PlayModeTests
                 "PlayerSpeedMultiplier still reads the stale OnEnable-time source -- FightBootstrap.Start " +
                 "installed its own source but never re-adopted before Bind painted the first badge pop");
         }
+
+        // FightBeatPlayer.OnEnable no longer adopts at all (item F) -- the
+        // bootstrap's own re-adopt above is the only one a fresh fight gets.
+        // This pins the ordering that makes deleting OnEnable's call safe:
+        // a sentinel adopted before the scene loads survives untouched
+        // through the load itself (every OnEnable in it has fired -- Unity
+        // runs OnEnable before any Start -- and none of them wrote to it),
+        // and only jumps to the bootstrap's own source once Start actually
+        // runs.
+        [UnityTest]
+        public IEnumerator TheMultiplierIsUntouchedThroughOnEnableThenAdoptedAtBootstrapStart()
+        {
+            // A SENTINEL distinct from both the static default (1f) and
+            // whatever this scene's own bootstrap will install (4/3 at
+            // display 2, per this fixture's own header), so a read that
+            // happens to land on either of those by coincidence cannot be
+            // mistaken for "something adopted on OnEnable again".
+            FightBeatPlayer.PlayerSpeedSource = () => 2f;
+            FightBeatPlayer.AdoptPlayerSpeed();
+            Assert.AreEqual(2f, FightBeatPlayer.PlayerSpeedMultiplier, 1e-5f,
+                "fixture: sentinel adoption did not take");
+
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+            GameSettings.SetBattleSpeed(2f);
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+
+            // ZERO SETTLE FRAMES: OnEnable fires synchronously with the
+            // scene load, Start (FightBootstrap's own) one frame later --
+            // CODE_STANDARDS.md Sec8 -- so this is the value as it stands
+            // the instant every OnEnable in the load has run and no Start
+            // has. The sentinel must still be here.
+            Assert.AreEqual(2f, FightBeatPlayer.PlayerSpeedMultiplier, 1e-5f,
+                "PlayerSpeedMultiplier moved before FightBootstrap.Start ran -- something is adopting on " +
+                "OnEnable again");
+
+            yield return null;
+            yield return null;
+
+            float expected = BattleSpeed.Nearest(2f).Multiplier;
+            Assert.AreEqual(expected, FightBeatPlayer.PlayerSpeedMultiplier, 1e-5f,
+                "the bootstrap's own re-adopt did not take before Bind painted the first badge pop");
+        }
     }
 }

@@ -55,7 +55,7 @@ namespace PrincesPalace.PlayModeTests
             // needed to confirm the scene actually has one to adopt for.
             if (Object.FindAnyObjectByType<FightBeatPlayer>() != null)
             {
-                FightBeatPlayer.AdoptPlayerSpeedForTest();
+                FightBeatPlayer.AdoptPlayerSpeed();
             }
         }
     }

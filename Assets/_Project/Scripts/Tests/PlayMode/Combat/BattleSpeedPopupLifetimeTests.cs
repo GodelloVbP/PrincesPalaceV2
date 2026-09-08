@@ -123,7 +123,7 @@ namespace PrincesPalace.PlayModeTests
             foreach (var (playerSpeed, missed, expectedLife) in cases)
             {
                 FightBeatPlayer.PlayerSpeedSource = () => playerSpeed;
-                FightBeatPlayer.AdoptPlayerSpeedForTest();
+                FightBeatPlayer.AdoptPlayerSpeed();
 
                 string because = $"player {playerSpeed}, missed {missed}";
 
@@ -201,7 +201,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadAndBind();
 
             FightBeatPlayer.PlayerSpeedSource = () => 1f / 3f;
-            FightBeatPlayer.AdoptPlayerSpeedForTest();
+            FightBeatPlayer.AdoptPlayerSpeed();
 
             var beat = new CombatBeat { Actor = Hero, Target = Foe, Amount = 5, DamageType = DamageType.Physical };
             _beats.Play(new List<CombatBeat> { beat }, null);

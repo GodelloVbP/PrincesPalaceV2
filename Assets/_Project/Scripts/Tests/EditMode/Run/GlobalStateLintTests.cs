@@ -58,14 +58,14 @@ namespace PrincesPalace.Domain.Tests
                 @"PlayerSpeedSource\s*=\s*\(\s*\)\s*=>\s*1f"),
 
             // The adopted factor has no direct assignment a test could write
-            // (docs/PLAN_BATTLE_SPEED.md contract 10 -- AdoptPlayerSpeed and
-            // its ForTest twin are the only writers), so the WRITE this
-            // watches is the call that pushes a just-changed source into it.
-            // The restore it demands is the sanctioned one: TestGlobals.
-            // ResetAll, which re-pins the source AND re-adopts in the same
-            // two lines -- there is no OTHER honest way to put this back.
+            // (docs/PLAN_BATTLE_SPEED.md contract 10 -- AdoptPlayerSpeed is
+            // the only writer), so the WRITE this watches is the call that
+            // pushes a just-changed source into it. The restore it demands
+            // is the sanctioned one: TestGlobals.ResetAll, which re-pins the
+            // source AND re-adopts in the same two lines -- there is no
+            // OTHER honest way to put this back.
             ("FightBeatPlayer.PlayerSpeedMultiplier",
-                @"AdoptPlayerSpeedForTest\s*\(\)",
+                @"AdoptPlayerSpeed\s*\(\)",
                 @"TestGlobals\.ResetAll\(\)"),
 
             ("ReckoningController.SpeedMultiplier",

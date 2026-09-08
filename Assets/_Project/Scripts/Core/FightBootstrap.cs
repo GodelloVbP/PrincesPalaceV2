@@ -102,55 +102,66 @@ namespace PrincesPalace
         // test rather than worth trusting. Widening these seven by name is a
         // smaller hole than handing the whole assembly's internals over.
 #if UNITY_EDITOR
-        private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
-        private const string DevForcedFormationKey = "PrincesPalace.Dev.ForcedFormation";
-        private const string DevForcedEnemyScriptKey = "PrincesPalace.Dev.ForcedEnemyScript";
-        private const string DevForcedSkillIdKey = "PrincesPalace.Dev.ForcedSkillId";
-        private const string DevForcedSquadKey = "PrincesPalace.Dev.ForcedSquad";
-        private const string DevForcedFirstActionKey = "PrincesPalace.Dev.ForcedFirstAction";
-        private const string DevForcedElementKey = "PrincesPalace.Dev.ForcedElement";
+        // ONE SESSIONSTATE KEY FOR ALL SEVEN, JSON-SERIALISED. Each property
+        // below is a read-modify-write on the same blob (LoadBlob/SaveBlob,
+        // beside DevForcedPreview itself) rather than a key of its own --
+        // SessionState has no atomic "change one field" call, so every
+        // accessor pays a full deserialise-mutate-serialise round trip, which
+        // is cheap next to the menu click or scene load that is the only
+        // place any of these seven is ever touched.
+        private const string DevForcedPreviewKey = "PrincesPalace.Dev.ForcedPreview";
 
         public static string DevForcedEnemyId
         {
-            get => UnityEditor.SessionState.GetString(DevForcedEnemyIdKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedEnemyIdKey, value ?? "");
+            get => LoadBlob().EnemyId ?? "";
+            set { var blob = LoadBlob(); blob.EnemyId = value ?? ""; SaveBlob(blob); }
         }
 
         public static string DevForcedFormation
         {
-            get => UnityEditor.SessionState.GetString(DevForcedFormationKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedFormationKey, value ?? "");
+            get => LoadBlob().Formation ?? "";
+            set { var blob = LoadBlob(); blob.Formation = value ?? ""; SaveBlob(blob); }
         }
 
         public static bool DevForcedEnemyScript
         {
-            get => UnityEditor.SessionState.GetBool(DevForcedEnemyScriptKey, false);
-            set => UnityEditor.SessionState.SetBool(DevForcedEnemyScriptKey, value);
+            get => LoadBlob().Showcase;
+            set { var blob = LoadBlob(); blob.Showcase = value; SaveBlob(blob); }
         }
 
         public static string DevForcedSkillId
         {
-            get => UnityEditor.SessionState.GetString(DevForcedSkillIdKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedSkillIdKey, value ?? "");
+            get => LoadBlob().SkillId ?? "";
+            set { var blob = LoadBlob(); blob.SkillId = value ?? ""; SaveBlob(blob); }
         }
 
         public static string DevForcedSquad
         {
-            get => UnityEditor.SessionState.GetString(DevForcedSquadKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedSquadKey, value ?? "");
+            get => LoadBlob().Squad ?? "";
+            set { var blob = LoadBlob(); blob.Squad = value ?? ""; SaveBlob(blob); }
         }
 
         public static string DevForcedFirstAction
         {
-            get => UnityEditor.SessionState.GetString(DevForcedFirstActionKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedFirstActionKey, value ?? "");
+            get => LoadBlob().FirstAction ?? "";
+            set { var blob = LoadBlob(); blob.FirstAction = value ?? ""; SaveBlob(blob); }
         }
 
         public static string DevForcedElement
         {
-            get => UnityEditor.SessionState.GetString(DevForcedElementKey, "");
-            set => UnityEditor.SessionState.SetString(DevForcedElementKey, value ?? "");
+            get => LoadBlob().Element ?? "";
+            set { var blob = LoadBlob(); blob.Element = value ?? ""; SaveBlob(blob); }
         }
+
+        private static DevForcedPreview LoadBlob()
+        {
+            string json = UnityEditor.SessionState.GetString(DevForcedPreviewKey, "");
+            if (string.IsNullOrEmpty(json)) return new DevForcedPreview();
+            return JsonUtility.FromJson<DevForcedPreview>(json) ?? new DevForcedPreview();
+        }
+
+        private static void SaveBlob(DevForcedPreview blob) =>
+            UnityEditor.SessionState.SetString(DevForcedPreviewKey, JsonUtility.ToJson(blob));
 #else
         public static string DevForcedEnemyId;
         public static string DevForcedFormation;
@@ -169,7 +180,10 @@ namespace PrincesPalace
         //
         // A CLASS RATHER THAN SEVEN LOCALS because they have to be cleared
         // together and read after the clear -- see ConsumeDevForced. Nothing
-        // outside this file constructs one.
+        // outside this file constructs one. [Serializable] because it is
+        // also the JSON shape the seven properties above (Editor only) read
+        // and write as one SessionState blob -- see LoadBlob/SaveBlob.
+        [System.Serializable]
         internal sealed class DevForcedPreview
         {
             public string EnemyId;
@@ -204,6 +218,18 @@ namespace PrincesPalace
         // happens next.
         private static DevForcedPreview ConsumeDevForced()
         {
+#if UNITY_EDITOR
+            // ONE READ, ONE ERASE -- the blob backing all seven properties
+            // above is the whole preview's state, so consuming it is
+            // reading it once and erasing the one key under it, rather than
+            // seven read-then-clear pairs each paying their own round trip.
+            // An empty string is what LoadBlob's own IsNullOrEmpty guard
+            // already treats as "nothing asked" -- the same emptiness
+            // GetString's own missing-key default reads as.
+            var asked = LoadBlob();
+            UnityEditor.SessionState.SetString(DevForcedPreviewKey, "");
+            return asked;
+#else
             var asked = new DevForcedPreview
             {
                 EnemyId = DevForcedEnemyId,
@@ -224,6 +250,7 @@ namespace PrincesPalace
             DevForcedElement = null;
 
             return asked;
+#endif
         }
 
         private void Start()
@@ -294,11 +321,10 @@ namespace PrincesPalace
             // not what it said when the scene opened.
             FightBeatPlayer.PlayerSpeedSource = () => BattleSpeed.Nearest(GameSettings.BattleSpeed).Multiplier;
 
-            // RE-ADOPTED HERE, not left to whatever OnEnable last saw. On a
-            // fresh scene load OnEnable's own adoption races ahead of this
-            // method (Unity runs every OnEnable before any Start) and reads
-            // whichever source was still installed from the PREVIOUS fight,
-            // or the static default -- never this one. Bind, right below,
+            // THE ONE PRODUCTION READER of that source ahead of Bind.
+            // PlayerSpeedMultiplier is a static that outlives a scene, so
+            // without this call it would still carry whatever the PREVIOUS
+            // fight (or the static default) last adopted. Bind, right below,
             // paints the first badge pop off PlayerSpeedMultiplier as it
             // stands at this instant, so without this call that first pop
             // reads a multiplier one fight behind the source just installed.
