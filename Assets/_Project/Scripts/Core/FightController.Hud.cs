@@ -251,13 +251,7 @@ namespace PrincesPalace
             // still the Skill branch's, but what is in it is a list of
             // elements, and a header reading SKILLS over four element names is
             // the header describing the depth the player just left.
-            submenuTitle.Set(_menu.Depth == MenuDepth.Element
-                ? UiStrings.SubmenuElementTitle
-                : _menu.Branch == MenuBranch.Item
-                    ? UiStrings.SubmenuItemsTitle
-                    : _menu.Branch == MenuBranch.Move
-                        ? UiStrings.SubmenuMoveTitle
-                        : UiStrings.SubmenuSkillsTitle);
+            submenuTitle.Set(SubmenuTitleFor(CurrentSubmenuKind()));
             // The truncation is reported HERE, beside the list it truncates,
             // rather than into the combat log. It used to AppendMessage on every
             // refresh, so the bark spent the fight repeating "9 more entr(y/ies)
@@ -1822,14 +1816,42 @@ namespace PrincesPalace
 
         // ---- what the model needs -------------------------------------------
 
-        private IReadOnlyList<SubmenuRow> CurrentRows() =>
-            _menu.Depth == MenuDepth.Element
-                ? FightHudModel.ElementRows(SelectedSkill())
-                : _menu.Branch == MenuBranch.Item
-                    ? FightHudModel.ItemRows(_satchel)
-                    : _menu.Branch == MenuBranch.Move
-                        ? FightHudModel.MoveRows(_session, ActingCharacter())
-                        : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
+        // WHICH SUBMENU LIST IS OPEN, read off (Depth, Branch) once so
+        // CurrentRows and the submenu title agree by construction rather than
+        // by two copies of the same condition tree staying in sync. A fifth
+        // depth or branch that needs its own submenu is one arm added here,
+        // not one arm added in each of the two switches below.
+        private enum SubmenuKind { Element, Item, Move, Skill }
+
+        private SubmenuKind CurrentSubmenuKind()
+        {
+            if (_menu.Depth == MenuDepth.Element) return SubmenuKind.Element;
+            if (_menu.Branch == MenuBranch.Item) return SubmenuKind.Item;
+            if (_menu.Branch == MenuBranch.Move) return SubmenuKind.Move;
+            return SubmenuKind.Skill;
+        }
+
+        private static UiString SubmenuTitleFor(SubmenuKind kind)
+        {
+            switch (kind)
+            {
+                case SubmenuKind.Element: return UiStrings.SubmenuElementTitle;
+                case SubmenuKind.Item: return UiStrings.SubmenuItemsTitle;
+                case SubmenuKind.Move: return UiStrings.SubmenuMoveTitle;
+                default: return UiStrings.SubmenuSkillsTitle;
+            }
+        }
+
+        private IReadOnlyList<SubmenuRow> CurrentRows()
+        {
+            switch (CurrentSubmenuKind())
+            {
+                case SubmenuKind.Element: return FightHudModel.ElementRows(SelectedSkill());
+                case SubmenuKind.Item: return FightHudModel.ItemRows(_satchel);
+                case SubmenuKind.Move: return FightHudModel.MoveRows(_session, ActingCharacter());
+                default: return FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
+            }
+        }
 
         // The skill the SUB row selection names, or null when the open branch
         // is not Skill or the selection points at nothing. The element list,
