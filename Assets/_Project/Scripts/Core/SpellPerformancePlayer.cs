@@ -95,6 +95,20 @@ namespace PrincesPalace
 
         internal static float Now() => ClockOverride != null ? ClockOverride() : Time.time;
 
+        // T4's test seam (docs/PLAN_BATTLE_SPEED.md), not in the plan's own
+        // stated Seams line ranges (98-105,152-164,196-208) because it
+        // touches Advance instead, which sits outside them -- recorded as a
+        // deviation in the plan's own Deviations section. HitCue is "the one
+        // authoritative impact cue, delivered exactly once per cast"
+        // (SpellEventKind.HitCue's own header), but Advance's switch below
+        // has never acted on it: the beat player owns the impact block
+        // through its OWN independent wait, entirely disconnected from this
+        // module's schedule crossing. Proving that the crossing THIS module
+        // computes happens exactly once, and only inside the right window,
+        // needs a hook nothing else reads. Public rather than internal for
+        // the same reason ClockOverride above is.
+        public Action<CastHandle> HitCueCrossedForTest;
+
         private sealed class Cast
         {
             internal int Generation;
@@ -103,6 +117,15 @@ namespace PrincesPalace
 
             // Engine seconds, from the module's own clock.
             internal float StartedAt;
+
+            // Contract 3: FightBeatPlayer.Pace AT THE INSTANT this cast
+            // began, captured once and never re-read. A live cast keeps
+            // ageing on the pace it was born at even if the player steps the
+            // preset mid-cast in either direction -- reading the live Pace
+            // in Tick instead would make an in-flight cast's age jump the
+            // moment the setting changed, tearing its cue windows out from
+            // under whichever ones had not fired yet.
+            internal float PaceAtStart;
 
             // Authored seconds already delivered. Starts below zero so a cue at
             // zero -- which every melee beat has -- lands in the first window.
@@ -153,6 +176,20 @@ namespace PrincesPalace
         {
             if (performance == null || performance.Instances == null) return CastHandle.None;
 
+            // Contract 3: refused and logged, the same posture missing art
+            // gets. A cast born at pace <= 0 has no honest age to convert --
+            // Tick's (now - StartedAt) * PaceAtStart would sit at zero for
+            // its entire life, so every cue would either fire on the same
+            // frame or never, depending on where BeforeAnything happened to
+            // land.
+            float pace = FightBeatPlayer.Pace;
+            if (pace <= 0f)
+            {
+                Debug.LogWarning($"[SpellPerformancePlayer] Refused to begin a cast: FightBeatPlayer.Pace " +
+                                  $"was {pace}, and a cast cannot age against a non-positive pace.");
+                return CastHandle.None;
+            }
+
             int slot = FreeCastSlot();
             var cast = _casts[slot];
 
@@ -162,6 +199,7 @@ namespace PrincesPalace
             cast.Live = true;
             cast.Performance = performance;
             cast.StartedAt = Now();
+            cast.PaceAtStart = pace;
             cast.Cursor = SpellSchedule.BeforeAnything;
 
             int count = performance.Instances.Count;
@@ -198,9 +236,11 @@ namespace PrincesPalace
 
                 // The schedule is in AUTHORED seconds and the clock is in
                 // engine ones, so the window is converted rather than the
-                // deadlines -- through FightBeatPlayer's own inverse, so the
-                // beat's speed multiplier keeps having exactly one reader.
-                float seconds = FightBeatPlayer.Unscaled(now - _casts[slot].StartedAt);
+                // deadlines -- but through the CAST'S OWN PaceAtStart, not
+                // FightBeatPlayer.Unscaled's live product (contract 3): this
+                // cast must keep ageing on the pace it was born at even if
+                // the player steps the preset while it is still drawing.
+                float seconds = (now - _casts[slot].StartedAt) * _casts[slot].PaceAtStart;
                 Advance(slot, seconds);
                 if (_casts[slot].Live) Paint(slot, seconds);
             }
@@ -315,12 +355,18 @@ namespace PrincesPalace
                         Close(cast, crossed.Instance);
                         break;
 
-                    // THE CUE IS DISPATCHED AND NOTHING HERE ACTS ON IT. The
-                    // beat player owns the impact block and always has; what
-                    // the module owes is that the instant exists in ONE place,
-                    // so a layer scheduled `at: hit` and the blow itself cannot
-                    // drift apart. A renderer that could not be obtained
-                    // removes a picture and never the cue.
+                    // THE CUE IS DISPATCHED AND NOTHING HERE ACTS ON IT
+                    // PRODUCTION-WISE. The beat player owns the impact block
+                    // and always has; what the module owes is that the
+                    // instant exists in ONE place, so a layer scheduled
+                    // `at: hit` and the blow itself cannot drift apart. A
+                    // renderer that could not be obtained removes a picture
+                    // and never the cue. HitCueCrossedForTest is the one
+                    // exception, and it is test-only.
+                    case SpellEventKind.HitCue:
+                        HitCueCrossedForTest?.Invoke(new CastHandle(slot, cast.Generation));
+                        break;
+
                     default:
                         break;
                 }

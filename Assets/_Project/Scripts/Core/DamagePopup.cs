@@ -14,7 +14,13 @@ namespace PrincesPalace
     public class DamagePopup : MonoBehaviour
     {
         private const float RiseDistance = 90f;
-        private const float LifeSeconds = 0.85f;
+
+        // The AUTHORED constant, in engine seconds at 1x -- FightBeatPlayer
+        // is the one caller that scales it (contract 9, docs/
+        // PLAN_BATTLE_SPEED.md), so this stays internal rather than private:
+        // same assembly, one reader outside this file, no reason to widen
+        // further.
+        internal const float LifeSeconds = 0.85f;
 
         // Fully opaque for the first third, then fades. A number that starts
         // fading immediately is hard to read at exactly the moment it matters.
@@ -83,9 +89,13 @@ namespace PrincesPalace
         // ATTACK's element and a heal is never elemental, so reading it here
         // would tint a heal by whatever the healer's basic attack happens to
         // be.
-        public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType = DamageType.Physical) =>
+        // No default on damageType any more: lifeSeconds has none either
+        // (there is no honest default for a scaled duration), and a
+        // parameter after one without a default cannot itself carry one.
+        // FightBeatPlayer.PopNumber, the only call site, always passes both.
+        public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType, float lifeSeconds) =>
             PlayContent(anchoredStart, (isHealing ? "+" : "-") + Mathf.Abs(amount),
-                isHealing ? HealColor : ColorForDamageType(damageType));
+                isHealing ? HealColor : ColorForDamageType(damageType), lifeSeconds);
 
         private static Color ColorForDamageType(DamageType type) =>
             ColorUtility.TryParseHtmlString(FightHudPalette.ForDamageType(type), out var parsed)
@@ -99,9 +109,9 @@ namespace PrincesPalace
         // exact same rise/punch/fade motion as a real number, deliberately:
         // the DIFFERENCE the player needs to read is the colour and the
         // word, not a second animation language to learn.
-        public void PlayMiss(Vector2 anchoredStart) => PlayContent(anchoredStart, "Miss", MissColor);
+        public void PlayMiss(Vector2 anchoredStart, float lifeSeconds) => PlayContent(anchoredStart, "Miss", MissColor, lifeSeconds);
 
-        private void PlayContent(Vector2 anchoredStart, string text, Color color)
+        private void PlayContent(Vector2 anchoredStart, string text, Color color, float lifeSeconds)
         {
             if (_rect == null) _rect = (RectTransform)transform;
 
@@ -127,7 +137,7 @@ namespace PrincesPalace
                 ApplyGlow(GlowAt(0f));
             }
 
-            _running = StartCoroutine(Rise(anchoredStart));
+            _running = StartCoroutine(Rise(anchoredStart, lifeSeconds));
         }
 
         // Hands the popup back to the pool immediately, wherever it was.
@@ -149,14 +159,20 @@ namespace PrincesPalace
             gameObject.SetActive(false);
         }
 
-        private IEnumerator Rise(Vector2 start)
+        // lifeSeconds is the SCALED life (contract 9) -- measured in plain
+        // Time.deltaTime the same way it always was, so "measured in game
+        // time" falls out of using the engine's own delta rather than
+        // needing a second clock: a pause (Time.timeScale = 0, the system
+        // menu) stops deltaTime along with it, which is exactly "a pause
+        // does not count against the window" (T7).
+        private IEnumerator Rise(Vector2 start, float lifeSeconds)
         {
             float elapsed = 0f;
 
-            while (elapsed < LifeSeconds)
+            while (elapsed < lifeSeconds)
             {
                 elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / LifeSeconds);
+                float t = Mathf.Clamp01(elapsed / lifeSeconds);
 
                 _rect.anchoredPosition = start + new Vector2(0f, RiseDistance * t);
                 _rect.localScale = Vector3.one * ScaleAt(t);

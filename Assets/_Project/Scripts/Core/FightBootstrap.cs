@@ -284,6 +284,16 @@ namespace PrincesPalace
             // turn from a turn state it assumes is already settled.
             built.Session.Begin();
 
+            // THE ONE PRODUCTION WRITER of FightBeatPlayer.PlayerSpeedSource
+            // (docs/PLAN_BATTLE_SPEED.md contract 10) -- before Bind, so the
+            // opening glide and the first beat both read the player's chosen
+            // preset rather than the static default. Read lazily inside the
+            // closure, not captured as a value here: GameSettings.BattleSpeed
+            // can change while this fight is open (contracts 4 and 5), and
+            // each adoption must see whatever the setting currently says,
+            // not what it said when the scene opened.
+            FightBeatPlayer.PlayerSpeedSource = () => BattleSpeed.Nearest(GameSettings.BattleSpeed).Multiplier;
+
             fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), RunOrchestrator.BuildSatchel());
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);

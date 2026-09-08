@@ -53,6 +53,21 @@ namespace PrincesPalace.Domain.Tests
                 @"BeatSpeedMultiplier\s*=",
                 @"BeatSpeedMultiplier\s*=\s*1f"),
 
+            ("FightBeatPlayer.PlayerSpeedSource",
+                @"PlayerSpeedSource\s*=",
+                @"PlayerSpeedSource\s*=\s*\(\s*\)\s*=>\s*1f"),
+
+            // The adopted factor has no direct assignment a test could write
+            // (docs/PLAN_BATTLE_SPEED.md contract 10 -- AdoptPlayerSpeed and
+            // its ForTest twin are the only writers), so the WRITE this
+            // watches is the call that pushes a just-changed source into it.
+            // The restore it demands is the sanctioned one: TestGlobals.
+            // ResetAll, which re-pins the source AND re-adopts in the same
+            // two lines -- there is no OTHER honest way to put this back.
+            ("FightBeatPlayer.PlayerSpeedMultiplier",
+                @"AdoptPlayerSpeedForTest\s*\(\)",
+                @"TestGlobals\.ResetAll\(\)"),
+
             ("ReckoningController.SpeedMultiplier",
                 @"ReckoningController\.SpeedMultiplier\s*=",
                 @"ReckoningController\.SpeedMultiplier\s*=\s*1f"),
@@ -131,9 +146,14 @@ namespace PrincesPalace.Domain.Tests
             foreach (string file in TestFiles())
             {
                 // TestGlobals IS the restore, so it trivially satisfies every
-                // rule; named here so a reader does not wonder whether it was
-                // an oversight.
-                if (Path.GetFileName(file) == "TestGlobals.cs") continue;
+                // rule. FightSceneFixture pins PlayerSpeedSource to its own
+                // shipped default and adopts it -- ESTABLISHING the known-good
+                // state every battle-speed timing fixture loads through,
+                // never flipping one away from default -- so it has nothing
+                // to pair with a restore any more than TestGlobals does.
+                // Both named here so a reader does not wonder whether either
+                // exemption was an oversight.
+                if (Path.GetFileName(file) == "TestGlobals.cs" || Path.GetFileName(file) == "FightSceneFixture.cs") continue;
 
                 string source = File.ReadAllText(file);
 

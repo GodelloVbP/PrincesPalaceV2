@@ -63,6 +63,15 @@ namespace PrincesPalace.PlayModeTests
             // simply never finish, and it surfaces as an unrelated timeout.
             UnityEngine.Time.timeScale = 1f;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            // BOTH HALVES of the player-facing product (docs/
+            // PLAN_BATTLE_SPEED.md revision 3 point 1): the source back to
+            // its shipped default, then adopted immediately rather than left
+            // for the next OnEnable or beat to catch up -- a test reading
+            // PlayerSpeedMultiplier right after ResetAll must see 1, not
+            // whatever the LAST fight in this process happened to adopt.
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+            FightBeatPlayer.AdoptPlayerSpeedForTest();
             ReckoningController.SpeedMultiplier = 1f;
             RewardTrackController.SpeedMultiplier = 1f;
             TalentController.MotionSpeedMultiplier = 1f;

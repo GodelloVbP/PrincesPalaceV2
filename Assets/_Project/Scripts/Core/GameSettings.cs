@@ -1,4 +1,5 @@
 using UnityEngine;
+using BattleSpeedTable = PrincesPalace.Domain.Combat.Session.BattleSpeed;
 
 namespace PrincesPalace
 {
@@ -22,6 +23,7 @@ namespace PrincesPalace
         private const string ResolutionIndexKey = "settings.resolutionIndex";
         private const string WindowModeIndexKey = "settings.windowModeIndex";
         private const string FpsLimitIndexKey = "settings.fpsLimitIndex";
+        private const string BattleSpeedKey = "settings.battleSpeed";
 
         public readonly struct ResolutionOption
         {
@@ -82,6 +84,14 @@ namespace PrincesPalace
         public static int WindowModeIndex { get; private set; } = DefaultWindowModeIndex;
         public static int FpsLimitIndex { get; private set; } = DefaultFpsLimitIndex;
 
+        // The DISPLAY NUMBER of the stored row (BattleSpeedTable.Preset.
+        // Display), not the multiplier FightBeatPlayer actually applies --
+        // same split as every other stored index here surfacing a label
+        // while a converter (BattleSpeedTable.Nearest/.Multiplier) does the
+        // rest. In-fight only (docs/PLAN_BATTLE_SPEED.md); nothing outside a
+        // fight reads this.
+        public static float BattleSpeed { get; private set; } = BattleSpeedTable.DefaultDisplay;
+
         // Applies stored settings before the first scene loads, same
         // self-bootstrapping pattern as CursorController/LoadingScreen-
         // Controller — so a returning player's choices are live from the
@@ -101,6 +111,14 @@ namespace PrincesPalace
                 PlayerPrefs.GetInt(ResolutionIndexKey, DefaultResolutionIndexForDisplay()), Resolutions.Length);
             WindowModeIndex = ClampIndex(PlayerPrefs.GetInt(WindowModeIndexKey, DefaultWindowModeIndex), WindowModes.Length);
             FpsLimitIndex = ClampIndex(PlayerPrefs.GetInt(FpsLimitIndexKey, DefaultFpsLimitIndex), FpsLimits.Length);
+
+            // Contract 7, entirely inside Nearest: PlayerPrefs' own missing-
+            // key fallback already answers "absent -> default" (Default IS a
+            // row, so Nearest(DefaultDisplay) returns it exactly), and
+            // Nearest answers non-finite, between-rows and beyond-either-end
+            // the same way whether the value came from a fresh install or a
+            // row this version removed.
+            BattleSpeed = BattleSpeedTable.Nearest(PlayerPrefs.GetFloat(BattleSpeedKey, BattleSpeedTable.DefaultDisplay)).Display;
         }
 
         public static void Save()
@@ -110,6 +128,7 @@ namespace PrincesPalace
             PlayerPrefs.SetInt(ResolutionIndexKey, ResolutionIndex);
             PlayerPrefs.SetInt(WindowModeIndexKey, WindowModeIndex);
             PlayerPrefs.SetInt(FpsLimitIndexKey, FpsLimitIndex);
+            PlayerPrefs.SetFloat(BattleSpeedKey, BattleSpeed);
             PlayerPrefs.Save();
         }
 
@@ -144,6 +163,18 @@ namespace PrincesPalace
             FpsLimitIndex = ClampIndex(index, FpsLimits.Length);
             Save();
             Apply();
+        }
+
+        // No Apply() call, unlike every setter above: those push a stored
+        // choice at the actual device (resolution, fps cap), and battle
+        // speed has no OS-level counterpart to push -- it takes effect the
+        // next time a fight adopts FightBeatPlayer.PlayerSpeedSource
+        // (contracts 4 and 5), which this setter has no way to reach from
+        // outside a fight and no business reaching into anyway.
+        public static void SetBattleSpeed(float display)
+        {
+            BattleSpeed = BattleSpeedTable.Nearest(display).Display;
+            Save();
         }
 
         // Pushes the stored settings at the actual device.

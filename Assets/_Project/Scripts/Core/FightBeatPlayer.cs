@@ -102,8 +102,54 @@ namespace PrincesPalace
         // rule about ordering.
         public static float BeatSpeedMultiplier = 1f;
 
+        // THE PLAYER-FACING HALF OF THE PRODUCT (docs/PLAN_BATTLE_SPEED.md
+        // contract 10). Never written directly -- AdoptPlayerSpeed and its
+        // ForTest twin, below, are the only writers, so nothing outside them
+        // can leave this disagreeing with what PlayerSpeedSource would
+        // currently say.
+        public static float PlayerSpeedMultiplier { get; private set; } = 1f;
+
+        // The seam FightBootstrap installs the settings-backed reader
+        // behind, before fight.Bind. Static default () => 1f, so a fixture
+        // that never touches battle speed at all -- most of them -- adopts
+        // exactly the constant this project always ran at. A fixture that
+        // DOES touch it (or anything downstream of FightBootstrap.Start
+        // installing the production source) must re-pin this explicitly
+        // rather than trust the default to still be what it started as: the
+        // shared PlayMode fight-loading helper and TestGlobals.ResetAll both
+        // do, because this is a static surviving across the whole PlayMode
+        // process, not per-fixture state.
+        public static Func<float> PlayerSpeedSource = () => 1f;
+
+        // Contract 1 and 2: the source is read in exactly this one place, so
+        // PlayerSpeedMultiplier can never disagree with what it would
+        // currently say between one adoption and the next.
+        private static void AdoptPlayerSpeed()
+        {
+            PlayerSpeedMultiplier = PlayerSpeedSource != null ? PlayerSpeedSource() : 1f;
+        }
+
+        // The same adoption, public: a fixture that changes PlayerSpeedSource
+        // mid-test needs a way to make that change stick in
+        // PlayerSpeedMultiplier without waiting for the next beat or a fresh
+        // OnEnable to trigger it on their own (T5's "changing the delegate
+        // alone changes nothing" case, revision 3 point 2).
+        public static void AdoptPlayerSpeedForTest() => AdoptPlayerSpeed();
+
+        // THE PRODUCT, read in exactly one place -- Scaled/Unscaled below,
+        // and SpellPerformancePlayer.Begin's own capture of a cast's
+        // PaceAtStart (contract 3). A third reader computing
+        // BeatSpeedMultiplier * PlayerSpeedMultiplier itself at its own call
+        // site would be a second home for the product, free to disagree
+        // with this one the day either factor changes on its own.
+        public static float Pace => BeatSpeedMultiplier * PlayerSpeedMultiplier;
+
+        // Contract 8: a product at or below zero collapses to zero rather
+        // than a division blowing up into infinity or NaN -- today's
+        // BeatSpeedMultiplier-only behaviour, unchanged by PlayerSpeedMultiplier
+        // joining the product it is checked against.
         public static float Scaled(float seconds) =>
-            BeatSpeedMultiplier <= 0f ? 0f : seconds / BeatSpeedMultiplier;
+            Pace <= 0f ? 0f : seconds / Pace;
 
         // THE SAME CONVERSION READ THE OTHER WAY, for the one caller that has
         // an engine duration and needs the authored seconds behind it: the
@@ -111,13 +157,16 @@ namespace PrincesPalace
         // engine ones, and asking "how far into the cast are we" is exactly
         // this division undone.
         //
-        // Here rather than at that call site because BeatSpeedMultiplier must
-        // be read in ONE place. A module multiplying by it directly would be a
+        // Here rather than at that call site because the product must be
+        // read in ONE place. A module multiplying by it directly would be a
         // second home for the conversion, and the two would be free to
         // disagree the moment either changed -- which is the failure the beat
         // and the spell crossing their cue on the same frame depends on not
-        // happening.
-        public static float Unscaled(float engineSeconds) => engineSeconds * BeatSpeedMultiplier;
+        // happening. SpellPerformancePlayer.Tick does NOT call this any
+        // more, precisely because it needs the cast's OWN frozen PaceAtStart
+        // rather than the live product this reads -- see that method's own
+        // comment.
+        public static float Unscaled(float engineSeconds) => engineSeconds * Pace;
 
         public bool IsPlaying { get; private set; }
 
@@ -322,6 +371,25 @@ namespace PrincesPalace
             StopVfx?.Invoke();
         }
 
+        // Contract 2: opens the fight already on the chosen speed. Ordering
+        // caveat, recorded rather than silently assumed: Unity runs OnEnable
+        // for every object in a freshly loaded scene before ANY object's
+        // Start(), so this adoption can race ahead of FightBootstrap.Start
+        // installing the production source on the SAME load -- the plan's
+        // own "after FightBootstrap.Start installed the production source"
+        // ordering does not hold for that first instant. What this call
+        // still buys: PlayerSpeedMultiplier is a static that outlives a
+        // scene, so without it a fresh fight would open still carrying
+        // whatever the PREVIOUS fight last adopted. The opening glide and
+        // first badge pop run before Bind, which runs after Start, so by the
+        // time either actually paints anything the source is already
+        // installed and contract 1's own per-beat adoption has long since
+        // caught up.
+        private void OnEnable()
+        {
+            AdoptPlayerSpeed();
+        }
+
         private void OnDisable()
         {
             // A scene change mid-round is exactly the abandoned-fight case, and
@@ -329,10 +397,30 @@ namespace PrincesPalace
             EndFight();
         }
 
+        // THE FOURTH TEST SEAM, alongside WireContactFxForTest/WireStageForTest
+        // above and IsPlaying: a PlayMode test observing what pace each beat
+        // actually adopted (the beat's index and PlayerSpeedMultiplier at
+        // its top), without reaching into the coroutine that plays it. A
+        // public field rather than a Wire method because PlayMode has no
+        // InternalsVisibleTo grant (see DamagePopupColorTests' own comment)
+        // and this needs to be settable directly from one.
+        public Action<int, float> BeatStarted;
+
         private IEnumerator PlayBeats(IReadOnlyList<CombatBeat> beats)
         {
+            int beatIndex = 0;
+
             foreach (var beat in beats)
             {
+                // Contract 1: adopted before ANY Scaled/Unscaled call this
+                // beat's body makes, so every conversion in it sees one
+                // product for the beat's whole duration -- even if the
+                // player steps the setting again before the NEXT beat opens
+                // (contract 4).
+                AdoptPlayerSpeed();
+                BeatStarted?.Invoke(beatIndex, PlayerSpeedMultiplier);
+                beatIndex++;
+
                 // THE PRE-SNAPSHOT, which is the whole reason the session
                 // records two.
                 //
@@ -673,8 +761,15 @@ namespace PrincesPalace
                 ? Vector2.zero
                 : slot.anchoredPosition + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
 
-            if (missed) popup.PlayMiss(at);
-            else popup.Play(at, amount, beat.IsHealing, beat.DamageType);
+            // Contract 9: the popup's whole life is scaled by the SAME
+            // product a beat's own durations are, so it outlives its beat by
+            // the same ratio the beat itself is stretched or compressed --
+            // a popup timed to the authored 0.85s would read as abnormally
+            // slow at 0.5x and vanish mid-read at 2x.
+            float lifeSeconds = Scaled(DamagePopup.LifeSeconds);
+
+            if (missed) popup.PlayMiss(at, lifeSeconds);
+            else popup.Play(at, amount, beat.IsHealing, beat.DamageType, lifeSeconds);
         }
 
         private DamagePopup FreePopup()

@@ -1,5 +1,7 @@
 using NUnit.Framework;
+using UnityEngine;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -78,6 +80,76 @@ namespace PrincesPalace.PlayModeTests
             GameSettings.SetWindowModeIndex(GameSettings.DefaultWindowModeIndex);
             Assert.AreEqual(1, GameSettings.WindowModeIndex);
             Assert.AreEqual("Borderless Windowed", GameSettings.WindowModeLabels[GameSettings.WindowModeIndex]);
+        }
+
+        // ---- BattleSpeed (T2, docs/PLAN_BATTLE_SPEED.md) --------------------
+
+        // The same PlayerPrefs key GameSettings.cs declares privately -- there
+        // is no public accessor for it, and this is the one place outside
+        // that file that legitimately needs to write UNDER GameSettings'
+        // Load() rather than through SetBattleSpeed, to prove Load's own
+        // migration rather than SetBattleSpeed's (which already routes
+        // through the same Nearest and would make this a tautology).
+        private const string BattleSpeedKey = "settings.battleSpeed";
+
+        private float _savedBattleSpeedForMigration;
+
+        [SetUp]
+        public void SaveBattleSpeedForMigration() => _savedBattleSpeedForMigration = GameSettings.BattleSpeed;
+
+        [TearDown]
+        public void RestoreBattleSpeedForMigration() => GameSettings.SetBattleSpeed(_savedBattleSpeedForMigration);
+
+        [Test]
+        public void SetBattleSpeedPersistsAcrossAReload()
+        {
+            GameSettings.SetBattleSpeed(2f);
+            Assert.AreEqual(2f, GameSettings.BattleSpeed, 0f);
+
+            GameSettings.Load();
+            Assert.AreEqual(2f, GameSettings.BattleSpeed, 0f,
+                "battle speed should survive a Load() the way a real relaunch would trigger one");
+        }
+
+        // Contract 7's every branch, driven through a raw PlayerPrefs write
+        // (bypassing SetBattleSpeed, which would already Nearest() its own
+        // input) plus a Load() -- the same route a value stored by an EARLIER
+        // version of this table, one this version has since removed a row
+        // from, would take.
+        [TestCase(1.2f, 1f, TestName = "StoredValueMigratesToItsCloserNeighbour")]
+        [TestCase(1.25f, 1f, TestName = "AMidpointStoredValueMigratesToTheSlowerRow")]
+        [TestCase(0.1f, 0.5f, TestName = "AStoredValueBelowTheFirstRowSnapsToIt")]
+        [TestCase(9f, 2f, TestName = "AStoredValueAboveTheLastRowSnapsToIt")]
+        public void AStoredValueMigratesThroughLoad(float stored, float expectedDisplay)
+        {
+            PlayerPrefs.SetFloat(BattleSpeedKey, stored);
+            GameSettings.Load();
+            Assert.AreEqual(expectedDisplay, GameSettings.BattleSpeed, 0f,
+                $"a stored {stored} should have migrated to {expectedDisplay}");
+        }
+
+        [Test]
+        public void ANonFiniteStoredValueFallsBackToTheDefault()
+        {
+            PlayerPrefs.SetFloat(BattleSpeedKey, float.NaN);
+            GameSettings.Load();
+            Assert.AreEqual(BattleSpeed.DefaultDisplay, GameSettings.BattleSpeed, 0f);
+        }
+
+        [Test]
+        public void AnAbsentStoredValueFallsBackToTheDefault()
+        {
+            PlayerPrefs.DeleteKey(BattleSpeedKey);
+            GameSettings.Load();
+            Assert.AreEqual(BattleSpeed.DefaultDisplay, GameSettings.BattleSpeed, 0f);
+        }
+
+        [Test]
+        public void RestoringDefaultsGoesBackToTheDefaultBattleSpeed()
+        {
+            GameSettings.SetBattleSpeed(2f);
+            GameSettings.SetBattleSpeed(BattleSpeed.DefaultDisplay);
+            Assert.AreEqual(BattleSpeed.DefaultDisplay, GameSettings.BattleSpeed, 0f);
         }
     }
 }
