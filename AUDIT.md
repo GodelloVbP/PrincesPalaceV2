@@ -1197,3 +1197,24 @@ layers, and a change to `RefreshUi`'s path deserves its own gate.
 ### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `4c45692b`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `44e05216`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters both ship `[15, 18, 8, 12, 12, 8, 15, 2]` over the 8-cell drops folder -- small/mid chunks dominant, the two heaviest chunks held down, grit present, the dust puff at 2.2%; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+
+### 109. The house contact effect is the one spell look still authored in code
+
+Found by the simplify pass after the layered presentation shipped. Every
+spell's look is content (`vfx.layers` in `skills.json`, resolved through
+`SpellPresentation`), except the arc-and-burst a plain melee blow draws on
+its target: `FightController.SpellVfx.cs` `BuildContactPresentation` (~`:463-527`)
+hand-builds two `SpellPresentation` templates in C# from the `ContactCues`
+constants, now cached as two static fields (`_contactWithArc`,
+`_contactBurstOnly`) after the review found the per-beat allocation. The
+caching fixed the cost and entrenched the shape: a third weapon-family
+contact look, or a change to the arc's timing, is a code change, which is
+the case `docs/CODE_STANDARDS.md` §10 names ("combinations of supported
+behaviour should cost a data change").
+
+Fix shape: author the contact effect as content, one presentation per
+`Approach`/weapon family in a content file loaded once through
+`ContentDatabase` and selected the way `PlayContactFx` selects today; delete
+`BuildContactPresentation` and the two statics; the allocation win survives
+because content assets are already built once. Needs a schema entry and
+`ContentBuilder` support, so it is its own pass, not a cleanup.
