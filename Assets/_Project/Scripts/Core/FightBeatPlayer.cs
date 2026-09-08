@@ -723,7 +723,12 @@ namespace PrincesPalace
         {
             if (beat == null || beat.Amount <= 0 || beat.IsHealing) return false;
 
-            return beat.Vfx == null || string.IsNullOrEmpty(beat.Vfx.path);
+            // ASKED OF THE PRESENTATION, not of its `path`. A layered cast
+            // authors no path by construction, so a path test reads every
+            // layered spell as bringing no art of its own and draws the slash
+            // arc over its splash -- which is the two-effects-arguing case this
+            // method's own header refuses.
+            return beat.Vfx == null || !beat.Vfx.HasArt;
         }
 
         // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside

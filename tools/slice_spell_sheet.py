@@ -135,7 +135,8 @@ def _load_recipes():
         if "grid" in spec:
             spec["grid"] = tuple(spec["grid"])
         for source in spec.get("sources", ()):
-            source["grid"] = tuple(source["grid"])
+            if "grid" in source:
+                source["grid"] = tuple(source["grid"])
 
         recipes[name[:-5]] = spec
 
@@ -146,7 +147,8 @@ def write_recipe(vfx_id, spec):
     """Record a recipe, in the same key order the migration wrote."""
     os.makedirs(RECIPE_DIR, exist_ok=True)
     ordered = collections.OrderedDict()
-    for key in ("_notes", "sheet", "grid", "names", "sources", "keyed", "base_align", "content_crop", "sequence"):
+    for key in ("_notes", "sheet", "grid", "rects", "names", "sources", "keyed", "canvas",
+                "base_align", "content_crop", "sequence"):
         if key in spec:
             value = spec[key]
             ordered[key] = list(value) if isinstance(value, tuple) else value
@@ -581,8 +583,20 @@ def crop_to_shared_content(frames, pad=8):
     return [f.crop((left, top, right, bottom)) for f in frames]
 
 
-def cut_cells(sheet_path, rows, cols, names, keyed=True):
+def cut_cells(sheet_path, rows, cols, names, keyed=True, rects=None):
     """Cut one sheet into its named cells: {name: RGBA frame}.
+
+    `rects` REPLACES `rows`/`cols` when a sheet's cells are not a uniform
+    grid: a list of [x, y, w, h] in the sheet's own top-origin pixels, one per
+    name, in play order. It exists because a generated sheet's dimensions do
+    not have to divide: water_particles_8.png is 1774x887 over 4x2, and its
+    own README states the column edges 0, 444, 887, 1331, 1774 -- 444/443
+    alternating. A floor-divided grid takes 443 everywhere, which is not
+    merely a lost pixel per cell: by the fourth column it is reading two
+    pixels to the LEFT of where the cell starts, so a sheet whose drops touch
+    their cell seams slices a sliver of the neighbour into the frame. Fine on
+    a 512-padded flight sequence and not fine on an atlas whose cells become
+    small sprites drawn a few dozen pixels wide.
 
     Everything a SINGLE SHEET needs -- the Resources/ guard, the divides-evenly
     warning, the keying-or-authored-alpha split, the line- and border-erasure
@@ -611,9 +625,10 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True):
     cell -- and neither can tell those from art in a frame whose alpha was
     authored deliberately.
     """
-    expected = rows * cols
+    expected = len(rects) if rects else rows * cols
     if len(names) != expected:
-        sys.exit(f"Need exactly {expected} names for a {rows}x{cols} sheet, got {len(names)}.")
+        shape = f"{len(rects)} explicit rect(s)" if rects else f"a {rows}x{cols} sheet"
+        sys.exit(f"Need exactly {expected} names for {shape}, got {len(names)}.")
 
     # Same guard slice_actor_sheet.py carries: re-processing already-keyed
     # output compounds resample loss, and is how a previous art pass went
@@ -625,9 +640,15 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True):
 
     source = Image.open(sheet_path)
     width, height = source.size
-    if width % cols or height % rows:
+    if rects:
+        for name, rect in zip(names, rects):
+            x, y, w, h = rect
+            if x < 0 or y < 0 or w <= 0 or h <= 0 or x + w > width or y + h > height:
+                sys.exit(f"rect {rect} for '{name}' does not fit inside {width}x{height}.")
+    elif width % cols or height % rows:
         print(f"warning: {width}x{height} does not divide evenly into {cols}x{rows}; "
-              f"cells will be truncated by up to a pixel.")
+              f"cells will be truncated by up to a pixel. State `rects` instead if the "
+              f"edge pixels matter.")
 
     if keyed:
         sheet = source.convert("RGB")
@@ -645,13 +666,18 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True):
         cut = source.convert("RGBA")
         print("authored alpha: keeping it, and skipping the sheet-wide line pass")
 
-    cell_w = width // cols
-    cell_h = height // rows
+    cell_w = width // cols if cols else 0
+    cell_h = height // rows if rows else 0
 
     cells = {}
     for index, name in enumerate(names):
-        row, col = divmod(index, cols)
-        box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
+        if rects:
+            x, y, w, h = rects[index]
+            box = (x, y, x + w, y + h)
+        else:
+            row, col = divmod(index, cols)
+            box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
+
         frame = cut.crop(box)
 
         # RUN FOR AN AUTHORED-ALPHA SHEET TOO, which it used to skip.
@@ -680,9 +706,19 @@ def cut_cells(sheet_path, rows, cols, names, keyed=True):
     return cells
 
 
-def pad_to_common_canvas(cells):
+def pad_to_common_canvas(cells, canvas=None):
     """Centre every cell, transparent-padded, onto one shared canvas: the
-    largest cell any of them measures.
+    largest cell any of them measures, or `canvas` when a recipe states one.
+
+    A STATED CANVAS IS FOR HEADROOM, and it is the difference between a scale
+    step and a clip. `turned` grows a cell about its pivot INSIDE the cell's
+    own bounds and then feathers the outer ring, so a 6% growth applied to a
+    crown already filling 425 of a 444 cell is not 6% larger -- it is 6%
+    larger with 3px shaved off every side and a 12px fade welded to what is
+    left. The combined water recipe never saw this because its shared canvas
+    was the core's 512 and its contact cells arrived padded into it; split
+    per layer, the contact recipe's own largest cell IS 444 and the headroom
+    disappeared with the core. So the canvas is stated rather than inferred.
 
     ONLY A MULTI-SOURCE RECIPE NEEDS THIS. A single sheet's cells are already
     the same size by construction -- one grid, one cell_w/cell_h. Cells drawn
@@ -696,11 +732,19 @@ def pad_to_common_canvas(cells):
     behind it.
     """
     sizes = {cell.size for cell in cells.values()}
-    if len(sizes) <= 1:
+    if canvas is None and len(sizes) <= 1:
         return cells
 
-    max_w = max(w for w, h in sizes)
-    max_h = max(h for w, h in sizes)
+    if canvas is not None:
+        max_w, max_h = canvas
+        too_big = {name: cell.size for name, cell in cells.items()
+                   if cell.size[0] > max_w or cell.size[1] > max_h}
+        if too_big:
+            sys.exit(f"canvas {max_w}x{max_h} is smaller than cell(s) {too_big}; "
+                     f"padding cannot shrink a cell.")
+    else:
+        max_w = max(w for w, h in sizes)
+        max_h = max(h for w, h in sizes)
 
     padded = {}
     for name, cell in cells.items():
@@ -719,12 +763,14 @@ def pad_to_common_canvas(cells):
 
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
                 base_align=False, content_crop=False, preview=False, vfx_id=None,
-                sources=None):
+                sources=None, rects=None, canvas=None):
     """Cut a sheet -- or several -- into frames.
 
     `sources`, when given, replaces `sheet_path`/`rows`/`cols`/`names`
     entirely: a list of `{"sheet", "grid": [rows, cols], "names": [...]}`
-    dicts, one per sheet a recipe draws cells from. Each is cut with
+    dicts, one per sheet a recipe draws cells from. A source (or a
+    single-sheet recipe) may state `rects` instead of `grid` -- see
+    `cut_cells` for when that is the honest cut. Each is cut with
     `cut_cells` under the one `keyed` flag the whole recipe declares, the
     dicts are merged (a name repeated across sources is refused -- the merge
     would silently keep whichever source lost), and if the sources' cells
@@ -737,7 +783,8 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
         cells = {}
         names = []
         for source in sources:
-            src_rows, src_cols = source["grid"]
+            src_rects = source.get("rects")
+            src_rows, src_cols = source["grid"] if "grid" in source else (None, None)
             src_names = source["names"]
 
             repeats = set(cells) & set(src_names)
@@ -746,12 +793,19 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
                           f"names must be unique across sources.")
 
             cells.update(cut_cells(os.path.join(SOURCE_DIR, source["sheet"]), src_rows, src_cols,
-                                    src_names, keyed=keyed))
+                                    src_names, keyed=keyed, rects=src_rects))
             names.extend(src_names)
 
-        cells = pad_to_common_canvas(cells)
+        cells = pad_to_common_canvas(cells, canvas)
     else:
-        cells = cut_cells(sheet_path, rows, cols, names, keyed=keyed)
+        cells = cut_cells(sheet_path, rows, cols, names, keyed=keyed, rects=rects)
+
+        # A SINGLE SHEET'S RECTS MAY DIFFER IN SIZE TOO, which a grid's cells
+        # never could -- the 444/443 alternation is exactly that. Same shared
+        # canvas, same reason: SpellVfxPlayer fits a whole sequence into one box
+        # and a frame that changes size mid-sequence is the tell.
+        if rects or canvas is not None:
+            cells = pad_to_common_canvas(cells, canvas)
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -1066,6 +1120,13 @@ def scaffold(vfx_id, sheet, rows, cols, frames, keyed):
     print()
 
 
+def _shape_of(spec):
+    """How a source describes its cut, for the one line printed per sheet."""
+    if "rects" in spec:
+        return f"{spec['sheet']} {len(spec['rects'])} rect(s)"
+    return f"{spec['sheet']} {spec['grid'][0]}x{spec['grid'][1]}"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("ids", nargs="*", help="VFX ids to process (default: every entry in VFX)")
@@ -1136,22 +1197,24 @@ def main():
         out_dir = os.path.join(OUTPUT_ROOT, vfx_id)
 
         if "sources" in spec:
-            described = ", ".join(f"{s['sheet']} {s['grid'][0]}x{s['grid'][1]}" for s in spec["sources"])
+            described = ", ".join(_shape_of(s) for s in spec["sources"])
             print(f"[{vfx_id}] {described}")
             slice_sheet(None, out_dir, None, None, None,
                         keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
-                        preview=args.preview, vfx_id=vfx_id, sources=spec["sources"])
+                        preview=args.preview, vfx_id=vfx_id, sources=spec["sources"],
+                        canvas=spec.get("canvas"))
         else:
-            rows, cols = spec["grid"]
-            print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
+            rows, cols = spec["grid"] if "grid" in spec else (None, None)
+            print(f"[{vfx_id}] {_shape_of(spec)}")
             slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
                         out_dir, rows, cols, spec["names"],
                         keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
                         base_align=spec.get("base_align", False),
                         content_crop=spec.get("content_crop", False),
-                        preview=args.preview, vfx_id=vfx_id)
+                        preview=args.preview, vfx_id=vfx_id, rects=spec.get("rects"),
+                        canvas=spec.get("canvas"))
 
 
 if __name__ == "__main__":

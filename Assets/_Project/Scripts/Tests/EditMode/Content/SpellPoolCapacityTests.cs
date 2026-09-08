@@ -55,7 +55,7 @@ namespace PrincesPalace.Domain.Tests
 
                 int targets = TargetsOf(skill);
 
-                var vfx = PresentationIn(skill, "vfx");
+                var vfx = SpellVfxJson.OwnVfx(skill);
                 if (vfx != null) found.Add(DemandOf(id, vfx, targets));
 
                 // ELEMENTS COUNT SEPARATELY AND NEVER TOGETHER: a cast picks
@@ -63,7 +63,7 @@ namespace PrincesPalace.Domain.Tests
                 // rather than all of them at once.
                 foreach (string element in JsonBlocks.ObjectsInArray(skill, "elements"))
                 {
-                    var choice = PresentationIn(element, "vfx");
+                    var choice = SpellVfxJson.OwnVfx(element);
                     if (choice != null)
                     {
                         found.Add(DemandOf($"{id} element '{JsonBlocks.String(element, "type")}'",
@@ -73,33 +73,6 @@ namespace PrincesPalace.Domain.Tests
             }
 
             return found;
-        }
-
-        // Read field by field rather than through JsonUtility, which is Unity's
-        // and would make this test Unity-only for no gain -- the four numbers
-        // below are all a pool count depends on.
-        private static SpellPresentation PresentationIn(string owner, string key)
-        {
-            string block = JsonBlocks.ObjectFor(owner, key);
-            if (block == null) return null;
-
-            var vfx = new SpellPresentation
-            {
-                path = JsonBlocks.String(block, "path") ?? "",
-                groundPath = JsonBlocks.String(block, "groundPath") ?? "",
-                layerFormat = (int)(JsonBlocks.Number(block, "layerFormat") ?? 0),
-            };
-
-            // A LAYERED BLOCK IS COUNTED BY ITS LAYERS. Parsing the array by
-            // hand here would be a second, drifting reader of the authoring
-            // format; nothing in skills.json authors layers yet, and when
-            // something does this assertion is what has to grow with it.
-            Assert.IsFalse(vfx.layerFormat > 0,
-                "a layered vfx block reached this pin, which counts layers through the adapter only. " +
-                "Extend it to read the authored array before the first layered spell ships, or the " +
-                "capacity it guards stops being checked at all.");
-
-            return vfx;
         }
 
         // HOW MANY THINGS THIS SKILL CAN ACTUALLY STRIKE, off its own targeting
@@ -204,10 +177,21 @@ namespace PrincesPalace.Domain.Tests
         {
             var demands = Demands();
 
-            Assert.GreaterOrEqual(demands.Count, 5,
-                "the sweep found " + demands.Count + " presentations. At least five spells author a vfx " +
-                "block today (lightning_bolt, frost_flare, mud_burst, bog_mud_burst, cinderfault), so a " +
-                "sweep finding fewer has stopped reading the file.");
+            Assert.GreaterOrEqual(demands.Count, 6,
+                "the sweep found " + demands.Count + " presentations. At least six author a vfx block " +
+                "today -- lightning_bolt, frost_flare, mud_burst, bog_mud_burst, cinderfault, and " +
+                "prismatic_orb's Water element -- so a sweep finding fewer has stopped reading the file.");
+
+            // THE ONE LAYERED BLOCK IN THE FILE, found where a skill-level
+            // lookup would not look. prismatic_orb authors no vfx of its own,
+            // so a reader that took the first "vfx" at any depth would report
+            // the element's block as the skill's -- counting one cast twice and
+            // naming it after a key that is not in the file.
+            var water = demands.FirstOrDefault(d => d.Skill == "prismatic_orb element 'Water'");
+            Assert.IsNotNull(water,
+                "the pilot's layered block was not read out of skills.json at all, so the only spell " +
+                "in the game that spends the particle pool is not being counted against it.");
+            Assert.Greater(water.Particles, 0, "the pilot's two emitters were read as spending nothing");
 
             var cinderfault = demands.FirstOrDefault(d => d.Skill == "cinderfault");
             Assert.IsNotNull(cinderfault, "cinderfault is the only spell with a ground layer and it was missed");
@@ -241,6 +225,17 @@ namespace PrincesPalace.Domain.Tests
             // against.
             Assert.AreEqual(3, water.Effects);
             Assert.AreEqual(28, water.Particles);
+
+            // AND THE SHIPPED BLOCK SPENDS WHAT THE FIXTURE SAYS. The two are
+            // kept the same by hand, so this is the line that notices when they
+            // stop being -- against the demand rather than field by field,
+            // because what this file guards is what a cast COSTS.
+            var authored = Demands().First(d => d.Skill == "prismatic_orb element 'Water'");
+            Assert.AreEqual(water.Effects, authored.Effects,
+                "skills.json's Water block draws a different number of sprite layers than the fixture " +
+                "every other pin in this suite is written against");
+            Assert.AreEqual(water.Particles, authored.Particles,
+                "skills.json's Water block spends a different number of particles than the fixture");
             Assert.AreEqual(1, cinderfault.Ground);
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, cinderfault.Effects);
         }

@@ -99,6 +99,10 @@ namespace PrincesPalace.PlayModeTests
         {
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             StanceManifestLoader.Reset();
+
+            // Global engine state the spell capture sets; leaking it would
+            // repace every test that runs after this one.
+            Time.captureFramerate = 0;
         }
 
         // The contact sheet. Deliberately built from the sprite pixels rather
@@ -295,6 +299,29 @@ namespace PrincesPalace.PlayModeTests
         // rounding of the same instant.
         private const int FlankSamples = 2;
 
+        // AND A FOURTH, FAR ENOUGH OUT TO SEE WHAT IS STILL FALLING. Nine
+        // samples is 0.30s, which is where the pilot's droplets live: its
+        // spray bursts at the cue with lives of 0.18-0.34s, so "after" at two
+        // samples (0.067s) catches the crown at full extent and nothing at all
+        // of the shed. A layered spell's tail is most of what distinguishes it
+        // from the single sheet it replaced, and three frames around the blow
+        // photographed exactly none of it.
+        private const int TailSamples = 9;
+
+        // How long to wait for the cast to put ANYTHING on screen before giving
+        // up and counting from the press instead. Four seconds of sampled time,
+        // which is several times the longest beat this game has.
+        private const int ReleaseFrameBudget = 120;
+
+        // AND ONE EARLY, BEFORE THE BLOW HAS ANYTHING TO DO WITH IT. Three
+        // samples is 0.10s from the release, which is mid-flight for the
+        // pilot's 0.25s travel -- the only instant at which its core and the
+        // wake riding it are on screen at all. The three frames around the
+        // impact are all past the arrival, so a projectile spell's projectile
+        // was in none of them: "before" means "before the blow", and for a fast
+        // cast that is still after the ball has landed.
+        private const int FlightSample = 3;
+
         private IEnumerator CaptureOneSpell(string id)
         {
             // THE PLAN IS THE SAME ONE -Launch USES, refusals included. A
@@ -306,6 +333,23 @@ namespace PrincesPalace.PlayModeTests
             Debug.Log("[PreviewCapture] " + PreviewFight.Describe(plan));
 
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            // A FIXED 1/30s PER FRAME, WHATEVER A FRAME ACTUALLY COSTS. The
+            // loop below used to compare realtimeSinceStartup against
+            // sample * SpellSampleSeconds -- and one CanvasCapture.RenderToFile
+            // is far more than 33ms, so writing the first picture made the next
+            // two samples already overdue and they were taken back to back,
+            // hundreds of milliseconds late. Measured on the Water pilot: the
+            // "before" frame caught the splash at full crown and "impact",
+            // nominally 67ms later, caught an empty stage -- the whole cast had
+            // finished between two consecutive samples of a 30fps series.
+            //
+            // captureFramerate makes Time.time (which the spell reads) and
+            // WaitForSeconds (which the beat waits on) advance by exactly one
+            // sample per frame, so a sample number IS an instant. Restored at
+            // the end of this method and again in TearDown -- it is global
+            // engine state and leaking it would repace every test after it.
+            Time.captureFramerate = Mathf.RoundToInt(1f / SpellSampleSeconds);
 
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
@@ -352,11 +396,18 @@ namespace PrincesPalace.PlayModeTests
             // WHEN the blow lands, asked of the controller rather than
             // recomputed. A beat carrying this skill's own presentation is all
             // ImpactDelayFor reads.
+            // THE PRESENTATION THE PREVIEW WILL ACTUALLY CAST, which for an
+            // elemental spell is not the skill's. prismatic_orb authors none
+            // of its own and its Water element authors five layers, so timing
+            // the samples off plan.Skill.Vfx put every one of them before the
+            // cue -- a picture of the right spell at the wrong instants.
+            // PreviewFight owns which element is pressed, so this asks it
+            // rather than deciding again.
             float impactSeconds = fight.ImpactDelayFor(new CombatBeat
             {
                 Actor = built.Party.FirstOrDefault(),
                 Target = built.Session.Encounter.LivingEnemies.FirstOrDefault(),
-                Vfx = plan.Skill.Vfx,
+                Vfx = PreviewFight.PreviewPresentationOf(plan.Skill),
             });
 
             int impactSample = Mathf.Max(FlankSamples, Mathf.RoundToInt(impactSeconds / SpellSampleSeconds));
@@ -375,55 +426,86 @@ namespace PrincesPalace.PlayModeTests
                 { impactSample - FlankSamples, prefix + "_before.png" },
                 { impactSample, prefix + "_impact.png" },
                 { impactSample + FlankSamples, prefix + "_after.png" },
+                { impactSample + TailSamples, prefix + "_tail.png" },
             };
+
+            // ADDED LAST AND ONLY IF IT IS ITS OWN INSTANT. A spell whose cue
+            // lands within five samples of the release would collide with
+            // "before", and one picture cannot be two instants: the flanking
+            // frames are the ones that answer "did the blow land with the
+            // number", so they keep the sample.
+            if (!wanted.ContainsKey(FlightSample)) wanted[FlightSample] = prefix + "_flight.png";
+
+            // SAMPLE ZERO IS THE FRAME THE CAST FIRST DRAWS, not the frame the
+            // button was pressed. Between the two sit the beat's own wind-up,
+            // its stance change and its lunge -- a fixed but unstated number of
+            // frames -- and impactSeconds is measured from the cast's release,
+            // so counting from the press put every sample that many frames
+            // early. Anchoring on "something is on screen" needs no seam and
+            // is the release by definition.
+            int waited = 0;
+            while (!AnythingDrawn(fight) && waited < ReleaseFrameBudget)
+            {
+                waited++;
+                yield return null;
+            }
+
+            bool anchored = waited < ReleaseFrameBudget;
 
             int observedImpact = -1;
             int groundLit = -1;
             int busyPopups = 0;
             int sample = 0;
-            float started = Time.realtimeSinceStartup;
             int last = wanted.Keys.Max();
 
             while (sample <= last)
             {
-                if (Time.realtimeSinceStartup - started >= sample * SpellSampleSeconds)
+                int popups = player.Popups.Count(pp => pp != null && !pp.IsFree);
+                if (observedImpact < 0 && popups > busyPopups) observedImpact = sample;
+                busyPopups = popups;
+
+                // THE GROUND LAYER, WHEN AUTHORED. Only some spells have
+                // one (Cinderfault's fault); a spell without one never
+                // lights it and no file is written, which is the report
+                // rather than an empty picture claiming to be one.
+                var ground = fight.GroundVfxPlayerForTest;
+                if (groundLit < 0 && ground != null && ground.Image != null && ground.Image.enabled)
                 {
-                    int popups = player.Popups.Count(pp => pp != null && !pp.IsFree);
-                    if (observedImpact < 0 && popups > busyPopups) observedImpact = sample;
-                    busyPopups = popups;
-
-                    // THE GROUND LAYER, WHEN AUTHORED. Only some spells have
-                    // one (Cinderfault's fault); a spell without one never
-                    // lights it and no file is written, which is the report
-                    // rather than an empty picture claiming to be one.
-                    var ground = fight.GroundVfxPlayerForTest;
-                    if (groundLit < 0 && ground != null && ground.Image != null && ground.Image.enabled)
-                    {
-                        groundLit = sample;
-                        CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, prefix + "_ground.png"));
-                    }
-
-                    if (wanted.TryGetValue(sample, out string name))
-                    {
-                        CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, name));
-                    }
-
-                    sample++;
+                    groundLit = sample;
+                    CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, prefix + "_ground.png"));
                 }
 
+                if (wanted.TryGetValue(sample, out string name))
+                {
+                    CanvasCapture.RenderToFile(canvas, Path.Combine(OutputDir, name));
+                }
+
+                sample++;
                 yield return null;
             }
+
+            Time.captureFramerate = 0;
 
             Debug.Log("[PreviewCapture] '" + id + "': impact scheduled at sample " + impactSample +
                       " (" + impactSeconds.ToString("F3") + "s from ImpactDelayFor), popup observed at sample " +
                       (observedImpact < 0 ? "never" : observedImpact.ToString()) +
-                      (groundLit < 0 ? ", no ground layer authored" : ", ground layer lit at sample " + groundLit));
+                      (groundLit < 0 ? ", no ground layer authored" : ", ground layer lit at sample " + groundLit) +
+                      (anchored
+                          ? ", sample 0 = the frame the cast first drew (" + waited + " frames after the press)"
+                          : ", NOTHING WAS EVER DRAWN -- samples counted from the press, so every one of " +
+                            "them is early by the beat's wind-up"));
 
             foreach (var name in wanted.Values)
             {
                 Debug.Log("[PreviewCapture] wrote " + Path.Combine(OutputDir, name));
             }
         }
+
+        // Whether the cast has begun drawing -- any effect renderer in either
+        // band showing a frame. The release instant, without a seam for it.
+        private static bool AnythingDrawn(FightController fight) =>
+            fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .Any(p => p != null && p.Image != null && p.Image.enabled);
 
         // ---- tools/preview.ps1 -Character <id> --------------------------------
 

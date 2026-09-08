@@ -432,7 +432,7 @@ namespace PrincesPalace
                     continue;
                 }
 
-                renderer.SetFacing(instance.Layer.Facing == SpellFacing.None ? 1f : instance.Facing);
+                renderer.SetFacing(instance.DrawFacing);
 
                 var next = sample.Next >= 0 && sample.Next < frameCount ? frames[sample.Next] : null;
                 var at = PositionOf(cast, instance, seconds);
@@ -457,8 +457,13 @@ namespace PrincesPalace
                 source = cast.Performance.Instances[source.SourceInstance];
             }
 
+            // dx IS LOCAL, so it mirrors with the cast -- a wake authored 118
+            // units behind a rightward core has to sit 118 units behind a
+            // leftward one, not 118 units in front of it. Its ContentDoc has
+            // always said "local offset from the anchor"; the sign was the half
+            // that was missing, and the emitter's own sourceDx already did it.
             var at = SpellPerformance.PositionOf(source, seconds);
-            return at + new UiVec(instance.Layer.dx, instance.Layer.dy);
+            return at + new UiVec(instance.Layer.dx * instance.DrawFacing, instance.Layer.dy);
         }
 
         private void PaintEmitter(Cast cast, int slot, int index, SpellLayerInstance instance, float seconds)
@@ -493,8 +498,8 @@ namespace PrincesPalace
                 var source = SourceOf(cast, instance);
 
                 var p0 = SpellPerformance.PositionOf(source, birth)
-                         + new UiVec(spec.sourceDx * SignOf(instance), spec.sourceDy);
-                var v0 = SpellEmitterSim.LaunchOf(spec, seed, i, instance.Facing)
+                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy);
+                var v0 = SpellEmitterSim.LaunchOf(spec, seed, i, instance.DrawFacing)
                          + SpellPerformance.VelocityOf(source, birth) * spec.inherit;
 
                 var drop = SpellEmitterSim.At(spec, seed, i, p0, v0, seconds - birth, frameCount);
@@ -525,8 +530,6 @@ namespace PrincesPalace
             if (instance.SourceInstance < 0) return instance;
             return cast.Performance.Instances[instance.SourceInstance];
         }
-
-        private static float SignOf(SpellLayerInstance instance) => instance.Facing < 0f ? -1f : 1f;
 
         // THE BOX ONE DROP IS DRAWN IN, before its own size variation. A
         // reservation rather than a measurement: the atlas's own cells are a

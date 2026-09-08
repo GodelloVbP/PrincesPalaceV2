@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -47,14 +48,21 @@ namespace PrincesPalace.Domain.Tests
         {
             internal string SkillId;
             internal string Path;      // "Spells/frost_flare"
-            internal int ImpactFrame;
-            internal int DepartFrame;
-            internal string Field;     // "path" or "groundPath"
+            internal int ImpactFrame;  // 1-based; a pre-layer block's blow
+            internal int DepartFrame;  // 1-based; a pre-layer block's throw
+            internal int StartFrame;   // 1-based; a layer's first drawn frame
+            internal string Field;     // "vfx.path", "vfx.layers[3].emitter.path", ...
         }
 
-        // Every vfx block in skills.json, plus the ground layer a spell may
-        // author beside it -- cinderfault plays two folders on one timeline and
-        // the second one is just as capable of not existing.
+        // EVERY FOLDER ANY SPELL PLAYS, from all four places one can be named:
+        // a pre-layer block's `path` and `groundPath`, and a layered block's
+        // `layers[].path` and `layers[].emitter.path`.
+        //
+        // AND FROM AN ELEMENT'S OWN BLOCK, not only a skill's. That is where the
+        // first layered spell in the game actually lives -- prismatic_orb
+        // authors no vfx of its own and its Water element authors five layers --
+        // so a sweep reading skills only would have declared the whole pilot
+        // absent and passed.
         private static List<SkillVfx> SkillVfxBlocks()
         {
             string file = Path.Combine(Root(), "Assets", "_Project", "ContentData", "skills.json");
@@ -64,23 +72,14 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (string skill in JsonBlocks.ObjectsInArray(File.ReadAllText(file), "skills"))
             {
-                string vfx = JsonBlocks.ObjectFor(skill, "vfx");
-                if (vfx == null) continue;
-
                 string id = JsonBlocks.String(skill, "id") ?? "?";
-                int impact = (int)(JsonBlocks.Number(vfx, "impactFrame") ?? 0d);
-                int depart = (int)(JsonBlocks.Number(vfx, "departFrame") ?? 0d);
 
-                string path = JsonBlocks.String(vfx, "path");
-                if (!string.IsNullOrWhiteSpace(path))
-                {
-                    found.Add(new SkillVfx { SkillId = id, Path = path, ImpactFrame = impact, DepartFrame = depart, Field = "path" });
-                }
+                Collect(found, id, SpellVfxJson.OwnVfx(skill));
 
-                string ground = JsonBlocks.String(vfx, "groundPath");
-                if (!string.IsNullOrWhiteSpace(ground))
+                foreach (string element in JsonBlocks.ObjectsInArray(skill, "elements"))
                 {
-                    found.Add(new SkillVfx { SkillId = id, Path = ground, ImpactFrame = impact, DepartFrame = depart, Field = "groundPath" });
+                    Collect(found, $"{id} element '{JsonBlocks.String(element, "type")}'",
+                        SpellVfxJson.OwnVfx(element));
                 }
             }
 
@@ -88,6 +87,61 @@ namespace PrincesPalace.Domain.Tests
                 "no vfx blocks parsed out of skills.json -- either every spell lost its art, or the " +
                 "parse stopped matching the file's shape and this fixture is guarding nothing.");
             return found;
+        }
+
+        private static void Collect(List<SkillVfx> found, string label, SpellPresentation vfx)
+        {
+            if (vfx == null) return;
+
+            if (!string.IsNullOrWhiteSpace(vfx.path))
+            {
+                found.Add(new SkillVfx
+                {
+                    SkillId = label, Path = vfx.path, Field = "vfx.path",
+                    ImpactFrame = vfx.impactFrame, DepartFrame = vfx.departFrame,
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(vfx.groundPath))
+            {
+                found.Add(new SkillVfx
+                {
+                    SkillId = label, Path = vfx.groundPath, Field = "vfx.groundPath",
+                    ImpactFrame = vfx.GroundImpactFrame, DepartFrame = 0,
+                });
+            }
+
+            var layers = vfx.layers ?? System.Array.Empty<SpellLayer>();
+            for (int i = 0; i < layers.Length; i++)
+            {
+                var layer = layers[i];
+                if (layer == null) continue;
+
+                // A LAYER HAS NO impactFrame AND NO departFrame. Its cue is
+                // hitCueSeconds on the block and its flight is travelSeconds on
+                // itself, both in seconds -- decoupling those from the frame
+                // count is the whole of the brief's point 6. What a layer CAN
+                // index into its folder is startFrame, so that is the number
+                // this range-checks, and it is the only guard `startFrame: 2`
+                // has anywhere.
+                if (!string.IsNullOrWhiteSpace(layer.path))
+                {
+                    found.Add(new SkillVfx
+                    {
+                        SkillId = label, Path = layer.path, Field = $"vfx.layers[{i}].path",
+                        StartFrame = layer.startFrame,
+                    });
+                }
+
+                string drops = layer.emitter == null ? "" : layer.emitter.path;
+                if (!string.IsNullOrWhiteSpace(drops))
+                {
+                    found.Add(new SkillVfx
+                    {
+                        SkillId = label, Path = drops, Field = $"vfx.layers[{i}].emitter.path",
+                    });
+                }
+            }
         }
 
         private static HashSet<string> RecipeIds()
@@ -122,20 +176,17 @@ namespace PrincesPalace.Domain.Tests
             return ids;
         }
 
-        [Test]
-        public void EveryFolderASkillPlaysHasARecordedProvenance()
+        // The walk itself, so the test below can be aimed at content this file
+        // fabricates as well as at content the game ships. A lint that scans
+        // nothing passes everything, and the only way to know this one still
+        // scans is to hand it something it must refuse.
+        private static List<string> OrphansAmong(IEnumerable<SkillVfx> blocks)
         {
             var recipes = RecipeIds();
             var handAssembled = HandAssembledIds();
-
-            Assert.IsNotEmpty(recipes,
-                $"no recipes under '{RecipeDir()}'. Either they moved and this fixture is asserting on an " +
-                "empty set, or the tool's manifest was inlined again -- a record only the Python can read " +
-                "is one the suite cannot enforce.");
-
             var orphans = new List<string>();
 
-            foreach (var vfx in SkillVfxBlocks())
+            foreach (var vfx in blocks)
             {
                 string id = vfx.Path.Replace('\\', '/').Trim('/');
                 int slash = id.LastIndexOf('/');
@@ -146,6 +197,19 @@ namespace PrincesPalace.Domain.Tests
                 orphans.Add($"{vfx.SkillId}'s {vfx.Field} '{vfx.Path}'");
             }
 
+            return orphans;
+        }
+
+        [Test]
+        public void EveryFolderASkillPlaysHasARecordedProvenance()
+        {
+            Assert.IsNotEmpty(RecipeIds(),
+                $"no recipes under '{RecipeDir()}'. Either they moved and this fixture is asserting on an " +
+                "empty set, or the tool's manifest was inlined again -- a record only the Python can read " +
+                "is one the suite cannot enforce.");
+
+            var orphans = OrphansAmong(SkillVfxBlocks());
+
             Assert.IsEmpty(orphans,
                 "these skills play frames whose origin nothing records:\n  " + string.Join("\n  ", orphans) +
                 "\n\nEvery played folder is either produced by a recipe under " +
@@ -154,13 +218,15 @@ namespace PrincesPalace.Domain.Tests
                 "the state golem_boulder was in when a scaffold run cut over all six of its frames.");
         }
 
-        [Test]
-        public void NoSkillTimesABeatToAFrameItsFolderDoesNotHave()
+        // The frame-range walk, pulled out for the same reason the provenance
+        // walk above was: the only proof a range check still ranges is a case
+        // built to fail it.
+        private static List<string> OutOfRangeAmong(IEnumerable<SkillVfx> blocks, out int measured)
         {
             var broken = new List<string>();
-            int checkedBlocks = 0;
+            measured = 0;
 
-            foreach (var vfx in SkillVfxBlocks())
+            foreach (var vfx in blocks)
             {
                 string folder = Path.Combine(SpellsRoot(),
                     vfx.Path.StartsWith("Spells/", StringComparison.OrdinalIgnoreCase)
@@ -174,7 +240,7 @@ namespace PrincesPalace.Domain.Tests
                 }
 
                 int frames = Directory.GetFiles(folder, "f*.png").Length;
-                checkedBlocks++;
+                measured++;
 
                 if (frames == 0)
                 {
@@ -182,7 +248,7 @@ namespace PrincesPalace.Domain.Tests
                     continue;
                 }
 
-                // 1-BASED, both of them -- see the vfx table in
+                // 1-BASED, all three -- see the vfx table in
                 // docs/ART_PIPELINE.md 5b. impactFrame 5 is the fifth frame, so
                 // a folder of nine is fine and a folder of four is not.
                 if (vfx.ImpactFrame > frames)
@@ -194,13 +260,95 @@ namespace PrincesPalace.Domain.Tests
                 {
                     broken.Add($"{vfx.SkillId}: departFrame {vfx.DepartFrame} but '{vfx.Path}' has {frames} frames");
                 }
+
+                // START ON A FRAME THE FOLDER HAS, and one it has something
+                // AFTER: a layer beginning on the last frame plays a single
+                // still and calls it an animation. The pilot's splash authors
+                // startFrame 2 of nine to skip a contact frame that draws the
+                // ball still approaching, and this is the only thing anywhere
+                // that checks the 2 against the nine.
+                if (vfx.StartFrame > frames)
+                {
+                    broken.Add($"{vfx.SkillId}: {vfx.Field} starts on frame {vfx.StartFrame} but " +
+                               $"'{vfx.Path}' has {frames} frames");
+                }
             }
 
-            Assert.Greater(checkedBlocks, 0, "no folder was measured, so this rule is vacuous");
+            return broken;
+        }
+
+        [Test]
+        public void NoSkillTimesABeatToAFrameItsFolderDoesNotHave()
+        {
+            var broken = OutOfRangeAmong(SkillVfxBlocks(), out int measured);
+
+            Assert.Greater(measured, 0, "no folder was measured, so this rule is vacuous");
             Assert.IsEmpty(broken,
                 "these skills time a beat to a frame that does not exist. The player clamps rather than " +
                 "throwing, so the symptom is a blow landing at the wrong moment rather than an error:\n  "
                 + string.Join("\n  ", broken));
+        }
+
+        // ---- and the two proofs that either rule still refuses anything ----------
+        //
+        // A LINT THAT SCANS NOTHING PASSES EVERYTHING, and both rules above
+        // fail by going quiet: a sweep that stopped seeing layers reports no
+        // orphans and no bad frames, and reads exactly like a clean tree. So
+        // each is aimed at a fabricated block built to be refused. The
+        // fabrication is deliberately shaped like the pilot -- a layer path and
+        // an emitter path -- because those are the two places the sweep grew.
+
+        [Test]
+        public void TheProvenanceSweepRefusesALayerPlayingAnUnrecordedFolder()
+        {
+            var made = new List<SkillVfx>
+            {
+                new SkillVfx
+                {
+                    SkillId = "fabricated", Field = "vfx.layers[0].path",
+                    Path = "Spells/no_recipe_records_this",
+                },
+                new SkillVfx
+                {
+                    SkillId = "fabricated", Field = "vfx.layers[0].emitter.path",
+                    Path = "Spells/nor_this_one",
+                },
+            };
+
+            var orphans = OrphansAmong(made);
+
+            Assert.AreEqual(2, orphans.Count,
+                "the provenance walk did not refuse two folders no recipe produces, so it would not " +
+                "refuse a real one either: " + string.Join("; ", orphans));
+            Assert.IsTrue(orphans[0].Contains("vfx.layers[0].path"),
+                "the refusal has to name the FIELD, or an author is told a spell is wrong without " +
+                "being told which of its six paths: " + orphans[0]);
+        }
+
+        [Test]
+        public void TheFrameRangeSweepRefusesAStartFramePastTheEndOfTheFolder()
+        {
+            // A REAL FOLDER with a startFrame it does not reach, which is the
+            // shape of the mistake: the folder exists, the recipe is recorded,
+            // the provenance check is happy, and the layer opens on a frame
+            // that is not there.
+            var madeUp = new List<SkillVfx>
+            {
+                new SkillVfx
+                {
+                    SkillId = "fabricated", Field = "vfx.layers[0].path",
+                    Path = "Spells/prismatic_orb_water_contact", StartFrame = 99,
+                },
+            };
+
+            var broken = OutOfRangeAmong(madeUp, out int measured);
+
+            Assert.AreEqual(1, measured, "the fabricated folder was not measured at all");
+            Assert.AreEqual(1, broken.Count,
+                "a layer starting on frame 99 of a nine-frame folder was accepted, so startFrame is " +
+                "range-checked by nothing: " + string.Join("; ", broken));
+            Assert.IsTrue(broken[0].Contains("99") && broken[0].Contains("9 frames"),
+                "the refusal states neither the authored frame nor the count it exceeded: " + broken[0]);
         }
 
         // TWO SKILLS, ONE FOLDER, DIFFERENT TIMING IS LEGAL, and this is the

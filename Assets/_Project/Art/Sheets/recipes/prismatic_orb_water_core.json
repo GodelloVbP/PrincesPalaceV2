@@ -1,0 +1,64 @@
+{
+  "_notes": [
+    "THE FLIGHT LOOP, ALONE. This is one quarter of what prismatic_orb_water.json",
+    "cut as a single 15-frame sequence: that recipe stitched a travelling ball and a",
+    "contact burst into one timeline, which is one drawing per cast and therefore one",
+    "thing on screen. The layered presentation plays the core, its wake, its shed and",
+    "its splash as four independent layers, so each needs its own folder with its own",
+    "provenance. The combined recipe stays on disk, unplayed, as the baseline the",
+    "layered version is measured against.",
+    "",
+    "SIX CELLS, IN ORDER, NOTHING COMPOSED. water_core_6f.png is already an authored",
+    "six-frame loop of internal motion (the sources' own README), and the 1536x1024",
+    "sheet divides exactly into 512px cells -- the one sheet of the four that does.",
+    "No rects, no canvas, no scale steps.",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA, so keyed is false and nothing is re-keyed from",
+    "luminance. Measured on the cut cells: alpha is effectively binary -- 29% of every",
+    "cell above 128 and 0% between 8 and 128 -- so the README's 'soft blue halo' is",
+    "drawn in RGB against a hard alpha edge rather than as a falloff. The cell edges",
+    "carry alpha 0-1, so there is no rectangle to read against the dark stage: the",
+    "halo stops well inside the cell.",
+    "",
+    "PLAYED AS A LOOP by the layer that owns it (until: loop, fps 24 over a 0.25s",
+    "flight is exactly one revolution), which is what makes the f5->f0 seam a question",
+    "at all. The seam is a playback decision and lives in skills.json, not here: the",
+    "recipe's job is that the six cells arrive uncomposed and in order."
+  ],
+  "sheet": "Spells/prismatic_bolt/water/water_core_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "core_f0",
+    "core_f1",
+    "core_f2",
+    "core_f3",
+    "core_f4",
+    "core_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "core_f0"
+    },
+    {
+      "from": "core_f1"
+    },
+    {
+      "from": "core_f2"
+    },
+    {
+      "from": "core_f3"
+    },
+    {
+      "from": "core_f4"
+    },
+    {
+      "from": "core_f5"
+    }
+  ]
+}

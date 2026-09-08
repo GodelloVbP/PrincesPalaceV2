@@ -276,6 +276,164 @@ picture, because no spell authors an emitter until M5.
 
 ---
 
+## Deviations from revision 4 — M5, the Water pilot, as built
+
+Written by the implementing session. §6's composition was built as specified;
+the numbers moved and four defects between the model and the screen were found
+by looking at the pictures, which is what the milestone was for.
+
+**FOUR LIVE DEFECTS, none of which any test could see.** Every one of them made
+the pilot draw less than it authored, silently, while the suite stayed green.
+
+**D13 — an element's layered block was thrown away.**
+`ResolvedSkill.AsElement` chose between the element's presentation and the
+skill's on `!string.IsNullOrEmpty(chosen.Vfx.path)`. A layered block authors no
+`path` **by construction** — `SpellLayerRules` refuses a block that authors both
+— so the Water element's five layers were discarded and the orb's own empty
+presentation was used instead. **The pilot drew nothing at all**, and would have
+gone on drawing nothing for every layered element ever authored.
+`SpellPresentation.HasArt` (layers, or a path, or a groundPath) is the question
+both askers actually had; the second is below.
+
+**D14 — the house's melee contact effects were drawn over it.**
+`FightBeatPlayer.WantsContactFx` asked the same question the same way, so a
+layered cast read as "brings no art of its own" and got the slash arc and impact
+burst on top of its own splash — the two-effects-arguing case that method's own
+header refuses. Same fix, same property. `FightContactCueTests` gains the
+layered case beside the pre-layer one it already had.
+
+**D15 — the particle pool's members were never activated.**
+`SpellParticleRenderer.Show` set `image.enabled = true` and activated its own
+`gameObject`, which is the POOL node. Every member is built `.Inactive()`
+(`FightScreen.BuildSpellParticles`), so all sixty-four Images were enabled
+components on deactivated objects: **both emitters drew nothing**, in two
+consecutive capture runs, while `IsDrawing` reported them as drawing. The sprite
+pool never met this because each of ITS members carries its own
+`SpellVfxPlayer` and activates itself; this is one component over sixty-four
+objects. `IsDrawing` now reads `isActiveAndEnabled`, which is the half that was
+lying.
+
+**D16 — the preview cast the element with no art.**
+`FightController`'s forced first action pressed element ZERO, and the orb's
+first element is Earth, which authors nothing. `tools/preview.ps1 -Spell
+prismatic_orb` therefore photographed an empty stage with a damage number on it.
+`PreviewFight.PreviewElementOf` picks the first element that draws anything and
+says so in the log; the headless capture asks the same function which
+presentation to time its samples against, because two copies of that choice
+would photograph one element and caption it with another's timing.
+
+**AND THE CAPTURE HARNESS WAS RACING ITSELF (D17).** `CaptureOneSpell` compared
+`realtimeSinceStartup` against `sample * 1/30` — and one
+`CanvasCapture.RenderToFile` costs far more than 33ms, so writing the first
+picture made the next two samples already overdue and they were taken back to
+back, hundreds of milliseconds late. Measured on this spell: the "before" frame
+caught the splash at full crown and "impact", nominally 67ms later, caught an
+empty stage. It sets `Time.captureFramerate` now, so a sample number IS an
+instant; and sample 0 is the frame the cast **first draws** rather than the frame
+the button was pressed, because the beat's wind-up sits between the two and
+`ImpactDelayFor` is measured from the release.
+
+**D18 — a fifth sample, not the one extra §6e asked for.** §6e adds `_tail` at
+impact + 0.30s so the droplets are in a picture. A second is needed and the
+reason is structural: this spell's arrival (0.25s) is BEFORE its cue (0.35s), so
+all three frames around the impact are past the arrival and **the projectile is
+in none of them**. `_flight` at 0.10s from the release is the only picture in
+which the core and the wake riding it exist at all.
+
+**D19 — the wake's attachment is `dx`, not `impactX`/`impactY`.** §6d authors
+`impactX: 0.94, impactY: 0.50` on the wake. A follower's position is its
+SOURCE's position plus its own `(dx, dy)` (`SpellPerformancePlayer.PositionOf`),
+so neither field reaches a placement and authoring them documents a correction
+that does not happen. They are dropped; `dx: -118` against the cropped sheet's
+own measured profile does the work. That found a real defect on the way:
+**`dx` was not mirrored with the cast** while the emitter's own `sourceDx`
+already was, so a wake authored behind a rightward core would sit in FRONT of a
+leftward one. `SpellLayerInstance.DrawFacing` is now the one place the cast's
+facing and the layer's own policy are combined, with four readers where there
+were two hand-written copies and one raw read.
+
+**D20 — two new recipe keys, and the water pack is what earned both.**
+`rects` states explicit slice rectangles per cell, which is the brief's own
+requirement for the 1774×887 atlases and which §6b left as "state them or record
+why not". Measured before choosing: five of the particle sheet's eight cells
+have content touching a cell edge, and a floor grid is two pixels off by the
+fourth column — so a sliver of the neighbouring drop would be sliced into a
+frame that becomes a sprite a few dozen pixels wide. `canvas` states the shared
+padding canvas instead of inferring it from the largest cell, which the contact
+recipe needs because its scale steps had been getting their headroom from the
+core's 512 cells and the split took the core away. Both are in
+`docs/ART_PIPELINE.md` §5b.
+
+**D21 — `contact_f0` keeps its 1.10 and is never played.** The scale was a
+measured bridge between two sheets in ONE sequence. Split, the core and the
+splash are separate layers with separate boxes, so there is no join left to
+correct — and `startFrame: 2` skips the frame anyway. Kept, corrected, and
+recorded in the recipe's `_notes`, because §6b's point 3 is that the choice
+should be an authored number rather than a deleted asset.
+
+**D22 — the temporary recipe and its folder STAY.** The instruction to this
+session allowed deleting `prismatic_orb_water.json` and its 15-frame folder if
+the layered folders supersede them. §6c says the opposite in as many words —
+they stay on disk, unplayed, as the baseline the "after" is measured against —
+and an unplayed folder costs nothing, because `SpellVfxRecipeDriftTests` walks
+content rather than folders. Kept, per the plan.
+
+**D23 — no `sfxPath`.** §6d authors `Audio/Sfx/water_impact`.
+`Resources/Audio/Sfx/` holds no water clip; nothing was delivered with the art
+pack. The path convention checks shape and not existence, so authoring it would
+have passed the build and been silently mute. Omitted, and named here instead:
+**the pilot has no impact sound**, and that is a commission rather than a code
+change.
+
+**D24 — the drift lint reads elements, which §9 M5 did not say.** It extends
+`layers[].path`, `layers[].emitter.path` and the `startFrame` range check as
+specified — but all three would have found nothing, because `SkillVfxBlocks`
+walked skill-level `vfx` only and the first layered spell in the game lives on
+an ELEMENT. Both lints now walk `elements[].vfx` as well, through the shared
+`SpellVfxJson` reader that also replaced `SpellPoolCapacityTests`' own parser
+and its "extend me before the first layered spell ships" assertion.
+
+**D25 — M8's runtime fixture is half-built here.** §9 puts the real-time
+recording in M8. Its one-cast half is built now
+(`SpellRuntimeCaptureTests`, 45 frames at `captureFramerate = 60`, frame 0 the
+release) because the brief's acceptance is that the owner can SEE the collision,
+and four sampled stills of a 0.7s cast are not that. What M8 still owes is the
+second cast opened over the first's living droplets, its assertion that a
+particle of the first is still owned on that frame, and the allocation
+measurement.
+
+**D26 — the tuned numbers.** §6d says every number in it is a first guess to be
+tuned against captures. Four moved, each against a measurement rather than a
+preference: the splash is `size: 260` (from 300) with `impactX: 0.76,
+impactY: 0.58` (from 0.50/0.50) — 0.60 is where the crown's spine actually sits
+in the cut frames, and the rest is the correction that took the water off the
+target's head and out from under the damage number; the shed's drops are
+`0.5-1.0` (from `0.35-0.7`) and the spray's `0.45-1.15` (from `0.3-0.9`),
+because at `ParticleSize` 64 the authored range drew specks rather than drops;
+and the spray's `aimDegrees` is 115 (from 70), to agree with the art it fires
+alongside — the contact crown opens backwards and up, and a cone centred
+forward-and-up threw the spray the opposite way from the drawing.
+
+**TWO OBSERVATIONS, NEITHER ACTED ON.**
+
+*The flight is legible for about three frames.* `PositionOf`'s ease is `t*t`,
+unauthored and deliberately one house rule — so a 0.25s travel covers a bit over
+a third of the distance in its first 0.15s and the rest in the last 0.10s. It
+reads as a hard, fast arrival, which is what the brief asks for; it also means
+the core and its wake are on screen legibly for three frames of a 45-frame
+recording. If the owner wants the ball readable for longer, the lever is the
+ease, and making it authorable is a word on the layer under the same format
+version (`PositionOf`'s own header says so).
+
+*The popup is observed two frames after the scheduled cue.* The capture now logs
+both: "impact scheduled at sample 10 (0.350s from `ImpactDelayFor`), popup
+observed at sample 12". 67ms, consistent, and it is between the module's cue and
+the popup being non-free rather than anywhere in the layer model. It predates
+this work and nothing measured it before; it is a number for M6 or later to
+decide about.
+
+---
+
 ## Review log, revision 3
 
 An adversarial pass over revision 2 against the tree, section by section.

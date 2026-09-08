@@ -319,6 +319,25 @@ namespace PrincesPalace.Domain.Content
         // home.
         public bool HasLayers => layers != null && layers.Length > 0;
 
+        // WHETHER THIS BLOCK DRAWS ANYTHING AT ALL, in either vocabulary.
+        //
+        // Two callers ask this question and both used to ask it of `path`
+        // alone: "did this element author its own art" (ResolvedSkill
+        // .AsElement) and "does this blow bring its own effect, so the house's
+        // contact language should stay out of the way"
+        // (FightBeatPlayer.WantsContactFx). A pre-layer block's only way of
+        // saying yes IS a path, so that read correctly for five years and for
+        // every spell that shipped.
+        //
+        // A layered block authors no `path` by construction -- SpellLayerRules
+        // refuses a block that authors both -- so both callers read the first
+        // layered spell in the game as authoring nothing. The element's whole
+        // presentation was dropped and the melee burst it does not want was
+        // drawn over the splash. One property, so a third caller cannot ask it
+        // the old way.
+        public bool HasArt =>
+            HasLayers || !string.IsNullOrWhiteSpace(path) || !string.IsNullOrWhiteSpace(groundPath);
+
         // ---- the legacy adapter --------------------------------------------------
 
         // A PRE-LAYER BLOCK, SAID IN LAYERS. Pure, engine-free, and its output

@@ -764,6 +764,99 @@ namespace PrincesPalace.PlayModeTests
                 "the box size survived into the next cast");
         }
 
+        // A FOLLOWER'S dx IS LOCAL TO THE CAST, which is the half that was
+        // missing. The wake the Water pilot authors sits 118 units BEHIND its
+        // core, and "behind" is a direction: cast back across the stage the
+        // same number has to put it 118 units the other way, or the wake leads
+        // the projectile it is supposed to trail.
+        //
+        // Invisible on Odette, who is the only caster of the only spell that
+        // authors one today, and wrong on every monster -- the exact shape of
+        // the mirroring bug the sibling tests above already record twice.
+        [UnityTest]
+        public IEnumerator AFollowersOffsetIsMirroredWithTheCastThatOwnsIt()
+        {
+            yield return LoadFight();
+
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(TrailingBeat());
+            yield return null;
+
+            var drawn = EffectPlayers();
+            Assert.AreEqual(-118f, drawn[1].Image.rectTransform.anchoredPosition.x
+                                   - drawn[0].Image.rectTransform.anchoredPosition.x, 1.5f,
+                "cast left to right, the trailing layer has to sit its authored dx BEHIND its source");
+
+            LetTheLastCastFinish();
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(TrailingBeat(reversed: true));
+            yield return null;
+
+            drawn = EffectPlayers();
+            Assert.AreEqual(118f, drawn[1].Image.rectTransform.anchoredPosition.x
+                                  - drawn[0].Image.rectTransform.anchoredPosition.x, 1.5f,
+                "cast back across the stage, the same authored dx has to reach the other way -- " +
+                "unmirrored it puts the wake in FRONT of the thing it trails");
+        }
+
+        // The effect band in pool order, which is authored layer order: a cast
+        // takes the lowest free member per layer, so member 0 is the first
+        // layer the block declares and member 1 the second.
+        private IReadOnlyList<SpellVfxPlayer> EffectPlayers() =>
+            _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .Where(p => !_fight.GroundVfxPlayersForTest.Contains(p))
+                .ToList();
+
+        // A travelling layer with something riding it, which is the pilot's
+        // core-and-wake pair with frost_flare's frames standing in for both --
+        // this is about the offset, not about the art.
+        private CombatBeat TrailingBeat(bool reversed = false)
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = reversed ? foe : hero,
+                Target = reversed ? hero : foe,
+                Vfx = new SpellPresentation
+                {
+                    layerFormat = 1,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            id = "core",
+                            render = "sprite",
+                            place = "caster-centre",
+                            at = "release",
+                            travelSeconds = 0.30f,
+                            path = "Spells/frost_flare",
+                            seconds = 0.52f,
+                            until = "once",
+                            size = 190f,
+                            facing = "auto",
+                            sort = "effects",
+                        },
+                        new SpellLayer
+                        {
+                            id = "trail",
+                            render = "still",
+                            place = "layer:core",
+                            follow = true,
+                            at = "release",
+                            path = "Spells/frost_flare",
+                            until = "hold",
+                            dx = -118f,
+                            scale = 0.7f,
+                            facing = "auto",
+                            sort = "effects",
+                        },
+                    },
+                },
+            };
+        }
+
         // ---- an effect that lands on more than one thing -------------------------
         //
         // ResolveDamageAll opens ONE beat aimed at the first living enemy,

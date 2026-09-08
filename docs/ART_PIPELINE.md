@@ -579,6 +579,32 @@ An unrecognised word falls back to `target` at play time and **fails the
 suite** — `SpellVfxTests` refuses any anchor that does not parse, so a typo
 cannot reach a player as a quietly misplaced explosion.
 
+### Cells that are not a uniform grid: `rects` and `canvas`
+
+Two recipe keys for sheets whose delivered dimensions do not divide, and both
+were earned by the water pack.
+
+**`rects`** replaces `grid` on a sheet (or on one entry of `sources`): a list of
+`[x, y, w, h]` in the sheet's own top-origin pixels, one per name, in play
+order. `water_particles_8.png` is 1774×887 over 4×2 and its own README states
+the column edges 0, 444, 887, 1331, 1774 — 444/443 alternating. A floor-divided
+grid takes 443 everywhere, and the cost is not one lost pixel per cell: by the
+fourth column it starts two pixels LEFT of where the cell does, so a sheet whose
+art reaches its seams slices a sliver of the neighbour in. Measured on that
+sheet, five of eight cells' content bboxes touch a cell edge.
+
+State `rects` when the sheet does not divide AND the cells become sprites drawn
+small (a particle atlas). A uniform grid is still right for a sheet that
+divides, and truncation is still acceptable for cells padded onto a much larger
+canvas — say so in `_notes` either way, because an unstated trade reads as an
+unnoticed one.
+
+**`canvas`: [w, h]** pads every cell onto a stated canvas before composing,
+instead of onto the largest cell. It is headroom for a `scale` step: `turned()`
+grows a cell about its own centre INSIDE its bounds and then feathers the outer
+ring, so 1.06 applied to a crown already filling 425 of a 444 cell is 6% bigger
+with 3px shaved off each side and a 12px fade welded to what is left.
+
 ### Composing frames from cells
 
 The manifest's optional `sequence` builds frames out of the cut cells, so a

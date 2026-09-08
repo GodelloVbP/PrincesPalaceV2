@@ -240,8 +240,14 @@ namespace PrincesPalace.Domain.Content
             // A COPY EITHER WAY, never the catalogue's own object -- the same
             // rule the constructor states, and the reason a cast cannot edit
             // the content it was dealt from.
+            // HasArt RATHER THAN A PATH TEST. An element's block says "use me
+            // instead of the skill's" by drawing something, and a layered block
+            // draws through `layers` with no `path` at all -- SpellLayerRules
+            // refuses a block that authors both. Read for a path, prismatic_orb's
+            // Water element authored five layers and got the skill's empty
+            // presentation instead: the pilot drew nothing, silently.
             var chosen = Elements == null ? null : System.Array.Find(Elements, e => e != null && e.Type == element);
-            copy.Vfx = (chosen != null && chosen.Vfx != null && !string.IsNullOrEmpty(chosen.Vfx.path)
+            copy.Vfx = (chosen != null && chosen.Vfx != null && chosen.Vfx.HasArt
                 ? chosen.Vfx
                 : Vfx ?? SpellPresentation.None).Copy();
 

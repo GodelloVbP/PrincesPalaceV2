@@ -67,6 +67,18 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // target, so a projectile and the wake riding it cannot disagree about
         // which way they point.
         public float Facing = 1f;
+
+        // THE CAST'S FACING AFTER THIS LAYER'S OWN POLICY, which is the number
+        // every mirroring decision actually wants -- the sheet's scale, the
+        // layer's dx, an emitter's sourceDx and the angle its cone opens at.
+        //
+        // ASKED RATHER THAN RECOMPUTED. The expression `Facing == None ? 1 :
+        // instance.Facing` was written out at two call sites and a third read
+        // `instance.Facing` raw, which is how `facing: none` came to mirror an
+        // emitter's cone while un-mirroring the sheet it was thrown from. One
+        // property, four readers, and a fifth reader cannot get it wrong.
+        public float DrawFacing =>
+            Layer != null && Layer.Facing == SpellFacing.None ? 1f : (Facing < 0f ? -1f : 1f);
     }
 
     // A PRESENTATION, RESOLVED: every layer fanned out, every time absolute,

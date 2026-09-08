@@ -561,8 +561,33 @@ hold the runtime; nothing else in the game knows a spell has layers at all.
 | `Domain/Combat/Presentation/SpellEmitterSim.cs` | ballistic drops as a closed form over `(spec, seed, index, age)` |
 | `Core/SpellPerformancePlayer.cs` | the module: owns the clock (`Time.time`), the handles, the schedule tick, and the two renderer bands plus the particle pool |
 | `Core/SpellVfxPlayer.cs` | the sprite/still renderer, and nothing else — `Show(frame, next, blend, alpha, at, size)` |
-| `Core/SpellParticleRenderer.cs` | N pooled `Image`s driven from the sim |
+| `Core/SpellParticleRenderer.cs` | N pooled `Image`s driven from the sim. `Show` activates the member's own GameObject as well as enabling its Image — every pool member is built `Inactive()`, and enabling half the switch draws nothing while reporting itself as drawing |
 | `Core/FightController.SpellVfx.cs` | placement only: where the bottom of an effect is, which is the question every bug in it came from |
+
+**The pilot that consumes it (M5).** `prismatic_orb`'s **Water element** is the
+first layered spell in the game, and the only one: five layers, three renderer
+kinds, two scopes and three schedule points, authored under
+`elements[].vfx` in `skills.json` rather than on the skill, because an element
+brings its own art.
+
+**The folder name is the artist's and the ids are the game's.** The delivery
+lives under `Art/Sheets/Spells/prismatic_bolt/water/` while every runtime id is
+`prismatic_orb_*`; nothing is renamed, because the recipe already bridges them —
+`SpellVfxRecipeDriftTests` matches a played folder's LAST path segment against
+recipe filenames, so a source sheet's directory name is invisible to it. (Those
+source PNGs are on disk and **not in git**, which is true of the whole
+`Art/Sheets/Spells/` tree and predates the pilot.)
+
+| File | What it owns |
+|---|---|
+| `Art/Sheets/recipes/prismatic_orb_water_{core,contact,wake,drops}.json` | one recipe per layer, each with its own provenance. `prismatic_orb_water.json` and its 15-frame folder stay on disk, unplayed, as the single-sequence baseline the layered version is measured against |
+| `Resources/Spells/prismatic_orb_water_core` | 6 frames, 512², the flight loop |
+| `Resources/Spells/prismatic_orb_water_contact` | 9 frames, 512², the contact burst; the splash layer plays 8 of them from `startFrame: 2` |
+| `Resources/Spells/prismatic_orb_water_wake` | 1 frame, 2027×410, the rear-attached ribbon |
+| `Resources/Spells/prismatic_orb_water_drops` | 8 stills, 444², the droplet atlas both emitters throw |
+| `Tests/EditMode/Shared/SpellVfxJson.cs` | the ONE reader of an authored `vfx` block, by reflection over the target type rather than a hand-written field list. Two fixtures ask it what a spell draws — the pool pin and the recipe drift lint — and a second parser is a second thing that can fall behind the format |
+| `Tests/PlayMode/Combat/SpellEmitterCastTests.cs` | that a live cast's emitters put sprites on the canvas. Everything else about the sim is EditMode arithmetic, and arithmetic cannot see a pool member that was never activated |
+| `Tests/PlayMode/Art/SpellRuntimeCaptureTests.cs` | the real-time recording: 45 frames at `Time.captureFramerate = 60`, frame 0 the release. Not a gate — `-nographics` has no device, so it Ignores itself there |
 
 Design and milestones: `docs/PLAN_SPELL_LAYERS.md`. Handoff:
 `docs/handoffs/spell_layers/BRIEF.md`.

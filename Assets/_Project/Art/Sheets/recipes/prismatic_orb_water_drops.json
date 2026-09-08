@@ -1,0 +1,115 @@
+{
+  "_notes": [
+    "THE DROPLET ATLAS -- eight stills, one per cell, in the sources' README order:",
+    "round drop, stretched drop, heavy drop, curved streak, reverse curved streak,",
+    "torn sheet, forked sheet, splash fork. NOT a sequence: the emitter picks one per",
+    "particle by hash, so the folder is a palette and the order only decides which",
+    "index a hash lands on.",
+    "",
+    "EXPLICIT RECTS, and here the argument is sharper than for the contact sheet.",
+    "Same 1774x887 4x2 delivery, same 444/443 alternation, same two-pixel drift by the",
+    "fourth column -- but a contact cell is padded onto 512 and played as one frame of",
+    "a burst, while each of these cells becomes a SPRITE drawn a few dozen pixels",
+    "wide. A sliver of the neighbouring drop sliced into a cell is a second droplet in",
+    "the frame at that size. Measured on this sheet: r0c0's content reaches x=444 and",
+    "r0c1's starts at x=0, so the round drop and the stretched drop touch across the",
+    "seam the floor grid would cut through. The rects are the README's own column and",
+    "row edges.",
+    "",
+    "NO CANVAS STATED: the rects give 444x444 and 443x443 cells and nothing here",
+    "scales, so the automatic pad onto the largest (444x444) is all that is needed.",
+    "Centred and transparent-padded, so no drop is resized.",
+    "",
+    "Delivered with its own alpha; keyed is false, like the rest of the pack."
+  ],
+  "sheet": "Spells/prismatic_bolt/water/water_particles_8.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "drop_round",
+    "drop_stretched",
+    "drop_heavy",
+    "streak_curved",
+    "streak_reverse",
+    "sheet_torn",
+    "sheet_forked",
+    "splash_fork"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "drop_round"
+    },
+    {
+      "from": "drop_stretched"
+    },
+    {
+      "from": "drop_heavy"
+    },
+    {
+      "from": "streak_curved"
+    },
+    {
+      "from": "streak_reverse"
+    },
+    {
+      "from": "sheet_torn"
+    },
+    {
+      "from": "sheet_forked"
+    },
+    {
+      "from": "splash_fork"
+    }
+  ]
+}

@@ -459,5 +459,46 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEqual(oneStep, stepped);
         }
+
+        // ---- which way an instance actually draws --------------------------------
+        //
+        // THE CAST'S FACING AND THE LAYER'S POLICY ARE TWO NUMBERS, and every
+        // mirroring decision in the renderer wants the combination rather than
+        // either half. Written out at two call sites and read raw at a third,
+        // it drifted: an emitter's cone mirrored on a `facing: none` layer whose
+        // own sheet did not.
+
+        [Test]
+        public void AMirroredCastDrawsMirroredUnlessTheLayerRefuses()
+        {
+            var instance = new SpellLayerInstance
+            {
+                Layer = new SpellLayer { render = "sprite", place = "target", facing = "auto" },
+                Facing = -1f,
+            };
+
+            Assert.AreEqual(-1f, instance.DrawFacing, 0.0001f,
+                "a mirrored cast's auto-facing layer has to draw mirrored");
+
+            instance.Layer.facing = "none";
+            Assert.AreEqual(1f, instance.DrawFacing, 0.0001f,
+                "'none' is what every pre-layer non-travelling effect becomes, and it means the sheet " +
+                "is drawn as authored however the cast is aimed");
+        }
+
+        [Test]
+        public void AnUnmirroredCastDrawsUnmirroredWhateverTheLayerSays()
+        {
+            var instance = new SpellLayerInstance
+            {
+                Layer = new SpellLayer { render = "sprite", place = "target", facing = "auto" },
+                Facing = 1f,
+            };
+
+            Assert.AreEqual(1f, instance.DrawFacing, 0.0001f);
+
+            instance.Layer.facing = "none";
+            Assert.AreEqual(1f, instance.DrawFacing, 0.0001f);
+        }
     }
 }

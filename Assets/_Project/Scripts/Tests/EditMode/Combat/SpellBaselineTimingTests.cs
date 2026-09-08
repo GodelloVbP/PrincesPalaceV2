@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat.Session;
@@ -102,18 +103,49 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0.43333334, 0.78 * CombatBeat.ImpactFraction(5, 9), 1e-6);
         }
 
-        // L7, as an assertion rather than as prose. The pilot spell has no
-        // "before" in game, which is why M0 could not photograph one.
+        // WHAT M5 PUT WHERE THE BASELINE'S ABSENCE WAS. This assertion used to
+        // read "prismatic_orb authors no presentation at all", which is why M0
+        // could not photograph a "before"; the note on it said the layered pin
+        // should REPLACE it rather than delete it, so here it is.
+        //
+        // ON THE ELEMENT AND NOT ON THE SKILL, which is the whole shape of the
+        // pilot: the orb itself draws nothing and each element may bring its
+        // own art. Water is the one that has any, and the other three staying
+        // empty is what makes "one element authored, three not" a case the
+        // resolver and the pool pin both have to handle.
         [Test]
-        public void ThePilotSpellStillAuthorsNoPresentationAtAll()
+        public void ThePilotSpellAuthorsItsWaterElementAndOnlyThat()
         {
             string skill = JsonBlocks.ObjectsInArray(SkillsJson(), "skills")
                 .FirstOrDefault(s => JsonBlocks.String(s, "id") == "prismatic_orb");
             Assert.IsNotNull(skill, "skills.json has no prismatic_orb");
 
-            Assert.IsNull(JsonBlocks.ObjectFor(skill, "vfx"),
-                "prismatic_orb now authors a vfx block. That is M5's work, and when it lands this " +
-                "assertion is what should be replaced by the layered pin -- not deleted.");
+            Assert.IsNull(SpellVfxJson.OwnVfx(skill),
+                "the orb itself authors a vfx block. Its art belongs to whichever element is cast, " +
+                "and a skill-level block would draw for all four.");
+
+            var authored = new List<string>();
+            foreach (string element in JsonBlocks.ObjectsInArray(skill, "elements"))
+            {
+                if (SpellVfxJson.OwnVfx(element) != null) authored.Add(JsonBlocks.String(element, "type"));
+            }
+
+            CollectionAssert.AreEqual(new[] { "Water" }, authored,
+                "exactly one of the orb's four elements has art today");
+
+            var water = SpellVfxJson.OwnVfx(JsonBlocks.ObjectsInArray(skill, "elements")
+                .First(e => JsonBlocks.String(e, "type") == "Water"));
+
+            Assert.AreEqual(1, water.layerFormat);
+            Assert.AreEqual(0.35f, water.hitCueSeconds, 1e-6f,
+                "the cue is arrival (0.25s) plus 0.10s of compression, authored in seconds rather " +
+                "than derived from a frame index -- which is the whole of the brief's point 6");
+            Assert.IsEmpty(water.path,
+                "a layered block authors no single-block path; the rules refuse one that authors both");
+
+            CollectionAssert.AreEqual(new[] { "core", "wake", "shed", "splash", "spray" },
+                water.layers.Select(l => l.id).ToList(),
+                "authored order is draw order, so it is part of the content rather than an accident");
         }
     }
 }

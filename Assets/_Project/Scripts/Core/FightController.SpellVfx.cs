@@ -220,7 +220,7 @@ namespace PrincesPalace
 
             var box = BoxForLayer(layer);
             var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
-            float facing = layer.Facing == SpellFacing.None ? 1f : instance.Facing;
+            float facing = instance.DrawFacing;
 
             var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing,
                 standing: !SpellPlaceNames.Centred(layer.Place));

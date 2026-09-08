@@ -184,24 +184,35 @@ namespace PrincesPalace
             // forced path presses an element too -- the same row press a hand
             // would make, not a shortcut past the menu.
             //
-            // THE FIRST ELEMENT, AND IT SAYS SO. A preview cannot ask which
-            // one, and picking silently would put a Fire number on a picture
-            // captioned "prismatic_orb" with nothing on screen explaining
-            // where Fire came from. Named in the log, the way every other
-            // accommodation a preview makes is (PreviewFight.Notes).
+            // THE FIRST ELEMENT THAT DRAWS SOMETHING, AND IT SAYS SO. A
+            // preview cannot ask which one, and picking silently would put a
+            // Fire number on a picture captioned "prismatic_orb" with nothing
+            // on screen explaining where Fire came from. Named in the log, the
+            // way every other accommodation a preview makes is
+            // (PreviewFight.Notes).
+            //
+            // NOT ELEMENT ZERO, which is what this took before and what made
+            // the Water pilot unphotographable: the orb's first element is
+            // Earth, Earth authors no art, and the capture came back as an
+            // empty stage with a damage number on it. PreviewFight owns the
+            // choice so the headless route times its samples against the same
+            // element this presses.
             if (_menu.Depth == MenuDepth.Element)
             {
                 var elements = options[row].Skill?.Elements;
-                if (elements == null || elements.Length == 0 || elements[0] == null)
+                var chosen = PreviewFight.PreviewElementOf(options[row].Skill);
+                if (elements == null || chosen == null)
                 {
                     _session.AppendMessage($"preview: '{skillId}' asks for an element and offers none.");
                     RefreshUi();
                     return;
                 }
 
+                int at = System.Array.IndexOf(elements, chosen);
                 _session.AppendMessage($"preview: casting {options[row].Skill.DisplayName} as " +
-                                       $"{elements[0].Type} -- the first element it offers.");
-                OnRowPressed(0);
+                                       $"{chosen.Type} -- the first element it offers that draws " +
+                                       "anything.");
+                OnRowPressed(at < 0 ? 0 : at);
             }
 
             // Self and Party resolved inside OnRowPressed; everything else is

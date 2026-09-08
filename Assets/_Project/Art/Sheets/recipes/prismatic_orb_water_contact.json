@@ -1,0 +1,145 @@
+{
+  "_notes": [
+    "THE CONTACT BURST, ALONE -- the second quarter of the old combined recipe.",
+    "",
+    "EXPLICIT RECTS, NOT A FLOOR-DIVIDED GRID, and this is the correction the combined",
+    "recipe's own notes declined to make. water_contact_8f.png is 1774x887 over 4x2;",
+    "neither divides. The sources' README states the column edges 0, 444, 887, 1331,",
+    "1774 and the row edges 0, 444, 887 -- 444/443 alternating. A floor grid takes 443",
+    "everywhere, and the cost is not one lost pixel per cell: by the fourth column it",
+    "starts two pixels LEFT of where the cell does, so a sheet whose art reaches its",
+    "seams slices a sliver of the neighbour in. Measured on this sheet, five of the",
+    "eight cells' content bboxes touch a cell edge, so the seams are exactly where the",
+    "ink is. The rects are the README's own numbers.",
+    "",
+    "CANVAS 512, WHICH IS HEADROOM RATHER THAN TIDINESS. The scale steps below grow a",
+    "cell about its own centre INSIDE its own bounds and then feather the outer ring,",
+    "so 1.06 applied to a crown already filling 425 of a 444 cell is not 6% bigger --",
+    "it is 6% bigger with 3px shaved off each side and a 12px fade welded to what is",
+    "left. The combined recipe never met this because its shared canvas was the core's",
+    "512 and the contact cells arrived padded into it; split per layer, this recipe's",
+    "own largest cell IS 444 and that headroom left with the core. So it is stated.",
+    "",
+    "contact_f0 KEEPS ITS 1.10, THOUGH THE PILOT DOES NOT PLAY IT. The scale was a",
+    "measured bridge between two sheets in ONE sequence -- core_f5's content bbox is",
+    "454x472 of 512 against contact_f0's 425x417 of 444, so the ball visibly shrank",
+    "for one frame at the join. Split, the core and the splash are separate layers",
+    "with separate boxes (190 and 300 units), so there is no join left to correct; and",
+    "the splash layer authors startFrame 2, which skips this frame for the reason the",
+    "brief gives -- contact frame 1 contains an APPROACHING ball, and replaying an",
+    "approach after arrival is a second impact time. The frame stays in the folder,",
+    "corrected, so the choice is an authored number rather than a deleted asset.",
+    "",
+    "contact_f3 IS THE PEAK and gets hold: 2, the second 6% larger -- 27% ink coverage",
+    "against the runner-up's 23%, and the widest crown in the sheet. One frame reads",
+    "as a drawing going past; two growing into each other reads as a blow landing. The",
+    "same trick frost_flare and mud_burst already use.",
+    "",
+    "Nine frames out of eight cells. The splash layer plays eight of them at 26fps",
+    "from startFrame 2, which is 0.308s of compression, crown, breakup and a clearing",
+    "centre."
+  ],
+  "sheet": "Spells/prismatic_bolt/water/water_contact_8f.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "contact_f0",
+    "contact_f1",
+    "contact_f2",
+    "contact_f3",
+    "contact_f4",
+    "contact_f5",
+    "contact_f6",
+    "contact_f7"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "contact_f0",
+      "scale": [
+        1.0,
+        1.1
+      ]
+    },
+    {
+      "from": "contact_f1"
+    },
+    {
+      "from": "contact_f2"
+    },
+    {
+      "from": "contact_f3",
+      "hold": 2,
+      "scale": [
+        1.0,
+        1.06
+      ]
+    },
+    {
+      "from": "contact_f4"
+    },
+    {
+      "from": "contact_f5"
+    },
+    {
+      "from": "contact_f6"
+    },
+    {
+      "from": "contact_f7"
+    }
+  ]
+}

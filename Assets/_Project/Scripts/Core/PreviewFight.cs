@@ -65,6 +65,51 @@ namespace PrincesPalace
             SkillEffect.Transform,
         };
 
+        // WHICH ELEMENT A PREVIEW CASTS, and what its art therefore is.
+        //
+        // THE FIRST ONE THAT DRAWS SOMETHING, falling back to the first. A
+        // preview exists to photograph art, and an elemental spell may author
+        // art on one element and none on the others -- prismatic_orb has four
+        // and one Water block. Taking element[0] unconditionally photographed
+        // Earth, which draws nothing, and the picture was an empty stage with
+        // a damage number: evidence that the pilot does not work, produced by
+        // a preview that never cast it.
+        //
+        // DERIVED FROM CONTENT, not from an id. "Has art" is a question of the
+        // presentation (SpellPresentation.HasArt); no spell is named here and
+        // a second elemental spell gets the same treatment for free.
+        //
+        // HERE rather than in the controller because BOTH preview routes need
+        // the same answer: the Editor one presses the row, and the headless
+        // one has to know which presentation to time its samples against. Two
+        // copies of this choice would photograph one element and caption it
+        // with another's timing.
+        public static ElementChoice PreviewElementOf(ResolvedSkill skill)
+        {
+            var elements = skill?.Elements;
+            if (elements == null || elements.Length == 0) return null;
+
+            foreach (var choice in elements)
+            {
+                if (choice != null && choice.Vfx != null && choice.Vfx.HasArt) return choice;
+            }
+
+            return elements[0];
+        }
+
+        // The presentation a preview cast of `skill` actually plays: the chosen
+        // element's when it has one, the skill's own otherwise. What the
+        // headless capture times its samples against.
+        public static SpellPresentation PreviewPresentationOf(ResolvedSkill skill)
+        {
+            if (skill == null) return SpellPresentation.None;
+
+            var chosen = PreviewElementOf(skill);
+            return chosen != null && chosen.Vfx != null && chosen.Vfx.HasArt
+                ? chosen.Vfx
+                : skill.Vfx ?? SpellPresentation.None;
+        }
+
         // What one preview fight is, once every question about it is settled.
         // A plan with a Refusal is a plan that must not be built: the caller
         // prints the reason and stops.

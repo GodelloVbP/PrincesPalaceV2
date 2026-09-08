@@ -51,11 +51,15 @@ namespace PrincesPalace.Domain.Tests
                 StringAssert.Contains($"\"type\": \"{element}\"", entry);
             }
 
-            // NO VFX BLOCK YET (docs/PLAN_PRISMATIC_ORB.md assumption 4). The
-            // absence is the contract while the four sheets do not exist, so it
-            // is asserted rather than assumed -- art added later should be
-            // noticed here rather than reaching a player unremarked.
-            StringAssert.DoesNotContain("\"vfx\"", entry);
+            // ART ON THE WATER ELEMENT AND NOWHERE ELSE (M5). The absence used
+            // to be the contract while the four sheets did not exist; one of
+            // them does now, so what is asserted is that it landed on the
+            // ELEMENT rather than on the skill -- a skill-level block would
+            // draw water for a Fire cast. What the block CONTAINS is
+            // SpellBaselineTimingTests' pin; this file only cares that the orb
+            // itself still authors nothing.
+            StringAssert.DoesNotContain("\"path\": \"Spells/prismatic_orb_water\"", entry,
+                "the orb authors a spell folder of its own, which every element would then draw");
         }
 
         // The three placeholders are GONE, not merely superseded. A kit that
@@ -131,6 +135,37 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(fire.HasElementChoice);
             Assert.AreEqual(0, fire.Elements.Length);
+        }
+
+        // AN ELEMENT'S OWN ART REACHES THE CAST, and the test is written
+        // against a LAYERED block because that is the case the path test it
+        // replaces got wrong. A layered presentation authors no `path` -- the
+        // rules refuse a block that authors both -- so "did this element bring
+        // art" asked of `path` answered no for the pilot, and every Water cast
+        // silently drew the skill's empty presentation instead.
+        [Test]
+        public void AnElementThatAuthorsOnlyLayersStillHandsItsArtToTheCast()
+        {
+            // THROUGH THE RESOLVER, not hand-built, so the element's block
+            // makes the same journey the content build puts it through --
+            // validation included. A hand-built ResolvedSkill would prove
+            // AsElement alone and skip the half that reads the file.
+            var orb = OrbWithWaterArt();
+            var water = orb.AsElement(DamageType.Water);
+
+            Assert.IsTrue(water.Vfx.HasLayers,
+                "the element's layered block did not reach the cast at all");
+            Assert.AreEqual(5, water.Vfx.layers.Length);
+
+            // AND A COPY, never the catalogue's own object -- the same rule the
+            // packet array is held to, and worse here because a layer is a
+            // mutable object a renderer is handed every tick.
+            var source = orb.Elements.First(e => e.Type == DamageType.Water).Vfx;
+            Assert.AreNotSame(source.layers[0], water.Vfx.layers[0],
+                "the cast was handed the catalogue's own layer objects");
+
+            // An element with nothing authored still falls back to the skill's.
+            Assert.IsFalse(orb.AsElement(DamageType.Earth).Vfx.HasLayers);
         }
 
         // ---- what a choice is worth ----------------------------------------------
@@ -298,6 +333,33 @@ namespace PrincesPalace.Domain.Tests
         // behaviour test cannot pass against numbers the file does not author.
         // A fresh instance per call, for the reason CinderfaultSpellTests
         // states: cooldowns key on the id, not on object identity.
+        // The orb as M5 authors it: one element with a layered block, three
+        // without.
+        private static ResolvedSkill OrbWithWaterArt()
+        {
+            var raw = new RawSkillEntry
+            {
+                id = "prismatic_orb",
+                displayName = "Prismatic Orb",
+                characterId = "owl",
+                unlockLevel = 1,
+                effect = "DamageSingle",
+                manaCost = ManaCost,
+                damageInstances = new[] { new RawDamageInstance { type = "Earth", amount = Packet } },
+                elements = new[]
+                {
+                    new RawElementChoice { type = "Earth" },
+                    new RawElementChoice { type = "Water", vfx = SpellLayerFixtures.Water() },
+                },
+            };
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { raw }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            return resolved[0];
+        }
+
         private static ResolvedSkill Orb()
         {
             var raw = new RawSkillEntry
@@ -366,11 +428,16 @@ namespace PrincesPalace.Domain.Tests
         {
             string json = File.ReadAllText(SkillsJsonPath());
 
-            int start = json.IndexOf("\"id\": \"prismatic_orb\"", StringComparison.Ordinal);
-            Assert.Greater(start, 0, "skills.json has no prismatic_orb entry");
+            // SLICED BY BRACE DEPTH, not by "the text up to the next id".
+            // A layer carries an `id` of its own -- the pilot's Water element
+            // declares five -- so the old scan stopped inside the orb's own vfx
+            // block and every assertion below would have been made against a
+            // third of the record.
+            string entry = JsonBlocks.ObjectsInArray(json, "skills")
+                .FirstOrDefault(s => JsonBlocks.String(s, "id") == "prismatic_orb");
 
-            int next = json.IndexOf("\"id\":", start + 1, StringComparison.Ordinal);
-            return next < 0 ? json.Substring(start) : json.Substring(start, next - start);
+            Assert.IsNotNull(entry, "skills.json has no prismatic_orb entry");
+            return entry;
         }
 
         private static string SkillsJsonPath()

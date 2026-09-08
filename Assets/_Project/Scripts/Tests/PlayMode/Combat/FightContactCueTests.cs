@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace;
@@ -92,6 +93,37 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, fired,
                 "a cast played its own sheet AND the house's default one, which reads as two " +
                 "unrelated effects on one blow");
+        }
+
+        // THE SAME RULE FOR A LAYERED CAST, which says it brings its own art a
+        // different way. A layered block authors no `path` -- the rules refuse
+        // a block that authors both -- so a gate reading `path` alone drew the
+        // house's slash arc over the Water pilot's own splash.
+        [UnityTest]
+        public IEnumerator ABeatThatBringsItsOwnLAYEREDSpellGetsNoContactEffects()
+        {
+            var beat = Swing();
+            beat.Vfx.path = "";
+            beat.Vfx.layerFormat = 1;
+            beat.Vfx.layers = new[]
+            {
+                new SpellLayer
+                {
+                    render = "sprite",
+                    place = "target-centre",
+                    at = "release",
+                    path = "Spells/lightning_bolt",
+                    seconds = 0.4f,
+                },
+            };
+
+            int fired = 0;
+            yield return PlayOne(beat, b => fired++);
+
+            Assert.AreEqual(0, fired,
+                "a layered cast played its own layers AND the house's default contact effects, which " +
+                "reads as two unrelated effects on one blow -- the same complaint the pre-layer case " +
+                "above already refuses");
         }
 
         [UnityTest]

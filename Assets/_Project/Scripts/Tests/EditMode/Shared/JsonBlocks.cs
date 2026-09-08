@@ -239,6 +239,22 @@ namespace PrincesPalace.Domain.Tests
                 : (double?)null;
         }
 
+        // The boolean value of `key`, or null when absent or not a boolean.
+        // JsonUtility writes a bool unquoted, so String cannot read one and a
+        // Number lookup would answer null on the word rather than on the miss.
+        internal static bool? Bool(string block, string key)
+        {
+            int at = ValueAt(block, key);
+            if (at < 0)
+            {
+                return null;
+            }
+
+            if (string.CompareOrdinal(block, at, "true", 0, 4) == 0) return true;
+            if (string.CompareOrdinal(block, at, "false", 0, 5) == 0) return false;
+            return null;
+        }
+
         internal static bool HasKey(string block, string key)
         {
             return ValueAt(block, key) >= 0;

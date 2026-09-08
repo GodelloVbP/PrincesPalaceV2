@@ -120,9 +120,239 @@ MonoBehaviour:
         groundAspect: 0
         groundImpactY: -1
         castSfxPath: 
-        layers: []
-        layerFormat: 0
-        hitCueSeconds: 0
+        layers:
+        - id: core
+          render: sprite
+          place: caster-centre
+          follow: 0
+          at: release
+          offset: 0
+          path: Spells/prismatic_orb_water_core
+          seconds: 0
+          fps: 24
+          startFrame: 0
+          until: loop
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 190
+          facing: auto
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0.25
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: wake
+          render: still
+          place: layer:core
+          follow: 1
+          at: release
+          offset: 0
+          path: Spells/prismatic_orb_water_wake
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: hold
+          fade: 0.1
+          dx: -118
+          dy: 0
+          scale: 0.7
+          size: 0
+          facing: auto
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: shed
+          render: emitter
+          place: layer:core
+          follow: 0
+          at: release
+          offset: 0
+          path: 
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: 
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 0
+          facing: 
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: Spells/prismatic_orb_water_drops
+            rate: 40
+            burst: 0
+            window: 0.25
+            sourceDx: -40
+            sourceDy: 0
+            spreadDegrees: 55
+            aimDegrees: 200
+            speedMin: 90
+            speedMax: 220
+            inherit: 0.35
+            drag: 3.5
+            gravity: -1400
+            lifeMin: 0.22
+            lifeMax: 0.38
+            sizeMin: 0.5
+            sizeMax: 1
+            spinMin: -180
+            spinMax: 180
+            fadeFrom: 0.6
+            endScale: 0.8
+            seed: 0
+        - id: splash
+          render: sprite
+          place: target-centre
+          follow: 0
+          at: arrival
+          offset: 0
+          path: Spells/prismatic_orb_water_contact
+          seconds: 0
+          fps: 26
+          startFrame: 2
+          until: once
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 260
+          facing: auto
+          sort: effects
+          impactX: 0.76
+          impactY: 0.58
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: 
+            rate: 0
+            burst: 0
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 0
+            aimDegrees: 0
+            speedMin: 0
+            speedMax: 0
+            inherit: 0
+            drag: 0
+            gravity: 0
+            lifeMin: 0
+            lifeMax: 0
+            sizeMin: 1
+            sizeMax: 1
+            spinMin: 0
+            spinMax: 0
+            fadeFrom: 1
+            endScale: 1
+            seed: 0
+        - id: spray
+          render: emitter
+          place: target-centre
+          follow: 0
+          at: hit
+          offset: 0
+          path: 
+          seconds: 0
+          fps: 0
+          startFrame: 0
+          until: 
+          fade: 0
+          dx: 0
+          dy: 0
+          scale: 1
+          size: 0
+          facing: 
+          sort: effects
+          impactX: -1
+          impactY: -1
+          aspect: 0
+          travelSeconds: 0
+          travelDelay: 0
+          emitter:
+            path: Spells/prismatic_orb_water_drops
+            rate: 0
+            burst: 18
+            window: 0
+            sourceDx: 0
+            sourceDy: 0
+            spreadDegrees: 150
+            aimDegrees: 115
+            speedMin: 160
+            speedMax: 520
+            inherit: 0
+            drag: 2
+            gravity: -1600
+            lifeMin: 0.18
+            lifeMax: 0.34
+            sizeMin: 0.45
+            sizeMax: 1.15
+            spinMin: -360
+            spinMax: 360
+            fadeFrom: 0.55
+            endScale: 0.7
+            seed: 0
+        layerFormat: 1
+        hitCueSeconds: 0.35
     - Type: 1
       Vfx:
         path: 

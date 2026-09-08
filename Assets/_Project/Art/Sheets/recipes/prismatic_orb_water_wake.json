@@ -1,0 +1,41 @@
+{
+  "_notes": [
+    "ONE FRAME, HELD -- the rear-attached wake the brief asks for, drawn once and",
+    "played by a `still` layer rather than animated. A FOLDER rather than a bare PNG",
+    "because SpellVfxRecipeDriftTests matches a played path's LAST segment against",
+    "recipe filenames: `..._wake/f0` would present `f0` as its provenance and find no",
+    "recipe of that name.",
+    "",
+    "CONTENT_CROP, and it changes what the layer's numbers mean. The delivery is",
+    "2172x724 with the drawing occupying (73, 103)-(2084, 497) -- a third of the",
+    "canvas is empty, most of it above and below. preserveAspect fits the whole CANVAS",
+    "into the box, so the dead margin would shrink the visible wake by a third and",
+    "leave it floating in the middle of its own box. Cropped to the content plus 8px,",
+    "the canvas aspect becomes the drawing's own, which is what the placement code",
+    "already assumes a frame's width over its height means.",
+    "",
+    "NO PIVOT AND NO IMPACT POINT. A wake rides its core through place 'layer:core',",
+    "and a follower's position is its SOURCE's position plus the layer's own (dx, dy)",
+    "-- impactX/impactY never reach it. Where the thick end attaches is therefore",
+    "authored as dx in skills.json, against the rendered width, and stating a pivot",
+    "here as well would be a correction that does not happen.",
+    "",
+    "Delivered with its own alpha, like the rest of the pack; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/water/water_wake.png",
+  "grid": [
+    1,
+    1
+  ],
+  "names": [
+    "wake"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "wake"
+    }
+  ]
+}

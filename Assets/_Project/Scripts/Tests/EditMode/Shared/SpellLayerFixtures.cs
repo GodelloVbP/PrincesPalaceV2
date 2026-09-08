@@ -7,16 +7,24 @@ namespace PrincesPalace.Domain.Tests
     // it.
     //
     // Written out field by field rather than parsed from skills.json on
-    // purpose. Two of the three are not in skills.json at all -- the Water
-    // block is M5's to author and the two-burst is deliberately fixture-only,
-    // so no content or recipe register is touched to prove the scheduler
-    // handles overlapping instances. Reading the file would make these tests
-    // silently pass on a day the content had not been written yet.
+    // purpose. The two-burst is deliberately fixture-only, so no content or
+    // recipe register is touched to prove the scheduler handles overlapping
+    // instances; and reading the file would make every one of these tests
+    // silently pass on a day the content had been deleted.
     //
-    // The numbers are the plan's, and the plan says they are first guesses to
-    // be tuned against captures. A test asserting a POSITION or a SPEED here
-    // would be pinning a tuning decision; what these are for is asserting the
-    // model can EXPRESS them, and that the rules do not refuse them.
+    // WATER IS NOW ALSO IN skills.json, which it was not when this file was
+    // written, and the two are kept the same by hand rather than by a parse.
+    // That is a real risk and it is bounded: SpellPoolCapacityTests reads the
+    // authored block out of skills.json through SpellVfxJson and holds the
+    // SHIPPED spell to the same three bands, so a fixture that drifted would
+    // stop describing the game without stopping the game from being checked.
+    // What the fixture is still for is the questions the file cannot answer --
+    // that the model EXPRESSES this composition and that the rules do not
+    // refuse it.
+    //
+    // A test asserting a POSITION or a SPEED here would be pinning a tuning
+    // decision, which these numbers are: the plan's first guesses, corrected in
+    // M5 where a measurement replaced a guess.
     internal static class SpellLayerFixtures
     {
         // The pilot: a compact core loop crossing the stage, a wake riding it,
@@ -54,10 +62,17 @@ namespace PrincesPalace.Domain.Tests
                     path = "Spells/prismatic_orb_water_wake",
                     until = "hold",
                     fade = 0.10f,
-                    dx = -70f,
-                    scale = 0.85f,
-                    impactX = 0.94f,
-                    impactY = 0.50f,
+
+                    // MEASURED, NOT THE PLAN'S -70/0.94/0.50. A follower's
+                    // position is its SOURCE's plus (dx, dy), so the plan's
+                    // impactX/impactY on this layer never reached a placement;
+                    // dx is the field that attaches the wake. Against the
+                    // cropped sheet's own profile -- ink peaks at 0.87 of the
+                    // width and the box renders 266 wide at scale 0.7 -- -118
+                    // puts the thick end just behind the core's centre and
+                    // trails the rest away from it.
+                    dx = -118f,
+                    scale = 0.7f,
                     facing = "auto",
                     sort = "effects",
                 },
@@ -83,8 +98,8 @@ namespace PrincesPalace.Domain.Tests
                         gravity = -1400f,
                         lifeMin = 0.22f,
                         lifeMax = 0.38f,
-                        sizeMin = 0.35f,
-                        sizeMax = 0.7f,
+                        sizeMin = 0.5f,
+                        sizeMax = 1.0f,
                         spinMin = -180f,
                         spinMax = 180f,
                         fadeFrom = 0.6f,
@@ -101,11 +116,19 @@ namespace PrincesPalace.Domain.Tests
                     startFrame = 2,
                     fps = 26f,
                     until = "once",
-                    size = 300f,
+                    size = 260f,
                     facing = "auto",
                     sort = "effects",
-                    impactX = 0.50f,
-                    impactY = 0.50f,
+
+                    // MEASURED OFF THE CUT FRAMES rather than assumed centred.
+                    // The crown's spine -- the densest column of f1, f3 and f4
+                    // alike -- sits at 0.60 of the frame with the fan opening
+                    // to its left, and the ink's vertical centroid at 0.48. Put
+                    // 0.5 on the target and the crown straddles the body; put
+                    // 0.60 there and it opens across the near contact surface,
+                    // which is the side the ball arrives on.
+                    impactX = 0.76f,
+                    impactY = 0.58f,
                 },
                 new SpellLayer
                 {
@@ -119,15 +142,20 @@ namespace PrincesPalace.Domain.Tests
                         path = "Spells/prismatic_orb_water_drops",
                         burst = 18,
                         spreadDegrees = 150f,
-                        aimDegrees = 70f,
+
+                        // 115 RATHER THAN THE PLAN'S 70, to agree with the art
+                        // it fires alongside: the contact crown opens backwards
+                        // and up, so a cone centred forward-and-up threw the
+                        // spray the opposite way from the drawing.
+                        aimDegrees = 115f,
                         speedMin = 160f,
                         speedMax = 520f,
                         drag = 2.0f,
                         gravity = -1600f,
                         lifeMin = 0.18f,
                         lifeMax = 0.34f,
-                        sizeMin = 0.3f,
-                        sizeMax = 0.9f,
+                        sizeMin = 0.45f,
+                        sizeMax = 1.15f,
                         spinMin = -360f,
                         spinMax = 360f,
                         fadeFrom = 0.55f,

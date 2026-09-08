@@ -23,10 +23,19 @@ namespace PrincesPalace
         public int Capacity => particles == null ? 0 : particles.Length;
 
         // Whether this member is drawing. Not a bool per member kept here --
-        // the Image's own `enabled` already is that state, and a second copy
-        // could disagree with it.
+        // the Image's own state already is that, and a second copy could
+        // disagree with it.
+        //
+        // isActiveAndEnabled AND NOT enabled, which is the difference between
+        // "the component would draw" and "anything is on screen". Every pool
+        // member is built Inactive (FightScreen.BuildSpellParticles), so an
+        // `enabled` Image on a deactivated GameObject reports itself as drawing
+        // and renders nothing -- which is exactly what the Water pilot's first
+        // two captures showed: a perfect crown, no droplets, and four green
+        // emitter tests asserting on `enabled`.
         public bool IsDrawing(int member) =>
-            member >= 0 && member < Capacity && particles[member] != null && particles[member].enabled;
+            member >= 0 && member < Capacity && particles[member] != null &&
+            particles[member].isActiveAndEnabled;
 
         public void Show(int member, Sprite sprite, Vector2 at, float size, float alpha, float rotation)
         {
@@ -43,6 +52,14 @@ namespace PrincesPalace
             rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
 
             image.sprite = sprite;
+
+            // THE MEMBER'S OWN GameObject, not only this component's. Every
+            // member is built Inactive, so `enabled = true` on its Image is
+            // half the switch and the visible half is the other one. The sprite
+            // pool never met this because each of ITS members carries its own
+            // SpellVfxPlayer and activates itself; this is one component over
+            // sixty-four objects, and `gameObject` here is the pool node.
+            if (!image.gameObject.activeSelf) image.gameObject.SetActive(true);
             image.enabled = true;
 
             var colour = image.color;
@@ -60,6 +77,7 @@ namespace PrincesPalace
             if (image == null) return;
 
             image.enabled = false;
+            image.gameObject.SetActive(false);
             image.sprite = null;
 
             var colour = image.color;
