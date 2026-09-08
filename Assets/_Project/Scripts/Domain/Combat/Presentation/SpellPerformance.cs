@@ -455,7 +455,20 @@ namespace PrincesPalace.Domain.Combat.Presentation
             for (int i = 0; i < instances.Count; i++)
             {
                 events.Add(new SpellEvent(SpellEventKind.LayerStart, i, instances[i].StartSeconds));
-                events.Add(new SpellEvent(SpellEventKind.LayerEnd, i, instances[i].EndSeconds));
+
+                // CLEARED, NOT ENDED, and the difference is the whole of an
+                // authored `fade`. LayerEnd is what hands the renderer back, so
+                // firing it at EndSeconds reclaimed the member on the very tick
+                // the alpha ramp was supposed to begin -- SpellFrameCursor's
+                // fade branch was unreachable from a running fight, and the
+                // pilot's wake cut instead of fading. The layer's LIFETIME is
+                // still EndSeconds, which is what the cursor measures its ramp
+                // from; this is only when the picture is finally taken away.
+                //
+                // ClearedSeconds is EndSeconds when nothing fades, so every
+                // spell that authors no fade -- which is every pre-layer block
+                // through the adapter -- is untouched to the float.
+                events.Add(new SpellEvent(SpellEventKind.LayerEnd, i, instances[i].ClearedSeconds));
             }
 
             return new SpellSchedule(events);

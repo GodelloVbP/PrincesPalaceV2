@@ -351,6 +351,77 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1f, dissolve.color.a, 1e-4f);
         }
 
+        // ---- the fade ------------------------------------------------------------
+
+        // AN AUTHORED `fade` HAS TO REACH THE SCREEN, and until this test it
+        // did not.
+        //
+        // SpellFrameCursor has always known how to draw one -- AlphaAt ramps
+        // from 1 to 0 across the layer's FadeSeconds once its age passes its
+        // lifetime -- but the schedule fired LayerEnd at EndSeconds and Close
+        // handed the member straight back, so Paint skipped the instance on
+        // every tick the ramp existed for. The whole branch was unreachable
+        // from a running fight: the pilot's wake cuts instead of fading, and
+        // nothing could see it, because a tenth of a second of alpha is
+        // exactly the kind of thing an eye forgives and a test never asked
+        // about.
+        //
+        // The lifetime is unchanged by the fix. A layer still ENDS at its
+        // authored end; what moved is when its renderer is reclaimed, from the
+        // end to the end plus the ramp -- which is what SpellLayerInstance
+        // .ClearedSeconds has meant since M2 and what the cast-level release
+        // already used.
+        [UnityTest]
+        public IEnumerator ALayerWithAFadeKeepsDrawingThroughItAtAFallingAlpha()
+        {
+            yield return LoadFight();
+
+            HoldTheClock();
+
+            var beat = FlareAt(Foes[0]);
+            beat.Vfx = new SpellPresentation
+            {
+                layerFormat = SpellLayerRules.CurrentLayerFormat,
+                layers = new[]
+                {
+                    new SpellLayer
+                    {
+                        id = "fading", render = "sprite", place = "target",
+                        at = "release", path = "Spells/frost_flare",
+                        seconds = 0.20f, fade = 0.20f,
+                    },
+                },
+            };
+
+            var cast = _fight.PlaySpellVfxForTest(beat);
+            var module = _fight.PerformancePlayerForTest;
+
+            // StepTo IS RELATIVE in this fixture, so each of these is a delta
+            // and the running total is the instant named beside it.
+            StepTo(0.10f); // 0.10s: inside the layer's own lifetime
+            int member = module.MemberFor(cast, 0);
+            Assert.GreaterOrEqual(member, 0, "the layer never drew at all");
+            Assert.AreEqual(1f, Effects[member].Image.color.a, 1e-3f,
+                "the layer is inside its own lifetime and already fading");
+
+            // A QUARTER INTO THE RAMP: still drawn, and dimmer.
+            StepTo(0.15f); // 0.25s: 0.05s past a 0.20s lifetime, a quarter into a 0.20s ramp
+            Assert.AreEqual(member, module.MemberFor(cast, 0),
+                "the layer's renderer was reclaimed at its end, so the fade it authors never draws");
+            Assert.IsTrue(Effects[member].Image.enabled, "the fade stopped being drawn the instant it began");
+            Assert.AreEqual(0.75f, Effects[member].Image.color.a, 1e-2f,
+                "0.05s into a 0.20s ramp is three quarters of the way up, not a step to zero");
+
+            // THREE QUARTERS IN: dimmer still, and monotonically.
+            StepTo(0.10f); // 0.35s
+            Assert.AreEqual(0.25f, Effects[member].Image.color.a, 1e-2f);
+
+            // PAST IT: gone, and the member is back.
+            StepTo(0.06f); // 0.41s, past the 0.40s the ramp ends at
+            Assert.AreEqual(-1, module.MemberFor(cast, 0), "the faded layer never gave its renderer back");
+            Assert.IsFalse(module.IsLive(cast), "the cast outlived the last of its art");
+        }
+
         // ---- draw order ----------------------------------------------------------
 
         // AUTHORED ARRAY ORDER IS DRAW ORDER, and it is member index that makes
