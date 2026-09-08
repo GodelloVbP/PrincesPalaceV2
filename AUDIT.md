@@ -1193,3 +1193,29 @@ which is the same graceful-degradation rule the rest of the HUD follows, and
 one guard rather than a caller-side check at each of the paint sites. Left
 undone here because it belongs to fight-HUD teardown rather than to the spell
 layers, and a change to `RefreshUi`'s path deserves its own gate.
+
+### 107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts
+
+Found delivering Fire, Wind and Earth for `prismatic_orb`. `PreviewFight.PreviewElementOf`
+(`Assets/_Project/Scripts/Core/PreviewFight.cs:87-98`) casts the first element in
+authored order that has art, and `tools/preview.ps1` has no `-Element` parameter. While
+only Water had art this was invisible; with four elements drawn, photographing any but
+the first means reordering `elements[]` in `skills.json`, capturing, and restoring the
+order -- which is what the delivery did. Fix shape: an `-Element <DamageType>` on
+`preview.ps1` handed through the same request the `-Spell` id travels in, validated
+against the skill's `Offers`, refused by name when the element is not offered; the
+capture fixture names the element in the log line it already prints.
+
+### 108. `SpellEmitter` cannot weight which atlas cell a particle draws
+
+Found delivering Earth. `SpellEmitterSim.At` (`Assets/_Project/Scripts/Domain/Combat/
+Presentation/SpellEmitterSim.cs:156`) picks a still by `hash(seed, index) % frameCount`,
+uniform across the folder, and `SpellEmitter` carries no weight field. Earth's delivered
+atlas is uneven on purpose -- six rock chunks from 10% to 34% ink coverage, a grit
+cluster and a dust puff -- and its README asks not to sample them uniformly. Content
+cannot say "small chunks often, the puff rarely"; the delivery mitigated with a narrow
+size range and a modest burst count. Fix shape: an optional `weights` array on
+`SpellEmitter` (one float per cell, validated to the folder's count by the drift lint),
+consumed by a cumulative-weight lookup in place of the modulus, seeded the same way so
+previews stay repeatable; absent means uniform, so every shipped emitter is unchanged.
+A resolver rule refuses a weights array whose length is not the folder's frame count.
