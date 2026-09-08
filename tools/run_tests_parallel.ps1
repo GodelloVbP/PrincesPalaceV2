@@ -546,9 +546,44 @@ foreach ($runner in $Runners) {
     ) -PassThru -NoNewWindow
 }
 
-$procs.Values | Wait-Process -Timeout 1800
+$TestTimeoutSeconds = 1800
+$timedOut = $false
+
+# WAIT-PROCESS RETURNING IS NOT THE SAME AS UNITY HAVING EXITED. On timeout it
+# writes an error and carries on, leaving batchmode Unity alive and holding an
+# exclusive lock on that runner copy's Library. The next run of this script then
+# cannot use the copy either, so one hung run poisons every run after it, and the
+# symptom arrives one run later looking nothing like the hang that caused it.
+$procs.Values | Wait-Process -Timeout $TestTimeoutSeconds -ErrorAction SilentlyContinue
+
+foreach ($runner in $Runners) {
+    $p = $procs[$runner.Platform]
+    if (-not $p) { continue }
+    $p.Refresh()
+    if ($p.HasExited) { continue }
+
+    # THE EXACT PID WE LAUNCHED, AND ONLY WHILE IT STILL SAYS SO. Two sessions
+    # share this machine and one of them may have an Editor open on the real
+    # project, so a PID recycled onto somebody elses Unity must not be killed.
+    # The command line still carries the -projectPath this script passed; that is
+    # what is matched on, not the process name.
+    $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
+    if (-not $cim -or $cim.CommandLine -notlike "*$($runner.Path)*") {
+        Write-Host "$($runner.Platform) did not finish within $TestTimeoutSeconds s, and PID $($p.Id) no longer looks like the Unity this script started. Leaving it alone."
+        $timedOut = $true
+        continue
+    }
+
+    Write-Host "$($runner.Platform) did not finish within $TestTimeoutSeconds s. Killing PID $($p.Id) so it stops holding $($runner.Path) for the next run."
+    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    $timedOut = $true
+}
 
 $allPassed = $true
+
+# A killed Unity may still have left a partial results file behind, so the
+# timeout is failed on its own account rather than through the checks below.
+if ($timedOut) { $allPassed = $false }
 foreach ($runner in $Runners) {
     $resultsPath = Join-Path $runner.Path "test-results-$($runner.Platform).xml"
     $logPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
