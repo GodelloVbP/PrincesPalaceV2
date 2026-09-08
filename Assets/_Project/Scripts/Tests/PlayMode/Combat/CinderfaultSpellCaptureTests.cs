@@ -71,8 +71,18 @@ namespace PrincesPalace.PlayModeTests
 
         // NORMAL SPEED IS THE WHOLE POINT -- stated rather than inherited,
         // same reasoning as StaticPilotStageCaptureTests.
+        //
+        // docs/PLAN_BATTLE_SPEED.md G3: BeatSpeedMultiplier == 1 no longer
+        // guarantees Pace == 1 by itself -- FightBootstrap can install a
+        // settings-backed PlayerSpeedMultiplier on top of it -- so "normal
+        // speed" needs both pinned now, not just the one this fixture always
+        // set.
         [SetUp]
-        public void RealTime() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void RealTime()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+        }
 
         [TearDown]
         public void Restore()

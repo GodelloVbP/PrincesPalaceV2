@@ -697,7 +697,13 @@ namespace PrincesPalace.PlayModeTests
             // That is not a slow version of the same measurement -- it is a
             // measurement of nothing, and it read as a bug in the player for
             // three rounds.
+            //
+            // docs/PLAN_BATTLE_SPEED.md G3: pinned alongside it -- "real
+            // speed" now means Pace == 1, and BeatSpeedMultiplier alone no
+            // longer guarantees that once FightBootstrap can install a
+            // settings-backed PlayerSpeedMultiplier on the same fight.
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
 
             // SLOWED FOR THE MEASUREMENT, and the reason is not convenience.
             // At the shipping 0.65s a frame is 25ms, so a single long frame --

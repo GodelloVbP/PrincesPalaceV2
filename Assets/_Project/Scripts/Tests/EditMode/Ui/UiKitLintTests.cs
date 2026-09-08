@@ -261,5 +261,59 @@ namespace PrincesPalace.Domain.Tests
                 "these restate a colour the palette already owns -- " + string.Join("; ", offenders));
         }
 
+        // ---- T9, docs/PLAN_BATTLE_SPEED.md: the battle-speed seam --------------
+        //
+        // Secondary guard only -- contract 10 ("Writers and readers") is
+        // structural (the seam's own writer is the only place that assigns
+        // it), so this exists as a backstop the way every rule in this file
+        // is a backstop for something the type system does not enforce, not
+        // because contract 10 is expected to be violated.
+        [Test]
+        public void BattleSpeedSeamsStayInsideTheFightFiles()
+        {
+            string[] allowed = { "FightBeatPlayer.cs", "FightBootstrap.cs", "SpellPerformancePlayer.cs" };
+
+            var offenders = Matches(@"\bPlayerSpeedMultiplier\b|\bPlayerSpeedSource\b")
+                .Where(h => !allowed.Contains(Path.GetFileName(h.File)))
+                .ToList();
+
+            Assert.IsEmpty(offenders,
+                "PlayerSpeedMultiplier/PlayerSpeedSource belong to FightBeatPlayer/FightBootstrap/" +
+                "SpellPerformancePlayer only (docs/PLAN_BATTLE_SPEED.md contract 10).\n" + Describe(offenders));
+        }
+
+        // The two HUB motion multipliers (TalentController, HubController --
+        // as opposed to ReckoningController/RewardTrackController, both
+        // reachable from inside the fight's own end-of-battle flow) have no
+        // business appearing in a Fight file: a battle-speed row that read
+        // one of those by mistake would silently change what "1x" means.
+        [Test]
+        public void TheHubMotionMultipliersStayOutOfEveryFightFile()
+        {
+            var fightFiles = ProductionFiles()
+                .Where(f => Path.GetFileName(f).StartsWith("Fight", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.Greater(fightFiles.Count, 10,
+                $"only {fightFiles.Count} Fight*.cs files were scanned, so this rule would be vacuous");
+
+            var rx = new Regex(@"TalentController\.MotionSpeedMultiplier|HubController\.MotionSpeedMultiplier",
+                RegexOptions.Compiled);
+            var offenders = new List<(string File, int Line, string Text)>();
+
+            foreach (string file in fightFiles)
+            {
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string trimmed = lines[i].TrimStart();
+                    if (trimmed.StartsWith("//") || trimmed.StartsWith("*") || trimmed.StartsWith("/*")) continue;
+                    if (rx.IsMatch(lines[i])) offenders.Add((file, i + 1, lines[i].Trim()));
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                "a hub motion multiplier reached a Fight file -- " + Describe(offenders));
+        }
     }
 }

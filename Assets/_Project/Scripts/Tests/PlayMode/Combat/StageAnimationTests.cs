@@ -40,6 +40,13 @@ namespace PrincesPalace.PlayModeTests
             // ~2.8s real-time cycle for the four tests below that wait it
             // out.
             FightController.BreathSpeedMultiplier = 60f;
+
+            // docs/PLAN_BATTLE_SPEED.md G3: AFastMoveLeavesAnAfterimageAnd
+            // ASlowOneDoesNot below runs at the REAL BeatSpeedMultiplier (1)
+            // on purpose and waits a fixed WaitForSeconds(0.3f) for the
+            // trail to settle -- pinned here, once, since nothing un-pins it
+            // for the rest of the test after that local override.
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
         }
 
         [TearDown]

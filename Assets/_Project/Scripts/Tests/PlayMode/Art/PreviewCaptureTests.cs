@@ -98,7 +98,19 @@ namespace PrincesPalace.PlayModeTests
         // stance contact sheet does not care how long a beat took; a
         // photograph OF the timing does, and the two live in one fixture.
         [SetUp]
-        public void PlayBeatsFast() => FightBeatPlayer.BeatSpeedMultiplier = 8f;
+        public void PlayBeatsFast()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 8f;
+
+            // docs/PLAN_BATTLE_SPEED.md G3: several fixed WaitForSecondsRealtime
+            // calls below (the stage settle, the map/dossier/fight captures,
+            // the 1/30s-per-frame spell sampling) are calibrated against
+            // Pace == BeatSpeedMultiplier exactly, at both 8x and the local
+            // 1x override further down. Pinned here so FightBootstrap
+            // installing the settings-backed source cannot stretch any of
+            // them past their budget.
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
+        }
 
         [TearDown]
         public void Restore()

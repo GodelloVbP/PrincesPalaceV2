@@ -250,6 +250,16 @@ namespace PrincesPalace.PlayModeTests
 
             // Fast, so a beat's waits do not make the test wait them out.
             FightBeatPlayer.BeatSpeedMultiplier = 60f;
+
+            // docs/PLAN_BATTLE_SPEED.md G3: no scene here, so FightBootstrap
+            // never runs to install anything -- but this file's own tests
+            // (AChargeWaitsOutItsOwnTravelBeforeTheImpactInstant) locally set
+            // BeatSpeedMultiplier back to 1 and measure real elapsed time
+            // against it, and PlayerSpeedSource is a process-wide static a
+            // leaked value from elsewhere in the same batch could still
+            // leave non-default. Pinned here, at the one place every test in
+            // this file starts from.
+            FightBeatPlayer.PlayerSpeedSource = () => 1f;
             return player;
         }
 
