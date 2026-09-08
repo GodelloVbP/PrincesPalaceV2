@@ -67,13 +67,22 @@ namespace PrincesPalace
 
         // WHICH ELEMENT A PREVIEW CASTS, and what its art therefore is.
         //
-        // THE FIRST ONE THAT DRAWS SOMETHING, falling back to the first. A
-        // preview exists to photograph art, and an elemental spell may author
-        // art on one element and none on the others -- prismatic_orb has four
-        // and one Water block. Taking element[0] unconditionally photographed
-        // Earth, which draws nothing, and the picture was an empty stage with
-        // a damage number: evidence that the pilot does not work, produced by
-        // a preview that never cast it.
+        // THE ONE THE AUTHOR ASKED FOR, and failing that THE FIRST ONE THAT
+        // DRAWS SOMETHING, falling back to the first. A preview exists to
+        // photograph art, and an elemental spell may author art on one element
+        // and none on the others -- prismatic_orb had four elements and one
+        // Water block. Taking element[0] unconditionally photographed Earth,
+        // which drew nothing, and the picture was an empty stage with a damage
+        // number: evidence that the pilot does not work, produced by a preview
+        // that never cast it.
+        //
+        // The default rule survived that fix and then became the whole problem
+        // once the other three were drawn: with four elements that all draw,
+        // "the first that draws" always means Earth, and photographing Wind
+        // meant reordering elements[] in skills.json, capturing, and putting
+        // the order back (AUDIT #107). `requested` is that ask, and an element
+        // the skill does not offer is refused by name rather than approximated
+        // -- see ElementRefusal, which is the sentence an author reads.
         //
         // DERIVED FROM CONTENT, not from an id. "Has art" is a question of the
         // presentation (SpellPresentation.HasArt); no spell is named here and
@@ -84,10 +93,26 @@ namespace PrincesPalace
         // one has to know which presentation to time its samples against. Two
         // copies of this choice would photograph one element and caption it
         // with another's timing.
-        public static ElementChoice PreviewElementOf(ResolvedSkill skill)
+        public static ElementChoice PreviewElementOf(ResolvedSkill skill) =>
+            PreviewElementOf(skill, null);
+
+        public static ElementChoice PreviewElementOf(ResolvedSkill skill, string requested)
         {
             var elements = skill?.Elements;
             if (elements == null || elements.Length == 0) return null;
+
+            if (!string.IsNullOrWhiteSpace(requested))
+            {
+                // NULL RATHER THAN A FALLBACK when the ask cannot be honoured.
+                // Every caller reaches this through a Plan that ElementRefusal
+                // has already screened, so the only way here is a caller that
+                // skipped the screen -- and quietly casting a different element
+                // than the one on the command line is exactly the picture this
+                // whole flag exists to stop being taken.
+                return elements.FirstOrDefault(
+                    c => c != null &&
+                         string.Equals(c.Type.ToString(), requested.Trim(), StringComparison.OrdinalIgnoreCase));
+            }
 
             foreach (var choice in elements)
             {
@@ -97,14 +122,45 @@ namespace PrincesPalace
             return elements[0];
         }
 
+        // WHY AN ASKED-FOR ELEMENT CANNOT BE CAST, or null when it can.
+        //
+        // Both refusals name the element the author typed and list what the
+        // skill actually offers, because the whole cost of getting this wrong
+        // is one Unity boot: tools/preview.ps1 runs the same check against
+        // skills.json before anything starts, and this is the copy that catches
+        // a request arriving from anywhere else (the Editor route, a stale
+        // request file, a capture fixture run by hand).
+        public static string ElementRefusal(ResolvedSkill skill, string requested)
+        {
+            if (string.IsNullOrWhiteSpace(requested)) return null;
+
+            string asked = requested.Trim();
+            var elements = skill?.Elements ?? Array.Empty<ElementChoice>();
+            var offered = elements.Where(c => c != null).Select(c => c.Type.ToString()).ToList();
+
+            if (offered.Count == 0)
+            {
+                return $"'{skill?.Id}' offers no element choice at all, so it cannot be cast as '{asked}'. " +
+                       "Drop -Element, or preview a skill whose elements[] is authored.";
+            }
+
+            if (PreviewElementOf(skill, asked) != null) return null;
+
+            return $"'{skill.Id}' does not offer element '{asked}'. It offers: " +
+                   string.Join(", ", offered) + ".";
+        }
+
         // The presentation a preview cast of `skill` actually plays: the chosen
         // element's when it has one, the skill's own otherwise. What the
         // headless capture times its samples against.
-        public static SpellPresentation PreviewPresentationOf(ResolvedSkill skill)
+        public static SpellPresentation PreviewPresentationOf(ResolvedSkill skill) =>
+            PreviewPresentationOf(skill, null);
+
+        public static SpellPresentation PreviewPresentationOf(ResolvedSkill skill, string requested)
         {
             if (skill == null) return SpellPresentation.None;
 
-            var chosen = PreviewElementOf(skill);
+            var chosen = PreviewElementOf(skill, requested);
             return chosen != null && chosen.Vfx != null && chosen.Vfx.HasArt
                 ? chosen.Vfx
                 : skill.Vfx ?? SpellPresentation.None;
@@ -124,6 +180,14 @@ namespace PrincesPalace
 
             // The character definition id who casts it.
             public string CasterId;
+
+            // WHICH ELEMENT THE CAST PRESSES, as the DamageType's own name, or
+            // empty for "whichever PreviewElementOf picks". Carried on the plan
+            // rather than re-derived at each of the three places that need it
+            // (the forced press, the presentation the capture times against,
+            // the line the author reads) because those three disagreeing is
+            // the failure that looks right: a Wind picture timed off Earth.
+            public string Element;
 
             // "lone" or "full", in FightBootstrap.DevForcedFormation's own
             // vocabulary. Not a preference: Summon needs a free slot and
@@ -149,7 +213,11 @@ namespace PrincesPalace
 
         // ---- the spell plan --------------------------------------------------
 
-        public static Plan ForSpell(string skillId)
+        public static Plan ForSpell(string skillId) => ForSpell(skillId, null);
+
+        // `element` is tools/preview.ps1 -Element, by the DamageType's own name
+        // and case-insensitively. Empty means today's rule unchanged.
+        public static Plan ForSpell(string skillId, string element)
         {
             var plan = new Plan();
 
@@ -173,6 +241,34 @@ namespace PrincesPalace
                     string.Join(", ", Supported.Select(e => e.ToString())) + ". " +
                     "Cast it from a real run instead of being shown an approximation of it.";
                 return plan;
+            }
+
+            // BEFORE THE CASTER LADDER, because an element the skill does not
+            // offer is wrong about the command line rather than about content:
+            // reporting "no character carries resource X" for a typo'd element
+            // would send the author to characters.json.
+            string elementRefusal = ElementRefusal(skill, element);
+            if (elementRefusal != null)
+            {
+                plan.Refusal = elementRefusal;
+                return plan;
+            }
+
+            var asked = PreviewElementOf(skill, element);
+            if (asked != null && !string.IsNullOrWhiteSpace(element))
+            {
+                plan.Element = asked.Type.ToString();
+
+                // AND WHETHER IT DRAWS, said here rather than discovered in the
+                // picture. An element with no art is a legal thing to ask for
+                // -- "does Wind have art yet" is a real question -- and the
+                // answer arriving as an empty stage with a damage number reads
+                // as a broken preview instead of an unauthored element.
+                plan.Notes.Add(asked.Vfx != null && asked.Vfx.HasArt
+                    ? $"cast as {plan.Element} because -Element asked for it, not because it is the " +
+                      "first element that draws"
+                    : $"cast as {plan.Element} because -Element asked for it -- and {plan.Element} " +
+                      "authors no art, so the stage shows the damage number and nothing else");
             }
 
             plan.CasterId = ChooseCaster(skill, Roster(), plan);

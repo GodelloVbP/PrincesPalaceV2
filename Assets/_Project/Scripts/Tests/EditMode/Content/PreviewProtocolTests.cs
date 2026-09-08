@@ -33,7 +33,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static PreviewRequest Request(string action, string enemyId = null,
                                               string skillId = null, string characterId = null,
-                                              string requestId = Id) =>
+                                              string requestId = Id, string element = null) =>
             new PreviewRequest
             {
                 requestId = requestId,
@@ -41,6 +41,7 @@ namespace PrincesPalace.Domain.Tests
                 enemyId = enemyId,
                 skillId = skillId,
                 characterId = characterId,
+                element = element,
             };
 
         // ---- the echo --------------------------------------------------------
@@ -160,6 +161,37 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNull(PreviewProtocol.Screen(request));
             Assert.AreNotEqual(PreviewAction.Unknown, PreviewProtocol.ActionOf(action));
             Assert.IsNotEmpty(PreviewProtocol.TargetIdOf(request, PreviewProtocol.ActionOf(action)));
+        }
+
+        // ---- the optional half of a spell request ----------------------------
+        //
+        // -Element NARROWS a request rather than selecting one, which is why it
+        // is the only field on the document that no rule requires. Both halves
+        // of that are pinned: a spell request without it is not refused, and a
+        // spell request with it does not become some other action.
+        //
+        // WHAT IS DELIBERATELY NOT CHECKED HERE: whether the element is one the
+        // skill offers. That needs a content database, which this half of the
+        // protocol has neither. PreviewFight.ElementRefusal owns it and
+        // PreviewFightRefusalTests pins the message.
+        [Test]
+        public void ASpellRequestIsNotRefusedForCarryingNoElement()
+        {
+            Assert.IsNull(PreviewProtocol.Screen(Request("spell", skillId: "prismatic_orb")));
+            Assert.AreEqual("skillId", PreviewProtocol.TargetFieldOf(PreviewAction.Spell),
+                "the only field a spell request is REQUIRED to carry is still its id.");
+        }
+
+        [Test]
+        public void ASpellRequestCarriesTheElementItWasAskedFor()
+        {
+            var request = Request("spell", skillId: "prismatic_orb", element: "Wind");
+
+            Assert.IsNull(PreviewProtocol.Screen(request));
+            Assert.AreEqual("Wind", request.element,
+                "the element rides the same request document the skill id does -- a second channel for it " +
+                "would be a second thing that can arrive out of step with the id it narrows.");
+            Assert.AreEqual("prismatic_orb", PreviewProtocol.TargetIdOf(request, PreviewAction.Spell));
         }
 
         // THE WRITE RETRY. The watcher publishes its result by File.Replace

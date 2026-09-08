@@ -1194,17 +1194,7 @@ one guard rather than a caller-side check at each of the paint sites. Left
 undone here because it belongs to fight-HUD teardown rather than to the spell
 layers, and a change to `RefreshUi`'s path deserves its own gate.
 
-### 107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts
-
-Found delivering Fire, Wind and Earth for `prismatic_orb`. `PreviewFight.PreviewElementOf`
-(`Assets/_Project/Scripts/Core/PreviewFight.cs:87-98`) casts the first element in
-authored order that has art, and `tools/preview.ps1` has no `-Element` parameter. While
-only Water had art this was invisible; with four elements drawn, photographing any but
-the first means reordering `elements[]` in `skills.json`, capturing, and restoring the
-order -- which is what the delivery did. Fix shape: an `-Element <DamageType>` on
-`preview.ps1` handed through the same request the `-Spell` id travels in, validated
-against the skill's `Offers`, refused by name when the element is not offered; the
-capture fixture names the element in the log line it already prints.
+### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `d7d559ab`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 108. `SpellEmitter` cannot weight which atlas cell a particle draws
 

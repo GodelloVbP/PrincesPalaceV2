@@ -9,7 +9,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // ONE PREVIEW, ONE FIGHT -- including when the preview is refused.
     //
-    // The six DevForced* keys are a preview's opinion about a single fight,
+    // The seven DevForced* keys are a preview's opinion about a single fight,
     // written by tools/preview.ps1 through PreviewRequestWatcher and cleared by
     // FightBootstrap the moment it reads them. Five of them were consumed
     // inside BuildPlaceholderFight and the sixth after the null check on what
@@ -45,6 +45,7 @@ namespace PrincesPalace.PlayModeTests
             FightBootstrap.DevForcedSkillId = null;
             FightBootstrap.DevForcedSquad = null;
             FightBootstrap.DevForcedFirstAction = null;
+            FightBootstrap.DevForcedElement = null;
         }
 
         private static void AssertNothingIsStillSet(string after)
@@ -62,6 +63,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsEmpty(FightBootstrap.DevForcedFirstAction ?? "",
                 $"DevForcedFirstAction survived {after}, so the next fight this Editor session opens will " +
                 "force-cast a skill nobody asked for.");
+
+            Assert.IsEmpty(FightBootstrap.DevForcedElement ?? "", $"DevForcedElement survived {after}");
         }
 
         private static IEnumerator OpenTheFightScene()

@@ -55,6 +55,42 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator AForcedCastOfAnElementSkillActuallyHappens()
         {
+            yield return CastAndAssert(element: null, expected: null);
+        }
+
+        // AND IT PRESSES THE ONE THAT WAS ASKED FOR. Reaching the plate proves
+        // the forced path got through the element depth; it says nothing about
+        // WHICH element it pressed, and "it pressed one" is exactly what was
+        // true before AUDIT #107 and exactly what made photographing Wind
+        // impossible.
+        //
+        // THE LAST ELEMENT IN AUTHORED ORDER, deliberately: the default rule is
+        // "the first that draws", so an ask that happens to agree with the
+        // default would pass against a controller that ignored the ask
+        // entirely.
+        [UnityTest]
+        public IEnumerator AForcedCastPressesTheElementItWasAskedForRatherThanTheDefault()
+        {
+            var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == ElementSkillId);
+            if (skill == null || !skill.Data.HasElementChoice)
+            {
+                Assert.Ignore($"no skill in content offers an element choice ('{ElementSkillId}' is the one " +
+                              "this was written against), so there is nothing to ask for.");
+            }
+
+            var elements = skill.Data.Elements;
+            string asked = elements[elements.Length - 1].Type.ToString();
+
+            Assert.AreNotEqual(asked, PreviewFight.PreviewElementOf(skill.Data).Type.ToString(),
+                $"'{ElementSkillId}' would cast {asked} anyway with nothing asked for, so this test cannot " +
+                "tell an honoured request from an ignored one. Point it at an element the default rule " +
+                "does not already pick.");
+
+            yield return CastAndAssert(element: asked, expected: asked);
+        }
+
+        private IEnumerator CastAndAssert(string element, string expected)
+        {
             var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == ElementSkillId);
             if (skill == null || !skill.Data.HasElementChoice)
             {
@@ -62,7 +98,7 @@ namespace PrincesPalace.PlayModeTests
                               "this was written against), so there is no depth to get stuck in.");
             }
 
-            var plan = PreviewFight.ForSpell(ElementSkillId);
+            var plan = PreviewFight.ForSpell(ElementSkillId, element);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
 
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
@@ -102,7 +138,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            fight.ForceFirstAction(ElementSkillId);
+            fight.ForceFirstAction(ElementSkillId, plan.Element);
 
             float armed = Time.realtimeSinceStartup;
             while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
@@ -111,6 +147,30 @@ namespace PrincesPalace.PlayModeTests
                 $"the forced cast of '{ElementSkillId}' never left the menu. It offers an element choice, so " +
                 "pressing SKILL and then the row lands on the element list, not on the target prompt -- the " +
                 "forced path has to press an element too.");
+
+            // THE BARK LINE, which is where the preview names the element it
+            // pressed and therefore the only place the choice is visible from
+            // outside the controller. It is written into the immediate message
+            // list an instant before the element row is pressed, and the press
+            // drains it into the log, so it is on screen by the time the cast
+            // is under way.
+            string named = fight.RecentLogForTest.FirstOrDefault(line => line.StartsWith("preview: casting"));
+
+            Assert.IsNotNull(named,
+                "the forced path cast without saying which element it chose. The line is the whole report " +
+                "for a picture nobody watches being taken: log lines seen were " +
+                string.Join(" | ", fight.RecentLogForTest));
+
+            if (expected == null)
+            {
+                StringAssert.Contains("the first element it offers that draws anything", named);
+                yield break;
+            }
+
+            StringAssert.Contains(expected, named);
+            StringAssert.Contains("the element -Element asked for", named,
+                "an honoured -Element and the default rule must not read the same in the log, or a picture " +
+                "of the wrong element is indistinguishable from a picture of the right one.");
         }
     }
 }

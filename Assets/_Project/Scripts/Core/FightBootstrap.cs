@@ -88,15 +88,18 @@ namespace PrincesPalace
         //     (FightController.ForceFirstAction). Separate from
         //     DevForcedSkillId because character mode sets it to a skill the
         //     kit already has, and spell mode sets both to the same id.
+        //   DevForcedElement -- tools/preview.ps1 -Element. Which element of a
+        //     choice skill that forced press picks, by the DamageType's own
+        //     name; empty leaves PreviewFight's first-that-draws rule alone.
         //
-        // PUBLIC, not internal, and only these six. Core grants
+        // PUBLIC, not internal, and only these seven. Core grants
         // InternalsVisibleTo to the Editor assembly alone and deliberately not
         // to the PlayMode tests (see Core/AssemblyInfo.cs -- a test that can
         // reach into controller state can make itself pass). That rule is
         // about a screen's private wiring; this is a tooling CHANNEL that
         // already crosses an assembly boundary in both directions, and
         // "consumed exactly once, whatever happens next" is a rule worth a
-        // test rather than worth trusting. Widening these six by name is a
+        // test rather than worth trusting. Widening these seven by name is a
         // smaller hole than handing the whole assembly's internals over.
 #if UNITY_EDITOR
         private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
@@ -105,6 +108,7 @@ namespace PrincesPalace
         private const string DevForcedSkillIdKey = "PrincesPalace.Dev.ForcedSkillId";
         private const string DevForcedSquadKey = "PrincesPalace.Dev.ForcedSquad";
         private const string DevForcedFirstActionKey = "PrincesPalace.Dev.ForcedFirstAction";
+        private const string DevForcedElementKey = "PrincesPalace.Dev.ForcedElement";
 
         public static string DevForcedEnemyId
         {
@@ -141,6 +145,12 @@ namespace PrincesPalace
             get => UnityEditor.SessionState.GetString(DevForcedFirstActionKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedFirstActionKey, value ?? "");
         }
+
+        public static string DevForcedElement
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedElementKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedElementKey, value ?? "");
+        }
 #else
         public static string DevForcedEnemyId;
         public static string DevForcedFormation;
@@ -148,6 +158,7 @@ namespace PrincesPalace
         public static string DevForcedSkillId;
         public static string DevForcedSquad;
         public static string DevForcedFirstAction;
+        public static string DevForcedElement;
 #endif
 
         // How many copies of a forced mob "-Formation full" fields. The stage's
@@ -156,7 +167,7 @@ namespace PrincesPalace
 
         // What one preview asked for, read off SessionState once.
         //
-        // A CLASS RATHER THAN SIX LOCALS because the six have to be cleared
+        // A CLASS RATHER THAN SEVEN LOCALS because they have to be cleared
         // together and read after the clear -- see ConsumeDevForced. Nothing
         // outside this file constructs one.
         internal sealed class DevForcedPreview
@@ -167,9 +178,10 @@ namespace PrincesPalace
             public string SkillId;
             public string Squad;
             public string FirstAction;
+            public string Element;
         }
 
-        // ALL SIX KEYS, READ AND CLEARED IN ONE ACT, BEFORE ANYTHING CAN
+        // ALL SEVEN KEYS, READ AND CLEARED IN ONE ACT, BEFORE ANYTHING CAN
         // REFUSE OR RETURN.
         //
         // Five of them used to be consumed inside BuildPlaceholderFight and
@@ -200,6 +212,7 @@ namespace PrincesPalace
                 SkillId = DevForcedSkillId,
                 Squad = DevForcedSquad,
                 FirstAction = DevForcedFirstAction,
+                Element = DevForcedElement,
             };
 
             DevForcedEnemyId = null;
@@ -208,6 +221,7 @@ namespace PrincesPalace
             DevForcedSkillId = null;
             DevForcedSquad = null;
             DevForcedFirstAction = null;
+            DevForcedElement = null;
 
             return asked;
         }
@@ -279,7 +293,7 @@ namespace PrincesPalace
             // of the previous fight's state. Already CONSUMED, up at the top of
             // this method with the other five -- what is applied here is the
             // snapshot, not the key.
-            if (!string.IsNullOrEmpty(asked.FirstAction)) fight.ForceFirstAction(asked.FirstAction);
+            if (!string.IsNullOrEmpty(asked.FirstAction)) fight.ForceFirstAction(asked.FirstAction, asked.Element);
 
             // Banked the moment the last beat has PLAYED, not when the player
             // dismisses the screen.

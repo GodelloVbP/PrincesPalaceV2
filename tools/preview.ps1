@@ -5,7 +5,7 @@
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Build
 #   ... -Enemy <id> [-Launch] [-Formation lone|full]
-#   ... -Spell <id> [-Launch]
+#   ... -Spell <id> [-Element <DamageType>] [-Launch]
 #   ... -Character <id> [-Launch]
 #
 # Without -Launch every mode writes pictures into tools/screenshots/preview/
@@ -42,6 +42,15 @@ param(
     # decided by Scripts/Core/PreviewFight.cs, not here -- those are content
     # questions and PowerShell has no business answering them a second time.
     [string]$Spell = "",
+
+    # Which element of a choice skill to cast, by the DamageType's own name and
+    # case-insensitively (Earth, Water, Fire, Wind, ...). Empty keeps
+    # PreviewFight's rule: the first element in authored order that draws
+    # anything. Validated against THAT SKILL'S OWN elements[] before any Unity
+    # boots, the same way -Spell is validated against skills.json -- with four
+    # elements drawn, the alternative to this flag was reordering elements[],
+    # capturing, and putting the order back (AUDIT #107).
+    [string]$Element = "",
 
     # The character to look at, by its characters.json id. Fields them alone
     # so the stage, the map figure and the dossier are all unambiguously them.
@@ -332,11 +341,60 @@ function Invoke-EnemyCapture {
 # builds, and then either asks the Editor to play it or asks the capture
 # fixture to photograph it -- and prints whatever the answer was, refusal
 # included, without paraphrasing it.
+# THE SAME VALIDATION Resolve-ContentId DOES, one level down: an element is
+# offered by ONE skill rather than by the file, so the list to print is that
+# skill's elements[] and not a global vocabulary. Case-insensitive, and the
+# CANONICAL spelling is what gets returned -- PreviewFight compares the name
+# against DamageType.ToString() on the far side, and "wind" travelling all the
+# way there to be refused would be a refusal about typing rather than about
+# content.
+#
+# A skill that offers no elements at all is its own message: "it offers none"
+# is a different mistake from "it does not offer that one" and sends the author
+# somewhere different.
+function Resolve-SpellElement {
+    param(
+        [string]$SkillId,
+        [string]$Element
+    )
+
+    $jsonPath = Join-Path $Project "Assets\_Project\ContentData\skills.json"
+    $parsed = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    $skill = @($parsed.skills | Where-Object { $_.id -eq $SkillId })[0]
+
+    $offered = @()
+    if ($skill.PSObject.Properties.Name -contains "elements") {
+        $offered = @($skill.elements | ForEach-Object { $_.type })
+    }
+
+    if ($offered.Count -eq 0) {
+        Write-Host "'$SkillId' offers no element choice at all, so -Element has nothing to pick from."
+        return $null
+    }
+
+    foreach ($known in $offered) {
+        if ($known -and $known.ToLowerInvariant() -eq $Element.ToLowerInvariant()) { return $known }
+    }
+
+    Write-Host "'$SkillId' does not offer element '$Element'. It offers:"
+    foreach ($known in $offered) { Write-Host "  $known" }
+    return $null
+}
+
 function Invoke-SpellPreview {
-    param([string]$Id)
+    param(
+        [string]$Id,
+        [string]$Element
+    )
 
     $resolved = Resolve-ContentId -Id $Id -File "skills.json" -Collection "skills" -Noun "skill"
     if (-not $resolved) { return 2 }
+
+    $chosenElement = ""
+    if ($Element -ne "") {
+        $chosenElement = Resolve-SpellElement -SkillId $resolved -Element $Element
+        if (-not $chosenElement) { return 2 }
+    }
 
     if (-not $NoBuild) {
         if (-not (Invoke-ContentBuild)) {
@@ -346,13 +404,21 @@ function Invoke-SpellPreview {
     }
 
     if (-not $Launch) {
-        return (Invoke-PreviewCapture -Variable "PP_PREVIEW_SPELL" -Value $resolved -Prefix "spell_$resolved")
+        # THE ELEMENT IS IN THE PREFIX TOO, matching what PreviewCaptureTests
+        # names the files: four elements over one prefix would have each
+        # capture overwrite the last.
+        $prefix = "spell_$resolved"
+        if ($chosenElement -ne "") { $prefix = "$prefix`_$($chosenElement.ToLowerInvariant())" }
+
+        return (Invoke-PreviewCapture -Variable "PP_PREVIEW_SPELL" -Value $resolved -Prefix $prefix `
+            -ExtraVariable "PP_PREVIEW_ELEMENT" -ExtraValue $chosenElement)
     }
 
     $timeout = Start-EditorIfNeeded
     if ($timeout -lt 0) { return 1 }
 
-    $answer = Invoke-EditorRequest -Payload @{ action = "spell"; skillId = $resolved } -Timeout $timeout
+    $answer = Invoke-EditorRequest `
+        -Payload @{ action = "spell"; skillId = $resolved; element = $chosenElement } -Timeout $timeout
     Write-Host "  $($answer.State): $($answer.Message)"
     if ($answer.State -ne "ok") { return 1 }
     return 0
@@ -425,7 +491,14 @@ function Invoke-PreviewCapture {
     param(
         [string]$Variable,
         [string]$Value,
-        [string]$Prefix
+        [string]$Prefix,
+
+        # A SECOND variable that NARROWS a mode already asked for, rather than
+        # selecting one -- -Element is the only one so far. ALWAYS SET, empty
+        # included: an inherited value from an earlier shell would silently
+        # photograph a different element than the command line named.
+        [string]$ExtraVariable = "",
+        [string]$ExtraValue = ""
     )
 
     $runner = (Split-Path $Project -Parent) + "\" + (Split-Path $Project -Leaf) + "-TestRunner"
@@ -438,6 +511,7 @@ function Invoke-PreviewCapture {
     robocopy "$Project\Assets" "$runner\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
     Set-Item -Path "Env:$Variable" -Value $Value
+    if ($ExtraVariable -ne "") { Set-Item -Path "Env:$ExtraVariable" -Value $ExtraValue }
 
     $out = Join-Path $Project "tools\screenshots\preview"
     Write-Host "capturing '$Value' -- pictures land in $out"
@@ -487,12 +561,20 @@ function Wait-ForLockfile {
 
 # --- dispatch ---------------------------------------------------------------
 
+# -Element BELONGS TO -Spell AND TO NOTHING ELSE, and a flag that is silently
+# ignored is worse than one that is refused: the author gets exactly the
+# picture they would have got without it and no reason to doubt it.
+if ($Element -ne "" -and $Spell -eq "") {
+    Write-Host "-Element only means something with -Spell <id>; it picks which element of a choice skill is cast."
+    exit 2
+}
+
 if ($Enemy -ne "") {
     exit (Invoke-EnemyPreview -Id $Enemy)
 }
 
 if ($Spell -ne "") {
-    exit (Invoke-SpellPreview -Id $Spell)
+    exit (Invoke-SpellPreview -Id $Spell -Element $Element)
 }
 
 if ($Character -ne "") {
@@ -506,6 +588,6 @@ if ($Build) {
 Write-Host "Nothing asked for. Modes:"
 Write-Host "  -Build                          regenerate Resources/Content by whichever route is available"
 Write-Host "  -Enemy <id> -Launch [-Formation lone|full]   build, then play a fight against that mob"
-Write-Host "  -Spell <id> [-Launch]           build, then cast that spell once and photograph the impact"
+Write-Host "  -Spell <id> [-Element <type>] [-Launch]   build, then cast that spell once and photograph the impact"
 Write-Host "  -Character <id> [-Launch]       build, then photograph them on the map, in the dossier and in a fight"
 exit 2

@@ -134,14 +134,29 @@ namespace PrincesPalace
         // target when the skill needs one. If any of them refuses, the refusal
         // is the session's own message and the author reads it in the log.
         private string _forcedFirstAction;
+        private string _forcedElement;
 
         // Set by FightBootstrap from DevForcedFirstAction. Public because the
         // headless capture fixture is in the PlayMode assembly, which reaches
         // internals of neither Core nor Editor.
-        public void ForceFirstAction(string skillId)
+        //
+        // `element` is tools/preview.ps1 -Element, already validated against
+        // the skill's own elements[] by PreviewFight.ForSpell. Null keeps the
+        // first-that-draws rule.
+        public void ForceFirstAction(string skillId) => ForceFirstAction(skillId, null);
+
+        public void ForceFirstAction(string skillId, string element)
         {
             _forcedFirstAction = string.IsNullOrWhiteSpace(skillId) ? null : skillId;
+            _forcedElement = string.IsNullOrWhiteSpace(element) ? null : element;
         }
+
+        // The bark lines this fight has shown, newest last. Read by
+        // ForcedFirstActionElementTests, which has to prove the forced path
+        // pressed the element it was ASKED for rather than merely that it
+        // pressed one -- and the log line naming it is the only place that
+        // distinction is visible from outside the controller.
+        public IReadOnlyList<string> RecentLogForTest => _log;
 
         // POLLED RATHER THAN FIRED AT Bind, because the player's turn may not
         // be first: a monster faster than the whole party opens the fight, and
@@ -154,11 +169,15 @@ namespace PrincesPalace
             if (_forcedFirstAction == null || !CanAct) return;
 
             string skillId = _forcedFirstAction;
+            string element = _forcedElement;
 
             // CONSUMED BEFORE THE PRESS, not after. A skill the caster cannot
             // afford leaves OnRowPressed refusing every frame otherwise, which
-            // is a hang rather than a report.
+            // is a hang rather than a report. The element goes with it: a
+            // request half-consumed would press the asked-for element on
+            // whatever cast the next refusal let through.
             _forcedFirstAction = null;
+            _forcedElement = null;
 
             var options = SkillOptions(_session.Current);
             int row = -1;
@@ -184,34 +203,38 @@ namespace PrincesPalace
             // forced path presses an element too -- the same row press a hand
             // would make, not a shortcut past the menu.
             //
-            // THE FIRST ELEMENT THAT DRAWS SOMETHING, AND IT SAYS SO. A
-            // preview cannot ask which one, and picking silently would put a
-            // Fire number on a picture captioned "prismatic_orb" with nothing
-            // on screen explaining where Fire came from. Named in the log, the
-            // way every other accommodation a preview makes is
+            // THE ELEMENT THE AUTHOR ASKED FOR, AND FAILING THAT THE FIRST ONE
+            // THAT DRAWS -- AND IT SAYS WHICH IT DID. Picking silently would
+            // put a Fire number on a picture captioned "prismatic_orb" with
+            // nothing on screen explaining where Fire came from. Named in the
+            // log, the way every other accommodation a preview makes is
             // (PreviewFight.Notes).
             //
             // NOT ELEMENT ZERO, which is what this took before and what made
             // the Water pilot unphotographable: the orb's first element is
-            // Earth, Earth authors no art, and the capture came back as an
+            // Earth, Earth authored no art, and the capture came back as an
             // empty stage with a damage number on it. PreviewFight owns the
             // choice so the headless route times its samples against the same
             // element this presses.
             if (_menu.Depth == MenuDepth.Element)
             {
                 var elements = options[row].Skill?.Elements;
-                var chosen = PreviewFight.PreviewElementOf(options[row].Skill);
+                var chosen = PreviewFight.PreviewElementOf(options[row].Skill, element);
                 if (elements == null || chosen == null)
                 {
-                    _session.AppendMessage($"preview: '{skillId}' asks for an element and offers none.");
+                    _session.AppendMessage(element == null
+                        ? $"preview: '{skillId}' asks for an element and offers none."
+                        : $"preview: '{skillId}' was asked to cast as {element} and does not offer it.");
                     RefreshUi();
                     return;
                 }
 
                 int at = System.Array.IndexOf(elements, chosen);
                 _session.AppendMessage($"preview: casting {options[row].Skill.DisplayName} as " +
-                                       $"{chosen.Type} -- the first element it offers that draws " +
-                                       "anything.");
+                                       $"{chosen.Type} -- " +
+                                       (element == null
+                                           ? "the first element it offers that draws anything."
+                                           : "the element -Element asked for."));
                 OnRowPressed(at < 0 ? 0 : at);
             }
 

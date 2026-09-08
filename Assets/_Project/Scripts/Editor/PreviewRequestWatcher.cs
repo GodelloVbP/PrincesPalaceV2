@@ -241,7 +241,7 @@ public static class PreviewRequestWatcher
 
         try
         {
-            var plan = PreviewFight.ForSpell(id);
+            var plan = PreviewFight.ForSpell(id, request.element);
             if (!plan.Ok)
             {
                 WriteResult(request.requestId, PreviewProtocol.StateFailed, plan.Refusal);
@@ -251,6 +251,12 @@ public static class PreviewRequestWatcher
             FightBootstrap.DevForcedSkillId = id;
             FightBootstrap.DevForcedFirstAction = id;
             FightBootstrap.DevForcedFormation = plan.Formation;
+
+            // THE PLAN'S SPELLING, not the request's. -Element is matched
+            // case-insensitively, so "wind" arrives here as the DamageType's
+            // own "Wind" -- and the forced press compares against that name
+            // once more on the far side of a domain reload.
+            FightBootstrap.DevForcedElement = plan.Element;
 
             WriteResult(request.requestId, PreviewProtocol.StateOk, "entering Play mode: " + PreviewFight.Describe(plan));
 

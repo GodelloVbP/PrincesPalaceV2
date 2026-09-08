@@ -509,3 +509,15 @@ failed race the same clock at 8.7ms. Advancing it past the end made the cleanup 
 assertable for the first time, and
 `EveryLayerIsDrawnAtTheImpactInstantAndNoneSurvivesTheBeat` is the only test in the
 suite that fails when `PlayRoutine`'s `image.enabled = false` is deleted.
+
+### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `PLACEHOLDER_SHA`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`
+
+Found delivering Fire, Wind and Earth for `prismatic_orb`. `PreviewFight.PreviewElementOf`
+(`Assets/_Project/Scripts/Core/PreviewFight.cs:87-98`) casts the first element in
+authored order that has art, and `tools/preview.ps1` has no `-Element` parameter. While
+only Water had art this was invisible; with four elements drawn, photographing any but
+the first means reordering `elements[]` in `skills.json`, capturing, and restoring the
+order -- which is what the delivery did. Fix shape: an `-Element <DamageType>` on
+`preview.ps1`, handed through the same request the `-Spell` id travels in, validated
+against the skill's `Offers`, refused by name when the element is not offered; the
+capture fixture names the element in the log line it already prints.

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -148,6 +149,136 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNull(caster);
             Assert.IsFalse(plan.Ok);
             StringAssert.Contains("no characters in the content database at all", plan.Refusal);
+        }
+
+        // ---- which element gets cast -----------------------------------------
+        //
+        // BUILT BY HAND rather than reached through content, and deliberately:
+        // the rule is "the element the author asked for, else the first that
+        // draws", and every interesting case of it (an element with no art
+        // sitting first, an ask for one further down the list, an ask for one
+        // that is not there) is a shape content might or might not happen to
+        // have this month. A fixture that had to hope prismatic_orb still
+        // authors four elements would go quiet the day it authored three.
+        // ForSpell against real content is exercised once, below.
+
+        private static SpellPresentation Drawn() =>
+            new SpellPresentation { path = "Spells/anything" };
+
+        private static ResolvedSkill Elemental() =>
+            new ResolvedSkill
+            {
+                Id = "hand_built_orb",
+                Elements = new[]
+                {
+                    new ElementChoice(DamageType.Earth),
+                    new ElementChoice(DamageType.Water, Drawn()),
+                    new ElementChoice(DamageType.Wind, Drawn()),
+                },
+            };
+
+        [Test]
+        public void WithNoElementAskedForTheFirstOneThatDrawsIsCast()
+        {
+            var chosen = PreviewFight.PreviewElementOf(Elemental(), null);
+
+            Assert.AreEqual(DamageType.Water, chosen.Type,
+                "Earth is first in authored order and draws nothing, so the rule that survives -Element " +
+                "is still 'the first element that draws anything'.");
+            Assert.IsNull(PreviewFight.ElementRefusal(Elemental(), null),
+                "asking for no element in particular cannot be a refusal.");
+        }
+
+        [Test]
+        public void TheElementAskedForIsTheOneCastEvenWhenItIsNotTheFirstThatDraws()
+        {
+            Assert.AreEqual(DamageType.Wind, PreviewFight.PreviewElementOf(Elemental(), "Wind").Type);
+
+            // CASE-INSENSITIVELY, because the command line is typed by a human
+            // and DamageType's own casing is an implementation detail of C#.
+            Assert.AreEqual(DamageType.Wind, PreviewFight.PreviewElementOf(Elemental(), "wind").Type);
+
+            // AND AN ELEMENT THAT DRAWS NOTHING IS STILL CASTABLE. "Does Earth
+            // have art yet" is a real question and refusing it would make the
+            // flag unable to answer it.
+            Assert.AreEqual(DamageType.Earth, PreviewFight.PreviewElementOf(Elemental(), "Earth").Type);
+        }
+
+        [Test]
+        public void AnElementTheSkillDoesNotOfferIsRefusedNamingTheOnesItDoes()
+        {
+            string refusal = PreviewFight.ElementRefusal(Elemental(), "Shadow");
+
+            Assert.IsNotNull(refusal, "an element the skill does not offer was accepted.");
+            StringAssert.Contains("Shadow", refusal);
+            StringAssert.Contains("hand_built_orb", refusal);
+            StringAssert.Contains("Earth, Water, Wind", refusal,
+                "the refusal has to LIST what is on offer -- an author who typed the wrong element needs " +
+                "the right one, not the news that theirs was wrong.");
+        }
+
+        [Test]
+        public void AskingASkillWithNoElementsForOneIsItsOwnRefusal()
+        {
+            var plain = new ResolvedSkill { Id = "headbutt" };
+
+            string refusal = PreviewFight.ElementRefusal(plain, "Fire");
+
+            Assert.IsNotNull(refusal);
+            StringAssert.Contains("offers no element choice at all", refusal,
+                "'it does not offer that one' and 'it offers none' send an author to two different places.");
+            StringAssert.Contains("headbutt", refusal);
+        }
+
+        // THE PLAN, over real content, so the wiring between the refusal above
+        // and ForSpell is not left to inspection. The id is whatever content
+        // currently offers a choice; the assertion is about the plan, not the
+        // orb.
+        [Test]
+        public void ForSpellCarriesTheAskedForElementOntoThePlanAndRefusesAnUnofferedOne()
+        {
+            var elemental = ContentDatabase.Skills
+                .FirstOrDefault(s => s?.Data != null && s.Data.HasElementChoice);
+
+            Assert.IsNotNull(elemental,
+                "no skill in content offers an element choice any more, so -Element has nothing to pick " +
+                "from and this pin covers nothing. Point it at the current example rather than leaving " +
+                "it passing on an empty set.");
+
+            string offered = elemental.Data.Elements[elemental.Data.Elements.Length - 1].Type.ToString();
+
+            var plan = PreviewFight.ForSpell(elemental.id, offered.ToLowerInvariant());
+            Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            Assert.AreEqual(offered, plan.Element,
+                "the plan carries the DamageType's own spelling, not whatever case was typed.");
+            Assert.IsTrue(plan.Notes.Any(n => n.Contains(offered)),
+                "casting a chosen element rather than the first that draws is an accommodation, and every " +
+                "accommodation a preview makes is listed in Notes.");
+
+            var refused = PreviewFight.ForSpell(elemental.id, "NotAnElementAnySkillOffers");
+            Assert.IsFalse(refused.Ok);
+            StringAssert.Contains("NotAnElementAnySkillOffers", refused.Refusal);
+            StringAssert.Contains(offered, refused.Refusal);
+        }
+
+        [Test]
+        public void WithNoElementAskedForThePlanNamesNoneAndTheOldRuleStands()
+        {
+            var elemental = ContentDatabase.Skills
+                .FirstOrDefault(s => s?.Data != null && s.Data.HasElementChoice);
+
+            Assert.IsNotNull(elemental, "no skill in content offers an element choice any more.");
+
+            var plan = PreviewFight.ForSpell(elemental.id);
+
+            Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            Assert.IsNull(plan.Element,
+                "an absent -Element must leave the plan silent about which element is cast, so the forced " +
+                "press and the capture's timing both fall back to PreviewElementOf's own rule.");
+            Assert.AreEqual(PreviewFight.PreviewElementOf(elemental.Data),
+                PreviewFight.PreviewElementOf(elemental.Data, plan.Element),
+                "with nothing asked for, the two overloads have to agree -- they are what the controller " +
+                "and the capture fixture each call.");
         }
 
         // ---- and the rungs that do NOT refuse, so the ladder is not just a

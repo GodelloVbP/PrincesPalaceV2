@@ -49,6 +49,15 @@ namespace PrincesPalace.Domain.Preview
         public string skillId;
         public string characterId;
         public string formation;
+
+        // -Element, for a `spell` request only, by the DamageType's own name.
+        // OPTIONAL and therefore not in TargetFieldOf: absent means the
+        // preview keeps PreviewFight's first-element-that-draws rule, and an
+        // element the skill does not offer is refused by PreviewFight rather
+        // than screened here -- what a skill offers is a content question and
+        // this half of the protocol has no content database to ask.
+        public string element;
+
         public bool launch;
     }
 
