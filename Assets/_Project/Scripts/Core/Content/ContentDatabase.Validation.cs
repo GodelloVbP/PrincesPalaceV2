@@ -567,29 +567,21 @@ namespace PrincesPalace.Content
                 bool hasSignatureResource = owner != null && owner.Data.HasSignatureResource;
 
                 // RULE 4's set: the character's own AttackType, plus the
-                // type of every damageInstances entry on a skill authored to
-                // them with unlockLevel <= 1 -- what they can already deal
-                // at level 1. A milestone is exempt (its level is authored
-                // and visible, so its element can be placed deliberately
-                // after the skill that first deals it); only filler is
-                // checked, matching the resolver's own gate.
-                var level1Types = new HashSet<DamageType>();
-                if (owner != null)
-                {
-                    level1Types.Add(owner.Data.AttackType);
-                    foreach (var skill in _skills)
-                    {
-                        if (skill.Data.CharacterId != track.Data.CharacterId || skill.Data.UnlockLevel > 1) continue;
-                        foreach (var instance in skill.Data.DamageInstances) level1Types.Add(instance.type);
-
-                        // An element a skill lets the player CHOOSE is one the
-                        // character can deal -- the authored packet is only one
-                        // of them. Mirrors RewardTrackEntryResolver.
-                        // RewardTrackCharacterContext.BuildAll, which is the
-                        // copy that decides; this one only has to agree.
-                        foreach (var choice in skill.Data.Elements) level1Types.Add(choice.Type);
-                    }
-                }
+                // type of every damageInstances entry (and every choosable
+                // element) on a skill authored to them with unlockLevel <= 1
+                // -- what they can already deal at level 1. A milestone is
+                // exempt (its level is authored and visible, so its element
+                // can be placed deliberately after the skill that first
+                // deals it); only filler is checked, matching the resolver's
+                // own gate. SkillDamageTypes.AtLevel1 is the one walk --
+                // RewardTrackCharacterContext.BuildAll asks the identical
+                // question over its own resolved skill list; this one only
+                // has to agree.
+                var level1Types = owner == null
+                    ? new HashSet<DamageType>()
+                    : SkillDamageTypes.AtLevel1(owner.Data.AttackType,
+                        _skills.Where(s => s.Data.CharacterId == track.Data.CharacterId && s.Data.UnlockLevel <= 1)
+                            .Select(s => s.Data));
 
                 foreach (var milestone in track.Data.Milestones)
                 {

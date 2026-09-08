@@ -67,21 +67,16 @@ namespace PrincesPalace.Domain.Content
             foreach (var character in characters)
             {
                 var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
+                var level1Skills = ownSkills.Where(s => s.UnlockLevel <= 1);
 
-                var level1Types = new HashSet<DamageType> { character.AttackType };
-                foreach (var skill in ownSkills)
-                {
-                    if (skill.UnlockLevel > 1) continue;
-                    foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
-
-                    // AN ELEMENT SHE CAN CHOOSE IS AN ELEMENT SHE CAN DEAL.
-                    // The authored packet is only ONE of the types a choice
-                    // skill can land -- reading the packets alone would say
-                    // Odette deals nothing but Earth at level 1 while the orb
-                    // lets her pick Fire on any turn, and rule 4 would refuse a
-                    // filler row for damage she demonstrably does.
-                    foreach (var choice in skill.Elements) level1Types.Add(choice.Type);
-                }
+                // SkillDamageTypes.AtLevel1 is the one walk -- it also folds
+                // in every element a choice skill offers, not just its
+                // authored packet, which is what keeps a filler row from
+                // being refused for damage a character demonstrably does
+                // (Odette's orb deals Fire on demand; its packet alone says
+                // only Earth). ContentDatabase.Validation's rule 4 asks the
+                // identical question over its own build-time skill list.
+                var level1Types = SkillDamageTypes.AtLevel1(character.AttackType, level1Skills);
 
                 contexts[character.Id] = new RewardTrackCharacterContext
                 {

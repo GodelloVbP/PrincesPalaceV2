@@ -95,6 +95,7 @@ MonoBehaviour:
           fadeFrom: 1
           endScale: 1
           seed: 0
+          weights: []
       - id: erupt
         render: sprite
         place: target
@@ -141,6 +142,7 @@ MonoBehaviour:
           fadeFrom: 1
           endScale: 1
           seed: 0
+          weights: []
       layerFormat: 1
       hitCueSeconds: 0.43333334
     SortOrder: 7
