@@ -261,6 +261,51 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{at}.emitter.fadeFrom {Num(emitter.fadeFrom)} is a fraction of a particle's " +
                              "life and must be between 0 and 1.");
             }
+
+            CheckWeights(at, emitter, problems);
+        }
+
+        // WHAT THIS RULE CAN CHECK WITHOUT THE DISK, and no more. Whether
+        // `weights.Length` matches the folder's own frame count is not
+        // answerable here -- Domain has no filesystem -- so that half of the
+        // brief lives beside the identical rule for startFrame, in
+        // SpellVfxRecipeDriftTests.NoSkillTimesABeatToAFrameItsFolderDoesNotHave.
+        // What IS answerable from the numbers alone: a negative or
+        // non-finite entry is never a legal chance, and an array that is
+        // every entry zero could never pick a cell at all -- SpellEmitterSim
+        // falls back to uniform when `weights` is null or empty, but an
+        // author who typed three zeros meant something and got silence.
+        private static void CheckWeights(string at, SpellEmitter emitter, List<string> problems)
+        {
+            var weights = emitter.weights;
+            if (weights == null || weights.Length == 0) return;
+
+            bool anyPositive = false;
+
+            for (int i = 0; i < weights.Length; i++)
+            {
+                float value = weights[i];
+
+                if (float.IsNaN(value) || float.IsInfinity(value))
+                {
+                    problems.Add($"{at}.emitter.weights[{i}] {value} is not a finite number.");
+                    continue;
+                }
+
+                if (value < 0f)
+                {
+                    problems.Add($"{at}.emitter.weights[{i}] {Num(value)} cannot be negative.");
+                    continue;
+                }
+
+                if (value > 0f) anyPositive = true;
+            }
+
+            if (!anyPositive)
+            {
+                problems.Add($"{at}.emitter.weights are all zero, so no cell could ever be picked. Give " +
+                             "at least one a positive weight, or remove weights for uniform selection.");
+            }
         }
 
         // What a layer of each kind has to carry to draw anything at all, and

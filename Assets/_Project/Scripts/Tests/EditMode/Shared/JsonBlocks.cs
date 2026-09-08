@@ -260,6 +260,52 @@ namespace PrincesPalace.Domain.Tests
             return ValueAt(block, key) >= 0;
         }
 
+        // The array of numbers at `key`, or null when absent or not an array.
+        // Only what SpellEmitter.weights needs: a flat JSON array of plain
+        // numbers, no nested objects or arrays inside it -- ObjectsInArray
+        // already owns the harder case of an array of {...} blocks.
+        internal static List<double> Numbers(string block, string key)
+        {
+            int at = ValueAt(block, key);
+            if (at < 0 || block[at] != '[')
+            {
+                return null;
+            }
+
+            int depth = 0;
+            int end = -1;
+
+            for (int i = at; i < block.Length; i++)
+            {
+                char c = block[i];
+                if (c == '[') depth++;
+                else if (c == ']')
+                {
+                    depth--;
+                    if (depth == 0) { end = i; break; }
+                }
+            }
+
+            if (end < 0)
+            {
+                return null;
+            }
+
+            var values = new List<double>();
+            foreach (string piece in block.Substring(at + 1, end - at - 1).Split(','))
+            {
+                string trimmed = piece.Trim();
+                if (trimmed.Length == 0) continue;
+
+                if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                {
+                    values.Add(value);
+                }
+            }
+
+            return values;
+        }
+
         // Where `key`'s value starts, skipping the colon and any whitespace.
         // The quotes around the key are part of the search, which is what stops
         // "groundLine" matching "_groundLineNote".

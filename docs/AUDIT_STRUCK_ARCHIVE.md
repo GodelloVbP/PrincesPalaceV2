@@ -521,3 +521,17 @@ order -- which is what the delivery did. Fix shape: an `-Element <DamageType>` o
 `preview.ps1`, handed through the same request the `-Spell` id travels in, validated
 against the skill's `Offers`, refused by name when the element is not offered; the
 capture fixture names the element in the log line it already prints.
+
+### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `PLACEHOLDER_SHA`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters over `Spells/prismatic_orb_earth_drops` (8 cells: six rock chunks, a grit cluster, a dust puff) both ship `[15, 18, 8, 12, 12, 8, 15, 2]` -- small/mid chunks dominant, the two heaviest chunks (index 2 and 5) held down, grit present, the dust puff at 2.2% of the total
+
+Found delivering Earth. `SpellEmitterSim.At` (`Assets/_Project/Scripts/Domain/Combat/
+Presentation/SpellEmitterSim.cs:156`) picks a still by `hash(seed, index) % frameCount`,
+uniform across the folder, and `SpellEmitter` carries no weight field. Earth's delivered
+atlas is uneven on purpose -- six rock chunks from 10% to 34% ink coverage, a grit
+cluster and a dust puff -- and its README asks not to sample them uniformly. Content
+cannot say "small chunks often, the puff rarely"; the delivery mitigated with a narrow
+size range and a modest burst count. Fix shape: an optional `weights` array on
+`SpellEmitter` (one float per cell, validated to the folder's count by the drift lint),
+consumed by a cumulative-weight lookup in place of the modulus, seeded the same way so
+previews stay repeatable; absent means uniform, so every shipped emitter is unchanged.
+A resolver rule refuses a weights array whose length is not the folder's frame count.

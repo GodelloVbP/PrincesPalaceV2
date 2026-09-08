@@ -100,6 +100,20 @@ namespace PrincesPalace.Domain.Tests
 
                     if (layers.Count > 0) field.SetValue(target, layers.ToArray());
                 }
+                // BEFORE kind.IsClass, which an array also satisfies -- a
+                // float[] falling through to the nested-object branch would
+                // have ObjectFor look for a '{' that a numeric array never
+                // has, silently leave the field at its null default, and
+                // every fixture built on emitter.weights would check nothing.
+                else if (kind == typeof(float[]))
+                {
+                    var numbers = JsonBlocks.Numbers(scalars, field.Name);
+                    if (numbers == null) continue;
+
+                    var floats = new float[numbers.Count];
+                    for (int i = 0; i < numbers.Count; i++) floats[i] = (float)numbers[i];
+                    field.SetValue(target, floats);
+                }
                 else if (kind.IsClass && kind != typeof(object))
                 {
                     string nested = JsonBlocks.ObjectFor(block, field.Name);

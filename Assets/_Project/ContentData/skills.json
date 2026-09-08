@@ -556,7 +556,8 @@
                   "spinMin": -120,
                   "spinMax": 120,
                   "fadeFrom": 0.6,
-                  "endScale": 0.75
+                  "endScale": 0.75,
+                  "weights": [15, 18, 8, 12, 12, 8, 15, 2]
                 }
               },
               {
@@ -596,7 +597,8 @@
                   "spinMin": -260,
                   "spinMax": 260,
                   "fadeFrom": 0.55,
-                  "endScale": 0.7
+                  "endScale": 0.7,
+                  "weights": [15, 18, 8, 12, 12, 8, 15, 2]
                 }
               }
             ]

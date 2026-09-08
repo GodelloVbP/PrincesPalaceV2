@@ -394,6 +394,95 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("is a sprite and authors emitter settings, which are inert", message);
         }
 
+        // A sprite layer that authors ONLY weights, everything else left at
+        // its default, is the case IsAuthored's array-aware equality exists
+        // for: a bare `Equals` on two `float[]` references would have missed
+        // this the same way it would have flagged EVERY untouched emitter.
+        [Test]
+        public void ASpriteThatAuthorsOnlyEmitterWeightsIsRefused()
+        {
+            var layer = Sprite();
+            layer.emitter.weights = new float[] { 1f, 1f, 1f };
+
+            string message = Only(With(layer));
+            StringAssert.Contains("is a sprite and authors emitter settings, which are inert", message);
+        }
+
+        // ---- emitter weights ------------------------------------------------------
+
+        [Test]
+        public void AnEmitterWeightBelowZeroIsRefused()
+        {
+            var layer = new SpellLayer
+            {
+                render = "emitter",
+                place = "target-centre",
+                emitter = new SpellEmitter
+                {
+                    path = "Spells/drops", burst = 8,
+                    weights = new float[] { 1f, -0.5f, 1f },
+                },
+            };
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].emitter.weights[1] -0.5 cannot be negative", message);
+        }
+
+        [Test]
+        public void AnEmitterWeightsArrayThatIsAllZeroIsRefused()
+        {
+            var layer = new SpellLayer
+            {
+                render = "emitter",
+                place = "target-centre",
+                emitter = new SpellEmitter
+                {
+                    path = "Spells/drops", burst = 8,
+                    weights = new float[] { 0f, 0f, 0f },
+                },
+            };
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].emitter.weights are all zero, so no cell could ever be " +
+                                  "picked", message);
+        }
+
+        [Test]
+        public void AnEmitterWeightThatIsNotFiniteIsRefused()
+        {
+            var layer = new SpellLayer
+            {
+                render = "emitter",
+                place = "target-centre",
+                emitter = new SpellEmitter
+                {
+                    path = "Spells/drops", burst = 8,
+                    weights = new float[] { 1f, float.NaN, 1f },
+                },
+            };
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].emitter.weights[1] NaN is not a finite number", message);
+        }
+
+        [Test]
+        public void AnEmitterWithLegalWeightsIsNotRefused()
+        {
+            var layer = new SpellLayer
+            {
+                render = "emitter",
+                place = "target-centre",
+                emitter = new SpellEmitter
+                {
+                    path = "Spells/drops", burst = 8,
+                    weights = new float[] { 0.2f, 0f, 0.8f },
+                },
+            };
+
+            CollectionAssert.IsEmpty(Problems(With(layer)),
+                "a zero entry is legal -- only ALL zero, negative or non-finite are refused");
+        }
+
         [Test]
         public void AnEmitterThatAuthorsSequenceWordsIsRefused()
         {

@@ -247,6 +247,23 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly.")]
         public int seed;
 
+        // PER-CELL CHANCE, not per-particle behaviour. One float per still in
+        // emitter.path's folder, in the folder's own file order -- the same
+        // order SpellEmitterSim.At already draws frame indices in. Absent or
+        // empty means uniform, which is the existing hash-modulus rule
+        // (AUDIT #108's whole compatibility promise: a shipped emitter with no
+        // weights authored plays the identical field it always did).
+        //
+        // VALIDATED IN TWO PLACES FOR TWO DIFFERENT REASONS. SpellLayerRules
+        // refuses a negative, all-zero or non-finite entry because those are
+        // questions about the numbers alone, answerable with no disk access.
+        // Whether the array's LENGTH matches the folder's frame count is not
+        // -- Domain cannot see the disk -- so that check lives beside the
+        // identical one for startFrame, in
+        // SpellVfxRecipeDriftTests.NoSkillTimesABeatToAFrameItsFolderDoesNotHave.
+        [ContentDoc("Per-cell pick weight, one per still in emitter.path's folder in file order; blank means uniform. Each entry must be finite and >= 0, and at least one must be > 0. Length must equal the folder's own frame count.")]
+        public float[] weights;
+
         public SpellEmitter Copy() => new SpellEmitter
         {
             path = path,
@@ -271,6 +288,12 @@ namespace PrincesPalace.Domain.Content
             fadeFrom = fadeFrom,
             endScale = endScale,
             seed = seed,
+            // A DEEP COPY, for the same reason SpellLayer.Copy() takes one of
+            // this whole object: a shallow assignment would alias the
+            // catalogue's own array into every combat beat, and a beat that
+            // mutated it (it does not today, but Copy()'s whole point is not
+            // to depend on that staying true) would corrupt the next cast.
+            weights = weights == null ? null : (float[])weights.Clone(),
         };
 
         // Whether anything on this block was authored, measured against a
@@ -288,12 +311,44 @@ namespace PrincesPalace.Domain.Content
         // content build, never in a fight.
         public bool IsAuthored => !FieldsEqual(this, new SpellEmitter());
 
+        // ARRAY-AWARE, because `Equals` on two `float[]` references is
+        // identity comparison -- `weights` has no initialiser (null is
+        // "uniform"), but the moment any field on this class defaulted to a
+        // freshly-allocated array, a bare `Equals` would compare that default
+        // against A DIFFERENT freshly-allocated array on the other side of
+        // every IsAuthored check and report every sprite layer in the game as
+        // authoring emitter settings -- refusing the whole Water pilot on a
+        // field that is not even weights. Comparing element-by-element is
+        // what keeps that failure mode impossible rather than merely avoided
+        // by today's choice of default.
         private static bool FieldsEqual(SpellEmitter a, SpellEmitter b)
         {
             foreach (var field in typeof(SpellEmitter).GetFields(
                          System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
             {
-                if (!Equals(field.GetValue(a), field.GetValue(b))) return false;
+                object va = field.GetValue(a);
+                object vb = field.GetValue(b);
+
+                if (va is float[] || vb is float[])
+                {
+                    if (!ArraysEqual(va as float[], vb as float[])) return false;
+                    continue;
+                }
+
+                if (!Equals(va, vb)) return false;
+            }
+
+            return true;
+        }
+
+        private static bool ArraysEqual(float[] a, float[] b)
+        {
+            if (a == null || b == null) return a == b;
+            if (a.Length != b.Length) return false;
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i]) return false;
             }
 
             return true;

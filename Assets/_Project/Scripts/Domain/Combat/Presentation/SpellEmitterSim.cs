@@ -153,9 +153,60 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float scale = size * Lerp(1f, spec.endScale, through);
             float alpha = AlphaThrough(spec.fadeFrom, through);
             float spin = Between(spec.spinMin, spec.spinMax, Hashed(seed, index, 5));
-            int frame = frameCount <= 0 ? 0 : (int)(Hashed(seed, index, 6) * frameCount) % frameCount;
+            int frame = FrameOf(spec.weights, seed, index, frameCount);
 
             return new SpellParticle(true, position, scale, alpha, spin * age, frame);
+        }
+
+        // WHICH STILL OF THE FOLDER THIS PARTICLE DRAWS, over the SAME
+        // hash(seed, index, 6) an unweighted emitter always used -- not a
+        // second random draw, so a preview or a test stays repeatable
+        // whichever branch below runs, and turning `weights` off for an
+        // emitter that shipped without it changes nothing about the picture
+        // (AUDIT #108's whole compatibility promise).
+        //
+        // ABSENT OR EMPTY IS THE OLD MODULUS RULE, uniform across the folder
+        // -- unchanged arithmetic, not merely an equivalent one, because
+        // "equivalent" would still have re-seeded every existing preview's
+        // stills the moment weights shipped.
+        //
+        // A weighted PICK is a cumulative sum walked against one hash sample
+        // scaled to the weights' own total, which is the standard weighted
+        // sampling construction and needs no second field: `total` folds the
+        // normalisation in rather than requiring an author to make their
+        // weights sum to 1. SpellLayerRules.CheckWeights has already refused
+        // a negative or all-zero array by the time this runs in a real fight,
+        // so `total <= 0f` here is a defensive fallback to uniform rather
+        // than a case Content is expected to reach.
+        private static int FrameOf(float[] weights, int seed, int index, int frameCount)
+        {
+            if (weights == null || weights.Length == 0 || frameCount <= 0)
+            {
+                return frameCount <= 0 ? 0 : (int)(Hashed(seed, index, 6) * frameCount) % frameCount;
+            }
+
+            float total = 0f;
+            for (int i = 0; i < weights.Length; i++) total += weights[i];
+
+            if (total <= 0f)
+            {
+                return (int)(Hashed(seed, index, 6) * frameCount) % frameCount;
+            }
+
+            float r = Hashed(seed, index, 6) * total;
+            float cumulative = 0f;
+
+            for (int i = 0; i < weights.Length; i++)
+            {
+                cumulative += weights[i];
+                if (r < cumulative) return i;
+            }
+
+            // Float rounding can leave `r` a hair past the last partial sum
+            // even though Hashed() is strictly < 1 -- the last weighted cell
+            // is the correct answer, not cell 0, which would silently favour
+            // the first index every time that happens.
+            return weights.Length - 1;
         }
 
         // Full strength until `fadeFrom` of the way through life, then down to

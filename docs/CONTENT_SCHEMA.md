@@ -373,6 +373,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `fadeFrom` | float | `1` | Fraction of life at which alpha starts falling, 0..1. |  |
 | `endScale` | float | `1` | Scale at the end of life, relative to the particle's own. |  |
 | `seed` | int | `0` | Random seed; 0 derives one from the cast so two casts differ, non-zero repeats exactly. |  |
+| `weights` | float[] | (none -- required) | Per-cell pick weight, one per still in emitter.path's folder in file order; blank means uniform. Each entry must be finite and >= 0, and at least one must be > 0. Length must equal the folder's own frame count. |  |
 
 ### `SpellLayer`
 

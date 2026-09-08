@@ -1196,16 +1196,4 @@ layers, and a change to `RefreshUi`'s path deserves its own gate.
 
 ### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `d7d559ab`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 108. `SpellEmitter` cannot weight which atlas cell a particle draws
-
-Found delivering Earth. `SpellEmitterSim.At` (`Assets/_Project/Scripts/Domain/Combat/
-Presentation/SpellEmitterSim.cs:156`) picks a still by `hash(seed, index) % frameCount`,
-uniform across the folder, and `SpellEmitter` carries no weight field. Earth's delivered
-atlas is uneven on purpose -- six rock chunks from 10% to 34% ink coverage, a grit
-cluster and a dust puff -- and its README asks not to sample them uniformly. Content
-cannot say "small chunks often, the puff rarely"; the delivery mitigated with a narrow
-size range and a modest burst count. Fix shape: an optional `weights` array on
-`SpellEmitter` (one float per cell, validated to the folder's count by the drift lint),
-consumed by a cumulative-weight lookup in place of the modulus, seeded the same way so
-previews stay repeatable; absent means uniform, so every shipped emitter is unchanged.
-A resolver rule refuses a weights array whose length is not the folder's frame count.
+### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `895e11f9`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters both ship `[15, 18, 8, 12, 12, 8, 15, 2]` over the 8-cell drops folder -- small/mid chunks dominant, the two heaviest chunks held down, grit present, the dust puff at 2.2%; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`

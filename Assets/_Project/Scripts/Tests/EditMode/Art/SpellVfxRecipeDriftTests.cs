@@ -52,6 +52,7 @@ namespace PrincesPalace.Domain.Tests
             internal int DepartFrame;  // 1-based; a pre-layer block's throw
             internal int StartFrame;   // 1-based; a layer's first drawn frame
             internal string Field;     // "vfx.path", "vfx.layers[3].emitter.path", ...
+            internal float[] Weights;  // an emitter's per-cell weights, or null/empty for uniform
         }
 
         // EVERY FOLDER ANY SPELL PLAYS, from all four places one can be named:
@@ -139,6 +140,7 @@ namespace PrincesPalace.Domain.Tests
                     found.Add(new SkillVfx
                     {
                         SkillId = label, Path = drops, Field = $"vfx.layers[{i}].emitter.path",
+                        Weights = layer.emitter.weights,
                     });
                 }
             }
@@ -272,6 +274,21 @@ namespace PrincesPalace.Domain.Tests
                     broken.Add($"{vfx.SkillId}: {vfx.Field} starts on frame {vfx.StartFrame} but " +
                                $"'{vfx.Path}' has {frames} frames");
                 }
+
+                // ONE WEIGHT PER CELL, EXACTLY -- not "at most", the way
+                // startFrame's range check reads. A weights array shorter
+                // than the folder picks blind for every cell past its end
+                // (SpellEmitterSim.At has nothing to read there) and one
+                // longer than the folder authors a chance for a cell that
+                // does not exist; both are silent everywhere but here, which
+                // is why AUDIT #108 put this exactly beside startFrame's
+                // check rather than in SpellLayerRules -- the frame count is
+                // on disk and Domain cannot see it.
+                if (vfx.Weights != null && vfx.Weights.Length > 0 && vfx.Weights.Length != frames)
+                {
+                    broken.Add($"{vfx.SkillId}: {vfx.Field} authors {vfx.Weights.Length} weights but " +
+                               $"'{vfx.Path}' has {frames} frames");
+                }
             }
 
             return broken;
@@ -349,6 +366,33 @@ namespace PrincesPalace.Domain.Tests
                 "range-checked by nothing: " + string.Join("; ", broken));
             Assert.IsTrue(broken[0].Contains("99") && broken[0].Contains("9 frames"),
                 "the refusal states neither the authored frame nor the count it exceeded: " + broken[0]);
+        }
+
+        [Test]
+        public void TheFrameRangeSweepRefusesAWeightsArrayWhoseLengthIsNotTheFoldersFrameCount()
+        {
+            // A REAL FOLDER, EIGHT FRAMES, FIVE WEIGHTS -- the shape of the
+            // mistake: the folder exists, the recipe is recorded, and the
+            // emitter authors a weight for some cells and not others without
+            // saying so.
+            var madeUp = new List<SkillVfx>
+            {
+                new SkillVfx
+                {
+                    SkillId = "fabricated", Field = "vfx.layers[0].emitter.path",
+                    Path = "Spells/prismatic_orb_earth_drops",
+                    Weights = new float[] { 1f, 1f, 1f, 1f, 1f },
+                },
+            };
+
+            var broken = OutOfRangeAmong(madeUp, out int measured);
+
+            Assert.AreEqual(1, measured, "the fabricated folder was not measured at all");
+            Assert.AreEqual(1, broken.Count,
+                "an emitter with 5 weights over an 8-frame folder was accepted, so weights.Length is " +
+                "range-checked by nothing: " + string.Join("; ", broken));
+            Assert.IsTrue(broken[0].Contains("5 weights") && broken[0].Contains("8 frames"),
+                "the refusal states neither the authored count nor the folder's own: " + broken[0]);
         }
 
         // TWO SKILLS, ONE FOLDER, DIFFERENT TIMING IS LEGAL, and this is the

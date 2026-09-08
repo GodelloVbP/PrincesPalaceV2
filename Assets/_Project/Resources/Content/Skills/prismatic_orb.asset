@@ -147,6 +147,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: wake
           render: still
           place: layer:core
@@ -193,6 +194,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: shed
           render: emitter
           place: layer:core
@@ -239,6 +241,15 @@ MonoBehaviour:
             fadeFrom: 0.6
             endScale: 0.75
             seed: 0
+            weights:
+            - 15
+            - 18
+            - 8
+            - 12
+            - 12
+            - 8
+            - 15
+            - 2
         - id: splash
           render: sprite
           place: target-centre
@@ -285,6 +296,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: spray
           render: emitter
           place: target-centre
@@ -331,6 +343,15 @@ MonoBehaviour:
             fadeFrom: 0.55
             endScale: 0.7
             seed: 0
+            weights:
+            - 15
+            - 18
+            - 8
+            - 12
+            - 12
+            - 8
+            - 15
+            - 2
         layerFormat: 1
         hitCueSeconds: 0.32
     - Type: 7
@@ -397,6 +418,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: wake
           render: still
           place: layer:core
@@ -443,6 +465,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: shed
           render: emitter
           place: layer:core
@@ -489,6 +512,7 @@ MonoBehaviour:
             fadeFrom: 0.6
             endScale: 0.8
             seed: 0
+            weights: []
         - id: splash
           render: sprite
           place: target-centre
@@ -535,6 +559,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: spray
           render: emitter
           place: target-centre
@@ -581,6 +606,7 @@ MonoBehaviour:
             fadeFrom: 0.55
             endScale: 0.7
             seed: 0
+            weights: []
         layerFormat: 1
         hitCueSeconds: 0.35
     - Type: 1
@@ -647,6 +673,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: wake
           render: still
           place: layer:core
@@ -693,6 +720,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: shed
           render: emitter
           place: layer:core
@@ -739,6 +767,7 @@ MonoBehaviour:
             fadeFrom: 0.55
             endScale: 0.6
             seed: 0
+            weights: []
         - id: splash
           render: sprite
           place: target-centre
@@ -785,6 +814,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: spray
           render: emitter
           place: target-centre
@@ -831,6 +861,7 @@ MonoBehaviour:
             fadeFrom: 0.5
             endScale: 0.65
             seed: 0
+            weights: []
         layerFormat: 1
         hitCueSeconds: 0.33
     - Type: 8
@@ -897,6 +928,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: wake
           render: still
           place: layer:core
@@ -943,6 +975,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: shed
           render: emitter
           place: layer:core
@@ -989,6 +1022,7 @@ MonoBehaviour:
             fadeFrom: 0.45
             endScale: 0.7
             seed: 0
+            weights: []
         - id: splash
           render: sprite
           place: target-centre
@@ -1035,6 +1069,7 @@ MonoBehaviour:
             fadeFrom: 1
             endScale: 1
             seed: 0
+            weights: []
         - id: spray
           render: emitter
           place: target-centre
@@ -1081,5 +1116,6 @@ MonoBehaviour:
             fadeFrom: 0.4
             endScale: 0.75
             seed: 0
+            weights: []
         layerFormat: 1
         hitCueSeconds: 0.33

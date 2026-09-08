@@ -249,6 +249,84 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, single.Frame);
         }
 
+        // ---- weighted cell picking (AUDIT #108) -----------------------------------
+
+        // AN UNWEIGHTED EMITTER IS UNCHANGED, LITERALLY. Every shipped emitter
+        // before this feature authors no `weights`, and the whole compatibility
+        // promise is that its picture does not move -- same seed, same index,
+        // same cell, pinned against the exact hash-modulus arithmetic the
+        // pre-weights code used.
+        [Test]
+        public void AnUnweightedEmitterPicksTheIdenticalCellTheOldModulusRuleDid()
+        {
+            var spec = Shed();
+
+            // The frame (seed=991, index=3, channel=6, frameCount=8) produced
+            // BEFORE weights existed, computed independently from the hash
+            // arithmetic itself rather than by calling the method under test
+            // -- a literal, not a tautology, so a regression in the fallback
+            // path fails this rather than hiding behind it.
+            var drop = SpellEmitterSim.At(spec, 991, 3, UiVec.Zero, UiVec.Zero, 0.01f, 8);
+            Assert.AreEqual(6, drop.Frame);
+        }
+
+        [Test]
+        public void AWeightOfOneAndTwoZerosAlwaysPicksTheFirstCell()
+        {
+            var spec = new SpellEmitter
+            {
+                burst = 1, lifeMin = 1f, lifeMax = 1f, sizeMin = 1f, sizeMax = 1f,
+                weights = new float[] { 1f, 0f, 0f },
+            };
+
+            for (int index = 0; index < 500; index++)
+            {
+                var drop = SpellEmitterSim.At(spec, index, index, UiVec.Zero, UiVec.Zero, 0.01f, 3);
+                Assert.AreEqual(0, drop.Frame, $"index {index} did not pick the only weighted cell");
+            }
+        }
+
+        [Test]
+        public void AZeroWeightCellIsNeverChosen()
+        {
+            var spec = new SpellEmitter
+            {
+                burst = 1, lifeMin = 1f, lifeMax = 1f, sizeMin = 1f, sizeMax = 1f,
+                weights = new float[] { 1f, 0f, 1f },
+            };
+
+            for (int index = 0; index < 500; index++)
+            {
+                var drop = SpellEmitterSim.At(spec, 5, index, UiVec.Zero, UiVec.Zero, 0.01f, 3);
+                Assert.AreNotEqual(1, drop.Frame, $"index {index} picked the zero-weight cell");
+            }
+        }
+
+        // EQUAL WEIGHTS SPLIT ROUGHLY EVENLY -- a statistical pin, not an
+        // exact one, over enough draws that a biased hash would show.
+        [Test]
+        public void TwoEqualWeightsSplitWithinFivePercentOverTwoThousandDraws()
+        {
+            var spec = new SpellEmitter
+            {
+                burst = 1, lifeMin = 1f, lifeMax = 1f, sizeMin = 1f, sizeMax = 1f,
+                weights = new float[] { 1f, 1f },
+            };
+
+            int cellZero = 0;
+            const int draws = 2000;
+
+            for (int index = 0; index < draws; index++)
+            {
+                var drop = SpellEmitterSim.At(spec, 42, index, UiVec.Zero, UiVec.Zero, 0.01f, 2);
+                if (drop.Frame == 0) cellZero++;
+            }
+
+            float fraction = cellZero / (float)draws;
+            Assert.Greater(fraction, 0.45f, $"cell 0 was picked {fraction:P1} of the time, far under half");
+            Assert.Less(fraction, 0.55f, $"cell 0 was picked {fraction:P1} of the time, far over half");
+        }
+
         // THE WHOLE FIELD, launches included. A helper handing every drop the
         // same v0 would compare ten copies of one trajectory and call them
         // repeatable -- which they are, and which proves nothing about the
