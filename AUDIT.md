@@ -1132,3 +1132,31 @@ book row must read as an object (an icon, or a plate with a title) and a
 selected row must look selected; the three slot boxes should look like
 boxes. Related: the shop's book cards fall back to the no-art slot art for
 the same reason.
+
+### 105. A provoked enemy stays provoked until it takes a plain swing, which can be never
+
+Reported from play: "provoke doesn't resolve -- a taunted creature stays
+taunted for ever."
+
+Verified: Provoked is deliberately not counted down by the turn-start tick
+(`StatusEffects.cs:441-468`, `IsSpentByTheTurn`) because a one-turn taunt
+would expire before the turn it exists to redirect. It is consumed instead
+by `StatusEffects.ConsumeProvoke` (`:218-221`), whose only two production
+callers are inside the enemy's PLAIN-ATTACK resolution -- the miss branch
+(`FightSession.Enemies.cs:877`) and the landed branch (`:936`). Every other
+way an enemy's turn can end leaves the status in place: an ability drawn
+from its pool (summon, heal, spell, a skill cast at the provoker), a skipped
+turn (Stun, Fear), and, since `ApplyProvoke` authors `TurnsRemaining 1`
+"only to satisfy the floor" (`FightSession.Talents.cs:658-661`), nothing else
+ever removes it. A monster whose weighted pool keeps drawing abilities is
+taunted for the rest of the fight, still redirected by `ForcedTargetFor`
+(`:993`) and still blunted by `ProvokedDamageMultiplier` (`:890`) on the
+plain swings it does take.
+
+The fix shape, for whoever picks it up: consume the taunt when the provoked
+combatant's turn ENDS having acted, whatever the action was -- one call at
+the end of the enemy-turn resolution rather than two inside one branch of
+it -- and pin it with an enemy whose pool is 100% an ability. Whether a
+taunt should also survive a stunned turn (the holder did not act, so the
+redirect was never spent) is a design call; the comment at `:664` reads as
+"spent by the turn it redirected", which says no.
