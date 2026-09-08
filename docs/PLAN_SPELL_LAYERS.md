@@ -434,6 +434,193 @@ decide about.
 
 ---
 
+## Deviations from revision 4 — M6 through M9, as built
+
+Written by the implementing session. M6 was billed as "a content edit if M3 was
+right", and it was; what it cost besides was two content pins outside the list
+of tests §7 promised would not move. M7 was as specified. M8's measurement found
+a per-frame allocation on its first run, which is the entire argument for
+measuring rather than asserting.
+
+**D27 — the cue is `0.43333334`, not §7's `0.433`.** The value the legacy block
+produced is `0.78 * ImpactFraction(5, 9)`, and the fixture
+`SpellPoolCapacityTests` already held the full float. Authoring the rounded one
+would have retimed the blow by a third of a millisecond for no reason anyone
+could state. Both pins now assert the authored number against the old
+expression, so the equality is visible rather than claimed.
+
+**D28 — two content pins outside §7's "must still pass, unmodified" list had to
+move, and neither is one of the eight.** All eight named tests pass with every
+`Assert` line untouched. These two are pins on the SHAPE of the content, which
+is the thing M6 changes:
+
+- `SpellBaselineTimingTests`' fifth `TestCase` read `path`/`seconds`/
+  `impactFrame` off a pre-layer block cinderfault no longer authors. Replaced the
+  way M5 replaced the pilot's row rather than deleted —
+  `TheCinderfaultLayersRuptureOnTheInstantItsLegacyBlockDid` states 0.43333334
+  twice, once as the legacy derivation and once as what the file now authors.
+- `CinderfaultSpellTests.CinderfaultEntry()` sliced its record out of
+  `skills.json` from `"id": "cinderfault"` to the next `"id":`. A layered block
+  gives its layers ids, so that slice now ended at `"fault"` INSIDE the record
+  and silently threw away everything from the vfx block to `bookTier` — three
+  `StringAssert.Contains` would have gone on passing against text nobody was
+  reading. It slices by brace depth now, through the same `JsonBlocks` every
+  other fixture uses. `TheGroundLayerInheritsThePerTargetTiming` becomes
+  `TheTwoLayersRuptureOnOneAuthoredInstant`: same claim, stated against layers.
+
+**D29 — the M6 before/after is numbers, because the pictures jitter.**
+`preview.ps1 -Spell cinderfault` was run three times — layered, legacy restored,
+layered again — because the first before/after diff showed 1.4% of the frame
+changing and that number means nothing without a control. Two runs of the SAME
+content differ by 1.36%, 1.22%, 5.49%, 2.54%, 0.28% and 2.77% across the six
+samples; before-against-after M6 differs by 1.40%, 1.26%, 4.72%, 2.43%, 0.14%
+and 2.80%. The re-authoring is inside the harness's own run-to-run jitter, which
+is a frame of phase in a 30fps sample. `timing.json`, which is deterministic,
+is identical field for field: `impactFrame` 12, `impactMs` 400.0,
+`settledFrame` 23, `settledMs` 766.7, same crop, same slot positions,
+`groundLeft`/`Right`/`Top` agreeing to 0.02 units. Against **M0** the only
+fields that moved are `settledFrame` 24 → 23 and the capture rig's crop, and
+both are already there BEFORE M6 — they belong to M3/M4.
+
+**D30 — an authored `fade` never reached the screen, and M7 is where it was
+found.** `SpellFrameCursor.AlphaAt` has ramped alpha across a layer's
+`FadeSeconds` since M2; nothing could ever see it, because `BuildSchedule` fired
+`LayerEnd` at `EndSeconds` and `Close` hands the renderer straight back — so
+`Paint` skipped the instance on every tick the ramp existed for. The pilot's
+wake authors `fade: 0.10` and cut instead of fading. `LayerEnd` is at
+`ClearedSeconds` now; a layer's LIFETIME is unchanged (which is what the cursor
+measures the ramp from and what a follower inherits), and `ClearedSeconds ==
+EndSeconds` when nothing fades, so every pre-layer block through the adapter is
+untouched to the float. Fixed in its own commit with a test that failed first.
+
+**D31 — §8's assertions, with two added and one moved.** The plan's list is
+"both renderers drawn simultaneously at t = 0.20; distinct pool members; A
+releases at 0.24 while B keeps drawing; both released by 0.42; the pool comes
+back whole". All five are asserted. Added: that the later layer takes the HIGHER
+member index (authored order is draw order, and the two-burst is the cheapest
+place to pin it), and that the second layer's `scale: 1.35` reaches its box —
+without which "two members" and "one member drawn twice" still look alike from
+outside. Moved: "the pool comes back whole" is asserted against
+`FightHudSpec.SpellLayerRenderers` rather than against a reading taken before
+the cast, because the module builds its owner arrays on the first `Begin` and
+"free before" is therefore zero for a reason that has nothing to do with
+ownership. The first draft asserted against that zero and failed.
+
+**D32 — M8's recordings are driven through the module, not through two beats.**
+§9 asks for a recording "including two consecutive casts while the first cast's
+droplets are still visible". The beat player is sequential: when a second BEAT
+arrives is decided by its own hold, hit-stop, settle and gap, and is not a time
+a fixture can choose. The second cast is opened on a chosen frame instead —
+frame 30, 0.50s, inside a beat's own 0.45s hold, so the overlap recorded is one
+a real round produces. What it gives up is the damage popup, which is not what
+these record. Both new fixtures ASSERT headless and write PNGs only where there
+is a graphics device, so the overlap is checked by the commit gate and
+photographed on demand — which is stricter than §9's "never a gate", and only
+the pictures are on demand.
+
+**D33 — the allocation measurement found a per-frame allocation, and it was in
+the parse.** `SpellLayer.Render`, `.Sort`, `.Until` and `.Facing` are computed
+properties over the authored word, and every one went through
+`name.Trim().ToLowerInvariant().Replace("_", "-")` — `ToLowerInvariant`
+allocates a string whether or not the word was already lower case. The renderer
+reads several per layer per frame, so a three-plume cinderfault handed the
+collector a dozen strings on every frame it drew. `SpellWord.Is` compares an
+authored word to a known one character by character with the same normalisation
+rules and no copy; six tables, one helper, and the content suite is green
+unedited. **The numbers**: the module's tick allocates zero
+(`Is.Not.AllocatingGCMemory()`), and a frame with two overlapping casts on it
+costs 994 B against the same scene idle at 994 B — median over 120 frames at
+60fps, worst casting frame 5558 B over the idle median, which is a re-cast's own
+per-instance arrays and is why the comparison is the median rather than the sum.
+
+**D34 — the constraint's delegate is warmed before it is measured.**
+`Is.Not.AllocatingGCMemory()` measures a single invocation, and the first
+invocation of a fresh delegate pays for JIT of whatever it reaches that has not
+run yet — which reads as an allocation the tick does not make. Calling it once
+before asserting is not the assertion getting easier: the second call runs
+exactly the same code. Found by bisection, because the first version of this
+test reported `Frames()` as allocating and `Frames()` is a dictionary lookup.
+
+**D35 — one live defect found and left, recorded as `AUDIT.md` #106.** Loading
+`Fight` over a live `Fight` reaches `FightController.BeginAppearancePop`
+(`FightController.Hud.cs:1218`) through the outgoing beat player's `OnDisable`,
+and it calls `StartCoroutine` on a panel the engine has already deactivated,
+which logs an error and therefore fails any test in whose window it lands.
+`SpellRuntimeCaptureTests` tolerates it across the scene swap only and says so
+at the line. Left undone because it belongs to fight-HUD teardown rather than to
+the spell layers.
+
+**D36 — §9 M9's `GAP_AUDIT.md` was not written.** The milestone asks for
+`docs/handoffs/spell_layers/GAP_AUDIT.md` "section-by-section against the
+brief". The brief's own acceptance is answered instead in the section below,
+clause by clause with its evidence, because a second document restating the same
+six answers is the thing that goes stale first. `docs/ART_PIPELINE.md` §5b and
+`docs/CODE_MAP.md` were both extended as specified.
+
+---
+
+## Acceptance
+
+The owner's six clauses, each with the evidence that answers it.
+
+**1. "New compositions of supported behaviours are content-only." MET.**
+`cinderfault` went through the model as a `skills.json` edit and a regenerated
+asset — no C# was written for it (`ec42209`). The synthetic two-burst is a
+composition no spell had ever authored (two instances of one renderer kind on a
+caster anchor at different offsets) and it is a test fixture, not a code path
+(`SpellTwoBurstTests`, `c4f5909`). Grep for `cinderfault` and `prismatic` under
+`Scripts/` outside `Tests/`: fourteen hits and four, every one of them a
+comment, none a branch.
+
+**2. "Water and Cinderfault share the same model." MET.**
+Both resolve through `SpellPerformance.Resolve` and are ticked by one
+`SpellPerformancePlayer`; the only thing that differs is the authored array.
+`SpellPoolCapacityTests.TheTwoProofSpellsFitTheBandsTheyDrawIn` counts both
+through the identical fan-out, and
+`SpellRuntimeCaptureTests.ACinderfaultAndAWaterTailOverlapOnOneTarget` runs them
+against each other on one target with disjoint members and the fault in the
+ground band.
+
+**3. "Existing spells retain behaviour." MET.**
+`SpellBaselineTimingTests` pins `lightning_bolt`, `frost_flare` and `mud_burst`
+as literal seconds, and
+`SpellCastOwnershipTests.EveryBaselineSpellLandsItsBlowAtExactlyTheSecondItAlwaysDid`
+pins the same numbers through the live controller. For Cinderfault, which DID
+change format, `timing.json` is identical field for field before and after
+(D29). The full suite is green.
+
+**4. "Gameplay timing remains reliable under failure." MET.**
+`ACastThatCanObtainNoGroundRendererStillLandsItsBlowOnTime` drives the ground
+band to exhaustion and asserts the cue still fires once, on time; T8's
+missing-art case keeps the pre-layer derivation for pre-layer blocks and gives a
+layered block an authored cue that no absent folder can move;
+`ASpellAndItsBeatCrossTheHitCueOnTheSameFrame` holds the beat and the spell to
+one frame at multiplier 1 and 60.
+
+**5. "Overlapping tails work." MET.**
+`ATailKeepsDrawingWhenTheNextRoundsPlaybackBegins`,
+`TwoCastsOnOneTargetHoldDifferentRenderersAndBothKeepDrawing`,
+`ASecondFaultGetsItsOwnMemberRatherThanSupersedingTheFirst`, and — as a
+recording rather than an assertion alone —
+`TwoConsecutiveCastsOverlapWithTheFirstsDropletsStillOwned`, which reads twenty
+droplets still owned by the FIRST cast's handle on the frame the second opens.
+`tools/screenshots/runtime/spell_prismatic_orb_two_f00..f74.png`.
+
+**6. "The owner can see the intended fast, heavy water collision in game." MET,
+with one number named rather than buried.**
+`tools/screenshots/runtime/spell_prismatic_orb_f00..f44.png` is the whole cast
+at 60fps; `tools/screenshots/preview/spell_prismatic_orb_{before,flight,impact,after,tail}.png`
+are the sampled stills. The number: the flight is legible for about three frames
+of that recording, because `PositionOf`'s ease is `t*t` and a 0.25s travel spends
+a third of the distance in its first 0.15s. That reads as a hard, fast arrival —
+which is what the brief asks for — and it is also the whole of why the ball is
+brief. The lever is the ease, and making it authorable is one word on the layer
+under the same format version. Recorded in M5's log as an observation; repeated
+here because it is the one thing between this recording and "heavy" that the
+owner might want changed.
+
+---
+
 ## Review log, revision 3
 
 An adversarial pass over revision 2 against the tree, section by section.
@@ -2071,13 +2258,22 @@ Call sites change as follows and nowhere else:
 
 A walkthrough, not a request to build one.
 
-**Changes:** `SpellLayerNames` gains the word `beam`. `SpellLayerRules` gains
-its rules (a beam needs two anchors and a width; it may not carry `fps` or
-`travelSeconds`). A `SpellBeamRenderer` is written in Core, and
-`SpellPerformancePlayer`'s renderer factory gains one arm. `FightScreen` gains
-a pool if beams cannot share the effects pool's `Image` members — they can, a
-stretched `Image` is a beam, so probably not. `docs/ART_PIPELINE.md` §5b gains
-a row.
+**Changes** (re-walked against the code as built, M9 — three corrections, all
+in the direction of naming what is actually there): `SpellRenderNames` in
+`Domain/Content/SpellLayerNames.cs` gains the enum member `Beam`, one
+`SpellWord.Is` line in its `Lookup`, and one entry in its `All` — which
+regenerates `docs/CONTENT_SCHEMA.md`, because `ContentSchema.EnumBackedFields`
+documents the field by calling `Enum.GetNames` on that type. `SpellLayerRules`
+gains its rules (a beam needs two anchors and a width; it may not carry `fps` or
+`travelSeconds`). A `SpellBeamRenderer` is written in Core.
+`SpellPerformancePlayer` gains an arm at **two** dispatch points rather than at
+one factory, because there is no factory: `Open` chooses which band's pool a
+layer takes a member from, and `Paint` chooses which renderer draws it. (A third
+would be `SpellPerformance.EndOf` if the kind had a derived lifetime the way an
+emitter does; a beam's is authored, so it does not.) `FightScreen` gains a pool
+if beams cannot share the effects pool's `Image` members — they can, a stretched
+`Image` is a beam, so probably not. `docs/ART_PIPELINE.md` §5b gains a row in
+the layer table.
 
 **Does not change:** `FightBeatPlayer` — not one line. `FightSession`,
 `CombatBeat`, `DealDamage`, any damage formula. `SpellSchedule` — a beam is

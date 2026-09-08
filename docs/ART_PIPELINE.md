@@ -515,7 +515,9 @@ dissolve and all, to `tools/screenshots/vfx/{id}.gif`.
 | `impactY` | unset | Where up its own frame the sheet actually strikes, `0`..`1` from the BOTTOM. |
 | `sfxPath` | — | `Resources` path to the clip that plays on impact. |
 
-Anything left out takes its default. There are no sentinels to remember,
+Anything left out takes its default. **This is the single-block form; a cast
+that is more than one drawing authors `layerFormat: 1` and an array of layers
+instead -- see "Layers" below.** There are no sentinels to remember,
 with one exception: `impactX`/`impactY` are unset at `-1`, because `0` is a
 legitimate point (the frame's bottom-left corner) and a sentinel that
 collides with a real value is a bug waiting for its first author.
@@ -615,6 +617,110 @@ six-drawing sheet can become a twenty-six-frame animation without new art:
 - `{"from": "f5", "scale": (1.0, 1.04)}` — one frame, resized
 
 Left out entirely, the cells **are** the frames one for one.
+
+### Layers: a cast that is more than one drawing
+
+`layerFormat: 1` replaces the single `path`/`seconds`/`impactFrame` block above
+with an ordered array of layers. A block authors ONE form or the other and the
+content build refuses one that authors both.
+
+Reach for it when a cast is more than one drawing: a projectile with a wake and
+a shed of droplets, a contact animation that arrives after the flight, a shared
+ground sequence under a whole formation. A single sheet on a single anchor is
+still a single block, and every spell that shipped before the pilot still is
+one -- the adapter turns those into layers at cast time, so there are not two
+timing implementations, and re-authoring one buys nothing on its own.
+
+```json
+"vfx": {
+  "layerFormat": 1,
+  "hitCueSeconds": 0.35,
+  "sfxPath": "Audio/Sfx/...",
+  "layers": [ { "id": "core", "render": "sprite", "place": "caster-centre", ... } ]
+}
+```
+
+**The cue is authored in seconds and nothing derives it.** `hitCueSeconds` is
+the one instant the blow lands: the damage number, the flash, the hit-stop and
+any layer scheduled `at: hit`. A pre-layer block derives that instant from
+`impactFrame` over the number of PNGs on disk, so re-cutting a sheet retimed the
+gameplay; a layered block cannot, which is the point of the format.
+
+| field | default | what it does |
+| --- | --- | --- |
+| `id` | — | Name, needed only when another layer rides it through `place: layer:<id>`. |
+| `render` | refused blank | `sprite` (an animated folder), `still` (one frame of a folder, held), `emitter` (ballistic particles). |
+| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, or `layer:<id>`. |
+| `at` | `release` | `release` (the beat opens), `arrival` (the cast's projectile lands), `hit` (the authoritative cue). |
+| `offset` | `0` | Seconds added to `at`. |
+| `path` | — | `Resources`-relative FOLDER of `f0..fN`, for `sprite` and `still` alike. |
+| `seconds` | derived | Total length; `0` fits the folder to `fps`. |
+| `fps` | `0` | `0` means fit the whole folder into `seconds`, which is what every pre-layer block becomes. |
+| `startFrame` | `1` | Which frame of the folder it opens on, counting from 1. Range-checked against the folder. |
+| `until` | `once` | `once`, `loop`, `hold`. Describes what the sheet does while it is alive, never how long it lives. |
+| `fade` | `0` | Seconds of alpha ramp after the layer's end. Capped at `SpellLayerRules.MaxFadeSeconds`. |
+| `travelSeconds` | `0` | Non-zero makes the layer a projectile, crossing from its anchor to the target. |
+| `travelDelay` | `0` | The wind-up held at the caster before the motion starts. |
+| `follow` | `false` | Re-read the anchor every tick rather than sampling it once when the layer opens. |
+| `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
+| `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
+| `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
+| `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
+| `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
+| `emitter` | — | The particle block; inert unless `render` is `emitter`. |
+
+**Placement decides instancing, and no spell id ever appears in code.**
+`formation` and the `caster` words are cast-level -- one instance however many
+enemies were struck; `target` and `target-centre` fan out over the struck list.
+That is the whole of how Cinderfault draws one fault under three eruptions.
+
+**Authored order is draw order** within a band: a cast takes pool members in the
+order its layers are written, so a spray authored after a splash draws over it.
+There is no z-order to author and nothing to keep in sync.
+
+**One recipe per layer folder.** A layered spell's folders are cut by the same
+`tools/slice_spell_sheet.py` as any other, one recipe each, because a recipe IS
+the provenance record `SpellVfxRecipeDriftTests` checks -- it walks
+`layers[].path` and `layers[].emitter.path` and refuses a folder no recipe
+explains. The pilot is four recipes where a single-block spell is one:
+`prismatic_orb_water_core` (6 frames), `_contact` (9), `_wake` (1 still) and
+`_drops` (8 particle stills). Cutting them from one recipe would give four
+layers one provenance and one set of slice numbers, which is exactly the drift
+that lint exists to catch.
+
+**A `still` names a FOLDER, not a file.** It draws that folder's `startFrame`.
+The drift lint matches a played path's last segment against recipe filenames and
+requires it to be a directory, so `..._wake/f0` would present `f0` as its
+provenance and fail both halves.
+
+**Uneven atlases**: state `rects`, and `canvas` when a `scale` step needs
+headroom -- both above, both earned by the water pack's two 1774x887 sheets.
+
+**The emitter block**, one field each and nothing else: `path`, `rate` and
+`window` (or `burst` for all at once), `sourceDx`/`sourceDy`,
+`spreadDegrees`/`aimDegrees`, `speedMin`/`speedMax`, `inherit` (how much of the
+source's velocity a particle is born with), `drag`, `gravity`,
+`lifeMin`/`lifeMax`, `sizeMin`/`sizeMax`, `spinMin`/`spinMax`, `fadeFrom`,
+`endScale`, `seed`. A particle's position is a closed form over its age, so a
+long frame or a 60x test speed-up lands it where a hundred short frames would.
+An emitter placed on a travelling layer sheds ALONG the flight: each particle is
+born at its own instant and sampled where the source was then.
+
+**Previewing one.** The Python preview draws sprite layers only and says so; an
+emitter is previewed by running the real code:
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Spell <id>
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/screenshot.ps1 -Runtime -RuntimeFilter SpellRuntimeCaptureTests
+```
+
+`preview.ps1` writes four to six sampled stills to `tools/screenshots/preview/`
+(`_before`, `_impact`, `_after`, `_tail`, plus `_flight` when the cast's arrival
+is before its cue and `_ground` when it draws a ground layer). `screenshot.ps1
+-Runtime` writes the whole cast as a frame series at 60fps to
+`tools/screenshots/runtime/`, which is the only thing that answers "does it read
+as heavy" -- and it WIPES the previous run's PNGs, so copy a comparison set out
+first. `ffmpeg -framerate 60 -i spell_<id>_f%02d.png out.mp4` makes it a video.
 
 ### A monster casting it
 

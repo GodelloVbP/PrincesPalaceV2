@@ -1160,3 +1160,36 @@ it -- and pin it with an enemy whose pool is 100% an ability. Whether a
 taunt should also survive a stunned turn (the holder did not act, so the
 redirect was never spent) is a design call; the comment at `:664` reads as
 "spent by the turn it redirected", which says no.
+
+## Findings from the layered-spell pass, 2026-09-08
+
+### 106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive
+
+Found by `SpellRuntimeCaptureTests` becoming the first fixture in the suite to
+load `Fight` twice in one class: the second `LoadSceneAsync(..., Single)`
+disables the outgoing scene, and Unity logs
+`Coroutine couldn't be started because the the game object 'FightPanel' is
+inactive!` before the new scene opens.
+
+Verified, one call chain and no branch in it:
+`FightBeatPlayer.OnDisable` (`FightBeatPlayer.cs:329`) calls `EndFight`
+(`:321`), which calls `Flush` (`:303`), which fires `_onFinished` ->
+`FightController.OnPlaybackFinished` (`FightController.Input.cs:820`) ->
+`RefreshUi` (`FightController.Hud.cs:63`) -> `RefreshPartyPlate` (`:583`) ->
+`RefreshPartyStatusRow` (`:1300`) -> `PaintStatusRow` (`:1107`) -> `PaintBadge`
+(`:1196`) -> `BeginAppearancePop` (`FightController.Hud.cs:1218`), which calls
+`StartCoroutine` on a `FightPanel` the engine has already deactivated.
+
+It is cosmetic in the game -- the badge simply does not pop on a screen that is
+being torn down -- and it is not cosmetic in a test host: Unity's test framework
+fails any test that logs an unexpected error, so it turns an unrelated fixture
+red. `SpellRuntimeCaptureTests` tolerates it across the scene swap only
+(`LogAssert.ignoreFailingMessages`, lifted before the cast) and says so at the
+line.
+
+The fix shape: `BeginAppearancePop` should set the final scale directly rather
+than starting a coroutine when the behaviour is not `isActiveAndEnabled` --
+which is the same graceful-degradation rule the rest of the HUD follows, and
+one guard rather than a caller-side check at each of the paint sites. Left
+undone here because it belongs to fight-HUD teardown rather than to the spell
+layers, and a change to `RefreshUi`'s path deserves its own gate.

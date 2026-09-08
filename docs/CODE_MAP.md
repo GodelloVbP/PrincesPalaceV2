@@ -552,7 +552,7 @@ hold the runtime; nothing else in the game knows a spell has layers at all.
 | File | What it owns |
 |---|---|
 | `Domain/Content/SpellLayer.cs` | `SpellLayer` and `SpellEmitter` — the authored shape |
-| `Domain/Content/SpellLayerNames.cs` | the six discriminators (`render`, `place`, `at`, `until`, `facing`, `sort`), each a closed enum with a `Parse`/`IsKnown` pair, `SpellAnchorNames`' shape exactly |
+| `Domain/Content/SpellLayerNames.cs` | the six discriminators (`render`, `place`, `at`, `until`, `facing`, `sort`), each a closed enum with a `Parse`/`IsKnown` pair, `SpellAnchorNames`' shape exactly. `SpellWord.Is` compares an authored word without normalising a copy of it — these are computed properties read several times per layer per frame, and `ToLowerInvariant` allocated a string on every one |
 | `Domain/Content/SpellLayerRules.cs` | every validation rule, collected in one pass, refused at content build with the skill, the layer and the field named |
 | `Domain/Content/SpellPresentation.cs` | `layers`/`layerFormat`/`hitCueSeconds`, and `ToLayers(frameCount)` — the pre-layer format said in layers, at runtime, never stored |
 | `Domain/Combat/Presentation/SpellPerformance.cs` | the resolved model: fan-out, absolute times, the lifetime table, `ArrivalSeconds`, `HitCueSeconds`, and `PositionOf`/`VelocityOf` — the ONE evaluation of an eased flight |
@@ -565,10 +565,18 @@ hold the runtime; nothing else in the game knows a spell has layers at all.
 | `Core/FightController.SpellVfx.cs` | placement only: where the bottom of an effect is, which is the question every bug in it came from |
 
 **The pilot that consumes it (M5).** `prismatic_orb`'s **Water element** is the
-first layered spell in the game, and the only one: five layers, three renderer
+first layered spell in the game: five layers, three renderer
 kinds, two scopes and three schedule points, authored under
 `elements[].vfx` in `skills.json` rather than on the skill, because an element
 brings its own art.
+
+**The second one (M6).** `cinderfault` is authored as two layers -- a
+`formation`-placed ground sequence instanced once per cast and a `target`-placed
+plume per struck slot, both opening at release, both running 0.78s, with
+`hitCueSeconds: 0.43333334` stated outright where the pre-layer block derived it
+from `impactFrame` over nine frames on disk. It is the case that proves the
+model EXPRESSES what the adapter already produced: same instant, same members,
+same `timing.json` before and after.
 
 **The folder name is the artist's and the ids are the game's.** The delivery
 lives under `Art/Sheets/Spells/prismatic_bolt/water/` while every runtime id is
@@ -587,7 +595,9 @@ source PNGs are on disk and **not in git**, which is true of the whole
 | `Resources/Spells/prismatic_orb_water_drops` | 8 stills, 444², the droplet atlas both emitters throw |
 | `Tests/EditMode/Shared/SpellVfxJson.cs` | the ONE reader of an authored `vfx` block, by reflection over the target type rather than a hand-written field list. Two fixtures ask it what a spell draws — the pool pin and the recipe drift lint — and a second parser is a second thing that can fall behind the format |
 | `Tests/PlayMode/Combat/SpellEmitterCastTests.cs` | that a live cast's emitters put sprites on the canvas. Everything else about the sim is EditMode arithmetic, and arithmetic cannot see a pool member that was never activated |
-| `Tests/PlayMode/Art/SpellRuntimeCaptureTests.cs` | the real-time recording: 45 frames at `Time.captureFramerate = 60`, frame 0 the release. Not a gate — `-nographics` has no device, so it Ignores itself there |
+| `Tests/PlayMode/Art/SpellRuntimeCaptureTests.cs` | three real-time recordings at `Time.captureFramerate = 60`: the pilot alone (45 frames, frame 0 the release), two consecutive casts with the first's droplets still owned when the second opens (75), and a cinderfault with a water cast landing on one of its targets (75). The pilot recording Ignores itself under `-nographics`; the two overlap fixtures ASSERT there and write pictures only where there is a device |
+| `Tests/PlayMode/Combat/SpellTwoBurstTests.cs` | the synthetic third proof: two instances of one renderer kind, on a caster anchor, at different offsets, overlapping. Fixture-only — it authors nothing into `skills.json` and plays art that already ships (`Vfx/impact_burst`) |
+| `Tests/PlayMode/Combat/SpellAllocationTests.cs` | what a cast costs a frame. `ProfilerRecorder(Memory, "GC Allocated In Frame")` over 120 frames idle and 120 during two overlapping casts, plus `Is.Not.AllocatingGCMemory()` on the module's own tick. It is what found the parse allocation above |
 
 Design and milestones: `docs/PLAN_SPELL_LAYERS.md`. Handoff:
 `docs/handoffs/spell_layers/BRIEF.md`.
@@ -627,14 +637,17 @@ anatomically wrong:
    wind-up frame reports "unmeasurable" rather than 0, because claiming the effect
    reaches the floor before it has appeared is confidently wrong.
 
-**The shared ground layer (Cinderfault).** A spell can author a SECOND sheet,
-drawn once behind the whole enemy formation rather than once per target:
-`SpellPresentation.groundPath` and the five fields beside it. Three files hold
-it and nothing else knows it exists —
+**The shared ground layer (Cinderfault).** A cast can draw a sheet once behind
+the whole enemy formation rather than once per target. In the layered format
+that is `place: formation`, `sort: ground` and nothing else — instancing is
+decided by the placement word, which is what keeps a spell id out of
+orchestration entirely. The pre-layer fields below still exist and still work
+for any block that authors them; the adapter turns `groundPath` into exactly
+that layer. Since M6 no shipped spell authors them.
 
 | File | What it owns |
 |---|---|
-| `Domain/Content/SpellPresentation.cs` | `groundPath`/`groundSeconds`/`groundImpactFrame`/`groundAspect`/`groundImpactY`/`castSfxPath`, and `HasGroundLayer` — the one gate the view asks |
+| `Domain/Content/SpellPresentation.cs` | `groundPath`/`groundSeconds`/`groundImpactFrame`/`groundAspect`/`groundImpactY`/`castSfxPath`, and `HasGroundLayer` — the pre-layer form, read by the adapter |
 | `Domain/UiKit/Screens/FightScreen.cs` | `BuildSpellGroundVfx` — a band of `FightHudSpec.SpellGroundRenderers`, declared *before* the racks so uGUI draws it behind the figures standing on it |
 | `Core/FightController.SpellVfx.cs` | `PlaceOnFormation`/`GroundBoxFor`/`StruckBy` — the fault sized to the slots the living targets actually occupy, not to a slot and not to a constant |
 
