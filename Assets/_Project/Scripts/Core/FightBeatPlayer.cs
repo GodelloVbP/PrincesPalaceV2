@@ -124,7 +124,15 @@ namespace PrincesPalace
         // Contract 1 and 2: the source is read in exactly this one place, so
         // PlayerSpeedMultiplier can never disagree with what it would
         // currently say between one adoption and the next.
-        private static void AdoptPlayerSpeed()
+        //
+        // INTERNAL, NOT PRIVATE: FightBootstrap is the one production caller
+        // outside this class, immediately after it installs a new
+        // PlayerSpeedSource (see the call site's own comment). Without that
+        // call, OnEnable's own adoption -- which runs before FightBootstrap
+        // .Start on a fresh scene load, against whatever source was still
+        // installed from the PREVIOUS fight or the static default -- is the
+        // value the FIRST badge pop reads from Bind, one adoption stale.
+        internal static void AdoptPlayerSpeed()
         {
             PlayerSpeedMultiplier = PlayerSpeedSource != null ? PlayerSpeedSource() : 1f;
         }
@@ -133,7 +141,9 @@ namespace PrincesPalace
         // mid-test needs a way to make that change stick in
         // PlayerSpeedMultiplier without waiting for the next beat or a fresh
         // OnEnable to trigger it on their own (T5's "changing the delegate
-        // alone changes nothing" case, revision 3 point 2).
+        // alone changes nothing" case, revision 3 point 2). PlayMode has no
+        // InternalsVisibleTo grant, which is why this wrapper exists rather
+        // than a test calling AdoptPlayerSpeed itself.
         public static void AdoptPlayerSpeedForTest() => AdoptPlayerSpeed();
 
         // THE PRODUCT, read in exactly one place -- Scaled/Unscaled below,
@@ -150,23 +160,6 @@ namespace PrincesPalace
         // joining the product it is checked against.
         public static float Scaled(float seconds) =>
             Pace <= 0f ? 0f : seconds / Pace;
-
-        // THE SAME CONVERSION READ THE OTHER WAY, for the one caller that has
-        // an engine duration and needs the authored seconds behind it: the
-        // spell module holds a schedule in authored seconds and a clock in
-        // engine ones, and asking "how far into the cast are we" is exactly
-        // this division undone.
-        //
-        // Here rather than at that call site because the product must be
-        // read in ONE place. A module multiplying by it directly would be a
-        // second home for the conversion, and the two would be free to
-        // disagree the moment either changed -- which is the failure the beat
-        // and the spell crossing their cue on the same frame depends on not
-        // happening. SpellPerformancePlayer.Tick does NOT call this any
-        // more, precisely because it needs the cast's OWN frozen PaceAtStart
-        // rather than the live product this reads -- see that method's own
-        // comment.
-        public static float Unscaled(float engineSeconds) => engineSeconds * Pace;
 
         public bool IsPlaying { get; private set; }
 
@@ -818,12 +811,16 @@ namespace PrincesPalace
         {
             if (beat == null || beat.Amount <= 0 || beat.IsHealing) return false;
 
-            // ASKED OF THE PRESENTATION, not of its `path`. A layered cast
-            // authors no path by construction, so a path test reads every
-            // layered spell as bringing no art of its own and draws the slash
-            // arc over its splash -- which is the two-effects-arguing case this
-            // method's own header refuses.
-            return beat.Vfx == null || !beat.Vfx.HasArt;
+            // ASKED OF WHETHER ANYTHING LANDS ON THE TARGET, not of HasArt.
+            // HasArt also counts a bare `groundPath` -- a fault opening under
+            // the whole formation -- which puts nothing on the STRUCK target's
+            // own body. Reading that as "brings its own art" left a legacy
+            // ground-only spell with no impact language on the target at all:
+            // no house arc (this used to say so) and no per-target art of its
+            // own (there is none). HasPerTargetArt is the same question
+            // `path` alone always answered for a pre-layer block, generalised
+            // to a layer with a per-target placement.
+            return beat.Vfx == null || !beat.Vfx.HasPerTargetArt;
         }
 
         // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside

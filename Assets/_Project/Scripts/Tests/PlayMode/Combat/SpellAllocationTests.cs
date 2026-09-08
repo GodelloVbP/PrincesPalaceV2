@@ -277,6 +277,103 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // THE PLAIN MELEE CASE (finding review, FightController.SpellVfx.cs
+        // PlayContactFx/ContactPresentation): every swing that authors no
+        // spell of its own reaches this, so it is the single most-called path
+        // in this file. ContactPresentation used to build a fresh
+        // List<SpellLayer> plus one or two SpellLayer objects on every call
+        // even though there are only ever two possible outputs -- now cached
+        // as two static templates and picked between.
+        //
+        // NOT A LITERAL ZERO, and this says why rather than silently
+        // widening the assertion: SpellPerformance.Resolve still fans out a
+        // fresh SpellLayerInstance per layer (Box/To/From/pool-member state
+        // is per-cast by necessity -- two overlapping blows must not share a
+        // renderer) and SpellPerformancePlayer.Begin allocates that cast's
+        // own small Members/Seeds/Drops arrays. Both are the same
+        // architecture every OTHER cast in the game already pays, measured
+        // and accepted by the test above (its own "zero" is on the TICK, not
+        // on beginning a cast) -- so this asks the same question that test's
+        // second half does: does a frame that plays the house's own contact
+        // fx cost any more than the same scene idle.
+        [UnityTest]
+        public IEnumerator APlainMeleeBlowsContactFxCostsNoMoreThanIdle()
+        {
+            yield return LoadFight();
+
+            var module = _fight.PerformancePlayerForTest;
+            Time.captureFramerate = CaptureFps;
+
+            var beat = new CombatBeat
+            {
+                Actor = Hero, Target = Foes[0], Amount = 5, DamageType = DamageType.Physical,
+            };
+
+            // Warm-up: one full call so FrameSequenceLoader has cached the
+            // contact sheets' folders (a cold folder probe is a one-off disk
+            // cost belonging to no frame under test) and the pool nodes have
+            // been activated once.
+            _fight.PlayContactFxForTest(beat);
+
+            // A generous, fixed wait rather than polling FreeEffectRenderers
+            // back to its starting count: the contact arc/burst pair is well
+            // under a second (ContactCues.SlashSeconds/BurstSeconds), and 30
+            // frames at 60fps is half a second of real time on top of that.
+            for (int i = 0; i < 30; i++) yield return null;
+
+            for (int i = 0; i < DiscardedFrames; i++) yield return null;
+
+            using (var recorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame"))
+            {
+                yield return null;
+                Assert.IsTrue(recorder.Valid,
+                    "ProfilerRecorder(Memory, \"GC Allocated In Frame\") is not valid in this PlayMode host.");
+
+                var idle = new List<long>(MeasuredFrames);
+                for (int frame = 0; frame < MeasuredFrames; frame++)
+                {
+                    yield return null;
+                    idle.Add(recorder.LastValue);
+                }
+
+                // RE-TRIGGERED WHEN THE EFFECTS BAND IS FULLY FREE AGAIN, not
+                // every single frame. A real melee beat opens one contact fx
+                // and lets it run its own ~0.2-0.3s life before the next
+                // blow can land; firing a fresh cast on every frame of a
+                // 60fps window is a scenario no beat pacer ever produces and
+                // would measure a stress case this fix was never meant to
+                // cover.
+                int idleFreeEffectRenderers = module.FreeEffectRenderers;
+                var during = new List<long>(MeasuredFrames);
+                for (int frame = 0; frame < MeasuredFrames; frame++)
+                {
+                    if (module.FreeEffectRenderers == idleFreeEffectRenderers)
+                    {
+                        _fight.PlayContactFxForTest(beat);
+                    }
+
+                    yield return null;
+                    during.Add(recorder.LastValue);
+                }
+
+                module.CancelAll();
+
+                long idleMedian = Median(idle);
+                long duringMedian = Median(during);
+                long worst = Worst(during, idleMedian);
+
+                Assert.AreEqual(idleMedian, duringMedian,
+                    "a frame playing the house's own contact fx allocates more than the same scene idle. " +
+                    "idle median " + idleMedian + " bytes, contact-fx median " + duringMedian +
+                    " bytes, worst frame " + worst + " bytes over the idle median. The cached templates " +
+                    "and the pools exist so that difference is nothing.");
+
+                Debug.Log("[SpellAllocation] contact fx: idle median " + idleMedian + " B/frame, during " +
+                          "median " + duringMedian + " B/frame over " + MeasuredFrames + " frames at " +
+                          CaptureFps + "fps; worst frame " + worst + " B over idle.");
+            }
+        }
+
         private static long Median(List<long> samples)
         {
             var sorted = samples.OrderBy(v => v).ToList();

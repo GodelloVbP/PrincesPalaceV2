@@ -63,6 +63,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // same way: nothing makes the two lengths agree.
         public UiVec Box;
 
+        // FALSE WHEN CORE COULD NOT FIND ANYWHERE FOR THIS LAYER TO GO --
+        // FightController.PlaceOne's early return, a cast-level layer whose
+        // beat struck no target. Written before SpellPerformancePlayer.Begin
+        // runs, so Open() can refuse the layer without ever taking a pooled
+        // renderer for a box that is still all-zero: the alternative was an
+        // instance that opened, held a member and drew nothing at the stage
+        // origin for its whole lifetime, one renderer short for whatever the
+        // cast's next layer needed. True is the default because every other
+        // placement path (target, caster, formation) always succeeds.
+        public bool Placed = true;
+
         // +1 as drawn, -1 mirrored. A property of the CAST rather than of a
         // target, so a projectile and the wake riding it cannot disagree about
         // which way they point.

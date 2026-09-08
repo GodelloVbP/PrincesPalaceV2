@@ -294,6 +294,16 @@ namespace PrincesPalace
             // not what it said when the scene opened.
             FightBeatPlayer.PlayerSpeedSource = () => BattleSpeed.Nearest(GameSettings.BattleSpeed).Multiplier;
 
+            // RE-ADOPTED HERE, not left to whatever OnEnable last saw. On a
+            // fresh scene load OnEnable's own adoption races ahead of this
+            // method (Unity runs every OnEnable before any Start) and reads
+            // whichever source was still installed from the PREVIOUS fight,
+            // or the static default -- never this one. Bind, right below,
+            // paints the first badge pop off PlayerSpeedMultiplier as it
+            // stands at this instant, so without this call that first pop
+            // reads a multiplier one fight behind the source just installed.
+            FightBeatPlayer.AdoptPlayerSpeed();
+
             fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), RunOrchestrator.BuildSatchel());
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);

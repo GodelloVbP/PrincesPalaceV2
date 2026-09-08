@@ -338,6 +338,33 @@ namespace PrincesPalace.Domain.Content
         public bool HasArt =>
             HasLayers || !string.IsNullOrWhiteSpace(path) || !string.IsNullOrWhiteSpace(groundPath);
 
+        // WHETHER SOMETHING DRAWS ON THE STRUCK TARGET ITSELF, as against the
+        // ground beneath the whole formation. `groundPath` alone -- a fault
+        // opening under the rack -- puts nothing on the target's own body, so
+        // FightBeatPlayer.WantsContactFx asks THIS rather than HasArt: a
+        // legacy spell authoring only groundPath used to read as "brings its
+        // own art" and suppress the house's contact arc, leaving the struck
+        // target with no impact language of its own at all. A per-target
+        // layer answers the same question the pre-layer `path` field always
+        // did -- SpellLayerRules refuses authoring both, so checking either is
+        // exhaustive without checking layers AND path together.
+        public bool HasPerTargetArt
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(path)) return true;
+                if (!HasLayers) return false;
+
+                foreach (var layer in layers)
+                {
+                    if (layer == null) continue;
+                    if (layer.Travels || SpellPlaceNames.PerTarget(layer.Place)) return true;
+                }
+
+                return false;
+            }
+        }
+
         // ---- the legacy adapter --------------------------------------------------
 
         // A PRE-LAYER BLOCK, SAID IN LAYERS. Pure, engine-free, and its output

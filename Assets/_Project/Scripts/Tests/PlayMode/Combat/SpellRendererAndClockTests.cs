@@ -185,13 +185,67 @@ namespace PrincesPalace.PlayModeTests
                 Assert.AreEqual(FightBeatPlayer.Scaled(_fight.ImpactDelayFor(beat)),
                     FightBeatPlayer.Scaled(_fight.PerformancePlayerForTest.HitCueSeconds(performance)),
                     $"the beat and the spell disagree about the cue at {multiplier}x");
-
-                // And the round trip through the module's own inverse returns
-                // the authored seconds it started from, which is what makes a
-                // held clock mean the same thing at both speeds.
-                Assert.AreEqual(performance.HitCueSeconds,
-                    FightBeatPlayer.Unscaled(FightBeatPlayer.Scaled(performance.HitCueSeconds)), 1e-5f);
             }
+        }
+
+        // ---- graceful degradation on missing art ----------------------------------
+
+        // AN EMITTER WHOSE PATH RESOLVES TO NOTHING used to throw
+        // `frames[drop.Frame]` out of PaintEmitter once a drop went alive by
+        // age alone -- and that exception unwound out of Tick's `for (slot...)`
+        // loop, so every LATER slot in the same tick never got its own
+        // Advance/Paint call. A second, perfectly healthy cast starved because
+        // an earlier one authored a bad path. The house posture on missing art
+        // is to draw nothing and say so once (ItemIcons, CharacterPortraits,
+        // SceneBuilder.LoadSpriteByKey) -- never to take the whole tick down.
+        [UnityTest]
+        public IEnumerator AnEmitterWithNoFramesDrawsNothingAndDoesNotStarveTheNextCast()
+        {
+            yield return LoadFight();
+
+            HoldTheClock();
+
+            var missingArt = new CombatBeat
+            {
+                Actor = Hero,
+                Target = Foes[0],
+                Vfx = new SpellPresentation
+                {
+                    layerFormat = SpellLayerRules.CurrentLayerFormat,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            id = "drops", render = "emitter", place = "target", at = "release",
+                            emitter = new SpellEmitter
+                            {
+                                path = "Spells/does_not_exist_for_this_test",
+                                burst = 3, rate = 0f, window = 0f,
+                                lifeMin = 1f, lifeMax = 1f, sizeMin = 1f, sizeMax = 1f,
+                            },
+                        },
+                    },
+                },
+            };
+
+            var module = _fight.PerformancePlayerForTest;
+
+            Assert.DoesNotThrow(() => _fight.PlaySpellVfxForTest(missingArt),
+                "an emitter with no frames must draw nothing, not throw");
+            yield return null;
+
+            var healthy = _fight.PlaySpellVfxForTest(FlareAt(Foes[0]));
+            yield return null;
+
+            Assert.DoesNotThrow(() => StepTo(0.05f),
+                "a tick that throws for one slot must not starve the slots after it");
+
+            Assert.IsTrue(module.IsLive(healthy),
+                "the second, healthy cast stopped advancing -- the broken emitter starved it");
+
+            var frames = Effects.Where(p => p.Image != null && p.Image.enabled).Select(p => p.Image.sprite)
+                .ToList();
+            Assert.IsNotEmpty(frames, "the healthy cast is not drawing anything either");
         }
 
         // ---- the pools -----------------------------------------------------------
@@ -465,6 +519,59 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(under, 0);
             Assert.Greater(over, under,
                 "the layer authored second took a lower member, so it would draw UNDER the first");
+        }
+
+        // A CAST-LEVEL LAYER WITH NOWHERE TO GO. "core" is caster-centre, so it
+        // always places; its follower is cast-level TOO (a follower inherits
+        // its source's scope) but resolves through the TARGET branch of
+        // PlaceOne's `on` expression -- which is null the instant the beat
+        // struck nobody. PlaceOne used to leave that instance's Box/To/From at
+        // zero and say nothing further, so Open() still spent a pooled
+        // renderer drawing an empty box at the stage origin -- one renderer
+        // short for "after", the layer authored next.
+        [UnityTest]
+        public IEnumerator AnUnplaceableCastLevelLayerOpensNoRendererAndTheNextLayerStillGetsOne()
+        {
+            yield return LoadFight();
+
+            HoldTheClock();
+
+            var beat = new CombatBeat
+            {
+                Actor = Hero,
+                Target = null,
+                Vfx = new SpellPresentation
+                {
+                    layerFormat = SpellLayerRules.CurrentLayerFormat,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            id = "core", render = "sprite", place = "caster-centre",
+                            at = "release", path = "Spells/frost_flare", seconds = 0.5f,
+                        },
+                        new SpellLayer
+                        {
+                            id = "", render = "sprite", place = "layer:core",
+                            at = "release", path = "Spells/frost_flare", seconds = 0.5f,
+                        },
+                        new SpellLayer
+                        {
+                            id = "after", render = "sprite", place = "caster",
+                            at = "release", path = "Spells/frost_flare", seconds = 0.5f,
+                        },
+                    },
+                },
+            };
+
+            var cast = _fight.PlaySpellVfxForTest(beat);
+            yield return null;
+
+            var module = _fight.PerformancePlayerForTest;
+            Assert.AreEqual(-1, module.MemberFor(cast, 1),
+                "the unplaceable follower (no struck target) still took a pooled renderer");
+            Assert.GreaterOrEqual(module.MemberFor(cast, 2), 0,
+                "the layer authored right after the unplaceable one lost its own renderer");
         }
 
         // A MEMBER INDEX ONLY MEANS SOMETHING INSIDE ITS OWN BAND: ground

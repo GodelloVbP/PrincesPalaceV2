@@ -92,6 +92,13 @@ namespace PrincesPalace
         // the value, which is why widening it broke nothing.
         public CastHandle PlaySpellVfxForTest(CombatBeat beat) => PlaySpellVfx(beat);
 
+        // The house's OWN contact language, for the allocation test that
+        // proves the cached templates actually stopped it building fresh
+        // SpellLayer objects every plain melee blow. PlayContactFx has no
+        // return value FightBeatPlayer's own caller wants, so there is
+        // nothing to hand back here either.
+        public void PlayContactFxForTest(CombatBeat beat) => PlayContactFx(beat);
+
         // The module itself, for the tests that ask which member a cast holds.
         // Public for the reason every seam in this file is: InternalsVisibleTo
         // names the EDITOR assembly only, so a PlayMode test reaches this or
@@ -216,7 +223,16 @@ namespace PrincesPalace
                 ? casterRect ?? targetRect
                 : targetRect;
 
-            if (on == null) return;
+            // NOWHERE TO PUT IT -- a cast-level layer whose beat struck no
+            // target, most often. Box/To/From are left at their zero default,
+            // and instance.Placed = false is what tells Open() not to spend a
+            // pooled renderer drawing a box that sits at the stage origin for
+            // its whole lifetime.
+            if (on == null)
+            {
+                instance.Placed = false;
+                return;
+            }
 
             var box = BoxForLayer(layer);
             var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
@@ -443,11 +459,34 @@ namespace PrincesPalace
         // and a Charge is a bump rather than a cut; the same table's "Blunt"
         // row calls for a burst and a longer hit-stop instead of an arc. This
         // is the burst half of that distinction.
-        private static SpellPresentation ContactPresentation(CombatBeat beat)
+        //
+        // BUILT ONCE, NOT PER BEAT. Every plain melee blow in the game calls
+        // this, and until this fix it allocated a List<SpellLayer> plus one or
+        // two SpellLayer objects fresh every single time even though there are
+        // only ever two possible outputs -- neither of which varies with
+        // anything about `beat` beyond the Charge/not-Charge branch. Caching
+        // is safe because the mutable half of a cast (Box/To/From/Placed) was
+        // always on SpellLayerInstance, never on SpellLayer -- SpellPerformance
+        // .Resolve's fan-out already hands multiple concurrent casts a
+        // REFERENCE to one shared SpellLayer for any authored skill (a
+        // ResolvedSkill's Vfx is built once and cast from for the rest of the
+        // run); a contact beat sharing its two templates the same way is the
+        // same contract, not a new one. SpellPerformance.Resolve still builds
+        // a fresh SpellLayerInstance list per beat (each cast needs its own
+        // Box/To/From/pool-member state, so that part cannot be shared across
+        // concurrent casts) -- see SpellAllocationTests
+        // .APlainMeleeBlowsContactFxCostsNoMoreThanIdle for what that leaves.
+        private static readonly SpellPresentation _contactWithArc = BuildContactPresentation(withArc: true);
+        private static readonly SpellPresentation _contactBurstOnly = BuildContactPresentation(withArc: false);
+
+        private static SpellPresentation ContactPresentation(CombatBeat beat) =>
+            beat.Approach == StageApproach.Charge ? _contactBurstOnly : _contactWithArc;
+
+        private static SpellPresentation BuildContactPresentation(bool withArc)
         {
             var layers = new List<SpellLayer>(2);
 
-            if (beat.Approach != StageApproach.Charge)
+            if (withArc)
             {
                 layers.Add(new SpellLayer
                 {

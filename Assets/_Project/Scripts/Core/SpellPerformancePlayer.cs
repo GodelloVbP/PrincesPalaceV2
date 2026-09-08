@@ -237,7 +237,7 @@ namespace PrincesPalace
                 // The schedule is in AUTHORED seconds and the clock is in
                 // engine ones, so the window is converted rather than the
                 // deadlines -- but through the CAST'S OWN PaceAtStart, not
-                // FightBeatPlayer.Unscaled's live product (contract 3): this
+                // FightBeatPlayer's live Pace product (contract 3): this
                 // cast must keep ageing on the pace it was born at even if
                 // the player steps the preset while it is still drawing.
                 float seconds = (now - _casts[slot].StartedAt) * _casts[slot].PaceAtStart;
@@ -384,11 +384,36 @@ namespace PrincesPalace
             var instance = cast.Performance.Instances[index];
             var layer = instance.Layer;
 
+            // NOWHERE TO DRAW IT. Core's PlaceOne already tried and failed
+            // (a cast-level layer on a beat that struck no target) and left
+            // Box/To/From at zero -- taking a member here would draw a box at
+            // the stage origin for the layer's whole lifetime and leave one
+            // fewer renderer for whatever the cast's NEXT layer needs.
+            if (!instance.Placed) return;
+
             // An emitter obtains no sprite renderer. Its drops are taken one at
             // a time as they are born and given back as they die, which is what
             // lets emission stop while the particles it already threw finish.
             if (layer.Render == SpellRender.Emitter)
             {
+                // REFUSED HERE, NOT IN PaintEmitter's PER-FRAME PATH. A path
+                // that resolves to no frames used to reach
+                // `frames[drop.Frame]` unguarded once a drop went alive by
+                // age alone, throwing out of Tick's loop and starving every
+                // later slot in the same tick -- the graceful-degradation
+                // posture this project takes on missing art everywhere else
+                // (ItemIcons, CharacterPortraits, SceneBuilder.LoadSpriteByKey).
+                // Leaving cast.Drops[index] null makes PaintEmitter's
+                // existing `if (drops == null) return;` the only check the
+                // hot path needs -- nothing new added there.
+                var frames = ParticleFrames(layer.emitter);
+                if (frames == null || frames.Length == 0)
+                {
+                    Debug.LogWarning($"SpellPerformancePlayer: emitter layer '{layer.id}' resolved no " +
+                                     "frames; it draws nothing. The hit cue is unaffected.");
+                    return;
+                }
+
                 cast.Drops[index] = cast.Drops[index] ?? new List<int>();
                 return;
             }
