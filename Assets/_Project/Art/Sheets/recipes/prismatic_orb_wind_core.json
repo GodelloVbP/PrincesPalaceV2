@@ -1,0 +1,64 @@
+{
+  "_notes": [
+    "THE FLIGHT LOOP, ALONE. wind_core_6f.png is 1536x1024 over 3x2 and divides",
+    "exactly into 512px cells, like every core sheet in this pack. No rects, no",
+    "canvas, no scale steps.",
+    "",
+    "A REAL DEFECT, CONFIRMED RATHER THAN JUST QUOTED FROM THE README: the README",
+    "warns of 'near-transparent canvas residue (sampled corner alpha 1/255)'.",
+    "Measured here it is not a one-pixel corner accident -- 15.6% of the WHOLE",
+    "1536x1024 sheet sits at alpha 1-7 and another 6.6% sits at alpha 8-127, against",
+    "fire's and water's 0.8-3.2% in that same band. Composited on a light background",
+    "it reads as a faint soft rounded-square smudge behind each crescent (checked --",
+    "see the report); on the dark stage backdrop it is invisible, which is the one",
+    "reason it ships rather than being escalated. Left as delivered: nothing in this",
+    "recipe's tools re-keys or crops that residue away, because it is graded alpha",
+    "over the WHOLE canvas rather than a rectangle a crop could remove.",
+    "",
+    "SHAPE: not a pointed, forward-leaning silhouette the way fire's spearhead or",
+    "water's ball are -- it is a closed crescent/vortex ring, near-symmetric, with",
+    "no strongly directional 'this end leads' read. Still travels fine as a moving",
+    "blob; it just does not sell direction of travel by silhouette alone the way",
+    "the other two cores do. Worth a look in motion (see report).",
+    "",
+    "LOOP SEAM: the six cells are near-duplicate crescent swirls with only the",
+    "flourish detail differing frame to frame, which loops cleanly by construction",
+    "-- there is no strong pose change to create a visible seam."
+  ],
+  "sheet": "Spells/prismatic_bolt/wind/wind_core_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "core_f0",
+    "core_f1",
+    "core_f2",
+    "core_f3",
+    "core_f4",
+    "core_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "core_f0"
+    },
+    {
+      "from": "core_f1"
+    },
+    {
+      "from": "core_f2"
+    },
+    {
+      "from": "core_f3"
+    },
+    {
+      "from": "core_f4"
+    },
+    {
+      "from": "core_f5"
+    }
+  ]
+}

@@ -710,7 +710,108 @@
           }
         },
         {
-          "type": "Wind"
+          "type": "Wind",
+          "vfx": {
+            "layerFormat": 1,
+            "hitCueSeconds": 0.33,
+            "layers": [
+              {
+                "id": "core",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "travelSeconds": 0.25,
+                "path": "Spells/prismatic_orb_wind_core",
+                "fps": 24,
+                "until": "loop",
+                "size": 195,
+                "facing": "auto",
+                "sort": "effects"
+              },
+              {
+                "id": "wake",
+                "render": "still",
+                "place": "layer:core",
+                "follow": true,
+                "at": "release",
+                "path": "Spells/prismatic_orb_wind_wake",
+                "until": "hold",
+                "fade": 0.08,
+                "dx": -115,
+                "scale": 0.6,
+                "facing": "auto",
+                "sort": "effects"
+              },
+              {
+                "id": "shed",
+                "render": "emitter",
+                "place": "layer:core",
+                "at": "release",
+                "sort": "effects",
+                "emitter": {
+                  "path": "Spells/prismatic_orb_wind_drops",
+                  "rate": 26,
+                  "window": 0.25,
+                  "sourceDx": -40,
+                  "spreadDegrees": 40,
+                  "aimDegrees": 195,
+                  "speedMin": 110,
+                  "speedMax": 260,
+                  "inherit": 0.4,
+                  "drag": 1.0,
+                  "gravity": -50,
+                  "lifeMin": 0.12,
+                  "lifeMax": 0.22,
+                  "sizeMin": 0.35,
+                  "sizeMax": 0.7,
+                  "spinMin": -200,
+                  "spinMax": 200,
+                  "fadeFrom": 0.45,
+                  "endScale": 0.7
+                }
+              },
+              {
+                "id": "splash",
+                "render": "sprite",
+                "place": "target-centre",
+                "at": "arrival",
+                "path": "Spells/prismatic_orb_wind_contact",
+                "startFrame": 2,
+                "fps": 28,
+                "until": "once",
+                "size": 300,
+                "facing": "auto",
+                "sort": "effects",
+                "impactX": 0.48,
+                "impactY": 0.48
+              },
+              {
+                "id": "spray",
+                "render": "emitter",
+                "place": "target-centre",
+                "at": "hit",
+                "sort": "effects",
+                "emitter": {
+                  "path": "Spells/prismatic_orb_wind_drops",
+                  "burst": 16,
+                  "spreadDegrees": 360,
+                  "aimDegrees": 0,
+                  "speedMin": 200,
+                  "speedMax": 480,
+                  "drag": 1.5,
+                  "gravity": -40,
+                  "lifeMin": 0.15,
+                  "lifeMax": 0.28,
+                  "sizeMin": 0.3,
+                  "sizeMax": 0.75,
+                  "spinMin": -360,
+                  "spinMax": 360,
+                  "fadeFrom": 0.4,
+                  "endScale": 0.75
+                }
+              }
+            ]
+          }
         }
       ]
     }

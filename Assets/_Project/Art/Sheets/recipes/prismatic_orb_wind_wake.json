@@ -1,0 +1,36 @@
+{
+  "_notes": [
+    "ONE FRAME, HELD -- same shape as prismatic_orb_water_wake.json.",
+    "",
+    "CONTENT_CROP. wind_wake.png is 2172x724; ink bbox (115,258)-(2065,467), so",
+    "1950x209 of the 2172x724 canvas -- the thinnest of the three new wakes (209px",
+    "tall against fire's 277 and earth's 272), which agrees with the README's own",
+    "'thin crescent' language even though the core itself reads as a thicker swirl",
+    "than 'thin' suggests (see prismatic_orb_wind_core.json's notes).",
+    "",
+    "THICK END: the README says 'thick right end' but what is actually at the",
+    "right is a frayed, feathered ribbon splitting into several thin strands",
+    "rather than a solid mass -- the widest CONTIGUOUS band of the ribbon sits",
+    "around x=1750-1950, just short of where it frays. Authored as dx against the",
+    "rendered width in skills.json; no impact point, same reason as the other two",
+    "wakes -- a follower's position is source + (dx, dy).",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/wind/wind_wake.png",
+  "grid": [
+    1,
+    1
+  ],
+  "names": [
+    "wake"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "wake"
+    }
+  ]
+}

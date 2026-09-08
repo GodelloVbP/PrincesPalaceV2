@@ -1,0 +1,114 @@
+{
+  "_notes": [
+    "THE STREAK ATLAS -- eight stills, one per cell, NOT a sequence: the emitter",
+    "picks one per particle by hash, so the folder is a palette.",
+    "",
+    "EXPLICIT RECTS, the README's own boundaries, same 1774x887 4x2 delivery as",
+    "the rest of the pack. Checked: none of the eight cells' ink bboxes touch a",
+    "rect edge.",
+    "",
+    "WHAT EACH CELL IS: c0 a short hooked streak; c1 a long thin blade streak;",
+    "c2 a tight crescent; c3 a taller arc streak; c4 a curling hooked streak;",
+    "c5 a forked streak (two tails); c6 a small near-complete ring loop; c7 a",
+    "small spiral curl. All eight read as wind-line/streak shapes, consistent with",
+    "the README's 'sparse streak emission' and with no chunky or round outliers",
+    "the way earth's atlas has (see prismatic_orb_earth_drops.json's notes) --",
+    "uniform hash selection across all eight is not a concern here the way it is",
+    "for earth.",
+    "",
+    "NO CANVAS STATED: the rects give 444x444/443x443 cells and nothing scales,",
+    "so the automatic pad onto the largest cell is sufficient.",
+    "",
+    "Delivered with its own alpha; keyed is false."
+  ],
+  "sheet": "Spells/prismatic_bolt/wind/wind_particles_8.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "streak_hook",
+    "streak_blade",
+    "crescent_tight",
+    "arc_tall",
+    "streak_curl",
+    "streak_forked",
+    "ring_loop",
+    "spiral_curl"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "streak_hook"
+    },
+    {
+      "from": "streak_blade"
+    },
+    {
+      "from": "crescent_tight"
+    },
+    {
+      "from": "arc_tall"
+    },
+    {
+      "from": "streak_curl"
+    },
+    {
+      "from": "streak_forked"
+    },
+    {
+      "from": "ring_loop"
+    },
+    {
+      "from": "spiral_curl"
+    }
+  ]
+}

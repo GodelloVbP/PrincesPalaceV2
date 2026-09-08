@@ -1,0 +1,125 @@
+{
+  "_notes": [
+    "THE CONTACT BURST, ALONE. wind_contact_8f.png is 1774x887 over 4x2, same",
+    "non-dividing sheet shape and the same README-stated boundaries as the rest",
+    "of the pack (x: 0, 444, 887, 1331, 1774; y: 0, 444, 887). Explicit rects,",
+    "for the same reason water's and fire's notes give.",
+    "",
+    "THE SEQUENCE: c0 a small approaching swirl (the same role as water's",
+    "contact_f0 and fire's -- the played layer starts at startFrame 2 to skip it).",
+    "c1 a growing swirl. c2 an opening ring. c3 is the WIDEST frame -- 17.9% ink,",
+    "runner-up c4 at 14.7% -- a full open double-ring pressure ring, source frame",
+    "4 one-indexed, the same peak position as fire's and water's own contact_f3.",
+    "c4 a dispersing flower/pinwheel read (large but slightly less ink than c3).",
+    "c5-c7 thin the ring into trailing wisps; c7 is nearly gone.",
+    "",
+    "A REAL DEFECT: c3, the peak frame, TOUCHES THE BOTTOM EDGE of its own cell --",
+    "confirmed visually, the ring's lower arc is cut by the sheet's own delivered",
+    "boundary, not by this recipe's slicing. c7 likewise touches the top edge (a",
+    "thin trailing wisp, cosmetically minor). Because c3's clipping is baked into",
+    "the source pixels, no rect or canvas choice here recovers it -- it is reported",
+    "rather than worked around. GIVEN THE CLIP, c3 gets hold: 2 for weight but NO",
+    "scale growth (unlike fire's and water's matching hold+scale step): growing an",
+    "already-clipped frame about its own centre would clip further, not just add",
+    "size.",
+    "",
+    "CANVAS 512, same headroom reasoning as the rest of the pack -- the split-per-",
+    "layer recipe's own largest cell is 444, so padding is stated rather than",
+    "inferred."
+  ],
+  "sheet": "Spells/prismatic_bolt/wind/wind_contact_8f.png",
+  "rects": [
+    [
+      0,
+      0,
+      444,
+      444
+    ],
+    [
+      444,
+      0,
+      443,
+      444
+    ],
+    [
+      887,
+      0,
+      444,
+      444
+    ],
+    [
+      1331,
+      0,
+      443,
+      444
+    ],
+    [
+      0,
+      444,
+      444,
+      443
+    ],
+    [
+      444,
+      444,
+      443,
+      443
+    ],
+    [
+      887,
+      444,
+      444,
+      443
+    ],
+    [
+      1331,
+      444,
+      443,
+      443
+    ]
+  ],
+  "names": [
+    "contact_f0",
+    "contact_f1",
+    "contact_f2",
+    "contact_f3",
+    "contact_f4",
+    "contact_f5",
+    "contact_f6",
+    "contact_f7"
+  ],
+  "keyed": false,
+  "canvas": [
+    512,
+    512
+  ],
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "contact_f0"
+    },
+    {
+      "from": "contact_f1"
+    },
+    {
+      "from": "contact_f2"
+    },
+    {
+      "from": "contact_f3",
+      "hold": 2
+    },
+    {
+      "from": "contact_f4"
+    },
+    {
+      "from": "contact_f5"
+    },
+    {
+      "from": "contact_f6"
+    },
+    {
+      "from": "contact_f7"
+    }
+  ]
+}
