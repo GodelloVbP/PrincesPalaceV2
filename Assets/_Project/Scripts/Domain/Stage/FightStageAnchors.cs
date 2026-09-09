@@ -129,18 +129,80 @@ namespace PrincesPalace.Domain.Stage
         // AllowOverlap on the stage panel says as much) -- it chases the gap
         // back down to something a body can stand in rather than mostly
         // behind.
+        // THESE TWO ARE THE ENEMY SIDE'S ENDPOINTS. They were both sides'
+        // until 2026-09-09 -- see StageFormation's header for why the party
+        // now carries its own, and PartyFarY below for the one number that
+        // differs. Kept as bare UiVec literals under these exact names
+        // because tools/measure_stage.py greps for them, and a measuring
+        // tool that can no longer parse the source is a gate that silently
+        // stops firing (this file's own header records that happening).
         public static readonly UiVec Near = new UiVec(300f, -218f);
         public static readonly UiVec Far = new UiVec(660f, -125f);
 
         // C4: the mirrored (party) side stands this much further back on X
         // than the enemy side's plain mirror image -- party Near/Far X
-        // become -360/-625 rather than -300/-565. X ONLY: the two sides
-        // still share one ground line (Y untouched), so nothing about
-        // vertical clearance (the plate top, the ring's Y, the mini-rows)
-        // moves. Widens the gap between the two front actors, which sat
-        // exactly as close together as two same-side neighbours despite
-        // facing off across the whole stage.
+        // become -360/-720 rather than -300/-660. X ONLY, and that is still
+        // exactly what this constant means: the party's Y now comes from its
+        // own formation (PartyFarY) rather than from the enemy's endpoints.
+        // Widens the gap between the two front actors, which sat exactly as
+        // close together as two same-side neighbours despite facing off
+        // across the whole stage.
         public const float PartyRetreat = 60f;
+
+        // THE PARTY'S FAR GROUND LINE, -64 WHERE THE ENEMY'S IS -125.
+        //
+        // OWNER, 2026-09-09, after the Far.X widen in cb8fee7c: "the
+        // formation is still off", the middle figure half hidden behind the
+        // front one "and its foot ring is hidden entirely".
+        //
+        // The ring was not hidden by another figure. It was hidden by the
+        // HUD. Measured off the capture that fix produced
+        // (scratchpad formation_now/full_narrowest_fourthree_1920x1440.png):
+        // the two roster plates occupy x -920..-468 and their block's top
+        // edge is at y -161, and BuildRosterPlates is declared after both
+        // stages, so they paint over anything standing there. With one
+        // shared ground line the middle party slot landed at y -171.5 --
+        // ten pixels INSIDE that block, ring drop and all -- while the near
+        // slot escaped by being to the RIGHT of the plates (x -360) and the
+        // far slot escaped by being ABOVE them (y -125). Only the middle of
+        // the line passed through the corner of the HUD, which is why one
+        // figure of three looked wrong and the other two looked fine.
+        //
+        // Nothing about X fixes that: for the middle slot's foot band to
+        // clear the plates' right edge it would have to stand at x >= -361,
+        // which is where the NEAR slot already is. The line has to be
+        // steeper, so the party's far end rises to -64 and the midpoint with
+        // it: -141, ring at -149, twelve pixels of daylight over the plate
+        // top. That daylight is pinned as a literal in
+        // FightStageAnchorsTests, because the audit that ought to have
+        // caught this cannot: FightScreenTests' foot-band-versus-HUD scan
+        // skips subtrees declared Inactive, and the roster plates are built
+        // Inactive and switched on at runtime.
+        //
+        // WHAT IT COSTS: the two sides no longer share one ground line past
+        // the front rank. The FRONT ranks still do (-218 both), which is the
+        // rank the two armies actually face each other across; the back
+        // ranks now differ by 61px, which reads as the party's line
+        // receding further than the enemy's rather than as two floors --
+        // they are 1000px apart on screen and never adjacent. Judged
+        // cheaper than the alternative, which is moving the HUD, and the
+        // HUD is not this file's to move.
+        //
+        // Headroom checked rather than assumed: the party's ceiling is the
+        // initiative tracker, pinned to the canvas TOP-LEFT at -(130+16)
+        // with a 74px row, so its underside sits 220 below the top edge --
+        // y 320 at the 1080-tall aspects. Odette is the tallest thing this
+        // slot can hold once her 70px hover is added, at y 222. 98px clear.
+        private const float PartyFarY = -64f;
+
+        // The two sides' formations, composed from the endpoints above.
+        // Authored as magnitudes out from stage centre (see StageFormation);
+        // SlotOffset applies the mirror.
+        public static readonly StageFormation Enemy = new StageFormation(Near, Far);
+
+        public static readonly StageFormation Party = new StageFormation(
+            new UiVec(Near.X + PartyRetreat, Near.Y),
+            new UiVec(Far.X + PartyRetreat, PartyFarY));
 
         // Applied on top of StageLayout.ScaleForDepth. The art is authored
         // larger than it is shown, so this is the one global shrink.
@@ -199,14 +261,16 @@ namespace PrincesPalace.Domain.Stage
         public const string AllyShadowColor = "#59D966D9";
         public const string EnemyShadowColor = "#E63340D9";
 
-        // A slot's offset from stage centre. `mirrored` flips X for the party
-        // side, which faces the other way.
+        // A slot's offset from stage centre. `mirrored` picks the PARTY
+        // formation and flips its X: the party stands on the left and faces
+        // the other way. Still the one place a slot position is computed --
+        // StageVisuals.DrawSide/AnchorOne and FightScreen.BuildStage both
+        // read it rather than re-deriving.
         public static UiVec SlotOffset(int slotIndex, int slotCount, bool mirrored)
         {
-            float depth = StageLayout.DepthForSlot(slotIndex, slotCount);
-            float x = StageLayout.PositionForDepth(Near.X, Far.X, depth);
-            float y = StageLayout.PositionForDepth(Near.Y, Far.Y, depth);
-            return new UiVec(mirrored ? -(x + PartyRetreat) : x, y);
+            var formation = mirrored ? Party : Enemy;
+            var offset = formation.OffsetForSlot(slotIndex, slotCount);
+            return new UiVec(mirrored ? -offset.X : offset.X, offset.Y);
         }
 
         // The scale a slot's sprite is drawn at: the depth curve times the one

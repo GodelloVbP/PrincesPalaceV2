@@ -68,8 +68,14 @@ namespace PrincesPalace.PlayModeTests
         // C4: the party (mirrored) side stands FightStageAnchors.PartyRetreat
         // (60px) further back on X than the enemy side's plain mirror image
         // -- -360/-720, not -300/-660 (was -625 before Far.X's 660 widen).
+        //
+        // FAR Y -125 -> -64, 2026-09-09: the party carries its own formation
+        // now (FightStageAnchors.Party / PartyFarY), because the roster
+        // plates stand on the party's half of the floor and the middle slot
+        // of a shared, shallower line landed inside them. Front marks are
+        // unchanged; only the far one moved.
         private static readonly Vector2 PartyNearMark = new Vector2(-360f, -218f);
-        private static readonly Vector2 PartyFarMark = new Vector2(-720f, -125f);
+        private static readonly Vector2 PartyFarMark = new Vector2(-720f, -64f);
 
         // A mark is arrived at or it is not; the walk lands on the exact value
         // rather than easing asymptotically into it (StageActorAnimator.Gliding

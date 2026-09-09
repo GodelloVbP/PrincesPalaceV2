@@ -34,6 +34,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(60f, FightStageAnchors.PartyRetreat, 0.001f);
             Assert.AreEqual(1500f, FightStageAnchors.StageSize.X, 0.001f);
             Assert.AreEqual(600f, FightStageAnchors.StageSize.Y, 0.001f);
+
+            // The two formations, as magnitudes out from stage centre. The
+            // party's far ground line is -64 where the enemy's is -125
+            // (FightStageAnchors.PartyFarY's own note): the roster plates
+            // stand on the party's half of the floor and the middle slot was
+            // landing inside them.
+            Assert.AreEqual(300f, FightStageAnchors.Enemy.Near.X, 0.001f);
+            Assert.AreEqual(-218f, FightStageAnchors.Enemy.Near.Y, 0.001f);
+            Assert.AreEqual(660f, FightStageAnchors.Enemy.Far.X, 0.001f);
+            Assert.AreEqual(-125f, FightStageAnchors.Enemy.Far.Y, 0.001f);
+
+            Assert.AreEqual(360f, FightStageAnchors.Party.Near.X, 0.001f);
+            Assert.AreEqual(-218f, FightStageAnchors.Party.Near.Y, 0.001f);
+            Assert.AreEqual(720f, FightStageAnchors.Party.Far.X, 0.001f);
+            Assert.AreEqual(-64f, FightStageAnchors.Party.Far.Y, 0.001f);
         }
 
         [Test]
@@ -60,12 +75,74 @@ namespace PrincesPalace.Domain.Tests
         {
             // C4: no longer a pure mirror -- the party (mirrored) side
             // stands PartyRetreat further back on X than the enemy side's
-            // mirror image, while Y is still shared exactly.
+            // mirror image. STILL TRUE OF X, and X is all this claims now:
+            // the two sides' ground lines diverge behind the front rank (see
+            // ThePartyLineIsSteeperThanTheEnemyLine below).
             var right = FightStageAnchors.SlotOffset(1, 3, mirrored: false);
             var left = FightStageAnchors.SlotOffset(1, 3, mirrored: true);
 
             Assert.AreEqual(-(right.X + FightStageAnchors.PartyRetreat), left.X, 0.001f);
-            Assert.AreEqual(right.Y, left.Y, 0.001f, "the two sides share a ground line");
+        }
+
+        // ---- the party's own line ---------------------------------------------
+
+        // Literals, not a re-derivation: -218 -> -64 across three slots puts
+        // the middle party slot's ground line at -141.
+        [Test]
+        public void ThePartyLineIsSteeperThanTheEnemyLine()
+        {
+            Assert.AreEqual(-218f, FightStageAnchors.SlotOffset(0, 3, mirrored: true).Y, 0.001f,
+                "the two front ranks still share the floor they face each other across");
+            Assert.AreEqual(-141f, FightStageAnchors.SlotOffset(1, 3, mirrored: true).Y, 0.001f);
+            Assert.AreEqual(-64f, FightStageAnchors.SlotOffset(2, 3, mirrored: true).Y, 0.001f);
+
+            Assert.AreEqual(-360f, FightStageAnchors.SlotOffset(0, 3, mirrored: true).X, 0.001f);
+            Assert.AreEqual(-540f, FightStageAnchors.SlotOffset(1, 3, mirrored: true).X, 0.001f);
+            Assert.AreEqual(-720f, FightStageAnchors.SlotOffset(2, 3, mirrored: true).X, 0.001f);
+        }
+
+        // THE DEFECT THIS FORMATION EXISTS TO FIX, pinned where it can fail.
+        //
+        // The middle party figure's contact ring was drawn behind the roster
+        // plates, which the party half of the HUD stands on the floor: the
+        // block occupies x -920..-468 with its top edge at y -161, measured
+        // off the real 4:3 capture, and BuildRosterPlates is declared after
+        // both stages so it paints over whatever is standing there.
+        //
+        // NOT COVERED BY FightScreenTests' foot-band-versus-HUD scan, which
+        // is the audit that ought to own this: that scan skips subtrees
+        // declared Inactive, and the roster plates are built Inactive and
+        // switched on at runtime by the controller. So the number is pinned
+        // here instead, in Domain, where it costs a second.
+        //
+        // The plate geometry is stated as literals rather than read out of
+        // FightScreen: this assembly is Domain-only, and a Domain test that
+        // reached into the UiKit screen for private layout constants would
+        // be the wrong dependency even if it could. If the roster block
+        // moves, this pin is wrong in the safe direction -- it fails and
+        // says why.
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void NoPartySlotStandsInsideTheRosterPlates(int slot)
+        {
+            // -468 is the OUTER of the two right edges the roster column has
+            // had this week (452-wide plates centred on -694; the narrower
+            // 380-wide cards that replaced them stop at -540). Assuming the
+            // wider block checks MORE slots, never fewer, so this stays
+            // correct against either.
+            const float PlateLeft = -920f;
+            const float PlateRight = -468f;
+            const float PlateTop = -161f;
+            const float RingDrop = 8f;
+            const float Margin = 12f;
+
+            var offset = FightStageAnchors.SlotOffset(slot, 3, mirrored: true);
+            if (offset.X < PlateLeft || offset.X > PlateRight) return;
+
+            Assert.GreaterOrEqual(offset.Y - RingDrop, PlateTop + Margin,
+                $"party slot {slot}'s contact ring at y {offset.Y - RingDrop} is inside the roster " +
+                "plates (top edge -161), which draw over the stage - see FightStageAnchors.PartyFarY");
         }
 
         [Test]
