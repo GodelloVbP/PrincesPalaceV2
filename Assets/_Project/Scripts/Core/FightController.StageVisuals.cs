@@ -618,6 +618,15 @@ namespace PrincesPalace
             if (image == null) return;
 
             var slotRect = image.transform.parent as RectTransform;
+            string folder = SpriteFolderFor(combatant);
+
+            // BEFORE THE FALLBACK BRANCH BELOW, which returns early: an
+            // animator left holding the PREVIOUS occupant's folder would
+            // measure a stand-off against art this figure is not wearing.
+            // Handing over the folder of a combatant with no art at all is
+            // harmless -- SpanForStance resolves nothing and falls through to
+            // whatever Image is bound, which is the plate.
+            animator?.BindArt(folder);
 
             var sprite = StanceSpriteFor(combatant, stance);
 
@@ -637,7 +646,6 @@ namespace PrincesPalace
             float mirror = StageFacing.MirrorScaleX(FacingOf(combatant), side);
             image.rectTransform.localScale = new Vector3(mirror, 1f, 1f);
 
-            string folder = SpriteFolderFor(combatant);
             GroundTheFigure(image, slotRect, folder);
             PlaceShadow(slotRect, folder, mirror);
 

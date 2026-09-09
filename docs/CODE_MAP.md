@@ -353,8 +353,29 @@ milliseconds rather than by loading a scene.
 **formally supersedes** `StageLayout`'s header note that anchors stay in
 SceneBuilder — that note predates screen trees living in Domain.
 `PartyRetreat` (60px) pushes the party side out on the mirrored X only,
-paired with `StageSize` widening 1200 → 1260 so the far slot still fits —
-room made for the Move cross-tween without crowding the two sides together.
+paired with `StageSize` widening 1200 → 1260 → 1500 so the far slot still
+fits — room made for the Move cross-tween without crowding the two sides
+together.
+
+A SIDE'S LINE IS DATA, not a scalar tweak on one shared line:
+`Domain/Stage/StageFormation.cs` is a `Near`/`Far` pair authored as
+magnitudes out from stage centre, and `FightStageAnchors` holds one per side
+(`Enemy` 300/-218 → 660/-125, `Party` 360/-218 → 720/-64, mirrored). The
+party's line is the steeper of the two because the HUD stands on its half of
+the floor: the roster block occupies x −920..−468 up to y −161 and draws
+over the stage, and a shared ground line put the middle party slot inside
+it. `SlotOffset` is still the one place a slot position is computed.
+
+`Domain/Stage/StageStandOff.cs` answers the other half — where an attacker
+stops. `FightBeatPlayer` used to travel a fixed FRACTION of the X gap
+(0.70 lunge / 0.78 close / 0.86 charge), which left a residual that grew
+with the distance and knew nothing about how far the attacker's own weapon
+reached. It now arrives at a point derived from the two bodies: the target's
+near opaque edge, backed off by the attacker's forward reach in the widest
+drawing it will wear, plus a 12px gap (0 for a charge), on the target's
+ground line. `StageActorAnimator.SpanForStance` measures the drawings (tight
+sprite meshes, so `textureRectOffset` + `textureRect` is the opaque box);
+`FightController.StageVisuals` hands it the art folder beside the Image.
 
 ### Domain — the screen tree
 

@@ -5,6 +5,7 @@ using UnityEngine;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -516,8 +517,8 @@ namespace PrincesPalace
                 //
                 // Where everybody stands is settled before anything else about
                 // the beat is drawn, because the rest of the beat is measured
-                // against it: TravelFor reads the slots' live positions to
-                // work out how far the actor has to lean, and the damage
+                // against it: TravelFor reads the two figures' marks to
+                // work out where the actor stands to strike, and the damage
                 // popup is placed off the target's slot. Painted from the
                 // beat's own snapshot rather than from the live lists for the
                 // reason the vitals are -- a Move rewrites the party order in
@@ -997,7 +998,7 @@ namespace PrincesPalace
         {
             if (beat.Approach != StageApproach.Lunge) return;
 
-            var (animator, offset) = TravelFor(beat, staticSwing ? StaticLungeFraction : LungeFraction);
+            var (animator, offset) = TravelFor(beat, StageStandOff.Gap);
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
             float lead = staticSwing ? StageActorAnimator.AnticipationSeconds : 0f;
             animator?.Play(offset, hold, -1f, lead);
@@ -1027,8 +1028,9 @@ namespace PrincesPalace
         }
 
         // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside
-        // the swing rather than before it -- but nearly the whole way in, and
-        // timed to be at full extent exactly when the blow lands.
+        // the swing rather than before it -- but with no gap left at the end
+        // (StageStandOff.ChargeGap), and timed to be at full extent exactly
+        // when the blow lands.
         //
         // The two numbers that make it "arrive on the impact frame":
         //
@@ -1057,7 +1059,7 @@ namespace PrincesPalace
             // below and PlayBeats' wind-up wait can never disagree about it.
             float outSeconds = ChargeOutSeconds(beat);
 
-            var (animator, offset) = TravelFor(beat, ChargeFraction);
+            var (animator, offset) = TravelFor(beat, StageStandOff.ChargeGap);
             if (animator != null)
             {
                 // Unscaled, because Play scales the out-tween itself -- the
@@ -1091,10 +1093,14 @@ namespace PrincesPalace
         // thing down" actually looks like, and it is why this one is a
         // coroutine while Lunge is a call.
         //
-        // FURTHER IN, TOO. CloseFraction is nearly the whole gap: the point is
-        // to be standing over the target, and a figure that closed the same
-        // third a lunge does would read as a slow lunge rather than as an
-        // approach.
+        // THE SAME DISTANCE AS A LUNGE, now that both stop at the same
+        // measured stand-off point rather than at their own fraction of the
+        // gap. That collapse is deliberate: "how close do you have to be to
+        // hit this thing" was never a property of the approach, and the two
+        // fractions that said otherwise (0.70 and 0.78) were two guesses at
+        // one number. What still separates a Close from a Lunge is the ORDER
+        // -- arrive, THEN swing -- which is the difference this method's own
+        // header opens with and the only one worth having.
         //
         // THE HOLD IS TAKEN OUT OF NOTHING, unlike the hit-stop. It is real
         // extra time and the beat is genuinely longer for it, because there is
@@ -1105,7 +1111,7 @@ namespace PrincesPalace
         {
             if (beat.Approach != StageApproach.Close) yield break;
 
-            var (animator, offset) = TravelFor(beat, CloseFraction);
+            var (animator, offset) = TravelFor(beat, StageStandOff.Gap);
             if (animator == null) yield break;
 
             // Held for the whole beat rather than for the tween's own length:
@@ -1118,11 +1124,24 @@ namespace PrincesPalace
         }
 
         // Where this beat's actor is travelling to, and the thing that moves
-        // it. Shared by both approaches so they cannot disagree about which
-        // direction the stage runs in.
-        private (StageActorAnimator animator, Vector2 offset) TravelFor(CombatBeat beat, float fraction)
+        // it. Shared by all three crossing approaches so they cannot disagree
+        // about which direction the stage runs in.
+        //
+        // A STAND-OFF POINT, NOT A FRACTION OF THE GAP -- see
+        // Domain/Stage/StageStandOff for the two owner-reported symptoms that
+        // killed the fractions (stopping a body short from the back rank, and
+        // Bjorn's hammer inside whatever he slammed). Everything about WHERE
+        // is arithmetic over two measured bodies, which is in Domain and
+        // pinned there; everything about WHICH DRAWING to measure is here,
+        // because only playback knows what the actor will be wearing when it
+        // arrives.
+        private (StageActorAnimator animator, Vector2 offset) TravelFor(CombatBeat beat, float gap)
         {
-            if (beat?.Actor == null || beat.Target == null) return (null, Vector2.zero);
+            // The same trigger the wind-up and the contact effects read
+            // (CrossesToATarget): a beat with nobody else to reach does not
+            // travel, and self-targeting used to fall through to a zero-length
+            // "cross" only because the two marks happened to be identical.
+            if (beat == null || !CrossesToATarget(beat)) return (null, Vector2.zero);
 
             var from = SlotFor?.Invoke(beat.Actor);
             var to = SlotFor?.Invoke(beat.Target);
@@ -1131,11 +1150,74 @@ namespace PrincesPalace
             var animator = AnimatorFor?.Invoke(beat.Actor);
             if (animator == null) return (null, Vector2.zero);
 
-            // A fraction of the way, not all of it: the figures are meant to
-            // close the gap, not swap places.
-            float dx = (to.anchoredPosition.x - from.anchoredPosition.x) * fraction;
-            return (animator, new Vector2(dx, 0f));
+            var targetAnimator = AnimatorFor?.Invoke(beat.Target);
+
+            // MARKS, NOT LIVE POSITIONS. The animator composes travel and
+            // hover on top of the mark, so an offset measured from a live
+            // position would double-count whatever the figure was already
+            // doing -- and a hovering TARGET would drag its attacker into the
+            // air rather than being met on the floor it casts its shadow on.
+            var actorMark = ToUiVec(animator.Mark);
+            var targetMark = ToUiVec(targetAnimator != null ? targetAnimator.Mark : to.anchoredPosition);
+
+            // THE GOAL SCALE, not the slot's live one: breath, punch and
+            // stretch all write the slot's localScale, so reading it back
+            // would fold a 3% wobble into where the attacker stops.
+            //
+            // The target's own silhouette is taken from its IDLE. Its hurt
+            // pose is what it wears a frame later, it is usually narrower, and
+            // it recoils out of the way regardless -- so measuring the resting
+            // body is both the conservative choice and the stable one.
+            var targetSpan = targetAnimator != null
+                ? targetAnimator.SpanForStance(FightSession.Stances.Idle)
+                : OpaqueSpan.None;
+
+            var offset = StageStandOff.TravelTo(
+                actorMark, ReachOf(animator, beat), ScaleOf(animator, from),
+                targetMark, targetSpan, ScaleOf(targetAnimator, to),
+                gap);
+
+            return (animator, new Vector2(offset.X, offset.Y));
         }
+
+        private static float ScaleOf(StageActorAnimator animator, RectTransform slot)
+        {
+            float scale = animator != null ? animator.GoalScale.x : slot.localScale.x;
+            return scale <= 0f ? 1f : scale;
+        }
+
+        // THE WIDEST DRAWING THE ACTOR WILL WEAR WHILE IT IS STANDING THERE.
+        //
+        // Not simply the strike pose. The actor holds the stand-off point from
+        // the moment it arrives until the recoil pulls it home, and it wears
+        // up to three drawings in that window (approach, wind-up, strike --
+        // CombatBeat's own precedence table). Measuring only one of them
+        // leaves the other two free to clip: Bjorn's rush reaches 206px past
+        // his canvas centre, his overhead 166 and his slam 237, so a distance
+        // set by the rush puts the hammer 31 canvas pixels inside the target
+        // at the one instant the picture is about contact.
+        //
+        // Costs at most three cached texture-rect lookups per crossing beat.
+        private static OpaqueSpan ReachOf(StageActorAnimator animator, CombatBeat beat)
+        {
+            string strike = null;
+            if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strike);
+
+            var span = animator.SpanForStance(
+                CombatBeat.OpenStanceFor(beat.Approach, strike, beat.ActorApproachStance, beat.ActorWindupStance));
+
+            span = Widest(span, animator.SpanForStance(
+                CombatBeat.ArrivalStanceFor(beat.Approach, strike, beat.ActorApproachStance, beat.ActorWindupStance)));
+
+            return Widest(span, animator.SpanForStance(strike));
+        }
+
+        private static OpaqueSpan Widest(OpaqueSpan a, OpaqueSpan b)
+        {
+            return new OpaqueSpan(Mathf.Min(a.Left, b.Left), Mathf.Max(a.Right, b.Right));
+        }
+
+        private static UiVec ToUiVec(Vector2 v) => new UiVec(v.x, v.y);
 
         // WHOEVER THIS BEAT TURNED INTO SOMETHING ELSE.
         //
@@ -1207,36 +1289,30 @@ namespace PrincesPalace
             animator.Play(offset, hold);
         }
 
-        private const float LungeFraction = 0.35f;
-
-        // HOW FAR A STILL-DRAWING SWING TRAVELS. Twice the lean-in above, and
-        // the difference is what the pilot capture showed: at 0.35 the witch
-        // stopped 210px into a ~600px gap, her staff swinging at air a figure
-        // and a half short of Shawn, while his flash and number said he had
-        // been hit. An animated actor's sheet draws its weapon reaching out,
-        // so a lean is enough to sell the contact; a single drawing's weapon
-        // reaches exactly as far as the figure is carried, so the figure has
-        // to be carried to where the weapon lands. Short of Close's 0.78 so
-        // the depth-scaled front figure does not swallow the one it hits.
-        private const float StaticLungeFraction = 0.70f;
+        // THE THREE TRAVEL FRACTIONS ARE GONE -- 0.35/0.70 here, 0.78 on
+        // Close, 0.86 on Charge -- and StageStandOff (Domain/Stage) carries
+        // the reasoning that retired them. In short: a fraction of the gap
+        // leaves a residual that GROWS with the gap, so the same swing
+        // stopped a body short from the back rank and looked fine from the
+        // front one, and a fraction knows nothing about how far the
+        // attacker's own weapon reaches, so Bjorn's slam went through
+        // whatever he was slamming.
+        //
+        // THE 0.35 LEAN WAS ALREADY DEAD when it went. Lunge chose between
+        // 0.35 and 0.70 on `staticSwing`, which is IsStaticSwing -- "a Lunge
+        // that crosses to a target" -- and TravelFor moves nothing for a beat
+        // that does NOT cross to a target, because the actor and the target
+        // are then the same figure on the same mark. So every lunge that
+        // moved at all took the 0.70 branch; 0.35 was reachable only by beats
+        // whose offset was zero either way. `staticSwing` still decides the
+        // anticipation LEAD, which is a real distinction and the only one it
+        // was ever making here.
 
         private const float RecoilDistance = 45f;
-
-        // Nearly all the way. Not all of it -- two figures sharing a mark
-        // overlap, and the depth scaling means the nearer one would simply
-        // swallow the other.
-        private const float CloseFraction = 0.78f;
 
         // How long the walk in takes. Long enough to read as a decision and
         // short enough that a fight full of them does not become a parade.
         private const float CloseSeconds = 0.26f;
-
-        // Further than a Close, because a charger is meant to END against what
-        // it hit rather than a step short of it, and the recoil shoves the
-        // target back on contact so the two never actually overlap. Not the
-        // full gap for the same reason Close is not: the nearer, larger figure
-        // would otherwise swallow the one it slammed.
-        private const float ChargeFraction = 0.86f;
 
         // A floor under the rush's travel time. A charge that authors a spell
         // overrides it with that spell's own impact lead, which is longer; a

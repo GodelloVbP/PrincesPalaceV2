@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
 {
@@ -352,6 +354,98 @@ namespace PrincesPalace
         public void BindSprite(Image spriteImage)
         {
             _spriteImage = spriteImage;
+        }
+
+        // ---- how far this figure's drawing reaches ---------------------------
+
+        // WHICH FOLDER the drawings come from, handed over beside the Image by
+        // the same call that binds it. A folder rather than a delegate or a
+        // combatant, because a folder is the ONE thing FightController's stage
+        // already reduces "whose art is this" to (SpriteFolderFor's own
+        // header), it survives a transformation by being re-handed, and it
+        // keeps this file's standing promise that it "never has to know what a
+        // CombatantState is".
+        private string _artFolder;
+
+        public void BindArt(string artFolder)
+        {
+            _artFolder = artFolder;
+        }
+
+        // Measured once per (folder, stance) for the life of the process. The
+        // art is on disk and does not change; the alternative is a texture
+        // rect lookup on every beat of every fight.
+        private static readonly Dictionary<Sprite, OpaqueSpan> SpanCache =
+            new Dictionary<Sprite, OpaqueSpan>();
+
+        // The horizontal extent of the drawing this figure would wear in
+        // `stance`, in its own canvas pixels about its own canvas centre, with
+        // the stage mirror applied -- so Left is the screen-left edge whichever
+        // way the art was authored.
+        //
+        // Falls back through the same chain the stage's own sprite lookup
+        // does (requested stance -> idle -> whatever is currently bound), for
+        // the same reason: a kit is allowed to be missing a pose, and a
+        // stand-off measured against the wrong-but-present drawing beats one
+        // measured against nothing.
+        public OpaqueSpan SpanForStance(string stance)
+        {
+            var sprite = Resolve(stance) ?? (_spriteImage != null ? _spriteImage.sprite : null);
+            return SpanOf(sprite).Mirrored(MirrorSign);
+        }
+
+        // Which way the bound drawing is flipped. Read off the Image's own
+        // transform rather than re-derived from facing and side: this is where
+        // RefreshCombatantSprite wrote it, so there is no second copy of the
+        // mirroring rule to get inverted.
+        public float MirrorSign =>
+            _spriteImage != null && _spriteImage.rectTransform.localScale.x < 0f ? -1f : 1f;
+
+        private Sprite Resolve(string stance)
+        {
+            if (string.IsNullOrWhiteSpace(_artFolder)) return null;
+
+            return StanceAnimationLibrary.Resolve(_artFolder, stance)
+                   ?? StanceAnimationLibrary.Resolve(_artFolder, FightSession.Stances.Idle);
+        }
+
+        // THE TRIMMED RECT IS THE OPAQUE BOX, and it is an OFFSET CROP.
+        //
+        // Every stance PNG imports with Sprite Mesh Type Tight, so Unity
+        // stores the alpha bounding box rather than the authored canvas:
+        // `rect` reports the full canvas (Shawn's idle: 540x370) while
+        // `textureRect` is a sub-window inside it (65, 6, 280, 354). That
+        // sub-window IS the measurement wanted here -- but its position only
+        // means anything once `textureRectOffset` puts it back in canvas
+        // space. Dividing by the trimmed width instead is the exact bug
+        // FightController.StageVisuals' FootBandCentreFraction documents
+        // shipping once already; it is not repeated here.
+        //
+        // A sprite that is NOT tight-packed reports the whole canvas, which
+        // over-estimates the reach and therefore stands the figures further
+        // apart. Wrong in the safe direction: a gap reads as staging, an
+        // overlap reads as a bug.
+        private static OpaqueSpan SpanOf(Sprite sprite)
+        {
+            if (sprite == null) return OpaqueSpan.None;
+
+            if (SpanCache.TryGetValue(sprite, out var cached)) return cached;
+
+            float canvasWidth = sprite.rect.width;
+            if (canvasWidth <= 0f) return OpaqueSpan.None;
+
+            float offsetX = sprite.textureRectOffset.x;
+            float width = sprite.textureRect.width;
+            if (width <= 0f || width > canvasWidth)
+            {
+                offsetX = 0f;
+                width = canvasWidth;
+            }
+
+            float left = offsetX - canvasWidth * 0.5f;
+            var span = new OpaqueSpan(left, left + width);
+            SpanCache[sprite] = span;
+            return span;
         }
 
         // Convenience overload for a pure sideways move (recoils, and any
