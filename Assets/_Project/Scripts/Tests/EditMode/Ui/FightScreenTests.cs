@@ -1068,16 +1068,20 @@ namespace PrincesPalace.Domain.Tests
         // a test recomputing the production formula to build its own
         // expected value is a tautology (CLAUDE.md's gotcha 5): it can only
         // ever catch a hand-typed mistake in THIS test, never a real
-        // regression in SlotOffset itself. Values are docs/
+        // regression in SlotOffset itself. Values were docs/
         // PLAN_STATUS_EFFECT_UI.md section 1's own table -- X is each slot's
         // ground position (Near 300, mid 432.5, Far 565), Y is offset.Y - 60
-        // worked out there once (-278, -231.5, -185) and never recomputed
-        // again after this.
+        // worked out there once (-278, -231.5, -185).
+        //
+        // X RE-PINNED 2026-09-09: Far.X widened 565 -> 660 (party overlap
+        // fix, see FightStageAnchors' own comment on Far), so mid and far
+        // move to 480 and 660. Y is untouched -- Near.Y/Far.Y did not move,
+        // only X did -- so -278/-231.5/-185 stand as they were.
         private static readonly (float X, float Y)[] EnemyStatusRowCentres =
         {
             (300f, -278f),
-            (432.5f, -231.5f),
-            (565f, -185f),
+            (480f, -231.5f),
+            (660f, -185f),
         };
 
         [Test]

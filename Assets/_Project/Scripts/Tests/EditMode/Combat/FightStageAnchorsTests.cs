@@ -24,30 +24,34 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(300f, FightStageAnchors.Near.X, 0.001f);
             Assert.AreEqual(-218f, FightStageAnchors.Near.Y, 0.001f);
-            Assert.AreEqual(565f, FightStageAnchors.Far.X, 0.001f);
+            // Far.X 565 -> 660 and StageSize.X 1260 -> 1500, 2026-09-09: the
+            // owner-reported party overlap (Odette swallowed by the middle
+            // slot) -- see FightStageAnchors' own comment on Far.
+            Assert.AreEqual(660f, FightStageAnchors.Far.X, 0.001f);
             Assert.AreEqual(-125f, FightStageAnchors.Far.Y, 0.001f);
             Assert.AreEqual(0.76f, FightStageAnchors.SpriteScale, 0.001f);
             Assert.AreEqual(-34f, FightStageAnchors.NameplateOffset, 0.001f);
             Assert.AreEqual(60f, FightStageAnchors.PartyRetreat, 0.001f);
-            Assert.AreEqual(1260f, FightStageAnchors.StageSize.X, 0.001f);
+            Assert.AreEqual(1500f, FightStageAnchors.StageSize.X, 0.001f);
             Assert.AreEqual(600f, FightStageAnchors.StageSize.Y, 0.001f);
         }
 
         [Test]
         public void ThreeSlots_LandOnTheNearAnchor_TheMidpoint_AndTheFarAnchor()
         {
-            // Depths 0, 0.5, 1 across three slots; x lerps 300 -> 565, OUTWARD
-            // with depth, and y lerps -218 -> -125.
+            // Depths 0, 0.5, 1 across three slots; x lerps 300 -> 660, OUTWARD
+            // with depth (widened from 565 2026-09-09, see Far's own
+            // comment), and y lerps -218 -> -125.
             var near = FightStageAnchors.SlotOffset(0, 3, mirrored: false);
             Assert.AreEqual(300f, near.X, 0.001f);
             Assert.AreEqual(-218f, near.Y, 0.001f);
 
             var mid = FightStageAnchors.SlotOffset(1, 3, mirrored: false);
-            Assert.AreEqual(432.5f, mid.X, 0.001f);
+            Assert.AreEqual(480f, mid.X, 0.001f);
             Assert.AreEqual(-171.5f, mid.Y, 0.001f);
 
             var far = FightStageAnchors.SlotOffset(2, 3, mirrored: false);
-            Assert.AreEqual(565f, far.X, 0.001f);
+            Assert.AreEqual(660f, far.X, 0.001f);
             Assert.AreEqual(-125f, far.Y, 0.001f);
         }
 
@@ -67,10 +71,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SlotScale_ComposesTheDepthCurveWithTheGlobalShrink()
         {
-            // ScaleForDepth lerps 1 -> 0.74, then everything is shrunk by 0.76.
-            Assert.AreEqual(0.76f, FightStageAnchors.SlotScale(0, 3), 0.0001f);
-            Assert.AreEqual(0.6612f, FightStageAnchors.SlotScale(1, 3), 0.0001f);
-            Assert.AreEqual(0.5624f, FightStageAnchors.SlotScale(2, 3), 0.0001f);
+            // ScaleForDepth lerps 0.94 -> 0.82 (was 1.0 -> 0.74, narrowed
+            // 2026-09-09 -- the owner's "front one is too big and the back
+            // one too small", see StageLayout.NearScale/FarScale), then
+            // everything is shrunk by 0.76.
+            Assert.AreEqual(0.7144f, FightStageAnchors.SlotScale(0, 3), 0.0001f);
+            Assert.AreEqual(0.6688f, FightStageAnchors.SlotScale(1, 3), 0.0001f);
+            Assert.AreEqual(0.6232f, FightStageAnchors.SlotScale(2, 3), 0.0001f);
         }
 
         [Test]
@@ -81,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
             var only = FightStageAnchors.SlotOffset(0, 1, mirrored: false);
             Assert.AreEqual(300f, only.X, 0.001f);
             Assert.AreEqual(-218f, only.Y, 0.001f);
-            Assert.AreEqual(0.76f, FightStageAnchors.SlotScale(0, 1), 0.0001f);
+            Assert.AreEqual(0.7144f, FightStageAnchors.SlotScale(0, 1), 0.0001f);
         }
 
         [Test]
@@ -118,8 +125,9 @@ namespace PrincesPalace.Domain.Tests
         // empty. They stood 132 apart against a 675px-wide rat sheet, so the
         // back one was 78% hidden and the pair read as a single monster.
         //
-        // Literals, not a re-derivation: 300 and 565 are Near.X and Far.X, and
-        // the point of the test is that a PAIR reaches both ends of that range.
+        // Literals, not a re-derivation: 300 and 660 are Near.X and Far.X (Far
+        // widened from 565 2026-09-09, see Far's own comment), and the point
+        // of the test is that a PAIR reaches both ends of that range.
         [Test]
         public void TwoActorsStandAtBothEndsOfTheRange_NotBunchedAtTheNearEnd()
         {
@@ -127,8 +135,8 @@ namespace PrincesPalace.Domain.Tests
             var back = FightStageAnchors.SlotOffset(1, 2, mirrored: false);
 
             Assert.AreEqual(300f, front.X, 0.01f, "the front of a pair should sit at the near anchor");
-            Assert.AreEqual(565f, back.X, 0.01f, "the back of a pair should reach the FAR anchor, not the midpoint");
-            Assert.AreEqual(265f, back.X - front.X, 0.01f,
+            Assert.AreEqual(660f, back.X, 0.01f, "the back of a pair should reach the FAR anchor, not the midpoint");
+            Assert.AreEqual(360f, back.X - front.X, 0.01f,
                 "a pair separated by less than the full range is the bunching this test exists to catch");
         }
 
@@ -150,7 +158,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var last = FightStageAnchors.SlotOffset(count - 1, count, mirrored: false);
 
-            Assert.AreEqual(565f, last.X, 0.01f, $"with {count} actors the back one stops short of the far anchor");
+            Assert.AreEqual(660f, last.X, 0.01f, $"with {count} actors the back one stops short of the far anchor");
         }
 
         // Mirroring is the party side, and it must mirror the SPREAD too rather
@@ -158,14 +166,15 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePartySideMirrorsTheSameSpreadPlusTheRetreat()
         {
-            // C4: -360/-625, not -300/-565 -- the party side's whole spread
+            // C4: -360/-720, not -300/-660 -- the party side's whole spread
             // is pushed back by PartyRetreat, not just its endpoints
-            // individually re-tuned.
+            // individually re-tuned. (-720 was -625 before Far.X's 2026-09-09
+            // widen to 660, see Far's own comment.)
             var front = FightStageAnchors.SlotOffset(0, 2, mirrored: true);
             var back = FightStageAnchors.SlotOffset(1, 2, mirrored: true);
 
             Assert.AreEqual(-360f, front.X, 0.01f);
-            Assert.AreEqual(-625f, back.X, 0.01f);
+            Assert.AreEqual(-720f, back.X, 0.01f);
         }
     }
 }

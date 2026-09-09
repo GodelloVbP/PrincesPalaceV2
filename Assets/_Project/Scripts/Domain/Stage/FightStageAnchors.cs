@@ -44,7 +44,10 @@ namespace PrincesPalace.Domain.Stage
         //            paragraph carried was never measured off the art; see the
         //            re-measurement note under the live band below.
         //
-        // X NOW RUNS OUTWARD WITH DEPTH, 300 -> 565, where it used to run
+        // X NOW RUNS OUTWARD WITH DEPTH, 300 -> 565 (further widened to 660
+        // on 2026-09-09, see the note below the AUDIT #45 paragraph -- the
+        // outward DIRECTION this paragraph argues for is what still holds;
+        // only the far endpoint moved again since), where it used to run
         // inward, 470 -> 250. Two things were wrong with running inward and
         // only one of them was the obvious one.
         //
@@ -78,6 +81,17 @@ namespace PrincesPalace.Domain.Stage
         // At -218/-125 the front ring sits at -226 and the highest head at 149,
         // so both ends have more room than before rather than less.
         //
+        // THAT 149 IS STALE as of the 2026-09-09 depth-scale re-tune below
+        // (StageLayout.NearScale/FarScale 1.0/0.74 -> 0.94/0.82): Y here did
+        // not move, but the scale multiplying the tallest actor's 483px did,
+        // and the old near/far scale happened to put both ends within 3px of
+        // each other (149.1 near, 146.6 far) where the new one does not
+        // (~127 near, ~176 far -- the far slot is now the taller-head case).
+        // Not re-measured by hand again here: UiAudit re-solves every screen
+        // at four canvas aspects and refuses a head over the panel ceiling,
+        // so that gate is what actually guards this number now rather than a
+        // comment restating it after every scale tune.
+        //
         // RE-MEASURED 2026-09-08, and both halves of the old note were wrong.
         // The tallest actor is not the golem and never was 384: the roster
         // grew, and tools/measure_stage.py reads forest_warden at 483 above
@@ -95,8 +109,28 @@ namespace PrincesPalace.Domain.Stage
         // needs Near.Y >= -166, which does not fit. The rule applied here is
         // the one the handover states: clear every ALWAYS-visible panel.
         // Recorded as AUDIT #45.
+        //
+        // Far.X 565 -> 660, OWNER FEEDBACK 2026-09-09: "there is overlap
+        // between characters" and specifically Odette (the far/back party
+        // slot) "very bulky, overlaps or nudges under other chars." Measured
+        // against the real three-party capture
+        // (tools/screenshots/runtime/party_formation), the OLD 265px Near-Far
+        // range gave three co-present, similarly-sized figures (opaque idle
+        // width ~205px each once drawn) only a 132.5px gap between adjacent
+        // slots -- less than one figure's own half-width, so the middle slot
+        // sat on top of roughly a third of the far slot's body by
+        // construction, not as an authoring mistake. Y is untouched (the
+        // floor/ceiling band this file's own header measures does not move);
+        // widening is X-only, and StageSize.X below grows with it so the
+        // mirrored far anchor still lands inside its own coordinate frame
+        // (FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect).
+        // This does not chase zero overlap -- depth-stacked figures on one
+        // receding floor are SUPPOSED to overlap a little (FightScreen's own
+        // AllowOverlap on the stage panel says as much) -- it chases the gap
+        // back down to something a body can stand in rather than mostly
+        // behind.
         public static readonly UiVec Near = new UiVec(300f, -218f);
-        public static readonly UiVec Far = new UiVec(565f, -125f);
+        public static readonly UiVec Far = new UiVec(660f, -125f);
 
         // C4: the mirrored (party) side stands this much further back on X
         // than the enemy side's plain mirror image -- party Near/Far X
@@ -145,15 +179,16 @@ namespace PrincesPalace.Domain.Stage
         // eyeballed against.
         public const float IntentIconOffset = 72f;
 
-        // 1260 WIDE, up from 1200 -- PartyRetreat's own 60px, C4. The party
-        // far anchor is now at -(565 + 60) = -625, so the 1200-wide frame
-        // that exactly fit the OLD +-565 range left the retreated party
-        // slot 25px outside it -- the same
+        // 1500 WIDE, up from 1260 -- Far.X's own move to 660 above. The party
+        // far anchor is now at -(660 + 60) = -720, so the 1260-wide frame
+        // that exactly fit the OLD +-565 range left the retreated party slot
+        // 90px outside it -- the same
         // FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect this
-        // frame's own history (1000 -> 1200) already exists to catch.
+        // frame's own history (1000 -> 1200 -> 1260) already exists to catch.
         // Widening the frame is still free: it draws nothing and takes no
-        // clicks, it is a coordinate frame and not a surface.
-        public static readonly UiVec StageSize = new UiVec(1260f, 600f);
+        // clicks, it is a coordinate frame and not a surface -- see
+        // FightScreen.BuildStage's own AllowOverlap on this exact panel.
+        public static readonly UiVec StageSize = new UiVec(1500f, 600f);
 
         public const float InitiativeIconSize = 74f;
         public const float InitiativeIconGap = 8f;

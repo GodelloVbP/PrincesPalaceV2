@@ -59,14 +59,17 @@ namespace PrincesPalace.PlayModeTests
         // rather than recomputed from FightStageAnchors here -- a test that
         // re-derives the formula it is checking asserts only that arithmetic is
         // deterministic (CLAUDE.md gotcha 5).
+        //
+        // Far.X 565 -> 660, 2026-09-09: the party-overlap fix in
+        // FightStageAnchors (see Far's own comment) widened the far anchor.
         private static readonly Vector2 NearMark = new Vector2(300f, -218f);
-        private static readonly Vector2 FarMark = new Vector2(565f, -125f);
+        private static readonly Vector2 FarMark = new Vector2(660f, -125f);
 
         // C4: the party (mirrored) side stands FightStageAnchors.PartyRetreat
         // (60px) further back on X than the enemy side's plain mirror image
-        // -- -360/-625, not -300/-565.
+        // -- -360/-720, not -300/-660 (was -625 before Far.X's 660 widen).
         private static readonly Vector2 PartyNearMark = new Vector2(-360f, -218f);
-        private static readonly Vector2 PartyFarMark = new Vector2(-625f, -125f);
+        private static readonly Vector2 PartyFarMark = new Vector2(-720f, -125f);
 
         // A mark is arrived at or it is not; the walk lands on the exact value
         // rather than easing asymptotically into it (StageActorAnimator.Gliding
