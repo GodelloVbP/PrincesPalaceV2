@@ -139,15 +139,71 @@ namespace PrincesPalace.Domain.Stage
         public static readonly UiVec Near = new UiVec(300f, -218f);
         public static readonly UiVec Far = new UiVec(660f, -125f);
 
-        // C4: the mirrored (party) side stands this much further back on X
-        // than the enemy side's plain mirror image -- party Near/Far X
-        // become -360/-720 rather than -300/-660. X ONLY, and that is still
-        // exactly what this constant means: the party's Y now comes from its
-        // own formation (PartyFarY) rather than from the enemy's endpoints.
-        // Widens the gap between the two front actors, which sat exactly as
-        // close together as two same-side neighbours despite facing off
-        // across the whole stage.
-        public const float PartyRetreat = 60f;
+        // THE PARTY'S OWN X ENDPOINTS, 320 AND 810 -- AUTHORED, NOT DERIVED.
+        //
+        // PartyRetreat (the "+60 on both endpoints" scalar these two replace)
+        // is gone. It had already stopped being one number by 6fedab18, which
+        // gave the party its own Y; it stopped being one on X here, and a
+        // constant that has to be read as "true of the near endpoint only"
+        // is worse than two honest literals.
+        //
+        // OWNER, 2026-09-09, after 6fedab18: the three party figures "still
+        // read as a clump". MEASURED off that commit's own capture
+        // (scratchpad formation_after/full_narrowest_fourthree_1920x1440.png,
+        // 4:3, 1px = 1 canvas unit), compositing the real idle alpha masks at
+        // the real marks and slot scales:
+        //
+        //   Shawn  opaque -505.0 .. -307.8   (197px wide at slot 0)
+        //   Bjorn  opaque -645.0 .. -436.3   (209px at slot 1)
+        //   Odette opaque -805.7 .. -577.6   (228px at slot 2)
+        //
+        // Adjacent bodies overlapped 68.7px and 67.4px -- 35% and 32% of the
+        // narrower figure, at torso and leg height, which is why Shawn's
+        // cloak sat on Bjorn's leg. The previous pass judged this by an
+        // "unoccluded >= 80%" per-pixel criterion that passed at 92%: a
+        // measure that counts PIXELS cannot see that the third of a body it
+        // is losing is the readable third. The slot pitch was 180 against
+        // figures 197-228 wide, so the clump was arithmetic, not an
+        // authoring slip.
+        //
+        // THE SPREAD NEEDED, derived from the art rather than eyeballed. For
+        // adjacent bodies to just touch, consecutive marks must be at least
+        // (nearer figure's left extent + farther figure's right extent)
+        // apart at their own scales: 145.0 + 103.7 = 248.7 between slots 0
+        // and 1, and 105.0 + 142.4 = 247.4 between 1 and 2. That is 496 of
+        // total range where the old 360 (-360..-720) gave 180 per step.
+        //
+        // WHERE THE 496 COMES FROM, both ends:
+        //
+        //   FAR END, capped at 810 by the LEFT EDGE OF THE CANVAS. 4:3 is the
+        //   narrowest aspect UiAudit solves and the canvas is 1920 wide there
+        //   (Expand scaling: 1920x1440), so x stops at -960. The widest-left
+        //   drawing any actor can bring to the back slot is Shawn's idle,
+        //   whose opaque box reaches 203px left of his own canvas centre --
+        //   126.5 stage pixels at the far slot's 0.6232 scale. 810 + 126.5 =
+        //   936.5, which keeps EVERY seating inside the 20px margin. Sized
+        //   for the seating, not for today's party order, because Move
+        //   reorders the field formation in place (CombatEncounter's
+        //   SwapPartySlots) -- so any of the six is reachable mid-fight.
+        //
+        //   NEAR END, 360 -> 320, which is the 40px the far end could not
+        //   pay for. It is spent out of the floor between the front party
+        //   figure and the front enemy: Shawn's opaque right edge moves
+        //   -307.8 -> -267.8, and against the widest enemy in the near enemy
+        //   slot (the beetle, whose mirrored idle puts its near edge at
+        //   57.8) the clear floor goes 365.7 -> 325.7. Worth stating plainly
+        //   because the brief that asked for this believed there was ~600
+        //   there: there is not, and never was -- 660 is the distance
+        //   between the two MARKS, and both figures reach a long way in from
+        //   their marks.
+        //
+        // RESULT, same offline composite: adjacent overlaps 3.7px (1.9%) and
+        // 2.4px (1.2%), and both contact rings fully clear of the figure in
+        // front (24.7 and 34.8 pixels of daylight, where Bjorn's ring used
+        // to lose 35px of its right end behind Shawn -- visible in the
+        // capture as a green arc cut off square).
+        private const float PartyNearX = 320f;
+        private const float PartyFarX = 810f;
 
         // THE PARTY'S FAR GROUND LINE, -64 WHERE THE ENEMY'S IS -125.
         //
@@ -158,8 +214,10 @@ namespace PrincesPalace.Domain.Stage
         // The ring was not hidden by another figure. It was hidden by the
         // HUD. Measured off the capture that fix produced
         // (scratchpad formation_now/full_narrowest_fourthree_1920x1440.png):
-        // the two roster plates occupy x -920..-468 and their block's top
-        // edge is at y -161, and BuildRosterPlates is declared after both
+        // the two roster plates occupy x -920..-540 (FightScreen's
+        // PartyPlateWidth 380 centred on -730; the note here said -468 until
+        // 2026-09-09, which was the older 452-wide column) and their block's
+        // top edge is at y -161, and BuildRosterPlates is declared after both
         // stages, so they paint over anything standing there. With one
         // shared ground line the middle party slot landed at y -171.5 --
         // ten pixels INSIDE that block, ring drop and all -- while the near
@@ -169,11 +227,11 @@ namespace PrincesPalace.Domain.Stage
         // figure of three looked wrong and the other two looked fine.
         //
         // Nothing about X fixes that: for the middle slot's foot band to
-        // clear the plates' right edge it would have to stand at x >= -361,
-        // which is where the NEAR slot already is. The line has to be
-        // steeper, so the party's far end rises to -64 and the midpoint with
-        // it: -141, ring at -149, twelve pixels of daylight over the plate
-        // top. That daylight is pinned as a literal in
+        // clear the plates' right edge it would have to stand at x >= -487
+        // (its ring reaches 53 left of its mark), and the near slot is at
+        // -320. The line has to be steeper, so the party's far end rises to
+        // -64 and the midpoint with it: -141, ring at -149, twelve pixels of
+        // daylight over the plate top. That daylight is pinned as a literal in
         // FightStageAnchorsTests, because the audit that ought to have
         // caught this cannot: FightScreenTests' foot-band-versus-HUD scan
         // skips subtrees declared Inactive, and the roster plates are built
@@ -193,16 +251,37 @@ namespace PrincesPalace.Domain.Stage
         // with a 74px row, so its underside sits 220 below the top edge --
         // y 320 at the 1080-tall aspects. Odette is the tallest thing this
         // slot can hold once her 70px hover is added, at y 222. 98px clear.
+        //
+        // ASKED AGAIN 2026-09-09, once the X spread above widened: can the
+        // party's back rank come back down to the enemy's -125, so the two
+        // sides share one floor again? No, and the reason is not X. The
+        // binding number is the MIDDLE slot, whose ring has to stay above
+        // the roster block's -161 top edge and cannot get out of the block's
+        // x range at any spacing the bodies allow (see the paragraph above);
+        // -141 is the lowest it can sit, and a straight line through
+        // (-218, -141) arrives at exactly -64. The only way to have both is
+        // a per-formation Y CURVE -- authored bias on StageFormation, enemy
+        // linear and unchanged -- which would put the party's ladder at
+        // -218 / -141 / -125: a 77px step then a 16px one, two ranks 245px
+        // apart in X sitting on almost the same line. That reads as a kink
+        // in the floor rather than as depth, which is a worse failure than
+        // the one it fixes; the even ladder is kept and the shared back
+        // floor is not. Revisit if the HUD column ever moves.
         private const float PartyFarY = -64f;
 
-        // The two sides' formations, composed from the endpoints above.
-        // Authored as magnitudes out from stage centre (see StageFormation);
-        // SlotOffset applies the mirror.
+        // The two sides' formations. Authored as magnitudes out from stage
+        // centre (see StageFormation); SlotOffset applies the mirror.
+        //
+        // The enemy's endpoints ARE Near/Far; the party's are its own three
+        // constants above, except for the near GROUND LINE, which is shared
+        // deliberately -- the two front ranks stand on the one floor they
+        // face each other across, and FightScreenTests asserts it from the
+        // solved screen.
         public static readonly StageFormation Enemy = new StageFormation(Near, Far);
 
         public static readonly StageFormation Party = new StageFormation(
-            new UiVec(Near.X + PartyRetreat, Near.Y),
-            new UiVec(Far.X + PartyRetreat, PartyFarY));
+            new UiVec(PartyNearX, Near.Y),
+            new UiVec(PartyFarX, PartyFarY));
 
         // Applied on top of StageLayout.ScaleForDepth. The art is authored
         // larger than it is shown, so this is the one global shrink.
@@ -241,16 +320,18 @@ namespace PrincesPalace.Domain.Stage
         // eyeballed against.
         public const float IntentIconOffset = 72f;
 
-        // 1500 WIDE, up from 1260 -- Far.X's own move to 660 above. The party
-        // far anchor is now at -(660 + 60) = -720, so the 1260-wide frame
-        // that exactly fit the OLD +-565 range left the retreated party slot
-        // 90px outside it -- the same
+        // 1700 WIDE, up from 1500 -- PartyFarX's own move to 810 above. The
+        // party far anchor is the outermost thing this frame has to contain
+        // on either side, and the 1500-wide frame that fit -720 leaves -810
+        // 60px outside it -- the same
         // FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect this
-        // frame's own history (1000 -> 1200 -> 1260) already exists to catch.
+        // frame's own history (1000 -> 1200 -> 1260 -> 1500) already exists
+        // to catch. 850 of half-width against 810 keeps the 40px of headroom
+        // the last three widenings each had to go and find.
         // Widening the frame is still free: it draws nothing and takes no
         // clicks, it is a coordinate frame and not a surface -- see
         // FightScreen.BuildStage's own AllowOverlap on this exact panel.
-        public static readonly UiVec StageSize = new UiVec(1500f, 600f);
+        public static readonly UiVec StageSize = new UiVec(1700f, 600f);
 
         public const float InitiativeIconSize = 74f;
         public const float InitiativeIconGap = 8f;

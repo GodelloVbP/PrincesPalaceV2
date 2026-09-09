@@ -352,19 +352,27 @@ milliseconds rather than by loading a scene.
 `Domain/Stage/FightStageAnchors.cs` holds the stage's pixel anchors, and
 **formally supersedes** `StageLayout`'s header note that anchors stay in
 SceneBuilder — that note predates screen trees living in Domain.
-`PartyRetreat` (60px) pushes the party side out on the mirrored X only,
-paired with `StageSize` widening 1200 → 1260 → 1500 so the far slot still
-fits — room made for the Move cross-tween without crowding the two sides
-together.
+`StageSize` has widened 1200 → 1260 → 1500 → 1700, each time so the outermost
+slot still fits inside the frame it is declared in
+(`FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect` is what keeps
+finding it).
 
 A SIDE'S LINE IS DATA, not a scalar tweak on one shared line:
 `Domain/Stage/StageFormation.cs` is a `Near`/`Far` pair authored as
 magnitudes out from stage centre, and `FightStageAnchors` holds one per side
-(`Enemy` 300/-218 → 660/-125, `Party` 360/-218 → 720/-64, mirrored). The
-party's line is the steeper of the two because the HUD stands on its half of
-the floor: the roster block occupies x −920..−468 up to y −161 and draws
-over the stage, and a shared ground line put the middle party slot inside
-it. `SlotOffset` is still the one place a slot position is computed.
+(`Enemy` 300/-218 → 660/-125, `Party` 320/-218 → 810/-64, mirrored).
+`PartyRetreat`, the single "+60 on the mirrored X" scalar the party's
+endpoints used to be derived from, is **gone** — the two sides differ in
+both axes and by different amounts, and one number could no longer say so.
+The party's line is the steeper of the two because the HUD stands on its
+half of the floor: the roster block occupies x −920..−540 up to y −161 and
+draws over the stage, and a shared ground line put the middle party slot
+inside it. It is also the wider of the two, because three similar bipeds
+197-228px wide at the old 180px slot pitch overlapped by a third each and
+read as one clump; 245 per step makes them touch instead, and 810 is capped
+by the 4:3 canvas edge against the widest-left drawing the back slot can
+hold (Shawn's idle, 126.5 stage px left of its own mark).
+`SlotOffset` is still the one place a slot position is computed.
 
 `Domain/Stage/StageStandOff.cs` answers the other half — where an attacker
 stops. `FightBeatPlayer` used to travel a fixed FRACTION of the X gap
