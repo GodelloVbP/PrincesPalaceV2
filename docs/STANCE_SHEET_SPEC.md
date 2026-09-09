@@ -76,6 +76,7 @@ One supporting rule, learned the hard way and still true here:
 | treant | `Art/Enemies/treant/` | `treant` | idle, attack, trunk_slam, cast, hurt, defeated | **delivered as six stills, 2026-09-04** — one Stage-1 pose sheet sliced straight to `Resources/`, no Stage 2. **Reproducible:** `Art/Enemies/treant/recipe.json` replays it byte-identical |
 | forest troll | `Art/Enemies/forest_troll/` | `forest_warden` | idle, attack, attack_roar, attack_charge, hurt, defeated | not started. Protected legacy until then — its current stills were recomposited from hand-picked crops, see `Art/Enemies/forest_troll/README.md` |
 | owl | `Art/Characters/owl/` | `owl` | idle, attack, cast, hurt, defeated, victory | **delivered 2026-09-04**, the first kit commissioned under this policy. **Reproducible:** `Art/Characters/owl/recipe.json` |
+| sheep_black_ram | `Art/Characters/sheep_black_ram/` | `sheep_black_ram` | idle, attack, cast, hurt, defeated, victory | **delivered 2026-09-09** — Shawn's Black Ram transformation form (`black_ram_mode`), not a roster character. **Reproducible:** `Art/Characters/sheep_black_ram/recipe.json` replays it byte-identical |
 
 > **The troll's delivered id is `forest_warden`, not `forest_troll`.** The
 > art folder and the content id disagree and always have. Do not rename

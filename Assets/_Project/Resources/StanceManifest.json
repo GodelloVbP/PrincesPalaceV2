@@ -105,6 +105,13 @@
       "groundLineSource": "slicer",
       "breath": 1.0,
       "_breathNote": "Copied, not tuned: Shawn's own entry (Characters/sheep) sets no breath at all, which means the runtime default of 1.0 -- so this is that same number written out explicitly for the bear rather than a judgement about how hard he breathes. See Art/Characters/bear/README.md."
+    },
+    {
+      "spritePath": "Characters/sheep_black_ram",
+      "groundLine": 8,
+      "groundLineSource": "slicer",
+      "breath": 1.0,
+      "_breathNote": "Copied, not tuned: Shawn's own entry (Characters/sheep) sets no breath at all, which means the runtime default of 1.0 -- so this is that same number written out explicitly for the transformed form rather than a judgement about how hard it breathes. See Art/Characters/sheep_black_ram/README.md."
     }
   ]
 }

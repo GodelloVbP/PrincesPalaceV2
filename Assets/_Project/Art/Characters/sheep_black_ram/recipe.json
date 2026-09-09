@@ -1,0 +1,35 @@
+{
+  "_readme": "How this actor's stance stills were produced. Replay with `python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Characters/sheep_black_ram/recipe.json`; a replay that does not reproduce the committed PNGs byte for byte means the tool, its libraries or the source sheet moved under it. The recipe describes how the frames are MADE -- how they are used is content, in ContentData/.",
+  "tool": "tools/slice_actor_sheet.py",
+  "toolSha256": "ba466460bb4ed04b90d3a789c6df3259916ae42dd93ccee6363fa1af78c0d639",
+  "sheet": "Assets/_Project/Art/Characters/sheep_black_ram/sheet_poses.png",
+  "argv": [
+    "--sheet",
+    "Assets/_Project/Art/Characters/sheep_black_ram/sheet_poses.png",
+    "--actor",
+    "Characters/sheep_black_ram",
+    "--stances",
+    "idle,attack,cast,hurt,defeated,victory",
+    "--grid",
+    "3x2",
+    "--key",
+    "white_flood",
+    "--anchor",
+    "ground_band",
+    "--delivery-scale",
+    "0.8883248730964467",
+    "--pocket-max-area",
+    "4000",
+    "--max-ground-spread",
+    "6",
+    "--prune"
+  ],
+  "outputFolder": "Assets/_Project/Resources/Characters/sheep_black_ram",
+  "groundLine": 8,
+  "versions": {
+    "python": "3.14.5",
+    "pillow": "12.3.0",
+    "numpy": "2.5.1"
+  },
+  "generatedAt": "2026-09-09T09:54:45+02:00"
+}
