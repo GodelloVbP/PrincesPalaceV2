@@ -1,4 +1,4 @@
-# Bjorn — the bear veteran, six key stills
+# Bjorn — the bear veteran, nine key stills
 
 Delivered 2026-09-07. The third party member with battle art after Shawn and
 Odette, replacing `placeholder_brawler`. STR/CON Tank, and the owner's
@@ -172,3 +172,159 @@ trades full-figure coverage for a face that actually reads at dossier size
 (~107px), which the previous near-full-body crop did not.
 `characters.json`'s `portraitPath` for `bear` is `Portraits/bear`; replace
 this file and stop pointing at it the moment a painted portrait lands.
+
+## Second sheet: the Slam kit (2026-09-09)
+
+The owner drew a second sheet for Bjorn's Slam skill:
+`Assets/_Project/Art/Sheets/bjorn_combat_sheet-v1.png`, 1254x1254, 2x2 grid,
+RGB with a baked WHITE background (no checkerboard this time, unlike
+`sheet_poses.png`'s ~247-253 grey/white checker). Copied verbatim into this
+folder as `sheet_slam.png`.
+
+Three of its four cells become three additional stances of this same actor.
+Cell 2 is disregarded entirely, by the owner's own call:
+
+| cell | pose | stance |
+|---|---|---|
+| 1 (top-left) | running forward, hammer trailing low | `rush` |
+| 2 (top-right) | -- | disregarded, not sliced |
+| 3 (bottom-left) | hammer held high overhead | `overhead` |
+| 4 (bottom-right) | hammer brought down in the slam | `slam` |
+
+Bjorn faces RIGHT in every used cell, confirmed by eye against the sheet,
+matching `battleSpriteFacing: "Right"` and the first sheet's own convention.
+
+### Why this needed a tool change, not a second composite sheet
+
+`slice_actor_sheet.py`'s one-shared-canvas invariant is per ACTOR, not per
+sheet: every stance an actor ships has to sit on one canvas at one scale with
+one ground line (`ActorArtAssertions.AssertOneCanvasSize`,
+`StanceManifestValidationTests`). The slicer used to size and anchor its
+canvas from a single sheet's cells only, so slicing the new sheet as a
+separate run would have produced a SECOND canvas and a second scale for the
+same actor — exactly the failure mode this file's own §4a in
+`docs/ART_PIPELINE.md` warns about. Hand-pasting the three new cells into a
+composite sheet alongside the old six was the other obvious option and was
+rejected for the same reason the spell slicer's own multi-source `sources`
+convention exists: a hand-assembled source is not reproducible from anything
+committed, and this actor already carries a `recipe.json` earning it
+`groundLineSource: "slicer"` — silently downgrading it to an
+unreproducible composite would have thrown that away.
+
+`tools/slice_actor_sheet.py` now accepts more than one `--sheet`, each with
+its own `--grid`/`--stances`/`--key`/`--pocket-max-area`/`--delivery-scale`,
+gathered into one flat list of named pieces before the canvas is ever sized
+— see the tool's own module docstring, "More than one sheet, one actor". A
+one-sheet actor (every other recipe committed today: owl, treant, the ram)
+replays through the exact same code at n=1, unchanged; this is proven by
+`tools/slice_actor_sheet_test.py` and by replaying all four existing recipes
+during this change (byte-identical against the committed art in every case).
+
+### Scale derivation — the numbers
+
+A second AI generation of the same character is never drawn at the first
+generation's pixel size, so the new sheet needed its own `--delivery-scale`,
+derived from a feature that should be a constant absolute size regardless of
+pose or generation: the hammer head. Its copper trim shares a hue with the
+shaft/armor, so instead of the trim or an axis-aligned bbox (which shifts
+with the head's rotation from pose to pose), the isolated feature was the
+head's own CENTRAL DARK-CHARCOAL FACE — the one part of the head with a
+color (neutral, low-saturation grey) nothing else on the bear shares — masked
+by hue/saturation, holes from the specular highlight closed with a small
+morphological dilation, then measured two ways: its PCA-oriented long/short
+axis extents, and its raw pixel area.
+
+Measured on the ORIGINAL, undelivered sheets (native pixels, before any
+`--delivery-scale`):
+
+| sheet | cell | long axis | short axis | geometric mean | area (px) |
+|---|---|---:|---:|---:|---:|
+| `sheet_poses.png` | attack | 139.7 | 130.3 | 134.9 | 5520 |
+| `sheet_poses.png` | idle | 138.3 | 142.4 | 140.3 | 4416 |
+| `bjorn_combat_sheet-v1.png` | overhead | 156.8 | 145.8 | 151.2 | 7183 |
+| `bjorn_combat_sheet-v1.png` | slam | 156.8 | 171.7 | 164.1 | 7406 |
+| `bjorn_combat_sheet-v1.png` | rush | 154.0 | 168.5 | 161.1 | 6085 |
+
+Old-sheet average (attack, idle): geometric-mean 137.6. New-sheet average
+(overhead, slam, rush): geometric-mean 158.8. Axis-based ratio
+137.6 / 158.8 = 0.8665; the area-based cross-check
+(`sqrt(old_area / new_area)`) gives 0.8492 — about 2% apart, which is the
+manual crop-box-margin noise in an by-eye-cropped measurement, not a real
+disagreement. Averaging the two: ratio ~0.858.
+
+    new_delivery_scale = old_delivery_scale x ratio
+                        = 0.8632286995515696 x 0.858
+                        ~= 0.74
+
+**0.74 was used exactly**, then checked two more ways before touching real
+art: (1) a side-by-side composite of the committed `idle.png`/`attack.png`
+next to a SCRATCH-sliced `rush`/`overhead`/`slam` at 0.74 (never against
+`Resources/Characters/bear` first — that is real, delivered art, and this
+tool is destructive) showed consistent body/head/boot proportions across all
+five figures by eye; (2) `sqrt(LCC-mass)` for the three new stances at 0.74
+came out 303.6 / 312.6 / 289.4 — squarely inside the 285-312 band the
+existing `cast` stance (302.1) already occupies, which is the right
+comparison, since `rush`/`overhead`/`slam` are all wide, extended-limb poses
+like `cast` rather than close-in poses like `idle`/`attack`. No further
+adjustment was made.
+
+### Canvas, ground line
+
+Canvas grew from **486x467 to 512x536** (width +26, height +69) — mostly
+upward, to fit the `overhead` pose's raised hammer, plus a little wider for
+`rush`'s forward lunge and `slam`'s extended swing reaching further from
+centre than any of the original six poses. **`groundLine` is unchanged at
+74.** The six original stances' alpha-bbox crops were sha256-compared
+against the previously committed PNGs and are pixel-identical — the canvas
+resize repositions them (further from the top-left origin; the anchor point
+moves when the shared canvas grows) but changes not one opaque pixel of
+their own art.
+
+`rush`'s pose has the back leg lifted mid-stride, which is exactly the shape
+of pose the `ground_band` anchor exists to get right (see the tool's own
+"Anchoring" section) — its largest-connected-component + ground-band
+measurement correctly picked the PLANTED front foot as the ground contact,
+not the raised back one. Checked, not assumed: all nine stances landed
+within 0px of each other (`--max-ground-spread`'s default is 6), so no
+`--nudge` was needed anywhere in this delivery.
+
+### Ceiling check
+
+`overhead`'s topmost opaque pixel sits **454px above its own groundLine**.
+This file's own Sizing section above (written 2026-09-07) compared the
+bear's height to "384px, golem" — `Domain/Stage/FightStageAnchors.cs`'s own
+2026-09-08 re-measurement note says that 384/golem figure "was never
+measured off the art" and is superseded: the current documented tallest
+actor on record is **forest_warden at 483px** above its own manifest ground
+line, with the stage band closing by 66 units at that figure (not the 18
+units the stale note claimed). Y is shared between the enemy and party sides
+(only X differs, per `FightStageAnchors.cs`'s C4 note), so this comparison
+applies directly to a party member too.
+
+Bjorn's 454px sits under the current 483px reference, with less headroom
+than most of the roster but not a new tallest actor. **Not shrunk to fit** —
+`overhead` is a momentary wind-up pose, per this job's own brief, and the
+owner decides whether that margin is comfortable enough as delivered.
+
+### Provenance
+
+**Still reproducible.** `recipe.json` gained a `"sheets"` array (two
+sources) alongside the `"argv"` replay actually reads — see the tool's
+module docstring for why `"argv"` alone is what a replay needs, in both the
+one-sheet and multi-sheet shape. Verified 2026-09-09: replaying the recipe
+reproduces all nine committed stills byte for byte (sha256-compared), and
+the four other single-sheet recipes committed elsewhere (owl, treant, the
+ram) were replayed unchanged during this same check, into scratch, never
+against their own delivered art.
+
+```bash
+python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Characters/bear/recipe.json
+```
+
+`toolSha256` in this recipe now differs from owl/treant/the ram's own
+recipes, because the tool itself changed to support more than one sheet. No
+test in `Assets/_Project/Scripts/Tests` compares `toolSha256` values (checked
+by grep before this delivery) — `load_recipe`'s own version-mismatch NOTE is
+the only place that number is read back, and it degrades gracefully (a
+printed warning, not a failure) — so those three recipes were left
+untouched rather than rewritten for a hash nothing enforces.

@@ -57,6 +57,56 @@ Optional:
                                folder that this run did not (re)write
     --quiet
 
+## More than one sheet, one actor
+
+An actor's stances do not have to come from one sheet. Bjorn's Slam kit was
+commissioned as a second sheet after his original six stances shipped, and a
+second AI generation of the same character is never pixel-identical to the
+first at the same nominal size -- there is no scale to hold constant across
+sheets except by measuring one. **`--sheet`, `--grid`, `--stances`, `--key`,
+`--pocket-max-area` and `--delivery-scale` may each be repeated, once per
+sheet**, in the same relative order:
+
+    python tools/slice_actor_sheet.py --actor Characters/bear \\
+        --sheet Assets/_Project/Art/Characters/bear/sheet_poses.png \\
+        --grid 3x2 --stances idle,attack,cast,hurt,defeated,victory \\
+        --key white_flood --pocket-max-area 4000 --delivery-scale 0.8632286995515696 \\
+        --sheet Assets/_Project/Art/Characters/bear/sheet_slam.png \\
+        --grid 2x2 --stances rush,-,overhead,slam \\
+        --key white_flood --pocket-max-area 4000 --delivery-scale 0.503 \\
+        --prune
+
+A cell a later sheet doesn't use is skipped the same way any sheet skips a
+cell: name it `-` (or `skip`) in that sheet's own `--stances`. There is no
+separate cell selector, because the stance list already says which cells are
+used and in what name/order.
+
+Rules that do not change per sheet, because they describe the ACTOR rather
+than any one source image: `--actor`, `--anchor`, `--nudge`, `--max-ground-spread`,
+`--drop-far-components-px`, `--out-root`, `--prune`. Give each of those once,
+same as always.
+
+`--grid`/`--key`/`--pocket-max-area`/`--delivery-scale` may also be given
+**once** with more than one `--sheet` present, in which case that one value
+applies to every sheet -- most multi-sheet actors will still want one `--key`
+and one `--pocket-max-area` for every sheet and only the per-sheet scale
+genuinely differs. Give each exactly once per `--sheet`, or exactly once for
+all of them; any other count is refused. `--stances` has no shared default
+(the cells differ every time) and must be given exactly once per `--sheet`.
+
+**A stance name may not repeat across sheets.** Two sheets each naming a cell
+`idle` would silently let whichever sheet is processed second win, which is
+exactly the kind of collision `slice_spell_sheet.py`'s multi-source `sources`
+list already refuses for spell frames -- this is the same rule for actor
+stances.
+
+The union canvas, its one ground line, and every downstream assertion
+(`_assert_one_ground_line`, `ActorArtAssertions.AssertOneCanvasSize`) do not
+know or care how many sheets a stance came from: every named cell from every
+sheet is gathered into one flat list of pieces before the canvas is ever
+sized, so a two-sheet actor is composited exactly like a one-sheet actor with
+more cells.
+
 ## Recipes
 
 Every run against the real `Resources` tree writes
@@ -84,6 +134,19 @@ just read, so the only thing that could change is the timestamp, and a
 verification run that dirties the tree is a verification nobody runs twice. It
 reports whether this file's hash still matches the one recorded, which is the
 warning that a byte-identical result is no longer guaranteed.
+
+**A one-sheet recipe's top level is unchanged**: `"sheet"` is a single path
+and `"argv"` has one `--sheet`. A **multi-sheet** recipe additionally carries
+a `"sheets"` array -- one entry per source, each naming its own sheet, grid,
+stance list, key mode, pocket-max-area and delivery scale -- purely for a
+person reading the file; replay never looks at it. `"argv"` is the one thing
+`--recipe` actually reads, for both shapes: it is the repeated
+`--sheet`/`--grid`/`--stances`/`--key`/`--pocket-max-area`/`--delivery-scale`
+flags described in "More than one sheet, one actor" above, so a two-sheet
+recipe replays through the exact same argument parser as a one-sheet one, one
+`--sheet` occurrence per source. This is why a one-sheet recipe never had to
+change shape to make room for the two-sheet case: `"argv"` already said
+everything a replay needs, and it still does.
 
 It never writes `.meta` files either. Unity generates those on import and
 `Editor/StanceSpriteImporter.cs` sets the importer settings a stance PNG
@@ -576,7 +639,7 @@ def recipe_path(actor_arg):
     return os.path.join(ART_ROOT, parts[0], parts[1], RECIPE_NAME)
 
 
-def canonical_argv(args):
+def canonical_argv(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far_components_px, prune):
     """The run, with every default made explicit.
 
     EXPLICIT DEFAULTS ON PURPOSE. A recipe recording only what was typed would
@@ -584,23 +647,33 @@ def canonical_argv(args):
     actors sliced before the change. Writing them all out costs eight lines of
     JSON and makes the file a description of the run rather than of the
     keystrokes.
+
+    ONE `--sheet` GROUP PER ENTRY IN `sheet_specs`, IN ORDER. A one-sheet actor
+    (`len(sheet_specs) == 1`) emits exactly the flags this function has always
+    emitted for it -- same flags, same values -- so an existing single-sheet
+    recipe's shape is not something this had to special-case, it falls out of
+    the general case at n=1.
     """
-    argv = [
-        "--sheet", args.sheet.replace("\\", "/"),
-        "--actor", args.actor,
-        "--stances", args.stances,
-        "--grid", args.grid,
-        "--key", args.key,
-        "--anchor", args.anchor,
-        "--delivery-scale", repr(float(args.delivery_scale)),
-        "--pocket-max-area", str(args.pocket_max_area),
-        "--max-ground-spread", str(args.max_ground_spread),
+    argv = []
+    for spec in sheet_specs:
+        argv += [
+            "--sheet", spec["sheet"].replace("\\", "/"),
+            "--grid", spec["grid"],
+            "--stances", spec["stances"],
+            "--key", spec["key"],
+            "--pocket-max-area", str(spec["pocket_max_area"]),
+            "--delivery-scale", repr(float(spec["delivery_scale"])),
+        ]
+    argv += [
+        "--actor", actor,
+        "--anchor", anchor,
+        "--max-ground-spread", str(max_ground_spread),
     ]
-    for nudge in args.nudge or []:
+    for nudge in nudges or []:
         argv += ["--nudge", nudge]
-    if args.drop_far_components_px is not None:
-        argv += ["--drop-far-components-px", str(args.drop_far_components_px)]
-    if args.prune:
+    if drop_far_components_px is not None:
+        argv += ["--drop-far-components-px", str(drop_far_components_px)]
+    if prune:
         argv.append("--prune")
     return argv
 
@@ -623,8 +696,16 @@ def _versions():
     ])
 
 
-def write_recipe(args, ground_line, out_dir):
-    path = recipe_path(args.actor)
+def write_recipe(sheet_specs, actor, anchor, max_ground_spread, nudges, drop_far_components_px,
+                  prune, ground_line, out_dir):
+    """`sheet_specs` is the ordered list built in `main()` -- see its docstring
+    there. ONE SHEET keeps the exact old top-level shape (`"sheet"`: a single
+    path, next to `"argv"`) so a one-sheet actor's recipe is unchanged from
+    before this file supported more than one. MORE THAN ONE additionally
+    writes a `"sheets"` array for a person reading the file; `"argv"` is what
+    `load_recipe`/`--recipe` actually replay, for both shapes alike.
+    """
+    path = recipe_path(actor)
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     recipe = collections.OrderedDict()
@@ -637,8 +718,22 @@ def write_recipe(args, ground_line, out_dir):
     )
     recipe["tool"] = "tools/slice_actor_sheet.py"
     recipe["toolSha256"] = _sha256(os.path.abspath(__file__))
-    recipe["sheet"] = args.sheet.replace("\\", "/")
-    recipe["argv"] = canonical_argv(args)
+    if len(sheet_specs) == 1:
+        recipe["sheet"] = sheet_specs[0]["sheet"].replace("\\", "/")
+    else:
+        recipe["sheets"] = [
+            collections.OrderedDict([
+                ("sheet", spec["sheet"].replace("\\", "/")),
+                ("grid", spec["grid"]),
+                ("stances", spec["stances"]),
+                ("key", spec["key"]),
+                ("pocket_max_area", spec["pocket_max_area"]),
+                ("delivery_scale", spec["delivery_scale"]),
+            ])
+            for spec in sheet_specs
+        ]
+    recipe["argv"] = canonical_argv(sheet_specs, actor, anchor, max_ground_spread,
+                                     nudges, drop_far_components_px, prune)
     recipe["outputFolder"] = out_dir.replace("\\", "/")
     recipe["groundLine"] = ground_line
     recipe["versions"] = _versions()
@@ -665,13 +760,19 @@ def load_recipe(path):
     if not argv:
         sys.exit(f"{path} has no argv -- there is nothing to replay.")
 
-    sheet = recipe.get("sheet", "")
-    if not os.path.isfile(sheet):
-        sys.exit(
-            f"{path} was cut from '{sheet}', and that file is not there. "
-            "A recipe without its source sheet cannot be replayed -- recover the sheet "
-            "from git rather than slicing something else under the same id."
-        )
+    # Checked against EVERY source: a multi-sheet recipe's "sheets" array
+    # names them all, a one-sheet recipe's "sheet" names the one.
+    if "sheets" in recipe:
+        sheets = [entry.get("sheet", "") for entry in recipe["sheets"]]
+    else:
+        sheets = [recipe.get("sheet", "")]
+    for sheet in sheets:
+        if not os.path.isfile(sheet):
+            sys.exit(
+                f"{path} was cut from '{sheet}', and that file is not there. "
+                "A recipe without its source sheet cannot be replayed -- recover the sheet "
+                "from git rather than slicing something else under the same id."
+            )
 
     recorded = recipe.get("toolSha256")
     if recorded and recorded != _sha256(os.path.abspath(__file__)):
@@ -820,33 +921,46 @@ def parse_nudges(nudge_args):
 SKIP_TOKENS = {"-", "skip", "none", ""}
 
 
-def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
-            delivery_scale, nudges, drop_far_px, out_root, prune, verbose,
-            pocket_max_area=POCKET_MAX_AREA, max_ground_spread=6):
+def _cut_one_sheet(spec, label, drop_far_px, verbose, seen_names):
+    """One sheet's tight-cropped native-size pieces per named cell -- the old
+    single-sheet Pass 0, unchanged in what it does per cell. `seen_names` is
+    shared across every sheet an actor draws from, so a stance name repeated
+    on a second sheet is caught here rather than silently overwriting the
+    first sheet's piece of that name later.
+
+    Returns [(name, piece_RGBA, mask_bool), ...].
+    """
+    sheet_path = spec["sheet"]
     if "/Resources/" in os.path.abspath(sheet_path).replace("\\", "/"):
         sys.exit(f"Refusing to read from a Resources/ path (would compound a previous pass): {sheet_path}")
     if not os.path.isfile(sheet_path):
         sys.exit(f"Missing source sheet: {sheet_path}")
 
+    grid_arg = spec["grid"]
+    key_mode = spec["key"]
+    pocket_max_area = spec["pocket_max_area"]
+    delivery_scale = spec["delivery_scale"]
     rows, cols = parse_grid(grid_arg)
-    out_dir, label = parse_actor(actor_arg, out_root)
-    names = [s.strip() for s in stances_arg.split(",")]
+    names = [s.strip() for s in spec["stances"].split(",")]
     if len(names) != rows * cols:
-        sys.exit(f"--stances has {len(names)} name(s) but the {grid_arg} grid has {rows * cols} cell(s)")
+        sys.exit(f"--stances has {len(names)} name(s) but the {grid_arg} grid has {rows * cols} cell(s) "
+                  f"(sheet={sheet_path})")
 
-    print(f"[{label}] sheet={sheet_path} grid={grid_arg} key={key_mode} anchor={anchor_mode} "
-          f"delivery_scale={delivery_scale} -> {out_dir}")
+    print(f"[{label}] sheet={sheet_path} grid={grid_arg} key={key_mode} "
+          f"delivery_scale={delivery_scale}")
 
     keyed = key_sheet(Image.open(sheet_path), key_mode, pocket_max_area)
     mask = opaque_mask(keyed)
     boxes = cut_cells(mask, keyed.width, keyed.height, rows, cols)
 
-    # Pass 0: tight-cropped native-size pieces per named cell.
     pieces = []  # [(name, piece_RGBA, mask_bool)]
     for i, box in enumerate(boxes):
         name = names[i] if i < len(names) else None
         if name is None or name.lower() in SKIP_TOKENS:
             continue
+        if name in seen_names:
+            sys.exit(f"[{label}]: stance '{name}' is named by more than one sheet -- "
+                      "names must be unique across every --sheet an actor draws from.")
         if box is None:
             print(f"  WARNING: '{name}' cell is empty (no opaque pixels) -- skipped")
             continue
@@ -876,12 +990,36 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
                 if verbose:
                     print(f"  '{name}': dropped a stray component beyond {drop_far_px}px")
 
-        content_h = mask_bool.shape[0]
         if verbose:
             core = largest_connected_component(mask_bool)
             print(f"  '{name}': content {piece.width}x{piece.height}  "
                   f"sqrt(LCC-mass)={np.sqrt(core.sum()):.1f}")
+        seen_names.add(name)
         pieces.append((name, piece, mask_bool))
+
+    return pieces
+
+
+def process(sheet_specs, actor_arg, anchor_mode, nudges, drop_far_px, out_root, prune, verbose,
+            max_ground_spread=6):
+    """`sheet_specs`: ordered list of dicts, each `{sheet, grid, stances, key,
+    pocket_max_area, delivery_scale}` -- one entry per `--sheet` on the
+    command line, in order. A one-sheet actor passes a one-entry list; this
+    function does not otherwise know or care how many sheets an actor has,
+    because everything past Pass 0 already worked over a flat list of named
+    pieces regardless of which sheet cut them.
+    """
+    out_dir, label = parse_actor(actor_arg, out_root)
+    print(f"[{label}] anchor={anchor_mode} -> {out_dir}")
+
+    # Pass 0: every sheet's named cells, gathered into one flat list. Order
+    # across sheets does not matter to anything downstream -- canvas size,
+    # ground line and anchor are all computed as a max/median over the whole
+    # list, not sheet by sheet.
+    seen_names = set()
+    pieces = []  # [(name, piece_RGBA, mask_bool)]
+    for spec in sheet_specs:
+        pieces.extend(_cut_one_sheet(spec, label, drop_far_px, verbose, seen_names))
 
     if not pieces:
         sys.exit(f"[{label}]: no stances produced at all.")
@@ -961,6 +1099,25 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
     return written, ground_line, out_dir
 
 
+def _expand_per_sheet(values, default, n, flag_name):
+    """`values` is what argparse collected for a flag that MAY be repeated
+    once per `--sheet`. Zero occurrences means "use the default for every
+    sheet" (the one-sheet-actor behaviour, unchanged); one occurrence means
+    "use this value for every sheet" (most multi-sheet actors want one
+    `--key`/`--pocket-max-area` even with two sheets); `n` occurrences means
+    one value per sheet, in order. Anything else is ambiguous and refused
+    rather than guessed at.
+    """
+    if not values:
+        return [default] * n
+    if len(values) == 1:
+        return values * n
+    if len(values) == n:
+        return list(values)
+    sys.exit(f"--{flag_name} was given {len(values)} time(s) but there are {n} --sheet "
+              f"entries: give it once (applies to every sheet) or once per --sheet.")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--recipe", default=None, metavar="PATH",
@@ -968,27 +1125,48 @@ def main():
                          "the file, so what runs is the invocation that produced the committed "
                          "art rather than a reconstruction of it. Refuses if the source sheet "
                          "named in the recipe is missing.")
-    ap.add_argument("--sheet", help="Path to the Stage-1 design sheet")
-    ap.add_argument("--actor", help="'Enemies/<id>' or 'Characters/<id>'")
-    ap.add_argument("--stances",
-                    help="Comma-separated stance names, row-major, one per grid cell. "
-                         "Use '-' to skip a cell.")
-    ap.add_argument("--grid", default="3x2", help="COLSxROWS, default 3x2 (six cells)")
-    ap.add_argument("--key", default="alpha", choices=("alpha", "white_flood", "green"))
-    ap.add_argument("--anchor", default="ground_band", choices=("ground_band", "centroid"))
-    ap.add_argument("--delivery-scale", type=float, default=1.0)
-    ap.add_argument("--nudge", action="append", metavar="STANCE:DX,DY", default=[])
-    ap.add_argument("--drop-far-components-px", type=int, default=None)
+    ap.add_argument("--sheet", action="append", default=[],
+                    help="Path to a Stage-1 design sheet. Repeatable -- see 'More than one sheet, "
+                         "one actor' in this file's module docstring -- with --grid/--stances/--key/"
+                         "--pocket-max-area/--delivery-scale each given once per --sheet, or once for "
+                         "all of them.")
+    ap.add_argument("--actor", help="'Enemies/<id>' or 'Characters/<id>'. One per actor, whatever "
+                                    "the number of sheets.")
+    ap.add_argument("--stances", action="append", default=[],
+                    help="Comma-separated stance names for one --sheet, row-major, one per grid "
+                         "cell. Use '-' to skip a cell. Exactly one --stances per --sheet -- there "
+                         "is no default, because the cells differ every time.")
+    ap.add_argument("--grid", action="append", default=[],
+                    help="COLSxROWS for one --sheet (default 3x2 if omitted entirely). Once per "
+                         "--sheet, or once for all of them.")
+    ap.add_argument("--key", action="append", default=[], choices=("alpha", "white_flood", "green"),
+                    help="Keying mode for one --sheet (default alpha if omitted entirely). Once per "
+                         "--sheet, or once for all of them.")
+    ap.add_argument("--anchor", default="ground_band", choices=("ground_band", "centroid"),
+                    help="Per actor, not per sheet -- how every stance from every sheet is anchored.")
+    ap.add_argument("--delivery-scale", action="append", default=[], type=float,
+                    help="Uniform multiplier for one --sheet's pieces, applied after native-scale "
+                         "cropping (default 1.0 if omitted entirely). THE reason a second sheet needs "
+                         "its own value: a second AI generation of the same subject is drawn at its "
+                         "own pixel size, never the first sheet's. Once per --sheet, or once for all "
+                         "of them -- rarely useful shared, since this is the one thing that usually "
+                         "differs sheet to sheet.")
+    ap.add_argument("--nudge", action="append", metavar="STANCE:DX,DY", default=[],
+                    help="Per actor -- a stance name is unique across every sheet, so one flat list "
+                         "covers all of them.")
+    ap.add_argument("--drop-far-components-px", type=int, default=None,
+                    help="Per actor, applied to every sheet's pieces alike.")
     ap.add_argument("--max-ground-spread", type=int, default=6, metavar="PX",
                     help="How far apart the stances' lowest rows may sit before the one-ground-line "
                          "check refuses the output (default 6). Raise it ONLY for a deliberate hover: an "
                          "actor whose airborne stances are nudged up while its defeated pose stays on the "
                          "floor. The accidental float the default catches is still caught for everyone else.")
-    ap.add_argument("--pocket-max-area", type=int, default=POCKET_MAX_AREA,
+    ap.add_argument("--pocket-max-area", action="append", default=[], type=int,
                     help="white_flood only: largest enclosed neutral-bright pocket (px) still keyed "
-                         "to transparent. The 200px default catches specks; a sheet whose art "
-                         "closes around a real hole of checkerboard (the treant's roots enclose "
-                         "~1500px) needs this raised for that one run.")
+                         "to transparent for one --sheet (default 200 if omitted entirely). The 200px "
+                         "default catches specks; a sheet whose art closes around a real hole of "
+                         "checkerboard (the treant's roots enclose ~1500px) needs this raised for that "
+                         "one sheet. Once per --sheet, or once for all of them.")
     ap.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
     ap.add_argument("--prune", action="store_true")
     ap.add_argument("--quiet", action="store_true")
@@ -996,7 +1174,11 @@ def main():
 
     # A REPLAY IS THE RECORDED RUN, not a run that borrows some of it. Every
     # argument is re-parsed out of the recipe, so nothing typed alongside
-    # --recipe can quietly change what the recipe claims to reproduce.
+    # --recipe can quietly change what the recipe claims to reproduce. This is
+    # the ONE code path for both a one-sheet and a multi-sheet recipe: a
+    # recipe's "argv" is always the full repeated --sheet/--grid/--stances/
+    # --key/--pocket-max-area/--delivery-scale flags, one --sheet occurrence
+    # per source, so parsing it here needs no shape-specific branch at all.
     replaying = False
     if args.recipe:
         argv, _ = load_recipe(args.recipe)
@@ -1004,21 +1186,39 @@ def main():
         args = ap.parse_args(argv)
         replaying = True
 
-    for required in ("sheet", "actor", "stances"):
-        if not getattr(args, required):
-            ap.error(f"--{required} is required (or give --recipe, which carries it)")
+    if not args.sheet:
+        ap.error("--sheet is required (at least one; or give --recipe, which carries it)")
+    if not args.actor:
+        ap.error("--actor is required (or give --recipe, which carries it)")
+
+    n = len(args.sheet)
+    if len(args.stances) != n:
+        ap.error(f"--stances must be given exactly once per --sheet ({n} --sheet entries, "
+                  f"got {len(args.stances)} --stances)")
+
+    grids = _expand_per_sheet(args.grid, "3x2", n, "grid")
+    keys = _expand_per_sheet(args.key, "alpha", n, "key")
+    pocket_max_areas = _expand_per_sheet(args.pocket_max_area, POCKET_MAX_AREA, n, "pocket-max-area")
+    delivery_scales = _expand_per_sheet(args.delivery_scale, 1.0, n, "delivery-scale")
+
+    sheet_specs = [
+        {
+            "sheet": args.sheet[i],
+            "grid": grids[i],
+            "stances": args.stances[i],
+            "key": keys[i],
+            "pocket_max_area": pocket_max_areas[i],
+            "delivery_scale": delivery_scales[i],
+        }
+        for i in range(n)
+    ]
 
     _, ground_line, out_dir = process(
-        sheet_path=args.sheet,
+        sheet_specs=sheet_specs,
         actor_arg=args.actor,
-        stances_arg=args.stances,
-        grid_arg=args.grid,
-        key_mode=args.key,
         anchor_mode=args.anchor,
-        delivery_scale=args.delivery_scale,
         nudges=parse_nudges(args.nudge),
         drop_far_px=args.drop_far_components_px,
-        pocket_max_area=args.pocket_max_area,
         max_ground_spread=args.max_ground_spread,
         out_root=args.out_root,
         prune=args.prune,
@@ -1031,7 +1231,8 @@ def main():
     if replaying:
         print("  recipe: unchanged (this was a replay)")
     elif os.path.normpath(args.out_root) == os.path.normpath(DEFAULT_OUT_ROOT):
-        write_recipe(args, ground_line, out_dir)
+        write_recipe(sheet_specs, args.actor, args.anchor, args.max_ground_spread,
+                     args.nudge, args.drop_far_components_px, args.prune, ground_line, out_dir)
     else:
         print(f"  (--out-root is not {DEFAULT_OUT_ROOT}; no recipe written)")
 

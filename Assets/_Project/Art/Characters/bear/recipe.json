@@ -1,25 +1,54 @@
 {
   "_readme": "How this actor's stance stills were produced. Replay with `python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Characters/bear/recipe.json`; a replay that does not reproduce the committed PNGs byte for byte means the tool, its libraries or the source sheet moved under it. The recipe describes how the frames are MADE -- how they are used is content, in ContentData/.",
   "tool": "tools/slice_actor_sheet.py",
-  "toolSha256": "ba466460bb4ed04b90d3a789c6df3259916ae42dd93ccee6363fa1af78c0d639",
-  "sheet": "Assets/_Project/Art/Characters/bear/sheet_poses.png",
+  "toolSha256": "327b329d3c0fdfe6637e52930f3ee5c25d6a2175f506be03f47b5729877ee602",
+  "sheets": [
+    {
+      "sheet": "Assets/_Project/Art/Characters/bear/sheet_poses.png",
+      "grid": "3x2",
+      "stances": "idle,attack,cast,hurt,defeated,victory",
+      "key": "white_flood",
+      "pocket_max_area": 4000,
+      "delivery_scale": 0.8632286995515696
+    },
+    {
+      "sheet": "Assets/_Project/Art/Sheets/bjorn_combat_sheet-v1.png",
+      "grid": "2x2",
+      "stances": "rush,-,overhead,slam",
+      "key": "white_flood",
+      "pocket_max_area": 4000,
+      "delivery_scale": 0.74
+    }
+  ],
   "argv": [
     "--sheet",
     "Assets/_Project/Art/Characters/bear/sheet_poses.png",
-    "--actor",
-    "Characters/bear",
-    "--stances",
-    "idle,attack,cast,hurt,defeated,victory",
     "--grid",
     "3x2",
+    "--stances",
+    "idle,attack,cast,hurt,defeated,victory",
     "--key",
     "white_flood",
-    "--anchor",
-    "ground_band",
-    "--delivery-scale",
-    "0.8632286995515696",
     "--pocket-max-area",
     "4000",
+    "--delivery-scale",
+    "0.8632286995515696",
+    "--sheet",
+    "Assets/_Project/Art/Sheets/bjorn_combat_sheet-v1.png",
+    "--grid",
+    "2x2",
+    "--stances",
+    "rush,-,overhead,slam",
+    "--key",
+    "white_flood",
+    "--pocket-max-area",
+    "4000",
+    "--delivery-scale",
+    "0.74",
+    "--actor",
+    "Characters/bear",
+    "--anchor",
+    "ground_band",
     "--max-ground-spread",
     "6",
     "--prune"
@@ -31,5 +60,5 @@
     "pillow": "12.3.0",
     "numpy": "2.5.1"
   },
-  "generatedAt": "2026-09-07T21:52:13+02:00"
+  "generatedAt": "2026-09-09T10:20:41+02:00"
 }
