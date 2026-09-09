@@ -344,6 +344,31 @@ using PrincesPalace.Domain.Content;
         // authoring this can only ever add.
         public float Shake;
 
+        // WHAT THE FORM THE ACTOR IS WEARING ADDS TO THIS BLOW -- the contact
+        // effect a TransformHitCue authored, recorded at CommitBeat for any
+        // beat the holder landed damage with.
+        //
+        // A SECOND SLOT RATHER THAN A MERGE INTO Vfx, and the reason is the
+        // cue rather than the layers. A layered presentation's hitCueSeconds
+        // is THE instant the blow lands and nothing derives it
+        // (docs/ART_PIPELINE.md 5b); two presentations have two of them, and
+        // appending one's layers to the other's array would silently make the
+        // form's contact effect play against the skill's cue -- or force a
+        // choice between two authored cues that both mean "now". sfxPath and
+        // castSfxPath collide the same way, one clip each. Kept apart, each
+        // presentation keeps its own clock and the view plays both: a headbutt
+        // that already draws something draws both, which is the whole
+        // requirement.
+        //
+        // Null for every beat in the game except one worn form's landed hits.
+        public SpellPresentation FormVfx;
+
+        // AND THE FLOOR UNDER ITS HIT-STOP, in seconds -- the twin of Shake
+        // above, for the one reaction that had no authored floor at all.
+        // FightBeatPlayer.HitStopFor takes the larger of the blow's own weight
+        // and this. Zero for everything that authored none.
+        public float FormHitStopSeconds;
+
         // Vitals as they stood BEFORE this beat's action. Only a spell beat
         // needs it: the bolt takes most of a second to arrive, and dropping the
         // target's HP the instant the beat opens shows the damage before the

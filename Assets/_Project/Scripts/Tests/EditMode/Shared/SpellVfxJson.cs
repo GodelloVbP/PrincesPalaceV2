@@ -42,6 +42,19 @@ namespace PrincesPalace.Domain.Tests
         internal static SpellPresentation OwnVfx(string owner) =>
             Presentation(TopLevelObject(owner, "vfx"));
 
+        // THE CONTACT EFFECT A TRANSFORM'S WORN FORM PLAYS, nested two objects
+        // deep at `transform.hit.vfx`.
+        //
+        // A THIRD PLACE A SPELL FOLDER CAN BE NAMED, and it needs saying
+        // explicitly for the same reason the element case above does: it is a
+        // played path, so the provenance and frame-range lints have to see it,
+        // and a walk that only knew about `vfx` would declare it absent and
+        // pass. Reached through TopLevelObject at each hop rather than a plain
+        // ObjectFor, so a `vfx` sitting on the skill itself cannot be reported
+        // as the form's.
+        internal static SpellPresentation TransformHitVfx(string skill) =>
+            Presentation(TopLevelObject(TopLevelObject(TopLevelObject(skill, "transform"), "hit"), "vfx"));
+
         // A vfx block, as the presentation the game resolves it to.
         internal static SpellPresentation Presentation(string block)
         {

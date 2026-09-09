@@ -68,6 +68,75 @@ MonoBehaviour:
       temporaryHealthPercent: 25
       splashPercent: 50
       spritePath: Characters/sheep_black_ram
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers:
+          - id: ram_burst
+            render: sprite
+            place: target-centre
+            follow: 0
+            at: release
+            offset: 0
+            path: Spells/black_ram_impact
+            seconds: 0.46
+            fps: 0
+            startFrame: 0
+            until: once
+            fade: 0
+            dx: 0
+            dy: 0
+            scale: 1
+            size: 520
+            facing: auto
+            sort: effects
+            impactX: -1
+            impactY: -1
+            aspect: 0
+            travelSeconds: 0
+            travelDelay: 0
+            emitter:
+              path: 
+              rate: 0
+              burst: 0
+              window: 0
+              sourceDx: 0
+              sourceDy: 0
+              spreadDegrees: 0
+              aimDegrees: 0
+              speedMin: 0
+              speedMax: 0
+              inherit: 0
+              drag: 0
+              gravity: 0
+              lifeMin: 0
+              lifeMax: 0
+              sizeMin: 1
+              sizeMax: 1
+              spinMin: 0
+              spinMax: 0
+              fadeFrom: 1
+              endScale: 1
+              seed: 0
+              weights: []
+          layerFormat: 1
+          hitCueSeconds: 0
+        shake: 0.55
+        hitStopSeconds: 0.14
     CooldownTurns: 5
     PlayerSelectable: 1
     Shake: 0.7

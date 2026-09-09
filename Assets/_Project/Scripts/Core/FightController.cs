@@ -567,6 +567,7 @@ namespace PrincesPalace
             // given a way to hold one.
             beatPlayer.PlayVfx = beat => PlaySpellVfx(beat);
             beatPlayer.PlayContactFx = PlayContactFx;
+            beatPlayer.PlayFormHitFx = PlayFormHitFx;
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
             beatPlayer.StopVfx = StopSpellVfx;

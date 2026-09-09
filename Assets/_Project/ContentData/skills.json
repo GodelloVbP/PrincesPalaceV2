@@ -240,7 +240,28 @@
         "speedPercent": 30,
         "temporaryHealthPercent": 25,
         "splashPercent": 50,
-        "spritePath": "Characters/sheep_black_ram"
+        "spritePath": "Characters/sheep_black_ram",
+        "hit": {
+          "shake": 0.55,
+          "hitStopSeconds": 0.14,
+          "vfx": {
+            "layerFormat": 1,
+            "layers": [
+              {
+                "id": "ram_burst",
+                "render": "sprite",
+                "place": "target-centre",
+                "at": "release",
+                "path": "Spells/black_ram_impact",
+                "seconds": 0.46,
+                "until": "once",
+                "facing": "auto",
+                "sort": "effects",
+                "size": 520
+              }
+            ]
+          }
+        }
       },
       "windupStance": "victory",
       "stance": "victory",

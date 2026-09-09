@@ -533,6 +533,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 DealDamage(source, bystander, splash, AttackTypeOf(source), KillCredit.Attacker);
                 SetStance(bystander, bystander.IsAlive ? Stances.Hurt : Stances.Defeated);
+
+                // AND THE VIEW IS TOLD SOMETHING LANDED ON THEM. The beat
+                // recorded the neighbour's flinch and its log line and nothing
+                // else, so a body that visibly took damage had no effect drawn
+                // on it -- the same gap SplashTargets was added for when
+                // ResolveDamageAll gave three rats one animation between them.
+                // Additive, so a sweep that ALSO splashes keeps both lists.
+                RecordSplashTargets(new[] { bystander });
+
                 AppendMessage($"{cause} - {bystander.Name} takes {splash} from it!");
 
                 if (!bystander.IsAlive)
@@ -564,7 +573,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
                 grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
-                grant.spritePath);
+                grant.spritePath, grant.hit);
 
             // AND THE VIEW IS TOLD ON THE BEAT, not left to read live state.
             // The whole round has already resolved by the time this beat is
@@ -619,10 +628,73 @@ namespace PrincesPalace.Domain.Combat.Session
             transformation.TurnsRemaining--;
             if (transformation.TurnsRemaining > 0) return;
 
+            ExpireTransform(actor, transformation);
+        }
+
+        // How hard the stage kicks when a form runs out.
+        //
+        // A FLOOR, like every authored `shake`: ShakeStrength takes the larger
+        // of the blow's own weight and this, and an exit lands no blow at all.
+        // Under black_ram_mode's own 0.7 on purpose -- becoming the thing is
+        // the bigger of the two events, and a revert that hit as hard as the
+        // entry would make the mode read as costing what it granted.
+        private const float TransformExitShake = 0.45f;
+
+        // THE FORM RUNNING OUT IS AN EVENT, AND IT GETS ITS OWN BEAT.
+        //
+        // 651c8a79 shipped this as a quiet revert riding the post-playback
+        // resync, on the argument that a transform expires at its holder's TURN
+        // START -- which is not an action, so there was nothing to record the
+        // change on. That argument was about the beat QUEUE rather than about
+        // the player: a turn start is a moment, the queue can hold a beat for a
+        // moment, and leaving the form is exactly as much of an event as
+        // entering it was. Overruled by the owner, and this is the overrule.
+        //
+        // THE TWIN OF THE ENTRY, deliberately, down to opening the same
+        // BeginBeat(actor, actor, isCast: true) the Transform effect opens: one
+        // beat, no target, no amount, the form cleared at its impact instant
+        // under the same white silhouette flash, and a shake floor. What
+        // differs is the pose -- IDLE rather than the entry's authored
+        // `victory`, because he is not doing anything, he is being himself
+        // again, and `hurt` would say the change cost him something it does
+        // not.
+        //
+        // THE EXIT HAPPENS BEFORE CommitBeat, which is what puts the temporary
+        // health's disappearance on this beat rather than on whatever played
+        // next: PreSnapshot was taken by BeginBeat with the pool still granted
+        // and Snapshot is taken by CommitBeat without it, so the bar drops on
+        // the frame the ram walks back out.
+        //
+        // THE PATHS THAT DO NOT GET ONE, stated because they are the half that
+        // is easy to get wrong:
+        //   - the capstone's permanent form returns above without ever
+        //     reaching here, so keeping the form punctuates nothing;
+        //   - Wrath T3's hold returns above too, for the same reason;
+        //   - a re-entry (EnterTransform) exits and re-enters inside ONE beat
+        //     and records the new folder on it, so the swap is one event with
+        //     one flash rather than a revert followed by a transformation;
+        //   - nothing else in the game calls Transformation.Exit. A defeated
+        //     holder keeps their Transformation, so there is no revert to
+        //     flash over a death fade.
+        private void ExpireTransform(CombatantState actor, Transformation transformation)
+        {
             string name = transformation.DisplayName;
+
+            BeginBeat(actor, actor, isCast: true);
+            SetStance(actor, Stances.Idle);
+            RecordShake(TransformExitShake);
+
+            // "" is the view's word for "back in your own art" -- see
+            // RecordForm, which records an empty folder rather than omitting
+            // the actor, so playback can tell a revert from a beat that
+            // transformed nobody.
+            RecordForm(actor, "");
+
             Transformation.Exit(actor);
             _encounter.RefreshSpeed(actor);
             AppendMessage($"{actor.Name} is no longer {name}.");
+
+            CommitBeat();
         }
 
         // Wrath T2: a kill during the transform buys more of it, up to a total

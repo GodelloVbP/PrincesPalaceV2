@@ -64,8 +64,42 @@ namespace PrincesPalace.Domain.Combat.Session
             // never referenced -- see BeatFormation.
             _recordingBeat.Formation = BeatFormation.Capture(_encounter);
 
+            RecordFormHitCue(_recordingBeat);
+
             _beats.Add(_recordingBeat);
             _recordingBeat = null;
+        }
+
+        // AND WHAT THE ACTOR'S WORN FORM ADDS TO THE BLOW.
+        //
+        // HERE, AT COMMIT, rather than in each of the paths that can land one.
+        // "Every landed damaging hit by the holder" is a property of the BEAT
+        // -- who acted and whether it landed -- and CommitBeat is the one place
+        // every beat in the game passes through. Written into any of the melee
+        // paths instead it would be four copies of one rule, and the fifth path
+        // (an enemy ability, a relic's free swing, whatever lands next) would
+        // silently not have it. No skill id and no character id is involved,
+        // which is the point: a second form authoring a cue gets this for free.
+        //
+        // LANDED DAMAGE ONLY. A heal, a miss, a buff and the transform's own
+        // entry beat all commit through here too, and punctuating those would
+        // teach the player that the cue means nothing.
+        private static void RecordFormHitCue(CombatBeat beat)
+        {
+            var cue = beat?.Actor?.Transformation?.Hit;
+            if (cue == null || !cue.IsAuthored) return;
+            if (beat.IsHealing || beat.Missed || beat.Amount <= 0) return;
+
+            if (cue.vfx != null && cue.vfx.HasArt) beat.FormVfx = cue.vfx;
+
+            // BOTH ARE FLOORS, so a blow that already reads harder than the
+            // form asks for keeps its own reading -- see CombatBeat.Shake's own
+            // header for why a floor rather than an override.
+            if (cue.shake > beat.Shake) beat.Shake = cue.shake;
+
+            beat.FormHitStopSeconds = cue.hitStopSeconds > HitStop.MaxSeconds
+                ? HitStop.MaxSeconds
+                : (cue.hitStopSeconds < 0f ? 0f : cue.hitStopSeconds);
         }
 
         private void RecordBeatAmount(int amount, bool isHealing = false)
@@ -114,12 +148,32 @@ namespace PrincesPalace.Domain.Combat.Session
         // The extra combatants a multi-target effect should be DRAWN on. Kept
         // beside RecordSpellPresentation because it is the same kind of fact --
         // something the view needs that the resolution already knows.
+        //
+        // ADDITIVE, and that is a change from "the last caller wins". One beat
+        // can now hit wider than once: a sweep records the enemies it swept,
+        // and a Black Ram's splash records the neighbours the SAME blow spilled
+        // onto. Replacing would silently drop whichever came first, and the
+        // symptom of that is an effect missing from a body that visibly took
+        // damage. Duplicates are refused rather than tolerated -- an enemy
+        // drawn on twice is two overlapping copies of one effect.
         private void RecordSplashTargets(IEnumerable<CombatantState> targets)
         {
             if (_recordingBeat == null || targets == null) return;
 
-            var extra = targets.Where(t => t != null).ToList();
-            _recordingBeat.SplashTargets = extra.Count == 0 ? null : extra;
+            foreach (var target in targets)
+            {
+                if (target == null || ReferenceEquals(target, _recordingBeat.Target)) continue;
+
+                if (_recordingBeat.SplashTargets == null)
+                {
+                    _recordingBeat.SplashTargets = new List<CombatantState>();
+                }
+
+                if (!_recordingBeat.SplashTargets.Contains(target))
+                {
+                    _recordingBeat.SplashTargets.Add(target);
+                }
+            }
         }
 
         // WHAT ONE COMBATANT OF SEVERAL TOOK, recorded per enemy as the sweep

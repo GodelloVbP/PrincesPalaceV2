@@ -485,12 +485,43 @@ against:
   authoring the same pose name on `windupStance` and `stance` (as
   `black_ram_mode` does with `victory`) reads as one drawing replaced by the
   other actor's version of it.
-- The **revert** is quiet and lands at the END of the round in which the
-  timer ran out — a transform expires at its holder's turn start, which is
-  not an action and records no beat.
+- The **revert** is its own beat, and looks like the entry in reverse: the
+  base art goes back on at that beat's impact instant, under the same white
+  silhouette flash, with a house shake floor of 0.45 (below
+  `black_ram_mode`'s authored 0.7 — becoming the thing is the bigger event).
+  The pose is the actor's own `idle`. The **permanent** form the Wrath
+  capstone grants records no beat and flashes nothing: nothing changed.
 - A form folder that is not on disk leaves the figure in its own art and logs
   one line. A Black Ram nobody has drawn yet looks like Shawn with better
   numbers, not like a nameplate.
+
+**And a form authors how its holder's blows land.** `transform.hit` is a
+three-field block, all optional, and an unauthored one is byte-for-byte
+today's behaviour:
+
+| field | what it does |
+|---|---|
+| `hit.vfx` | a contact effect, in exactly the `vfx` vocabulary of §5b, played **on every body the blow reached** at the impact instant. Its layers author `at: release` — the presentation's own clock starts on the frame the blow lands, so there is no cue to wait for |
+| `hit.shake` | a floor on the stage kick, `0..1`, the same floor a skill's own `shake` is |
+| `hit.hitStopSeconds` | a floor on the hit-stop, in seconds, clamped to `HitStop.MaxSeconds` (0.18). This is the one reaction that had no authored floor before |
+
+It lands on any beat the holder **landed damage** with — his plain Attack, a
+headbutt, a Trample, a monster ability, whatever comes next — because it is
+recorded at `CommitBeat` off the actor's running `Transformation`, and no
+skill id or character id appears in the code that does it. A heal, a miss, a
+buff and the transform's own entry beat get nothing.
+
+It is an ADDITION, never a replacement: a skill that already draws its own
+spell draws both, on a second presentation slot (`CombatBeat.FormVfx`) rather
+than merged into `Vfx`, because two layered presentations have two
+`hitCueSeconds` and one `sfxPath` each and a merge would have to silently
+pick.
+
+`black_ram_mode` authors all three. Its burst, `Spells/black_ram_impact`, is
+**generated rather than delivered** — `tools/make_contact_fx.py --form-sheet`
+draws the sheet and `slice_spell_sheet.py` cuts it, so its provenance is a
+recipe like any other spell's; the recipe's own `_notes` say plainly that it
+is a placeholder awaiting a commissioned sheet.
 
 ## 5. Wiring checklist (new art → visible in-game)
 

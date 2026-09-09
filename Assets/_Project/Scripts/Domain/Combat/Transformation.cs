@@ -1,7 +1,64 @@
 using System;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat
 {
+    // HOW A BLOW LANDS WHILE THE FORM IS WORN -- authored, on the form, in
+    // content, and read by nothing that knows which form it belongs to.
+    //
+    // "Some hit markers when Shawn hits as the black ram, some cool OOMPH
+    // behind his hits." The obvious shape for that is a branch on the Black
+    // Ram somewhere in the view, and it is the shape docs/CODE_STANDARDS.md
+    // section 10 exists to refuse: a second form would be a second branch, and
+    // no skill id or character id belongs in code.
+    //
+    // WHY IT SITS ON THE TRANSFORM RATHER THAN ON THE SKILLS. The holder's
+    // plain Attack, his headbutt and a Trample he never authored all have to
+    // punctuate harder while the mode runs, and none of them knows the mode
+    // exists. What they have in common is the TRANSFORMATION, which is already
+    // the thing that arrives and leaves with the mode -- the same argument
+    // TransformGrant.splashPercent's own comment makes about why the splash is
+    // not a talent.
+    //
+    // THREE STATEMENTS ABOUT ONE BLOW, and they are three fields rather than
+    // one derived number on purpose. HitStop.Response exists so the stop, the
+    // stage kick and the squash cannot disagree about how hard a blow was --
+    // but that is about one blow's own WEIGHT, and these are floors under it.
+    // A convergence that reads as fast and weightless (the mage's, when its
+    // strand lands) wants a loud contact effect with very little freeze, which
+    // a single number cannot say.
+    [Serializable]
+    public class TransformHitCue
+    {
+        // The contact effect, in exactly the vocabulary `vfx` uses -- a
+        // layered SpellPresentation, resolved and validated by the same
+        // SpellLayerRules/SpellPresentationPaths checks (see
+        // SkillEntryResolver.TryResolveTransform).
+        //
+        // PLAYED ALONGSIDE the skill's own presentation, never instead of it:
+        // a headbutt that draws something draws both. See CombatBeat.FormVfx
+        // for why that is a second slot on the beat rather than a merge.
+        public SpellPresentation vfx = new SpellPresentation();
+
+        // A FLOOR on the stage kick, 0..1, exactly like a skill's own `shake`
+        // -- FightBeatPlayer.ShakeStrength already takes the larger of the
+        // blow's weight and whatever floor the beat authored, so this needs no
+        // new rule, only a second place a floor can come from.
+        public float shake;
+
+        // A FLOOR on the hit-stop, in SECONDS, because that is the unit
+        // HitStop.SecondsFor answers in and the only unit an author can check
+        // against its own MinSeconds/MaxSeconds. Clamped to HitStop.MaxSeconds
+        // at record time: past that the freeze reads as a hitch rather than as
+        // weight, and that ceiling is a decision the house already made once.
+        public float hitStopSeconds;
+
+        // Authored at all. A form that states none of the three punctuates
+        // exactly as it did before this existed.
+        public bool IsAuthored =>
+            (vfx != null && vfx.HasArt) || shake > 0f || hitStopSeconds > 0f;
+    }
+
     // The AUTHORED half: what a transform grants, as typed into skills.json
     // and carried on the SkillDefinition that hands it out.
     //
@@ -60,6 +117,11 @@ namespace PrincesPalace.Domain.Combat
         // FightController.WearForm), the house posture everywhere else.
         public string spritePath = "";
 
+        // HOW THE HOLDER'S BLOWS LAND WHILE THIS RUNS -- see TransformHitCue.
+        // Never null, so a grant that authors nothing still answers
+        // IsAuthored rather than needing a guard at every read.
+        public TransformHitCue hit = new TransformHitCue();
+
         public bool IsAuthored => turns > 0;
     }
 
@@ -107,6 +169,16 @@ namespace PrincesPalace.Domain.Combat
         // the post-playback resync that puts every figure back on live state.
         public readonly string SpritePath;
 
+        // HOW THIS FORM'S BLOWS LAND -- the authored block, carried whole
+        // rather than unpacked into three more readonly scalars, for the
+        // reason TransformGrant itself is a block: these only ever mean
+        // anything together, and a fourth field on the cue would otherwise be
+        // a fourth field here and a fourth argument to Enter.
+        //
+        // Never null. An unauthored form carries an empty cue, which every
+        // reader already answers with "do what you did before".
+        public readonly TransformHitCue Hit;
+
         // Turns already added by Wrath T2's on-kill extension, against its
         // own cap. Tracked here rather than on the combatant because it is
         // meaningless outside a running transform and has to reset with it.
@@ -120,8 +192,10 @@ namespace PrincesPalace.Domain.Combat
         public bool IsPermanent;
 
         public Transformation(string displayName, int turns, int attackBonus, int speedBonus,
-            int temporaryHealth, int splashPercent = 0, string spritePath = "")
+            int temporaryHealth, int splashPercent = 0, string spritePath = "",
+            TransformHitCue hit = null)
         {
+            Hit = hit ?? new TransformHitCue();
             DisplayName = string.IsNullOrEmpty(displayName) ? "Transformed" : displayName;
             TurnsRemaining = Math.Max(1, turns);
             AttackBonus = Math.Max(0, attackBonus);
@@ -141,14 +215,14 @@ namespace PrincesPalace.Domain.Combat
         // a proportionally bigger ram.
         public static Transformation Enter(CombatantState combatant, string displayName, int turns,
             int attackPercent, int speedPercent, int temporaryHealthPercentOfMax, int splashPercent = 0,
-            string spritePath = "")
+            string spritePath = "", TransformHitCue hit = null)
         {
             int attackBonus = combatant.Attack * Math.Max(0, attackPercent) / 100;
             int speedBonus = combatant.Speed * Math.Max(0, speedPercent) / 100;
             int temporary = combatant.MaxHealth * Math.Max(0, temporaryHealthPercentOfMax) / 100;
 
             var transformation = new Transformation(displayName, turns, attackBonus, speedBonus, temporary,
-                splashPercent, spritePath);
+                splashPercent, spritePath, hit);
 
             combatant.Attack += transformation.AttackBonus;
             combatant.Speed += transformation.SpeedBonus;

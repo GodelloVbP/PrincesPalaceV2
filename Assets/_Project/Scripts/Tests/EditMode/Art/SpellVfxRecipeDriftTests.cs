@@ -77,6 +77,12 @@ namespace PrincesPalace.Domain.Tests
 
                 Collect(found, id, SpellVfxJson.OwnVfx(skill));
 
+                // AND THE FORM'S OWN CONTACT EFFECT. A transform's hit cue
+                // names a folder the game plays every time the holder lands a
+                // blow, so it is provenance-checked and frame-range-checked
+                // exactly like a skill's own -- see TransformHitCue.
+                Collect(found, $"{id} transform.hit", SpellVfxJson.TransformHitVfx(skill));
+
                 foreach (string element in JsonBlocks.ObjectsInArray(skill, "elements"))
                 {
                     Collect(found, $"{id} element '{JsonBlocks.String(element, "type")}'",

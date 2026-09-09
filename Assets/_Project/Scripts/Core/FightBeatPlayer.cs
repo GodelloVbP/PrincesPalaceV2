@@ -94,7 +94,18 @@ namespace PrincesPalace
         public static float ShakeStrength(CombatBeat beat) =>
             beat == null ? 0f : Mathf.Max(Strength(beat), Mathf.Clamp01(beat.Shake));
 
-        public static float HitStopFor(CombatBeat beat) => HitStop.SecondsFor(Weight(beat));
+        // AND THE FLOOR A WORN FORM PUTS UNDER IT, the twin of ShakeStrength's
+        // above. Read here rather than at the two call sites so the wind-up a
+        // Charge waits out (Charge's own contact hold) and the freeze the
+        // impact instant takes cannot disagree about how long the blow stops
+        // for. Already clamped to HitStop.MaxSeconds at record time.
+        public static float HitStopFor(CombatBeat beat)
+        {
+            if (beat == null) return 0f;
+
+            float own = HitStop.SecondsFor(Weight(beat));
+            return beat.FormHitStopSeconds > own ? beat.FormHitStopSeconds : own;
+        }
 
         // The test seam. A PlayMode test that had to wait real seconds per beat
         // would take longer than the whole EditMode suite; this lets one run a
@@ -254,6 +265,24 @@ namespace PrincesPalace
         // inside a method whose whole job is playing the spell it authored.
         internal Action<CombatBeat> PlayContactFx;
 
+        // THE CONTACT EFFECT A WORN FORM ADDS, on top of whatever the beat
+        // already drew.
+        //
+        // A THIRD DOOR RATHER THAN A BRANCH INSIDE EITHER OF THE OTHER TWO.
+        // PlayVfx plays what the SKILL authored, at the top of the beat, on
+        // the skill's own clock. PlayContactFx is the HOUSE's default for a
+        // swing that authored nothing, and is gated on the beat authoring no
+        // spell (WantsContactFx). This is neither: it belongs to the FORM the
+        // actor is wearing, it fires whatever the skill authored, and it never
+        // replaces anything -- a headbutt that already draws something draws
+        // both. Folding it into PlayContactFx would mean loosening that gate
+        // for one case and re-tightening it for the other inside a method
+        // whose whole job is the case it excludes.
+        //
+        // Fired at the impact instant, beside the house's, because it is the
+        // same kind of statement about the same moment.
+        internal Action<CombatBeat> PlayFormHitFx;
+
         // THE WIRING SEAMS FOR A PLAYMODE TEST, and the only public doors onto
         // any of the delegates above.
         //
@@ -326,20 +355,40 @@ namespace PrincesPalace
             // it, and the player could act in the middle of the round they just
             // started.
             _onFinished = null;
-            Flush();
+            Supersede();
 
             _onFinished = onFinished;
             IsPlaying = true;
             _running = StartCoroutine(PlayBeats(beats));
         }
 
-        // Stops playback dead and puts every borrowed thing back.
+        // SUPERSEDE, NOT FLUSH -- and this is the same distinction one level
+        // down from the one EndFight already draws.
         //
-        // Reclaiming the popups here is the point. v1's Flush left them running,
-        // and its DamagePopup.Clear had no call sites at all, so an abandoned
-        // fight leaked one popup per in-flight number out of a pool of six that
-        // is never refilled.
-        public void Flush()
+        // Flush hands the stage back to LIVE state, which is right for a
+        // playback that is being abandoned with nothing to follow it. It is
+        // exactly wrong here. A round resolves in ONE synchronous pass before
+        // a single beat plays, so by the time Play is called live state is the
+        // END of the round about to be drawn -- and handing the stage to it
+        // paints the round's outcome on the frame before its first beat opens.
+        //
+        // The formation and the turn queue got away with it: PlayBeats' very
+        // first act is to paint both from beat 1, on the same frame, so the
+        // leak was overwritten before anything rendered. The FORMS did not,
+        // because a form is only repainted at a transform's impact instant --
+        // so ResyncForms here put Shawn in the Black Ram's skin from the
+        // opening frame of the beat that was supposed to turn him into it,
+        // and WearForm then found the folder it was about to wear already
+        // worn, took its "nothing actually changed" early return, and never
+        // flashed. "Shawn doesn't have a flash when he transforms": not the
+        // flash, the resync in front of it.
+        //
+        // So this stops the coroutine and puts the borrowed popups back --
+        // everything a supersede genuinely needs -- and leaves the stage
+        // alone. Whatever the previous playback left drawn is replaced by the
+        // incoming beat's own paint, which is the only description of the
+        // moment that is not from the future.
+        private void Supersede()
         {
             if (_running != null)
             {
@@ -355,15 +404,30 @@ namespace PrincesPalace
                 }
             }
 
+            IsPlaying = false;
+        }
+
+        // Stops playback dead and puts every borrowed thing back.
+        //
+        // Reclaiming the popups here is the point. v1's Flush left them running,
+        // and its DamagePopup.Clear had no call sites at all, so an abandoned
+        // fight leaked one popup per in-flight number out of a pool of six that
+        // is never refilled.
+        public void Flush()
+        {
+            Supersede();
+
             // An abandoned round leaves the stage on live state, same rule as
             // the normal completion path below and for the same reason. The
             // tracker with it: a queue frozen on a beat that will now never
             // finish playing would outlive the round it described.
+            //
+            // THE HALF Play DELIBERATELY DOES NOT TAKE -- see Supersede. Here
+            // nothing is going to be drawn after this, so live state is the
+            // moment on screen and painting it is the only honest answer.
             PaintFormation?.Invoke(null);
             PaintTurnOrder?.Invoke(null);
             ResyncForms?.Invoke();
-
-            IsPlaying = false;
 
             // AND WHOEVER WAS WAITING IS TOLD, which it never was.
             //
@@ -723,6 +787,14 @@ namespace PrincesPalace
                     ShowAmount(beat);
                     FlashTarget?.Invoke(beat);
                     if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
+
+                    // AFTER the house's, so a form's heavier burst draws OVER
+                    // the arc rather than under it -- authored order is draw
+                    // order within a band (docs/ART_PIPELINE.md 5b), and two
+                    // casts obtain pool members in the order they were begun.
+                    // Ungated on approach: a form's blow punctuates the same
+                    // whether it lunged, charged or stood still.
+                    if (beat.FormVfx != null) PlayFormHitFx?.Invoke(beat);
                     Recoil(beat);
                     Punch(beat);
                     ShakeStage?.Invoke(ShakeStrength(beat));

@@ -530,7 +530,22 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // THE FORM'S OWN HIT CUE, checked by exactly the two functions the
+            // skill's own `vfx` block is checked by. A presentation that only
+            // ever plays while a transform is running is no less able to name
+            // a folder that does not exist or an anchor that does not parse,
+            // and a second copy of those rules here would be the drift the
+            // shared checkers exist to prevent.
+            var hit = raw.transform.hit;
+            if (hit != null && hit.vfx != null)
+            {
+                if (!SpellPresentationPaths.Check($"{label} transform.hit", hit.vfx, out error)) return false;
+                if (!SpellLayerRules.TryCheck($"{label} transform.hit", hit.vfx, out error)) return false;
+            }
+
             transform = raw.transform;
+            if (transform.hit == null) transform.hit = new TransformHitCue();
+
             if (string.IsNullOrWhiteSpace(transform.displayName))
             {
                 transform.displayName = raw.displayName;

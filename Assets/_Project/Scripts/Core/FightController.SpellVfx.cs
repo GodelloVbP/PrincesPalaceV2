@@ -450,6 +450,40 @@ namespace PrincesPalace
             SoundController.PlayClip(ContactCues.ThudClipPath);
         }
 
+        // WHAT THE FORM THE ACTOR IS WEARING ADDS TO THE BLOW, on every body
+        // the blow reached.
+        //
+        // THROUGH PlaceCast, THE SAME PLACEMENT EVERY AUTHORED CAST GETS,
+        // rather than through PlayContactFx's centred-box shortcut above: this
+        // one IS authored content, so it can state its own `place`, its own
+        // size and its own impact point, and it fans out over StruckBy exactly
+        // as a multi-target spell does -- which is how the Black Ram's splash
+        // onto the neighbours gets punctuated with the same burst as the blow
+        // that caused it.
+        //
+        // BEGUN AT THE IMPACT INSTANT, so its layers author `at: release` and
+        // not `at: hit`: this performance's own clock starts on the frame the
+        // blow lands. `hit` is the word for a layer inside a cast that opened
+        // at the top of the beat and still has to wait for its cue.
+        //
+        // NO SOUND OF ITS OWN HERE. A presentation carries sfxPath and the
+        // module plays it on the same clock as its layers, so an authored clip
+        // is already handled and a second PlayClip would double it.
+        private void PlayFormHitFx(CombatBeat beat)
+        {
+            if (performancePlayer == null || beat?.FormVfx == null) return;
+
+            int struck = 0;
+            foreach (var _ in StruckBy(beat)) struck++;
+            if (struck == 0) return;
+
+            var performance = SpellPerformance.Resolve(beat.FormVfx, struck, FrameCountOf);
+            if (performance == null || performance.Instances.Count == 0) return;
+
+            PlaceCast(beat, performance);
+            performancePlayer.Begin(performance);
+        }
+
         // THE HOUSE'S DEFAULT CONTACT LANGUAGE, said in layers. Built in code
         // rather than authored, because it is what a blow that authored NOTHING
         // gets -- there is no content row for it to live on, and inventing one
