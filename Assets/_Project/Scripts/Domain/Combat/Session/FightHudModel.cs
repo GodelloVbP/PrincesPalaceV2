@@ -611,6 +611,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 rows.Add(StatusHud.RowFor(status));
             }
 
+            // A TRANSFORMATION IS A STATUS -- 2026-09-09, the HUD-column pass.
+            // It used to be a 36px panel of its own (TransformStrip) fused
+            // above the party plate, which meant it could only ever be shown
+            // for whoever was acting: a transformed ally sitting in the roster
+            // showed nothing at all. Read off the actor, needing no session,
+            // so it lands in the same half of this method actor.Statuses does
+            // and a no-session caller degrades identically.
+            if (actor.Transformation != null)
+            {
+                rows.Add(StatusHud.TransformRow(actor.Transformation.DisplayName,
+                    actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent));
+            }
+
             if (session != null)
             {
                 var kit = session.KitFor(actor);

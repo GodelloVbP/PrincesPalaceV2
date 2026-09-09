@@ -97,6 +97,17 @@ namespace PrincesPalace.Domain.UiKit
         public const string MpBright = "#7EA8E6";
         public const string MpDeep = "#3A5A9A";
         public const string MpText = "#C4D8F2";
+
+        // THE TWO TONES Ui.Meter NEEDS PER BAR: the hairline that traces the
+        // track, and the band under the fill. Both are HpDeep/MpDeep at an
+        // alpha, written out as full 8-digit tokens rather than composed at
+        // the call site -- alpha is part of a colour in this DSL (see the file
+        // header), and "HpDeep plus a suffix" is a string operation that would
+        // sit at four call sites and be wrong at one of them.
+        public const string HpRim = "#8E3226B3";             // HpDeep, 0.70
+        public const string HpShade = "#8E322670";           // HpDeep, 0.44
+        public const string MpRim = "#3A5A9AB3";             // MpDeep, 0.70
+        public const string MpShade = "#3A5A9A70";           // MpDeep, 0.44
         public const string EnemyName = "#F0DCD8";
         public const string EnemyHpText = "#E0A89C";
         public const string PipFilled = "#E8E0F7";

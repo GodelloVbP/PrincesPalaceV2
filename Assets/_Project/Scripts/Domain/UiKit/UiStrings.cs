@@ -638,6 +638,27 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("health_value", "{0}/{1}", "9999/9999");
         public static readonly UiString SignatureValue =
             UiString.Define("signature_value", "{0}/{1}", "16/16");
+
+        // THE SAME NUMBERS WITH THEIR TAG FOLDED IN, for the roster
+        // mini-plate, where the value is drawn ON the bar and there is no room
+        // beside it for a separate "HP" label the way the party plate has.
+        // Two entries rather than one "{0} {1}/{2}" with the tag passed in:
+        // the tag is authored UI copy, not data, and threading it through the
+        // controller would put the literal "HP" back in Core -- which is the
+        // whole thing UiStrings exists to stop.
+        public static readonly UiString HpValueTagged =
+            UiString.Define("hp_value_tagged", "HP {0}/{1}", "HP 9999/9999");
+        public static readonly UiString MpValueTagged =
+            UiString.Define("mp_value_tagged", "MP {0}/{1}", "MP 9999/9999");
+
+        // The roster's signature line -- "Wool 3/10". The NAME is content
+        // (characters.json's own resource display name), so it is a
+        // parameter here rather than a second per-character entry; the
+        // sample is the longest resource name on the roster plus a
+        // three-digit pool, which is what E1 measures the 10pt box against.
+        public static readonly UiString SignatureNamedValue =
+            UiString.Define("signature_named_value", "{0} {1}/{2}", "Moonlight 999/999");
+
         public static readonly UiString StandingCount =
             UiString.Define("standing_count", "{0} STANDING", "99 STANDING");
 
@@ -682,15 +703,15 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
                 "Boulder Slam — confirm on any enemy plate.");
 
-        // The transformation strip, fused above the party plate -- the one
-        // domain system that was previously invisible even to the character
-        // running it. IsPermanent (the capstone) gets its own word rather
-        // than a turn count that would stop moving and read as a bug -- see
-        // Transformation.IsPermanent's own comment.
-        public static readonly UiString TransformStripTurns =
-            UiString.Define("transform_strip_turns", "{0} — {1} TURNS", "Black Ram Mode — 99 TURNS");
-        public static readonly UiString TransformStripPermanent =
-            UiString.Define("transform_strip_permanent", "{0} — PERMANENT", "Black Ram Mode — PERMANENT");
+        // TransformStripTurns/TransformStripPermanent are GONE with the strip
+        // itself (2026-09-09, the HUD-column pass). A transformation IS a
+        // status on the character, so it reads out through the badge row on
+        // the party plate and the roster card like every other one, and its
+        // "X turns"/"permanent" wording now lives in StatusHud.TransformRow's
+        // tooltip beside the twelve status tooltips it belongs with -- a
+        // hover string, not a label, so it is not a UiStrings entry at all.
+        // The 36px the strip reserved is what paid for the roster cards'
+        // extra rows; see FightScreen's own RosterPlateH note.
 
         // ---- the overarching menu ------------------------------------------
         //

@@ -138,7 +138,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // BuildPartyPlate's own note. C1: swapped at runtime by
         // RefreshPartyPlate off the acting character's PlateTheme.
         public NodeRef PartyPlateArt;
-        public NodeRef PartyPortrait;
+
+        // PartyPortrait is GONE (2026-09-09, the HUD-column pass). It was
+        // declared Inactive() with a null sprite key and had no writer
+        // anywhere in the tree -- FightController.partyPortrait was a
+        // [SerializeField] nothing read and nothing assigned -- so it
+        // reserved 54px of the card's width to draw nothing, forever. Its
+        // serialized field went with it in the same commit; the mock-up this
+        // pass builds has no portrait either.
         public NodeRef PartyName;
         // PartyClass ("LV1 UTILITY") is GONE, B2 (balance-bot pass) -- see
         // BuildPartyPlate's own note. Removed here only: FightController.
@@ -165,12 +172,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef WoolValue;
         public List<NodeRef> WoolPips = new List<NodeRef>();
         public NodeRef SecondLifeBadge;
-        public NodeRef TransformStrip;
-        public NodeRef TransformStripText;
+
+        // TransformStrip/TransformStripText are GONE (2026-09-09). A
+        // transformation is a StatusRow now -- see BuildRosterPlates' own
+        // header for what its 36px bought and why a strip could never show a
+        // transformed ALLY at all.
         public List<NodeRef> RosterPlates = new List<NodeRef>();
         public List<NodeRef> RosterNames = new List<NodeRef>();
         public List<NodeRef> RosterHpValues = new List<NodeRef>();
         public List<NodeRef> RosterHpFills = new List<NodeRef>();
+
+        // The mana half of each roster card, and the signature line under
+        // both bars -- the mock-up's cells 1 and 2. Parallel to the HP pair
+        // above and refreshed in the same loop (FightController.Hud's
+        // RefreshRoster), so the four lists cannot drift in length.
+        public List<NodeRef> RosterMpValues = new List<NodeRef>();
+        public List<NodeRef> RosterMpFills = new List<NodeRef>();
+        public List<NodeRef> RosterSignatures = new List<NodeRef>();
 
         // One status row per roster mini-plate, flattened ROSTER-MAJOR (r0's
         // five badges, then r1's), same convention as EnemyStatusBadges.
@@ -310,7 +328,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.AddRange(s.BuildEnemiesHeading());
             hud.AddRange(s.BuildEnemyPlates());
             hud.Add(s.BuildPartyPlate());
-            hud.Add(s.BuildTransformStrip());
             hud.AddRange(s.BuildRosterPlates());
             hud.AddRange(s.BuildVerbColumn());
             hud.Add(s.BuildBreadcrumb());
@@ -1306,81 +1323,129 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Ui.CentreYForVisibleBottom(FightSubmenuLayout.VisibleBottomLine, PartyPlateHeight,
                 Ui.ContainerVisiblePad(ContainerRatio.TwoByOne).Bottom);
 
-        // EVERY LOCAL NUMBER BELOW IS THE OLD 452-WIDE LAYOUT SCALED BY
-        // PartyPlateWidth / 452f (0.8407) -- a uniform shrink, not a
-        // redesign from scratch. That is deliberate: the old layout was
-        // already audited clean (no overlaps, E1 text-fit passing), and a
-        // uniform scale of a non-overlapping layout is STILL non-overlapping
-        // -- every gap shrinks by the same factor a rect does, so nothing
-        // that cleared its neighbour before can now cross into it. The one
-        // thing that changes shape rather than just size is PartyClass,
-        // which is gone outright (see its own note below) rather than
-        // scaled down with everything else. Every number below is therefore
-        // its old value times PartyPlateWidth / 452f (0.8407), pre-computed
-        // rather than written as a live expression: the numbers are
-        // PLACEMENT, the same reason every other rect on this screen is a
-        // literal with a comment rather than a formula, and the E1/UiAudit
-        // pins below check the RESULT, not that any particular arithmetic
-        // produced it.
+        // ---- the plate's content stack, 2026-09-09 --------------------------
+        //
+        // REDRAWN AGAINST THE OWNER'S MOCK-UP, and this is the one place in
+        // this file where "every number is the old layout uniformly scaled"
+        // (B2's rule, above) stops applying: the mock-up changes the card's
+        // ANATOMY, not its size. Name loud and hard left; a full-width HP bar
+        // with its tag outside it; the same for MP; the signature meter; then
+        // TWO badge lines instead of one. What the old stack spent on a
+        // portrait that never loaded (see PartyPortrait's own removal note)
+        // and on generous inter-row air, this one spends on taller bars and a
+        // second badge line, because those are the two things the owner
+        // actually asked for ("it should feel like a proper HP bar", "two
+        // lines for status effects", "snug with barely any vertical padding").
+        //
+        // THE CONTENT BOX IS DERIVED, NOT RESTATED. Every x below is measured
+        // off PartyContentHalfW/H, which come from the SAME
+        // Ui.ContainerContentInset the emitter insets ContainerContent by --
+        // so a re-measured 2:1 frame moves the rows with it rather than
+        // leaving them 3px inside a border that moved. The Ys are literals
+        // with the ledger below, the way every other rect on this screen is:
+        // they are a stack, and a stack reads as numbers.
+        //
+        // THE VERTICAL LEDGER, top to bottom, in content-local Y
+        // (content is 169.1 tall, so +-84.55):
+        //   83.0  .. 55.0   name          28
+        //   49.0  .. 27.0   HP row        22   (gap 6)
+        //   21.0  .. -1.0   MP row        22   (gap 6)
+        //   -7.0  .. -27.0  signature     20   (gap 6)
+        //   -33.0 .. -55.0  badge line 1  22   (gap 6)
+        //   -60.0 .. -82.0  badge line 2  22   (gap 5)
+        // leaving 1.55 of padding at the top and 2.55 at the bottom, which is
+        // the "barely any vertical padding" the mock-up asks for.
+        private static float PartyContentHalfW =>
+            PartyPlateWidth * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Left);
+
+        private static float PartyContentHalfH =>
+            PartyPlateHeight * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Top);
+
+        private const float PartyNameY = 69f;
+        private const float PartyNameH = 28f;
+        private const float PartyHpRowY = 38f;
+        private const float PartyMpRowY = 10f;
+
+        // 22, UP FROM 13.45 -- the owner's note on the 2026-09-09 capture,
+        // and the reason Ui.Meter exists at all. A 13px bar is a coloured
+        // stripe however it is shaded; 22 is enough height for the sheen and
+        // the shade band to be separately visible, which is what makes it
+        // read as a meter.
+        private const float PartyBarH = 22f;
+
+        // The tag sits OUTSIDE the bar on the left and the value OUTSIDE it
+        // on the right (the mock-up's own arrangement), so the bar's span is
+        // whatever those two leave -- stated as edges rather than as a width
+        // and a centre, so widening the value box moves the bar's end and
+        // nothing else.
+        private const float PartyTagW = 20f;
+        private const float PartyValueW = 58.85f;
+        private const float PartyRowGapX = 4f;
+
+        // The two hairlines that split the card into the same three regions
+        // the roster cards have -- see BuildPartyPlate's own note for why
+        // they exist. Each sits in the middle of a 6px gap the ledger above
+        // already reserved, so neither costs the stack any height.
+        private const float PartySignatureRuleY = -4f;
+        private const float PartyStatusRuleY = -30f;
+        private static float PartyBarLeft => -PartyContentHalfW + PartyTagW + PartyRowGapX;
+        private static float PartyBarRight => PartyContentHalfW - PartyValueW - PartyRowGapX;
+        private static float PartyBarW => PartyBarRight - PartyBarLeft;
+        private static float PartyBarCentreX => (PartyBarLeft + PartyBarRight) * 0.5f;
+
         private UiNode BuildPartyPlate()
         {
-            // 54x54, not v1/A1's 64x64 -- 64 * 0.8407 = 53.8, which is the
-            // "portrait ~56px" the brief asked for (rounded to the nearest
-            // whole px the scale itself lands on, not a second, independently
-            // chosen number that could disagree with everything scaled off
-            // it).
-            var portrait = Ui.Sprite("PartyPortrait", null, new UiVec(54f, 54f), Place.At(-143f, 45.4f)).Inactive();
-
-            // A CHILD of the portrait, not a sibling of the plate -- nesting it
-            // here means A1 never has to reason about it (a child overlapping
-            // its own parent on purpose is not the case that check exists to
-            // catch), and it stays inside the portrait's own box with room
-            // either side, so it needs no AllowOverflow either. Shown only
-            // while the acting character still has an unspent Second Life --
-            // the one domain state this whole pass adds that was previously
-            // invisible end to end (RunSettlement's own revive, not shown
-            // anywhere before this).
+            // THE PORTRAIT IS GONE, and it never drew anything. PartyPortrait
+            // was declared Inactive() with a null sprite key and no writer
+            // anywhere: FightController.partyPortrait was a [SerializeField]
+            // that nothing read and nothing assigned, which is why the
+            // 2026-09-09 capture shows Odette's plate with a blank left
+            // column. The mock-up has no portrait either, so the node and its
+            // serialized field are removed together rather than left as a
+            // reserved 54px hole in a card the owner asked to make snug.
+            //
+            // SecondLifeBadge WAS A CHILD OF IT, and moves to the right end
+            // of the name row -- still a small square, still the one domain
+            // state (RunSettlement's own revive) that is invisible everywhere
+            // else, now sitting where a badge on a header row belongs.
             var secondLife = Ui.Solid("SecondLifeBadge", FightHudPalette.TargetAmber,
-                    new UiVec(9.25f, 9.25f), Place.At(21.9f, -21.9f))
+                    new UiVec(14f, 14f), Place.At(PartyContentHalfW, PartyNameY, new UiVec(1f, 0.5f)))
                 .Inactive();
             SecondLifeBadge = secondLife;
-            portrait.Children.Add(secondLife);
 
-            // WIDE ENOUGH TO USE THE ROOM PartyClass GAVE BACK -- 185 (the
-            // scaled figure) would still end well short of the freed span,
-            // but there is nothing else on this row to align against any
-            // more, so widening it further would only be guessing at how
-            // much of a long name actually needs it. 185 is what a uniform
-            // shrink of the old 220 gives, and it is not the bottleneck: a
-            // runtime name this box cannot hold already truncates via TMP's
-            // own overflow, same as every other UiString.Runtime label on
+            // HARD LEFT AT THE CONTENT'S OWN EDGE, 20pt -- the mock-up's "big
+            // char name top-left". 300 wide stops well short of the Second
+            // Life badge; a runtime name longer than that truncates through
+            // TMP's own overflow like every other UiString.Runtime label on
             // this screen.
-            var name = Ui.Label("PartyName", UiString.Runtime, new UiVec(185f, 26.9f), 20,
-                FightHudPalette.PartyNameText, Place.At(-102.6f, 52.1f, new UiVec(0f, 0.5f)));
+            var name = Ui.Label("PartyName", UiString.Runtime, new UiVec(300f, PartyNameH), 20,
+                    FightHudPalette.PartyNameText, Place.At(-PartyContentHalfW, PartyNameY, new UiVec(0f, 0.5f)))
+                .TextAligned(UiTextAlign.Left);
 
-            // PartyClass ("LV1 UTILITY") IS GONE -- balance-bot's cozy-plate
-            // pass. It repeated a fact the dossier already states in full
-            // sentences, and its own removal is most of where this card's
-            // 452 -> 380 shrink comes from: the header row now needs to fit
-            // only a portrait and a name, not a portrait, a name AND a
-            // right-aligned second label competing for the same 32px row.
-            var hpTag = Ui.Label("PartyHpTag", UiStrings.HpTag, new UiVec(18.5f, 16.8f), 10,
-                FightHudPalette.HpBright, Place.At(-163.1f, 3.36f, new UiVec(0f, 0.5f)));
-            var hpFill = Ui.Solid("PartyHpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-            var hpBar = Ui.Panel("PartyHpBar", Place.At(-20.18f, 3.36f), UiSize.Fixed(245.5f, 13.45f), hpFill)
-                .Coloured(FightHudPalette.Track);
+            var hpTag = Ui.Label("PartyHpTag", UiStrings.HpTag, new UiVec(PartyTagW, 16.8f), 10,
+                FightHudPalette.HpBright, Place.At(-PartyContentHalfW, PartyHpRowY, new UiVec(0f, 0.5f)));
+
+            // ONE HELPER FOR EVERY BAR ON THIS COLUMN (Ui.Meter) -- the party
+            // plate's two and the roster cards' four are the same widget, so
+            // there is one recipe for the track, the rim, the fill and the
+            // two shading strips rather than six hand-rolled copies of two of
+            // them. The node names are the wiring contract and are passed in
+            // unchanged: FightController's SetFill still finds PartyHpFill.
+            var hp = Ui.Meter("PartyHpBar", "PartyHpFill",
+                Place.At(PartyBarCentreX, PartyHpRowY), new UiVec(PartyBarW, PartyBarH),
+                FightHudPalette.Track, FightHudPalette.HpRim,
+                FightHudPalette.HpBright, FightHudPalette.HpShade);
 
             // 10pt, scaled down from 12 -- the box shrank with it (58.85,
             // from 70), so the "9999/9999 at 70/12 fits, do not grow past
             // it" relationship A1 pinned is preserved by the SAME ratio
             // rather than re-derived; E1 (this screen's own text-fit audit)
             // is the check that actually proves it still holds.
-            var hpValue = Ui.Label("PartyHpValue", UiStrings.HealthValue, new UiVec(58.85f, 16.8f), 10,
-                FightHudPalette.HpText, Place.At(163.1f, 3.36f, new UiVec(1f, 0.5f)));
+            var hpValue = Ui.Label("PartyHpValue", UiStrings.HealthValue, new UiVec(PartyValueW, 16.8f), 10,
+                FightHudPalette.HpText, Place.At(PartyContentHalfW, PartyHpRowY, new UiVec(1f, 0.5f)));
 
-            var mpTag = Ui.Label("PartyMpTag", UiStrings.MpTag, new UiVec(18.5f, 16.8f), 10,
-                FightHudPalette.MpBright, Place.At(-163.1f, -18.5f, new UiVec(0f, 0.5f)));
-            var mpFill = Ui.Solid("PartyMpFill", FightHudPalette.MpBright, Place.Stretch(), UiSize.Fill);
+            var mpTag = Ui.Label("PartyMpTag", UiStrings.MpTag, new UiVec(PartyTagW, 16.8f), 10,
+                FightHudPalette.MpBright, Place.At(-PartyContentHalfW, PartyMpRowY, new UiVec(0f, 0.5f)));
 
             // THE MANA-COST OVERLAY (PartyMpPreview) IS GONE, balance-bot
             // 2026-09-02: it drew a lighter segment inside the fill showing
@@ -1389,25 +1454,49 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // and it stayed live even while the player was casting, tracking
             // a cost that no longer meant "if you pick this". The numeric
             // cost is the one source of truth now.
-            var mpBar = Ui.Panel("PartyMpBar", Place.At(-20.18f, -18.5f), UiSize.Fixed(245.5f, 13.45f), mpFill)
-                .Coloured(FightHudPalette.TrackMp);
-            var mpValue = Ui.Label("PartyMpValue", UiStrings.HealthValue, new UiVec(58.85f, 16.8f), 10,
-                FightHudPalette.MpText, Place.At(163.1f, -18.5f, new UiVec(1f, 0.5f)));
+            var mp = Ui.Meter("PartyMpBar", "PartyMpFill",
+                Place.At(PartyBarCentreX, PartyMpRowY), new UiVec(PartyBarW, PartyBarH),
+                FightHudPalette.TrackMp, FightHudPalette.MpRim,
+                FightHudPalette.MpBright, FightHudPalette.MpShade);
 
-            PartyPortrait = portrait;
+            var mpValue = Ui.Label("PartyMpValue", UiStrings.HealthValue, new UiVec(PartyValueW, 16.8f), 10,
+                FightHudPalette.MpText, Place.At(PartyContentHalfW, PartyMpRowY, new UiVec(1f, 0.5f)));
+
             PartyName = name;
-            PartyHpFill = hpFill;
+            PartyHpFill = hp.Fill;
             PartyHpValue = hpValue;
-            PartyMpFill = mpFill;
+            PartyMpFill = mp.Fill;
             PartyMpValue = mpValue;
 
             var plate = Ui.Container("PartyPlate", ButtonTheme.Blue, ContainerRatio.TwoByOne,
                 Place.At(PartyPlateCentreX, PartyPlateCentreY),
                 new UiVec(PartyPlateWidth, PartyPlateHeight));
 
+            // TWO HAIRLINES, THE SAME ONES THE ROSTER CARDS USE, and they are
+            // an addition to the mock-up rather than something it drew.
+            //
+            // The reason is what the first capture of this layout showed: the
+            // signature row and both badge lines draw NOTHING when the acting
+            // character has no signature resource and no statuses -- which is
+            // Odette at the top of a fight, i.e. the commonest state there is
+            // -- so the bottom half of the card was simply empty, and a snug
+            // stack with a void under it reads as unfinished rather than as
+            // tight. The rules give the empty half the same three-region
+            // reading the roster cards beside it already have (identity and
+            // meters / signature / statuses), so the card is legible whether
+            // or not its lower rows have anything to say. One line each to
+            // remove if the owner wants the bare mock-up back.
+            var signatureRule = Ui.Solid("PartySignatureRule", FightHudPalette.Hairline,
+                    new UiVec(PartyContentHalfW * 2f, 1f), Place.At(0f, PartySignatureRuleY))
+                .AsDecor();
+            var statusRule = Ui.Solid("PartyStatusRule", FightHudPalette.Hairline,
+                    new UiVec(PartyContentHalfW * 2f, 1f), Place.At(0f, PartyStatusRuleY))
+                .AsDecor();
+
             var content = new List<UiNode>
             {
-                portrait, name, hpTag, hpBar, hpValue, mpTag, mpBar, mpValue, BuildWoolRow(),
+                name, secondLife, hpTag, hp.Track, hpValue, mpTag, mp.Track, mpValue,
+                signatureRule, BuildWoolRow(), statusRule,
             };
             content.AddRange(BuildPartyBuffIcons());
             Ui.ContainerContent(plate, ContainerRatio.TwoByOne, "PartyPlateContent", content.ToArray());
@@ -1426,192 +1515,235 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return plate;
         }
 
-        // The party plate's own top edge in world Y. Both the transformation
-        // strip and the roster stack build off this rather than off a
-        // restated number, so moving the plate moves them with it. Computed
-        // rather than const now that PartyPlateCentreY is (see its own
-        // note) -- and computed as Centre + Height*0.5f, THE SAME EXPRESSION
-        // UiRect.Top itself uses, rather than (Centre - Height*0.5f) + Height
-        // (algebraically equal, but a different float instruction sequence
-        // that rounded to a different last bit here): TransformStrip is
-        // placed flush against this value, and UiAudit's SiblingOverlap
-        // check is a strict `>`, so an ULP of drift between "the plate's own
-        // solved Top" and "the Y this constant claims that Top is" reads as
-        // a genuine (if 0px-wide) overlap rather than the two edges touching.
+        // The party plate's own top edge in world Y. The roster stack builds
+        // off this rather than off a restated number, so moving the plate
+        // moves it with it. Computed rather than const now that
+        // PartyPlateCentreY is (see its own note) -- and computed as
+        // Centre + Height*0.5f, THE SAME EXPRESSION UiRect.Top itself uses,
+        // rather than (Centre - Height*0.5f) + Height (algebraically equal,
+        // but a different float instruction sequence that rounded to a
+        // different last bit here): the first roster card is placed a fixed
+        // gap above this value, and UiAudit's SiblingOverlap check is a
+        // strict `>`, so an ULP of drift between "the plate's own solved Top"
+        // and "the Y this constant claims that Top is" reads as a genuine (if
+        // 0px-wide) overlap rather than the two edges clearing each other.
         private static float PartyPlateTopY => PartyPlateCentreY + PartyPlateHeight * 0.5f;
 
-        // FUSED TO THE PLATE'S TOP EDGE, not inside it -- the header row two
-        // labels above already leaves a 2px gap between PartyName and
-        // PartyClass, which is not room for a third fact. A separate strip
-        // immediately above costs nothing the plate itself would have to give
-        // up. Shown only while the acting character carries a Transformation
-        // (Black Ram Mode today) -- the only one of the four domain systems
-        // this pass surfaces that changes what the plate above it means while
-        // it's up, so it reads as fused to that plate rather than as a
-        // floating fourth panel.
-        private const float TransformStripH = 36f;
-
-        private UiNode BuildTransformStrip()
-        {
-            var text = Ui.Label("TransformStripText", UiString.Runtime, new UiVec(400f, 24f), 14,
-                FightHudPalette.GoldText, Place.At(0f, 0f));
-            TransformStripText = text;
-
-            var strip = Ui.Panel("TransformStrip",
-                    Place.At(-694f, PartyPlateTopY + TransformStripH * 0.5f),
-                    UiSize.Fixed(452f, TransformStripH), text)
-                .Coloured(FightHudPalette.PanelActive)
-                .Inactive();
-            TransformStrip = strip;
-            return strip;
-        }
-
-        // Two slots -- the stage fields up to StageSlotsPerSide (3) party
-        // members and the plate above already shows the acting one, so two is
-        // every OTHER member there is room on stage for. Information only,
-        // same as the intent icons: nothing here is clickable, there is no
-        // swap-who's-acting mechanic to wire.
+        // ---- the roster cards ------------------------------------------------
         //
-        // RESERVES ROOM FOR THE TRANSFORM STRIP WHETHER OR NOT IT IS SHOWING.
-        // The alternative is repositioning this stack's own RectTransform at
-        // runtime whenever Transformation comes or goes, which would make its
-        // vertical position a second thing the controller has to keep in sync
-        // with a fact the strip already displays. A fixed 44px gap costs
-        // nothing when the strip is hidden and avoids that entirely.
-        // LEFT FLAT, NOT CONVERTED (owner's HQ-kit instruction, 2026-09-07,
-        // asked for Container(Silver, TwoByOne) here "at their current size
-        // if within tolerance, otherwise the nearest size that is"). 452x44
-        // is aspect 10.27, 414% off TwoByOne's 2.0 -- Ui.ContainerSizeFor*
-        // gives 452x226 as the nearest conforming size, a 5x GROWTH in
-        // height. RosterPitchY would grow from 50 to 232 with it, and two
-        // slots plus the transform strip would then need roughly 460px of
-        // vertical room between the party plate's top edge and the stage
-        // above it, where the design has room for under 100 today -- this
-        // does not "resize a plate", it breaks the HUD's whole vertical
-        // budget for two non-acting party members. Judged worse than
-        // leaving this one flat; see the conversion report for the
-        // alternative (FiveByOne, still a 2x height growth) if a resize is
-        // wanted after all.
+        // THE TRANSFORM STRIP IS GONE, and its 36px is what paid for these.
+        //
+        // It was a panel fused above the party plate that said one sentence
+        // ("Black Ram Mode - 3 TURNS") about whoever was acting, and it
+        // reserved its 36px whether or not it was showing. A transformation
+        // IS a status on a character, so it is a StatusRow now
+        // (StatusHud.TransformRow, FightHudModel.StatusRowsFor) and reads out
+        // through the badge rows on this column's three cards -- which also
+        // fixes the half of it that never worked: a TRANSFORMED ALLY IN THE
+        // ROSTER used to show nothing at all, because the strip could only
+        // describe the acting character.
+        //
+        // THE HARD CONSTRAINT ON EVERYTHING BELOW is the stack's TOP EDGE,
+        // which must not rise. The middle party stage slot stands at ground
+        // y -171.5 and its foot ring already touches this column; the stage
+        // draws OVER the HUD, so a taller stack puts feet on top of roster
+        // text. The budget between PartyPlateTopY and that line is 136px, and
+        // it is spent exactly: 2 + 66 + 2 + 66. The old spend was
+        // 36 (strip) + 6 + 44 + 6 + 44, which is the same 136 -- the strip's
+        // removal and a 6->2 gap are the whole of where the 22px per card
+        // came from.
+        //
+        // FLAT CARDS, NOT KIT CONTAINERS, and deliberately so (the same call
+        // the 2026-09-07 HQ-kit pass made here, restated because the numbers
+        // moved): the 5x1 container is the nearest conforming shape at this
+        // width and would be 76 tall, which is 20 more than the budget has
+        // for two of them. The mock-up asks for an outlined rectangle split
+        // by rules, which is what Ui.OutlineBox draws exactly.
+        //
+        // 380 WIDE, NOT 452. The owner asked for every card in this column to
+        // be flush on both vertical edges; the party plate's width is the one
+        // that cannot move (it is a fixed-aspect kit container whose height
+        // the budget above cannot afford to grow), so the roster cards come
+        // to it. Left edge -920, right edge -540, same as the plate.
         private const int RosterSlots = 2;
-        private const float RosterPlateW = 452f;
-        private const float RosterPlateH = 44f;
-        private const float RosterGap = 6f;
+        private const float RosterPlateW = PartyPlateWidth;
+        private const float RosterPlateH = 66f;
+        private const float RosterGap = 2f;
 
         // Computed, not const, now that PartyPlateTopY is (see its own note).
         private static float RosterFirstY =>
-            PartyPlateTopY + TransformStripH + RosterGap + RosterPlateH * 0.5f;
+            PartyPlateTopY + RosterGap + RosterPlateH * 0.5f;
         private const float RosterPitchY = RosterPlateH + RosterGap;
 
-        // 20/24, per section 1's measured table -- the gap between Name's
-        // right edge (-66) and HpValue's left edge (136), 202px wide, at the
-        // same y9 those two share. 4 statuses plus the "+N" chip, same as the
-        // enemy row; no counter is shown here (the tooltip carries duration
-        // instead), but the Counter node is still declared for anatomy
-        // parity with EnemyStatusBadge -- Package C simply never writes to
-        // it on this surface.
-        private const float RosterStatusBadgeSize = 20f;
-        private const float RosterStatusPitch = 24f;
-        private const int RosterStatusBadgesPerRow = 5;
+        // THE CARD'S OWN LEDGER, in card-local Y (+-33):
+        //   32   .. 16    name              16
+        //   14   .. -1    HP | MP bars      15   (gap 2)
+        //   -2   .. -3    rule              1    (gap 1)
+        //   -4   .. -17   signature         13   (gap 1)
+        //   -18  .. -19   rule              1    (gap 1)
+        //   -19.5.. -34.5 -- no: badges     15, centred -25.5
+        // The badge line runs -18.5 .. -33.5, half a pixel clear of the rule
+        // above it and of the card's own bottom edge. Every gap here is 0.5
+        // or more, which is what keeps A1 (strict `>` overlap) quiet without
+        // a single exemption on this card.
+        private const float RosterPadX = 8f;
+        private const float RosterNameY = 24.5f;
+        private const float RosterNameH = 15f;
+        private const float RosterBarY = 7f;
+        private const float RosterBarH = 15f;
 
-        // Midpoint of the -66..136 clear band.
-        private const float RosterStatusX0 = 35f;
+        // The gutter either side of the vertical rule that splits the HP half
+        // from the MP half -- the mock-up's "a vertical divider line in the
+        // middle of the cell".
+        private const float RosterMidGutter = 4f;
+        private const float RosterRule0Y = -2f;
+        private const float RosterSignatureY = -10f;
+        private const float RosterSignatureH = 13f;
+        private const float RosterRule1Y = -18f;
+
+        // 20/24 was the one-line row's size and pitch. The badges have their
+        // own cell now rather than threading between the name and the HP
+        // value, so they left-align from the card's own padding like every
+        // other row on it. 4 statuses plus the "+N" chip, same as the enemy
+        // row; no counter is shown here (the tooltip carries duration
+        // instead), but the Counter node is still declared for anatomy parity
+        // with EnemyStatusBadge.
+        private const float RosterStatusBadgeSize = 14f;
+        private const float RosterStatusPitch = 18f;
+        private const int RosterStatusBadgesPerRow = 5;
+        private const float RosterStatusY = -25.5f;
 
         private IEnumerable<UiNode> BuildRosterPlates()
         {
             return Ui.Each(Enumerable.Range(0, RosterSlots).ToList(), (_, i) =>
             {
-                // TWO ROWS, not one: name/HP-value share the top at y9 (spans
-                // -2..20), the bar owns the bottom at y-11 (spans -14..-8) --
-                // a 6px gap between them rather than three elements fighting
-                // for one row's width the way the first draft of this row did
-                // (Name and HpBar overlapping 54px, caught by A1 at build).
-                var name = Ui.Label($"Roster{i}Name", UiString.Runtime, new UiVec(140f, 22f), 14,
-                    FightHudPalette.TextPrimary, Place.At(-206f, 9f, new UiVec(0f, 0.5f)))
+                float halfW = RosterPlateW * 0.5f;
+                float left = -halfW + RosterPadX;
+                float right = halfW - RosterPadX;
+
+                var name = Ui.Label($"Roster{i}Name", UiString.Runtime, new UiVec(150f, RosterNameH), 12,
+                        FightHudPalette.TextPrimary, Place.At(left, RosterNameY, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
-                var hpValue = Ui.Label($"Roster{i}HpValue", UiStrings.HealthValue, new UiVec(70f, 20f), 11,
-                    FightHudPalette.HpText, Place.At(206f, 9f, new UiVec(1f, 0.5f)))
-                    .TextAligned(UiTextAlign.Right);
+                float halfBarW = (right - left) * 0.5f - RosterMidGutter;
+                float leftBarCentre = left + halfBarW * 0.5f;
 
-                var hpFill = Ui.Solid($"Roster{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-                var hpBar = Ui.Panel($"Roster{i}HpBar", Place.At(0f, -11f), UiSize.Fixed(412f, 6f), hpFill)
-                    .Coloured(FightHudPalette.Track);
+                // ON THE BAR, not beside it -- the mock-up draws the numbers
+                // inside the meter, which is the only way two meters fit
+                // across 380px with a name above them. Passed to Ui.Meter as
+                // an `over` caption so it rides the TRACK and stays put while
+                // the fill drains underneath it.
+                var hpValue = Ui.Label($"Roster{i}HpValue", UiStrings.HpValueTagged, new UiVec(100f, 13f), 9,
+                        FightHudPalette.TextPrimary, Place.At(-halfBarW * 0.5f + 4f, 0f, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
+
+                var mpValue = Ui.Label($"Roster{i}MpValue", UiStrings.MpValueTagged, new UiVec(100f, 13f), 9,
+                        FightHudPalette.TextPrimary, Place.At(-halfBarW * 0.5f + 4f, 0f, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
+
+                var hp = Ui.Meter($"Roster{i}HpBar", $"Roster{i}HpFill",
+                    Place.At(leftBarCentre, RosterBarY), new UiVec(halfBarW, RosterBarH),
+                    FightHudPalette.Track, FightHudPalette.HpRim,
+                    FightHudPalette.HpBright, FightHudPalette.HpShade, hpValue);
+
+                var mp = Ui.Meter($"Roster{i}MpBar", $"Roster{i}MpFill",
+                    Place.At(-leftBarCentre, RosterBarY), new UiVec(halfBarW, RosterBarH),
+                    FightHudPalette.TrackMp, FightHudPalette.MpRim,
+                    FightHudPalette.MpBright, FightHudPalette.MpShade, mpValue);
+
+                var split = Ui.Solid($"Roster{i}Split", FightHudPalette.Hairline,
+                        new UiVec(1f, RosterBarH), Place.At(0f, RosterBarY))
+                    .AsDecor();
+
+                var rule0 = Ui.Solid($"Roster{i}Rule0", FightHudPalette.Hairline,
+                        new UiVec(RosterPlateW, 1f), Place.At(0f, RosterRule0Y))
+                    .AsDecor();
+
+                // CELL 2: the character's own signature resource as one
+                // compact line ("Wool 3/10"), not the party plate's 16-pip
+                // meter -- there is no room for 16 pips in 13px of height,
+                // and the roster card's job is "is this ally alright", not
+                // "can they cast the big one". Hidden outright by
+                // RefreshRoster when the member carries no signature at all,
+                // which is most of the roster most of the time.
+                var signature = Ui.Label($"Roster{i}Signature", UiStrings.SignatureNamedValue,
+                        new UiVec(200f, RosterSignatureH), 10,
+                        FightHudPalette.TextSecondary, Place.At(left, RosterSignatureY, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left)
+                    .Inactive();
+
+                var rule1 = Ui.Solid($"Roster{i}Rule1", FightHudPalette.Hairline,
+                        new UiVec(RosterPlateW, 1f), Place.At(0f, RosterRule1Y))
+                    .AsDecor();
 
                 RosterNames.Add(name);
                 RosterHpValues.Add(hpValue);
-                RosterHpFills.Add(hpFill);
+                RosterHpFills.Add(hp.Fill);
+                RosterMpValues.Add(mpValue);
+                RosterMpFills.Add(mp.Fill);
+                RosterSignatures.Add(signature);
 
-                var plate = Ui.Panel($"Roster{i}", Place.At(-694f, RosterFirstY + i * RosterPitchY),
-                        UiSize.Fixed(RosterPlateW, RosterPlateH), name, hpValue, hpBar)
-                    .Coloured(FightHudPalette.PanelPrimary)
-                    .Inactive();
+                var cells = new List<UiNode>
+                {
+                    name, hp.Track, mp.Track, split, rule0, signature, rule1,
+                };
 
-                // No backing strip here -- the plate itself is the painted
-                // surface the strip exists to provide on bare stage floor
-                // (section 7).
+                // CELL 3: the badges, left-aligned from the same padding the
+                // name and the signature line use.
                 for (int k = 0; k < RosterStatusBadgesPerRow; k++)
                 {
-                    float x = RosterStatusX0 + (k - RosterStatusBadgesPerRow / 2) * RosterStatusPitch;
-                    var badge = BuildStatusBadge($"RosterStatusBadge{i}_{k}", x, 9f, RosterStatusBadgeSize, 8, 7);
+                    float x = left + RosterStatusBadgeSize * 0.5f + k * RosterStatusPitch;
+                    var badge = BuildStatusBadge($"RosterStatusBadge{i}_{k}", x, RosterStatusY,
+                        RosterStatusBadgeSize, 7, 6);
                     RosterStatusBadges.Add(badge);
-                    plate.Children.Add(badge);
+                    cells.Add(badge);
                 }
+
+                // A FLAT OUTLINED CARD, exactly the mock-up's shape: a fill,
+                // the four rim edges that trace it, and the two hairline
+                // rules that split it into three cells. No backing strip
+                // inside it -- the card itself is the painted surface the
+                // enemy rows' strips exist to provide on bare stage floor.
+                var plate = Ui.OutlineBox($"Roster{i}",
+                        Place.At(PartyPlateCentreX, RosterFirstY + i * RosterPitchY),
+                        new UiVec(RosterPlateW, RosterPlateH),
+                        FightHudPalette.PanelPrimary, FightHudPalette.BorderPartyGold, cells)
+                    .Inactive();
 
                 RosterPlates.Add(plate);
                 return plate;
             });
         }
 
-        // Six badges above the portrait, reading whatever
-        // FightHudModel.StatusRowsFor says is currently on the acting
-        // character. The portrait had nothing here before the original
-        // status-effect UI pass -- a buff a relic granted was visible
-        // nowhere except a menu that does not even say it fired.
+        // TWELVE BADGES ON TWO LINES, up from six on one -- the mock-up's
+        // "then TWO lines at the bottom for status effects, buffs, etc".
         //
-        // REBUILT THROUGH BuildStatusBadge, same Glyph/Code/Counter anatomy
-        // as the enemy and roster rows -- PLAN_STATUS_EFFECT_UI's own defect
-        // list, package B's first pass left this one as a plain chromeless
-        // Ui.Button (root Image doubling as both frame and glyph, Code
-        // carrying the counter folded into its own text: "PSN·2"), which is
-        // what made the first capture's party badges unreadable tinted
-        // smudges with text stacked on top. There is no structural reason
-        // for the party plate to be the one surface with fewer layers than
-        // the other two; BuildStatusBadge already builds a hoverable button
-        // with a dedicated Frame (the root Image), Glyph, Code and Counter,
-        // so this just calls it at the party's own size/pitch instead of
-        // hand-rolling a shorter anatomy.
+        // Six per line, laid out ROW-MAJOR, which is the only ordering
+        // FightController.Hud can paint without knowing anything new: its
+        // PaintStatusRow walks a flat index range and fills it in order, so
+        // slot 6 has to be the start of the second line and not the second
+        // slot of the first. PartyStatusBadgeCount on FightController moves
+        // to 12 with this; the "+N" overflow chip still lands on the LAST
+        // slot (the 12th) the moment a 13th status arrives.
         //
-        // 6, UP FROM 4 (PLAN_STATUS_EFFECT_UI section 1) -- section 6 found
-        // the realistic worst case for a party member (Poison, Vulnerable,
-        // Shielded, Regen, Protect, one speed entry) is exactly 6, so the
-        // party plate's own slots cover it with no overflow chip needed in
-        // practice; the 6th slot doubles as the "+N" chip on the rare 7th.
-        // Unchanged by the B2 shrink -- the row scales with the plate, not
-        // the slot count.
-        private const int PartyBuffSlots = 6;
+        // WHY THE LINES ARE NOT FULL-WIDTH: 6 badges at 22px cannot span
+        // 353px without ~45px holes between them, which reads as scattered
+        // rather than as a row. They left-align from the content's own edge
+        // like the name above them and fill rightwards as statuses arrive,
+        // which is how a badge row reads everywhere else in this game.
+        private const int PartyBuffPerRow = 6;
+        private const int PartyBuffRows = 2;
+        private const int PartyBuffSlots = PartyBuffPerRow * PartyBuffRows;
 
-        // 22.7x22.7, DOWN FROM 27x27 -- the B2 cozy-plate shrink
-        // (PartyPlateWidth 452 -> 380) scaled the whole row by the same
-        // 0.8407 the rest of BuildPartyPlate is scaled by (see its own
-        // header); pitch scaled with it, 27.74 down from 33, so the gap
-        // between badges shrinks by the same proportion rather than toward
-        // a collision.
-        private const float PartyBuffIconSize = 22.7f;
-        private const float PartyBuffPitch = 27.74f;
+        private const float PartyBuffIconSize = 22f;
+        private const float PartyBuffPitch = 28.4f;
+        private const float PartyBuffRow0Y = -44f;
+        private const float PartyBuffRow1Y = -71f;
 
-        // Y scaled with the row (30 -> 25.22): the header row (PartyName)
-        // and the HP row below it both moved with the same shrink, so the
-        // clear band between them scaled too rather than needing to be
-        // re-found by hand.
-        private const float PartyBuffY = 25.22f;
+        private static float PartyBuffX0 => -PartyContentHalfW + PartyBuffIconSize * 0.5f;
 
-        // X0 scaled with the row (-111 -> -93.32): still clear of the
-        // portrait's own (now smaller) right edge by the same proportion.
-        private const float PartyBuffX0 = -93.32f;
-
-        // 8/7, scaled down from 9/8 (a 27px icon's own font size, x0.8407)
-        // -- the enemy row's 11/9 at 36px and the roster row's 8/7 at 20px
-        // are the two ends this row already sat between; scaling down with
+        // 8/7 at 22px -- the enemy row's 11/9 at 36px and the roster row's
+        // 7/6 at 15px are the two ends this row sits between; scaling with
         // the icon keeps it there rather than picking a third number.
         private const int PartyBuffCodeFontSize = 8;
         private const int PartyBuffCounterFontSize = 7;
@@ -1622,8 +1754,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < PartyBuffSlots; i++)
             {
-                float x = PartyBuffX0 + i * PartyBuffPitch;
-                var icon = BuildStatusBadge($"PartyBuff{i}", x, PartyBuffY, PartyBuffIconSize,
+                float x = PartyBuffX0 + i % PartyBuffPerRow * PartyBuffPitch;
+                float y = i < PartyBuffPerRow ? PartyBuffRow0Y : PartyBuffRow1Y;
+                var icon = BuildStatusBadge($"PartyBuff{i}", x, y, PartyBuffIconSize,
                     PartyBuffCodeFontSize, PartyBuffCounterFontSize);
 
                 PartyBuffIcons.Add(icon);
@@ -1634,44 +1767,55 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // 16 pips rather than a fraction. A charge meter you can watch fill
         // without reading numbers is the whole reason this is not just another
         // "3/16" label.
+        private const float WoolRowY = -17f;
+        private const float WoolRowH = 20f;
+        private const float WoolTagW = 50f;
+        private const float WoolValueW = 48f;
+        private const float WoolPipW = 11f;
+        private const float WoolPipH = 14f;
+
         private UiNode BuildWoolRow()
         {
-            // Every number in this method is the old 410-wide row's own
-            // number times PartyPlateWidth / 452f (0.8407) -- see
-            // BuildPartyPlate's own header for why a uniform scale, not a
-            // redesign, is what B2's shrink applies here too. WoolPips
-            // (16) is untouched: it is a display reservation for a gameplay
-            // number (FightHudSpec.WoolPips), not a layout choice this pass
-            // gets to make smaller.
-            var divider = Ui.Solid("WoolDivider", FightHudPalette.Hairline, new UiVec(339.65f, 0.84f), Place.At(0f, 18.5f))
-                .AllowOverflow("the divider sits ON the row's top edge, marking where the wool block begins");
+            // THE DIVIDER IS GONE with the loose layout it marked. It was a
+            // hairline sitting ON this row's top edge (with its own
+            // AllowOverflow to say so) to show where the wool block began,
+            // back when the rows above it floated with 20px of air between
+            // them. At a 6px gap there is nothing to separate -- a rule in a
+            // 6px gap reads as a scratch, not as a division -- and removing
+            // it takes one AllowOverflow off this screen with it.
+            //
+            // The pips span whatever the tag and the value leave, the same
+            // edges-not-widths discipline the HP/MP rows above use.
+            float half = PartyContentHalfW;
+            float pipsLeft = -half + WoolTagW + PartyRowGapX;
+            float pipsRight = half - WoolValueW - PartyRowGapX;
+            float pitch = (pipsRight - pipsLeft) / FightHudSpec.WoolPips;
 
-            var tag = Ui.Label("WoolTag", UiStrings.WoolHeading, new UiVec(50.44f, 16.8f), 10,
-                FightHudPalette.TextMuted, Place.At(-169.82f, 0f, new UiVec(0f, 0.5f)));
+            var tag = Ui.Label("WoolTag", UiStrings.WoolHeading, new UiVec(WoolTagW, 16f), 10,
+                FightHudPalette.TextMuted, Place.At(-half, 0f, new UiVec(0f, 0.5f)));
 
             var pips = Ui.Each(Enumerable.Range(0, FightHudSpec.WoolPips).ToList(), (_, i) =>
             {
-                var pip = Ui.Solid($"WoolPip{i}", FightHudPalette.PipEmpty, new UiVec(10.93f, 16.8f),
-                    Place.At(-112.66f + i * 15.13f, 0f));
+                var pip = Ui.Solid($"WoolPip{i}", FightHudPalette.PipEmpty, new UiVec(WoolPipW, WoolPipH),
+                    Place.At(pipsLeft + pitch * (i + 0.5f), 0f));
                 WoolPips.Add(pip);
                 return pip;
             });
 
-            var value = Ui.Label("WoolValue", UiStrings.SignatureValue, new UiVec(46.24f, 16.8f), 13,
-                FightHudPalette.TextPrimary, Place.At(169.82f, 0f, new UiVec(1f, 0.5f)));
+            var value = Ui.Label("WoolValue", UiStrings.SignatureValue, new UiVec(WoolValueW, 16.8f), 13,
+                FightHudPalette.TextPrimary, Place.At(half, 0f, new UiVec(1f, 0.5f)));
             WoolValue = value;
 
-            var children = new List<UiNode> { divider, tag };
+            var children = new List<UiNode> { tag };
             children.AddRange(pips);
             children.Add(value);
 
-            // 344.69 wide, not the plate's own 380: same reasoning the old
-            // 410-vs-452 gap documented, scaled down with it -- the row's
-            // actual content already tops out at +-169.82, and the panel's
-            // own declared box (what A2 checks against the container's
-            // inset) has to clear both its own content and the container's
-            // left/right bound (+-176.7 at this plate size).
-            var row = Ui.Panel("WoolRow", Place.At(0f, -55.49f), UiSize.Fixed(344.69f, 33.63f), children);
+            // FULL CONTENT WIDTH now, not 344.69 of 353.4: the row's own
+            // content reaches both content edges (the tag is flush left, the
+            // value flush right), so a narrower panel would clip them. A2
+            // checks this box against the container's inset, which is exactly
+            // what it is derived from.
+            var row = Ui.Panel("WoolRow", Place.At(0f, WoolRowY), UiSize.Fixed(half * 2f, WoolRowH), children);
             WoolRow = row;
             return row;
         }

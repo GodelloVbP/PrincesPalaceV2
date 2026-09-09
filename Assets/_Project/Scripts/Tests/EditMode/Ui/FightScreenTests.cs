@@ -103,6 +103,12 @@ namespace PrincesPalace.Domain.Tests
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows);
             AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes,
                 s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
+
+            // The roster card grew from one readout to four in 2026-09-09's
+            // column pass, and RefreshRoster indexes all of them off the same
+            // loop counter -- exactly the shape the Store bug had.
+            AssertSameLength("roster", s.RosterPlates, s.RosterNames, s.RosterHpValues,
+                s.RosterHpFills, s.RosterMpValues, s.RosterMpFills, s.RosterSignatures);
         }
 
         // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
@@ -983,7 +989,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(15, screen.EnemyStatusBadges.Count);
             Assert.AreEqual(3, screen.EnemyStatusStrips.Count);
             Assert.AreEqual(10, screen.RosterStatusBadges.Count);
-            Assert.AreEqual(6, screen.PartyBuffIcons.Count);
+
+            // 12 SINCE 2026-09-09, up from 6: the owner's mock-up gives the
+            // party plate two badge lines of six. Row-major, so slot 6 starts
+            // the second line -- PartyBuffLinesAreSixWideAndRowMajor below
+            // pins that half; this one only pins the count the controller's
+            // PartyStatusBadgeCount has to agree with.
+            Assert.AreEqual(12, screen.PartyBuffIcons.Count);
 
             for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
             {
@@ -1018,7 +1030,7 @@ namespace PrincesPalace.Domain.Tests
             // capture's worst defect was this row NOT having its own Glyph/
             // Counter children, which forced a tinted root Image to double
             // as the glyph and Code to carry a folded "CODE·N" caption.
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 12; i++)
             {
                 var name = $"PartyBuff{i}";
                 var badge = Find(root, name);
@@ -1181,27 +1193,194 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // ---- the bottom-left HUD column (owner's mock-up, 2026-09-09) --------
+
+        // THE PIN THAT MATTERS MOST ON THIS COLUMN, and the only one that is
+        // about something outside the column itself.
+        //
+        // The stack grows UPWARD from the party plate's top edge, and the
+        // party stage stands over it: the stage is declared before the HUD
+        // plates but the middle party slot's contact ring and feet reach down
+        // into this band, and the stage draws OVER the column, so anything
+        // this stack gains in height is paid for in roster text with a boot
+        // on it. The budget is therefore the stack's own TOP, and it must not
+        // rise.
+        //
+        // PINNED AS A LITERAL, not recomputed from RosterFirstY/RosterPitchY/
+        // RosterPlateH (CLAUDE.md's gotcha 5): a test that rebuilds the
+        // production expression can only catch a typo in itself. -160.627 is
+        // what the stack topped out at BEFORE this pass, when the 136px
+        // between PartyPlateTopY and here was spent on
+        // 36 (transform strip) + 6 + 44 + 6 + 44. It is spent on
+        // 2 + 66 + 2 + 66 now, which is the same 136 -- that is the whole
+        // arithmetic of removing the strip.
+        private const float RosterStackTopBudget = -160.627f;
+
         [Test]
-        public void RosterStatusRowsSitBetweenTheNameAndTheHpValueWithNoOverlap()
+        public void TheRosterStackTopDoesNotRiseAboveItsBudget()
+        {
+            var top = RectOf("Roster1");
+
+            Assert.AreEqual(RosterStackTopBudget, top.Centre.Y + top.Height * 0.5f, 0.01f,
+                "the HUD column's top edge moved -- the party stage draws OVER this column, so a taller " +
+                "stack puts a figure's feet on top of the roster text. Pay for new rows by trimming cell " +
+                "heights, never by raising this line.");
+        }
+
+        // "Have all the containers be flush with one another on a horizontal
+        // axis. So no container bigger than the other in width" -- the owner,
+        // 2026-09-09. Three cards, one left edge, one right edge.
+        [Test]
+        public void EveryCardInTheHudColumnSharesTheSameVerticalEdges()
+        {
+            var cards = new[] { "PartyPlate", "Roster0", "Roster1" };
+
+            foreach (var card in cards)
+            {
+                var rect = RectOf(card);
+                Assert.AreEqual(-920f, rect.Left, 0.01f, $"{card}'s left edge");
+                Assert.AreEqual(-540f, rect.Right, 0.01f, $"{card}'s right edge");
+            }
+        }
+
+        // The mock-up's roster card: one outlined rectangle, three stacked
+        // cells, a hairline between each pair. Checked as ORDER and
+        // CLEARANCE rather than as coordinates -- the numbers are free to be
+        // retuned, the reading order is not.
+        [Test]
+        public void EachRosterCardStacksNameAndBarsThenSignatureThenBadges()
         {
             for (int r = 0; r < 2; r++)
             {
                 var name = RectOf($"Roster{r}Name");
-                var hpValue = RectOf($"Roster{r}HpValue");
                 var hpBar = RectOf($"Roster{r}HpBar");
+                var mpBar = RectOf($"Roster{r}MpBar");
+                var rule0 = RectOf($"Roster{r}Rule0");
+                var signature = RectOf($"Roster{r}Signature");
+                var rule1 = RectOf($"Roster{r}Rule1");
+
+                Assert.LessOrEqual(hpBar.Top, name.Bottom, $"roster {r}: the bars must sit UNDER the name");
+                Assert.AreEqual(hpBar.Centre.Y, mpBar.Centre.Y, 0.01f,
+                    $"roster {r}: the mock-up puts the MP bar at the SAME height as the HP bar, not below it");
+                Assert.LessOrEqual(hpBar.Right, mpBar.Left, $"roster {r}: HP on the left half, MP on the right");
+
+                Assert.LessOrEqual(rule0.Top, hpBar.Bottom, $"roster {r}: rule 0 closes the bar cell");
+                Assert.LessOrEqual(signature.Top, rule0.Bottom, $"roster {r}: the signature line is cell 2");
+                Assert.LessOrEqual(rule1.Top, signature.Bottom, $"roster {r}: rule 1 closes the signature cell");
 
                 for (int i = 0; i < 5; i++)
                 {
                     var badge = RectOf($"RosterStatusBadge{r}_{i}");
-
-                    Assert.LessOrEqual(name.Right, badge.Left,
-                        $"roster {r} badge {i} reaches back into the name box");
-                    Assert.LessOrEqual(badge.Right, hpValue.Left,
-                        $"roster {r} badge {i} reaches into the hp-value box");
-                    Assert.IsFalse(badge.Overlaps(hpBar),
-                        $"roster {r} badge {i} overlaps the hp bar below it");
+                    Assert.LessOrEqual(badge.Top, rule1.Bottom,
+                        $"roster {r} badge {i} has left the third cell");
+                    Assert.IsTrue(RectOf($"Roster{r}").Contains(badge),
+                        $"roster {r} badge {i} escapes the card");
                 }
             }
+        }
+
+        // The two numbers are drawn ON their own bars, which is the only way
+        // two meters fit across a 380px card -- so each value label has to be
+        // INSIDE its own track's rect, not beside it.
+        [Test]
+        public void TheRosterValuesAreDrawnOnTheirOwnBars()
+        {
+            for (int r = 0; r < 2; r++)
+            {
+                Assert.IsTrue(RectOf($"Roster{r}HpBar").Contains(RectOf($"Roster{r}HpValue")),
+                    $"roster {r}: the HP value has slipped off its bar");
+                Assert.IsTrue(RectOf($"Roster{r}MpBar").Contains(RectOf($"Roster{r}MpValue")),
+                    $"roster {r}: the MP value has slipped off its bar");
+            }
+        }
+
+        // EVERY meter on this column is the same widget (Ui.Meter): a track,
+        // the fill FightController.SetFill drains, and the two shading strips
+        // that make it read as a bar rather than as a coloured rectangle.
+        //
+        // The strips must be CHILDREN OF THE FILL, and that is the half worth
+        // pinning: SetFill moves the fill's own anchorMax.x, so a strip
+        // declared as a sibling of the fill would stay full width while the
+        // bar drained under it -- a highlight floating over an empty track.
+        [Test]
+        public void EveryMeterOnTheHudColumnCarriesItsShadingInsideItsFill()
+        {
+            var fills = new List<string> { "PartyHpFill", "PartyMpFill" };
+            for (int r = 0; r < 2; r++)
+            {
+                fills.Add($"Roster{r}HpFill");
+                fills.Add($"Roster{r}MpFill");
+            }
+
+            var root = Solve();
+            foreach (var fillName in fills)
+            {
+                var fill = Find(root, fillName);
+                Assert.IsNotNull(fill, $"no meter fill named '{fillName}'");
+
+                var children = fill.Children.Select(c => c.Name).ToList();
+                CollectionAssert.Contains(children, fillName + "Sheen",
+                    $"{fillName} has no top highlight - it will read as a flat rectangle");
+                CollectionAssert.Contains(children, fillName + "Shade",
+                    $"{fillName} has no bottom shade band");
+            }
+        }
+
+        // "The bars should be slightly bigger in height. It should feel like
+        // a proper HP bar not a red bar. Same for MP." -- the owner. Pinned
+        // as a floor rather than an exact value: the point is that a future
+        // tidy-up cannot quietly shrink them back toward the 13.45 the
+        // capture was taken at.
+        [Test]
+        public void TheHudColumnsBarsAreTallEnoughToReadAsMeters()
+        {
+            Assert.GreaterOrEqual(RectOf("PartyHpBar").Height, 20f, "the party HP bar is back to a stripe");
+            Assert.GreaterOrEqual(RectOf("PartyMpBar").Height, 20f, "the party MP bar is back to a stripe");
+
+            for (int r = 0; r < 2; r++)
+            {
+                Assert.GreaterOrEqual(RectOf($"Roster{r}HpBar").Height, 12f, $"roster {r} HP bar");
+                Assert.GreaterOrEqual(RectOf($"Roster{r}MpBar").Height, 12f, $"roster {r} MP bar");
+            }
+        }
+
+        [Test]
+        public void PartyBuffLinesAreSixWideAndRowMajor()
+        {
+            var first = RectOf("PartyBuff0");
+            var seventh = RectOf("PartyBuff6");
+
+            Assert.AreEqual(first.Centre.X, seventh.Centre.X, 0.01f,
+                "slot 6 must start the SECOND line under slot 0 -- PaintStatusRow fills a flat range in " +
+                "order, so a column-major layout would fill down before across");
+            Assert.Less(seventh.Centre.Y, first.Centre.Y, "the second line sits below the first");
+
+            for (int i = 0; i < 5; i++)
+            {
+                Assert.AreEqual(RectOf($"PartyBuff{i}").Centre.Y, RectOf($"PartyBuff{i + 1}").Centre.Y, 0.01f,
+                    $"badges {i} and {i + 1} are on the same line");
+            }
+        }
+
+        // Two features removed in the same pass as the column redraw, both
+        // pinned as absences because a re-added node would otherwise cost
+        // vertical budget nothing here would notice.
+        [Test]
+        public void TheTransformStripAndTheDeadPortraitAreGone()
+        {
+            var root = Solve();
+
+            // A transformation is a StatusRow now (StatusHud.TransformRow),
+            // so it shows on the party plate AND on a transformed ally's
+            // roster card -- which the strip, describing only the acting
+            // character, never could. Its 36px is what bought the roster
+            // cards their extra cells.
+            Assert.IsNull(Find(root, "TransformStrip"));
+            Assert.IsNull(Find(root, "TransformStripText"));
+
+            // Never loaded anything: no sprite key, always inactive, and the
+            // controller field it bound to had no reader and no writer.
+            Assert.IsNull(Find(root, "PartyPortrait"));
         }
 
         private static IEnumerable<UiNode> Walk(UiNode node)

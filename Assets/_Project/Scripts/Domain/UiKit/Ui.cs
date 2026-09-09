@@ -453,6 +453,106 @@ namespace PrincesPalace.Domain.UiKit
             return Panel(name, place, UiSize.Fixed(size), parts);
         }
 
+        // ---- meters ------------------------------------------------------------
+        //
+        // A TRACK, THE FILL THAT READS IT, AND THE TWO STRIPS THAT MAKE IT A
+        // METER RATHER THAN A COLOURED RECTANGLE.
+        //
+        // The fight HUD wrote this by hand three times -- the party plate's HP
+        // row, its MP row, and the roster mini-plate's -- and every copy was
+        // the same two lines: a Panel tinted Track with one full-bleed Solid
+        // inside it. At 6-13px tall that reads as a red stripe, which is
+        // exactly the owner's note on the 2026-09-09 capture ("it should feel
+        // like a proper HP bar, not a red bar"). What makes it read as a meter
+        // is not height alone: it is a rim in the fill's own deep tone, a
+        // highlight along the top of the fill and a darker band under it.
+        //
+        // THE STRIPS ARE CHILDREN OF THE FILL, at FRACTIONAL anchors, and both
+        // halves of that matter. FightController.SetFill drains a bar by moving
+        // the fill's own anchorMax.x, so anything anchored INSIDE the fill
+        // narrows with it for free and needs no second runtime writer; and
+        // fractional anchors mean the strips stay the same PROPORTION of the
+        // bar however tall the caller makes it, so one recipe serves a 22px
+        // party bar and a 14px roster bar without a second set of numbers.
+        //
+        // Anything that must NOT drain with the fill -- the roster's
+        // "HP 34/40" caption, drawn on the bar itself -- is passed as `over`
+        // and lands on the TRACK, layered against the fill rather than
+        // overlapping it by accident.
+        public readonly struct MeterNodes
+        {
+            public readonly UiNode Track;
+
+            // The node FightController.SetFill writes. Named by the caller,
+            // never derived here: PartyHpFill/Roster0HpFill are wiring
+            // contract, and a helper that minted its own name would rename
+            // three serialized fields as a side effect of a refactor.
+            public readonly UiNode Fill;
+
+            internal MeterNodes(UiNode track, UiNode fill)
+            {
+                Track = track;
+                Fill = fill;
+            }
+        }
+
+        // A WARM white at 0.18, and the top 40% / bottom 25% split beneath it.
+        // One statement of the recipe, so a red bar and a blue bar are the
+        // same widget in two colours rather than two bars that happen to be
+        // lit similarly. Only the two TONES are per-caller (a meter's shade
+        // has to be its own deep colour, or the band under a blue bar reads
+        // brown).
+        //
+        // WARM, NOT #FFFFFF, for two reasons that happen to agree. A pure
+        // white highlight desaturates the red bar it sits on; #FFF3E0 is the
+        // same lamp-lit white GoldLight already uses and leaves the bar its
+        // own hue. And FightPlayableTests.NothingOnScreenIsAWhiteQuad sweeps
+        // for sprite-less Images left at construction white -- which is a
+        // guard worth keeping strict, so the deliberate highlight moves off
+        // pure white rather than the sweep gaining an alpha exemption every
+        // real white quad could then hide behind.
+        private const string MeterSheenHex = "#FFF3E02E";
+        private const float MeterSheenFromY = 0.6f;
+        private const float MeterShadeToY = 0.25f;
+
+        public static MeterNodes Meter(string trackName, string fillName, Place place, UiVec size,
+            string trackHex, string rimHex, string fillHex, string shadeHex, params UiNode[] over)
+        {
+            // AsDecor, both: a highlight is drawn, never pressed -- same rule
+            // Rim's own edges follow -- and it keeps them out of A1's sibling
+            // check against each other, which they would otherwise need a
+            // Layered() for despite never touching.
+            var sheen = Solid(fillName + "Sheen", MeterSheenHex,
+                    Place.Frac(new UiVec(0f, MeterSheenFromY), UiVec.One), UiSize.Fill)
+                .AsDecor();
+            var shade = Solid(fillName + "Shade", shadeHex,
+                    Place.Frac(UiVec.Zero, new UiVec(1f, MeterShadeToY)), UiSize.Fill)
+                .AsDecor();
+
+            // ONE PIXEL IN FROM THE TRACK on every side, so the rim below
+            // traces the fill rather than being covered by it at full health.
+            var fill = Solid(fillName, fillHex, Place.Stretch(1f, 1f, 1f, 1f), UiSize.Fill);
+            fill.Children.Add(sheen);
+            fill.Children.Add(shade);
+
+            var parts = new List<UiNode> { fill };
+            parts.AddRange(Rim(trackName, size, rimHex));
+
+            var captions = over == null ? new List<UiNode>() : over.Where(n => n != null).ToList();
+            if (captions.Count > 0)
+            {
+                parts.AddRange(captions);
+
+                // The caption sits ON the fill by design -- that is what "the
+                // text is drawn on the bar" means -- so it is a layer, not an
+                // overlap to be exempted one pair at a time.
+                Layered(new List<UiNode> { fill }.Concat(captions));
+            }
+
+            var track = Panel(trackName, place, UiSize.Fixed(size), parts).Coloured(trackHex);
+            return new MeterNodes(track, fill);
+        }
+
         // OutlineButton (the hairline-rim, no-plate button) retired
         // 2026-09-07: the shop was its only caller and every one of those
         // sites now wears a kit plate (owner's HQ-kit instruction). The

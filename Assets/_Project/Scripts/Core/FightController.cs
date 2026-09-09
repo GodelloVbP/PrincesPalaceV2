@@ -94,15 +94,29 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] enemyPlateBreakTracks;
         [SerializeField] internal Image[] enemyPlateBreakFills;
         [SerializeField] internal GameObject secondLifeBadge;
-        [SerializeField] internal GameObject transformStrip;
-        [SerializeField] internal TMP_Text transformStripText;
+
+        // transformStrip/transformStripText are GONE (2026-09-09, the
+        // HUD-column pass). A transformation reads out as a status badge on
+        // every surface now (StatusHud.TransformRow) rather than as a panel
+        // that could only ever describe whoever was acting.
         [SerializeField] internal GameObject[] rosterPlates;
         [SerializeField] internal TMP_Text[] rosterNames;
         [SerializeField] internal TMP_Text[] rosterHpValues;
         [SerializeField] internal Image[] rosterHpFills;
+
+        // The mana half of each roster card and its signature line -- the
+        // owner's 2026-09-09 mock-up gave the mini-plate three cells where it
+        // had one. Bound by name off FightScreen.RosterMpValues/RosterMpFills/
+        // RosterSignatures like every other indexed array here.
+        [SerializeField] internal TMP_Text[] rosterMpValues;
+        [SerializeField] internal Image[] rosterMpFills;
+        [SerializeField] internal TMP_Text[] rosterSignatures;
         [SerializeField] internal GameObject lowHpVignette;
 
-        [SerializeField] internal Image partyPortrait;
+        // partyPortrait is GONE. It was a [SerializeField] nothing read and
+        // nothing assigned, wired to a node that was always inactive with no
+        // sprite -- see FightScreen.PartyName's own note where the NodeRef
+        // used to be declared.
         [SerializeField] internal TMP_Text partyName;
 
         // The plate's own frame art -- C1. Swapped by RefreshPartyPlate off
@@ -172,7 +186,13 @@ namespace PrincesPalace
         private const int RosterStatusBadgesPerRow = 5;
         private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
         private const int RosterStatusBadgeCount = 10; // 2 roster plates x 5
-        private const int PartyStatusBadgeCount = 6;
+
+        // 12, UP FROM 6 (2026-09-09): the owner's mock-up gives the party
+        // plate TWO badge lines of six, and FightScreen.BuildPartyBuffIcons
+        // lays them out ROW-MAJOR so this stays one flat range that
+        // PaintStatusRow fills in order. The overflow chip is still the last
+        // slot, which is now the 12th rather than the 6th.
+        private const int PartyStatusBadgeCount = 12;
 
         private StatusBadgeParts[] _statusBadgeParts;
         private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];

@@ -575,7 +575,6 @@ namespace PrincesPalace
 
             RefreshWool(actor);
             RefreshPartyStatusRow(actor);
-            RefreshTransformStrip(actor);
             RefreshSecondLifeBadge();
             RefreshRoster(actor);
         }
@@ -601,28 +600,15 @@ namespace PrincesPalace
             if (themed != null) partyPlateArt.sprite = themed;
         }
 
-        // Fused above the party plate, shown only while the acting character
-        // is transformed -- see FightScreen.BuildTransformStrip's own
-        // comment for why this is a separate panel rather than a fourth row
-        // squeezed into the plate itself.
-        private void RefreshTransformStrip(CombatantState actor)
-        {
-            if (transformStrip == null) return;
-
-            var transformation = actor.Transformation;
-            transformStrip.SetShown(transformation != null);
-            if (transformation == null || transformStripText == null) return;
-
-            if (transformation.IsPermanent)
-            {
-                transformStripText.Set(UiStrings.TransformStripPermanent, transformation.DisplayName);
-            }
-            else
-            {
-                transformStripText.Set(UiStrings.TransformStripTurns,
-                    transformation.DisplayName, transformation.TurnsRemaining);
-            }
-        }
+        // RefreshTransformStrip is GONE (2026-09-09). The strip it painted was
+        // a whole panel that said one sentence about the ACTING character and
+        // could therefore never show a transformed ally sitting in the roster
+        // at all. A transformation is a StatusRow now
+        // (FightHudModel.StatusRowsFor -> StatusHud.TransformRow), so every
+        // surface that already paints status badges -- the party plate, both
+        // roster cards, and the hover tooltip that names it in full -- picks
+        // it up through PaintStatusRow with no code here at all. That is the
+        // whole point of folding it in rather than adding a fourth writer.
 
         // The one badge on this screen that reads FightSession rather than
         // the acting character -- a Second Life charge belongs to the whole
@@ -663,12 +649,46 @@ namespace PrincesPalace
                 if (!present) continue;
 
                 if (Has(rosterNames, i)) rosterNames[i].SetContent(member.Name);
+
+                // TAGGED templates ("HP 34/40"), not HealthValue -- the
+                // number is drawn ON the bar now (the owner's 2026-09-09
+                // mock-up), where there is no separate tag label beside it to
+                // say which resource it is.
                 if (Has(rosterHpValues, i))
                 {
-                    rosterHpValues[i].Set(UiStrings.HealthValue, member.CurrentHealth, member.MaxHealth);
+                    rosterHpValues[i].Set(UiStrings.HpValueTagged, member.CurrentHealth, member.MaxHealth);
                 }
                 if (Has(rosterHpFills, i)) SetFill(rosterHpFills[i], member.CurrentHealth, member.MaxHealth);
+
+                if (Has(rosterMpValues, i))
+                {
+                    rosterMpValues[i].Set(UiStrings.MpValueTagged, member.CurrentMana, member.MaxMana);
+                }
+                if (Has(rosterMpFills, i)) SetFill(rosterMpFills[i], member.CurrentMana, member.MaxMana);
+
+                RefreshRosterSignature(i, member);
             }
+        }
+
+        // Cell 2 of the roster card: the member's own signature resource as
+        // one line ("Wool 3/10"), or nothing at all.
+        //
+        // HIDDEN RATHER THAN BLANKED when the member carries no signature,
+        // which is the normal case for two thirds of the roster -- a label
+        // set to "" still occupies its cell for A1's purposes and, more to
+        // the point, leaves an empty band under the bars that reads as a
+        // missing value rather than as a character who simply has no meter.
+        // Same graceful-degradation shape as RefreshWool one screen over.
+        private void RefreshRosterSignature(int index, CombatantState member)
+        {
+            if (!Has(rosterSignatures, index)) return;
+
+            var signature = member?.Signature;
+            rosterSignatures[index].gameObject.SetShown(signature != null);
+            if (signature == null) return;
+
+            rosterSignatures[index].Set(UiStrings.SignatureNamedValue,
+                signature.DisplayName, signature.Current, signature.Max);
         }
 
         // ---- status badges (enemy row, party plate, roster row) ---------------

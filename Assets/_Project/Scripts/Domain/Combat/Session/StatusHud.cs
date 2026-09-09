@@ -19,8 +19,8 @@ namespace PrincesPalace.Domain.Combat.Session
     // fixes those two names, so the other packages compile against
     // FightHudModel, never against this file.
     //
-    // PUBLIC SURFACE IS SentinelTurns, CodeFor, SlugFor, SortKeyFor, RowFor
-    // and SpeedRow (S6's review) -- every one of those has a real caller
+    // PUBLIC SURFACE IS SentinelTurns, CodeFor, SlugFor, SortKeyFor, RowFor,
+    // SpeedRow and TransformRow (S6's review) -- every one of those has a real caller
     // outside this file (FightHudModel.StatusRowsFor, the icon resource
     // lookups, StatusHudCoverageTests' own CodeFor/SortKeyFor coverage).
     // CounterFor, IsPositive, SpeedSortKey and TooltipFor are composition
@@ -72,6 +72,32 @@ namespace PrincesPalace.Domain.Combat.Session
         public const string SpeedDownCode = "SP-";
         public const string SpeedUpSlug = "speed";
         public const string SpeedDownSlug = "speed_down";
+
+        // ---- the transformation, as a status ----------------------------------
+        //
+        // A presentation id like speed's, and for the same reason: a
+        // Transformation is a live object on the combatant (Domain/Combat/
+        // Transformation.cs), not a StatusEffectType, and adding a thirteenth
+        // enum member to give it a badge would mean every switch in this file
+        // pretending it has a magnitude and a duration in the ActiveStatus
+        // sense.
+        //
+        // It replaces the TransformStrip -- a whole 36px panel fused above the
+        // party plate that said one sentence and, being a panel, could only
+        // ever say it about whoever was acting. As a row it appears on every
+        // surface that reads StatusRowsFor, so a transformed ally sitting in
+        // the roster is finally visible too, and the 36px goes back to the
+        // roster cards. There is no Status/transformed.png yet, which is a
+        // stated gap rather than a bug: PaintBadge's icon-first/code-fallback
+        // path draws "FRM" until one ships.
+        public const string TransformCode = "FRM";
+        public const string TransformSlug = "transformed";
+
+        // Second tier, benefit bucket -- ahead of poison and regen, behind
+        // anything that stops the holder acting. A transform changes what
+        // every subsequent action of theirs does, which is exactly what
+        // Tier.ImmediateExchange already means for Shielded and Empowered.
+        private const int TransformTableIndex = 14;
 
         // ---- codes, slugs and polarity, one switch each ----------------------
 
@@ -199,6 +225,9 @@ namespace PrincesPalace.Domain.Combat.Session
             ((int)Tier.Rest * 10 + (int)(positive ? Bucket.Benefit : Bucket.Harm)) * 100
                 + (positive ? SpeedUpTableIndex : SpeedDownTableIndex);
 
+        private static int TransformSortKey() =>
+            ((int)Tier.ImmediateExchange * 10 + (int)Bucket.Benefit) * 100 + TransformTableIndex;
+
         // ---- tooltip text, section 5's own table -------------------------------
         //
         // "NAME -- <keyword>, <duration>", extending the shape Chilled and
@@ -274,6 +303,29 @@ namespace PrincesPalace.Domain.Combat.Session
                 IsPositive(status.Type),
                 CounterFor(status.TurnsRemaining),
                 SortKeyFor(status.Type));
+
+        // A running transformation as one badge. `displayName` is the form's
+        // own name ("Black Ram Mode"), which is what the retired strip said
+        // and what the tooltip still says -- the badge itself carries only
+        // FRM and the turn count, exactly like every other row.
+        //
+        // A PERMANENT form draws NO number (the -1 sentinel every surface
+        // already understands) rather than a count that has stopped moving:
+        // see Transformation.IsPermanent's own comment for why "47 turns left"
+        // reads as a bug rather than as "this is who he is now".
+        public static FightHudModel.StatusRow TransformRow(string displayName, int turnsRemaining, bool permanent)
+        {
+            string name = string.IsNullOrEmpty(displayName) ? "Transformed" : displayName;
+            string duration = permanent ? "for the rest of the run" : Plural(turnsRemaining, "turn");
+
+            return new FightHudModel.StatusRow(
+                TransformCode,
+                TransformSlug,
+                $"{name} -- {Wrap(true, "transformed")}, {duration}",
+                true,
+                permanent ? -1 : CounterFor(turnsRemaining),
+                TransformSortKey());
+        }
 
         public static FightHudModel.StatusRow SpeedRow(string sourceName, int granted, int turnsLeft)
         {
