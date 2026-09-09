@@ -424,6 +424,74 @@ left blank, because a silent gap reads as "nothing to see here":
   without writing anything. That hazard was documented in the tool's own
   docstring for months and enforced nowhere.
 
+### 4c. Phase-keyed stances, and transformation forms
+
+Two things a stance kit can be commissioned for beyond the four the fight
+drives on its own (`idle`/`attack`/`hurt`/`defeated`). Both are authored in
+`skills.json`; neither costs any code.
+
+**A blow can be three drawings, not one.** A skill authors up to three of the
+caster's own poses, keyed by the PHASE of the beat rather than sequenced with
+their own timings — the phases already exist in the beat and are already
+timed, so a phase key picks a drawing for a moment the beat already owns.
+
+| field | worn |
+|---|---|
+| `approachStance` | while the actor is travelling — a `close`'s walk-in, a `lunge`/`charge`'s crossing |
+| `windupStance` | between arrival and impact; on a `hold` or a `close` this BUYS the beat a wind-up wait it would not otherwise have |
+| `stance` | the strike, from the impact instant through the settle. This is the field that already existed |
+
+Precedence, which is what an author actually needs to know:
+
+- Author nothing and the beat plays as it always did — the strike from the
+  open, idle at the end, no extra waits. Every existing skill is this case.
+- `hold` has no travel, so `approachStance` on one is **ignored** (not
+  refused: a skill's approach can be edited without its poses being
+  rewritten).
+- `lunge` and `charge` have exactly ONE pre-impact interval, and that
+  interval IS the travel — the crouch-and-cross is the swing rather than
+  something in front of it. Authoring both there wears the **approach** pose
+  and drops the wind-up, rather than inventing a midpoint the animator knows
+  nothing about. Author one or the other on those two.
+- `close` is the only approach with a real boundary inside it (it arrives
+  before the blow opens), so it is the one that can wear all three.
+- A wind-up a `hold`/`close` buys is charged to the beat's own budget: the
+  settle afterwards gives back exactly what it took, so a beat with a wind-up
+  is the same length as one without.
+
+The worked example is `placeholder_brawler_slam` (Bjorn): `"approach":
+"close"`, `"approachStance": "rush"`, `"windupStance": "overhead"`,
+`"stance": "slam"` — he crosses, raises it, brings it down. The kit therefore
+needs `rush`, `overhead` and `slam` on the same shared canvas as the other
+six. The full table with its fallbacks lives on `CombatBeat`, and
+`EnemyArtCompletenessTests` audits both new fields against disk exactly as it
+already audits `stance` — a phase pose naming art a monster does not have
+fails the same way the strike does.
+
+**A transform can change which actor is drawn.** `transform.spritePath` names
+a Resources-relative stance FOLDER (`"Characters/sheep_black_ram"`), and
+while the transformation runs, every stance name the fight asks for resolves
+inside it — so the form is a whole delivered actor with its own
+`StanceManifest` entry, its own canvas and its own ground line, commissioned
+exactly like any other. It is not a per-stance override list: a second actor
+already is one, on disk.
+
+What the runtime does with it, so a delivery knows what it is being judged
+against:
+
+- The swap becomes visible at the **impact instant** of the transform's own
+  beat, under a white silhouette flash, with the beat's authored `shake`. The
+  beat before that instant is drawn from the caster's OWN folder, so
+  authoring the same pose name on `windupStance` and `stance` (as
+  `black_ram_mode` does with `victory`) reads as one drawing replaced by the
+  other actor's version of it.
+- The **revert** is quiet and lands at the END of the round in which the
+  timer ran out — a transform expires at its holder's turn start, which is
+  not an action and records no beat.
+- A form folder that is not on disk leaves the figure in its own art and logs
+  one line. A Black Ram nobody has drawn yet looks like Shawn with better
+  numbers, not like a nameplate.
+
 ## 5. Wiring checklist (new art → visible in-game)
 
 1. Drop raw source file(s) in the kit's source folder, run the keyer.

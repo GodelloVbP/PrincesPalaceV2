@@ -44,6 +44,22 @@ namespace PrincesPalace.Domain.Combat
         // the kind of hidden coupling the closed enum is meant to avoid.
         public int splashPercent;
 
+        // WHOSE ART THE HOLDER WEARS WHILE THIS IS RUNNING — a
+        // Resources-relative stance folder ("Characters/sheep_black_ram"),
+        // empty for a transform that only changes the numbers.
+        //
+        // A FOLDER, not a set of stance names: the form is a whole actor, so
+        // every stance name the fight already asks for ("cast", "hurt",
+        // "victory", "defeated") resolves inside it, and its own
+        // StanceManifest entry re-lays the figure out — the ram's canvas is
+        // not Shawn's 540x370 and its feet are not on his ground line. That
+        // is why this is one string rather than a per-stance map: a second
+        // actor already IS a per-stance map, on disk, with a manifest entry.
+        //
+        // Missing on disk degrades to the holder's own art (see
+        // FightController.WearForm), the house posture everywhere else.
+        public string spritePath = "";
+
         public bool IsAuthored => turns > 0;
     }
 
@@ -85,6 +101,12 @@ namespace PrincesPalace.Domain.Combat
         // while this is running — see TransformGrant.splashPercent.
         public readonly int SplashPercent;
 
+        // The stance folder the holder is DRAWN from while this runs, "" for
+        // "keep their own art" — see TransformGrant.spritePath. Read by the
+        // view in exactly two places: the beat that records the change, and
+        // the post-playback resync that puts every figure back on live state.
+        public readonly string SpritePath;
+
         // Turns already added by Wrath T2's on-kill extension, against its
         // own cap. Tracked here rather than on the combatant because it is
         // meaningless outside a running transform and has to reset with it.
@@ -98,7 +120,7 @@ namespace PrincesPalace.Domain.Combat
         public bool IsPermanent;
 
         public Transformation(string displayName, int turns, int attackBonus, int speedBonus,
-            int temporaryHealth, int splashPercent = 0)
+            int temporaryHealth, int splashPercent = 0, string spritePath = "")
         {
             DisplayName = string.IsNullOrEmpty(displayName) ? "Transformed" : displayName;
             TurnsRemaining = Math.Max(1, turns);
@@ -106,6 +128,7 @@ namespace PrincesPalace.Domain.Combat
             SpeedBonus = Math.Max(0, speedBonus);
             TemporaryHealth = Math.Max(0, temporaryHealth);
             SplashPercent = Math.Max(0, splashPercent);
+            SpritePath = spritePath ?? "";
         }
 
         // Applies the transform's grants to a combatant and hands back the
@@ -117,13 +140,15 @@ namespace PrincesPalace.Domain.Combat
         // late in a run: a Ram who has found a better weapon transforms into
         // a proportionally bigger ram.
         public static Transformation Enter(CombatantState combatant, string displayName, int turns,
-            int attackPercent, int speedPercent, int temporaryHealthPercentOfMax, int splashPercent = 0)
+            int attackPercent, int speedPercent, int temporaryHealthPercentOfMax, int splashPercent = 0,
+            string spritePath = "")
         {
             int attackBonus = combatant.Attack * Math.Max(0, attackPercent) / 100;
             int speedBonus = combatant.Speed * Math.Max(0, speedPercent) / 100;
             int temporary = combatant.MaxHealth * Math.Max(0, temporaryHealthPercentOfMax) / 100;
 
-            var transformation = new Transformation(displayName, turns, attackBonus, speedBonus, temporary, splashPercent);
+            var transformation = new Transformation(displayName, turns, attackBonus, speedBonus, temporary,
+                splashPercent, spritePath);
 
             combatant.Attack += transformation.AttackBonus;
             combatant.Speed += transformation.SpeedBonus;

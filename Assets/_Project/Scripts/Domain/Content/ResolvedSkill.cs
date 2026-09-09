@@ -126,6 +126,13 @@ namespace PrincesPalace.Domain.Content
         // whoever resolves this skill plays their "cast" pose.
         public string Stance = "";
 
+        // See RawSkillEntry.approachStance / windupStance. The two phases in
+        // front of the strike Stance holds. Empty means unauthored, which is
+        // every skill written before these existed and which plays exactly as
+        // it always did — the precedence table is on CombatBeat.
+        public string ApproachStance = "";
+        public string WindupStance = "";
+
         // See RawSkillEntry.summonEnemyId / summonCap. Null/0 for every
         // skill but a Summon effect's.
         public string SummonEnemyId = "";
@@ -270,7 +277,12 @@ namespace PrincesPalace.Domain.Content
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
             int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
             StageApproach approach = StageApproach.Hold, float shake = 0f, Reach reach = default,
-            bool bookOnly = false, int bookTier = 0, ElementChoice[] elements = null)
+            bool bookOnly = false, int bookTier = 0, ElementChoice[] elements = null,
+            // APPENDED rather than placed beside `stance`, where they belong
+            // by meaning: every argument here is positional at its one call
+            // site (SkillEntryResolver) and in a dozen test fixtures, so
+            // inserting in the middle would silently repoint two strings.
+            string approachStance = "", string windupStance = "")
         {
             Elements = elements ?? Array.Empty<ElementChoice>();
             BookOnly = bookOnly;
@@ -308,6 +320,8 @@ namespace PrincesPalace.Domain.Content
             Requirements = requirements;
             ScalingAxis = scalingAxis;
             Stance = stance ?? "";
+            ApproachStance = approachStance ?? "";
+            WindupStance = windupStance ?? "";
             Approach = approach;
             Shake = shake < 0f ? 0f : (shake > 1f ? 1f : shake);
             SummonEnemyId = summonEnemyId ?? "";

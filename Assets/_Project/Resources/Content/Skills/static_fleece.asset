@@ -68,11 +68,14 @@ MonoBehaviour:
       speedPercent: 0
       temporaryHealthPercent: 0
       splashPercent: 0
+      spritePath: 
     CooldownTurns: 2
     PlayerSelectable: 1
     Shake: 0
     Approach: 0
     Stance: 
+    ApproachStance: 
+    WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
     Reach:

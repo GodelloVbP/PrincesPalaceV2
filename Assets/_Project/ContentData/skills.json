@@ -239,8 +239,12 @@
         "attackPercent": 50,
         "speedPercent": 30,
         "temporaryHealthPercent": 25,
-        "splashPercent": 50
+        "splashPercent": 50,
+        "spritePath": "Characters/sheep_black_ram"
       },
+      "windupStance": "victory",
+      "stance": "victory",
+      "shake": 0.7,
       "cooldownTurns": 5
     },
     {
@@ -454,13 +458,17 @@
     {
       "id": "placeholder_brawler_slam",
       "displayName": "Slam",
-      "description": "Placeholder kit. A shoulder into whatever is in front of him.",
+      "description": "Placeholder kit. He crosses the ground, gets the hammer over his head, and puts it through whatever is under it.",
       "characterId": "bear",
       "unlockLevel": 1,
       "effect": "DamageSingle",
       "manaCost": 6,
       "flatAmount": 12,
-      "meleeReach": true
+      "meleeReach": true,
+      "approach": "close",
+      "approachStance": "rush",
+      "windupStance": "overhead",
+      "stance": "slam"
     },
     {
       "id": "placeholder_brawler_provoke",

@@ -151,6 +151,20 @@ namespace PrincesPalace.PlayModeTests
                     $"{enemy.id} draws on skill '{ability.SkillId}', which is not in the catalogue");
 
                 wanted.Add(string.IsNullOrEmpty(skill.Data.Stance) ? "cast" : skill.Data.Stance);
+
+                // AND THE TWO PHASES IN FRONT OF THE STRIKE. A skill may
+                // author up to three poses of one blow (CombatBeat's
+                // precedence table); each is a folder name resolved exactly
+                // the way the strike's is, so each fails exactly the way the
+                // strike's does -- a monster that vanishes for the frames it
+                // is winding up. Added here rather than as a fourth test, so
+                // the resolution, canvas and manifest rules all cover them at
+                // once: this walk is the one definition of "poses this monster
+                // can reach", and that is the whole reason it is shared.
+                foreach (string phase in new[] { skill.Data.ApproachStance, skill.Data.WindupStance })
+                {
+                    if (!string.IsNullOrWhiteSpace(phase)) wanted.Add(phase);
+                }
             }
 
             // The legacy single-action trio poses as a cast.

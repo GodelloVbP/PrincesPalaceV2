@@ -67,11 +67,14 @@ MonoBehaviour:
       speedPercent: 30
       temporaryHealthPercent: 25
       splashPercent: 50
+      spritePath: Characters/sheep_black_ram
     CooldownTurns: 5
     PlayerSelectable: 1
-    Shake: 0
+    Shake: 0.7
     Approach: 0
-    Stance: 
+    Stance: victory
+    ApproachStance: 
+    WindupStance: victory
     SummonEnemyId: 
     SummonCap: 0
     Reach:

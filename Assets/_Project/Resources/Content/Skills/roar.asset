@@ -67,11 +67,14 @@ MonoBehaviour:
       speedPercent: 0
       temporaryHealthPercent: 0
       splashPercent: 0
+      spritePath: 
     CooldownTurns: 0
     PlayerSelectable: 0
     Shake: 0.85
     Approach: 0
     Stance: attack_roar
+    ApproachStance: 
+    WindupStance: 
     SummonEnemyId: rat
     SummonCap: 2
     Reach:

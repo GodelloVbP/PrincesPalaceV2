@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_slam
     DisplayName: Slam
-    Description: Placeholder kit. A shoulder into whatever is in front of him.
+    Description: Placeholder kit. He crosses the ground, gets the hammer over his
+      head, and puts it through whatever is under it.
     CharacterId: bear
     UnlockLevel: 1
     Effect: 0
@@ -67,11 +68,14 @@ MonoBehaviour:
       speedPercent: 0
       temporaryHealthPercent: 0
       splashPercent: 0
+      spritePath: 
     CooldownTurns: 0
     PlayerSelectable: 1
     Shake: 0
-    Approach: 0
-    Stance: 
+    Approach: 2
+    Stance: slam
+    ApproachStance: rush
+    WindupStance: overhead
     SummonEnemyId: 
     SummonCap: 0
     Reach:

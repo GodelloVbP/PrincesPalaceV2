@@ -558,6 +558,8 @@ namespace PrincesPalace
             beatPlayer.FormationIsMoving = FormationIsMoving;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
+            beatPlayer.WearForm = WearForm;
+            beatPlayer.ResyncForms = ResyncForms;
             beatPlayer.FlashTarget = FlashCombatant;
             // A lambda rather than the method group, because the cast handle
             // PlaySpellVfx returns is for the tests that ask about ownership --

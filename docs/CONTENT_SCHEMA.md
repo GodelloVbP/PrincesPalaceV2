@@ -181,6 +181,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `queuePushSlots` | int | `0` | How many places later in the turn queue this skill knocks its target; 0 means it does not touch the queue. |  |
 | `transform` | TransformGrant | (zero -- see TransformGrant) | What the caster transforms into, for a Transform effect; rejected if authored on any other effect. |  |
 | `stance` | string | `""` | Which of the caster's own stance folders plays while this skill resolves; empty means the default cast pose. |  |
+| `approachStance` | string | `""` | The pose worn while the caster travels to its target (Close's walk-in, Lunge/Charge's crossing); empty means the strike pose is worn throughout. Ignored on a Hold approach, which has no travel. |  |
+| `windupStance` | string | `""` | The pose held through the wind-up, between arrival and impact; empty means the strike pose is worn throughout. On a Hold or Close approach this buys the beat a wind-up wait it would not otherwise have. |  |
 | `approach` | string | `""` | How the caster gets to what it is hitting: hold, lunge, or close; empty means hold. | Hold, Lunge, Close, Charge |
 | `shake` | float | `0` | How hard this skill kicks the stage on its own account, 0..1; 0 means whatever the damage was worth. |  |
 | `summonEnemyId` | string | `""` | The enemy id this skill calls onto the caster's own side, for a Summon effect. |  |

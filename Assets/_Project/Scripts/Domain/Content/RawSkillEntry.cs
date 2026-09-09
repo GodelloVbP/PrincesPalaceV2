@@ -193,6 +193,31 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which of the caster's own stance folders plays while this skill resolves; empty means the default cast pose.")]
         public string stance = "";
 
+        // THE OTHER TWO PHASES OF THE SAME BLOW. `stance` above is the STRIKE
+        // — the drawing worn at the moment of impact — and these are the two
+        // poses that can come before it: the travel, and the wind-up held at
+        // the top of it.
+        //
+        // Bjorn's Slam is the case they exist for: "he rushes forward in the
+        // first frame, then he holds his hammer over his head, then he slams
+        // down" is three drawings of one beat, and a beat carried one. KEYED
+        // BY PHASE rather than authored as a sequence of poses with their own
+        // durations, because the phases already exist in the player and are
+        // already timed — the walk-in a Close spends, the wind-up wait a
+        // Lunge/Charge already takes before the impact instant — so a phase
+        // key selects a drawing for a moment the beat already has, where a
+        // sequence would be a second, parallel clock arguing with the first
+        // about when the blow lands.
+        //
+        // Empty means unauthored, and an unauthored beat plays exactly as it
+        // always did: the strike stance from the beat's open, idle at the end,
+        // no extra waits. The full precedence table lives on CombatBeat.
+        [ContentDoc("The pose worn while the caster travels to its target (Close's walk-in, Lunge/Charge's crossing); empty means the strike pose is worn throughout. Ignored on a Hold approach, which has no travel.")]
+        public string approachStance = "";
+
+        [ContentDoc("The pose held through the wind-up, between arrival and impact; empty means the strike pose is worn throughout. On a Hold or Close approach this buys the beat a wind-up wait it would not otherwise have.")]
+        public string windupStance = "";
+
         // HOW THE CASTER GETS TO WHAT IT IS HITTING. "hold", "lunge" or
         // "close"; empty means hold, which is what every skill did before this
         // existed and therefore changes nothing for the ones that say nothing.

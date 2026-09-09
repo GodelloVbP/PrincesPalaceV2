@@ -312,7 +312,8 @@ namespace PrincesPalace.Domain.Content
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
                 ParseApproach(raw.approach), raw.shake, reach,
-                raw.bookOnly, raw.bookTier, elements);
+                raw.bookOnly, raw.bookTier, elements,
+                raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "");
             error = null;
             return true;
         }

@@ -536,6 +536,31 @@ too via `attackApproach` on the enemy entry (both parse through
 continuous `BreathCurve` swell, driven per idle figure from `.StageVisuals`'s
 `IdleBreathing` loop — a transform write, not a repaint.
 
+A beat can carry **three actor poses, keyed by phase** — `ActorApproachStance`
+worn while travelling, `ActorWindupStance` between arrival and impact,
+`Stances[Actor]` as the strike from the impact instant. The precedence table
+and its fallbacks are two pure functions on `CombatBeat`
+(`OpenStanceFor`/`ArrivalStanceFor`) so an EditMode test can reach them;
+`FightBeatPlayer` owns only WHEN each moment falls, and a beat that authored
+neither new field makes exactly the one `SetStance` call it always did.
+Authoring a wind-up on a `Hold` or a `Close` buys the beat a wait of
+`StaticSwing.WindupSeconds`, charged to the beat's own `spent` so the settle
+gives it straight back. Content vocabulary: `docs/ART_PIPELINE.md` §4c.
+
+**Which stance FOLDER a combatant is drawn from** has one seam,
+`.StageVisuals`'s `SpriteFolderFor` — every other question the stage asks (the
+sprite, the ground line, the canvas top, the breath, the hover, the ring, the
+intent badge) reaches a folder through it. A `TransformGrant.spritePath` swaps
+that one answer, so the whole figure re-lays out against the form's own
+`StanceManifest` entry. The change is RECORDED on the beat (`CombatBeat.Forms`)
+rather than read off live `Transformation`, for the reason the vitals snapshot
+is: the round has already resolved by the time a beat plays, so live state
+would draw the new form from the beat's first frame. `FightBeatPlayer.WearForm`
+applies it at the impact instant (silhouette flash, authored `shake`);
+`ResyncForms`, fired where `PaintFormation(null)` is, puts every figure back on
+live state — which is also the only place the REVERT can happen, because a
+transform expires at its holder's turn start and that opens no beat.
+
 Party art is a **parallel map** (`BindPartyArt`), deliberately not part of
 `PlayerKit`. The kit is what combat needs and a sprite folder is not that; v1
 kept both in one `_playerOwners` dictionary, which is a large part of why its

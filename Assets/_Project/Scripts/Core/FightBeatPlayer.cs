@@ -219,6 +219,22 @@ namespace PrincesPalace
         // lookup; playback only says WHO holds WHAT and WHEN.
         internal Action<CombatantState, string> SetStance;
 
+        // SetStance's twin one level up: which stance FOLDER a combatant is
+        // drawn from, for the length of a transformation. Playback owns the
+        // moment (the impact instant of the beat that recorded the change);
+        // the view owns what changing form looks like -- the re-layout against
+        // the new actor's manifest entry, and the silhouette flash that covers
+        // the swap. Exactly the split ShakeStage already draws.
+        internal Action<CombatantState, string> WearForm;
+
+        // AND BACK TO LIVE STATE, called where PaintFormation(null) and
+        // PaintTurnOrder(null) are and for the same reason: every beat has
+        // been shown, so live Transformation state is now the moment on
+        // screen. This is also the whole of how a transform's REVERT reaches
+        // the stage -- it expires at its holder's turn start, which opens no
+        // beat, so there is nothing to record it on.
+        internal Action ResyncForms;
+
         // How hard to kick the stage, 0..1. The view owns which transforms
         // that means -- see FightController.ShakeStage -- and playback owns
         // when and how hard, because only it knows where the impact is.
@@ -274,6 +290,32 @@ namespace PrincesPalace
             AnimatorFor = animatorFor;
         }
 
+        // THE THIRD DOOR, for the poses themselves and for what a figure is
+        // drawn AS.
+        //
+        // Same justification as WireContactFxForTest's: WHICH DRAWING GOES ON
+        // WHEN is a decision rather than a picture. A beat can now carry three
+        // actor poses and a form change, and the whole of what is worth
+        // pinning about them is the ORDER -- approach, wind-up, strike, and
+        // the form landing on the impact instant rather than at the open,
+        // which is the difference between a flash that hides a transformation
+        // and a transformation that has already happened by the time anything
+        // flashes.
+        //
+        // Reproducing that order through a real fight would mean authoring an
+        // actor with three extra stances on disk, and the art it would assert
+        // against is exactly the art that has not been delivered when the rule
+        // is being written. Deliberately narrow: three delegates in, nothing
+        // readable back out.
+        public void WireStancesForTest(Action<CombatantState, string> setStance,
+                                       Action<CombatantState, string> wearForm,
+                                       Action resyncForms)
+        {
+            SetStance = setStance;
+            WearForm = wearForm;
+            ResyncForms = resyncForms;
+        }
+
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
             // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
@@ -319,6 +361,7 @@ namespace PrincesPalace
             // finish playing would outlive the round it described.
             PaintFormation?.Invoke(null);
             PaintTurnOrder?.Invoke(null);
+            ResyncForms?.Invoke();
 
             IsPlaying = false;
 
@@ -468,9 +511,41 @@ namespace PrincesPalace
                 // The actor is different: its stance IS the wind-up, so it has
                 // to be worn from the first frame. PoseVictims below is the
                 // other half, called from the impact block.
-                if (beat.Actor != null && beat.Stances.TryGetValue(beat.Actor, out var actorStance))
+                //
+                // AND IT CAN NOW BE UP TO THREE DRAWINGS RATHER THAN ONE --
+                // approach, wind-up, strike. CombatBeat's own header carries
+                // the precedence table; what follows is that table, applied.
+                // Everything about it collapses to today's single SetStance
+                // for a beat that authored neither of the two new poses, which
+                // is every beat in the game bar one.
+                string strikeStance = null;
+                if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strikeStance);
+
+                // WHICH drawing at which moment is CombatBeat's rule, so an
+                // EditMode test can pin the fallbacks; WHEN each moment falls
+                // is this file's, because only it knows what a walk-in or a
+                // crouch costs.
+                string openStance = CombatBeat.OpenStanceFor(
+                    beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
+                string arrivalStance = CombatBeat.ArrivalStanceFor(
+                    beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
+
+                // Whether this beat has a wind-up POSE at all, which is what
+                // decides below whether it also has to buy the WAIT to hold it
+                // through. Blank-is-unauthored, plus the no-strike-no-phases
+                // rule CombatBeat.Normalise states -- read through the same
+                // two functions above rather than re-tested here, so there is
+                // one answer to "did this beat author a wind-up".
+                bool hasWindup = !string.IsNullOrWhiteSpace(strikeStance)
+                                 && !string.IsNullOrWhiteSpace(beat.ActorWindupStance);
+
+                // What the actor is wearing right now, so the impact instant
+                // can tell whether it still has to change into the strike.
+                string wornStance = openStance;
+
+                if (beat.Actor != null && openStance != null)
                 {
-                    SetStance?.Invoke(beat.Actor, actorStance);
+                    SetStance?.Invoke(beat.Actor, openStance);
                 }
 
                 // BEFORE THE LUNGE AND BEFORE THE SPELL, and it yields, so
@@ -511,6 +586,16 @@ namespace PrincesPalace
 
                 if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
 
+                // ARRIVED, AND NOW HE RAISES IT. The one moment a Close has
+                // that no other approach does: the walk-in is over and the
+                // blow has not started, which is exactly where "then he holds
+                // his hammer over his head" goes.
+                if (arrivalStance != null)
+                {
+                    SetStance?.Invoke(beat.Actor, arrivalStance);
+                    wornStance = arrivalStance;
+                }
+
                 Lunge(beat, staticSwing);
 
                 // THE CHARGE'S OWN OUTBOUND TRAVEL TIME, computed once and
@@ -540,6 +625,35 @@ namespace PrincesPalace
                 if (staticSwing) yield return StaticSwing.Windup();
                 else if (staticCharge) yield return StaticSwing.Windup(chargeOutSeconds);
 
+                // A WIND-UP THE BEAT DID NOT ALREADY HAVE, and the only thing
+                // in this file that authoring a pose can BUY.
+                //
+                // A Lunge and a Charge already wait one out above, so a pose
+                // authored on either simply gets worn through the wait that
+                // was there. A Hold and a Close do not: a Hold never crosses
+                // anything, and a Close's walk-in finishes before the blow
+                // opens -- so without this a raised hammer would be drawn for
+                // one frame and then be a slam.
+                //
+                // StaticSwing's OWN NUMBER rather than a second constant: the
+                // crouch before a swing and the hammer held at the top of its
+                // arc are the same beat of anticipation, and two constants for
+                // one idea drift. Not StaticSwing.Windup() itself, though --
+                // that plays the swing's whoosh, and the cue belongs to a
+                // weapon cutting air rather than to every pose that pauses.
+                //
+                // CHARGED TO `spent` BELOW, never added on top: the settle
+                // gives back exactly what this took, so a beat with a wind-up
+                // is the same length as one without. Adding time here instead
+                // is the "beat runs long" failure SettleAfter's own header
+                // records going unnoticed once already.
+                float boughtWindup = 0f;
+                if (hasWindup && !staticSwing && !staticCharge)
+                {
+                    boughtWindup = StaticSwing.WindupSeconds;
+                    yield return new WaitForSeconds(Scaled(boughtWindup));
+                }
+
                 // SKIPPED FOR A STATIC CHARGE: chargeOutSeconds already IS
                 // Max(ChargeMinOutSeconds, impact) -- see ChargeOutSeconds --
                 // so the wind-up just waited out at least this much. Waiting
@@ -563,6 +677,28 @@ namespace PrincesPalace
                 // degradation, not a silence.
                 try
                 {
+                    // THE STRIKE, and it goes on first of everything here.
+                    //
+                    // ONLY IF THE ACTOR IS NOT ALREADY IN IT. A beat that
+                    // authored no phase poses opened in the strike and must
+                    // make exactly the SetStance calls it has always made --
+                    // an unconditional call here would fire a second one on
+                    // every beat in the game, repainting the whole stage for
+                    // nothing and quietly changing what the ordering pins in
+                    // this suite are measuring.
+                    if (strikeStance != null && wornStance != strikeStance)
+                    {
+                        SetStance?.Invoke(beat.Actor, strikeStance);
+                        wornStance = strikeStance;
+                    }
+
+                    // AND WHOEVER BECAME SOMETHING ELSE, on the same frame.
+                    // Before the flash below for the reason PoseVictims is:
+                    // changing form re-syncs the hit-flash silhouette to the
+                    // new drawing, and the whole point of the flash is to be
+                    // the shape of what he turned INTO.
+                    ApplyForms(beat);
+
                     // FIRST, before the flash: SetStance is what re-syncs the
                     // hit-flash overlay's silhouette to the drawing under it,
                     // and a flash shaped like the pose the victim just left is
@@ -633,9 +769,15 @@ namespace PrincesPalace
                 // thing that can take a beat further, and only at the top of
                 // the range: at HitStop.MaxSeconds a swing's or a charge's
                 // remainder clamps up to MinSettleSeconds.
+                //
+                // AND A BOUGHT WIND-UP IS SPENT TIME LIKE ANY OTHER. It is
+                // added to StillPoseSeconds rather than replacing it: the 0.08
+                // is the notional cost of showing a drawing, which the beat
+                // still does, and boughtWindup is real seconds this beat
+                // actually waited on top of it.
                 float spent = staticSwing ? StaticSwing.WindupSeconds
                     : staticCharge ? chargeOutSeconds
-                    : StillPoseSeconds;
+                    : StillPoseSeconds + boughtWindup;
                 yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
 
                 // Back to idle before the next beat opens, so a pose belongs to
@@ -666,6 +808,13 @@ namespace PrincesPalace
             // schedule says acts next. That step is the point of the tracker.
             PaintFormation?.Invoke(null);
             PaintTurnOrder?.Invoke(null);
+
+            // AND WHOSE SKIN EACH FIGURE IS IN, from the same moment and for
+            // the same reason. This is where a transform's revert becomes
+            // visible: it expired at its holder's turn start, which is not an
+            // action and records no beat, so the round in which the timer ran
+            // out ends with the ram walking back out as himself.
+            ResyncForms?.Invoke();
 
             var finished = _onFinished;
             _onFinished = null;
@@ -914,6 +1063,19 @@ namespace PrincesPalace
             // close the gap, not swap places.
             float dx = (to.anchoredPosition.x - from.anchoredPosition.x) * fraction;
             return (animator, new Vector2(dx, 0f));
+        }
+
+        // WHOEVER THIS BEAT TURNED INTO SOMETHING ELSE.
+        //
+        // Null on every beat but a transform's, so this costs one null test
+        // per beat. Handed straight over the WearForm door rather than
+        // interpreted here, the same posture PaintFormation takes: playback
+        // says who changes and when, the view owns what changing looks like.
+        private void ApplyForms(CombatBeat beat)
+        {
+            if (beat.Forms == null) return;
+
+            foreach (var pair in beat.Forms) WearForm?.Invoke(pair.Key, pair.Value);
         }
 
         // Every stance the beat recorded for someone OTHER than its actor,

@@ -212,6 +212,44 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.Stances[combatant] = stance;
         }
 
+        // The two poses in front of the strike SetStance just recorded -- see
+        // CombatBeat's own precedence table for who wears which and when.
+        //
+        // ON THE BEAT rather than in the Stances map, because they are not
+        // stances OF anybody in the map's sense: the map is keyed by combatant
+        // and answers "what is this figure wearing", one answer per figure per
+        // beat. These are three answers for one figure at three moments, which
+        // is a different question and needs the phase in the key rather than
+        // the combatant.
+        private void RecordPhaseStances(string approachStance, string windupStance)
+        {
+            if (_recordingBeat == null) return;
+
+            _recordingBeat.ActorApproachStance = string.IsNullOrWhiteSpace(approachStance) ? null : approachStance;
+            _recordingBeat.ActorWindupStance = string.IsNullOrWhiteSpace(windupStance) ? null : windupStance;
+        }
+
+        // WHAT THIS COMBATANT BECOMES, as of this beat's impact instant. See
+        // CombatBeat.Forms for why the form is recorded rather than read off
+        // live Transformation state during playback.
+        //
+        // Recorded even when the folder is empty: a transform that changes
+        // only the numbers still says so, and the view answers an empty folder
+        // with "keep your own art" rather than having to distinguish it from a
+        // beat that mentioned nobody. Allocated lazily, like Results and
+        // SplashTargets, because one skill in the game uses it.
+        private void RecordForm(CombatantState combatant, string spritePath)
+        {
+            if (_recordingBeat == null || combatant == null) return;
+
+            if (_recordingBeat.Forms == null)
+            {
+                _recordingBeat.Forms = new Dictionary<CombatantState, string>();
+            }
+
+            _recordingBeat.Forms[combatant] = spritePath ?? "";
+        }
+
         // A pose decided AFTER the beat that earned it was committed -- the
         // victory stance, which is settled once the last enemy is already down
         // and its beat closed. Same retro-attach rule AppendMessage follows, and

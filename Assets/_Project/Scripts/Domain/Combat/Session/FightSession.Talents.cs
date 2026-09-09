@@ -563,7 +563,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
             int turns = grant.turns + actor.Talents.Best(TalentEffectType.TransformDurationBonus);
             var transformation = Transformation.Enter(actor, grant.displayName, turns,
-                grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent);
+                grant.attackPercent, grant.speedPercent, grant.temporaryHealthPercent, grant.splashPercent,
+                grant.spritePath);
+
+            // AND THE VIEW IS TOLD ON THE BEAT, not left to read live state.
+            // The whole round has already resolved by the time this beat is
+            // drawn, so a stage that asked actor.Transformation would show the
+            // Black Ram from the beat's first frame -- before the flash that is
+            // supposed to hide the change. See CombatBeat.Forms.
+            RecordForm(actor, transformation.SpritePath);
 
             // Speed changed, so the SCHEDULER has to be told. Without this the
             // plate would show the bonus and the turn queue would ignore it -- a

@@ -813,6 +813,96 @@ namespace PrincesPalace
             RefreshStage();
         }
 
+        // BECOMING SOMETHING ELSE, on the frame the beat says so.
+        //
+        // Three things at once, and they are one event rather than three: the
+        // figure starts resolving its stances out of the new actor's folder,
+        // the repaint re-lays it out against that actor's own canvas and
+        // ground line (the ram is not Shawn's 540x370 and its feet are not
+        // where his are), and a white silhouette of the RESULT flashes over
+        // the swap so the change reads as a change rather than as a sprite
+        // popping. "He should flash and then become the black ram."
+        //
+        // THE FLASH IS THE ORDINARY IMPACT ONE, not a new tempo. Flash() is
+        // already white and untinted -- FlashHeal is the one that carries a
+        // colour -- and the hold-and-fade it uses is long enough to cover the
+        // swap. It goes through StageHitFlash directly rather than through
+        // FlashCombatant, which is guarded on the beat having landed damage
+        // and would also want a damage popup; a transformation lands nothing
+        // and pops no number.
+        //
+        // NO ART, NO CHANGE. A form folder that is not on disk leaves the
+        // figure in its own skin and says so once, which is the house posture
+        // everywhere else -- a Black Ram that has not been drawn yet should
+        // look like Shawn with better numbers, not like a nameplate.
+        internal void WearForm(CombatantState combatant, string folder)
+        {
+            if (combatant == null) return;
+
+            string current = SpriteFolderFor(combatant);
+            bool clearing = string.IsNullOrWhiteSpace(folder);
+
+            if (!clearing && StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle) == null)
+            {
+                Debug.LogWarning($"[stage] {combatant.Name} transforms into '{folder}', which has no idle " +
+                                 "drawing under Resources -- keeping their own art.");
+                return;
+            }
+
+            if (clearing) _form.Remove(combatant);
+            else _form[combatant] = folder;
+
+            // Nothing actually changed -- a transform that only moves numbers,
+            // or a re-entry into the form already worn. The stage has nothing
+            // to redraw and nothing to punctuate.
+            if (SpriteFolderFor(combatant) == current) return;
+
+            RefreshStage();
+            HitFlashFor(combatant)?.Flash();
+        }
+
+        // BACK TO WHOEVER THEY ACTUALLY ARE, once the round has finished
+        // playing. The twin of PaintFormation(null) and PaintTurnOrder(null),
+        // called from the same two places and for the same reason: playback is
+        // over, so live state is the moment on screen.
+        //
+        // It is also the whole of how a transformation ENDS on the stage.
+        // TickTransform expires it at the holder's turn start, which is not an
+        // action, opens no beat and therefore has nothing to record the change
+        // on -- so the revert lands here, at the end of the round the timer ran
+        // out in. Quietly, with no flash: he was the ram for a while and now
+        // he is not, and punctuating that would claim something happened on a
+        // beat where nothing did.
+        internal void ResyncForms()
+        {
+            if (_session == null) return;
+
+            bool changed = false;
+
+            foreach (var combatant in _session.Encounter.PlayerParty.Concat(_session.Encounter.Enemies))
+            {
+                string live = combatant?.Transformation?.SpritePath;
+                bool worn = _form.ContainsKey(combatant);
+
+                if (string.IsNullOrWhiteSpace(live))
+                {
+                    changed |= worn && _form.Remove(combatant);
+                    continue;
+                }
+
+                // Same missing-art rule as WearForm's: a form nothing can draw
+                // is not worn, here or there.
+                if (StanceAnimationLibrary.Resolve(live, FightSession.Stances.Idle) == null) continue;
+
+                if (worn && _form[combatant] == live) continue;
+
+                _form[combatant] = live;
+                changed = true;
+            }
+
+            if (changed) RefreshStage();
+        }
+
         // Fades out whoever this beat left on the floor.
         //
         // Driven off the beat's SNAPSHOT rather than off live health: by the
@@ -1101,6 +1191,12 @@ namespace PrincesPalace
 
             _confirmedDefeated.Clear();
 
+            // AND NOBODY IS WEARING ANYBODY ELSE'S SKIN. A transformation
+            // belongs to the encounter it was cast in; carrying one across
+            // would open the next fight with a combatant drawn as a form
+            // whose Transformation object no longer exists.
+            _form.Clear();
+
             // WHO OWNS WHICH SLOT, for the whole of this fight -- see the map's
             // own header. Seeded here rather than in Bind because this is the
             // one method that means "a new encounter is standing up", and the
@@ -1210,8 +1306,38 @@ namespace PrincesPalace
 
         // ---- resolving art from content ----------------------------------------
 
+        // WHICH FORM EACH COMBATANT IS CURRENTLY DRAWN AS -- a transformation's
+        // own stance folder, absent for everyone wearing their own art, which
+        // is everyone nearly all of the time.
+        //
+        // Written by playback at the impact instant of the beat that recorded
+        // the change (WearForm) and rewritten wholesale from live state when
+        // playback ends (ResyncForms). Never read from Transformation directly
+        // during a round: the whole round has already resolved by then, so the
+        // ram would be on screen from the first frame of the beat that
+        // summons it. See CombatBeat.Forms.
+        private readonly Dictionary<CombatantState, string> _form =
+            new Dictionary<CombatantState, string>();
+
+        // THE ONE SEAM THAT ANSWERS "whose art is this combatant drawn from".
+        //
+        // Every other question the stage asks -- which sprite for this stance,
+        // where its feet are, how tall its canvas is, how far it breathes,
+        // whether it hovers, where its intent badge and its foot ring go --
+        // is asked of a FOLDER and reaches that folder through here. So a
+        // transformation swaps this one answer and the whole figure changes
+        // with it: the ram's own canvas, its own ground line, its own
+        // manifest entry, and a hit-flash silhouette re-synced to whatever
+        // drawing came out. Rewiring each of those readers instead would be
+        // eleven call sites agreeing by hand.
         private string SpriteFolderFor(CombatantState combatant)
         {
+            if (combatant != null && _form.TryGetValue(combatant, out var form)
+                && !string.IsNullOrWhiteSpace(form))
+            {
+                return form;
+            }
+
             var enemy = _session?.SourceFor(combatant);
             if (enemy != null) return enemy.Source.SpritePath;
 

@@ -118,6 +118,143 @@ using PrincesPalace.Domain.Content;
         public BeatFormation Formation = BeatFormation.Empty;
 
         public readonly Dictionary<CombatantState, string> Stances = new Dictionary<CombatantState, string>();
+
+        // ---- the actor's other two phases ------------------------------------
+        //
+        // Stances[Actor] above is the STRIKE: the drawing worn at the moment
+        // of impact and held through the settle. These are the two poses that
+        // can come BEFORE it, and they are what makes "he rushes forward, then
+        // he holds the hammer over his head, then he slams down" one beat
+        // rather than three.
+        //
+        // KEYED BY PHASE, NOT A SEQUENCE. The phases already exist in
+        // FightBeatPlayer and are already timed against the beat's budget --
+        // Close's walk-in (CloseSeconds), a Lunge's crouch-and-cross
+        // (StaticSwing.WindupSeconds), a Charge's outbound travel
+        // (chargeOutSeconds). A phase key picks the drawing for a moment the
+        // beat already owns. A list of poses with their own durations would be
+        // a second clock, free to disagree with the first about when the blow
+        // lands -- which is precisely the class of bug SettleAfter's header
+        // and AUDIT.md #59 both record.
+        //
+        // WHO WEARS WHAT, AND WHEN. Null or empty means unauthored.
+        //
+        //   approach | windup | Hold                  | Close                 | Lunge / Charge
+        //   ---------+--------+-----------------------+-----------------------+----------------------
+        //   -        | -      | strike from open      | strike from open      | strike from open
+        //            |        | (today, byte for      | (today)               | (today)
+        //            |        | byte)                 |                       |
+        //   yes      | -      | IGNORED: nothing      | approach during the   | approach during the
+        //            |        | travels               | walk-in, strike on    | wind-up, strike on
+        //            |        |                       | arrival               | impact
+        //   -        | yes    | windup from open,     | strike during the     | windup during the
+        //            |        | beat BUYS a wind-up   | walk-in, windup on    | wind-up it already
+        //            |        | wait, strike on       | arrival, beat BUYS a  | has, strike on impact
+        //            |        | impact                | wind-up wait, strike  |
+        //            |        |                       | on impact             |
+        //   yes      | yes    | as "-|yes"; approach  | approach, windup,     | approach, windup,
+        //            |        | IGNORED               | strike                | strike
+        //
+        // A bought wind-up is charged to the beat's own `spent` (see
+        // FightBeatPlayer's SettleAfter call), so authoring one shortens the
+        // settle rather than lengthening the beat. The strike is always set at
+        // the impact instant BEFORE PoseVictims and FlashTarget, because
+        // SetStance is what re-syncs the hit-flash silhouette to the drawing
+        // under it.
+        public string ActorApproachStance;
+        public string ActorWindupStance;
+
+        // THE TABLE ABOVE, AS TWO PURE FUNCTIONS -- WHICH drawing at which
+        // moment. WHEN those moments fall stays in FightBeatPlayer, which is
+        // the only thing that knows how long a walk-in or a crouch takes.
+        //
+        // Here rather than inline in the coroutine for the reason
+        // ImpactFraction and QueueToShow are: Core cannot be reached from an
+        // EditMode test, so a precedence rule written inside PlayBeats would
+        // only ever be exercised by watching a fight -- and the interesting
+        // half of this rule is the fallbacks, which are exactly the cases
+        // nobody thinks to watch for.
+        //
+        // WHAT THE ACTOR OPENS THE BEAT IN.
+        public static string OpenStanceFor(StageApproach approach, string strikeStance,
+                                           string approachStance, string windupStance)
+        {
+            Normalise(strikeStance, ref approachStance, ref windupStance);
+
+            switch (approach)
+            {
+                // Nothing crosses, so there is no travel for an approach pose
+                // to be worn through -- authoring one on a Hold is ignored,
+                // and ignored rather than refused because a skill's approach
+                // can be edited without its poses being rewritten.
+                case StageApproach.Hold: return windupStance ?? strikeStance;
+
+                // The one approach with a real boundary inside it: it arrives
+                // before the blow opens, so the walk-in gets the approach pose
+                // and the wind-up gets its own moment (ArrivalStanceFor).
+                case StageApproach.Close: return approachStance ?? strikeStance;
+
+                // A Lunge or a Charge has exactly ONE pre-impact interval, and
+                // that interval IS the travel -- the crouch-and-cross is the
+                // swing, not something in front of it. So the approach pose is
+                // the one that fits it, and a wind-up pose stands in only when
+                // no approach pose was authored. Authoring both on a Lunge
+                // therefore drops the wind-up rather than inventing a halfway
+                // point inside a wait that has no halves.
+                default: return approachStance ?? windupStance ?? strikeStance;
+            }
+        }
+
+        // WHAT A Close CHANGES INTO THE MOMENT IT ARRIVES, or null for "keep
+        // wearing what it opened in". Null for every other approach: they have
+        // no arrival distinct from their impact.
+        public static string ArrivalStanceFor(StageApproach approach, string strikeStance,
+                                              string approachStance, string windupStance)
+        {
+            if (approach != StageApproach.Close) return null;
+
+            Normalise(strikeStance, ref approachStance, ref windupStance);
+            if (windupStance == null) return null;
+
+            string open = OpenStanceFor(approach, strikeStance, approachStance, windupStance);
+            return windupStance == open ? null : windupStance;
+        }
+
+        // Blank is unauthored, and NO STRIKE MEANS NO PHASES.
+        //
+        // The second half is the load-bearing one: a phase pose is what is
+        // worn BEFORE the strike, so with no strike recorded there is nothing
+        // to change back into at impact -- and the return-to-idle at the end
+        // of a beat walks Stances, which would not mention the actor. The
+        // figure would hold its wind-up for the rest of the fight.
+        private static void Normalise(string strikeStance, ref string approachStance, ref string windupStance)
+        {
+            bool none = string.IsNullOrWhiteSpace(strikeStance);
+
+            approachStance = none || string.IsNullOrWhiteSpace(approachStance) ? null : approachStance;
+            windupStance = none || string.IsNullOrWhiteSpace(windupStance) ? null : windupStance;
+        }
+
+        // ---- what somebody BECOMES on this beat --------------------------------
+        //
+        // The stance folder a combatant is drawn from after this beat's impact
+        // instant, "" for "back to their own art". Null on every beat but a
+        // transform's, which is all but one skill in the game.
+        //
+        // RECORDED, NOT READ LIVE, for the reason the vitals snapshot and the
+        // turn queue are: resolution runs the whole round in one synchronous
+        // pass, so `actor.Transformation` is already set by the time the
+        // transform's own beat opens. A view reading live state would draw the
+        // Black Ram from the beat's first frame -- before the flash, before
+        // the shake, before anything said it had happened.
+        //
+        // The REVERT is not recorded here and deliberately so: a transform
+        // expires at its holder's turn START (FightSession.TickTransform),
+        // which is not an action and opens no beat. It is instead handled by
+        // the post-playback resync that puts every combatant's worn folder
+        // back on live Transformation state -- so the ram changes back at the
+        // END of the round in which its timer ran out.
+        public Dictionary<CombatantState, string> Forms;
         public readonly List<string> Messages = new List<string>();
         public Dictionary<CombatantState, Vitals> Snapshot;
 

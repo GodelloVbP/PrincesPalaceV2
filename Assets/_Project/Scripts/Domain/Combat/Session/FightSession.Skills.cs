@@ -962,6 +962,12 @@ namespace PrincesPalace.Domain.Combat.Session
             if (_recordingBeat?.Actor != null)
             {
                 SetStance(_recordingBeat.Actor, StanceFor(skill));
+
+                // AND THE TWO PHASES IN FRONT OF IT, through the same door and
+                // for the same reason the strike came here: a per-branch
+                // SetStance is what got forgotten six times over, and a
+                // per-branch pair of these would be forgotten the same way.
+                RecordPhaseStances(skill.ApproachStance, skill.WindupStance);
             }
         }
     }
