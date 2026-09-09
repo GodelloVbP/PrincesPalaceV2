@@ -203,8 +203,11 @@ re-slice moves with the figure instead.
 At play time this becomes a stage position by scaling and mirroring `(dx,
 dy)` onto the caster's own slot — `FightController.SpellVfx.CasterCastPoint`
 is the seam every caster-anchored travelling layer and every non-travelling
-`caster`-placed layer goes through, and `Domain/Stage/CastPointPlacement` is
-the one piece of that seam that is a formula rather than "ask the transform"
+`caster`- or `caster-centre`-placed layer goes through (an authored
+`castPoint` IS where a cast leaves that actor's body, whichever of the two
+words placed it — `caster-centre` for an actor with no entry still means the
+figure's own centre, exactly as before), and `Domain/Stage/CastPointPlacement`
+is the one piece of that seam that is a formula rather than "ask the transform"
 (engine-free, so it is pinned with literal numbers in the fast EditMode
 suite). It rides the slot's current depth scale and hover for free, because
 both are already baked into the slot's transform by the time a cast reads

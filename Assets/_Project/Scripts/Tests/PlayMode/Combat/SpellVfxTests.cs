@@ -678,6 +678,79 @@ namespace PrincesPalace.PlayModeTests
                 "lookup or the seam that reads it stopped firing");
         }
 
+        // THE OTHER HALF OF THE SAME SEAM, and the one that shipped broken:
+        // prismatic_orb's own "charge" layer is `place: caster-centre` and
+        // never travels, and it kept forming at Odette's slot centre -- her
+        // spine, roughly, since the slot is sized to her raw stance canvas --
+        // while the travelling "core" cast right behind it correctly left
+        // from her book, because CasterCastPoint's guard read
+        // `layer.Place == SpellPlace.Caster` and CasterCentre is a different
+        // enum member. Confirmed on screen before this fix: a runtime
+        // capture of the real cast shows the earth charge's dust glyph
+        // forming at Odette's neck and shoulder, nowhere near the book her
+        // wings are holding open (tools/screenshot.ps1 -Runtime
+        // -RuntimeFilter SpellRuntimeCaptureTests, frames 8-15 of
+        // spell_prismatic_orb_f*.png).
+        //
+        // Same fixture and the same loose assertion as the travelling test
+        // above and for the same reason -- FightStageAnchors' depth scale is
+        // a live number this file has no business pinning twice.
+        [UnityTest]
+        public IEnumerator ANonTravellingCasterCentreLayerLeavesFromAnAuthoredCastPointToo()
+        {
+            yield return LoadFight();
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            _fight.BindPartyArt(new List<CombatantState> { hero }, new List<string> { "Characters/owl" });
+
+            var casterOrigin = SlotXOf("Shawn");
+
+            _fight.PlaySpellVfxForTest(CasterCentreBeat());
+
+            float drawnX = _player.Image.rectTransform.anchoredPosition.x;
+
+            Assert.Greater(drawnX, casterOrigin + 20f,
+                "an authored castPoint did not move a non-travelling caster-centre layer off the slot " +
+                "centre -- either OnCaster stopped covering CasterCentre or the seam that reads it stopped " +
+                "firing");
+        }
+
+        // A single caster-centre layer that never travels -- prismatic_orb's
+        // "charge" in shape, frost_flare's frames standing in for its art,
+        // the same substitution TrailingBeat below makes for the same
+        // reason: this is about the placement, not about the art.
+        private CombatBeat CasterCentreBeat()
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation
+                {
+                    layerFormat = 1,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            id = "charge",
+                            render = "sprite",
+                            place = "caster-centre",
+                            at = "release",
+                            path = "Spells/frost_flare",
+                            seconds = 0.2f,
+                            until = "once",
+                            size = 195f,
+                            facing = "auto",
+                            sort = "effects",
+                        },
+                    },
+                },
+            };
+        }
+
         // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The Bog Witch casts the same
         // spell back across the stage; drawn as-authored her glyph forms on
         // Shawn and her impact lands on herself.

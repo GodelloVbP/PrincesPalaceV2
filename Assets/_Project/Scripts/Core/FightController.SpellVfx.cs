@@ -238,14 +238,26 @@ namespace PrincesPalace
             var box = BoxForLayer(layer);
             var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
 
-            // A PLAIN `caster` PLACEMENT (not centred, not travelling) used to
-            // mean "the slot's own origin" -- exactly what AimPoint just
-            // computed above. It now means the caster's own cast point
-            // instead, when one is authored; CasterCastPoint falls back to
-            // that same AimPoint answer verbatim for every actor that
-            // authors nothing, which is every actor but the two this
-            // feature was written for.
-            if (layer.Place == SpellPlace.Caster && !layer.Travels && casterRect != null)
+            // A NON-TRAVELLING `caster` OR `caster-centre` PLACEMENT used to
+            // mean "the slot's own origin" or "the slot's own middle" --
+            // exactly what AimPoint just computed above. Both now mean the
+            // caster's own cast point instead, when one is authored: the
+            // model is that an authored castPoint IS where every cast leaves
+            // that actor's body, not just the ones that happen to travel.
+            // Found missing when prismatic_orb's caster-centre `charge` layer
+            // kept forming at Odette's slot centre -- her spine, roughly --
+            // while the travelling `core` layer right behind it (routed
+            // through CasterCastPoint below regardless of `place`, since it
+            // only checks Travels) left correctly from her book. One seam,
+            // one rule, or a caster-centre effect and a travelling one on the
+            // same cast disagree about where "the caster" is.
+            //
+            // CasterCastPoint falls back to that same AimPoint answer
+            // verbatim for every actor that authors nothing, which is every
+            // actor but the two this feature was written for -- so
+            // `caster-centre` for an unauthored actor keeps meaning the
+            // figure's own centre exactly as before.
+            if (SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels && casterRect != null)
             {
                 aim = CasterCastPoint(caster, casterRect, parent, aim);
             }
