@@ -265,6 +265,27 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
             Directory.CreateDirectory(dir);
 
+            // FULL-FRAME, NOT JUST THE STAGE CROP BELOW. StageCaptureRig (and
+            // every reading in this fixture) exists to answer "is the ring
+            // under the feet" against a crop of FightStageAnchors.StageSize --
+            // a coordinate frame, not a clip region (see StageSize's own
+            // header) -- so nothing here had ever shown whether a widened Far
+            // anchor pushes a far-slot figure off the REAL screen or under a
+            // HUD panel the crop doesn't include. CanvasCapture.RenderToFile
+            // is the same renderer ScreenshotTool uses, called at the two ends
+            // of UiAudit's own audited-aspect range (UiFrames.All) -- widest
+            // (21:9 UltraWide, more half-width than Reference) and narrowest
+            // by aspect ratio (4:3 FourThree, same half-width as Reference but
+            // the most vertical headroom) -- so a problem at either extreme
+            // shows up in a picture rather than only in arithmetic. Taken
+            // BEFORE StageCaptureRig exists: RenderToFile owns its own
+            // camera/scaler swap and restores the canvas exactly as it found
+            // it, same as the rig below does for its own capture.
+            CanvasCapture.RenderToFile(canvas, Path.Combine(dir, "full_widest_ultrawide_2580x1080.png"),
+                (int)PrincesPalace.Domain.UiKit.UiFrames.UltraWide.X, (int)PrincesPalace.Domain.UiKit.UiFrames.UltraWide.Y);
+            CanvasCapture.RenderToFile(canvas, Path.Combine(dir, "full_narrowest_fourthree_1920x1440.png"),
+                (int)PrincesPalace.Domain.UiKit.UiFrames.FourThree.X, (int)PrincesPalace.Domain.UiKit.UiFrames.FourThree.Y);
+
             var rig = new StageCaptureRig(canvas, (int)FightStageAnchors.StageSize.X, (int)FightStageAnchors.StageSize.Y);
             SlotReading[] first = null;
             SlotReading[] last = null;
