@@ -257,7 +257,9 @@
                 "until": "once",
                 "facing": "auto",
                 "sort": "effects",
-                "size": 520
+                "size": 260,
+                "impactX": 0.43,
+                "impactY": 0.48
               }
             ]
           }

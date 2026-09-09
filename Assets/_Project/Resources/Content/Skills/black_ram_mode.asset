@@ -101,11 +101,11 @@ MonoBehaviour:
             dx: 0
             dy: 0
             scale: 1
-            size: 520
+            size: 260
             facing: auto
             sort: effects
-            impactX: -1
-            impactY: -1
+            impactX: 0.43
+            impactY: 0.48
             aspect: 0
             travelSeconds: 0
             travelDelay: 0

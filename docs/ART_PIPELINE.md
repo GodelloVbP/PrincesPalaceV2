@@ -577,11 +577,12 @@ than merged into `Vfx`, because two layered presentations have two
 `hitCueSeconds` and one `sfxPath` each and a merge would have to silently
 pick.
 
-`black_ram_mode` authors all three. Its burst, `Spells/black_ram_impact`, is
-**generated rather than delivered** — `tools/make_contact_fx.py --form-sheet`
-draws the sheet and `slice_spell_sheet.py` cuts it, so its provenance is a
-recipe like any other spell's; the recipe's own `_notes` say plainly that it
-is a placeholder awaiting a commissioned sheet.
+`black_ram_mode` authors all three. Its burst, `Spells/black_ram_impact`, was
+generated placeholder art (`tools/make_contact_fx.py`'s polar arithmetic)
+until a commissioned sheet replaced it; the function that drew the
+placeholder is gone (`--form-sheet` had no other caller) and its bytes live
+in git history. The recipe's own `_notes` carry the delivered sheet's
+provenance the same way every other recipe's do.
 
 ## 5. Wiring checklist (new art → visible in-game)
 
