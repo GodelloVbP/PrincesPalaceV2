@@ -408,39 +408,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Enemy0Slot", order[order.Count - 1], "nearest last, so it paints over the others");
         }
 
-        [Test]
-        public void ASlotSitsWhereTheDepthCurveSaysItDoes()
+        // BOTH SIDES, since 6fedab18: each side stands where ITS OWN
+        // StageFormation says (FightStageAnchors.Enemy / .Party), so the
+        // party side is checked against the mirrored call rather than
+        // against a mirror of the enemy rects -- the two are no longer the
+        // same claim.
+        [TestCase("Enemy", false)]
+        [TestCase("Party", true)]
+        public void ASlotSitsWhereTheDepthCurveSaysItDoes(string side, bool mirrored)
         {
             int count = FightHudSpec.StageSlotsPerSide;
             for (int slot = 0; slot < count; slot++)
             {
-                var expected = FightStageAnchors.SlotOffset(slot, count, mirrored: false);
-                var rect = RectOf($"Enemy{slot}Slot");
+                var expected = FightStageAnchors.SlotOffset(slot, count, mirrored);
+                var rect = RectOf($"{side}{slot}Slot");
 
                 // Bottom pivot: the offset positions the GROUND LINE, which is
                 // what makes depth scaling grow a figure upward from the floor
                 // rather than around its middle.
-                Assert.AreEqual(expected.X, rect.Centre.X, 0.01f, $"slot {slot} x");
-                Assert.AreEqual(expected.Y, rect.Bottom, 0.01f, $"slot {slot} ground line");
+                Assert.AreEqual(expected.X, rect.Centre.X, 0.01f, $"{side} slot {slot} x");
+                Assert.AreEqual(expected.Y, rect.Bottom, 0.01f, $"{side} slot {slot} ground line");
             }
         }
 
         [Test]
-        public void ThePartySideIsTheEnemySideMirroredInXPlusTheRetreat()
+        public void TheTwoFrontRanksShareTheFloorTheyFaceEachOtherAcross()
         {
-            // C4: X is no longer a pure mirror -- the party side stands
-            // FightStageAnchors.PartyRetreat further back than the enemy
-            // side's mirror image. The ground line (Y) is still identical
-            // on both sides, which is what makes the two halves read as
-            // one floor.
-            for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
-            {
-                var enemy = RectOf($"Enemy{slot}Slot");
-                var party = RectOf($"Party{slot}Slot");
+            // "One floor, not two platforms" used to be asserted for every
+            // slot, back when both sides were one Near/Far pair mirrored in
+            // X. Since 6fedab18 the party has its own formation
+            // (StageFormation.Party): its floor has the HUD column standing
+            // on it and its back ranks rise faster to clear it, so the back
+            // ranks' ground lines legitimately differ. What still has to
+            // hold is the pair the eye compares -- the two FRONT figures,
+            // squared off across the open middle of the stage, stand on one
+            // line. Which side stands where is ASlotSitsWhereTheDepthCurve-
+            // SaysItDoes' job, per side; this only says the two fronts agree.
+            var enemy = RectOf("Enemy0Slot");
+            var party = RectOf("Party0Slot");
 
-                Assert.AreEqual(-(enemy.Centre.X + FightStageAnchors.PartyRetreat), party.Centre.X, 0.01f);
-                Assert.AreEqual(enemy.Bottom, party.Bottom, 0.01f, "one floor, not two platforms");
-            }
+            Assert.AreEqual(enemy.Bottom, party.Bottom, 0.01f,
+                "the two front ranks still share the floor they face each other across");
         }
 
         [Test]
