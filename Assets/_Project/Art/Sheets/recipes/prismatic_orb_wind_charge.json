@@ -1,0 +1,50 @@
+{
+  "_notes": [
+    "THE STARTUP CHARGE -- see prismatic_orb_water_charge.json's notes for the",
+    "shape this follows and Assets/_Project/Art/Sheets/Spells/prismatic_bolt/",
+    "CHARGE_HANDOFF.md for the brief, which calls this element out by name for",
+    "halo softness. Same six-cell, no-compose layout; wind_charge_6f.png is",
+    "1536x1024 over 3x2 and divides exactly.",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA; keyed is false.",
+    "",
+    "THE HANDOFF'S WARNING IS MEASURED, NOT JUST OBSERVED. This is the softest",
+    "sheet of the four: every one of the six cells has partial-alpha coverage",
+    "at or above 91% of its drawn area (water/fire/earth run 50-100% and drop",
+    "as low as 50% on the densest frames; here the crescent NEVER reaches a",
+    "hard core). The drawn bounds are also the widest of the pack -- 49-57% of",
+    "the 512 canvas versus 30-47% for the other three -- because the wisp has",
+    "no dense centre to anchor a tight bbox around. Both readings point the",
+    "same way: this sheet reads as haze rather than a crisp glyph at the sizes",
+    "the other three elements use.",
+    "",
+    "SIZED SMALLEST OF THE FOUR IN skills.json FOR EXACTLY THAT REASON -- see",
+    "that file's comment for the arithmetic. Shrinking the box tightens the",
+    "glow along with the shape; there is no crop that fixes soft alpha without",
+    "re-painting the source, so this recipe does not attempt one."
+  ],
+  "sheet": "Spells/prismatic_bolt/wind/wind_charge_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "charge_f0",
+    "charge_f1",
+    "charge_f2",
+    "charge_f3",
+    "charge_f4",
+    "charge_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "charge_f0" },
+    { "from": "charge_f1" },
+    { "from": "charge_f2" },
+    { "from": "charge_f3" },
+    { "from": "charge_f4" },
+    { "from": "charge_f5" }
+  ]
+}

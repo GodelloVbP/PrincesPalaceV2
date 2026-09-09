@@ -155,7 +155,9 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(water.Vfx.HasLayers,
                 "the element's layered block did not reach the cast at all");
-            Assert.AreEqual(5, water.Vfx.layers.Length);
+            // Was 5: 2026-09-09 SpellLayerFixtures.Water() gained a "charge"
+            // layer ahead of "core", matching skills.json's Water block.
+            Assert.AreEqual(6, water.Vfx.layers.Length);
 
             // AND A COPY, never the catalogue's own object -- the same rule the
             // packet array is held to, and worse here because a layer is a

@@ -27,10 +27,10 @@ namespace PrincesPalace.Domain.Tests
     // M5 where a measurement replaced a guess.
     internal static class SpellLayerFixtures
     {
-        // The pilot: a compact core loop crossing the stage, a wake riding it,
-        // droplets shed along the flight, a contact animation at arrival and a
-        // second burst at the cue. Five layers, three renderer kinds, two
-        // scopes and three schedule points.
+        // The pilot: a caster-side charge, a compact core loop crossing the
+        // stage, a wake riding it, droplets shed along the flight, a contact
+        // animation at arrival and a second burst at the cue. Six layers,
+        // three renderer kinds, two scopes and three schedule points.
         internal static SpellPresentation Water() => new SpellPresentation
         {
             layerFormat = 1,
@@ -40,18 +40,39 @@ namespace PrincesPalace.Domain.Tests
             // frames) so the flinch lands on the touch instead of the end of
             // the crown's opening -- 2026-09-08 second battle-speed pass, the
             // 1x strip showed the rat reacting at frame 27 (crown fully open)
-            // rather than frame 20-22 (first touch). Kept the same by hand as
-            // skills.json's Water block; see the file header.
-            hitCueSeconds = 0.25f,
+            // rather than frame 20-22 (first touch).
+            // 0.4167 = 0.25 + 0.1667: 2026-09-09 a caster-side "charge" layer
+            // was added ahead of "core", holding the beat for 0.1667s before
+            // the core opens (see that layer's own offset below), so arrival
+            // and the cue both slid by the same amount to keep damage synced
+            // to contact. Kept the same by hand as skills.json's Water block;
+            // see the file header.
+            hitCueSeconds = 0.4167f,
             layers = new[]
             {
+                new SpellLayer
+                {
+                    id = "charge",
+                    render = "sprite",
+                    place = "caster-centre",
+                    at = "release",
+                    path = "Spells/prismatic_orb_water_charge",
+                    fps = 30f,
+                    seconds = 0.1667f,
+                    until = "once",
+                    fade = 0.0333f,
+                    size = 170f,
+                    facing = "auto",
+                    sort = "effects",
+                },
                 new SpellLayer
                 {
                     id = "core",
                     render = "sprite",
                     place = "caster-centre",
-                    travelSeconds = 0.25f,
                     at = "release",
+                    offset = 0.1667f,
+                    travelSeconds = 0.25f,
                     path = "Spells/prismatic_orb_water_core",
                     fps = 24f,
                     until = "loop",
@@ -66,6 +87,7 @@ namespace PrincesPalace.Domain.Tests
                     place = "layer:core",
                     follow = true,
                     at = "release",
+                    offset = 0.1667f,
                     path = "Spells/prismatic_orb_water_wake",
                     until = "hold",
                     fade = 0.10f,
@@ -89,6 +111,7 @@ namespace PrincesPalace.Domain.Tests
                     render = "emitter",
                     place = "layer:core",
                     at = "release",
+                    offset = 0.1667f,
                     sort = "effects",
                     emitter = new SpellEmitter
                     {

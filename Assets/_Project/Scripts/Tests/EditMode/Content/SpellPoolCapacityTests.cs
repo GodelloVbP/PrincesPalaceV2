@@ -219,11 +219,14 @@ namespace PrincesPalace.Domain.Tests
 
             // Stated as literals so the numbers behind "12, 2 and 64 are
             // reservations with headroom" are readable rather than implied:
-            // prismatic_orb is DamageSingle, so its five layers fan out to one
-            // target -- three sprite instances and two emitters, whose 10 shed
-            // drops and 18-drop burst are the 28 the particle pool is sized
-            // against.
-            Assert.AreEqual(3, water.Effects);
+            // prismatic_orb is DamageSingle, so its six layers fan out to one
+            // target -- four sprite/still instances and two emitters, whose 10
+            // shed drops and 18-drop burst are the 28 the particle pool is
+            // sized against.
+            // Was 3: 2026-09-09 a caster-side "charge" layer was added ahead
+            // of "core" (core, wake, splash -> charge, core, wake, splash),
+            // one more Effects-band sprite instance than before.
+            Assert.AreEqual(4, water.Effects);
             Assert.AreEqual(28, water.Particles);
 
             // AND THE SHIPPED BLOCK SPENDS WHAT THE FIXTURE SAYS. The two are

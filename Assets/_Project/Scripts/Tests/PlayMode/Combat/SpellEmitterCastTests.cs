@@ -155,6 +155,11 @@ namespace PrincesPalace.PlayModeTests
         // MID-FLIGHT: the shed is emitting and its drops are on screen. Read at
         // 0.20s of a 0.25s flight, so the window is open and the earliest drops
         // (lifeMin 0.22) have not begun to expire.
+        //
+        // 0.3667 = 0.1667 + 0.20: 2026-09-09 a caster-side charge was added
+        // ahead of "core", so the shed now opens 0.1667s after release (see
+        // skills.json's Water block) instead of at release itself -- held
+        // 0.1667s later to land on the same 0.20s-of-the-0.25s-window point.
         [UnityTest]
         public IEnumerator TheFlightShedPutsDropsOnScreenWhileTheCoreIsStillCrossing()
         {
@@ -164,7 +169,7 @@ namespace PrincesPalace.PlayModeTests
             _fight.PlaySpellVfxForTest(WaterBeat());
             yield return null;
 
-            HoldTheClockAt(0.20f);
+            HoldTheClockAt(0.3667f);
             yield return null;
 
             // 0.20s at rate 40 is eight births. Asserted as "more than half of
@@ -199,11 +204,15 @@ namespace PrincesPalace.PlayModeTests
             // 0.18s, so all 18 are still drawing this soon after birth), and
             // gives up proving isolation from a shed straggler that the
             // flight-shed test above already covers on its own.
-            HoldTheClockAt(0.30f);
+            //
+            // 0.4667 = 0.4167 + 0.05: 2026-09-09 the charge pushed the cue
+            // from 0.25 to 0.4167 (see skills.json's Water block), so "0.05s
+            // after the cue" moved with it.
+            HoldTheClockAt(0.4667f);
             yield return null;
 
             Assert.Greater(DrawnDrops(), 0,
-                "nothing was drawn 0.05s after the impact burst's 0.25s cue, inside every particle's " +
+                "nothing was drawn 0.05s after the impact burst's 0.4167s cue, inside every particle's " +
                 "guaranteed 0.18s lifeMin");
         }
 
@@ -218,7 +227,13 @@ namespace PrincesPalace.PlayModeTests
             _fight.PlaySpellVfxForTest(WaterBeat());
             yield return null;
 
-            HoldTheClockAt(0.20f);
+            // 0.3667 = 0.1667 + 0.20: 2026-09-09 the charge pushed the shed's
+            // own opening from release to release + 0.1667s (see skills.json's
+            // Water block), so a sample comfortably inside its window moved
+            // with it -- 0.20s in was nearly the whole window before the
+            // charge existed and would now catch the shed a frame after it
+            // opens.
+            HoldTheClockAt(0.3667f);
             yield return null;
             Assert.Greater(DrawnDrops(), 0, "nothing was drawing, so this proves nothing about cleanup");
 

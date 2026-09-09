@@ -510,13 +510,28 @@
           "type": "Earth",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.18,
+            "hitCueSeconds": 0.3467,
             "layers": [
+              {
+                "id": "charge",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "path": "Spells/prismatic_orb_earth_charge",
+                "fps": 30,
+                "seconds": 0.1667,
+                "until": "once",
+                "fade": 0.0333,
+                "size": 195,
+                "facing": "auto",
+                "sort": "effects"
+              },
               {
                 "id": "core",
                 "render": "sprite",
                 "place": "caster-centre",
                 "at": "release",
+                "offset": 0.1667,
                 "travelSeconds": 0.18,
                 "path": "Spells/prismatic_orb_earth_core",
                 "fps": 0,
@@ -531,6 +546,7 @@
                 "place": "layer:core",
                 "follow": true,
                 "at": "release",
+                "offset": 0.1667,
                 "path": "Spells/prismatic_orb_earth_wake",
                 "until": "hold",
                 "fade": 0.08,
@@ -544,6 +560,7 @@
                 "render": "emitter",
                 "place": "layer:core",
                 "at": "release",
+                "offset": 0.1667,
                 "sort": "effects",
                 "emitter": {
                   "path": "Spells/prismatic_orb_earth_drops",
@@ -616,13 +633,28 @@
           "type": "Water",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.25,
+            "hitCueSeconds": 0.4167,
             "layers": [
+              {
+                "id": "charge",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "path": "Spells/prismatic_orb_water_charge",
+                "fps": 30,
+                "seconds": 0.1667,
+                "until": "once",
+                "fade": 0.0333,
+                "size": 170,
+                "facing": "auto",
+                "sort": "effects"
+              },
               {
                 "id": "core",
                 "render": "sprite",
                 "place": "caster-centre",
                 "at": "release",
+                "offset": 0.1667,
                 "travelSeconds": 0.25,
                 "path": "Spells/prismatic_orb_water_core",
                 "fps": 24,
@@ -637,6 +669,7 @@
                 "place": "layer:core",
                 "follow": true,
                 "at": "release",
+                "offset": 0.1667,
                 "path": "Spells/prismatic_orb_water_wake",
                 "until": "hold",
                 "fade": 0.1,
@@ -650,6 +683,7 @@
                 "render": "emitter",
                 "place": "layer:core",
                 "at": "release",
+                "offset": 0.1667,
                 "sort": "effects",
                 "emitter": {
                   "path": "Spells/prismatic_orb_water_drops",
@@ -720,13 +754,28 @@
           "type": "Fire",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.25,
+            "hitCueSeconds": 0.4167,
             "layers": [
+              {
+                "id": "charge",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "path": "Spells/prismatic_orb_fire_charge",
+                "fps": 30,
+                "seconds": 0.1667,
+                "until": "once",
+                "fade": 0.0333,
+                "size": 170,
+                "facing": "auto",
+                "sort": "effects"
+              },
               {
                 "id": "core",
                 "render": "sprite",
                 "place": "caster-centre",
                 "at": "release",
+                "offset": 0.1667,
                 "travelSeconds": 0.25,
                 "path": "Spells/prismatic_orb_fire_core",
                 "fps": 24,
@@ -741,6 +790,7 @@
                 "place": "layer:core",
                 "follow": true,
                 "at": "release",
+                "offset": 0.1667,
                 "path": "Spells/prismatic_orb_fire_wake",
                 "until": "hold",
                 "fade": 0.08,
@@ -754,6 +804,7 @@
                 "render": "emitter",
                 "place": "layer:core",
                 "at": "release",
+                "offset": 0.1667,
                 "sort": "effects",
                 "emitter": {
                   "path": "Spells/prismatic_orb_fire_drops",
@@ -824,13 +875,28 @@
           "type": "Wind",
           "vfx": {
             "layerFormat": 1,
-            "hitCueSeconds": 0.25,
+            "hitCueSeconds": 0.4167,
             "layers": [
+              {
+                "id": "charge",
+                "render": "sprite",
+                "place": "caster-centre",
+                "at": "release",
+                "path": "Spells/prismatic_orb_wind_charge",
+                "fps": 30,
+                "seconds": 0.1667,
+                "until": "once",
+                "fade": 0.0333,
+                "size": 135,
+                "facing": "auto",
+                "sort": "effects"
+              },
               {
                 "id": "core",
                 "render": "sprite",
                 "place": "caster-centre",
                 "at": "release",
+                "offset": 0.1667,
                 "travelSeconds": 0.25,
                 "path": "Spells/prismatic_orb_wind_core",
                 "fps": 24,
@@ -845,6 +911,7 @@
                 "place": "layer:core",
                 "follow": true,
                 "at": "release",
+                "offset": 0.1667,
                 "path": "Spells/prismatic_orb_wind_wake",
                 "until": "hold",
                 "fade": 0.08,
@@ -858,6 +925,7 @@
                 "render": "emitter",
                 "place": "layer:core",
                 "at": "release",
+                "offset": 0.1667,
                 "sort": "effects",
                 "emitter": {
                   "path": "Spells/prismatic_orb_wind_drops",

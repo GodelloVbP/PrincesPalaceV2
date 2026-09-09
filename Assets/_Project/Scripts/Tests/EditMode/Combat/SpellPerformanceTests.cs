@@ -53,34 +53,41 @@ namespace PrincesPalace.Domain.Tests
         {
             var performance = Resolve(SpellLayerFixtures.Water());
 
+            // 2026-09-09: a caster-side "charge" layer was added ahead of
+            // "core", holding the beat for 0.1667s (offset on "core" and every
+            // follower) before the core opens and starts flying -- so every
+            // instant below that used to read off release now reads off
+            // release + 0.1667, moved by hand together with the numbers in
+            // skills.json and SpellLayerFixtures.Water().
+            //
             // Travels 0.25s with no hold, so it ends at its arrival however
             // many times it looped its six frames getting there.
-            Assert.AreEqual(0.25f, Named(performance, "core").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.4167f, Named(performance, "core").EndSeconds, 1e-5f);
 
             // Follows the core, so it ends when the core does and never after
             // it; its 0.10 fade then clears it.
-            Assert.AreEqual(0.25f, Named(performance, "wake").EndSeconds, 1e-5f);
-            Assert.AreEqual(0.35f, Named(performance, "wake").ClearedSeconds, 1e-5f);
+            Assert.AreEqual(0.4167f, Named(performance, "wake").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.5167f, Named(performance, "wake").ClearedSeconds, 1e-5f);
 
             // window + lifeMax, which is what lets a shed that stopped at the
             // target keep falling.
-            Assert.AreEqual(0.63f, Named(performance, "shed").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.7967f, Named(performance, "shed").EndSeconds, 1e-5f);
 
             // Opens at the arrival and runs eight of nine contact frames at
             // 26fps -- startFrame 2 is 1-based, so one frame is skipped.
-            Assert.AreEqual(0.25f, Named(performance, "splash").StartSeconds, 1e-5f);
-            Assert.AreEqual(0.5576923f, Named(performance, "splash").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.4167f, Named(performance, "splash").StartSeconds, 1e-5f);
+            Assert.AreEqual(0.7243923f, Named(performance, "splash").EndSeconds, 1e-5f);
 
             // A burst at the hit cue plus the longest life it can throw. Cue
             // moved from 0.327 to 0.25 (arrival exactly, not arrival plus two
-            // contact frames) in the 2026-09-08 second battle-speed pass, so
-            // 0.327+0.34=0.667 became 0.25+0.34=0.59 -- now under the shed's
-            // own 0.63s clear, so the shed is the last layer standing rather
-            // than the spray.
-            Assert.AreEqual(0.25f, Named(performance, "spray").StartSeconds, 1e-5f);
-            Assert.AreEqual(0.59f, Named(performance, "spray").EndSeconds, 1e-5f);
+            // contact frames) in the 2026-09-08 second battle-speed pass, then
+            // from 0.25 to 0.4167 (+0.1667, the charge) in the 2026-09-09
+            // charge pass -- 0.4167+0.34=0.7567, still under the shed's own
+            // 0.7967s clear, so the shed remains the last layer standing.
+            Assert.AreEqual(0.4167f, Named(performance, "spray").StartSeconds, 1e-5f);
+            Assert.AreEqual(0.7567f, Named(performance, "spray").EndSeconds, 1e-5f);
 
-            Assert.AreEqual(0.63f, performance.ClearedSeconds, 1e-5f,
+            Assert.AreEqual(0.7967f, performance.ClearedSeconds, 1e-5f,
                 "the last of the cast to clear is now the shed (window + lifeMax), not the burst -- " +
                 "the tightened cue moved the burst's own clear ahead of it");
         }
@@ -125,7 +132,9 @@ namespace PrincesPalace.Domain.Tests
 
             var performance = Resolve(water);
 
-            Assert.AreEqual(0.25f, Named(performance, "wake").EndSeconds, 1e-5f);
+            // Was 0.25: 2026-09-09 "core" (and its followers) opens 0.1667s
+            // after release now, for the charge ahead of it.
+            Assert.AreEqual(0.4167f, Named(performance, "wake").EndSeconds, 1e-5f);
         }
 
         [Test]
@@ -136,7 +145,9 @@ namespace PrincesPalace.Domain.Tests
 
             var performance = Resolve(water);
 
-            Assert.AreEqual(0.25f + SpellLayerRules.MaxFadeSeconds,
+            // Was 0.25f base: 2026-09-09 the charge pushed "core"'s own ending
+            // to 0.4167 (see EveryLayerOfTheWaterPilotEndsAtAStatedInstant).
+            Assert.AreEqual(0.4167f + SpellLayerRules.MaxFadeSeconds,
                 Named(performance, "wake").ClearedSeconds, 1e-5f);
         }
 
@@ -154,8 +165,10 @@ namespace PrincesPalace.Domain.Tests
             var splashes = performance.Instances.Where(i => i.Layer.id == "splash").ToList();
 
             Assert.AreEqual(3, splashes.Count, "a target-placed layer draws once per struck target");
-            Assert.AreEqual(0.25f, performance.ArrivalSeconds, 1e-5f);
-            foreach (var splash in splashes) Assert.AreEqual(0.25f, splash.StartSeconds, 1e-5f);
+            // Was 0.25: 2026-09-09 the charge holds "core" (and its arrival)
+            // 0.1667s later than release.
+            Assert.AreEqual(0.4167f, performance.ArrivalSeconds, 1e-5f);
+            foreach (var splash in splashes) Assert.AreEqual(0.4167f, splash.StartSeconds, 1e-5f);
             CollectionAssert.AreEquivalent(new[] { 0, 1, 2 }, splashes.Select(s => s.TargetIndex).ToList());
         }
 
@@ -260,6 +273,10 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEqual(new[]
             {
+                // "charge" added 2026-09-09, ahead of "core": cast-level
+                // (caster-centre, not per-target), so TargetIndex is -1 and it
+                // draws once however many targets were struck.
+                ("charge", -1),
                 ("core", 0), ("core", 1),
                 ("wake", 0), ("wake", 1),
                 ("shed", 0), ("shed", 1),
@@ -322,7 +339,9 @@ namespace PrincesPalace.Domain.Tests
             var water = SpellLayerFixtures.Water();
             foreach (var layer in water.layers) layer.path = "Spells/does_not_exist";
 
-            Assert.AreEqual(0.25f, Resolve(water).HitCueSeconds, 1e-5f);
+            // Was 0.25: 2026-09-09 the charge pushed the fixture's authored
+            // hitCueSeconds to 0.4167 (see the fixture's own comment).
+            Assert.AreEqual(0.4167f, Resolve(water).HitCueSeconds, 1e-5f);
         }
 
         [Test]

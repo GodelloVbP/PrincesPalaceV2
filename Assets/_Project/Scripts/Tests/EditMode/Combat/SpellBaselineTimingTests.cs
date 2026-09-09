@@ -190,13 +190,20 @@ namespace PrincesPalace.Domain.Tests
             // arrival exactly so the flinch lands on the touch (frame 20-22)
             // rather than the end of the crown's opening (frame 27) -- 2026-09-08
             // second battle-speed pass, measured against the 1x strip.
-            Assert.AreEqual(0.25f, water.hitCueSeconds, 1e-6f,
-                "the cue is arrival (0.25s) exactly -- the reaction is timed to the touch, not to the " +
+            // Was 0.25 (== travelSeconds, no charge). 2026-09-09: a caster-side
+            // charge layer was added ahead of the core with offset 0.1667s
+            // (core opens exactly when the charge's frame 6 begins), so arrival
+            // and the cue both slid by that same 0.1667s to keep the touch and
+            // the damage together -- 0.25 + 0.1667 = 0.4167.
+            Assert.AreEqual(0.4167f, water.hitCueSeconds, 1e-6f,
+                "the cue is arrival exactly -- the reaction is timed to the touch, not to the " +
                 "contact art finishing -- authored in seconds rather than derived from a frame index");
             Assert.IsEmpty(water.path,
                 "a layered block authors no single-block path; the rules refuse one that authors both");
 
-            CollectionAssert.AreEqual(new[] { "core", "wake", "shed", "splash", "spray" },
+            // "charge" added 2026-09-09 ahead of "core": the caster-side
+            // gather-then-release beat that plays before the flight core opens.
+            CollectionAssert.AreEqual(new[] { "charge", "core", "wake", "shed", "splash", "spray" },
                 water.layers.Select(l => l.id).ToList(),
                 "authored order is draw order, so it is part of the content rather than an accident");
         }

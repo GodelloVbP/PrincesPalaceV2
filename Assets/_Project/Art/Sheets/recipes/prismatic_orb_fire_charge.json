@@ -1,0 +1,41 @@
+{
+  "_notes": [
+    "THE STARTUP CHARGE -- see prismatic_orb_water_charge.json's notes for the",
+    "shape this follows and Assets/_Project/Art/Sheets/Spells/prismatic_bolt/",
+    "CHARGE_HANDOFF.md for the brief. Same six-cell, no-compose layout;",
+    "fire_charge_6f.png is 1536x1024 over 3x2 and divides exactly.",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA; keyed is false.",
+    "",
+    "MEASURED: the core (fire_core_6f.png) fills about 86% of its canvas",
+    "width at every frame; this sheet's compact flame seed (frames 3-5) fills",
+    "28-34%, widening to 44% at the release frame. Partial-alpha coverage",
+    "(pixels never reaching full opacity) is around 80% of the drawn area --",
+    "softer than Earth, tighter than Wind. skills.json sizes the charge layer",
+    "under the core's box; see its own comment for the arithmetic."
+  ],
+  "sheet": "Spells/prismatic_bolt/fire/fire_charge_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "charge_f0",
+    "charge_f1",
+    "charge_f2",
+    "charge_f3",
+    "charge_f4",
+    "charge_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "charge_f0" },
+    { "from": "charge_f1" },
+    { "from": "charge_f2" },
+    { "from": "charge_f3" },
+    { "from": "charge_f4" },
+    { "from": "charge_f5" }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "_notes": [
+    "THE STARTUP CHARGE, A FIFTH LAYER ADDED AFTER THE PILOT SHIPPED. Read",
+    "Assets/_Project/Art/Sheets/Spells/prismatic_bolt/CHARGE_HANDOFF.md for the",
+    "brief this follows: a caster-side gather-then-release beat that plays",
+    "before the flight core opens.",
+    "",
+    "SIX CELLS, IN ORDER, NOTHING COMPOSED -- the same shape as *_core.json.",
+    "water_charge_6f.png is 1536x1024 over 3 columns by 2 rows and divides",
+    "exactly into 512px cells, read left-to-right then top-to-bottom per the",
+    "handoff. No rects, no canvas, no scale steps: frames 1-5 gather and",
+    "compress, frame 6 is the rightward release accent, all six preserved on",
+    "disk even though skills.json's authored `seconds` on the charge layer",
+    "stops the played CLIP one frame short of frame 6's full hold (see that",
+    "file for why -- the crossfade needs frame 6 to start FADING the instant",
+    "it appears, not to play out first).",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA (built-in image generation, RGBA preserved",
+    "per the handoff), so keyed is false like the rest of the pack.",
+    "",
+    "MEASURED, NOT REUSED: the core's own painted bounds (water_core_6f.png)",
+    "fill about 74% of their 512 canvas at every frame; this sheet's condensed",
+    "seed (frames 3-5) fills only 22-30%, with the gathering/release frames",
+    "reaching 41% at their widest. skills.json sizes the charge layer well",
+    "under the core's own box for exactly that reason -- see its own comment",
+    "for the arithmetic.",
+    "",
+    "ALPHA EDGES: soft throughout, as the handoff warns for every element --",
+    "measured, none of the six cells reach full 255 opacity even at the",
+    "densest bead (max ~254, mostly soft gradient). Read as intended painterly",
+    "glow rather than a keying defect; Wind is the sheet where this actually",
+    "reads as washed-out (see that recipe's notes)."
+  ],
+  "sheet": "Spells/prismatic_bolt/water/water_charge_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "charge_f0",
+    "charge_f1",
+    "charge_f2",
+    "charge_f3",
+    "charge_f4",
+    "charge_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "charge_f0" },
+    { "from": "charge_f1" },
+    { "from": "charge_f2" },
+    { "from": "charge_f3" },
+    { "from": "charge_f4" },
+    { "from": "charge_f5" }
+  ]
+}

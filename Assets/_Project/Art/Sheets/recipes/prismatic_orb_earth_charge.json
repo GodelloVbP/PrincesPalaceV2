@@ -1,0 +1,42 @@
+{
+  "_notes": [
+    "THE STARTUP CHARGE -- see prismatic_orb_water_charge.json's notes for the",
+    "shape this follows and Assets/_Project/Art/Sheets/Spells/prismatic_bolt/",
+    "CHARGE_HANDOFF.md for the brief. Same six-cell, no-compose layout;",
+    "earth_charge_6f.png is 1536x1024 over 3x2 and divides exactly.",
+    "",
+    "DELIVERED WITH ITS OWN ALPHA; keyed is false.",
+    "",
+    "MEASURED: the core (earth_core_6f.png) fills about 88% of its canvas",
+    "width at every frame; this sheet's locked chip cluster (frames 3-5)",
+    "fills 30-33%, widening to 47% at the release frame. This is the",
+    "crispest sheet of the four -- partial-alpha coverage on the densest",
+    "frames drops to 50%, the lowest in the pack, so the chips read with an",
+    "actual hard edge rather than a glow. skills.json still sizes the charge",
+    "layer under the core's box; see its own comment for the arithmetic."
+  ],
+  "sheet": "Spells/prismatic_bolt/earth/earth_charge_6f.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "charge_f0",
+    "charge_f1",
+    "charge_f2",
+    "charge_f3",
+    "charge_f4",
+    "charge_f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    { "from": "charge_f0" },
+    { "from": "charge_f1" },
+    { "from": "charge_f2" },
+    { "from": "charge_f3" },
+    { "from": "charge_f4" },
+    { "from": "charge_f5" }
+  ]
+}

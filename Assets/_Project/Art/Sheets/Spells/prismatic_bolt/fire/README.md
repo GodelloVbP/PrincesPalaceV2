@@ -22,3 +22,9 @@ Compact pointed spear; short bright crown at contact. Emit few short-lived ember
 Core loop ends at arrival; wake fades; old emitted particles finish. Choose contact start frame and hit cue together so the approaching pose is not replayed after arrival. Peak is approximately source frame 4, but tune by viewing real-time playback, not by assuming a fixed frame. Test loop seam, pivot stability, core-to-contact scale, right/left facing, UI readability and two consecutive casts. Do not assume uniform scale across generated sheets. Core halos are visible and should be reviewed in game. Transparent encoding does not itself prove clean edges or perfect registration.
 
 No scenes, recipes, mechanics or working Water content were changed in this delivery. See PROMPTS.md for generation provenance.
+
+## Charge (2026-09-09)
+
+Sliced from `fire_charge_6f.png` (1536 x 1024, 3 columns x 2 rows, 512 px cells; see `CHARGE_HANDOFF.md`) by `recipes/prismatic_orb_fire_charge.json`, keyed false (delivered alpha). All six cells are cut to `Resources/Spells/prismatic_orb_fire_charge/f0..f5`; the played clip stops the layer's own lifetime one frame early (`seconds: 0.1667` at `fps: 30`, i.e. frames 1-5 only) so frame 6 fades out (`fade: 0.0333`) instead of holding at full opacity into the flight core's own appearance -- see skills.json's Fire element for why (avoids two full-strength cores on screen at once).
+
+Timing: charge opens at release and runs 0.1667s + 0.0333s fade = 0.2s total. `core` (and its followers `wake`/`shed`) now open with `offset: 0.1667` instead of at release, so the flight starts exactly as the charge's fade begins. `hitCueSeconds` moved from 0.25 to 0.4167 (+0.1667) to keep the arrival and the damage cue on the same instant. Box: `size: 170`, smaller than the core's 175 -- measured off the sheet's own painted bounds (28-44% of its 512 canvas across the six frames, against the core's own 86%), not copied from the core's number.
