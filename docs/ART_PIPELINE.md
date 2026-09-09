@@ -163,6 +163,63 @@ One authored number per actor, checked against the art, replaced the guess:
   `ContentData/enemies.json`) still time the *effect* layered over a
   stance — that is unrelated and unaffected by this.
 
+**`castPoint` — where a cast leaves this actor's body.** A third judgement
+beside `breath` and `hover`, same rule: no tool ever writes it, because there
+is nothing to measure — "where the light should come from" is a choice about
+the drawing, not a fact a pixel scan reports. Absent means what it always
+meant before this field existed: the cast leaves from the caster's own slot
+origin, which is what every actor without an entry still gets, byte for byte.
+
+The gripe this was written for: a travelling spell's launch point used to be
+the caster's slot origin unconditionally, which lands behind an actor whose
+weapon or book is held out in FRONT of them. Odette casts with a book held
+out; her book, not her spine, is where the light should leave from.
+
+```json
+"castPoint": { "dx": 201.5, "dy": 135.5 }
+```
+
+Units, and why they are not canvas-absolute: pixels on the actor's own
+**cast** still, the same canvas `groundLine` is measured on.
+
+- **`dx`** — pixels from the figure's own horizontal centre (canvas width /
+  2), **positive toward the actor's own drawn facing** (`SpriteFacing`), never
+  toward whichever side of the stage the actor happens to stand on. The
+  mirror that flips a leftward-drawn monster onto the right side of the stage
+  flips this the same way, automatically — it rides the same transform the
+  sprite itself does.
+- **`dy`** — pixels **above this actor's own `groundLine`**, the same
+  "up from the floor" direction `groundLine` already counts in, never up from
+  the canvas edge.
+
+Anchoring to the figure's own centre and its own ground line rather than to
+canvas corners is the same move `groundLine` itself made, for the same
+reason: a re-slice can change the canvas (a wider pad, a taller sheet)
+without moving the figure's anatomy relative to itself, and a point measured
+off a corner that can move would drift off the book the moment the canvas
+resized. A point measured off the two things that do not move under a
+re-slice moves with the figure instead.
+
+At play time this becomes a stage position by scaling and mirroring `(dx,
+dy)` onto the caster's own slot — `FightController.SpellVfx.CasterCastPoint`
+is the seam every caster-anchored travelling layer and every non-travelling
+`caster`-placed layer goes through, and `Domain/Stage/CastPointPlacement` is
+the one piece of that seam that is a formula rather than "ask the transform"
+(engine-free, so it is pinned with literal numbers in the fast EditMode
+suite). It rides the slot's current depth scale and hover for free, because
+both are already baked into the slot's transform by the time a cast reads
+it — `AnchorOne` writes depth into `localScale`, `SetHover` writes the bob
+straight into `anchoredPosition` every frame.
+
+Two actors are authored today, as the model's two-use check: Odette
+(`Characters/owl`) at the hinge of her book, and Shawn (`Characters/sheep`)
+at the glowing mote over his raised hand — his `cast.png` holds no staff,
+despite what an earlier draft of this brief guessed; the hand-raised cast is
+what the art actually shows and reads just as clearly as a launch point.
+`StanceManifestValidationTests` refuses a `castPoint` that falls outside its
+actor's `cast.png` alpha bbox, the same way it refuses a `groundLine` more
+than 8px off the art.
+
 The file lives in `Resources/` rather than `ContentData/` because it is
 read at runtime rather than baked — and deliberately **not** under
 `Resources/Content/`, which `ContentBuilder` deletes wholesale.

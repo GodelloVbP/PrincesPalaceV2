@@ -4,6 +4,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -195,12 +196,12 @@ namespace PrincesPalace
             foreach (var instance in performance.Instances)
             {
                 instance.Facing = facing;
-                PlaceOne(instance, performance, parent, struck, casterRect, casterX);
+                PlaceOne(instance, performance, parent, struck, beat.Actor, casterRect, casterX);
             }
         }
 
         private void PlaceOne(SpellLayerInstance instance, SpellPerformance performance, Transform parent,
-            List<CombatantState> struck, RectTransform casterRect, float casterX)
+            List<CombatantState> struck, CombatantState caster, RectTransform casterRect, float casterX)
         {
             var layer = instance.Layer;
 
@@ -236,6 +237,19 @@ namespace PrincesPalace
 
             var box = BoxForLayer(layer);
             var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
+
+            // A PLAIN `caster` PLACEMENT (not centred, not travelling) used to
+            // mean "the slot's own origin" -- exactly what AimPoint just
+            // computed above. It now means the caster's own cast point
+            // instead, when one is authored; CasterCastPoint falls back to
+            // that same AimPoint answer verbatim for every actor that
+            // authors nothing, which is every actor but the two this
+            // feature was written for.
+            if (layer.Place == SpellPlace.Caster && !layer.Travels && casterRect != null)
+            {
+                aim = CasterCastPoint(caster, casterRect, parent, aim);
+            }
+
             float facing = instance.DrawFacing;
 
             var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing,
@@ -249,9 +263,64 @@ namespace PrincesPalace
             // the same offset at the other end would shift a DIFFERENT part of
             // the drawing -- the conjuring glyph -- away from the caster rather
             // than onto them.
-            instance.From = layer.Travels && casterRect != null
-                ? new UiVec(casterX, to.y)
-                : instance.To;
+            //
+            // THE LAUNCH IS THE CAST POINT, when the caster authors one --
+            // CasterCastPoint falls back to (casterX, to.y) verbatim for an
+            // actor that authors nothing, which is what this line always
+            // computed before the cast point existed.
+            var launch = layer.Travels && casterRect != null
+                ? CasterCastPoint(caster, casterRect, parent, new Vector2(casterX, to.y))
+                : (Vector2?)null;
+            instance.From = launch.HasValue ? new UiVec(launch.Value.x, launch.Value.y) : instance.To;
+        }
+
+        // WHERE A CAST ACTUALLY LEAVES THIS ACTOR'S BODY, on stage, right now
+        // -- the seam every caster-anchored placement above goes through
+        // instead of re-deriving the slot's own origin.
+        //
+        // TWO HALVES, ONE ENGINE-FREE. `slotOrigin` asks the SAME
+        // TransformPoint/InverseTransformPoint dance every other point in
+        // this file goes through for "where is this slot, right now" -- it
+        // already carries the slot's depth scale (AnchorOne writes
+        // FightStageAnchors.SlotScale into localScale) and its current hover
+        // offset (SetHover writes straight into the slot's anchoredPosition
+        // every frame, so a flying actor's cast point rides the bob for
+        // free) without this function having an opinion about either.
+        // CastPointPlacement.OnStage is the one piece that IS a formula --
+        // an authored (dx, dy) plus the slot's own scale and mirror -- and it
+        // lives in Domain, engine-free, so it is what CastPointPlacementTests
+        // pins with literal numbers instead of only a running scene.
+        //
+        // MIRRORED BEFORE THE SCALE, not after -- dx is authored relative to
+        // the actor's own drawn facing, and the slot itself is never
+        // mirrored (only the sprite Image inside it is, in
+        // RefreshCombatantSprite). Reading FacingOf/side the same way that
+        // call site does is what keeps this from disagreeing with which way
+        // the figure is actually drawn.
+        //
+        // UNAUTHORED ACTORS GET `fallback` VERBATIM. The two call sites above
+        // disagreed about what "no opinion" meant before this seam existed --
+        // a travelling layer's launch took the target's own height (to.y), a
+        // plain `caster` placement took the slot's ground line -- so that
+        // choice cannot live inside this function without changing one of
+        // the two answers. It stays the caller's, which is what makes
+        // "unauthored actors get exactly today's answer" true by
+        // construction rather than by re-deriving today's formula twice.
+        private Vector2 CasterCastPoint(CombatantState caster, RectTransform casterRect, Transform parent,
+            Vector2 fallback)
+        {
+            if (caster == null || casterRect == null) return fallback;
+
+            var authored = StanceManifestLoader.Manifest.CastPointFor(SpriteFolderFor(caster));
+            if (!authored.HasValue) return fallback;
+
+            var side = caster.IsPlayerSide ? StageSide.Left : StageSide.Right;
+            float mirror = StageFacing.MirrorScaleX(FacingOf(caster), side);
+
+            var slotOrigin = parent.InverseTransformPoint(casterRect.TransformPoint(Vector3.zero));
+            var stage = CastPointPlacement.OnStage(authored.Value, mirror, casterRect.localScale.x,
+                new UiVec(slotOrigin.x, slotOrigin.y));
+            return new Vector2(stage.X, stage.Y);
         }
 
         // ONE FAULT UNDER THE WHOLE FORMATION, sized to the enemies actually

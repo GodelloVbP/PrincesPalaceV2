@@ -40,6 +40,7 @@ namespace PrincesPalace.Domain.Stage
         private readonly Dictionary<string, string> _groundLineSources;
         private readonly Dictionary<string, float> _breaths;
         private readonly Dictionary<string, HoverSpec> _hovers;
+        private readonly Dictionary<string, CastPointSpec> _castPoints;
 
         public StanceManifest(RawStanceManifest raw)
         {
@@ -47,6 +48,7 @@ namespace PrincesPalace.Domain.Stage
             _groundLineSources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _breaths = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             _hovers = new Dictionary<string, HoverSpec>(StringComparer.OrdinalIgnoreCase);
+            _castPoints = new Dictionary<string, CastPointSpec>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var actor in raw?.actors ?? new List<RawStanceActor>())
             {
@@ -63,6 +65,11 @@ namespace PrincesPalace.Domain.Stage
                 {
                     _hovers[path] = new HoverSpec(actor.hover.height, actor.hover.bob, actor.hover.periodSeconds);
                 }
+
+                if (actor.castPoint != null)
+                {
+                    _castPoints[path] = new CastPointSpec(actor.castPoint.dx, actor.castPoint.dy);
+                }
             }
         }
 
@@ -74,6 +81,21 @@ namespace PrincesPalace.Domain.Stage
             if (string.IsNullOrWhiteSpace(spritePath) || !_hovers.TryGetValue(Normalise(spritePath), out var spec))
             {
                 return HoverSpec.Grounded;
+            }
+
+            return spec;
+        }
+
+        // WHERE A CAST LEAVES THIS ACTOR'S BODY, in the actor's own stance
+        // canvas pixels (see RawCastPoint for the dx/dy convention). Null for
+        // every actor that authors nothing -- FightController's placement
+        // seam is what turns null into "the caster's own slot origin", the
+        // answer every actor gave before this field existed.
+        public CastPointSpec? CastPointFor(string spritePath)
+        {
+            if (string.IsNullOrWhiteSpace(spritePath) || !_castPoints.TryGetValue(Normalise(spritePath), out var spec))
+            {
+                return null;
             }
 
             return spec;
@@ -160,6 +182,23 @@ namespace PrincesPalace.Domain.Stage
         private static string Normalise(string spritePath)
         {
             return spritePath.Trim().Trim('/');
+        }
+    }
+
+    // ONE AUTHORED POINT: where a cast leaves this actor's body, in the
+    // actor's own stance canvas -- see RawCastPoint for the dx/dy
+    // convention this carries verbatim (this type adds no correction of its
+    // own; it exists so the resolved manifest hands out a value rather than
+    // two loose floats that could be passed in the wrong order).
+    public readonly struct CastPointSpec
+    {
+        public readonly float Dx;
+        public readonly float Dy;
+
+        public CastPointSpec(float dx, float dy)
+        {
+            Dx = dx;
+            Dy = dy;
         }
     }
 }

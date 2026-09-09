@@ -647,6 +647,37 @@ namespace PrincesPalace.PlayModeTests
                 "the effect never reached the thing it was cast at");
         }
 
+        // WIRING CHECK: an actor with an authored castPoint (StanceManifest
+        // .json) launches a travelling cast from it rather than from its own
+        // slot origin. Characters/owl is the shipped manifest's own entry --
+        // reusing it here checks the real content rather than a synthetic
+        // fixture that could pass against a broken lookup. Not asserting an
+        // exact literal: FightStageAnchors' own depth scale is a live number
+        // this file has no business pinning a second time (CastPointPlacement
+        // Tests already pins the seam's own arithmetic in EditMode), so this
+        // only asserts the DIRECTION and a floor on the MAGNITUDE that the
+        // manifest's positive dx implies for a caster who faces right with no
+        // mirror -- loose enough to survive a depth-scale retune, tight
+        // enough that "the seam stopped firing" cannot pass silently.
+        [UnityTest]
+        public IEnumerator ATravellingEffectLeavesFromAnAuthoredCastPointRatherThanTheSlotOrigin()
+        {
+            yield return LoadFight();
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            _fight.BindPartyArt(new List<CombatantState> { hero }, new List<string> { "Characters/owl" });
+
+            var casterOrigin = SlotXOf("Shawn");
+
+            _fight.PlaySpellVfxForTest(TravellingBeat());
+
+            float launchX = _player.Image.rectTransform.anchoredPosition.x;
+
+            Assert.Greater(launchX, casterOrigin + 20f,
+                "an authored castPoint did not move the launch off the slot origin -- either the manifest " +
+                "lookup or the seam that reads it stopped firing");
+        }
+
         // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The Bog Witch casts the same
         // spell back across the stage; drawn as-authored her glyph forms on
         // Shawn and her impact lands on herself.

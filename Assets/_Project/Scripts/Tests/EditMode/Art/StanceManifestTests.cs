@@ -261,5 +261,52 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(manifest.HoverFor("Characters/owl").IsAirborne);
         }
+
+        // ---- where a cast leaves this actor's body -----------------------------
+
+        // NULL, not a zeroed struct -- an unauthored actor has to be
+        // DISTINGUISHABLE from one authored at (0, 0), because the seam that
+        // reads this falls back to a different answer (the caster's own slot
+        // origin) only when nothing was said at all.
+        [Test]
+        public void AnActorWithNoCastPoint_ResolvesToNull()
+        {
+            var manifest = Build(Actor("Enemies/rat", 8f));
+
+            Assert.IsFalse(manifest.CastPointFor("Enemies/rat").HasValue);
+            Assert.IsFalse(manifest.CastPointFor("Enemies/nobody").HasValue);
+        }
+
+        // Odette's own numbers (StanceManifest.json), pinned so a future edit
+        // to the manifest or its resolver cannot silently move where her
+        // spells leave from without a test noticing.
+        [Test]
+        public void AnAuthoredCastPoint_ComesBackWithItsNumbers()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Characters/owl",
+                groundLine = 8f,
+                castPoint = new RawCastPoint { dx = 201.5f, dy = 135.5f },
+            });
+
+            var point = manifest.CastPointFor("Characters/owl");
+            Assert.IsTrue(point.HasValue);
+            Assert.AreEqual(201.5f, point.Value.Dx, 0.0001f);
+            Assert.AreEqual(135.5f, point.Value.Dy, 0.0001f);
+        }
+
+        [Test]
+        public void PathsForCastPoint_MatchRegardlessOfStraySlashesOrCasing()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Characters/owl",
+                groundLine = 8f,
+                castPoint = new RawCastPoint { dx = 201.5f, dy = 135.5f },
+            });
+
+            Assert.AreEqual(201.5f, manifest.CastPointFor("/characters/OWL/").Value.Dx, 0.0001f);
+        }
     }
 }

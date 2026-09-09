@@ -65,6 +65,36 @@ namespace PrincesPalace.Domain.Tests
             return -1;
         }
 
+        // The tightest box holding every pixel at least this opaque, or null
+        // for a wholly transparent image. Left/top/right/bottom, inclusive,
+        // in the same top-down/left-right pixel coordinates `At` and
+        // `LowestOpaqueRow` already use -- row 0 is the canvas TOP.
+        //
+        // Exists for StanceManifestValidationTests' castPoint check: an
+        // authored point outside this box is pointing at empty air, the same
+        // class of typo `groundLine`'s 8px band already catches on the
+        // vertical axis alone.
+        public (int Left, int Top, int Right, int Bottom)? AlphaBBox(int threshold = 8)
+        {
+            int left = Width, top = Height, right = -1, bottom = -1;
+
+            for (int y = 0; y < Height; y++)
+            {
+                int row = y * Width;
+                for (int x = 0; x < Width; x++)
+                {
+                    if (_alpha[row + x] <= threshold) continue;
+
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                    if (y < top) top = y;
+                    if (y > bottom) bottom = y;
+                }
+            }
+
+            return right < 0 ? ((int, int, int, int)?)null : (left, top, right, bottom);
+        }
+
         public static PngAlpha Read(string path)
         {
             byte[] bytes = File.ReadAllBytes(path);

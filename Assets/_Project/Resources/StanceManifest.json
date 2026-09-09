@@ -44,6 +44,28 @@
     "to compete with. Negative means none; nothing needs that today, a statue",
     "would.",
     "",
+    "castPoint: where a cast leaves this actor's body -- I write this one by",
+    "eye, on the actor's own cast.png, the same way I write breath and hover:",
+    "no tool ever measures it, because there is nothing to measure. 'Where the",
+    "light should come from' is a judgement about the drawing, not a fact a",
+    "pixel scan could report. dx is pixels from the figure's own horizontal",
+    "centre (canvas width / 2), positive toward whichever way the actor is",
+    "drawn facing -- not toward whichever side of the stage it happens to",
+    "stand on, because the mirror that flips a leftward monster onto the",
+    "right side of the stage flips this the same way, automatically. dy is",
+    "pixels ABOVE this actor's own groundLine, the same 'up from the floor'",
+    "direction groundLine itself already counts in, not up from the canvas",
+    "edge -- so a re-slice that moves groundLine by re-measuring the feet",
+    "carries this point along with it instead of leaving it pointing at empty",
+    "air the way a canvas-corner offset would. Odette's is the hinge of her",
+    "book (measured on Characters/owl/cast.png at canvas pixel (526, 221.5),",
+    "which is dx 201.5, dy 135.5 above her groundLine of 8); Shawn's is the",
+    "glowing mote over his raised hand, not a staff -- he doesn't carry one in",
+    "this pose -- (canvas pixel (296.5, 62.2) on Characters/sheep/cast.png,",
+    "dx 26.5, dy 263.8 above his groundLine of 43). Unauthored means what it",
+    "always meant before this field existed: the cast leaves from the slot's",
+    "own origin, exactly as today.",
+    "",
     "There are no per-stance entries because there is no per-stance timing left",
     "to author: a still has nothing to time. What used to live here",
     "(secondsPerFrame, impactFrame, soundFrame, loop, endHold, returns) belonged",
@@ -77,12 +99,22 @@
         "bob": 10,
         "periodSeconds": 2.4
       },
+      "castPoint": {
+        "dx": 201.5,
+        "dy": 135.5
+      },
       "_groundLineNote": "Handed to the slicer 2026-09-06: Art/Characters/owl/recipe.json replays the six committed stills byte for byte, so this 8 is a measurement the tool can reproduce rather than a judgement. The hover below is NOT -- no tool writes it.",
-      "_hoverNote": "Odette FLIES. hover.height is her resting altitude above the ground line in STAGE pixels and hover.bob the excursion either side of it (HoverCurve); FightController pushes it every frame in every stance but defeated, and the animator composes it with lunges and recoils. Height 70 is what lifts her body clear of the front-row figure standing in front of her far slot -- see Art/Characters/owl/README.md. All six stills stand on the same floor; nothing about the hover is baked into the drawings."
+      "_hoverNote": "Odette FLIES. hover.height is her resting altitude above the ground line in STAGE pixels and hover.bob the excursion either side of it (HoverCurve); FightController pushes it every frame in every stance but defeated, and the animator composes it with lunges and recoils. Height 70 is what lifts her body clear of the front-row figure standing in front of her far slot -- see Art/Characters/owl/README.md. All six stills stand on the same floor; nothing about the hover is baked into the drawings.",
+      "_castPointNote": "The hinge of her open book, measured on Characters/owl/cast.png at canvas pixel (526, 221.5) -- 649x366 canvas, groundLine 8, so dx = 526 - 649/2 = 201.5 and dy = (366 - 1 - 221.5) - 8 = 135.5. A travelling spell used to leave from her slot's own origin, which is behind her body since her book is held out in FRONT of her; the AUDIT gripe (2026-09-09) that spells started 'from the back of Odette, not from her book' is this number."
     },
     {
       "spritePath": "Characters/sheep",
-      "groundLine": 43
+      "groundLine": 43,
+      "castPoint": {
+        "dx": 26.5,
+        "dy": 263.8
+      },
+      "_castPointNote": "The glowing mote over his raised hand, measured on Characters/sheep/cast.png at canvas pixel (296.5, 62.2) -- 540x370 canvas, groundLine 43, so dx = 296.5 - 540/2 = 26.5 and dy = (370 - 1 - 62.2) - 43 = 263.8. He has no staff in this pose (the brief that asked for this entry guessed one); the hand-raised cast with sparks is what Characters/sheep/cast.png actually shows, and it reads as clearly as a launch point as a staff would have. The second of the two actors this feature was authored for, alongside Characters/owl -- see that entry's own note."
     },
     {
       "spritePath": "Enemies/forest_warden",

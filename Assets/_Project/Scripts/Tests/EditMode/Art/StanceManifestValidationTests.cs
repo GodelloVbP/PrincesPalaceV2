@@ -54,6 +54,8 @@ namespace PrincesPalace.Domain.Tests
             internal float GroundLine;
             internal string Source;
             internal string RawSource;
+            internal float? CastPointDx;
+            internal float? CastPointDy;
         }
 
         private static string Root() => RepoTree.Root();
@@ -73,6 +75,8 @@ namespace PrincesPalace.Domain.Tests
                     ? JsonBlocks.String(block, "groundLineSource")
                     : null;
 
+                string castPointBlock = JsonBlocks.ObjectFor(block, "castPoint");
+
                 entries.Add(new Entry
                 {
                     SpritePath = sprite.Trim().Trim('/'),
@@ -81,6 +85,8 @@ namespace PrincesPalace.Domain.Tests
                     Source = string.IsNullOrWhiteSpace(rawSource)
                         ? StanceManifest.AuthoredSource
                         : rawSource.Trim().ToLowerInvariant(),
+                    CastPointDx = castPointBlock == null ? (float?)null : (float?)(JsonBlocks.Number(castPointBlock, "dx") ?? 0d),
+                    CastPointDy = castPointBlock == null ? (float?)null : (float?)(JsonBlocks.Number(castPointBlock, "dy") ?? 0d),
                 });
             }
 
@@ -180,6 +186,76 @@ namespace PrincesPalace.Domain.Tests
 
             return File.Exists(readme)
                    && File.ReadAllText(readme).IndexOf("groundLine", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // A castPoint pointing into empty air on its OWN cast still -- a typo
+        // in dx or dy, or a point authored against the wrong canvas -- the
+        // same class of mistake groundLine's 8px band exists to catch, one
+        // axis short of it: a dx or dy off by enough lands the effect
+        // nowhere near the actor rather than merely on the wrong pixel of
+        // them, and nothing else would ever notice, because an unauthored
+        // castPoint is a perfectly valid, silent fallback.
+        [Test]
+        public void EveryAuthoredCastPointLiesInsideItsCastStillsAlphaBBox()
+        {
+            var offStage = new List<string>();
+            var noCastStill = new List<string>();
+            int checkedCount = 0;
+
+            foreach (var entry in Manifest())
+            {
+                if (entry.CastPointDx == null || entry.CastPointDy == null) continue;
+
+                string castPng = Path.Combine(Root(), "Assets", "_Project", "Resources",
+                    entry.SpritePath.Replace('/', Path.DirectorySeparatorChar), "cast.png");
+
+                if (!File.Exists(castPng))
+                {
+                    noCastStill.Add($"{entry.SpritePath} authors a castPoint but has no cast.png at '{castPng}'");
+                    continue;
+                }
+
+                var png = PngAlpha.Read(castPng);
+                var bbox = png.AlphaBBox();
+                if (bbox == null)
+                {
+                    noCastStill.Add($"{entry.SpritePath}'s cast.png is wholly transparent -- nothing to check a castPoint against");
+                    continue;
+                }
+
+                checkedCount++;
+
+                // The inverse of RawCastPoint's convention: dx is pixels from
+                // the canvas's own horizontal centre, dy is pixels above the
+                // actor's groundLine -- so the canvas pixel a castPoint names
+                // is (width/2 + dx, height - 1 - (groundLine + dy)), the
+                // second term converting "up from the ground line" into the
+                // top-down row PngAlpha reads in.
+                float x = png.Width / 2f + entry.CastPointDx.Value;
+                float canvasYFromBottom = entry.GroundLine + entry.CastPointDy.Value;
+                float row = png.Height - 1 - canvasYFromBottom;
+
+                var (left, top, right, bottom) = bbox.Value;
+                if (x < left || x > right || row < top || row > bottom)
+                {
+                    offStage.Add($"{entry.SpritePath} authors castPoint (dx {entry.CastPointDx}, dy {entry.CastPointDy}), " +
+                                 $"which lands at canvas pixel ({x:0.#}, {row:0.#}) on a {png.Width}x{png.Height} " +
+                                 $"cast.png whose opaque content is x[{left}..{right}] y[{top}..{bottom}] -- " +
+                                 "outside the drawing, which reads as a typo in dx, dy or groundLine");
+                }
+            }
+
+            Assert.IsEmpty(noCastStill,
+                "these actors author a castPoint this test could not check against art:\n  " +
+                string.Join("\n  ", noCastStill));
+
+            Assert.IsEmpty(offStage,
+                "these castPoints land outside their own cast.png's opaque content:\n  " +
+                string.Join("\n  ", offStage));
+
+            Assert.Greater(checkedCount, 0,
+                "no actor in the manifest authors a castPoint -- if that's still true this assertion should be " +
+                "deleted, and if it's not, this sweep silently stopped checking the ones that do");
         }
 
         private static float? MedianGroundLine(string folder)

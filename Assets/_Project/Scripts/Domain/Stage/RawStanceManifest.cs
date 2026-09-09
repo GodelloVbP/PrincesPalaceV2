@@ -73,6 +73,19 @@ namespace PrincesPalace.Domain.Stage
         // grounded, which is every actor but one. Stage pixels, not canvas
         // pixels -- see HoverSpec for why the difference matters at depth.
         public RawHover hover;
+
+        // WHERE A CAST LEAVES THIS ACTOR'S BODY. Absent means "nowhere in
+        // particular" -- the runtime falls back to whatever the call site
+        // already computed before this field existed (the caster's own slot
+        // origin), so an actor with no entry here is unaffected by this
+        // field's existence at all.
+        //
+        // A JUDGEMENT, like breath and hover: no tool ever measures a launch
+        // point off the art, because there is nothing to measure -- "where
+        // the book is" is not a fact the pixels assert, it is a choice about
+        // which pixel the spell should appear to leave from. See CastPoint
+        // for the coordinate convention.
+        public RawCastPoint castPoint;
     }
 
     [Serializable]
@@ -86,5 +99,36 @@ namespace PrincesPalace.Domain.Stage
 
         // Zero means HoverCurve.DefaultPeriodSeconds.
         public float periodSeconds;
+    }
+
+    // PIXELS ON THE ACTOR'S OWN STANCE CANVAS, measured on its `cast` still --
+    // the same still slice_actor_sheet.py cuts alongside idle/attack/hurt, so
+    // there is nothing extra to commission.
+    //
+    // NOT canvas-absolute (x, y) from a corner, on purpose: a re-slice can
+    // change the canvas size (a wider pad, a taller sheet) without moving the
+    // figure's own anatomy relative to itself, and a point authored against
+    // the OLD canvas's corner would silently drift off the book the moment
+    // the canvas resized. `groundLine` solved the same problem for the feet
+    // by anchoring to the canvas's bottom edge, which does not move under a
+    // re-slice; this anchors to the two things that don't move under one
+    // either -- the figure's own horizontal centre and its own ground line.
+    //
+    // dx: pixels from the figure's horizontal centre (canvas width / 2),
+    //     POSITIVE TOWARD THE ACTOR'S OWN FACING (SpriteFacing, not the side
+    //     of the stage it happens to stand on -- the mirror that flips a
+    //     leftward-drawn monster onto the right side of the stage flips this
+    //     too, automatically, because it rides the same transform the sprite
+    //     does).
+    // dy: pixels ABOVE the actor's own ground line (same "up from
+    //     groundLine" direction groundLine itself is measured in, not up
+    //     from the canvas edge) -- so a re-slice that changes groundLine by
+    //     re-measuring the feet moves this point by the same amount, keeping
+    //     it pinned to the book rather than to a row of the old canvas.
+    [Serializable]
+    public class RawCastPoint
+    {
+        public float dx;
+        public float dy;
     }
 }
