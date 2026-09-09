@@ -1218,3 +1218,32 @@ Fix shape: author the contact effect as content, one presentation per
 `BuildContactPresentation` and the two statics; the allocation win survives
 because content assets are already built once. Needs a schema entry and
 `ContentBuilder` support, so it is its own pass, not a cleanup.
+
+### 110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file
+
+Found 2026-09-09 while running the gate against a shared TestRunner pair.
+Unity refused to start (`Aborting batchmode due to fatal error: It looks
+like another Unity instance is running with this project open` -- the other
+session had taken `-TestRunner2` between the lock check and the launch), so
+no PlayMode run happened at all. The script then read
+`test-results-PlayMode.xml` left behind by an EARLIER, narrower run, printed
+`PlayMode -- Total: 39  Passed: 39  Failed: 0`, and ended with **`All tests
+passed.`** The real suite is 897.
+
+That is the AUDIT #43 shape one level up: #43 was the screenshot tool
+checking whether the output directory held ANY png rather than the one it
+was asked for. Here it is the gate checking whether a results file parses
+rather than whether THIS run wrote it. The exit code is deliberately ignored
+(the script's own header says why, and that reasoning still holds), so the
+results file is the only signal -- and a stale one is indistinguishable from
+a fresh one.
+
+Fix shape: delete both `test-results-*.xml` before launching, and refuse the
+run if the file the platform was supposed to write is missing afterwards --
+the same "check the expected artifact, by name" rule #43 landed for
+`screenshot.ps1`. A count sanity floor would be a weaker version of the same
+thing and would need maintaining.
+
+Not blocking: the run was repeated until it got a clean slot and the real
+suite was green. But a gate that can say "All tests passed" having run 4% of
+the suite is the one kind of green nobody re-checks.
