@@ -300,6 +300,22 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ApplyRunicWardConversion(CombatantState actor)
         {
             if (actor == null || actor.CurrentMana <= 0) return;
+
+            // AND IT HAS TO BE MANA. actor.CurrentMana is the compatibility
+            // getter onto PrimaryPool.Current, and CombatantState's own header
+            // says what that costs: the getters "will stop being truthful the
+            // moment a character's primary pool is not mana... which is why
+            // they are getters and not fields". Every WRITE site was made to
+            // ask; this READ was not, so on a Fury holder the conversion sized
+            // a defensive ward off a rage bar -- highest exactly when he is
+            // winning -- and the log said "his runes catch the leftover mana".
+            //
+            // RestoredByManaEffects is the predicate that already means "this
+            // pool is mana-shaped for effects that speak about mana", the same
+            // one the potion and the gift read. Not a hardcoded pool id: a
+            // second mana-shaped row would be mana to Runic too.
+            if (actor.PrimaryPool == null || !actor.PrimaryPool.RestoredByManaEffects) return;
+
             if (!actor.ModifierEffects.Has(ModifierEffectType.ManaToWardOnTurnStartPercent)) return;
 
             int wardPercent = Math.Min(FightTuning.RunicWardMagnitudeCapPercent,

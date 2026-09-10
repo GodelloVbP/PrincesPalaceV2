@@ -156,5 +156,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightTuning.RunicWardMagnitudeCapPercent, ward.Magnitude,
                 "a deep mana pool must never grant more than the deliberately conservative cap");
         }
+
+        [Test]
+        public void AWearerWhoseResourceIsNotManaConvertsNothing()
+        {
+            // THE READ SITE THAT STOPPED BEING TRUTHFUL. CombatantState's own
+            // header says the CurrentMana/MaxMana getters "will stop being
+            // truthful the moment a character's primary pool is not mana",
+            // which is why they are getters -- but only the WRITE sites were
+            // made to change, so this one kept reading "mana" off whatever the
+            // holder carried. On Bjorn that is a rage bar, at its highest
+            // exactly when he is winning, and the log line still said "his
+            // runes catch the leftover mana as a ward".
+            var hero = Hero(mana: 100, speed: 50);
+            hero.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0,
+                gainOnAttack: 0, gainOnDamageTaken: 0)
+            {
+                ShortTag = "FURY",
+                RestoredByManaEffects = false,
+                Current = 60,
+            };
+            var foe = Foe(speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+
+            var session = Session(hero, foe);
+            session.ExecuteAttack(foe);
+
+            Assert.IsNull(hero.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded),
+                "60 Fury is not 60 unspent mana, and must buy no ward at all");
+        }
     }
 }
