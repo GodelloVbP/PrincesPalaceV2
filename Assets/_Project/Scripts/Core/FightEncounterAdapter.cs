@@ -103,8 +103,19 @@ namespace PrincesPalace
             // applies to the player's Dexterity applies to a monster: an enemy
             // at 40,000 Speed does not act more often, it acts always. (An
             // Elite's speed DOES ride the elite multiplier above, same as its
-            // health and mana regen -- ScaledForElite's own main `multiplier`
-            // parameter, unchanged behaviour from before this phase.)
+            // health -- ScaledForElite's own main `multiplier` parameter,
+            // unchanged behaviour from before this phase.)
+            //
+            // MANA REGEN IS NOT IN THAT LIST, and this comment used to say it
+            // was. `stats` really has been elite-scaled two blocks up, so the
+            // claim reads plausibly -- but stats.manaRegen is never read on
+            // this path at all: the call below passes manaRegen: 0 outright,
+            // and no enemy in the game has ever regenerated a point of mana,
+            // before this phase or after it. The behaviour is fine; the
+            // sentence was the kind that sends the next reader hunting a bug
+            // that is not there, or "fixing" it and silently re-tuning every
+            // elite in the game. Passing stats.manaRegen instead would be a
+            // balance change and the owner's call, not a comment's.
             var state = new CombatantState(definition.Data.DisplayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 ContentDatabase.BuildPrimaryPool(ContentDatabase.ManaPoolId,
@@ -612,7 +623,7 @@ namespace PrincesPalace
             }
 
             return new PlayerKit(kit.Id, kit.Role, skills, kit.Relics, kit.AttackType,
-                kit.Level, kit.SkillPowerMultiplier, kit.PlateTheme);
+                kit.Level, kit.SkillPowerMultiplier, kit.PlateTheme, kit.PlateArt);
         }
 
         private static PlayerKit KitFor(CharacterDefinition definition,
@@ -644,7 +655,7 @@ namespace PrincesPalace
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
                 definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level),
-                definition.Data.PlateTheme);
+                definition.Data.PlateTheme, definition.Data.PlateArt);
         }
 
         // Test-only door to the overload above, named ...ForTest per house
@@ -691,7 +702,7 @@ namespace PrincesPalace
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
                 definition.Data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character),
-                definition.Data.PlateTheme);
+                definition.Data.PlateTheme, definition.Data.PlateArt);
         }
 
         // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
