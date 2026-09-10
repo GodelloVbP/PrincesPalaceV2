@@ -195,6 +195,58 @@ namespace PrincesPalace.PlayModeTests
                 "spending un-earned what had already been earned");
         }
 
+        // ---- how deep they got, not how deep they last fought -------------
+        //
+        // RunSnapshot: "The furthest step reached, which is NOT `step` -- that
+        // is where the party currently stands ... Kept separately so the
+        // summary can say how deep they got rather than where they happened to
+        // die."
+        //
+        // Its only writer was RunLedger.RecordRoom, called only when a FIGHT
+        // settles. Treasure, shop, rest and event rooms all arrive through
+        // RoomResolver and never reached it, so the number said how deep the
+        // last fight was. Clear the leg-1 boss at 8, then walk a treasure, a
+        // shop and an event: the map header reads 11 and Run statistics reads
+        // 8, off the same run.
+
+        [Test]
+        public void WalkingIntoANonFightRoomCountsTowardsHowDeepTheRunGot()
+        {
+            RunManager.StartRun(Seed);
+
+            for (int i = 0; i < 3; i++)
+            {
+                var next = RunManager.Choices().FirstOrDefault();
+                Assert.IsNotNull(next, "fixture: the leg ran out of rooms before three steps");
+                Assert.IsTrue(RunManager.MoveTo(next.Id));
+            }
+
+            Assert.AreEqual(3, RunManager.Run.step, "fixture: three moves is three steps in");
+            Assert.AreEqual(3, RunManager.Run.deepestStep,
+                "three rooms walked and the run still says it never got past the entry");
+        }
+
+        [Test]
+        public void TheWatermarkStaysAtTheDeepestRoomEvenAfterWalkingBackUp()
+        {
+            // Nothing in the map walks backwards today, so this pins the
+            // property rather than a reachable path: the watermark is a
+            // maximum, not a mirror of step.
+            RunManager.StartRun(Seed);
+
+            var next = RunManager.Choices().First();
+            RunManager.MoveTo(next.Id);
+            RunManager.Run.step = 9;
+            RunManager.Run.deepestStep = 9;
+
+            var after = RunManager.Choices().FirstOrDefault();
+            Assert.IsNotNull(after, "fixture: nowhere left to walk");
+            RunManager.MoveTo(after.Id);
+
+            Assert.AreEqual(2, RunManager.Run.step, "the party stands where the node says");
+            Assert.AreEqual(9, RunManager.Run.deepestStep, "and the watermark went backwards");
+        }
+
         [Test]
         public void ARunSurvivesBeingReadBackFromDisk()
         {

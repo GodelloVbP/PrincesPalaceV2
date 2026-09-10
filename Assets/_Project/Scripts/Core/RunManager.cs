@@ -329,6 +329,26 @@ namespace PrincesPalace
             // rooms deep and the curve is scaling them for the second.
             run.step = run.legStartStep + target.Depth;
 
+            // AND THE WATERMARK MOVES WITH IT, here, because this is the one
+            // place a step advances.
+            //
+            // deepestStep's own header says it is "the furthest step reached ...
+            // kept separately so the summary can say how deep they got rather
+            // than where they happened to die". It could not say that: the only
+            // writer was RunLedger.RecordRoom, whose only caller is a settled
+            // FIGHT. Every non-fight arrival -- treasure, shop, rest, event --
+            // goes ArriveAt -> RoomResolver.Resolve -> ClearCurrentRoom and
+            // never touched it. So clearing the leg-1 boss at step 8 and then
+            // walking a treasure, a shop and an event left the map header
+            // reading 11 (UiStrings.MapDepth off run.step) while Run statistics
+            // read 8, and abandoning there folded 8 into lifetimeDeepestStep.
+            //
+            // RecordRoom's raise is deliberately left in place as the belt to
+            // this brace: it costs one comparison, and a fight that somehow
+            // settles at a step this method did not write is exactly the case
+            // worth keeping covered.
+            if (run.step > run.deepestStep) run.deepestStep = run.step;
+
             Persist();
             return true;
         }
