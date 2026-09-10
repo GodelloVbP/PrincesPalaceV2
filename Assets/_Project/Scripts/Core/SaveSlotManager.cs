@@ -88,9 +88,23 @@ namespace PrincesPalace
             // before Continue needed it too.
             RunManager.SettleOnOpening();
 
+            // THE ONE THIS MANAGER IS HOLDING, not a second CreateNew().
+            //
+            // SettleOnOpening above reaches CurrentSave -> SaveSystem.Load ->
+            // missing file -> SaveData.CreateNew(), and that instance is what
+            // _cached holds from here on. This line used to build a SECOND
+            // one and write that, so "a brand new slot is written immediately"
+            // was kept by an object nobody was holding, and the first
+            // SaveCurrent() overwrote the file with the other one.
+            //
+            // Nothing observable comes of it today: both are built from the
+            // same ContentDatabase by a deterministic method, so they are
+            // value-identical. It is written this way because the promise in
+            // the header above is about THIS slot's save, and two objects that
+            // happen to agree is not the same claim.
             if (!SaveSystem.SlotExists(slot))
             {
-                SaveSystem.Save(SaveData.CreateNew(), slot);
+                SaveSystem.Save(CurrentSave, slot);
             }
         }
     }
