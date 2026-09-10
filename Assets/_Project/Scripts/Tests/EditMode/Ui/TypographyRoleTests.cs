@@ -24,7 +24,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(TypographyRole.FunctionalHeading, "SourceSans3-SemiBold SDF", "FunctionalHeading", 34f, 42f, true, 2f, 0f)]
         [TestCase(TypographyRole.Body, "SourceSans3-Regular SDF", "Body", 20f, 22f, false, 0f, 5f)]
         [TestCase(TypographyRole.TacticalData, "ChakraPetch-Medium SDF", "TacticalData", 17f, 19f, false, 1f, 0f)]
-        [TestCase(TypographyRole.Alert, "SourceSans3-Bold SDF", "Alert", 22f, 26f, false, 1f, 0f)]
+        [TestCase(TypographyRole.OnBarCaption, "ChakraPetch-Medium SDF", "OnBarCaption", 17f, 19f, false, 1f, 0f)]
+    [TestCase(TypographyRole.Alert, "SourceSans3-Bold SDF", "Alert", 22f, 26f, false, 1f, 0f)]
         public void Spec_MatchesBriefedValues(
             TypographyRole role, string fontAssetName, string materialName,
             float min, float max, bool uppercase, float tracking, float lineSpacing)
@@ -39,7 +40,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(lineSpacing, spec.LineSpacing);
         }
 
-        // ButtonLabel's tracking is deliberately dynamic (fit-dependent, not
+        // ON-BAR IS TACTICAL DATA IN A DIFFERENT MATERIAL, and that is the whole
+    // of the difference. A caption that changed size, font or tracking when
+    // it moved onto the bar would be a second number language on one plate,
+    // so the two specs are pinned as equal everywhere but MaterialName -- if
+    // one is retuned and the other is not, this is what says so.
+    [Test]
+    public void OnBarCaption_IsTacticalDataWithADifferentMaterial()
+    {
+        var data = Typography.Specs[TypographyRole.TacticalData];
+        var onBar = Typography.Specs[TypographyRole.OnBarCaption];
+
+        Assert.AreEqual(data.FontAssetName, onBar.FontAssetName);
+        Assert.AreEqual(data.MinSize1080p, onBar.MinSize1080p);
+        Assert.AreEqual(data.MaxSize1080p, onBar.MaxSize1080p);
+        Assert.AreEqual(data.Uppercase, onBar.Uppercase);
+        Assert.AreEqual(data.Tracking, onBar.Tracking);
+        Assert.AreEqual(data.LineSpacing, onBar.LineSpacing);
+
+        Assert.AreNotEqual(data.MaterialName, onBar.MaterialName,
+            "the material is the only thing this role exists to change");
+    }
+
+    // ButtonLabel's tracking is deliberately dynamic (fit-dependent, not
         // an authored constant) -- see Typography.cs's own comment on why.
         [Test]
         public void ButtonLabel_TrackingIsDynamic_NotAFixedValue()

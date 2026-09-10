@@ -324,6 +324,62 @@ public static partial class TmpBootstrap
                 UnderlayOffsetY = -0.25f,
                 UnderlaySoftness = 0.08f,
             },
+            // A NUMBER DRAWN ON A COLOURED FILL, which is a different problem
+            // from every role above it: those all sit on a plate or a panel
+            // whose colour the kit chose, so a face colour can be picked to
+            // contrast with it. This one sits on whatever hex a pools.json row
+            // authored -- and on the near-black empty track behind it once the
+            // bar drains, so the SAME glyph has to survive two backgrounds
+            // that are not related to each other.
+            //
+            // DARK FACE, LIGHT OUTLINE, which is the opposite of every other
+            // role here and is arithmetic rather than taste. Measured off the
+            // party_formation capture: a light violet-white face against
+            // HpBright tops out at 2.87:1 and against MpBright at 2.23:1 --
+            // and PURE WHITE only reaches 3.32 and 2.58. No material setting
+            // puts a light caption over 4.5:1 on these fills, which is why
+            // the first two passes of this column reached for a dark chip
+            // under the text instead and ended up drawing a full HP bar as
+            // half drained. A near-black face is 6.06:1 on HpBright and
+            // 7.80:1 on MpBright before antialiasing takes its cut.
+            //
+            // 0.16 AND 0.25 ARE A MEASURED BALANCE POINT, not defaults. Face
+            // dilate and outline width trade against each other at 14pt,
+            // where a stroke is barely a pixel and neither the face nor the
+            // ring can be solid at once -- five settings were captured and
+            // measured, and they see-saw: 0.15/0.22 read 4.93:1 on the fills
+            // and 2.31:1 on the empty track, 0.08/0.34 read 2.89 and 5.03.
+            // 0.16/0.25 is the setting that clears 4.5:1 on all four fill
+            // samples (4.72-6.00) with the best empty-track number available
+            // at that point, 2.76:1.
+            //
+            // THE EMPTY TRACK IS THE SIDE THAT PAYS, and it is the right side
+            // to: Ui.Meter drains from the RIGHT, so the LEFT end this
+            // caption is pinned to is filled for every value above roughly
+            // 40%. A caption meets bare track only on a badly hurt bar or on
+            // Bjorn's fury, which opens each fight empty -- where the glyph
+            // renders as a hollow light outline. Readable, visibly weaker,
+            // and not fixable from this table; a lighter FightHudPalette.
+            // Track would fix it and is the owner's call.
+            //
+            // NO UNDERLAY. A drop shadow is directional and this glyph has no
+            // fixed background to drop onto; at 14pt the softest useful
+            // setting is a smear. Declared off rather than left at alpha 0,
+            // which would be dead machinery reading as a decision.
+            new MaterialSpec
+            {
+                RoleName = "OnBarCaption",
+                FontAssetName = "ChakraPetch-Medium SDF",
+                FaceColor = HexColor("080610", 0xFF),
+                FaceDilate = 0.16f,
+                OutlineColor = HexColor("F4EBFF", 0xFF),
+                OutlineWidth = 0.25f,
+                UnderlayOn = false,
+                UnderlayColor = HexColor("000000", 0x00),
+                UnderlayOffsetX = 0f,
+                UnderlayOffsetY = 0f,
+                UnderlaySoftness = 0f,
+            },
             new MaterialSpec
             {
                 RoleName = "Alert",
@@ -367,6 +423,25 @@ public static partial class TmpBootstrap
         mat.SetFloat(ShaderUtilities.ID_FaceDilate, spec.FaceDilate);
         mat.SetColor(ShaderUtilities.ID_OutlineColor, spec.OutlineColor);
         mat.SetFloat(ShaderUtilities.ID_OutlineWidth, spec.OutlineWidth);
+
+        // OUTLINE_ON, AND IT WAS THE MISSING HALF. Setting _OutlineWidth and
+        // _OutlineColor does nothing on its own -- TMP's shader branches on
+        // the keyword, so a width with no keyword is an authored value the
+        // renderer never reads. Every one of the six materials this method
+        // wrote before today has that shape (TacticalData: width 0.07,
+        // m_ValidKeywords holding UNDERLAY_ON alone), which is why the PC
+        // plates ended up drawing their bar captions on an opaque chip
+        // instead of outlining them -- see FightScreen's PcValueGround, now
+        // gone, and its own note saying so.
+        //
+        // The six already on disk are NOT rewritten by fixing this: the
+        // method returns early for a material that exists, so the change
+        // reaches new presets only. That is deliberate rather than shy --
+        // switching an outline on across every title, heading, button and
+        // body label in the game is a look change on every screen and the
+        // owner's call, and those six .mat files are the owner's own
+        // uncommitted work besides. Filed rather than done.
+        if (spec.OutlineWidth > 0f) mat.EnableKeyword("OUTLINE_ON");
 
         if (spec.UnderlayOn)
         {

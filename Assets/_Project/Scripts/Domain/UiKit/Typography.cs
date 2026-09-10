@@ -20,6 +20,13 @@ namespace PrincesPalace.Domain.UiKit
         Body,
         // Numeric/stat readouts -- damage, HP, currency counters.
         TacticalData,
+        // TacticalData's numbers, drawn ON a meter's fill rather than beside
+        // it. Same font and same size band; the whole difference is the
+        // material, which carries a real outline (OUTLINE_ON, 0.20) because
+        // the background under this one is not the kit's -- it is whatever
+        // colour a pools.json row authored, and it is the empty track once
+        // the bar drains. See TmpBootstrap.Typography's own spec.
+        OnBarCaption,
         // Warnings, danger states, low-HP or failure messaging.
         Alert,
     }
@@ -112,6 +119,14 @@ namespace PrincesPalace.Domain.UiKit
 
                 [TypographyRole.TacticalData] = new TypographySpec(
                     "ChakraPetch-Medium SDF", "TacticalData",
+                    minSize1080p: 17f, maxSize1080p: 19f,
+                    uppercase: false, tracking: 1f, lineSpacing: 0f),
+
+                // Deliberately identical to TacticalData but for the material:
+                // a caption that changed size or tracking when it moved onto
+                // the bar would be a second number language on one plate.
+                [TypographyRole.OnBarCaption] = new TypographySpec(
+                    "ChakraPetch-Medium SDF", "OnBarCaption",
                     minSize1080p: 17f, maxSize1080p: 19f,
                     uppercase: false, tracking: 1f, lineSpacing: 0f),
 

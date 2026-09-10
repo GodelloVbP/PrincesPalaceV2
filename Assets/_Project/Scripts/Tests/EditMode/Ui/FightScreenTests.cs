@@ -492,20 +492,46 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // ON-BAR TEXT CARRIES THE DATA MATERIAL, which is the one role whose
-        // TMP material has an outline AND an underlay -- a number drawn on a
-        // meter has to stay readable over a full fill and over the empty
-        // track behind it alike. Stated as a role rather than as a per-label
-        // outline so the treatment lives in one place.
+        // ON-BAR TEXT CARRIES THE ON-BAR MATERIAL, which is the one role whose
+        // TMP material has an outline actually SWITCHED ON -- a number drawn
+        // on a meter has to stay readable over a full fill and over the empty
+        // track behind it alike, and those are two unrelated backgrounds no
+        // face colour can serve at once. Stated as a role rather than as a
+        // per-label outline so the treatment lives in one place.
+        //
+        // NOT TacticalData, which is what these carried while the captions sat
+        // on a dark chip: TacticalData's outline is authored (0.07) and dead
+        // (no OUTLINE_ON keyword), which is exactly why the chip existed.
         [Test]
-        public void EveryNumberDrawnOnABarUsesTheTacticalDataRole()
+        public void EveryNumberDrawnOnABarUsesTheOnBarCaptionRole()
         {
             var s = Screen();
 
             foreach (var label in s.PcHpValues.Concat(s.PcMpValues))
             {
-                Assert.AreEqual(TypographyRole.TacticalData, label.Node.Role,
-                    $"{label.Node.Name} is drawn ON a meter and needs the outlined data material");
+                Assert.AreEqual(TypographyRole.OnBarCaption, label.Node.Role,
+                    $"{label.Node.Name} is drawn ON a meter and needs the outlined on-bar material");
+            }
+        }
+
+        // AND NOTHING IS DRAWN BETWEEN THE FILL AND THE CAPTION. Two passes of
+        // this column put each number on a dark quad -- first bare, then
+        // rimmed -- and both captures read a FULL HP bar as half drained,
+        // because a dark patch on a meter is the same colour as that meter's
+        // own empty track. A bar that lies about its own value is worse than
+        // the low contrast the chip was fixing, so the chip is gone and this
+        // is what keeps it from coming back a third time.
+        [Test]
+        public void NoPlateDrawsAGroundBehindItsBarCaptions()
+        {
+            var solved = Solve();
+
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                Assert.IsNull(Find(solved, $"PcPlate{i}HpValueGround"),
+                    $"plate {i}: the HP caption is back on a chip -- outline it instead");
+                Assert.IsNull(Find(solved, $"PcPlate{i}MpValueGround"),
+                    $"plate {i}: the pool caption is back on a chip -- outline it instead");
             }
         }
 
