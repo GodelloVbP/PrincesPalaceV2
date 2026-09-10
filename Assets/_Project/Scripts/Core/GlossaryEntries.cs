@@ -133,10 +133,34 @@ namespace PrincesPalace
                 .Where(s => s != null)
                 .Select(s => new GlossaryEntry(
                     s.id, s.Data.DisplayName,
-                    s.Data.ManaCost > 0 ? $"{s.Data.ManaCost} MANA" : "NO COST",
+                    SpellCost(s),
                     s.Data.Description,
                     iconId: s.id))
                 .ToList();
+
+        // PRICED IN THE CASTER'S OWN RESOURCE, not in "MANA".
+        //
+        // This was the last literal "MANA" left outside the fight HUD, and the
+        // change 52793e1b made everywhere else says why it cannot stay: "BOTH
+        // TAGS COME FROM THE CASTER, not from this file. 'MP' used to be a
+        // literal here, which was true only for as long as every caster spent
+        // mana: `manaCost` means 'spent from the primary pool'." The glossary
+        // has the owner in hand and was the one surface that never got the
+        // message -- inert today only because Bjorn's slam and brace are
+        // manaCost 0, and pools.json's own note promises the balance pass that
+        // ends that.
+        //
+        // FALLS BACK TO A BARE NUMBER on a blank tag, which is the same
+        // fallback FightHudModel.CostLabel already uses: a number with no unit
+        // is incomplete, a number with the WRONG unit is a lie.
+        private static string SpellCost(SkillDefinition skill)
+        {
+            int cost = skill.Data.ManaCost;
+            if (cost <= 0) return "NO COST";
+
+            string tag = ContentDatabase.PrimaryPoolOf(skill.Data.CharacterId)?.ShortTag;
+            return string.IsNullOrWhiteSpace(tag) ? cost.ToString() : $"{cost} {tag.ToUpperInvariant()}";
+        }
 
         private static List<GlossaryEntry> Items() =>
             ContentDatabase.Items
