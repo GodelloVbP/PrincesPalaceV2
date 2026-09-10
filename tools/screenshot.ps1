@@ -136,8 +136,27 @@ if ($Runtime) {
     $runtimeOut = Join-Path $OutDir "runtime"
     $runnerOut = Join-Path $TestProject "tools\screenshots\runtime"
     New-Item -ItemType Directory -Force -Path $runtimeOut | Out-Null
-    Get-ChildItem $runtimeOut -Filter *.png -ErrorAction SilentlyContinue | Remove-Item -Force
-    Get-ChildItem $runnerOut -Filter *.png -ErrorAction SilentlyContinue | Remove-Item -Force
+
+    # RECURSIVE, both here and in the two places below. Only RuntimeScreenshotTests
+    # writes flat; every labelled fixture (StageCaptureRig.CaptureOutput.LabelDir,
+    # PartyFormationCaptureTests.cs and friends) writes into
+    # <runtime>/<subsystem>/<PP_CAPTURE_LABEL or "unlabelled">/, and a flat
+    # Get-ChildItem never sees a file one folder deeper. That is what made
+    # -RuntimeFilter PartyFormationCaptureTests report "No runtime captures were
+    # produced" over a fixture that had, in fact, produced them.
+    #
+    # Deliberately clearing the WHOLE tree, not just $RuntimeFilter's own
+    # subsystem folder: a fixture class does not map 1:1 to one subsystem name --
+    # PartyFormationCaptureTests alone writes both party_formation/ and
+    # pool_meter/ -- so a class-name-to-subsystem table here would be exactly the
+    # second copy of a list this project's conventions forbid (CLAUDE.md), and it
+    # would already be wrong for this class. Clearing everything first and then
+    # counting everything keeps the AUDIT #43 "checked by expectation, not by
+    # any-count" doctrine intact the same way the flat case always had it:
+    # nothing stale from an earlier run of ANY fixture can survive to be mistaken
+    # for this run's output, because nothing survives the clear.
+    if (Test-Path $runtimeOut) { Get-ChildItem $runtimeOut -Recurse -Force | Remove-Item -Recurse -Force }
+    if (Test-Path $runnerOut) { Get-ChildItem $runnerOut -Recurse -Force | Remove-Item -Recurse -Force }
 
     $resultsPath = Join-Path $TestProject "test-results-runtime-screenshot.xml"
     if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
@@ -186,15 +205,26 @@ if ($Runtime) {
         }
     }
 
-    $produced = Get-ChildItem $runnerOut -Filter *.png -ErrorAction SilentlyContinue
+    $produced = Get-ChildItem $runnerOut -Recurse -File -Filter *.png -ErrorAction SilentlyContinue
     if (-not $produced -or $produced.Count -eq 0) {
         Write-Host "No runtime captures were produced. Tail of log:"
         Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
         exit 1
     }
 
-    Copy-Item "$runnerOut\*.png" $runtimeOut -Force
-    Get-ChildItem $runtimeOut -Filter *.png | ForEach-Object { Write-Host "  $($_.FullName)" }
+    # Copy back the WHOLE tree under $runnerOut, preserving the relative
+    # subsystem/label folders -- not just the *.png this existence check above
+    # is satisfied by. A labelled series' companion files (slots.json alongside
+    # PartyFormationCaptureTests' frames) belong next to the pictures they
+    # describe, not silently dropped because they aren't a .png.
+    $runnerOutFull = (Get-Item $runnerOut).FullName.TrimEnd('\')
+    Get-ChildItem $runnerOut -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+        $relative = $_.FullName.Substring($runnerOutFull.Length).TrimStart('\')
+        $destPath = Join-Path $runtimeOut $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $destPath -Parent) | Out-Null
+        Copy-Item $_.FullName $destPath -Force
+    }
+    Get-ChildItem $runtimeOut -Recurse -File | ForEach-Object { Write-Host "  $($_.FullName)" }
     exit 0
 }
 
