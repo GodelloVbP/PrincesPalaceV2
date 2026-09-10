@@ -69,11 +69,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // 1" reading.
         public readonly float SkillPowerMultiplier;
 
-        // THE PARTY PLATE'S FRAME, carried on the kit for the same reason
-        // Level is: painted off what the character walked into the fight
-        // with, not re-read off content at paint time. ResolvedCharacter.
-        // PlateTheme (characters.json's plateTheme field), Blue by default --
-        // see ResolvedCharacter's own header.
+        // THE CHARACTER'S IDENTITY COLOUR, carried on the kit for the same
+        // reason Level is: painted off what the character walked into the
+        // fight with, not re-read off content at paint time.
+        // ResolvedCharacter.PlateTheme (characters.json's plateTheme field,
+        // required of every row). FightController.Hud's ApplyCardTheme turns
+        // it into the rim and name colours of that character's HUD card
+        // through Domain.UiKit.PcTheme.
         public readonly ButtonTheme PlateTheme;
 
         public PlayerKit(string id, CharacterRole role,
@@ -82,6 +84,13 @@ namespace PrincesPalace.Domain.Combat.Session
                          DamageType? attackType,
                          int level = 1,
                          float skillPowerMultiplier = 1f,
+                         // Optional after other optionals, so the value
+                         // cannot simply be dropped now that content must
+                         // author a theme -- and it is Blue rather than the
+                         // enum's own default (Gold) for the reason
+                         // ResolvedCharacter.PlateTheme's note gives: a
+                         // hand-built kit should read as untinted, not as
+                         // authored. Only fixtures reach it.
                          ButtonTheme plateTheme = ButtonTheme.Blue)
         {
             Level = level;
