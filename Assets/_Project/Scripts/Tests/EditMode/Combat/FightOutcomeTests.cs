@@ -304,6 +304,53 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNull(session.Payout, "the fight settled a payout even though it is still running");
         }
 
+        // ---- what a spent charge leaves the fight sitting on ----------------------
+        //
+        // SettleIfOver (FightSession.Enemies.cs) answers "was it over ON ENTRY",
+        // not "is it over now" -- and ResolveOutcome can flip the answer inside
+        // the call, because that is precisely what a second life does. The
+        // enemy's turn is then never advanced past, so every driver in the tree
+        // re-enters AutoResolveEnemyTurns on the same live enemy and it swings
+        // for a second time on one turn.
+
+        [Test]
+        public void ASpentSecondLifeHandsTheTurnBackToThePlayer()
+        {
+            var (session, hero, foe) = FatalFight(charges: 1, heroHealth: 200);
+            hero.CurrentHealth = 1;
+
+            session.ExecuteAttack(foe);
+
+            Assert.IsFalse(session.IsOver, "the fight ended despite a charge");
+            Assert.AreEqual(1, session.SecondLivesSpent);
+            Assert.IsTrue(session.IsPlayerTurn,
+                "the fight is sitting on an enemy turn that nothing will resolve; Current is "
+                + session.Current.Name);
+        }
+
+        [Test]
+        public void ASpentSecondLifeDoesNotBuyTheKillerASecondSwing()
+        {
+            var (session, hero, foe) = FatalFight(charges: 1, heroHealth: 200);
+            hero.CurrentHealth = 1;
+
+            session.ExecuteAttack(foe);
+
+            // Half of 200, literal rather than derived: the revive's arithmetic
+            // is pinned by AChargeBringsTheHeroBackOnHalfHealthAndTheFightGoesOn
+            // and what is under test here is that NOTHING FURTHER happens.
+            Assert.AreEqual(100, hero.CurrentHealth, "fixture: the revive is half of max");
+
+            // The rescue every driver in the tree performs on a stalled enemy
+            // turn -- FightController.RescueAStalledEnemyTurn, FightRunner's
+            // StalledEnemyTurn path, and the loop in ASecondLifeIsSpentOnlyOnce
+            // below. On a fight whose turn has moved on this is a no-op.
+            session.AutoResolveEnemyTurns();
+
+            Assert.AreEqual(100, hero.CurrentHealth,
+                "the revived hero was hit again by the same enemy turn that had already resolved");
+        }
+
         [Test]
         public void ASecondLifeIsSpentOnlyOnce()
         {
@@ -322,20 +369,12 @@ namespace PrincesPalace.Domain.Tests
             int guard = 0;
             while (!session.IsOver && guard++ < 20)
             {
-                // A SESSION CAN BE LEFT SITTING ON AN ENEMY TURN (the same
-                // state FightController.RescueAStalledEnemyTurn and
-                // FightRunner's own StalledEnemyTurn invariant both exist for),
-                // and a swing issued on one is now refused rather than
-                // resolving as the monster attacking itself: CanReach's second
-                // step answers false for a target on the actor's own side. So
-                // this driver resolves what is owed instead of hammering the
-                // command, which is what a player's own screen does too.
-                if (!session.IsPlayerTurn)
-                {
-                    session.AutoResolveEnemyTurns();
-                    continue;
-                }
-
+                // A spent charge now hands the turn back rather than leaving
+                // the session parked on the enemy that landed the killing blow
+                // (ASpentSecondLifeHandsTheTurnBackToThePlayer above), so this
+                // driver no longer needs the AutoResolveEnemyTurns branch that
+                // used to exist to unstick it. The guard stays: whether the
+                // monster replies on any given exchange is a turn-order detail.
                 hero.CurrentHealth = 1;
                 session.ExecuteAttack(foe);
             }

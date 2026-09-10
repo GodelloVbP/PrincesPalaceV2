@@ -514,9 +514,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // for any fight driven by a player command, which is why this held
             // for so long. It does not cover the two callers that drive
             // AutoResolveEnemyTurns themselves -- Begin, and
-            // FightController.RescueAStalledEnemyTurn, the path a spent second
-            // life leaves the fight sitting on. Both settled nothing: no payout,
-            // not even the zeroed one a loss owes, and no "The party falls."
+            // FightController.RescueAStalledEnemyTurn. Both settled nothing: no
+            // payout, not even the zeroed one a loss owes, and no "The party
+            // falls." (The rescue used to be reached on every spent second
+            // life; it is not any more -- see SettleIfOver below.)
             //
             // Both calls are idempotent (_victoryResolved, _payoutResolved), so
             // asking twice costs a comparison.
@@ -528,13 +529,27 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // True when the fight is over, having settled it.
+        //
+        // ASKED AGAIN AFTER SETTLING, not answered from the entry test. A
+        // second life is spent inside ResolveOutcome and the whole mechanic is
+        // that the fight then does not end -- so the honest answer to "is it
+        // over" changes during this method, and a `return true` written off the
+        // guard above reports the fight ended when it demonstrably did not.
+        //
+        // What that cost: StepToNextTurn's first call site returned false, the
+        // enemy loop broke WITHOUT advancing, and Current stayed the monster
+        // that had just landed the killing blow. Nothing settles (IsOver is
+        // false), nothing prepares intents (it is not the player's turn), and
+        // every driver in the tree then re-enters AutoResolveEnemyTurns on that
+        // same live enemy -- which resolves its action a second time, on a hero
+        // who is standing on exactly half health. One turn, two swings.
         private bool SettleIfOver()
         {
             if (!_encounter.IsOver) return false;
 
             ResolveVictory();
             ResolveOutcome();
-            return true;
+            return _encounter.IsOver;
         }
 
         // Three independent reasons a turn is skipped outright rather than
