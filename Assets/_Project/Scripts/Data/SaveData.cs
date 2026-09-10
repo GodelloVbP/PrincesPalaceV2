@@ -907,16 +907,25 @@ namespace PrincesPalace
             }
         }
 
-        // Whether the thing a card is selling still exists. Books answer
-        // false until gate 3 authors them, which is the same answer their
-        // NO OFFER placeholder already gives -- so nothing changes shape when
-        // they arrive.
+        // Whether the thing a card is selling still exists.
         private static bool Resolves(ShopStockEntry entry)
         {
             switch (entry.kind)
             {
                 case ShopEntryKind.Gear: return ContentDatabase.GetItem(entry.contentId) != null;
                 case ShopEntryKind.Relic: return ContentDatabase.GetRelic(entry.contentId) != null;
+
+                // THE SAME PREDICATE THE BOOK SHELF IS ROLLED FROM.
+                // IsBookEligible above is what stocks the section and what
+                // prunes unassignedSpellBooks; asking it here is what stops a
+                // load from disagreeing with the roll about whether a book
+                // exists. This used to fall through to `default: return false`
+                // -- correct while books were unauthored, and a bug from the
+                // moment ShopStock.RollBooks started drawing real candidates:
+                // every unsold book card on a reloaded save was stamped NO
+                // OFFER in place, permanently.
+                case ShopEntryKind.Book: return IsBookEligible(entry.contentId);
+
                 default: return false;
             }
         }

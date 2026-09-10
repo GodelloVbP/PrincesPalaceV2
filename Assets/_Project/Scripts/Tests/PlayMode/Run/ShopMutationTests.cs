@@ -539,6 +539,25 @@ namespace PrincesPalace.PlayModeTests
                 "Removing the entry would renumber every card the screen binds by index.");
         }
 
+        // The other half of the rule above: a card whose content DOES still
+        // resolve must come back unchanged. Books were the case that got this
+        // wrong -- Resolves had no arm for them and fell to `default: false`,
+        // so every unsold book on the shelf was stamped NO OFFER by the load
+        // that should have restored it.
+        [Test]
+        public void ABookCardWhoseSkillStillExistsSurvivesReconcile()
+        {
+            OpenAShop();
+            var save = SaveSlotManager.CurrentSave;
+            var card = save.activeRun.shopStock.First(e => e.section == ShopStock.BookSection && !e.noOffer);
+            string soldId = card.contentId;
+
+            save.Reconcile();
+
+            Assert.IsFalse(card.noOffer, "a book the game still has was marked NO OFFER by a reload");
+            Assert.AreEqual(soldId, card.contentId, "and the card must not have been re-rolled either");
+        }
+
         [Test]
         public void ASoldCardStaysSoldEvenIfItsContentVanished()
         {
