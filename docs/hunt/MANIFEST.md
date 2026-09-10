@@ -54,7 +54,7 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Art/Characters/owl/recipe.json | art-data | 35 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/Characters/sheep_black_ram/recipe.json | art-data | 35 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/Enemies/treant/recipe.json | art-data | 34 | - | static read |  | open |  |  |  |
-| Assets/_Project/Art/Sheets/hand_assembled.json | art-data | 51 | - | static read |  | open |  |  |  |
+| Assets/_Project/Art/Sheets/hand_assembled.json | art-data | 51 | - | static read |  | evidence recorded | asserted: read and cross-checked against HandAssembledArtTests' pin dictionary; no unpinned registered id | fbf7ac1f | a new entry is registered |
 | Assets/_Project/Art/Sheets/recipes/black_ram_impact.json | art-data | 154 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/Sheets/recipes/cinderfault_eruption.json | art-data | 87 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/Sheets/recipes/cinderfault_ground.json | art-data | 107 | - | static read |  | open |  |  |  |
@@ -83,21 +83,21 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Art/Sheets/recipes/prismatic_orb_wind_drops.json | art-data | 114 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/Sheets/recipes/prismatic_orb_wind_wake.json | art-data | 36 | - | static read |  | open |  |  |  |
 | Assets/_Project/Art/UI/Plates/recipe.json | art-data | 140 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/achievements.json | content | 12 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/characters.json | content | 86 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/enemies.json | content | 326 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/items.json | content | 96 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/itemsets.json | content | 704 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/modifiers.json | content | 205 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/pools.json | content | 47 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/relics.json | content | 355 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/reward_tracks.json | content | 52 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/skills.json | content | 1021 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/spells.json | content | 14 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/talents.json | content | 762 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/upgrades.json | content | 19 | - | static read |  | open |  |  |  |
-| Assets/_Project/ContentData/weapons.json | content | 53 | - | static read |  | open |  |  |  |
-| Assets/_Project/Resources/StanceManifest.json | content | 149 | - | static read |  | open |  |  |  |
+| Assets/_Project/ContentData/achievements.json | content | 12 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly | 64afca2e | achievements.json changes |
+| Assets/_Project/ContentData/characters.json | content | 86 | - | static read |  | evidence recorded | asserted (ids only): re-resolved by ContentStampIdsTests; ids matched. NOTE: id-matching does not cover field-level correctness -- see candidates.md for a field-level defect found by reading, not by this lint | fd6314c1 | characters.json changes |
+| Assets/_Project/ContentData/enemies.json | content | 326 | - | static read |  | evidence recorded | asserted (ids only): re-resolved by ContentStampIdsTests; ids matched (including the `active:false` filter) | 64afca2e | enemies.json changes |
+| Assets/_Project/ContentData/items.json | content | 96 | - | static read |  | evidence recorded | asserted (ids only): re-resolved as part of the Items three-generator mirror | 64afca2e | items.json changes |
+| Assets/_Project/ContentData/itemsets.json | content | 704 | - | static read |  | evidence recorded | asserted (ids only): same | 64afca2e | same |
+| Assets/_Project/ContentData/modifiers.json | content | 205 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly | 64afca2e | modifiers.json changes |
+| Assets/_Project/ContentData/pools.json | content | 47 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly | 1a6b20b9 | pools.json changes |
+| Assets/_Project/ContentData/relics.json | content | 355 | - | static read |  | evidence recorded | asserted (ids only): re-resolved with achievement-id context | f2945c1b | relics.json changes |
+| Assets/_Project/ContentData/reward_tracks.json | content | 52 | - | static read |  | evidence recorded | asserted (ids only): re-resolved with character/skill context | 49c18d07 | reward_tracks.json changes |
+| Assets/_Project/ContentData/skills.json | content | 1021 | - | static read |  | evidence recorded | asserted (ids only): re-resolved with real pool-ownership context | 1a6b20b9 | skills.json changes |
+| Assets/_Project/ContentData/spells.json | content | 14 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly (SpellTiers) | 64afca2e | spells.json changes |
+| Assets/_Project/ContentData/talents.json | content | 762 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly | 3bf7e218 | talents.json changes |
+| Assets/_Project/ContentData/upgrades.json | content | 19 | - | static read |  | evidence recorded | asserted (ids only): re-resolved directly | 6cf75af8 | upgrades.json changes |
+| Assets/_Project/ContentData/weapons.json | content | 53 | - | static read |  | evidence recorded | asserted (ids only): same | 64afca2e | same |
+| Assets/_Project/Resources/StanceManifest.json | content | 149 | - | static read |  | evidence recorded | asserted: validated against real PNG ground-line measurements this run | 917e17e0 | an actor is resliced |
 | Assets/_Project/Scripts/Core/Achievements.cs | core | 84 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/AssemblyInfo.cs | core | 17 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/AudioLevels.cs | core | 142 | - | static read |  | open |  |  |  |
@@ -119,8 +119,8 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Core/Content/AchievementDefinition.cs | core | 49 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/Content/CharacterDefinition.cs | core | 60 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/Content/ContentDatabase.Effective.cs | core | 921 | lifecycle seam | static read; asserted |  | open |  |  |  |
-| Assets/_Project/Scripts/Core/Content/ContentDatabase.Validation.cs | core | 671 | seam | static read; asserted |  | open |  |  |  |
-| Assets/_Project/Scripts/Core/Content/ContentDatabase.cs | core | 861 | seam | static read; asserted |  | open |  |  |  |
+| Assets/_Project/Scripts/Core/Content/ContentDatabase.Validation.cs | core | 671 | seam | static read; asserted |  | evidence recorded | static read: read in full this pass (not independently re-executed with a planted cross-catalogue defect; `ValidateContent()` runs as part of every content build/test but was not isolated as its own asserted case here) | fd6314c1 | ValidateContent() changes |
+| Assets/_Project/Scripts/Core/Content/ContentDatabase.cs | core | 861 | seam | static read; asserted |  | evidence recorded | asserted: named explicitly as a scan target in `TheScanReachesTheFilesTheRuleIsAbout`; confirmed reached | fd6314c1 | ContentDatabase.cs changes |
 | Assets/_Project/Scripts/Core/Content/EnemyDefinition.cs | core | 57 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/Content/IOrderedContent.cs | core | 29 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Core/Content/ItemDefinition.cs | core | 163 | - | static read |  | open |  |  |  |
@@ -240,10 +240,10 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | AUDIT.md | doc | 1349 | - | static read |  | open |  |  |  |
 | CLAUDE.md | doc | 219 | - | static read |  | open |  |  |  |
 | docs/ART_PIPELINE.md | doc | 1065 | - | static read |  | open |  |  |  |
-| docs/CODE_MAP.md | doc | 1050 | - | static read |  | open |  |  |  |
+| docs/CODE_MAP.md | doc | 1050 | - | static read |  | evidence recorded | static read (mechanical): every backtick-quoted `*.ext` path candidate (305 found) checked against `git ls-files` with the doc's own path-abbreviation convention (paths are often given relative to `Assets/_Project/Scripts/`); every folder under `Scripts/{Domain,Core,Data,Editor}` checked for a by-name mention. See candidates.md for the misses found (1 stale path, 1-2 stale filenames, 4 undocumented folders) | 84fc988f | CODE_MAP.md or the folder tree changes |
 | docs/CODE_STANDARDS.md | doc | 480 | - | static read |  | open |  |  |  |
-| docs/CONTENT_SCHEMA.md | doc | 457 | - | static read |  | open |  |  |  |
-| docs/WORKFLOW.md | doc | 318 | - | static read |  | open |  |  |  |
+| docs/CONTENT_SCHEMA.md | doc | 457 | - | static read |  | evidence recorded | asserted: `tools/content_schema.ps1 -Check` run twice: stable, matches | fd6314c1 | a Raw*Entry field's [ContentDoc] changes |
+| docs/WORKFLOW.md | doc | 318 | - | static read |  | evidence recorded | static read (mechanical): every `tools/*.ps1` script named in section 8's table confirmed to exist; every `-Flag` named in section 8 confirmed present in that script's declared `param()` block (test.ps1, run_tests_parallel.ps1, build_content.ps1, preview.ps1, screenshot.ps1, bot.ps1, test_areas.ps1). No misses | 4c45692b | section 8 is edited, or a script's param block changes |
 | Assets/_Project/Scripts/Domain/Ambience/AmbienceCurves.cs | domain | 147 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Ambience/FlickerCurve.cs | domain | 115 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Audio/MusicClock.cs | domain | 64 | - | static read |  | open |  |  |  |
@@ -344,61 +344,61 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/Content/AchievementCondition.cs | domain | 41 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/AchievementProgress.cs | domain | 157 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/ArtPathConvention.cs | domain | 190 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/CharacterEntryResolver.cs | domain | 370 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/CharacterEntryResolver.cs | domain | 370 | - | static read |  | evidence recorded | asserted: exercised directly by ContentStampIdsTests' `ResolveCharacters()`; passed | fd6314c1 | resolver logic changes |
 | Assets/_Project/Scripts/Domain/Content/CharacterRole.cs | domain | 24 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/ContentDocAttribute.cs | domain | 26 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ContentInputHash.cs | domain | 198 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ContentSchema.cs | domain | 272 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/ContentInputHash.cs | domain | 198 | - | static read |  | evidence recorded | asserted: is the subject under test of ContentInputCoverageTests; its `Sources`/`Enumerate` were exercised directly | 714a5646 | ContentInputHash.cs's hashed-file list changes |
+| Assets/_Project/Scripts/Domain/Content/ContentSchema.cs | domain | 272 | - | static read |  | evidence recorded | asserted: is the generator under test in the above | ed1b4df9 | ContentSchema.cs changes |
 | Assets/_Project/Scripts/Domain/Content/ContentStamp.cs | domain | 183 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs | domain | 422 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/EnemyEntryResolver.cs | domain | 422 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 40f5cb43 | same |
 | Assets/_Project/Scripts/Domain/Content/GearScaling.cs | domain | 305 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ItemEntryResolver.cs | domain | 233 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/ItemEntryResolver.cs | domain | 233 | - | static read |  | evidence recorded | asserted: exercised directly (`ItemIds()`); passed | afe01a13 | same |
 | Assets/_Project/Scripts/Domain/Content/ItemNaming.cs | domain | 88 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ItemSetEntryResolver.cs | domain | 610 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ModifierEntryResolver.cs | domain | 288 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/ItemSetEntryResolver.cs | domain | 610 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 353c3175 | same |
+| Assets/_Project/Scripts/Domain/Content/ModifierEntryResolver.cs | domain | 288 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 26b314c3 | same |
 | Assets/_Project/Scripts/Domain/Content/ModifierMagnitude.cs | domain | 76 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/PoolEntryResolver.cs | domain | 260 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/PoolEntryResolver.cs | domain | 260 | - | static read |  | evidence recorded | asserted: exercised directly; passed | ed1b4df9 | same |
 | Assets/_Project/Scripts/Domain/Content/PoolOwnership.cs | domain | 59 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/PoolPrecedence.cs | domain | 65 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/PoolRules.cs | domain | 63 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/Rarity.cs | domain | 101 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawCharacterEntry.cs | domain | 194 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs | domain | 301 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawItemEntry.cs | domain | 92 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawItemSetEntry.cs | domain | 187 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawModifierEntry.cs | domain | 78 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawPoolEntry.cs | domain | 139 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawRelicEntry.cs | domain | 68 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawRewardTrackEntry.cs | domain | 71 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawSkillEntry.cs | domain | 370 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawSpellTierEntry.cs | domain | 58 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawTalentEntry.cs | domain | 152 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RawWeaponEntry.cs | domain | 146 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/RawCharacterEntry.cs | domain | 194 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | fd6314c1 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawEnemyEntry.cs | domain | 301 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawItemEntry.cs | domain | 92 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawItemSetEntry.cs | domain | 187 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawModifierEntry.cs | domain | 78 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawPoolEntry.cs | domain | 139 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 9f599f06 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawRelicEntry.cs | domain | 68 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawRewardTrackEntry.cs | domain | 71 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 58d84e6e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawSkillEntry.cs | domain | 370 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 651c8a79 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawSpellTierEntry.cs | domain | 58 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawTalentEntry.cs | domain | 152 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RawWeaponEntry.cs | domain | 146 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
 | Assets/_Project/Scripts/Domain/Content/RelicEffect.cs | domain | 214 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RelicEntryResolver.cs | domain | 190 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/RelicEntryResolver.cs | domain | 190 | - | static read |  | evidence recorded | asserted: exercised directly; passed | b6fa0add | same |
 | Assets/_Project/Scripts/Domain/Content/RelicModifier.cs | domain | 283 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/RelicRarity.cs | domain | 25 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/RelicRarityNames.cs | domain | 24 | never-named | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedAchievement.cs | domain | 173 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedCharacter.cs | domain | 176 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs | domain | 299 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedItem.cs | domain | 80 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedModifier.cs | domain | 52 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedPool.cs | domain | 93 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedRelic.cs | domain | 76 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedRewardTrack.cs | domain | 128 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedSetPiece.cs | domain | 73 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedSkill.cs | domain | 364 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedSpellTier.cs | domain | 58 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedTalent.cs | domain | 109 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedUpgrade.cs | domain | 178 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/ResolvedWeapon.cs | domain | 67 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/RewardTrackEntryResolver.cs | domain | 392 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/ResolvedAchievement.cs | domain | 173 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 64afca2e | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedCharacter.cs | domain | 176 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | fd6314c1 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedEnemy.cs | domain | 299 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | c67f401a | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedItem.cs | domain | 80 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 1bd59995 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedModifier.cs | domain | 52 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 8b7806c2 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedPool.cs | domain | 93 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | ed1b4df9 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedRelic.cs | domain | 76 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 8b7806c2 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedRewardTrack.cs | domain | 128 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 49c18d07 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedSetPiece.cs | domain | 73 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 1bd59995 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedSkill.cs | domain | 364 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 651c8a79 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedSpellTier.cs | domain | 58 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 8b7806c2 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedTalent.cs | domain | 109 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 8b7806c2 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedUpgrade.cs | domain | 178 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 6cf75af8 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/ResolvedWeapon.cs | domain | 67 | - | static read |  | evidence recorded | asserted: scanned by ContentOwnershipLintTests for out-of-place writes; none found | 353c3175 | a record gains a public field a resolver does not initialize |
+| Assets/_Project/Scripts/Domain/Content/RewardTrackEntryResolver.cs | domain | 392 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 85292f5c | same |
 | Assets/_Project/Scripts/Domain/Content/RiftTier.cs | domain | 19 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/RiftTierBands.cs | domain | 49 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/ScalingLineParser.cs | domain | 71 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/SkillDamageTypes.cs | domain | 64 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/SkillEntryResolver.cs | domain | 773 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/SkillEntryResolver.cs | domain | 773 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 1a6b20b9 | same |
 | Assets/_Project/Scripts/Domain/Content/SpellAnchor.cs | domain | 129 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/SpellBooks.cs | domain | 36 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/SpellLayer.cs | domain | 392 | - | static read |  | open |  |  |  |
@@ -406,10 +406,10 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/Content/SpellLayerRules.cs | domain | 591 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/SpellPresentation.cs | domain | 573 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Content/SpellPresentationPaths.cs | domain | 65 | never-named | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/SpellTierEntryResolver.cs | domain | 126 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/SpellTierEntryResolver.cs | domain | 126 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 8b7806c2 | same |
 | Assets/_Project/Scripts/Domain/Content/StatusAuthoring.cs | domain | 58 | never-named | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/TalentEntryResolver.cs | domain | 315 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/Content/WeaponEntryResolver.cs | domain | 335 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/Content/TalentEntryResolver.cs | domain | 315 | - | static read |  | evidence recorded | asserted: exercised directly; passed | b407dbd1 | same |
+| Assets/_Project/Scripts/Domain/Content/WeaponEntryResolver.cs | domain | 335 | - | static read |  | evidence recorded | asserted: exercised directly; passed | 353c3175 | same |
 | Assets/_Project/Scripts/Domain/DebugMenu/DebugMenuCatalog.cs | domain | 77 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Dungeon/DescentMap.cs | domain | 770 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/Dungeon/DifficultyCurve.cs | domain | 187 | - | static read |  | open |  |  |  |
@@ -496,7 +496,7 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/UiKit/ContainerArt.cs | domain | 278 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/DossierLayout.cs | domain | 753 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/ExitsLayout.cs | domain | 197 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/FightHudPalette.cs | domain | 225 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/FightHudPalette.cs | domain | 225 | - | static read |  | evidence recorded | asserted: `UiKitLintTests.NoScreenRestatesAColourThePaletteAlreadyOwns` parses every `public const string` colour from this file and diffs it against every other `Domain/UiKit/*` file | 6fde2fa2 | FightHudPalette.cs's colour constants change |
 | Assets/_Project/Scripts/Domain/UiKit/FightSubmenuLayout.cs | domain | 452 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/HubAnchors.cs | domain | 131 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/MapLayout.cs | domain | 270 | - | static read |  | open |  |  |  |
@@ -514,26 +514,26 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/UiKit/RewardTrackLayout.cs | domain | 1051 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/RunStatRows.cs | domain | 123 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/RunStatsLayout.cs | domain | 138 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/CharacterDossierScreen.cs | domain | 1127 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/DebugMenuScreen.cs | domain | 176 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/DefeatScreen.cs | domain | 173 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/ExitsScreen.cs | domain | 272 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/FightScreen.cs | domain | 2541 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/GlossaryScreen.cs | domain | 305 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/CharacterDossierScreen.cs | domain | 1127 | - | static read |  | evidence recorded | executed: built and walked by ButtonFallbackLintTests; UiAudit-equivalent coverage via `CharacterDossierScreenTests` in the same run | cd265cd2 | the screen tree changes |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/DebugMenuScreen.cs | domain | 176 | - | static read |  | evidence recorded | executed: same, via `DebugMenuScreenTests` | 520ac93d | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/DefeatScreen.cs | domain | 173 | - | static read |  | evidence recorded | executed: same, via `DefeatScreenTests`/`DefeatScreenWiringTests` | 09ea9cb6 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/ExitsScreen.cs | domain | 272 | - | static read |  | evidence recorded | executed: walked by ButtonFallbackLintTests; wiring covered by `ScreenWiringTests` | 9096e461 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/FightScreen.cs | domain | 2541 | - | static read |  | evidence recorded | executed: same, via `FightScreenTests` | af86b573 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/GlossaryScreen.cs | domain | 305 | - | static read |  | evidence recorded | executed: walked by ButtonFallbackLintTests only in this slice | 520ac93d | same |
 | Assets/_Project/Scripts/Domain/UiKit/Screens/HubAmbience.cs | domain | 275 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/HubScreen.cs | domain | 281 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/HubScreen.cs | domain | 281 | - | static read |  | evidence recorded | executed: walked by ButtonFallbackLintTests; no dedicated `HubScreenTests` in this slice's matched-class list | 520ac93d | same |
 | Assets/_Project/Scripts/Domain/UiKit/Screens/MainMenuAmbience.cs | domain | 286 | never-named | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/MainMenuScreen.cs | domain | 539 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/MapScreen.cs | domain | 514 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/OptionsScreen.cs | domain | 263 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/PartyScreen.cs | domain | 627 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/ReckoningScreen.cs | domain | 1037 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/RelicDraftScreen.cs | domain | 278 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/RewardTrackScreen.cs | domain | 1363 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/MainMenuScreen.cs | domain | 539 | - | static read |  | evidence recorded | executed: same, via `MainMenuScreenTests` | 9096e461 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/MapScreen.cs | domain | 514 | - | static read |  | evidence recorded | executed: same, via `MapScreenTests` | 520ac93d | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/OptionsScreen.cs | domain | 263 | - | static read |  | evidence recorded | executed: same, via `OptionsPaneTests` | 7370e567 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/PartyScreen.cs | domain | 627 | - | static read |  | evidence recorded | executed: same, via `PartyScreenTests` | 7370e567 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/ReckoningScreen.cs | domain | 1037 | - | static read |  | evidence recorded | executed: same, via `ReckoningScreenTests` | 520ac93d | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/RelicDraftScreen.cs | domain | 278 | - | static read |  | evidence recorded | executed: same, via `RelicDraftScreenTests`/`RelicDraftTests` | 09ea9cb6 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/RewardTrackScreen.cs | domain | 1363 | - | static read |  | evidence recorded | executed: same, via `RewardTrackScreenTests` | 4c0c550b | same |
 | Assets/_Project/Scripts/Domain/UiKit/Screens/RunStatsScreen.cs | domain | 128 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/ShopScreen.cs | domain | 788 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/SystemMenuScreen.cs | domain | 428 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/Screens/TalentScreen.cs | domain | 833 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/ShopScreen.cs | domain | 788 | - | static read |  | evidence recorded | executed: same, via `ShopScreenTests` | 4c0c550b | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/SystemMenuScreen.cs | domain | 428 | - | static read |  | evidence recorded | executed: same, via `SystemMenuScreenTests`/`SystemMenuTests`/`SystemMenuPaneTests`/`SystemMenuPartyTests`/`SystemMenuRunStatsTests` | 13ca2da4 | same |
+| Assets/_Project/Scripts/Domain/UiKit/Screens/TalentScreen.cs | domain | 833 | - | static read |  | evidence recorded | executed: walked by ButtonFallbackLintTests; no dedicated `TalentScreenTests` in this slice's matched-class list | 520ac93d | same |
 | Assets/_Project/Scripts/Domain/UiKit/SheetStats.cs | domain | 321 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/SolvedNode.cs | domain | 53 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/SystemMenuLayout.cs | domain | 318 | - | static read |  | open |  |  |  |
@@ -542,8 +542,8 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/UiKit/Typography.cs | domain | 139 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/Ui.cs | domain | 1080 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/UiAlign.cs | domain | 15 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/UiAudit.cs | domain | 400 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Domain/UiKit/UiAuditError.cs | domain | 33 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Domain/UiKit/UiAudit.cs | domain | 400 | - | static read |  | evidence recorded | asserted: `UiKitAuditTests` (35+ cases incl. the two shipped-bug regressions `578ba9e`/`ec19c3e`, and A1-A8 fire/don't-fire pairs) | 521daf44 | UiAudit.cs changes past this revision |
+| Assets/_Project/Scripts/Domain/UiKit/UiAuditError.cs | domain | 33 | - | static read |  | evidence recorded | static read + executed: read directly; exercised transitively by UiKitAuditTests | f6a3d522 | UiAuditError.cs changes |
 | Assets/_Project/Scripts/Domain/UiKit/UiBindingContract.cs | domain | 84 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/UiBindingNames.cs | domain | 29 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/UiFrames.cs | domain | 26 | - | static read |  | open |  |  |  |
@@ -557,7 +557,7 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Domain/UiKit/UiTextAlign.cs | domain | 37 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Domain/UiKit/UiVec.cs | domain | 44 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/Bot/BalanceBotRunner.cs | editor | 900 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Editor/ContentBuilder.cs | editor | 780 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Editor/ContentBuilder.cs | editor | 780 | - | static read |  | evidence recorded | asserted: is one of the two files the ownership lint exempts as a legitimate writer, and is named explicitly in its own coverage test | 1a6b20b9 | ContentBuilder.cs changes |
 | Assets/_Project/Scripts/Editor/EnemySpriteImportPostprocessor.cs | editor | 37 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/GenerationRun.cs | editor | 115 | never-named | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/IntentIconImportPostprocessor.cs | editor | 36 | - | static read |  | open |  |  |  |
@@ -575,11 +575,11 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | Assets/_Project/Scripts/Editor/SceneBuilder/TmpBootstrap.cs | editor | 133 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/SceneBuilder/UiAutoBind.cs | editor | 160 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/SceneBuilder/UiBindingAudit.cs | editor | 221 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Editor/SceneBuilder/UiCountAudit.cs | editor | 65 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Editor/SceneBuilder/UiCountAudit.cs | editor | 65 | - | static read |  | evidence recorded | static read: read directly; same caveat as UiWiringSweep -- E4 runs at scene-build time | 1bd59995 | needs a `-BuildScenes` run |
 | Assets/_Project/Scripts/Editor/SceneBuilder/UiEmitResult.cs | editor | 175 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Editor/SceneBuilder/UiEmitter.cs | editor | 554 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Editor/SceneBuilder/UiTextFitAudit.cs | editor | 77 | - | static read |  | open |  |  |  |
-| Assets/_Project/Scripts/Editor/SceneBuilder/UiWiringSweep.cs | editor | 160 | - | static read |  | open |  |  |  |
+| Assets/_Project/Scripts/Editor/SceneBuilder/UiEmitter.cs | editor | 554 | - | static read |  | evidence recorded | executed: same; CS0618 at line 220 (`TMP_Text.enableWordWrapping`), production code path | 4f4e6e23 | the TMPro package version changes, or the line's API usage changes |
+| Assets/_Project/Scripts/Editor/SceneBuilder/UiTextFitAudit.cs | editor | 77 | - | static read |  | evidence recorded | static read + executed: read directly; runs inside every scene build this stage's `ui,content,art` slice exercised (screen tests build trees, not scenes -- see blindspots.md; this file is EDITOR/scene-build-only and was not directly exercised by the dotnet-hosted screen tests) | b955ceb3 | UiTextFitAudit.cs changes, or a `-BuildScenes` run is needed to re-confirm against real scenes |
+| Assets/_Project/Scripts/Editor/SceneBuilder/UiWiringSweep.cs | editor | 160 | - | static read |  | evidence recorded | static read: read directly; NOT exercised this pass -- no `-BuildScenes` run happened in stage 2 (out of scope: fixes nothing, and a scene rebuild reassigns every fileID) | 31fbe64a | needs a `-BuildScenes` run to move to `executed` |
 | Assets/_Project/Scripts/Editor/StanceSpriteImporter.cs | editor | 108 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/StatusIconImportPostprocessor.cs | editor | 33 | - | static read |  | open |  |  |  |
 | Assets/_Project/Scripts/Editor/UiKitImportPostprocessor.cs | editor | 98 | never-named | static read |  | open |  |  |  |
@@ -600,7 +600,7 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | tools/capture_strip.py | tool | 255 | - | static read |  | open |  |  |  |
 | tools/content_schema.ps1 | tool | 77 | - | static read |  | open |  |  |  |
 | tools/extract_tmp_essentials.py | tool | 116 | - | static read |  | open |  |  |  |
-| tools/graphics_tests.ps1 | tool | 123 | - | static read |  | open |  |  |  |
+| tools/graphics_tests.ps1 | tool | 123 | - | static read |  | evidence recorded | asserted: planted-failure runner audit (stage 1b): a deliberately failing dotnet test, a deliberately failing PlayMode test, and a deliberately failing graphics-capture test were placed in scratch copies and driven through this script; failure and non-zero exit were confirmed, and two defects were found and fixed in the same commit (see 438d6fda) -- planted graphics-capture failure reported with the real error and non-zero exit (check 4a) | 325ed84c | this script's failure-reporting, discovery, sync or lock logic changes past this revision |
 | tools/hunt_manifest.py | tool | 459 | - | static read |  | open |  |  |  |
 | tools/key_green_screen.py | tool | 479 | - | static read |  | open |  |  |  |
 | tools/make_cinderfault_audio.py | tool | 201 | - | static read |  | open |  |  |  |
@@ -619,8 +619,8 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | tools/process_map_icons.py | tool | 161 | - | static read |  | open |  |  |  |
 | tools/remove_portrait_backgrounds.py | tool | 218 | - | static read |  | open |  |  |  |
 | tools/run_tests.ps1 | tool | 81 | - | static read |  | open |  |  |  |
-| tools/run_tests_parallel.ps1 | tool | 612 | - | static read |  | open |  |  |  |
-| tools/screenshot.ps1 | tool | 313 | - | static read |  | open |  |  |  |
+| tools/run_tests_parallel.ps1 | tool | 626 | - | static read |  | evidence recorded | asserted: planted-failure runner audit (stage 1b): a deliberately failing dotnet test, a deliberately failing PlayMode test, and a deliberately failing graphics-capture test were placed in scratch copies and driven through this script; failure and non-zero exit were confirmed, and two defects were found and fixed in the same commit (see 438d6fda) -- structural refusal of the orphan test (check 2c), stale-results-file deletion and results-mtime-inside-run-window (check 3, AUDIT #110 re-verified by reproducing the incident with a bait all-green XML) | 438d6fda | this script's failure-reporting, discovery, sync or lock logic changes past this revision |
+| tools/screenshot.ps1 | tool | 313 | - | static read |  | evidence recorded | asserted: planted-failure runner audit (stage 1b): a deliberately failing dotnet test, a deliberately failing PlayMode test, and a deliberately failing graphics-capture test were placed in scratch copies and driven through this script; failure and non-zero exit were confirmed, and two defects were found and fixed in the same commit (see 438d6fda) -- planted runtime capture's PNG and companion JSON confirmed to land in the runner and copy back to main (check 4b) | c0ab332d | this script's failure-reporting, discovery, sync or lock logic changes past this revision |
 | tools/sheet_slicing.py | tool | 75 | - | static read |  | open |  |  |  |
 | tools/slice_actor_sheet.py | tool | 1296 | - | static read |  | open |  |  |  |
 | tools/slice_actor_sheet_test.py | tool | 348 | - | static read |  | open |  |  |  |
@@ -628,10 +628,10 @@ Regenerate with `python tools/hunt_manifest.py`. `owner`, `status`, `evidence`, 
 | tools/slice_spell_sheet.py | tool | 1221 | - | static read |  | open |  |  |  |
 | tools/splice_ui_kit.py | tool | 324 | - | static read |  | open |  |  |  |
 | tools/static_pilot_qa.ps1 | tool | 76 | - | static read |  | open |  |  |  |
-| tools/test.ps1 | tool | 567 | - | static read |  | open |  |  |  |
+| tools/test.ps1 | tool | 699 | - | static read |  | evidence recorded | asserted: planted-failure runner audit (stage 1b): a deliberately failing dotnet test, a deliberately failing PlayMode test, and a deliberately failing graphics-capture test were placed in scratch copies and driven through this script; failure and non-zero exit were confirmed, and two defects were found and fixed in the same commit (see 438d6fda) -- discovery-count parity (383 tool vs 383 folder, 0 mismatched buckets), the orphan-test blind spot (check 2c), and the compiled-from-source check (a planted class in a synced copy is found and run) also verified here | 438d6fda | this script's failure-reporting, discovery, sync or lock logic changes past this revision |
 | tools/test_areas.ps1 | tool | 960 | - | static read |  | open |  |  |  |
 | tools/trim_wav.py | tool | 135 | - | static read |  | open |  |  |  |
-| tools/unity_lock.ps1 | tool | 99 | - | static read |  | open |  |  |  |
+| tools/unity_lock.ps1 | tool | 161 | - | static read |  | evidence recorded | asserted: planted-failure runner audit (stage 1b): a deliberately failing dotnet test, a deliberately failing PlayMode test, and a deliberately failing graphics-capture test were placed in scratch copies and driven through this script; failure and non-zero exit were confirmed, and two defects were found and fixed in the same commit (see 438d6fda) -- Test-RunnerFree added and verified against both a held and a free lock (check 6: no wait existed before this commit; refuses rather than waits) | 438d6fda | this script's failure-reporting, discovery, sync or lock logic changes past this revision |
 | tools/unity_path.ps1 | tool | 47 | - | static read |  | open |  |  |  |
 
 ### Removed from the tree
@@ -843,3 +843,94 @@ Stated so the gaps are visible rather than inferred from silence:
 - **Nothing in either hunt covered the Editor assembly's audits by test** (L10),
   the 34 grandfathered array sites (L9), or any of the 49 lifecycle controllers
   under interrupt/unload/restore (that is what `docs/hunt/SCENARIOS.md` is for).
+
+
+## Candidates
+
+Stage 2's two mechanical passes (existing lints, task 2) and two fuzzers (the
+balance bot, task 3; the two symbol-aware generators, task 4) each produced a
+ranked candidate list. Nothing here is `confirmed` unless its source says so;
+a `candidate` is a lead, not a finding, per the plan's own state list. `Fix
+restores or chooses` follows the plan's Definitions: a restore has intent
+evidence and is committed directly; a choose picks among options the evidence
+does not settle and goes to the owner (or, for a pure documentation gap, to a
+comment-only docs commit).
+
+Four rows below (ST2-L4, ST2-L5 in part, ST2-L6, ST2-B8) were docs-only
+restores with two agreeing intent sources and were fixed in the same pass
+that added this table -- see the commit that also adds
+`docs/BUG_HUNT_2026-09-11.md`. They are left `candidate` per this table's own
+rule (their source files do not say `confirmed`) with a note in `restore or
+choose` naming the fix.
+
+| id | state | source | file:line / path | observation | intent evidence | restore or choose | routed to |
+|---|---|---|---|---|---|---|---|
+| ST2-L1 | candidate | `stage2/lints/candidates.md` C1 | `Assets/_Project/ContentData/characters.json:79` | Odette's (owl) dossier portrait shows Shawn's (sheep) art: `portraitPath` is authored `"Portraits/sheep"` for the `owl` row; no `Resources/Portraits/owl.png` exists yet, though an untracked `Art/Portraits/Owl/` source folder does | the sibling rows (`sheep`->`Portraits/sheep`, `bear`->`Portraits/bear`) establish the pattern this row breaks; nothing confirms the copy-paste was deliberate | chooses (two independent fixes needed -- the JSON string and the missing processed art -- and `characters.json` is the owner's own uncommitted work) | owner decision |
+| ST2-L2 | candidate | `stage2/lints/candidates.md` C2 | 13 call sites, 10 files under `Assets/_Project/Scripts/Tests/PlayMode/` (full list: `warnings.md` sub-family A) | CS0618: `FindObjectsByType<T>(FindObjectsInactive, FindObjectsSortMode)` is obsolete; every site passes `FindObjectsSortMode.None` explicitly, the replacement overload's own default | the compiler warning names the exact replacement; confirmed behaviour-preserving by reading `CharacterSheetInFightTests.cs:55-58` as a representative site | restores (mechanical, one commit, test-only, zero production risk) | fixer |
+| ST2-L3 | candidate | `stage2/lints/candidates.md` C3 | `Assets/_Project/Scripts/Editor/SceneBuilder/UiEmitter.cs:220` | CS0618: `TMP_Text.enableWordWrapping` is obsolete, on the `node.Truncates` path of every scene build | the compiler warning names `textWrappingMode` as the replacement; TMPro documents its shim as equivalent, not independently verified by diffing a rebuilt scene | restores, pending verification (diff a rebuilt scene's `TMP_Text.textWrappingMode` before/after the swap -- not run in stage 2, touches generated scene output) | fixer |
+| ST2-L4 | candidate | `stage2/lints/candidates.md` C4 | `docs/CODE_MAP.md:489` | names `docs/STATIC_COMBAT_ART_DEEP_DIVE.md`; the tracked file is at `docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md` | mechanical path check against `git ls-files`, no judgement needed | restores -- **fixed this pass**, see the docs-restore commit | docs |
+| ST2-L5 | candidate | `stage2/lints/candidates.md` C5 | `docs/CODE_MAP.md:173` (`GameplayManager.cs`), `:197` (`MusicLayers.cs`) | neither file exists in the tree; `MusicLayers.cs` reading `music_layers.json` is now `Domain/Audio/MusicLayerResolver.cs` (confirmed by grep for the literal string); `GameplayManager.cs` names no file and no successor was chased this stage (out of stage 2's mechanical scope) | mechanical for the rename; `GameplayManager.cs` needs a stage-4-style "what replaced this" read before its row can be corrected rather than deleted | `MusicLayers.cs` restores -- **fixed this pass** (renamed to `MusicLayerResolver.cs`); `GameplayManager.cs` left open, see the integrator's final report | docs (MusicLayers); owner/stage 4 (GameplayManager, unresolved) |
+| ST2-L6 | candidate | `stage2/lints/candidates.md` C6 | `docs/CODE_MAP.md` (whole-file) | four `Domain/` folders never mentioned, not even case-insensitively: `DebugMenu`, `Glossary`, `Inventory`, `Progression` (6 files, the largest miss, including the reward-track types backing a screen CODE_MAP already documents) | mechanical, case-insensitive whole-file search found no mention | restores (documentation gap, not a bug) -- **fixed this pass** | docs |
+| ST2-B1 | candidate | `stage2/bot/candidates.md` 1a | `Domain/Bot/FightRunner.cs` (bot side); `Core/FightController.cs`'s `RescueAStalledEnemyTurn` (screen-side twin) | `FightRunner.cs`'s own comment (lines 175-195) calls `StalledEnemyTurn` "a pre-existing production fault", recorded "every time" rather than deduplicated; zero hits in 32,000 run-plays across all 4 archetypes, both shop policies, runs reaching depth 40 and fighting the boss 65,351 times | the comment and the batch disagree; distinguishing "rarer than stated" from "needs a precondition no archetype produces" from "already fixed, comment stale" needs a targeted repro or a source read, neither done this pass | escalated, not decided | owner |
+| ST2-B2 | candidate, instrumentation | `stage2/bot/candidates.md` 3a | `Domain/Bot/FightRunner.cs:99` (loop only iterates on the player's turn); hook point `Domain/Combat/Session/FightSession.Enemies.cs` | an enemy ability actually firing is never recorded, for any enemy, ever -- not a sampling gap, missing instrumentation; `RunTrace.TurnTrace` has no field that could hold it | `tools/bot_merge.py:863-870` already names the same gap from the report side | n/a -- a new `EnemyActionTrace[]` list is an addition, not a restore or a choice | instrumentation |
+| ST2-B3 | candidate, instrumentation | `stage2/bot/candidates.md` 3b | `Core/Bot/BotRunDriver.cs:93-101` (offered/picked recorded); `Core/Bot/RunOrchestrator.cs:143-148` (held recorded); hook point `Domain/Combat/Session/FightSession.Relics.cs` / `.RelicMechanics.cs` | a relic actually TRIGGERING its effect (`DualWield`, `Bloodlust`, `MagicalShield`, ...) is never recorded, only drafted and held | -- | n/a | instrumentation |
+| ST2-B4 | candidate, instrumentation | `stage2/bot/candidates.md` 3c | `Domain/Combat/Session/FightSession.Outcome.cs:141` (`SecondLivesSpent` increments); `Core/Bot/RunOrchestrator.cs:423` (folded into `run.secondLivesUsed`) | second-life usage is computed in-process on every fight but never copied into `RunTrace`/`BotRunResult`/`runs.jsonl` -- the cheapest of the three trace gaps, the number already exists at the point the row is serialized | -- | n/a | instrumentation |
+| ST2-B5 | candidate, instrumentation | `stage2/bot/candidates.md` 3d | no file -- no trace field exists at all | whether a transformation correctly REVERTED after its duration has no trace representation, independent of whether the transform skill itself is reachable | -- | n/a | instrumentation |
+| ST2-B6 | candidate | `stage2/bot/candidates.md` 4, `coverage.md` S8 | `Domain/Bot/RandomLegalPolicy.cs:74-90` (`ChooseShop`) | none of the four shipped archetypes can ever construct an illegal shop choice, so all 7 player-facing `ShopRefusal` values are `not supported` by the bot as built -- not proof the game forbids them (a real player, or a future "clumsy" archetype, can trip every one) | `RandomLegalPolicy` is described as "a fuzzer, stands in for a lost novice" in `PLAN_BALANCE_BOT.md` S1 but never asks for anything illegal | chooses (whether a 5th "clumsy" archetype is worth building) | owner |
+| ST2-B7 | candidate | `stage2/bot/candidates.md` 5b | `Core/Bot/BotRunDriver.cs:455-462` (`MaxShopChoices` = 12) | `GreedyDefensive` hits the 12-choice shop cap 21.1% of its visits, `Lookahead2` 33.2% -- a third of one archetype's shop visits are truncated rather than completed | the code's own comment frames hitting the cap as "a finding rather than a truncation" | chooses (raise the cap, or accept the truncation as correct) | owner |
+| ST2-B8 | candidate | `stage2/bot/candidates.md` 6 | `docs/PLAN_BALANCE_BOT.md` S0 F5, S5 | "only Shawn is a real character" is stale: Fresh fields all three of Shawn/Bjorn/Odette, and every one of their 13 non-gated skills was cast at least once this batch | this session's own project memory dates the three-character roster to 2026-09-07, after the plan doc's text | restores -- **fixed this pass** | docs |
+| ST2-G1 | candidate | `stage2/generators/candidates.md` A1.1 | `Domain/Content/ResolvedModifier.cs:19` (`Description`) | validated, resolved, authored non-empty on all 25 `modifiers.json` rows, shown on no surface -- every sibling family (relic/skill/talent/achievement description) is displayed; modifiers are the one family whose description is dropped | the `[ContentDoc]` line plus 25 authored rows agree it is meant to be shown; nothing says where | chooses (which surface shows it) | owner |
+| ST2-G2 | candidate | `stage2/generators/candidates.md` A1.3 | `Domain/Content/ResolvedTalent.cs:42` (`IconPath`) | written, `ArtPathConvention`-validated, read by nothing; its header names "loaded by SceneBuilder", but `TalentDefinition` carries no shim the way `RelicDefinition.iconPath` does; `talents.json` authors zero `iconPath` values today, so nothing is lost yet | header names a loader that does not load it; the sibling type it points at has the shim this one lacks | chooses (add the shim, same as `RelicDefinition`, or refuse the field -- same two options as AUDIT #111) | owner |
+| ST2-G3 | candidate | `stage2/generators/candidates.md` A1.2 | `Domain/Content/ResolvedSkill.cs:194` (`FixedDamageType`) | zero references in the tree; its own header names `FightHudModel.DamageTypeLabel` as the consumer, but that method deliberately computes a DIFFERENT answer (a "/"-joined multi-packet list off `DamageInstances`) and never calls this property | the header names a caller; the caller's own header explains why it stopped using it to stay correct | chooses (delete or adopt) -- restores nothing, since the property is wrong for the one job its own header names | owner |
+| ST2-G4 | candidate | `stage2/generators/candidates.md` B.1 | `Assets/_Project/Scripts/Data/SaveData.cs:130` (`exp`) | no comment, no production read, no production write; the sibling `currency` field two lines up carries an explicit keep-for-compat note, `exp` carries none | `docs/AUDIT_V1_ARCHIVE.md:550` recorded the same field dead in v1; the live per-character value is `Character.exp`, gained separately | chooses (delete vs. `JsonUtility` save-format compatibility, `currency`'s own reasoning may apply here too) | owner |
+| ST2-G5 | candidate | `stage2/generators/candidates.md` A2.6 | `Domain/Content/ResolvedRelic.cs:38` (`HasBehaviour`) | read only by `RelicModifierTests`; its header says it exists so the draft and the glossary can tell a real relic from a placeholder, but neither `RelicDraftController` nor `GlossaryEntries` calls it | header names two callers, both absent | chooses, same shape as AUDIT #88 | owner |
+| ST2-G6 | candidate | `stage2/generators/candidates.md` A1.4 | `Assets/_Project/Scripts/Core/Content/RewardTrackDefinitionAsset.cs:34` (`characterId`) | every sibling asset's lookup shim carries a "the one field the `Get*(id)` family and every content check read off the asset itself" comment; this one carries no such note and no reader -- `RewardTracks.For(character)` matches on `Data.CharacterId` directly | the sibling shims (`EnemyDefinition.cs:41`, `TalentDefinition.cs:44`, `ModifierDefinition.cs:41`, `UpgradeDefinition.cs:42`) set the pattern this one breaks | restores (delete the dead shim, or add the missing note) | fixer |
+| ST2-G7 | candidate | `stage2/generators/candidates.md` A1.6 | `Domain/Content/ResolvedTalent.cs:41` (`SortOrder`) | undocumented twin of the documented A1.5 case (`ResolvedSpellTier.SortOrder`); `TalentDefinition.SortOrder` computes `Row * PathCount + Column` and never consults the stamped field | A1.5's own header and its cross-reference to `architecture_audit.md` F14 set the pattern this field should follow | comment-only | docs |
+| ST2-G8 | candidate | `stage2/generators/candidates.md` A2.7-A2.8 | `Domain/Content/ResolvedSetPiece.cs:32,33` (`SetDisplayName`, `.PieceId`) | read only by `ItemSetEntryResolverTests`; sit inside a block whose comment reserves the neighbouring `SetId` for "a future set bonus", but the reservation is written for `SetId` alone | reserved by adjacency only -- the comment does not actually cover these two members | comment-only | docs |
+
+Routed-to counts: **fixer** 3 (ST2-L2, ST2-L3, ST2-G6); **owner** 9 (ST2-L1,
+ST2-B1, ST2-B6, ST2-B7, ST2-G1, ST2-G2, ST2-G3, ST2-G4, ST2-G5); **docs** 6
+(ST2-L4, ST2-L5 in part, ST2-L6, ST2-B8, ST2-G7, ST2-G8); **instrumentation**
+4 (ST2-B2, ST2-B3, ST2-B4, ST2-B5). 22 rows total. `ST2-L5`'s
+`GameplayManager.cs` half is the one row this pass could not route anywhere
+but `unresolved` -- no successor file was identified.
+
+## Stage 2 coverage classification (balance bot as fuzzer)
+
+From `stage2/bot/coverage.md`. Method: two full batches (`ShopPolicy
+WhenOffered` and `Never`), Fresh profile only, seed 1, 2000 runs/cell x 4
+archetypes, depth cap 40, replay share 1, revision `438d6fda` plus the
+working tree's uncommitted changes at batch time (see `stage2/bot/evidence.md`
+for the exact caveat). 16,000 runs, ~32,000 run-plays. Never inferred
+unreachable from absence: every `proven unreachable` row cites a file:line
+static argument; everything else is `not sampled` or `not supported` with a
+stated reason.
+
+| category | sampled | not sampled | not supported | proven unreachable |
+|---|---|---|---|---|
+| Enemies fielded (id-level) | 6 / 6 | 0 | 0 | 0 |
+| Enemy abilities fired (transition-level) | cannot be measured -- trace gap, ST2-B2 | -- | -- | -- |
+| Relics drafted (offered at least once) | 36 / 38 | 0 | 1 (`forest_wardens_tooth`, save-isolation model) | 1 (`rampaging_bulls_horn`, `ConvergenceGate` needs `SkillEffect.Transform`, only `black_ram_mode` at `unlockLevel:999`) |
+| Relics triggered (effect fired in combat) | cannot be measured -- trace gap, ST2-B3 | -- | -- | -- |
+| Player skills cast | 13 / 22 | 0 | 0 | 9 (all `unlockLevel:999`, above `LevelCurve.MaxCurvedLevel = 200`) |
+| Offerable items offered (id+plus level) | 491 / 638 | 147 (all high-plus `_p7`-`_p10` copies; nonzero, shrinking-probability climb per `LootLadder.cs`) | 0 | 0 |
+| Room types resolved | 7 / 10 (+1 `Entry`, not applicable) | 0 | 0 | 2 (`ItemSpawn`: absent from the weight table; `Unknown`/`?`: retired from generation) |
+| Move used | 1 / 1 | 0 | 0 | 0 |
+| Spell book learned | 1 / 1 (all 6 book spells) | 0 | 0 | 0 |
+| Talent chosen | 0 / 1 | 1 (Mid/Late profile, not run this pass -- Fresh holds zero embers by design) | 0 | 0 |
+| Reward claimed | 1 / 1 | 0 | 0 | 0 |
+| Shop sell | 1 / 1 | 0 | 0 | 0 |
+| Second life used | cannot be measured -- trace gap, ST2-B4 | -- | -- | -- |
+| Transformation entered | 0 / 1 | 0 | 0 | 1 (same skill/gate as the unreachable-skill row) |
+| Transformation expired | no trace field exists at all -- ST2-B5 | -- | -- | -- |
+| ShopRefusal kinds (7 player-facing values) | 0 / 7 | 0 | 7 (no archetype ever constructs an illegal shop choice -- ST2-B6) | 0 |
+
+Determinism: `-ReplayShare 1` on both batches, 8000 checks each, 16,000
+total, zero mismatches. Read plainly per the plan's own correction of the
+first draft's mistake: a clean determinism result says the machinery the bot
+exercised on 32,000 plays leaked no unseeded randomness, not that every code
+path is deterministic -- Mid/Late profile setup and anything past depth 40
+were not exercised this pass. Bugs: `bugs: []` in both `summary.json`s,
+cross-checked directly against all 8 shard `runs.jsonl` files; zero rows for
+any of the ten invariant kinds `FightInvariants`/`FightRunner`/
+`BalanceBotRunner` can emit.
