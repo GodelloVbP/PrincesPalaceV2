@@ -85,7 +85,7 @@ namespace PrincesPalace.Domain.Tests
             var owned = Ancestry(tree, TalentSkeleton.SlotCount - 1);
 
             var refusal = TalentPage.Evaluate(
-                tree, Path, TalentSkeleton.SlotCount - 1, owned, embers: 999);
+                tree, Path, TalentSkeleton.SlotCount - 1, owned, embers: 999, budget: 999);
 
             Assert.AreEqual(TalentPage.Refusal.Gated, refusal,
                 "a slot whose path is short of its gate was offered anyway - this is the rule " +
@@ -100,7 +100,7 @@ namespace PrincesPalace.Domain.Tests
             var owned = Ancestry(tree, slot);
 
             Assert.AreEqual(TalentPage.Refusal.None,
-                TalentPage.Evaluate(tree, Path, slot, owned, embers: 999),
+                TalentPage.Evaluate(tree, Path, slot, owned, embers: 999, budget: 999),
                 "the gate is met and the slot is still refused");
         }
 
@@ -112,7 +112,7 @@ namespace PrincesPalace.Domain.Tests
             var owned = Ancestry(tree, slot);
 
             Assert.AreEqual(TalentPage.Refusal.None,
-                TalentPage.Evaluate(tree, Path, slot, owned, embers: 999),
+                TalentPage.Evaluate(tree, Path, slot, owned, embers: 999, budget: 999),
                 "an ungated slot is being gated");
         }
 
@@ -129,7 +129,7 @@ namespace PrincesPalace.Domain.Tests
             var tree = TreeWithGate(slot, gate: 9999);
 
             var refusal = TalentPage.Evaluate(
-                tree, Path, slot, new HashSet<string>(), embers: 999);
+                tree, Path, slot, new HashSet<string>(), embers: 999, budget: 999);
 
             Assert.AreEqual(TalentPage.Refusal.PrerequisiteMissing, refusal,
                 "a gated slot with no parents lit reports the gate, which sends the player to " +
@@ -146,7 +146,7 @@ namespace PrincesPalace.Domain.Tests
             var owned = Ancestry(tree, slot);
 
             Assert.AreEqual(TalentPage.Refusal.Gated,
-                TalentPage.Evaluate(tree, Path, slot, owned, embers: 0),
+                TalentPage.Evaluate(tree, Path, slot, owned, embers: 0, budget: 999),
                 "a gated stone the player also cannot afford reports the price, which is the " +
                 "smaller of the two obstacles");
         }
@@ -173,7 +173,7 @@ namespace PrincesPalace.Domain.Tests
             var unlocked = new HashSet<string> { "p0s0" };
 
             Assert.AreEqual(TalentPage.Refusal.AllegianceSworn,
-                TalentPage.Evaluate(tree, path: 1, slot: 0, unlocked, embers: 0),
+                TalentPage.Evaluate(tree, path: 1, slot: 0, unlocked, embers: 0, budget: 999),
                 "a second path's engine was offered while the first is sworn - three generation " +
                 "rules stacking is the case ContentDatabase.AllegianceRootOf says the economy " +
                 "cannot survive");
@@ -190,7 +190,7 @@ namespace PrincesPalace.Domain.Tests
             var unlocked = new HashSet<string> { "p0s0" };
 
             Assert.AreEqual(TalentPage.Refusal.AlreadyTaken,
-                TalentPage.Evaluate(tree, path: 0, slot: 0, unlocked, embers: 0));
+                TalentPage.Evaluate(tree, path: 0, slot: 0, unlocked, embers: 0, budget: 999));
         }
 
         // NOTHING ABOVE A ROOT IS BLOCKED BY THE OATH, which is the half of the
@@ -206,9 +206,84 @@ namespace PrincesPalace.Domain.Tests
             var unlocked = new HashSet<string> { "p0s0", "p1s0" };
 
             Assert.AreEqual(TalentPage.Refusal.None,
-                TalentPage.Evaluate(tree, path: 1, slot: 1, unlocked, embers: 99),
+                TalentPage.Evaluate(tree, path: 1, slot: 1, unlocked, embers: 99, budget: 999),
                 "a non-root stone on the unsworn path was refused, which locks the whole path " +
                 "rather than its engine");
+        }
+
+        // THE LIFETIME BUDGET, WHICH NOTHING WAS CHECKING EITHER.
+        //
+        // ContentDatabase.EmberSpendCap is 30 and its header spells out what
+        // the number buys ("30 deep into one path ... or 9+9+9 wide ... or 20+9
+        // fused") -- the three archetypes the whole ember economy is measured
+        // on. It was enforced in exactly one place: the balance bot's own
+        // preset builder, which clamped the GRANT so the question never came
+        // up. On the player's path nothing asked, because the wallet is shared,
+        // uncapped and accumulates across runs, and asking the wallet is all
+        // TalentPage.Evaluate did.
+        //
+        // THE LITERAL 30 rather than the constant. The point of the test is
+        // that the number the design argues about is the number the gate uses;
+        // reading the constant back would pass whatever it became.
+        [Test]
+        public void KindlingIsRefusedOnceThirtyEmbersAreCommitted()
+        {
+            var tree = TwoRootedPaths();
+
+            // Path 0 climbed to slot 19: the root is free and eighteen stones
+            // at 1 each, plus the free convergence -- 19 committed. Path 1's
+            // root is NOT taken (that is the allegiance rule above), so its
+            // stones are unreachable and the fixture stays on one path.
+            var unlocked = new HashSet<string>();
+            for (int i = 0; i <= 19; i++) unlocked.Add($"p0s{i}");
+
+            Assert.AreEqual(19, TalentPage.SpentOn(tree, 0, unlocked),
+                "fixture: the shape of this hand-built tree moved");
+
+            // A wallet with plenty in it, a budget with nothing left.
+            Assert.AreEqual(TalentPage.Refusal.BudgetSpent,
+                TalentPage.Evaluate(tree, 0, 20, unlocked, embers: 99, budget: 0),
+                "a character who has committed their whole lifetime budget was offered another " +
+                "stone because their wallet still had embers in it");
+        }
+
+        // AND THE BUDGET IS NOT THE WALLET, which is the whole reason this is a
+        // seventh refusal rather than a second reading of the fifth. A player
+        // holding no embers today and a player who has committed all thirty are
+        // told different things, because one of them can go and earn.
+        [Test]
+        public void AnEmptyWalletAndASpentBudgetAreDifferentAnswers()
+        {
+            var tree = TwoRootedPaths();
+            var unlocked = new HashSet<string> { "p0s0" };
+
+            Assert.AreEqual(TalentPage.Refusal.NotEnoughEmbers,
+                TalentPage.Evaluate(tree, 0, 1, unlocked, embers: 0, budget: 30));
+
+            Assert.AreEqual(TalentPage.Refusal.BudgetSpent,
+                TalentPage.Evaluate(tree, 0, 1, unlocked, embers: 30, budget: 0));
+        }
+
+        // A FREE STONE IS STILL FREE AT THE CAP, and this is the rule
+        // ContentDatabase.MeetsGates already stated: `OrbCost(talent) <=
+        // EmbersLeftFor(character)`, which is 0 <= 0 for the convergence and
+        // the capstone. Their price was always the gate rather than the ember,
+        // and a budget spent to the last point does not take back a gate the
+        // player has already paid in full.
+        [Test]
+        public void TheFreeLandmarksAreStillReachableWithNothingLeftToCommit()
+        {
+            var tree = new TalentTree();
+            for (int i = 0; i < TalentSkeleton.SlotCount; i++)
+            {
+                tree.Set(Path, i, new TalentSlot($"t{i}", $"Star {i}", "", i == 20 ? 0 : 1));
+            }
+
+            var owned = Ancestry(tree, 20);
+
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, Path, 20, owned, embers: 0, budget: 0),
+                "the capstone costs nothing, so a spent budget cannot be what is in the way");
         }
 
         // The near-redundancy that hid the missing rule for as long as it did.
@@ -224,7 +299,7 @@ namespace PrincesPalace.Domain.Tests
                 var owned = Ancestry(tree, authored.slot);
 
                 Assert.AreEqual(TalentPage.Refusal.None,
-                    TalentPage.Evaluate(tree, Path, authored.slot, owned, embers: 999),
+                    TalentPage.Evaluate(tree, Path, authored.slot, owned, embers: 999, budget: 999),
                     $"slot {authored.slot}'s gate of {authored.gate} is no longer covered by the " +
                     "orbs required to reach it, so enforcing it now blocks a purchase that used " +
                     "to succeed. That may be correct - but it is a balance change, not a screen one");

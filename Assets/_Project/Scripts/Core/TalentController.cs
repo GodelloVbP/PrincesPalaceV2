@@ -209,6 +209,13 @@ namespace PrincesPalace
         // top of their tree out of someone else's earnings.
         private int Embers => Current?.embers ?? 0;
 
+        // AND WHAT THEY MAY STILL COMMIT, which is not the same number. The
+        // wallet above accumulates across runs and is uncapped; this is what is
+        // left of ContentDatabase.EmberSpendCap -- a per-character lifetime
+        // budget of 30 that used to be enforced only inside the balance bot's
+        // preset builder, so the screen would happily kindle past it.
+        private int Budget => ContentDatabase.EmbersLeftFor(Current);
+
         // ---- input -----------------------------------------------------------
 
         private void StepPath(int direction)
@@ -525,6 +532,11 @@ namespace PrincesPalace
         {
             var tree = Tree;
 
+            // Read once for the whole pass rather than per stone: it walks
+            // every talent this character owns and prices each one, and 63
+            // stones would ask for the same answer 63 times.
+            int budget = Budget;
+
             for (int path = 0; path < TalentPage.PathCount; path++)
             {
                 int spent = TalentPage.SpentOn(tree, path, unlocked);
@@ -534,7 +546,7 @@ namespace PrincesPalace
                     int index = TalentScreen.OrbIndex(path, slot);
                     if (index >= orbs.Length) continue;
 
-                    var refusal = TalentPage.Evaluate(tree, path, slot, unlocked, Embers);
+                    var refusal = TalentPage.Evaluate(tree, path, slot, unlocked, Embers, budget);
                     bool taken = refusal == TalentPage.Refusal.AlreadyTaken;
                     bool reachable = refusal == TalentPage.Refusal.None;
                     bool costly = refusal == TalentPage.Refusal.NotEnoughEmbers;
@@ -789,7 +801,7 @@ namespace PrincesPalace
             }
 
             var here = tree.At(_path, _selectedSlot);
-            var refusal = TalentPage.Evaluate(tree, _path, _selectedSlot, unlocked, Embers);
+            var refusal = TalentPage.Evaluate(tree, _path, _selectedSlot, unlocked, Embers, Budget);
 
             // AN UNAUTHORED SLOT STILL ANSWERS, because its stone is drawn now
             // and a stone you can press has to say something back. What it says
@@ -845,13 +857,18 @@ namespace PrincesPalace
         // The committed meter, drawn as a length because a proportion is a
         // length and a pair of numbers is not.
         //
-        // AGAINST WHAT HAS BEEN EARNED, NOT AGAINST A CAP. The design measures
-        // this against a 30-ember ceiling; there is no such ceiling in this
-        // game -- embers are earned per character with no limit -- so a bar
-        // drawn against 30 would fill and then keep being full, which says
-        // something untrue about a currency you can still gather. Committed
-        // over committed-plus-held is the same shape and is a real quantity:
-        // empty when nothing is spent, full when everything is.
+        // AGAINST WHAT HAS BEEN EARNED, NOT AGAINST THE CAP -- and the reason
+        // is narrower than this comment used to claim. It said "there is no
+        // such ceiling in this game", which was wrong even when it was written:
+        // ContentDatabase.EmberSpendCap is the design's 30 and is now enforced
+        // on this very screen (TalentPage.Refusal.BudgetSpent). What is
+        // uncapped is EARNING -- the wallet accumulates across runs with no
+        // limit -- and a bar drawn against 30 would fill at the cap and then
+        // keep being full while the player kept gathering. Committed over
+        // committed-plus-held is the same shape and is a real quantity: empty
+        // when nothing is spent, full when everything is. Changing the
+        // denominator to the cap is a design decision, not a bug fix, so this
+        // stays as it is and says so.
         private void PaintMeter(Character character)
         {
             emberCount.Set(UiStrings.TalentEmbers, Embers);
@@ -887,6 +904,12 @@ namespace PrincesPalace
                 // have yet to do.
                 case TalentPage.Refusal.AllegianceSworn:
                     return UiStrings.TalentWhySworn.Template;
+
+                // THE NUMBER COMES FROM THE CONSTANT rather than from the
+                // sentence, so the copy cannot drift from the cap the way the
+                // meter's own comment below did.
+                case TalentPage.Refusal.BudgetSpent:
+                    return UiStrings.TalentWhySpent.Format(ContentDatabase.EmberSpendCap);
                 default:
                     return string.Empty;
             }
@@ -902,6 +925,7 @@ namespace PrincesPalace
                 case TalentPage.Refusal.Gated: return UiStrings.TalentKickerGated.Template;
                 case TalentPage.Refusal.NotAuthored: return UiStrings.TalentKickerUnwritten.Template;
                 case TalentPage.Refusal.AllegianceSworn: return UiStrings.TalentKickerSworn.Template;
+                case TalentPage.Refusal.BudgetSpent: return UiStrings.TalentKickerSpent.Template;
                 default: return UiStrings.TalentKickerLocked.Template;
             }
         }
@@ -921,6 +945,7 @@ namespace PrincesPalace
                 // this is. A default of KINDLE on a stone that cannot be
                 // kindled is the failure this arm exists to stop.
                 case TalentPage.Refusal.AllegianceSworn: return UiStrings.TalentLocked;
+                case TalentPage.Refusal.BudgetSpent: return UiStrings.TalentLocked;
                 default: return UiStrings.TalentInvest;
             }
         }

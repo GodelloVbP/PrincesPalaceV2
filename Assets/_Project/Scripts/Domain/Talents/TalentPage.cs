@@ -69,6 +69,18 @@ namespace PrincesPalace.Domain.Talents
             // way there anyway.
             Gated,
 
+            // The character's LIFETIME BUDGET is spent. Above
+            // NotEnoughEmbers because it is the more permanent of the two
+            // money answers and outranks it in the same way Gated outranks a
+            // price: a wallet fills again, a budget never does. Told "not
+            // enough Embers" at the cap, a player goes and earns thirty more
+            // and comes back to a tree that still refuses them.
+            //
+            // BELOW Gated, for the mirror reason -- reachability is what a
+            // player can still act on, and a stone they cannot reach is not
+            // yet a question about money at all.
+            BudgetSpent,
+
             NotEnoughEmbers,
         }
 
@@ -76,9 +88,19 @@ namespace PrincesPalace.Domain.Talents
         // correction. This used to mint its own -- "sheep.p0.s0" -- and write
         // them into the save, where nothing matched them: every consumer of
         // unlockedTalentIds looks for the ids in talents.json. See TalentTree.
+        //
+        // `embers` is the WALLET -- what this character holds right now.
+        // `budget` is what they may still COMMIT before their lifetime cap,
+        // which is a different quantity and the reason the two are separate
+        // parameters rather than one number the caller pre-combines: the player
+        // is told a different thing by each, and a caller that folded them
+        // together would have to pick one of the two sentences at the call
+        // site, where the rules do not live. ContentDatabase.EmbersLeftFor is
+        // the Core half that answers the second (it floors at 0, so a save from
+        // before the cap existed is over budget rather than negative).
         public static Refusal Evaluate(
             TalentTree tree, int path, int slot,
-            IReadOnlyCollection<string> unlocked, int embers)
+            IReadOnlyCollection<string> unlocked, int embers, int budget)
         {
             if (slot < 0 || slot >= TalentSkeleton.SlotCount) return Refusal.NotAuthored;
 
@@ -161,6 +183,23 @@ namespace PrincesPalace.Domain.Talents
                 return Refusal.Gated;
             }
 
+            // THE CAP, WHICH NOTHING ON THE PLAYER'S PATH WAS CHECKING.
+            //
+            // ContentDatabase.EmberSpendCap is 30 and its header spends a
+            // paragraph on what that number buys -- the deep, wide and fused
+            // archetypes the ember economy is measured on. Every enforcement of
+            // it lived in the balance bot's preset builder, which clamped what
+            // it GRANTED so the question was never asked; the screen asked the
+            // wallet, which is shared, uncapped, and accumulates across runs.
+            //
+            // BEFORE THE WALLET, and the same test as the wallet uses: cost
+            // against what is left. A free stone stays free at the cap, exactly
+            // as ContentDatabase.MeetsGates already said ("OrbCost(talent) <=
+            // EmbersLeftFor(character)") -- the convergence and the capstone
+            // were paid for with a gate, not with embers, and a spent budget
+            // does not take back a gate already met.
+            if (budget < here.Cost) return Refusal.BudgetSpent;
+
             if (embers < here.Cost) return Refusal.NotEnoughEmbers;
 
             return Refusal.None;
@@ -168,8 +207,8 @@ namespace PrincesPalace.Domain.Talents
 
         public static bool CanInvest(
             TalentTree tree, int path, int slot,
-            IReadOnlyCollection<string> unlocked, int embers) =>
-            Evaluate(tree, path, slot, unlocked, embers) == Refusal.None;
+            IReadOnlyCollection<string> unlocked, int embers, int budget) =>
+            Evaluate(tree, path, slot, unlocked, embers, budget) == Refusal.None;
 
         // A root is any slot with no parents -- the entry to a path, always
         // reachable. Derived rather than listed so a skeleton change cannot
@@ -179,8 +218,14 @@ namespace PrincesPalace.Domain.Talents
 
         // Every slot that is one step away from being taken. This is what the
         // screen lights up: the frontier, rather than the whole tree.
+        // TAKES THE BUDGET THOUGH IT IGNORES THE WALLET, and the asymmetry is
+        // the point rather than an oversight. The wallet is a state of today --
+        // spend gold elsewhere and it changes, and a frontier that moved with
+        // it would make the tree appear to change shape. The lifetime cap never
+        // refills: past it there is no orb to reach, ever, which is a fact
+        // about the shape of what this character can own.
         public static IReadOnlyList<int> Frontier(
-            TalentTree tree, int path, IReadOnlyCollection<string> unlocked)
+            TalentTree tree, int path, IReadOnlyCollection<string> unlocked, int budget)
         {
             var frontier = new List<int>();
 
@@ -195,7 +240,7 @@ namespace PrincesPalace.Domain.Talents
                 // more than one: a capstone would otherwise drop out of the
                 // frontier for being expensive, which is exactly the wallet
                 // leaking into the shape this guards against.
-                var refusal = Evaluate(tree, path, slot, unlocked, int.MaxValue);
+                var refusal = Evaluate(tree, path, slot, unlocked, int.MaxValue, budget);
                 if (refusal == Refusal.None) frontier.Add(slot);
             }
 

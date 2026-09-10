@@ -78,6 +78,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentKickerSworn =
             UiString.Define("talent.kicker_sworn", "SWORN ELSEWHERE");
 
+        // The eighth, and the only refusal that is about the character's whole
+        // history rather than about this stone: every Ember they may ever
+        // commit is committed. Not "TOO DEAR" -- they may be holding plenty.
+        public static readonly UiString TalentKickerSpent =
+            UiString.Define("talent.kicker_spent", "NOTHING LEFT TO COMMIT");
+
         public static readonly UiString TalentWhyLocked =
             UiString.Define("talent.why_locked", "Kindle the star beneath it first.");
         public static readonly UiString TalentWhyGated =
@@ -92,6 +98,15 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentWhySworn =
             UiString.Define("talent.why_sworn",
                 "You are sworn to another path's engine. Only a respec changes that.");
+
+        // TAKES THE CAP AS AN ARGUMENT rather than spelling out "30", because
+        // the number is ContentDatabase.EmberSpendCap's to change and a
+        // hardcoded one here would be a second copy of it in player-facing
+        // copy -- the worst place for a stale number to sit.
+        public static readonly UiString TalentWhySpent =
+            UiString.Define("talent.why_spent",
+                "This character has committed all {0} of their Embers. Respec to spend them elsewhere.",
+                "This character has committed all 30 of their Embers. Respec to spend them elsewhere.");
 
         public static readonly UiString TalentPriceEmbers =
             UiString.Define("talent.price_embers", "{0} Embers", "12 Embers");

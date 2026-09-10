@@ -56,8 +56,8 @@ namespace PrincesPalace
 
         // Spends this character's embers on one orb. False, changing nothing,
         // when TalentPage refuses it -- unauthored, already taken, an
-        // allegiance sworn elsewhere, a prerequisite or gate unmet, or not
-        // enough embers.
+        // allegiance sworn elsewhere, a prerequisite or gate unmet, the
+        // lifetime budget spent, or not enough embers.
         //
         // THE CONTENT'S OWN ID, which is the entire point of this seam.
         // Everything that reads unlockedTalentIds -- the effective stats, the
@@ -78,7 +78,18 @@ namespace PrincesPalace
             var unlocked = new System.Collections.Generic.HashSet<string>(
                 character.unlockedTalentIds ?? new System.Collections.Generic.List<string>());
 
-            if (!TalentPage.CanInvest(tree, path, slot, unlocked, character.embers)) return false;
+            // TWO NUMBERS, NOT ONE. The wallet is what this character holds;
+            // the budget is what they may still commit against
+            // ContentDatabase.EmberSpendCap, and until this passed the second
+            // one the cap was enforced nowhere on the player's path -- only in
+            // the balance bot's preset builder, which clamped its own grant.
+            // Both are read off the character here for the same reason the
+            // wallet already was: TalentPage is Domain and cannot see a
+            // Character or a catalogue, and this is the Core half whose whole
+            // job is knowing where those numbers are kept.
+            if (!TalentPage.CanInvest(tree, path, slot, unlocked,
+                                      character.embers,
+                                      ContentDatabase.EmbersLeftFor(character))) return false;
 
             var taken = tree.At(path, slot);
 

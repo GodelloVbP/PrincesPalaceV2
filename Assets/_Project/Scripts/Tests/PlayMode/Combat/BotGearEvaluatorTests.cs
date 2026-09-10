@@ -5,6 +5,7 @@ using NUnit.Framework;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Bot;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.PlayModeTests
@@ -253,6 +254,24 @@ namespace PrincesPalace.PlayModeTests
                 Assert.IsNotNull(ContentDatabase.GetTalent(id),
                     $"the preset kindled '{id}', which talents.json does not have");
             }
+
+            // THE GATE, NOT THE GRANT. This assertion used to be green for the
+            // wrong reason: ProfilePresets.EmbersFor clamped what it handed
+            // over to the cap, so the spend could not exceed what nothing was
+            // checking. The clamp is gone and the refusal
+            // (TalentPage.Refusal.BudgetSpent) is what holds this line now.
+            //
+            // It still cannot FAIL on today's content -- three live bosses is a
+            // budget of 3 against a cap of 30, so the preset never approaches
+            // it. The case where the gate actually bites is pinned without
+            // content in TalentGateTests.KindlingIsRefusedOnceThirtyEmbersAre-
+            // Committed; this is the end-to-end statement that the preset obeys
+            // the same rule the screen does.
+            Assert.AreEqual(EmberPayout.EmbersFor(
+                    ContentDatabase.Enemies.Count(e => e != null && e.Data.IsBoss)),
+                ProfilePresets.EmbersFor(ProfilePresets.Mid),
+                "EmbersFor is clamping its grant again - the cap belongs on the SPEND, and a " +
+                "second copy of it here is how it came to be enforced in the bot alone");
 
             Assert.LessOrEqual(ContentDatabase.SpentBy(character), ContentDatabase.EmberSpendCap);
             Assert.GreaterOrEqual(character.embers, 0, "a preset spent embers it did not have");

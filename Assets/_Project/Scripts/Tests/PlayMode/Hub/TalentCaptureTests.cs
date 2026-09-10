@@ -96,7 +96,8 @@ namespace PrincesPalace.PlayModeTests
             // it says nothing at all until something is selected. The frontier
             // is where the interesting refusals live.
             int frontier = TalentPage.Frontier(TalentTreeOf(talents), 0,
-                new System.Collections.Generic.HashSet<string>(character.unlockedTalentIds))
+                new System.Collections.Generic.HashSet<string>(character.unlockedTalentIds),
+                ContentDatabase.EmbersLeftFor(character))
                 .FirstOrDefault();
 
             var orb = talents.GetComponentsInChildren<Button>(includeInactive: true)

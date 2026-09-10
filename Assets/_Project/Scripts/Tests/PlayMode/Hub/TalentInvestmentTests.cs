@@ -204,6 +204,61 @@ namespace PrincesPalace.PlayModeTests
                 "nothing in this tree costs more than one ember, so cost is effectively flat after all");
         }
 
+        // THE LIFETIME CAP, DRIVEN THROUGH THE SCREEN'S OWN BUTTONS.
+        //
+        // TalentGateTests pins the rule against a hand-built tree in
+        // milliseconds; what it cannot see is whether the screen's click
+        // handler actually asks the question. It did not: TalentOps.Kindle
+        // passed the wallet and nothing else, so the only enforcement of
+        // ContentDatabase.EmberSpendCap in the game was the balance bot
+        // clamping its own grant.
+        //
+        // THE FIXTURE IS EXACTLY THIRTY, off the shipped tree rather than a
+        // constructed one: path 0's root is free, its 3x3 grid costs
+        // 3+6+9 = 18, the convergence is free, and the first five branch stones
+        // cost 2+2+2+3+3 = 12. Asserted as a fixture check so this test says
+        // "the pricing moved" rather than "the cap broke".
+        [UnityTest]
+        public IEnumerator KindlingIsRefusedOnceThirtyEmbersAreCommitted()
+        {
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+
+            // A wallet with far more in it than the budget allows -- which is a
+            // reachable state, not a contrived one: the wallet is shared across
+            // the roster, accumulates across runs, and is capped nowhere.
+            character.embers = 999;
+            character.unlockedTalentIds.Clear();
+
+            foreach (var talent in ContentDatabase.TalentsFor(character)
+                         .Where(t => t != null && t.Data.Column == 0 && t.Data.Row <= 15)
+                         .OrderBy(t => t.Data.Row))
+            {
+                character.unlockedTalentIds.Add(talent.id);
+            }
+
+            Assert.AreEqual(30, ContentDatabase.SpentBy(character),
+                "fixture: the shipped tree's prices moved, so this no longer sits exactly on the cap");
+
+            talents.Refresh();
+            yield return null;
+
+            int before = character.unlockedTalentIds.Count;
+
+            Press(talents, "Orb0_16");
+            yield return null;
+            Press(talents, "InvestButton");
+            yield return null;
+
+            Assert.AreEqual(before, character.unlockedTalentIds.Count,
+                "the screen kindled a stone past the character's 30-ember lifetime budget, which " +
+                "is the cap the deep/wide/fused archetypes are measured against");
+            Assert.AreEqual(30, ContentDatabase.SpentBy(character));
+            Assert.AreEqual(999, character.embers, "the refused stone still took the ember");
+        }
+
         // ---- the respec, level 20 of the reward track ------------------------------
 
         private static IEnumerator OpenTheTree()

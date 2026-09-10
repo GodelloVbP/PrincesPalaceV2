@@ -92,14 +92,22 @@ namespace PrincesPalace
             if (LevelFor(profile) <= 1) return 0;
 
             int bosses = ContentDatabase.Enemies.Count(e => e != null && e.Data.IsBoss);
-            int budget = EmberPayout.EmbersFor(bosses);
 
-            // Never past what one character may ever commit. A save that
-            // somehow held more could not spend the excess anyway
-            // (ContentDatabase.EmbersLeftFor floors at the cap), and a preset
-            // that handed over unspendable currency would report an ember
-            // total the game cannot produce.
-            return budget > ContentDatabase.EmberSpendCap ? ContentDatabase.EmberSpendCap : budget;
+            // NOT CLAMPED TO EmberSpendCap ANY MORE, and the deletion is the
+            // point rather than a tidy-up. This clamped the GRANT because
+            // nothing clamped the SPEND: TalentPage.Evaluate asked the wallet
+            // alone, so a preset handed 31 embers would have kindled 31 embers'
+            // worth of tree and quietly reported a build the game cannot
+            // produce. The cap is now a refusal on the same path the player
+            // uses (TalentPage.Refusal.BudgetSpent), so the honest grant is the
+            // whole payout and the gate stops the spend at 30 -- one rule, in
+            // one place, instead of a second copy of it living here.
+            //
+            // A save CAN hold more than the cap, and always could: EmberPayout
+            // pays one per unique boss with no reference to the cap, and the
+            // wallet is deliberately shared and uncapped. What is capped is how
+            // much of it any ONE character may commit.
+            return EmberPayout.EmbersFor(bosses);
         }
 
         // ---- building one --------------------------------------------------------------
@@ -245,9 +253,15 @@ namespace PrincesPalace
 
                 var unlocked = new HashSet<string>(character.unlockedTalentIds);
 
+                // RE-DERIVED EACH LOOP like the frontier itself, because each
+                // purchase spends some of it. This is what stops the preset at
+                // the lifetime cap now that EmbersFor no longer clamps the
+                // grant -- the same refusal the screen's button reads.
+                int budget = ContentDatabase.EmbersLeftFor(character);
+
                 for (int path = 0; path < TalentPage.PathCount; path++)
                 {
-                    foreach (int slot in TalentPage.Frontier(tree, path, unlocked))
+                    foreach (int slot in TalentPage.Frontier(tree, path, unlocked, budget))
                     {
                         var here = tree.At(path, slot);
 
@@ -256,7 +270,8 @@ namespace PrincesPalace
                         // is checked here, through the same CanInvest the
                         // screen's button reads rather than a second cost
                         // comparison that could disagree with it.
-                        if (!TalentPage.CanInvest(tree, path, slot, unlocked, character.embers)) continue;
+                        if (!TalentPage.CanInvest(tree, path, slot, unlocked,
+                                                  character.embers, budget)) continue;
 
                         options.Add(new TalentOption(
                             here.Id, here.Name, here.Cost,
