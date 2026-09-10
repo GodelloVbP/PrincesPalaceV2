@@ -62,6 +62,14 @@ except ImportError:
 
 PROCESSED_DIR = "Assets/_Project/Art/UI/Buttons/Processed"
 
+# The per-PC fight-HUD plates (tools/normalize_pc_plates.py). NOT a six-theme
+# kit -- one file per character, so the agreement check below has nothing to
+# compare and each file is its own group. Measured here anyway because
+# UiKitVisiblePadTests pins these pads exactly like the kit's, and a second
+# script with a second copy of edge_pads is how the two would drift.
+PLATE_DIR = "Assets/_Project/Resources/Plates"
+PLATE_LABEL = "PcPlateArt: the per-PC fight-HUD plate"
+
 THEMES = ["blue", "crimson", "gold", "green", "silver", "violet"]
 THRESHOLDS = (8, 32, 128)
 PIN_THRESHOLD = 32
@@ -111,6 +119,44 @@ def edge_pads(alpha, threshold):
         bottom += 1
 
     return left, top, right, bottom
+
+
+def measure_pc_plates():
+    """The per-PC plates, each its own group. Returns C#-pasteable lines.
+
+    Kept in this script rather than only in normalize_pc_plates.py because
+    this is the script ContainerArt/ButtonPlateArt's own pins are re-measured
+    with, and PcPlateArt pins the same kind of number -- one walk of one edge
+    algorithm, so the plates cannot end up measured by a second definition of
+    "where the paint stops"."""
+    if not os.path.isdir(PLATE_DIR):
+        print(f"== {PLATE_DIR} is not there -- no PC plates to measure (run tools/normalize_pc_plates.py)")
+        print()
+        return []
+
+    files = sorted(f for f in os.listdir(PLATE_DIR) if f.endswith(".png"))
+    if not files:
+        return []
+
+    print(f"== pc plates  ->  {PLATE_LABEL}  ({len(files)} files)")
+    lines = [f"  // {PLATE_LABEL}"]
+    for name in files:
+        path = os.path.join(PLATE_DIR, name)
+        image = Image.open(path).convert("RGBA")
+        alpha = np.array(image)[:, :, 3]
+        h, w = alpha.shape
+        for t in THRESHOLDS:
+            l, top, r, b = edge_pads(alpha, t)
+            print(
+                f"  {name:24s} {w}x{h}  thr{t:>3d}  "
+                f"L{l:>3d}({l / w:.4f}) T{top:>3d}({top / h:.4f}) "
+                f"R{r:>3d}({r / w:.4f}) B{b:>3d}({b / h:.4f})"
+            )
+        l, top, r, b = edge_pads(alpha, PIN_THRESHOLD)
+        lines.append(
+            f"  // {name}: left {l / w:.4f}  top {top / h:.4f}  right {r / w:.4f}  bottom {b / h:.4f}")
+    print()
+    return ["\n".join(lines)]
 
 
 def main():
@@ -215,6 +261,8 @@ def main():
             f"top: {avg_t:.4f}f, bottom: {avg_b:.4f}f),"
         )
         print()
+
+    csharp_blocks.extend(measure_pc_plates())
 
     print(f"---- C#-PASTEABLE, threshold {PIN_THRESHOLD}, fraction averaged across each group's six themes ----")
     print()

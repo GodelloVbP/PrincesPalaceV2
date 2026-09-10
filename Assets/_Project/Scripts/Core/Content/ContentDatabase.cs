@@ -415,6 +415,13 @@ namespace PrincesPalace.Content
             // one's face.
             CharacterPortraits.Reset();
 
+            // The fight-HUD plates are keyed by the PATH a row authored
+            // rather than by id, so a swapped roster changes which path is
+            // asked for rather than what a path resolves to -- but a test
+            // that also swaps the PNG behind a path would otherwise keep the
+            // old sprite forever. Same drop, same call site.
+            PcPlateSprites.Reset();
+
             // Same shape, same reason: RewardTracks memoises one
             // RewardTrackDefinition per character id, built out of the
             // _rewardTracks assets just dropped above, so a swapped catalogue

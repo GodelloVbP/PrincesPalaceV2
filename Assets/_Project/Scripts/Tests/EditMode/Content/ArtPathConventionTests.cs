@@ -33,8 +33,20 @@ namespace PrincesPalace.Domain.Tests
         // calling it "vfxPath" inside a type already called a presentation
         // would be the stutter the nesting removed. The sweep found
         // "vfx.sfxPath" and missed "vfx.path" until this said so.
+        //
+        // AND "Art", added 2026-09-10 with RawCharacterEntry.plateArt. That
+        // field is a Resources path like portraitPath beside it and could
+        // have been called plateArtPath -- but it is the character's PLATE,
+        // one authored thing, and the owner names it that way. Widening the
+        // sweep is the cheaper half of that choice and strictly the safer
+        // one: a future `conceptArt` holding a path is now seen and refused
+        // until it is classified, where before it would have been invisible
+        // to this file in both directions. A field ending in "Art" that is
+        // NOT a path is the false positive, and the fix for one is to
+        // classify it or rename it, which is what the sweep is for.
         private static bool IsPathShaped(string fieldName) =>
             fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet")
+            || fieldName.EndsWith("Art")
             || string.Equals(fieldName, "path", StringComparison.Ordinal);
 
         // ONE LEVEL DOWN AS WELL AS ON THE ENTRY ITSELF, reported dotted.

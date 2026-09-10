@@ -55,6 +55,16 @@ namespace PrincesPalace.Domain.Tests
                 // starting-squad rule, so any valid theme does; a case that
                 // is ABOUT the theme uses Probe() below.
                 plateTheme = "Blue",
+
+                // REQUIRED for the same reason and in the same pass: the
+                // plate IS the character on the fight column now, so a row
+                // without one has no face there at all. The convention check
+                // is what the value's SHAPE has to satisfy (Resources-
+                // relative, no extension); whether the file exists is
+                // ContentDatabase.ValidateContent's job and not this
+                // resolver's, so a fixture path that names nothing is fine
+                // here.
+                plateArt = "Plates/pc_sheep",
             };
         }
 
@@ -77,6 +87,7 @@ namespace PrincesPalace.Domain.Tests
                 intelligence = 10,
                 charisma = 10,
                 plateTheme = plateTheme,
+                plateArt = "Plates/pc_sheep",
             };
         }
 
@@ -115,8 +126,9 @@ namespace PrincesPalace.Domain.Tests
                 charisma = charisma,
 
                 // Authored so an ABILITY-SCORE case cannot fail for a theme
-                // reason -- plateTheme is required now.
+                // or a plate reason -- both are required now.
                 plateTheme = "Blue",
+                plateArt = "Plates/pc_sheep",
             };
         }
 
@@ -213,6 +225,86 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // ---- plateArt -------------------------------------------------------
+        //
+        // The character's OWN fight-HUD plate (the leather strip with their
+        // head embossed at the right end). REQUIRED, unlike every other art
+        // path in this project: art is optional almost everywhere and the
+        // missing-art fallbacks are deliberate, but the HUD column has no
+        // fallback plate to fall back TO -- the acting character is a
+        // highlight on their own plate now rather than a promotion to a
+        // bigger card, so a plateless row is an empty rectangle where the
+        // other two have a face.
+        //
+        // WHETHER THE FILE EXISTS is not this resolver's job and is not
+        // tested here: a Domain resolver cannot open a file, and
+        // ContentDatabase.ValidateContent is what refuses a path that loads
+        // nothing. What is tested here is the two things a resolver CAN see
+        // -- that the field was authored at all, and that it was authored in
+        // the right convention.
+
+        private static RawCharacterEntry ProbeWithPlateArt(string plateArt)
+        {
+            var probe = Probe("Blue");
+            probe.plateArt = plateArt;
+            return probe;
+        }
+
+        private static bool ResolvePlateArt(string plateArt, out ResolvedCharacter resolved, out string error)
+        {
+            var entries = new List<RawCharacterEntry>
+            {
+                Starter("a", 1), Starter("b", 2), Starter("c", 3), ProbeWithPlateArt(plateArt),
+            };
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
+            resolved = ok ? all.Single(c => c.Id == "probe") : null;
+            error = ok ? null : string.Join(" | ", errors);
+            return ok;
+        }
+
+        [Test]
+        public void AnAuthoredPlateArt_ResolvesOntoTheCharacter()
+        {
+            Assert.IsTrue(ResolvePlateArt("Plates/pc_bear", out var resolved, out string error), error);
+            Assert.AreEqual("Plates/pc_bear", resolved.PlateArt);
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void AnUnauthoredPlateArt_RefusesTheBuild(string authored)
+        {
+            Assert.IsFalse(ResolvePlateArt(authored, out _, out string error),
+                "a character with no plate has no face on the fight column -- that must not build");
+
+            StringAssert.Contains("probe", error, "the refusal must name the character");
+            StringAssert.Contains("plateArt", error, "the refusal must name the field");
+            StringAssert.Contains("Plates/pc_sheep", error,
+                "the refusal must show the shape an author has to write");
+        }
+
+        // THE TWO CONVENTIONS COEXIST IN CONTENT JSON AND ARE DISTINGUISHED
+        // ONLY BY FIELD NAME (ArtPathConvention's own header). Getting this
+        // one wrong fails SILENTLY at runtime -- Resources.Load returns null
+        // for an Assets/ path and for a path with an extension -- so the
+        // resolver refuses both shapes rather than letting a blank plate
+        // ship.
+        [Test]
+        public void AnAssetsRelativePlateArt_IsRefusedAsTheWrongConvention()
+        {
+            Assert.IsFalse(
+                ResolvePlateArt("Assets/_Project/Resources/Plates/pc_bear.png", out _, out string error),
+                "plateArt is Resources.Load'ed at runtime, so an Assets/ path loads nothing");
+            StringAssert.Contains("RESOURCES-relative", error);
+        }
+
+        [Test]
+        public void APlateArtCarryingAFileExtension_IsRefused()
+        {
+            Assert.IsFalse(ResolvePlateArt("Plates/pc_bear.png", out _, out string error),
+                "Resources.Load takes the path without an extension and returns null with one");
+            StringAssert.Contains("extension", error);
+        }
+
         // ---- primaryPoolId -------------------------------------------------
         //
         // Which resource a character's skills spend, as a pools.json id. The
@@ -242,9 +334,10 @@ namespace PrincesPalace.Domain.Tests
                 charisma = 10,
 
                 // Authored explicitly so a later change to how plateTheme
-                // is defaulted cannot make a POOL case fail for a theme
-                // reason.
+                // or plateArt is defaulted cannot make a POOL case fail for
+                // an identity reason.
                 plateTheme = "Blue",
+                plateArt = "Plates/pc_sheep",
             };
 
             // `authorTheField` is what separates "the author omitted the

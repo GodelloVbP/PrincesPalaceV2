@@ -91,6 +91,17 @@ namespace PrincesPalace.Domain.Content
         // only; CombatantState learns about pools in phase B.
         public string PrimaryPoolId = "mana";
 
+        // WHERE THIS CHARACTER'S FIGHT-HUD PLATE LIVES, Resources-relative
+        // and without an extension (RawCharacterEntry.plateArt). Loaded at
+        // runtime by PcPlateSprites, never baked -- the fight HUD's three
+        // plate slots learn their occupant per encounter, so there is no
+        // build-time moment at which the right sprite is known.
+        //
+        // Empty is unreachable from content (the resolver refuses it) and
+        // means "a fixture built this by hand", which draws no plate rather
+        // than a wrong one.
+        public string PlateArt = "";
+
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.SignaturePool for why that distinction is kept
         // sharp.
@@ -126,7 +137,16 @@ namespace PrincesPalace.Domain.Content
             // also the shipped answer: every character in the game spends
             // mana, so a fixture that has no opinion about pools gets the
             // one every real row has.
-            string primaryPoolId = "mana")
+            string primaryPoolId = "mana",
+            // Trailing and optional for the third time, and the reason is
+            // the same one plateTheme's note gives: C# forbids a required
+            // parameter after an optional one. Content DOES have to author
+            // it -- CharacterEntryResolver refuses a row without one -- so
+            // the empty default is reachable only from the serializer
+            // constructor and the fixtures, where "this character has no
+            // plate art" is the honest answer and PcPlateSprites returns
+            // null for it without complaint.
+            string plateArt = "")
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -150,6 +170,7 @@ namespace PrincesPalace.Domain.Content
             SquadSlot = squadSlot;
             PlateTheme = plateTheme;
             PrimaryPoolId = string.IsNullOrWhiteSpace(primaryPoolId) ? "mana" : primaryPoolId;
+            PlateArt = plateArt ?? "";
         }
     }
 }

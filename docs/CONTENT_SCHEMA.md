@@ -39,6 +39,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
 | `plateTheme` | string | `""` | Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build. | Gold, Crimson, Violet, Blue, Green, Silver |
+| `plateArt` | string | `""` | Resources-relative path (no extension) to this character's fight-HUD plate, e.g. 'Plates/pc_sheep'. Required: an empty path, or one that loads nothing, refuses the build. |  |
 | `primaryPoolId` | string | `"mana"` | The pools.json id of the resource this character's skills spend; refused unless pools.json defines it, and blank means 'mana'. |  |
 | `signatureId` | string | `""` | The id of this character's private signature resource; empty means the character has none. |  |
 | `signatureDisplayName` | string | `""` | The name shown for the signature resource, e.g. 'Wool'. |  |

@@ -116,6 +116,28 @@ namespace PrincesPalace.Content
                         errors.Add($"Character '{character.id}' has {score} {value}, outside the authorable range {MinAbilityScore}-{MaxAbilityScore}.");
                     }
                 }
+
+                // THE PLATE HAS TO ACTUALLY LOAD, which is a check no
+                // resolver can make: CharacterEntryResolver sees the string
+                // and refuses an empty one or one written the wrong
+                // convention (ArtPathConvention), but it cannot open a file.
+                // This can, and the failure it catches is the silent one --
+                // Resources.Load<Sprite> returns null for a typo, for a PNG
+                // that imported as a plain Texture2D, and for a file nobody
+                // committed, with no error anywhere. The plate is the
+                // character's whole identity on the fight column, so the
+                // consequence is a blank strip in the HUD rather than a
+                // missing decoration, and it is worth a refused build.
+                string plateArt = character.Data.PlateArt;
+                if (!string.IsNullOrWhiteSpace(plateArt)
+                    && UnityEngine.Resources.Load<UnityEngine.Sprite>(plateArt.Trim()) == null)
+                {
+                    errors.Add($"Character '{character.id}' names plateArt '{plateArt}', which loads nothing. " +
+                               "It must be Resources-relative and without an extension (e.g. 'Plates/pc_sheep'), " +
+                               "the PNG must sit under Assets/_Project/Resources/, and it must import as a Sprite " +
+                               "-- Resources.Load<Sprite> returns null for a plain Texture2D. " +
+                               "Run `py tools/normalize_pc_plates.py` to (re)produce the plates.");
+                }
             }
 
             foreach (var enemy in _enemies)

@@ -16,10 +16,18 @@ namespace PrincesPalace.Domain.Tests
     // the only shape supported here, and anything else throws by name rather
     // than being guessed at.
     //
-    // ONLY ALPHA IS RETURNED. Nothing that reads this cares what colour a
-    // pixel is -- the questions are all "is there art here", so carrying the
-    // RGB planes around would be three quarters of the memory for none of the
-    // answers.
+    // ONLY ALPHA IS RETURNED BY DEFAULT. Almost nothing that reads this
+    // cares what colour a pixel is -- the questions are nearly all "is there
+    // art here", so carrying the RGB planes around would be three quarters of
+    // the memory for none of the answers, across a whole roster of stills.
+    //
+    // ONE READER DOES CARE, and asks for it explicitly: PcPlateArtTests has
+    // to find the EMBOSSED head on a PC plate, which is tone-on-tone -- it has
+    // no alpha of its own and barely any hue, so the only thing separating it
+    // from empty leather is how much the luminance VARIES down a column.
+    // `Read(path, keepLuminance: true)` keeps one extra byte plane for that
+    // and LuminanceAt throws without it, so the default posture is unchanged
+    // and a caller cannot silently read zeros.
     internal sealed class PngAlpha
     {
         public int Width { get; }
@@ -31,14 +39,32 @@ namespace PrincesPalace.Domain.Tests
         // LowestOpaqueRow's own note.
         private readonly byte[] _alpha;
 
-        private PngAlpha(int width, int height, byte[] alpha)
+        // Null unless the caller asked for it -- see the header. One byte per
+        // pixel: the flat mean of R, G and B, which is what a "does this
+        // column vary" question needs and is not a colorimetric luminance.
+        private readonly byte[] _luminance;
+
+        private PngAlpha(int width, int height, byte[] alpha, byte[] luminance)
         {
             Width = width;
             Height = height;
             _alpha = alpha;
+            _luminance = luminance;
         }
 
         public byte At(int x, int y) => _alpha[y * Width + x];
+
+        public byte LuminanceAt(int x, int y)
+        {
+            if (_luminance == null)
+            {
+                throw new InvalidOperationException(
+                    "this PNG was read alpha-only. Pass keepLuminance: true to PngAlpha.Read when the " +
+                    "question is about what the art LOOKS like rather than where it is.");
+            }
+
+            return _luminance[y * Width + x];
+        }
 
         // The bottom-most row holding a pixel at least this opaque, or -1 for
         // a wholly transparent image. Rows count DOWN from the top, so a
@@ -95,7 +121,7 @@ namespace PrincesPalace.Domain.Tests
             return right < 0 ? ((int, int, int, int)?)null : (left, top, right, bottom);
         }
 
-        public static PngAlpha Read(string path)
+        public static PngAlpha Read(string path, bool keepLuminance = false)
         {
             byte[] bytes = File.ReadAllBytes(path);
 
@@ -156,7 +182,8 @@ namespace PrincesPalace.Domain.Tests
             idat.ReadByte();
 
             byte[] raw = Inflate(idat, height * (width * 4 + 1));
-            return new PngAlpha(width, height, Unfilter(raw, width, height));
+            byte[] luminance = keepLuminance ? new byte[width * height] : null;
+            return new PngAlpha(width, height, Unfilter(raw, width, height, luminance), luminance);
         }
 
         private static byte[] Inflate(Stream compressed, int expected)
@@ -186,7 +213,7 @@ namespace PrincesPalace.Domain.Tests
         // depth 8), one filter byte per row. The five filter types are the
         // whole of the format's compression pre-pass and Pillow uses all of
         // them, so none can be skipped as "probably not used".
-        private static byte[] Unfilter(byte[] raw, int width, int height)
+        private static byte[] Unfilter(byte[] raw, int width, int height, byte[] luminance = null)
         {
             const int bpp = 4;
             int stride = width * bpp;
@@ -221,6 +248,11 @@ namespace PrincesPalace.Domain.Tests
                 for (int x = 0; x < width; x++)
                 {
                     alpha[y * width + x] = current[x * bpp + 3];
+                    if (luminance != null)
+                    {
+                        luminance[y * width + x] =
+                            (byte)((current[x * bpp] + current[x * bpp + 1] + current[x * bpp + 2]) / 3);
+                    }
                 }
 
                 var swap = previous;

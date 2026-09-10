@@ -36,10 +36,24 @@ public sealed class UiKitImportPostprocessor : AssetPostprocessor
     private const string ButtonsRoot = "/Art/UI/Buttons/Processed/";
     private const string FightButtonsRoot = "/Art/UI/FightButtons/Processed/";
 
+    // THE PER-PC FIGHT-HUD PLATES, a third root under the same settings and
+    // for a sharper version of the same reason. They are delivered 2048x365
+    // and drawn at 452x81 -- a 4.5x minification, where the kit's plates run
+    // about 5x -- so a mip chain is not a nicety here, it is the difference
+    // between an embossed head and a shimmering one. They live under
+    // Resources/ rather than Art/ because content addresses them by a
+    // Resources path at runtime (see PcPlateSprites); the import settings a
+    // wide UI plate wants do not change with the folder it sits in, so this
+    // stays one postprocessor rather than a second copy of the same six
+    // lines.
+    private const string PcPlatesRoot = "/Resources/Plates/";
+
     private void OnPreprocessTexture()
     {
         if (string.IsNullOrEmpty(assetPath)
-            || (!assetPath.Contains(ButtonsRoot) && !assetPath.Contains(FightButtonsRoot)))
+            || (!assetPath.Contains(ButtonsRoot)
+                && !assetPath.Contains(FightButtonsRoot)
+                && !assetPath.Contains(PcPlatesRoot)))
         {
             return;
         }
@@ -74,6 +88,9 @@ public sealed class UiKitImportPostprocessor : AssetPostprocessor
             ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
         AssetDatabase.ImportAsset(
             "Assets/_Project/Art/UI/FightButtons/Processed",
+            ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+        AssetDatabase.ImportAsset(
+            "Assets/_Project/Resources/Plates",
             ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
         AssetDatabase.Refresh();
         Debug.Log("REIMPORT-COMPLETE: UiKit");

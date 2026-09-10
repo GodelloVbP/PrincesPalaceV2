@@ -58,6 +58,16 @@ namespace PrincesPalace.Domain.Content
                 { "spritePath", ArtPathKind.RuntimeLoaded },
                 { "battleSpritePath", ArtPathKind.RuntimeLoaded },
 
+                // THE PC'S OWN FIGHT-HUD PLATE (the leather strip with their
+                // head embossed at the right end). RUNTIME, deliberately and
+                // for the reason portraitPath moved: a fight HUD holds three
+                // plate slots whose OCCUPANT is decided per encounter, so
+                // nothing about which sprite goes where can be known at scene
+                // build time -- and a character authored after the last scene
+                // build would otherwise get a correct name on somebody else's
+                // plate.
+                { "plateArt", ArtPathKind.RuntimeLoaded },
+
                 // RUNTIME SINCE 2026-09-06, and it was EditorBaked before.
                 // Baked meant the Character pane's scene held the sprite, so a
                 // character authored after the last scene build had a correct

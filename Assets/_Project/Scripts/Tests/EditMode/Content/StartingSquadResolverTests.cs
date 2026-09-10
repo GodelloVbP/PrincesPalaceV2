@@ -54,6 +54,13 @@ namespace PrincesPalace.Domain.Tests
                 // scores are: a SQUAD rejection that is really a theme
                 // rejection proves nothing about the squad.
                 plateTheme = "Blue",
+
+                // REQUIRED as of 2026-09-10, same posture as plateTheme
+                // above and for the same reason: the plate IS the character
+                // on the fight column, so an unauthored one refuses the
+                // build. These fixtures are about the SQUAD rule, so any
+                // valid path does.
+                plateArt = "Plates/pc_sheep",
             };
         }
 

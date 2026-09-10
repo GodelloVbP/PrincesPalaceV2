@@ -99,6 +99,22 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build.")]
         public string plateTheme = "";
 
+        // THIS CHARACTER'S OWN FIGHT-HUD PLATE: the wide leather strip with
+        // their head embossed at the right end, drawn by
+        // tools/normalize_pc_plates.py onto the one canvas every plate shares
+        // (PcPlateArt). Resources-relative and without an extension, e.g.
+        // "Plates/pc_sheep", because the fight HUD's three plate slots learn
+        // their occupant per encounter and load it then.
+        //
+        // REQUIRED, like plateTheme beside it and for a stronger reason: the
+        // plate IS the character's identity on that column now -- the acting
+        // PC is a highlight on their own plate rather than a promotion to a
+        // bigger card -- so a row without one has no face in the HUD at all.
+        // ContentDatabase.ValidateContent additionally refuses a path that
+        // loads nothing, since Resources.Load returning null is silent.
+        [ContentDoc("Resources-relative path (no extension) to this character's fight-HUD plate, e.g. 'Plates/pc_sheep'. Required: an empty path, or one that loads nothing, refuses the build.")]
+        public string plateArt = "";
+
         // WHICH RESOURCE THIS CHARACTER'S SKILLS SPEND, as a pools.json id.
         //
         // DEFAULTS TO "mana", which is what makes this field free: every

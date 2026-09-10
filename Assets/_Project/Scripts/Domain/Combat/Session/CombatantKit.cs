@@ -78,6 +78,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // through Domain.UiKit.PcTheme.
         public readonly ButtonTheme PlateTheme;
 
+        // WHERE THIS CHARACTER'S HUD PLATE ART LIVES (Resources-relative, no
+        // extension), carried beside PlateTheme for exactly the same reason:
+        // the two are one identity, one authored per row, and the HUD paints
+        // both off what walked into the fight rather than re-reading content
+        // per frame. ResolvedCharacter.PlateArt; empty only for a hand-built
+        // kit, which draws no plate rather than somebody else's.
+        public readonly string PlateArt;
+
         public PlayerKit(string id, CharacterRole role,
                          IReadOnlyList<ResolvedSkill> skills,
                          IReadOnlyList<ResolvedRelic> relics,
@@ -91,7 +99,11 @@ namespace PrincesPalace.Domain.Combat.Session
                          // ResolvedCharacter.PlateTheme's note gives: a
                          // hand-built kit should read as untinted, not as
                          // authored. Only fixtures reach it.
-                         ButtonTheme plateTheme = ButtonTheme.Blue)
+                         ButtonTheme plateTheme = ButtonTheme.Blue,
+                         // Last and optional, the same C# constraint every
+                         // optional above it hit. A fixture with no plate
+                         // draws none.
+                         string plateArt = "")
         {
             Level = level;
             Id = id;
@@ -101,6 +113,7 @@ namespace PrincesPalace.Domain.Combat.Session
             AttackType = attackType;
             SkillPowerMultiplier = skillPowerMultiplier;
             PlateTheme = plateTheme;
+            PlateArt = plateArt ?? "";
 
             _relicEffects = new HashSet<RelicEffect>();
             for (int i = 0; i < Relics.Count; i++)

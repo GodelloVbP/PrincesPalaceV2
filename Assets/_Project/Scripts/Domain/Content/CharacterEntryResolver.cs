@@ -252,6 +252,25 @@ namespace PrincesPalace.Domain.Content
             // one per resolver that remembered.
             if (!ArtPathConvention.Check(label, "portraitPath", raw.portraitPath, out error)) return false;
             if (!ArtPathConvention.Check(label, "battleSpritePath", raw.battleSpritePath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "plateArt", raw.plateArt, out error)) return false;
+
+            // REQUIRED, and checked AFTER the convention so a row that
+            // authored the path the wrong way round hears which mistake it
+            // made rather than "you did not author one". Art is optional
+            // almost everywhere in this project (ArtPathConvention.Check
+            // passes an empty value on purpose); this is one of the two
+            // exceptions on a character row, because the fight HUD's plate
+            // column has no fallback drawing to fall back TO -- a plateless
+            // character would be an empty rectangle where the other two have
+            // a face.
+            if (string.IsNullOrWhiteSpace(raw.plateArt))
+            {
+                error = $"{label}: plateArt is required -- it is this character's own fight-HUD plate, " +
+                        "the surface their name, meters and status badges are drawn on. Write it " +
+                        "Resources-relative and without an extension, e.g. 'Plates/pc_sheep'; " +
+                        "tools/normalize_pc_plates.py is what produces the file.";
+                return false;
+            }
 
             bool hasSignature = !string.IsNullOrWhiteSpace(raw.signatureId);
             if (hasSignature)
@@ -322,7 +341,8 @@ namespace PrincesPalace.Domain.Content
                 raw.startsInSquad,
                 raw.squadSlot,
                 plateTheme,
-                primaryPoolId);
+                primaryPoolId,
+                raw.plateArt.Trim());
             error = null;
             return true;
         }

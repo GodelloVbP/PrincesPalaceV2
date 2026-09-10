@@ -1,0 +1,140 @@
+{
+  "canvas": [
+    2048,
+    365
+  ],
+  "glow": {
+    "output": "pc_plate_glow.png",
+    "padPx": 36,
+    "sha256": "331de669588e345d97fa9ff3490744d2696228dcf070d1d5d3fe8fe689a2dfdc"
+  },
+  "params": {
+    "alphaThreshold": 32,
+    "canvasW": 2048,
+    "cutBlendPx": 64,
+    "cutCentreFrac": 0.4,
+    "glowPadFrac": 0.1,
+    "plates": [
+      [
+        "sheep",
+        "shawn.png"
+      ],
+      [
+        "bear",
+        "bjorn.png"
+      ],
+      [
+        "owl",
+        "odette.png"
+      ]
+    ],
+    "referenceId": "sheep"
+  },
+  "plates": [
+    {
+      "blendColumns": 0,
+      "contentInsetPx": [
+        48,
+        10,
+        41,
+        11
+      ],
+      "cropBox": [
+        48,
+        187,
+        2068,
+        547
+      ],
+      "cropSize": [
+        2020,
+        360
+      ],
+      "cutAtColumn": 0,
+      "headStartColumn": 1658,
+      "headZoneFrac": 0.1904,
+      "id": "sheep",
+      "output": "pc_sheep.png",
+      "outputSha256": "a5f2ecd2124551a523e7ccb85929839adcda7552644842f23ba437540548ff4d",
+      "removedColumns": 0,
+      "source": "shawn.png",
+      "sourceSha256": "aba82af267ddc42bd2be93b832a176321264c38a243fcab289150cf44f2c5c2c",
+      "visiblePadPx": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "blendColumns": 64,
+      "contentInsetPx": [
+        60,
+        2,
+        60,
+        3
+      ],
+      "cropBox": [
+        18,
+        210,
+        2109,
+        487
+      ],
+      "cropSize": [
+        2091,
+        277
+      ],
+      "cutAtColumn": 836,
+      "headStartColumn": 1676,
+      "headZoneFrac": 0.1816,
+      "id": "bear",
+      "output": "pc_bear.png",
+      "outputSha256": "f55c839c9369567be8c03612da20222732c83b101bb5844ee89a62e2079f3d60",
+      "removedColumns": 537,
+      "source": "bjorn.png",
+      "sourceSha256": "38f4e67b302429f3fb0e933cebe4492eeb5ca8d9bde4f138717d9c806dbbfa1d",
+      "visiblePadPx": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "blendColumns": 64,
+      "contentInsetPx": [
+        59,
+        2,
+        58,
+        2
+      ],
+      "cropBox": [
+        41,
+        198,
+        2086,
+        511
+      ],
+      "cropSize": [
+        2045,
+        313
+      ],
+      "cutAtColumn": 818,
+      "headStartColumn": 1755,
+      "headZoneFrac": 0.1431,
+      "id": "owl",
+      "output": "pc_owl.png",
+      "outputSha256": "cbe8931d973cf3c391ee67fc5751e66e7a636f6206a898e89b3ad0b5548beec0",
+      "removedColumns": 289,
+      "source": "odette.png",
+      "sourceSha256": "d208a7f9551560ec35ead531acca60b75e9a020cbb8f15e2f203aa3539f44b38",
+      "visiblePadPx": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "targetAspect": 5.611111,
+  "tool": "tools/normalize_pc_plates.py",
+  "version": 1
+}
