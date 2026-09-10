@@ -147,6 +147,52 @@ namespace PrincesPalace.PlayModeTests
             RunManager.BankPayout(0);
 
             Assert.AreEqual(0, RunManager.Run.gold);
+            Assert.AreEqual(0, RunManager.Run.goldEarned);
+        }
+
+        // ---- earned is not just what fights paid --------------------------
+        //
+        // Run statistics shows "Gold held" and "Gold earned" side by side, and
+        // RunStatRows says why: "Held and earned are different numbers as soon
+        // as anything is spent, and a shop exists. Showing only one of them
+        // makes the other unanswerable."
+        //
+        // That only reads as a sentence while earned >= held. goldEarned was
+        // credited in RunLedger.RecordRoom, whose one caller is a settled
+        // FIGHT -- so a treasure room's 15-30 (RoomResolver -> BankPayout) and
+        // a shop sale (run.gold += paid, bypassing BankPayout entirely) both
+        // moved held without moving earned. Walk into a treasure that rolls 22
+        // and the pane read 22 held against 0 earned.
+        //
+        // Pinned on BankPayout rather than on a treasure room because
+        // BankPayout is now the contract: it is the one place a run is
+        // credited, so it is the one place earning is recorded.
+
+        [Test]
+        public void TreasureGoldIsGoldTheRunEarned()
+        {
+            RunManager.StartRun(Seed);
+
+            RunManager.BankPayout(22);
+
+            Assert.AreEqual(22, RunManager.Run.gold, "a treasure room's stash reached the purse");
+            Assert.AreEqual(22, RunManager.Run.goldEarned,
+                "and the run does not admit to having earned it, so Gold earned reads below Gold held");
+        }
+
+        [Test]
+        public void SpendingMovesHeldWithoutMovingEarned()
+        {
+            // The other half of the same contract, and the reason the two
+            // fields exist at all: crediting is BankPayout's, spending is not.
+            RunManager.StartRun(Seed);
+
+            RunManager.BankPayout(50);
+            RunManager.Run.gold -= 30;
+
+            Assert.AreEqual(20, RunManager.Run.gold);
+            Assert.AreEqual(50, RunManager.Run.goldEarned,
+                "spending un-earned what had already been earned");
         }
 
         [Test]

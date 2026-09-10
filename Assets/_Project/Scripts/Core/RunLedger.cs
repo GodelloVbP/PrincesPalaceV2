@@ -44,18 +44,23 @@ namespace PrincesPalace
 
         // Everything about a finished room that is not per-character.
         //
-        // `won` gates the room count and the gold, not the ledger fold above:
-        // a room you died in was not cleared, but the blows you struck in it
-        // still happened.
-        public static void RecordRoom(RunSnapshot run, bool won, int goldGained, int expGained, int step)
+        // `won` gates the room count, not the ledger fold above: a room you
+        // died in was not cleared, but the blows you struck in it still
+        // happened.
+        //
+        // NO GOLD PARAMETER, deliberately. This used to take `goldGained` and
+        // credit run.goldEarned from it, which made a settled fight the only
+        // thing in the game that could earn -- a treasure room's 15-30 and a
+        // shop sale both went onto run.gold without passing here, so "Gold
+        // earned" could read below "Gold held". Earning now happens in the one
+        // place gold is credited (RunManager.BankPayout), and taking the
+        // parameter away is what stops the two from ever double-counting the
+        // same coin.
+        public static void RecordRoom(RunSnapshot run, bool won, int expGained, int step)
         {
             if (run == null) return;
 
-            if (won)
-            {
-                run.roomsCleared++;
-                run.goldEarned += goldGained > 0 ? goldGained : 0;
-            }
+            if (won) run.roomsCleared++;
 
             run.expEarned += expGained > 0 ? expGained : 0;
 

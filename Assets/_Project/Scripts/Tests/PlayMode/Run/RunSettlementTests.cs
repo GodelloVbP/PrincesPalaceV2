@@ -188,11 +188,17 @@ namespace PrincesPalace.PlayModeTests
             // the death screen under-report the most dramatic fight in it.
             var run = Run();
 
-            RunLedger.RecordRoom(run, won: false, goldGained: 50, expGained: 0, step: 9);
+            RunLedger.RecordRoom(run, won: false, expGained: 0, step: 9);
 
             Assert.AreEqual(0, run.roomsCleared, "a room you died in was not cleared");
-            Assert.AreEqual(0, run.goldEarned, "and it paid nothing");
             Assert.AreEqual(9, run.deepestStep, "but you still got that deep");
+
+            // "And it paid nothing" used to be asserted here off a goldGained
+            // argument. It has moved rather than gone: RecordRoom no longer
+            // takes gold at all, and a lost fight pays nothing because the
+            // orchestrator's BankPayout is on the win side of the branch.
+            // RunManagerTests.TreasureGoldIsGoldTheRunEarned pins the other
+            // half -- that everything which DOES pay counts.
         }
 
         [Test]
@@ -200,8 +206,8 @@ namespace PrincesPalace.PlayModeTests
         {
             var run = Run();
 
-            RunLedger.RecordRoom(run, won: true, goldGained: 0, expGained: 0, step: 14);
-            RunLedger.RecordRoom(run, won: true, goldGained: 0, expGained: 0, step: 3);
+            RunLedger.RecordRoom(run, won: true, expGained: 0, step: 14);
+            RunLedger.RecordRoom(run, won: true, expGained: 0, step: 3);
 
             Assert.AreEqual(14, run.deepestStep, "how deep they got, not where they stand");
         }

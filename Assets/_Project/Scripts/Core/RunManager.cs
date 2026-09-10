@@ -426,12 +426,29 @@ namespace PrincesPalace
         // where they live. Kept separate because a run's gold is spent inside
         // the run and lost with it, while experience survives -- conflating them
         // is how a defeat would silently keep half its reward.
+        //
+        // AND IT IS THE ONE PLACE A RUN EARNS GOLD, so it is the one place that
+        // records having earned it.
+        //
+        // `goldEarned` used to be credited in RunLedger.RecordRoom, which only
+        // a settled FIGHT reaches. Treasure rooms pay 15-30 through here
+        // (RoomResolver) and a shop sale paid straight onto run.gold, so
+        // neither counted -- and Run statistics shows held and earned side by
+        // side precisely because "held and earned are different numbers as soon
+        // as anything is spent, and a shop exists" (RunStatRows). That framing
+        // only holds while earned >= held; with treasure uncounted, a run could
+        // read 22 gold held against 0 earned.
+        //
+        // HELD AND EARNED MOVE TOGETHER HERE and diverge only through spending,
+        // which is the whole distinction: spending touches run.gold and never
+        // this method.
         public static void BankPayout(int gold)
         {
             var run = Run;
             if (run == null || gold <= 0) return;
 
             run.gold += gold;
+            run.goldEarned += gold;
             Persist();
         }
 

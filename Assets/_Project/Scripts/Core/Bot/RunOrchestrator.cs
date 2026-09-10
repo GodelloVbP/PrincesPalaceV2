@@ -423,8 +423,12 @@ namespace PrincesPalace
             if (run != null && session != null) run.secondLivesUsed += session.SecondLivesSpent;
 
             var payout = won ? session?.Payout : null;
+
+            // GOLD IS NOT PASSED HERE any more. The fight's gold is banked
+            // below through RunManager.BankPayout, which is now the one place
+            // a run records having earned anything -- so handing it to the
+            // ledger too would count the same coin twice.
             RunLedger.RecordRoom(run, won,
-                payout?.Gold ?? 0,
                 won ? (payout?.Experience ?? 0) : 0,
                 run?.step ?? 0);
 

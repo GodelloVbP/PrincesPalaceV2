@@ -294,9 +294,17 @@ namespace PrincesPalace
             }
 
             int paid = unit * sold;
-            run.gold += paid;
 
-            // 3. PERSIST.
+            // THROUGH THE PAYOUT SEAM, not onto run.gold. A sale is gold the
+            // run earned, and BankPayout is the one place that records that --
+            // `run.gold += paid` here was the second of the two leaks that let
+            // "Gold earned" read below "Gold held" (the other was treasure).
+            RunManager.BankPayout(paid);
+
+            // 3. PERSIST. BankPayout already wrote, so this is the second write
+            // on a sale -- kept because ShopResult's Ok/AppliedNotPersisted
+            // distinction is the caller's only signal that the shelf change
+            // reached disk, and BankPayout returns nothing to read.
             return Persisted(paid);
         }
 

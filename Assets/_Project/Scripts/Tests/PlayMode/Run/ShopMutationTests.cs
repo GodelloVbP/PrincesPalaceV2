@@ -262,6 +262,42 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, InventoryOps.CountAt(save.stockpiledItems, sellable.id, 1));
         }
 
+        // A SALE IS GOLD THE RUN EARNED, and it was the one credit in the game
+        // that never went through RunManager.BankPayout -- `run.gold += paid`,
+        // straight onto the field. goldEarned was credited from a settled
+        // fight's ledger call, so a bag sold off in a shop moved "Gold held"
+        // and left "Gold earned" behind, which is exactly the comparison Run
+        // statistics puts side by side.
+        [Test]
+        public void ASaleIsGoldTheRunEarned()
+        {
+            OpenAShop();
+            var save = SaveSlotManager.CurrentSave;
+            save.stockpiledItems.Clear();
+
+            var sellable = Content.ContentDatabase.Offerable.First();
+            InventoryOps.Add(save.stockpiledItems, sellable.id, 1, plus: 1);
+
+            int expected = ShopPricing.SellPrice(ShopPricing.GearPrice(sellable.tier, 1, 0));
+            Assert.Greater(expected, 0, "fixture: the item has to be worth something to sell");
+
+            int heldBefore = RunManager.Run.gold;
+            int earnedBefore = RunManager.Run.goldEarned;
+
+            var result = RunOrchestrator.Sell(0, 1);
+
+            Assert.AreEqual(ShopOutcome.Ok, result.Outcome);
+            Assert.AreEqual(heldBefore + expected, RunManager.Run.gold);
+            Assert.AreEqual(earnedBefore + expected, RunManager.Run.goldEarned,
+                "the sale credited the purse without the run admitting it earned anything");
+
+            // Held is NOT asserted to stay under earned here: OpenAShop hands
+            // the run 5000 gold as a fixture rather than earning it, so this
+            // run's held already exceeds anything it could have earned. The
+            // invariant that matters -- every credit moves both -- is the two
+            // deltas above, and RunManagerTests pins the treasure half.
+        }
+
         [Test]
         public void SellingMoreThanTheBagHoldsIsRefusedAndCreditsNothing()
         {

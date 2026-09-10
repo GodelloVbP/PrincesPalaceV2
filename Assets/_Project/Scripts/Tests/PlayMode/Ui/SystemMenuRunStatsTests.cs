@@ -161,8 +161,13 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ThePaneFillsItselfFromTheRunWhenItIsOpened()
         {
             RunManager.StartRun(4242);
-            RunLedger.RecordRoom(RunManager.Run, won: true, goldGained: 40, expGained: 15, step: 3);
-            RunLedger.RecordRoom(RunManager.Run, won: true, goldGained: 25, expGained: 10, step: 5);
+            // Gold arrives through BankPayout, which is the one seam that
+            // credits both held and earned -- RecordRoom stopped taking a gold
+            // argument when treasure and shop sales turned out to bypass it.
+            RunLedger.RecordRoom(RunManager.Run, won: true, expGained: 15, step: 3);
+            RunManager.BankPayout(40);
+            RunLedger.RecordRoom(RunManager.Run, won: true, expGained: 10, step: 5);
+            RunManager.BankPayout(25);
 
             yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
             yield return null;
