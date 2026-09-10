@@ -1,5 +1,12 @@
+using System.Collections;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Stats;
 
@@ -41,6 +48,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
             RunManager.ResetForTests();
@@ -128,6 +136,106 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(7, character.embers);
             Assert.AreEqual(2, character.unspentStatPoints);
             Assert.IsEmpty(character.unlockedTalentIds);
+        }
+
+        // THE FIFTH MOVER OF A MAXIMUM, and the one a player reaches from
+        // inside a descent.
+        //
+        // 33d88bcc closed this class for three of them (equip, unequip, the
+        // respec) and RewardTrackController.Input.Claim for a fourth. The
+        // dossier's "+" was left: CharacterDossierController.Spend calls
+        // character.Invest, saves and repaints, with no photograph of the
+        // maximum and no rescale after it. Invested Constitution pays 20 max
+        // health a point through AbilityDerivation, so the maximum moves by 20
+        // and the run keeps holding the old absolute.
+        //
+        // AND IT IS REACHABLE MID-DESCENT ON PURPOSE. Spend guards on
+        // lockedForFight only, while Refund beside it also guards on
+        // InDescent -- the asymmetry is deliberate (a placed point is a
+        // decision you may make in the field, taking one back is not), which
+        // is what makes this a live bug rather than an unreachable one.
+        //
+        // DRIVEN THROUGH THE SCREEN'S OWN BUTTON rather than through the new
+        // wrapper directly: the wrapper existing proves nothing if the dossier
+        // does not call it, and "the dossier does not call it" was the bug.
+        //
+        // The numbers, stated rather than recomputed: 280 with nothing
+        // invested, 300 with one point in Constitution (both pinned as fixture
+        // checks above), and 140 of 280 carried into the descent. Rescaled:
+        // (140 * 300 + 140) / 280 = 42140 / 280 = 150.
+        [UnityTest]
+        public IEnumerator InvestingAPointKeepsTheCarriedFraction()
+        {
+            Navigation.LoadOverride = _ => { };
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            menu.Open();
+            menu.Select(0);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the hub has no dossier controller");
+
+            var character = SquadFixture.FirstLiveMember();
+            character.unspentStatPoints = 1;
+            character.investedAbilityScores = default;
+
+            Assert.AreEqual(ShawnsMaxWithNothingInvested,
+                Content.ContentDatabase.EffectiveStats(character).maxHealth,
+                "fixture: the character on screen is not the one these literals were read off");
+
+            RunManager.StartRun(4242UL);
+            RunManager.Run.currentHealth.Add(new RunHealthEntry
+            {
+                characterId = character.definitionId,
+                hp = 140,
+            });
+
+            dossier.Refresh();
+            yield return null;
+
+            // THE CELL IS NOT THE SCORE -- the six are sorted highest-first per
+            // character, so which cell holds Constitution is a fact about
+            // Shawn's stat line rather than a constant. Read the labels and
+            // press the one that says so.
+            int cell = Enumerable.Range(0, 6).First(i =>
+                TextNamed(menu.gameObject, $"DossierAttrKey{i}").text.Trim().ToUpperInvariant()
+                    .StartsWith("CON"));
+
+            ButtonNamed(menu.gameObject, $"DossierAttrPlus{cell}").onClick.Invoke();
+            yield return null;
+
+            character = SquadFixture.FirstLiveMember();
+            Assert.AreEqual(1, character.investedAbilityScores[AbilityScore.Constitution],
+                "fixture: the plus did not put a point into Constitution");
+            Assert.AreEqual(ShawnsMaxWithOnePointInConstitution,
+                Content.ContentDatabase.EffectiveStats(character).maxHealth,
+                "fixture: the point went in but the maximum did not move");
+
+            Assert.AreEqual(150, RunManager.Run.currentHealth[0].hp,
+                "the run kept 140 against a maximum that had just risen to 300, which is the " +
+                "permanently-empty tail RunEncounter.ScaleCarriedHealth's header describes");
+        }
+
+        private static Button ButtonNamed(GameObject scope, string name)
+        {
+            var button = scope.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == name);
+            Assert.IsNotNull(button, $"the dossier has no '{name}'");
+            return button;
+        }
+
+        private static TMP_Text TextNamed(GameObject scope, string name)
+        {
+            var label = scope.GetComponentsInChildren<TMP_Text>(includeInactive: true)
+                .FirstOrDefault(t => t.name == name);
+            Assert.IsNotNull(label, $"the dossier has no '{name}'");
+            return label;
         }
 
         // The other half of finding 6, which cannot be driven today.

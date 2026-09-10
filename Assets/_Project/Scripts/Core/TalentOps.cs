@@ -1,4 +1,5 @@
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.Talents;
 
 namespace PrincesPalace
@@ -128,6 +129,41 @@ namespace PrincesPalace
             });
 
             return refund;
+        }
+
+        // PLACING ONE ABILITY POINT, and taking one back.
+        //
+        // Character.Invest is Data and moves max health the moment the score
+        // is Constitution -- 20 a point through AbilityDerivation, joined to
+        // the ability floor at ContentDatabase.Effective.cs:124. Nothing on
+        // Character can rescale what the run carries, for the reason its own
+        // ClaimTrackRewards comment gives: Data may not reach ContentDatabase
+        // or SaveSlotManager, and the rescale needs both.
+        //
+        // So the Core half lives here beside Respec, wrapping the same pair,
+        // and CharacterDossierController's "+" and "-" call these instead of
+        // the Character methods directly. A FOURTH COPY OF THE PAIR AT THE
+        // DOSSIER would have been the fifth in the tree; the argument against
+        // that is EquipmentOps' own header, quoted in RescalingCarriedHealth
+        // below.
+        //
+        // Both directions, though only investing is reachable inside a descent
+        // (the dossier's Refund also guards on InDescent, its Spend does not):
+        // a refund lowers the maximum, and lowering a maximum without rescaling
+        // is the healing exploit's mirror image, which is exactly what the
+        // respec case was.
+        public static bool Invest(Character character, AbilityScore score)
+        {
+            if (character == null) return false;
+
+            return RescalingCarriedHealth(character, () => character.Invest(score));
+        }
+
+        public static bool Refund(Character character, AbilityScore score)
+        {
+            if (character == null) return false;
+
+            return RescalingCarriedHealth(character, () => character.Refund(score));
         }
 
         // THE PAIR, ONCE. Measure the maximum, make the change, rescale what

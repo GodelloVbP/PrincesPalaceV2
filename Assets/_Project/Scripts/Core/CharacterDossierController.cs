@@ -998,12 +998,22 @@ namespace PrincesPalace
         // Character.Invest refuses when there is nothing to spend and returns
         // false, so the guard here is about not repainting rather than about
         // correctness.
+        //
+        // THROUGH TalentOps, NOT THROUGH Character DIRECTLY. Investing into
+        // Constitution moves max health by 20, and the run stores current
+        // health as an ABSOLUTE number -- so a point placed mid-descent left
+        // the run holding the old figure against a maximum that had just
+        // risen, growing the permanently-empty tail RunEncounter.
+        // ScaleCarriedHealth's header describes. This is reachable on purpose:
+        // Spend guards on lockedForFight alone, while Refund below also guards
+        // on InDescent. TalentOps.Invest is the Core half that wraps the
+        // measure/rescale pair, the same one Kindle and Respec ride.
         private void Spend(int index)
         {
             if (lockedForFight) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
-            if (!character.Invest(score)) return;
+            if (!TalentOps.Invest(character, score)) return;
 
             // Written immediately. A placed point is permanent until a respec,
             // so losing one to a crash costs the player a level's reward.
@@ -1022,7 +1032,7 @@ namespace PrincesPalace
             if (lockedForFight || InDescent) return;
             if (!TryResolveCell(index, out var character, out var score)) return;
 
-            if (!character.Refund(score)) return;
+            if (!TalentOps.Refund(character, score)) return;
 
             SaveSlotManager.SaveCurrent();
             Refresh();
