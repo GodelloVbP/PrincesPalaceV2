@@ -226,7 +226,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // actor's own OncePerTurn locks reset against -- see CombatLocks'
             // own header. Scoped to this actor only: another combatant's
             // once-per-turn locks must survive until THEIR turn starts.
-            _locks.ResetTurn(LedgerIdOf(actor));
+            _locks.ResetTurn(actor);
 
             TickPrimaryPool(actor);
             ApplyRunicWardConversion(actor);

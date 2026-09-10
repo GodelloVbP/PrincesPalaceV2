@@ -202,16 +202,20 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- combat-lock keys (mechanic f) --------------------------------------
         //
-        // Every OncePerTurn/OncePerCombat lock below is keyed per COMBATANT
-        // (the ledger id already used to attribute damage/kills), not by a
-        // bare constant -- CombatLocks is one shared instance for the whole
-        // session, and a bare key would let one party member's trigger
-        // spend the lock for everyone else carrying the same shared relic.
-        public static string PhoenixEggLockKeyFor(string combatantId) => "phoenix_egg:" + combatantId;
-        public static string BerserkersVestLockKeyFor(string combatantId) => "berserkers_vest:" + combatantId;
-        public static string SparringBucklerLockKeyFor(string combatantId) => "sparring_buckler:" + combatantId;
-        public static string DancersAnkletLockKeyFor(string combatantId) => "dancers_anklet:" + combatantId;
-        public static string InconspicuousKeyLockKeyFor(string combatantId) => "inconspicuous_key:" + combatantId;
+        // BARE NAMES NOW, and the OWNER is passed to CombatLocks separately.
+        // These used to be `...LockKeyFor(string combatantId)` helpers that
+        // built "name:" + the LEDGER id, because CombatLocks was one flat set
+        // of strings and the owner had nowhere else to go. The ledger id was
+        // the wrong thing to hand it -- it groups every combatant of one enemy
+        // type under one row on purpose -- and the suffix convention that made
+        // it work was a convention rather than a rule. See CombatLocks' own
+        // header for both halves. What is left here is what these constants
+        // always were: the NAME of the gate.
+        public const string PhoenixEggLockKey = "phoenix_egg";
+        public const string BerserkersVestLockKey = "berserkers_vest";
+        public const string SparringBucklerLockKey = "sparring_buckler";
+        public const string DancersAnkletLockKey = "dancers_anklet";
+        public const string InconspicuousKeyLockKey = "inconspicuous_key";
 
         // The PRIMARY pool's gainOnAttack, which fires from the damage funnel
         // and therefore needs a "once per damaging action" boundary the funnel
@@ -225,6 +229,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // answer a Trample chain should get. Dual Wield's second swing shares
         // the turn and so grants nothing extra, matching the rule the
         // signature pool has always had at the Attack verb.
-        public static string PrimaryPoolAttackGainLockKeyFor(string combatantId) => "primary_pool_attack_gain:" + combatantId;
+        //
+        // THE ONE ENEMY-SIDE LOCK IN THE GAME, which is what made the ledger-id
+        // owner a live hazard rather than a tidy one: three rats shared it.
+        // Inert only because every shipped enemy authors gainOnAttack 0.
+        public const string PrimaryPoolAttackGainLockKey = "primary_pool_attack_gain";
     }
 }

@@ -1056,14 +1056,14 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // Called from the damage funnel, which runs once per TARGET, so the
         // lock is what makes a three-enemy sweep worth 15 rather than 45. See
-        // FightTuning.PrimaryPoolAttackGainLockKeyFor for why once-per-turn is
+        // FightTuning.PrimaryPoolAttackGainLockKey for why once-per-turn is
         // the same boundary as once-per-action here.
         private void GrantPrimaryOnDamagingAction(CombatantState actor)
         {
             int gain = actor?.PrimaryPool?.GainOnAttack ?? 0;
             if (gain <= 0) return;
 
-            if (!_locks.OncePerTurn(FightTuning.PrimaryPoolAttackGainLockKeyFor(LedgerIdOf(actor)))) return;
+            if (!_locks.OncePerTurn(actor, FightTuning.PrimaryPoolAttackGainLockKey)) return;
 
             GrantPrimary(actor, gain);
         }

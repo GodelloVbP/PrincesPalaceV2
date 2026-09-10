@@ -110,7 +110,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (target != null && target.IsPlayerSide && amount > 0 && target.CurrentHealth > 0
                 && amount >= target.CurrentHealth
                 && HasRelic(target, RelicEffect.PhoenixEgg)
-                && _locks.OncePerCombat(FightTuning.PhoenixEggLockKeyFor(LedgerIdOf(target))))
+                && _locks.OncePerCombat(target, FightTuning.PhoenixEggLockKey))
             {
                 return PhoenixEggHatch(actor, target, amount, type);
             }
@@ -146,7 +146,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // shaved a cooldown for a blow that landed on the shield).
             if (target != null && target.IsPlayerSide && toHealth > 0
                 && HasRelic(target, RelicEffect.BerserkersVest)
-                && _locks.OncePerTurn(FightTuning.BerserkersVestLockKeyFor(LedgerIdOf(target))))
+                && _locks.OncePerTurn(target, FightTuning.BerserkersVestLockKey))
             {
                 int shortened = ReduceCooldowns(target, FightTuning.BerserkersVestCooldownReduction);
                 if (shortened > 0)

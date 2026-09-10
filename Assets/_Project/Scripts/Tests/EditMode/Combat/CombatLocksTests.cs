@@ -1,63 +1,126 @@
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Mechanic (f): a once-per-X gate, keyed by an arbitrary string.
+    // Mechanic (f): a once-per-X gate, owned by a COMBATANT and named by a key.
+    //
+    // The owner used to be spelled into the key string -- "berserkers_vest:" +
+    // the ledger id -- and ResetTurn cleared by suffix match. Two things were
+    // wrong with that and only one of them was visible. The suffix convention
+    // was fragile (an owner id that happened to end another one, or contain the
+    // separator, aliases two owners silently), and the ledger id is not an
+    // identity: it deliberately groups every combatant of one enemy type under
+    // one row, so three rats were one lock owner.
     public class CombatLocksTests
     {
+        private static CombatantState Rat(string name = "Rat") =>
+            new CombatantState(name, false, 100, 0, 5, 5);
+
+        private const string Vest = "berserkers_vest";
+        private const string Buckler = "sparring_buckler";
+
         [Test]
         public void OncePerCombatFiresOnceThenRefusesForTheRestOfTheFight()
         {
             var locks = new CombatLocks();
+            var hero = Rat("Hero");
 
-            Assert.IsTrue(locks.OncePerCombat("x:hero1"), "the first call must be free");
-            Assert.IsFalse(locks.OncePerCombat("x:hero1"), "a second call in the same combat must be refused");
+            Assert.IsTrue(locks.OncePerCombat(hero, Vest), "the first call must be free");
+            Assert.IsFalse(locks.OncePerCombat(hero, Vest), "a second call in the same combat must be refused");
 
-            locks.ResetTurn("hero1");
-            Assert.IsFalse(locks.OncePerCombat("x:hero1"), "a turn boundary does not reset a per-combat lock");
+            locks.ResetTurn(hero);
+            Assert.IsFalse(locks.OncePerCombat(hero, Vest), "a turn boundary does not reset a per-combat lock");
         }
 
         [Test]
         public void OncePerTurnResetsAtTheTurnBoundary()
         {
             var locks = new CombatLocks();
+            var hero = Rat("Hero");
 
-            Assert.IsTrue(locks.OncePerTurn("y:hero1"));
-            Assert.IsFalse(locks.OncePerTurn("y:hero1"), "spent for this turn");
+            Assert.IsTrue(locks.OncePerTurn(hero, Vest));
+            Assert.IsFalse(locks.OncePerTurn(hero, Vest), "spent for this turn");
 
-            locks.ResetTurn("hero1");
-            Assert.IsTrue(locks.OncePerTurn("y:hero1"), "a fresh turn re-arms it");
+            locks.ResetTurn(hero);
+            Assert.IsTrue(locks.OncePerTurn(hero, Vest), "a fresh turn re-arms it");
         }
 
         [Test]
         public void DifferentKeysDoNotShareOneLock()
         {
             var locks = new CombatLocks();
+            var hero = Rat("Hero");
 
-            Assert.IsTrue(locks.OncePerCombat("a:hero1"));
-            Assert.IsTrue(locks.OncePerCombat("b:hero1"), "a different key must have its own gate");
+            Assert.IsTrue(locks.OncePerCombat(hero, Vest));
+            Assert.IsTrue(locks.OncePerCombat(hero, Buckler), "a different key must have its own gate");
         }
 
-        // Finding 1: ResetTurn used to clear the WHOLE per-turn set on any
-        // actor's turn boundary. A lock owned by "hero1" must survive an
-        // "enemy1" turn boundary and only clear on hero1's own.
+        // A lock owned by the hero must survive an enemy's turn boundary and
+        // only clear on the hero's own.
         [Test]
         public void ResetTurnOnlyClearsTheGivenOwnersLocks()
         {
             var locks = new CombatLocks();
+            var hero = Rat("Hero");
+            var enemy = Rat("Enemy");
 
-            Assert.IsTrue(locks.OncePerTurn("berserkers_vest:hero1"));
-            Assert.IsTrue(locks.OncePerTurn("sparring_buckler:enemy1"));
+            Assert.IsTrue(locks.OncePerTurn(hero, Vest));
+            Assert.IsTrue(locks.OncePerTurn(enemy, Buckler));
 
-            // enemy1's turn starts -- hero1's lock must not be touched.
-            locks.ResetTurn("enemy1");
-            Assert.IsFalse(locks.OncePerTurn("berserkers_vest:hero1"), "another owner's turn boundary must not re-arm hero1's lock");
-            Assert.IsTrue(locks.OncePerTurn("sparring_buckler:enemy1"), "enemy1's own lock was cleared by enemy1's turn boundary");
+            // The enemy's turn starts -- the hero's lock must not be touched.
+            locks.ResetTurn(enemy);
+            Assert.IsFalse(locks.OncePerTurn(hero, Vest), "another owner's turn boundary must not re-arm the hero's lock");
+            Assert.IsTrue(locks.OncePerTurn(enemy, Buckler), "the enemy's own lock was cleared by the enemy's turn boundary");
 
-            // hero1's own turn starts -- now hero1's lock re-arms.
-            locks.ResetTurn("hero1");
-            Assert.IsTrue(locks.OncePerTurn("berserkers_vest:hero1"), "hero1's own turn boundary must re-arm hero1's lock");
+            // The hero's own turn starts -- now the hero's lock re-arms.
+            locks.ResetTurn(hero);
+            Assert.IsTrue(locks.OncePerTurn(hero, Vest), "the hero's own turn boundary must re-arm the hero's lock");
+        }
+
+        // THE FINDING. Three rats in a room are three combatants and one ledger
+        // id -- LedgerIdOf returns enemy.Source.Id and that grouping is
+        // deliberate, because a fight's damage table wants one "Rat" row, not
+        // three. Handing that same string to a lock made them one lock owner:
+        // the first rat to claim a once-per-turn gate spent it for its
+        // littermates, and any one rat's turn boundary re-armed it for all of
+        // them.
+        [Test]
+        public void TwoCombatantsOfTheSameTypeDoNotShareAPerTurnLock()
+        {
+            var locks = new CombatLocks();
+            var first = Rat();
+            var second = Rat();
+
+            Assert.IsTrue(locks.OncePerTurn(first, Vest));
+            Assert.IsTrue(locks.OncePerTurn(second, Vest),
+                "a second rat is a second owner, however the ledger chooses to group them");
+        }
+
+        [Test]
+        public void OneCombatantsTurnBoundaryDoesNotReArmAnIdenticalTwins()
+        {
+            var locks = new CombatLocks();
+            var first = Rat();
+            var second = Rat();
+
+            Assert.IsTrue(locks.OncePerTurn(first, Vest));
+            locks.ResetTurn(second);
+
+            Assert.IsFalse(locks.OncePerTurn(first, Vest),
+                "the second rat's turn start cleared the first rat's lock out from under it");
+        }
+
+        [Test]
+        public void ANullOwnerOrABlankKeyClaimsNothing()
+        {
+            var locks = new CombatLocks();
+
+            Assert.IsFalse(locks.OncePerTurn(null, Vest));
+            Assert.IsFalse(locks.OncePerCombat(null, Vest));
+            Assert.IsFalse(locks.OncePerTurn(Rat(), ""));
+            Assert.DoesNotThrow(() => locks.ResetTurn(null));
         }
     }
 }

@@ -360,7 +360,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // single relic would be a second system claiming the word
             // "ward" already means something specific here.
             if (actingCharacter != null && HasRelic(actingCharacter, RelicEffect.SparringBuckler)
-                && _locks.OncePerTurn(FightTuning.SparringBucklerLockKeyFor(LedgerIdOf(actingCharacter))))
+                && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
             {
                 StatusEffects.Apply(actingCharacter.Statuses, StatusEffectType.Shielded,
                     FightTuning.SparringBucklerWardPercent, FightTuning.MagicalShieldDurationTurns, actingCharacter);
@@ -383,7 +383,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void DancersAnkletReposition(CombatantState actor)
         {
             if (actor == null || !HasRelic(actor, RelicEffect.DancersAnklet)) return;
-            if (!_locks.OncePerTurn(FightTuning.DancersAnkletLockKeyFor(LedgerIdOf(actor)))) return;
+            if (!_locks.OncePerTurn(actor, FightTuning.DancersAnkletLockKey)) return;
             if (!_encounter.PullToFront(actor)) return;
 
             AppendMessage($"{actor.Name} slips a step forward in the order.");
@@ -463,7 +463,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || victim == null || !actor.IsPlayerSide || victim.IsSummon) return;
             if (!HasRelic(actor, RelicEffect.InconspicuousKey)) return;
-            if (!_locks.OncePerCombat(FightTuning.InconspicuousKeyLockKeyFor(LedgerIdOf(actor)))) return;
+            if (!_locks.OncePerCombat(actor, FightTuning.InconspicuousKeyLockKey)) return;
 
             var target = RandomLivingEnemy();
             if (target == null) return;
