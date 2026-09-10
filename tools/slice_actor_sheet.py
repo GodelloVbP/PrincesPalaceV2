@@ -24,10 +24,14 @@ every pose the actor has.
 
 Optional:
     --recipe PATH            replay the recipe.json a previous run wrote --
-                             every other argument comes out of the file, so
-                             what runs is the invocation that produced the
-                             committed art rather than a reconstruction of it.
-                             See "Recipes" below.
+                             every other cut-affecting argument comes out of
+                             the file, so what runs is the invocation that
+                             produced the committed art rather than a
+                             reconstruction of it. --out-root/--quiet may
+                             still be given explicitly alongside --recipe
+                             (they choose where the replay writes, not what
+                             it cuts); any other flag given alongside
+                             --recipe is refused. See "Recipes" below.
     --grid COLSxROWS         default 3x2 (six cells, row-major top-left first)
     --key alpha|white_flood|green   default alpha (real transparency)
     --anchor ground_band|centroid   default ground_band (see below)
@@ -134,6 +138,14 @@ just read, so the only thing that could change is the timestamp, and a
 verification run that dirties the tree is a verification nobody runs twice. It
 reports whether this file's hash still matches the one recorded, which is the
 warning that a byte-identical result is no longer guaranteed.
+
+A replay honours an explicit `--out-root`/`--quiet` typed alongside
+`--recipe` -- those choose WHERE the replay writes, never WHAT it cuts, so
+`--recipe <path> --out-root scratch/verify` verifies into scratch instead of
+overwriting the real delivered PNGs. Any other flag typed alongside
+`--recipe` (a different `--sheet`, `--grid`, `--key`, `--anchor`, `--nudge`,
+...) would change the cut the recipe exists to pin, so it is refused rather
+than silently discarded.
 
 **A one-sheet recipe's top level is unchanged**: `"sheet"` is a single path
 and `"argv"` has one `--sheet`. A **multi-sheet** recipe additionally carries
@@ -1118,6 +1130,27 @@ def _expand_per_sheet(values, default, n, flag_name):
               f"entries: give it once (applies to every sheet) or once per --sheet.")
 
 
+# Flags a replay may still honour explicitly. Both change WHERE the run
+# writes, never WHAT it cuts -- `--out-root` is the scratch-vs-real switch
+# this module's "Nothing is recorded when --out-root points somewhere other
+# than the real Resources tree" guard depends on, and `--quiet` is output
+# verbosity. Every other flag is part of the recorded cut (sheet, grid,
+# stances, key, anchor, delivery-scale, nudges, drop-far-components-px,
+# max-ground-spread, pocket-max-area, prune) and is refused alongside
+# --recipe rather than silently discarded -- see the replay block in main().
+REPLAY_OVERRIDABLE_FLAGS = {"--out-root", "--quiet"}
+
+
+def _explicit_flags(argv_tokens):
+    """The `--flag` names actually typed in `argv_tokens` (not their values).
+
+    Covers both `--foo value` and `--foo=value` spellings. Used only to see
+    what a human typed on the real command line -- never to parse a recipe's
+    own recorded argv, which is trusted wholesale.
+    """
+    return {tok.split("=", 1)[0] for tok in argv_tokens if tok.startswith("--")}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--recipe", default=None, metavar="PATH",
@@ -1173,17 +1206,39 @@ def main():
     args = ap.parse_args()
 
     # A REPLAY IS THE RECORDED RUN, not a run that borrows some of it. Every
-    # argument is re-parsed out of the recipe, so nothing typed alongside
-    # --recipe can quietly change what the recipe claims to reproduce. This is
-    # the ONE code path for both a one-sheet and a multi-sheet recipe: a
-    # recipe's "argv" is always the full repeated --sheet/--grid/--stances/
-    # --key/--pocket-max-area/--delivery-scale flags, one --sheet occurrence
-    # per source, so parsing it here needs no shape-specific branch at all.
+    # cut-affecting argument is re-parsed out of the recipe, so nothing typed
+    # alongside --recipe can quietly change what the recipe claims to
+    # reproduce. This is the ONE code path for both a one-sheet and a
+    # multi-sheet recipe: a recipe's "argv" is always the full repeated
+    # --sheet/--grid/--stances/--key/--pocket-max-area/--delivery-scale
+    # flags, one --sheet occurrence per source, so parsing it here needs no
+    # shape-specific branch at all.
+    #
+    # --out-root/--quiet are the exception: they choose WHERE the replay
+    # writes, not WHAT it cuts, so an explicit one typed alongside --recipe
+    # is honoured rather than discarded -- a verification run needs to be
+    # able to land in scratch. Anything else typed alongside --recipe would
+    # silently change the cut a moment ago, so it is refused instead.
     replaying = False
     if args.recipe:
+        typed_out_root, typed_quiet = args.out_root, args.quiet
+        disallowed = _explicit_flags(sys.argv[1:]) - {"--recipe"} - REPLAY_OVERRIDABLE_FLAGS
+        if disallowed:
+            ap.error(
+                "--recipe replays the exact run that produced the committed art; "
+                + ", ".join(sorted(disallowed)) + " would change the CUT, not just "
+                "where it lands, and cannot be combined with --recipe. Only "
+                + "/".join(sorted(REPLAY_OVERRIDABLE_FLAGS)) + " (output location/verbosity) "
+                "may be overridden on replay. Drop --recipe to run with new arguments instead."
+            )
         argv, _ = load_recipe(args.recipe)
         print(f"[replay] {args.recipe}")
         args = ap.parse_args(argv)
+        # Explicit CLI overrides win; otherwise these are just the parser's
+        # own defaults, which is what the recipe implies anyway, so
+        # restoring them here is always safe -- never a change from what a
+        # replay with no --out-root/--quiet already did.
+        args.out_root, args.quiet = typed_out_root, typed_quiet
         replaying = True
 
     if not args.sheet:

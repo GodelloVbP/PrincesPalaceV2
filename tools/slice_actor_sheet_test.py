@@ -276,5 +276,73 @@ class OneSheetRecipeShapeStillReplaysTests(_FixtureTree):
         self.assertTrue(os.path.isfile(self.out_png("idle")))
 
 
+class ReplayOutRootOverrideTests(_FixtureTree):
+    """Finding: `--recipe <path> --out-root <scratch>` used to silently drop
+    the `--out-root` and write the real Resources tree instead. A replay's
+    `--out-root` (and `--quiet`) must be honoured; every other flag given
+    alongside `--recipe` must be refused rather than silently discarded."""
+
+    def setUp(self):
+        super().setUp()
+        self.sheet = os.path.join(self.art_dir, "sheet_a.png")
+        _blob_sheet(self.sheet, 60, 60, (10, 30, 29, 49))
+        self.argv = [
+            "--actor", "Characters/testbear",
+            "--sheet", self.sheet, "--grid", "1x1", "--stances", "idle",
+        ]
+
+    def test_replay_with_an_explicit_out_root_writes_scratch_not_the_real_tree(self):
+        # Initial run at the DEFAULT out-root -- this is the only shape that
+        # writes a recipe (see the module's out_root == DEFAULT_OUT_ROOT gate).
+        self.run_tool(self.argv)
+        self.assertTrue(os.path.isfile(self.out_png("idle")))
+        os.remove(self.out_png("idle"))
+
+        scratch = os.path.join(self.root, "scratch2")
+        self.run_tool(["--recipe", self.recipe_path(), "--out-root", scratch])
+
+        self.assertFalse(
+            os.path.isfile(self.out_png("idle")),
+            "a replay with an explicit --out-root must not touch the real Resources tree")
+        scratch_png = os.path.join(scratch, "Characters", "testbear", "idle.png")
+        self.assertTrue(
+            os.path.isfile(scratch_png),
+            "a replay's explicit --out-root should have been honoured, not discarded")
+
+    def test_replay_never_dirties_the_real_tree_git_status(self):
+        # git-status guard named in the brief: run the whole sequence inside
+        # a real git repo rooted at the fixture, and confirm the scratch
+        # replay leaves Assets/_Project/Resources untouched.
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        self.run_tool(self.argv)
+        subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "initial"], cwd=self.root, check=True)
+
+        scratch = os.path.join(self.root, "scratch2")
+        self.run_tool(["--recipe", self.recipe_path(), "--out-root", scratch])
+
+        status = subprocess.run(
+            ["git", "status", "--short", "Assets/_Project/Resources"],
+            cwd=self.root, capture_output=True, text=True, check=True)
+        self.assertEqual("", status.stdout.strip(),
+                          "replay with --out-root scratch dirtied the real Resources tree: "
+                          + status.stdout)
+
+    def test_replay_refuses_a_flag_that_would_change_the_cut(self):
+        self.run_tool(self.argv)
+        result = self.run_tool(
+            ["--recipe", self.recipe_path(), "--anchor", "centroid"], expect_ok=False)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("--anchor", result.stdout + result.stderr)
+        self.assertIn("cannot be combined with --recipe", result.stdout + result.stderr)
+
+    def test_replay_still_honours_quiet(self):
+        self.run_tool(self.argv)
+        result = self.run_tool(["--recipe", self.recipe_path(), "--quiet"])
+        self.assertNotIn("sqrt(LCC-mass)", result.stdout,
+                          "--quiet given alongside --recipe should still suppress the verbose "
+                          "per-stance line")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

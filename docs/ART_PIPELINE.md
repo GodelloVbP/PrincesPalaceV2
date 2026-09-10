@@ -258,13 +258,19 @@ a timestamp. `--recipe <path>` replays it:
 python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/treant/recipe.json
 ```
 
-A replay re-parses every argument out of the file, so nothing typed alongside
-can quietly change what it claims to reproduce; it refuses by name if the
-source sheet is gone; it never rewrites the recipe (the argv it would write is
-the argv it just read) and never writes a `.meta` (Unity generates those on
-import — a tool copying one alongside a regenerated PNG is how a duplicated
-asset gets a duplicated GUID). Defaults are written out rather than omitted,
-so a recipe does not change meaning the day a default does.
+A replay re-parses every cut-affecting argument out of the file, so nothing
+typed alongside can quietly change what it claims to reproduce — any of those
+flags given alongside `--recipe` is refused by name rather than silently
+discarded. `--out-root`/`--quiet` are the exception: they choose *where* the
+replay writes, not *what* it cuts, so an explicit `--out-root` is honoured —
+`--recipe <path> --out-root scratch/verify` verifies into scratch instead of
+overwriting the shipped PNGs, which is the safe way to run a verification a
+second time. A replay refuses by name if the source sheet is gone; it never
+rewrites the recipe (the argv it would write is the argv it just read) and
+never writes a `.meta` (Unity generates those on import — a tool copying one
+alongside a regenerated PNG is how a duplicated asset gets a duplicated GUID).
+Defaults are written out rather than omitted, so a recipe does not change
+meaning the day a default does.
 
 The README is still where the *reasoning* belongs and is no longer where the
 recipe lives. The treant's said `delivery_scale 1.05`, `white_flood` and "a
