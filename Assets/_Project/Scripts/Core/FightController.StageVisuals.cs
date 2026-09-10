@@ -1372,9 +1372,20 @@ namespace PrincesPalace
             var enemy = _session?.SourceFor(combatant);
             if (enemy != null) return enemy.Source.Facing;
 
-            // Only reached for a combatant with no content behind it at all,
-            // which also means no art to mirror -- the value is inert.
-            return SpriteFacing.Right;
+            // The party side: SourceFor is enemy-only (see FightSession.
+            // Enemies.cs's own note on SourceFor(player) always being null),
+            // so a party combatant's facing comes off its PlayerKit instead
+            // -- ResolvedCharacter.BattleSpriteFacing, carried through
+            // FightEncounterAdapter.KitFor exactly the way PlateArt already
+            // is. This used to fall through to a hardcoded Right with a
+            // comment claiming the fallback was unreachable for a
+            // content-backed combatant; that was false for the whole party
+            // (every one of them reaches here on every repaint) and only
+            // read as correct because all three fielded characters happen to
+            // be authored Right. KitFor's own facing default (also Right)
+            // is what a kit with no content behind it -- or none at all --
+            // now falls through to.
+            return _session?.KitFor(combatant)?.Facing ?? SpriteFacing.Right;
         }
 
         // The one drawing this combatant is showing, falling back through

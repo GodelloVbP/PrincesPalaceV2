@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -403,6 +405,103 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("rage", error, "the refusal must name the bad value");
             StringAssert.Contains("mana", error, "the refusal must list the pools that do exist");
             StringAssert.Contains("fury", error, "the refusal must list the pools that do exist");
+        }
+
+        // ---- battleSpriteFacing ---------------------------------------------
+        //
+        // Bug hunt finding 1 (2026-09-10): FightController.FacingOf never
+        // read this field -- every party member rendered hardcoded
+        // SpriteFacing.Right regardless of what characters.json authored,
+        // because BattleSpriteFacing reached ResolvedCharacter and stopped
+        // there (a grep across Scripts/, Tests included, found exactly two
+        // readers, both inside ResolvedCharacter.cs itself). The fix threads
+        // the value through PlayerKit (Domain/Combat/Session/CombatantKit.cs)
+        // the same way PlateArt already travels, rather than a parallel array
+        // threaded beside FightEncounterAdapter.PartyArt -- FacingOf now
+        // reads it off FightSession.KitFor(combatant), the identical seam
+        // ApplyPlateIdentity already reads PlateArt through.
+        //
+        // What is pinned here is the two DOMAIN-only hops that make up the
+        // whole chain: the resolver parses the raw string into
+        // ResolvedCharacter.BattleSpriteFacing (first three cases, which
+        // already worked before this fix -- the bug was entirely downstream
+        // of this resolver), and a PlayerKit built from that value the same
+        // way FightEncounterAdapter.KitFor builds one carries it out again
+        // unchanged (the last case, which is the actual carrier this finding
+        // is about). FightEncounterAdapter.KitFor's own pass-through line
+        // cannot be exercised from this dotnet host -- it lives in Core and
+        // needs a UnityEngine CharacterDefinition -- so the PlayMode test
+        // FightControllerFacingTests covers the rest of the chain: binding a
+        // party member through FightController and asserting the mirrored
+        // sprite scale.
+
+        private static RawCharacterEntry ProbeWithFacing(string battleSpriteFacing)
+        {
+            var probe = Probe("Blue");
+            probe.battleSpriteFacing = battleSpriteFacing;
+            return probe;
+        }
+
+        private static bool ResolveFacing(string battleSpriteFacing, out ResolvedCharacter resolved, out string error)
+        {
+            var entries = new List<RawCharacterEntry>
+            {
+                Starter("a", 1), Starter("b", 2), Starter("c", 3), ProbeWithFacing(battleSpriteFacing),
+            };
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
+            resolved = ok ? all.Single(c => c.Id == "probe") : null;
+            error = ok ? null : string.Join(" | ", errors);
+            return ok;
+        }
+
+        [Test]
+        public void AnUnauthoredBattleSpriteFacing_DefaultsToRight()
+        {
+            Assert.IsTrue(ResolveFacing("", out var resolved, out string error), error);
+            Assert.AreEqual(SpriteFacing.Right, resolved.BattleSpriteFacing);
+        }
+
+        [TestCase("Left", SpriteFacing.Left)]
+        [TestCase("right", SpriteFacing.Right)]
+        [TestCase("  LEFT  ", SpriteFacing.Left)]
+        public void AnAuthoredBattleSpriteFacing_ParsesCaseInsensitively(string authored, SpriteFacing expected)
+        {
+            Assert.IsTrue(ResolveFacing(authored, out var resolved, out string error), error);
+            Assert.AreEqual(expected, resolved.BattleSpriteFacing);
+        }
+
+        [Test]
+        public void AnUnknownBattleSpriteFacing_RefusesTheBuild()
+        {
+            Assert.IsFalse(ResolveFacing("Sideways", out _, out string error),
+                "an unrecognised facing must not silently default to Right -- that is exactly the plausible-wrong-answer this refuses");
+            StringAssert.Contains("probe", error, "the refusal must name the character");
+            StringAssert.Contains("Sideways", error, "the refusal must name the bad value");
+        }
+
+        // THE CARRIER: PlayerKit.Facing, reproducing FightEncounterAdapter.
+        // KitFor's own pass-through (`definition.Data.BattleSpriteFacing` in,
+        // straight into the PlayerKit constructor) since that method lives in
+        // Core and needs a UnityEngine CharacterDefinition this host cannot
+        // build. A Left-authored character reaching Core with its facing
+        // silently dropped back to PlayerKit's own Right default is exactly
+        // the failure this finding reported -- three shipped characters all
+        // authored Right, which is also the fallback, so the bug produced the
+        // correct picture by coincidence and stayed invisible.
+        [TestCase(SpriteFacing.Left)]
+        [TestCase(SpriteFacing.Right)]
+        public void AResolvedCharactersFacing_ReachesThePlayerKitUnchanged(SpriteFacing facing)
+        {
+            Assert.IsTrue(ResolveFacing(facing.ToString(), out var resolved, out string resolveError), resolveError);
+
+            var kit = new PlayerKit("probe", CharacterRole.Tank,
+                skills: null, relics: null, attackType: DamageType.Physical,
+                level: 1, skillPowerMultiplier: 1f,
+                plateTheme: ButtonTheme.Blue, plateArt: "Plates/pc_sheep",
+                facing: resolved.BattleSpriteFacing);
+
+            Assert.AreEqual(facing, kit.Facing,
+                "PlayerKit must carry the facing it was built with unchanged, the same way it already carries PlateArt");
         }
     }
 }

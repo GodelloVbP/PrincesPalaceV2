@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -86,6 +87,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // kit, which draws no plate rather than somebody else's.
         public readonly string PlateArt;
 
+        // WHICH WAY THIS CHARACTER'S BATTLE ART IS DRAWN IN ITS SOURCE FILE
+        // (ResolvedCharacter.BattleSpriteFacing), carried on the kit for the
+        // same reason PlateArt is: the stage's FacingOf reads a party
+        // combatant's kit through FightSession.KitFor, exactly the seam
+        // PlateArt already travels through for the HUD, rather than a second
+        // parallel array threaded beside FightEncounterAdapter.PartyArt.
+        // Right for a hand-built kit -- the same fallback the fight stage
+        // used before this field existed, so a fixture with no opinion on
+        // facing renders exactly as it always has.
+        public readonly SpriteFacing Facing;
+
         public PlayerKit(string id, CharacterRole role,
                          IReadOnlyList<ResolvedSkill> skills,
                          IReadOnlyList<ResolvedRelic> relics,
@@ -103,7 +115,13 @@ namespace PrincesPalace.Domain.Combat.Session
                          // Last and optional, the same C# constraint every
                          // optional above it hit. A fixture with no plate
                          // draws none.
-                         string plateArt = "")
+                         string plateArt = "",
+                         // Trailing and optional for the same C# reason as
+                         // plateArt beside it. Right, not Left, because that
+                         // is the stage's own pre-existing hardcoded fallback
+                         // -- a fixture that does not pass this keeps today's
+                         // behaviour rather than silently flipping.
+                         SpriteFacing facing = SpriteFacing.Right)
         {
             Level = level;
             Id = id;
@@ -114,6 +132,7 @@ namespace PrincesPalace.Domain.Combat.Session
             SkillPowerMultiplier = skillPowerMultiplier;
             PlateTheme = plateTheme;
             PlateArt = plateArt ?? "";
+            Facing = facing;
 
             _relicEffects = new HashSet<RelicEffect>();
             for (int i = 0; i < Relics.Count; i++)
