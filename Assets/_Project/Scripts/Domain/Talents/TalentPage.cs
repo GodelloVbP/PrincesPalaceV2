@@ -43,6 +43,19 @@ namespace PrincesPalace.Domain.Talents
             NotAuthored,
 
             AlreadyTaken,
+
+            // Another path's ENGINE is already sworn. Slot 0 of each path is
+            // that path's wool generation rule and exactly one may ever be lit
+            // across all three -- see Evaluate for where the rule lived before
+            // this, and ContentDatabase.AllegianceRootOf for why the design
+            // cannot survive two of them.
+            //
+            // DIRECTLY UNDER AlreadyTaken, because it is the same KIND of
+            // answer: not "you cannot afford this yet" but "you have already
+            // decided this". A player told the price of a stone their own
+            // earlier choice has closed goes and farms for nothing.
+            AllegianceSworn,
+
             PrerequisiteMissing,
 
             // The path has not been spent up to this slot's gate. Only the
@@ -73,6 +86,42 @@ namespace PrincesPalace.Domain.Talents
             if (!here.Exists) return Refusal.NotAuthored;
 
             if (unlocked != null && unlocked.Contains(here.Id)) return Refusal.AlreadyTaken;
+
+            // THE ALLEGIANCE, WHICH NOTHING WAS CHECKING.
+            //
+            // Same story as the gate below, one rule further along.
+            // ContentDatabase.AllegianceRootOf and IsBlockedByAllegiance have
+            // held this since the content layer was written and were folded
+            // into MeetsGates, which has never had a caller. TalentPage
+            // replaced the screen's colouring pass and carried across five
+            // refusals, not this one -- so both of Shawn's roots could be lit,
+            // for nothing, and TalentEffects sums every unlocked talent with no
+            // allegiance filter. Two wool engines at once against abilities
+            // priced at 7-8 is the economy the handoff calls load-bearing.
+            //
+            // IN DOMAIN RATHER THAN IN CONTENT, because the rule needs to hold
+            // for the screen, the bot and Frontier alike, and only this layer
+            // is beneath all three. Everything it needs is in hand: the tree
+            // carries all three paths, and a root is a slot the skeleton gives
+            // no parents.
+            //
+            // ONLY THE ROOT, and only somebody ELSE'S root: the engine is
+            // exclusive, the tree is not. A player sworn on path 0 may still
+            // climb path 1 for its nodes -- they simply never get its
+            // generation rule.
+            if (IsRoot(slot) && unlocked != null)
+            {
+                for (int other = 0; other < PathCount; other++)
+                {
+                    if (other == path) continue;
+
+                    string rootId = tree.IdAt(other, slot);
+                    if (!string.IsNullOrEmpty(rootId) && unlocked.Contains(rootId))
+                    {
+                        return Refusal.AllegianceSworn;
+                    }
+                }
+            }
 
             // PREREQUISITES BEFORE COST, deliberately. Told "not enough Embers"
             // for an orb three tiers above anything they own, a player goes and

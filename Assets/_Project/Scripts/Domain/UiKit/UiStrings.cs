@@ -69,12 +69,29 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentKickerUnwritten =
             UiString.Define("talent.kicker_unwritten", "UNWRITTEN");
 
+        // The seventh state, and it is a state the player PUT the tree in
+        // rather than one they have yet to reach -- so it says what they did,
+        // not what is missing. Wording taken from the line talents.json already
+        // prints on both roots ("you may swear to only one path's engine at a
+        // time"), because a player meets that sentence before they ever meet
+        // this kicker.
+        public static readonly UiString TalentKickerSworn =
+            UiString.Define("talent.kicker_sworn", "SWORN ELSEWHERE");
+
         public static readonly UiString TalentWhyLocked =
             UiString.Define("talent.why_locked", "Kindle the star beneath it first.");
         public static readonly UiString TalentWhyGated =
             UiString.Define("talent.why_gated", "Spend further along this path to open it.");
         public static readonly UiString TalentWhyPoor =
             UiString.Define("talent.why_poor", "Not enough Embers.");
+
+        // NAMES THE WAY OUT, which the other three refusals do not have to:
+        // the first two are cured by playing on and the third by earning, but
+        // an oath is only undone by a respec. Both roots' own descriptions
+        // already say so, so this repeats rather than surprises.
+        public static readonly UiString TalentWhySworn =
+            UiString.Define("talent.why_sworn",
+                "You are sworn to another path's engine. Only a respec changes that.");
 
         public static readonly UiString TalentPriceEmbers =
             UiString.Define("talent.price_embers", "{0} Embers", "12 Embers");

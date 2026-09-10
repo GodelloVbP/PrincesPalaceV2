@@ -55,8 +55,9 @@ namespace PrincesPalace
         }
 
         // Spends this character's embers on one orb. False, changing nothing,
-        // when TalentPage refuses it -- unauthored, already taken, a
-        // prerequisite or gate unmet, or not enough embers.
+        // when TalentPage refuses it -- unauthored, already taken, an
+        // allegiance sworn elsewhere, a prerequisite or gate unmet, or not
+        // enough embers.
         //
         // THE CONTENT'S OWN ID, which is the entire point of this seam.
         // Everything that reads unlockedTalentIds -- the effective stats, the

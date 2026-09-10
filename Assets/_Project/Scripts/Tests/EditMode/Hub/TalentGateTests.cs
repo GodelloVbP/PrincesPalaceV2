@@ -22,6 +22,26 @@ namespace PrincesPalace.Domain.Tests
     {
         private const int Path = 0;
 
+        // TWO PATHS, EACH WITH A ROOT AT SLOT 0 AND NO GATES -- the shape the
+        // shipped sheep tree actually has (sheep_ram_root at column 0,
+        // sheep_lamb_root at column 1, both row 0, both priced 0 because
+        // ContentDatabase.OrbCost makes depth-0 free).
+        private static TalentTree TwoRootedPaths()
+        {
+            var tree = new TalentTree();
+
+            for (int path = 0; path < 2; path++)
+            {
+                for (int i = 0; i < TalentSkeleton.SlotCount; i++)
+                {
+                    tree.Set(path, i, new TalentSlot(
+                        $"p{path}s{i}", $"Star {path}.{i}", "", i == 0 ? 0 : 1));
+                }
+            }
+
+            return tree;
+        }
+
         // A tree with a gate on one slot and nothing else in the way. Built by
         // hand rather than from content, because the point is the RULE and a
         // content-shaped fixture would test the authoring instead.
@@ -129,6 +149,66 @@ namespace PrincesPalace.Domain.Tests
                 TalentPage.Evaluate(tree, Path, slot, owned, embers: 0),
                 "a gated stone the player also cannot afford reports the price, which is the " +
                 "smaller of the two obstacles");
+        }
+
+        // THE ALLEGIANCE, WHICH NOTHING WAS CHECKING EITHER.
+        //
+        // Slot 0 of each path is that path's wool GENERATION rule, and exactly
+        // one may ever be lit across all three -- ContentDatabase.
+        // AllegianceRootOf's own header calls it "the load-bearing rule of the
+        // whole design", talents.json says it to the player's face ("you may
+        // swear to only one path's engine at a time"), and TalentEffect.cs
+        // repeats it. The rule was written in Core, folded into
+        // ContentDatabase.MeetsGates, and MeetsGates has never had a caller:
+        // TalentPage.Evaluate is the only gate on the live click path and it
+        // refused five things, none of them this.
+        //
+        // Both of Shawn's roots cost nothing (depth 0 is free), so the bug was
+        // not "an ember was misspent" -- it was two stacking wool engines for
+        // free, against abilities priced at 7-8.
+        [Test]
+        public void ASecondAllegianceRootIsRefusedOnceOneIsSworn()
+        {
+            var tree = TwoRootedPaths();
+            var unlocked = new HashSet<string> { "p0s0" };
+
+            Assert.AreEqual(TalentPage.Refusal.AllegianceSworn,
+                TalentPage.Evaluate(tree, path: 1, slot: 0, unlocked, embers: 0),
+                "a second path's engine was offered while the first is sworn - three generation " +
+                "rules stacking is the case ContentDatabase.AllegianceRootOf says the economy " +
+                "cannot survive");
+        }
+
+        // AND THE ONE ALREADY SWORN STILL ANSWERS "taken", not "sworn". The
+        // refusal a player is shown decides what they do next, and "you have
+        // already sworn elsewhere" pointed at the stone they swore ON would be
+        // a lie about their own choice.
+        [Test]
+        public void TheSwornRootItselfStillReadsAsTaken()
+        {
+            var tree = TwoRootedPaths();
+            var unlocked = new HashSet<string> { "p0s0" };
+
+            Assert.AreEqual(TalentPage.Refusal.AlreadyTaken,
+                TalentPage.Evaluate(tree, path: 0, slot: 0, unlocked, embers: 0));
+        }
+
+        // NOTHING ABOVE A ROOT IS BLOCKED BY THE OATH, which is the half of the
+        // rule that makes it liveable: the engine is exclusive, the tree is
+        // not. Green before this change as well as after -- it is here because
+        // the obvious over-fix is to refuse the whole path, and because every
+        // save written before today holds two roots already (that is the bug),
+        // so those saves must keep climbing rather than seize up.
+        [Test]
+        public void OnlyTheROOTOfTheOtherPathIsBlocked()
+        {
+            var tree = TwoRootedPaths();
+            var unlocked = new HashSet<string> { "p0s0", "p1s0" };
+
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, path: 1, slot: 1, unlocked, embers: 99),
+                "a non-root stone on the unsworn path was refused, which locks the whole path " +
+                "rather than its engine");
         }
 
         // The near-redundancy that hid the missing rule for as long as it did.

@@ -491,12 +491,15 @@ namespace PrincesPalace
             nextPathButton.interactable = ConstellationLayout.CanStep(_path, 1, TalentPage.PathCount);
         }
 
-        // ---- the six states --------------------------------------------------
+        // ---- the states --------------------------------------------------
         //
-        // The domain answers with six refusals and the design names six states,
-        // and they line up one for one. Nothing here tints a stone into another
-        // state: the variants are baked, so Image.color only ever multiplies
-        // white, and the one exception says why in its own comment.
+        // The domain answers with seven refusals and the design names six
+        // materials; the seventh, an allegiance sworn elsewhere, is drawn as
+        // ash like the other two shut states, because the stone is shut and no
+        // amount of paint would say WHY -- the kicker and the refusal line do
+        // that. Nothing here tints a stone into another state: the variants are
+        // baked, so Image.color only ever multiplies white, and the one
+        // exception says why in its own comment.
         private Sprite SpriteFor(TalentPage.Refusal refusal)
         {
             switch (refusal)
@@ -878,6 +881,12 @@ namespace PrincesPalace
                     return UiStrings.TalentWhyGated.Template;
                 case TalentPage.Refusal.NotEnoughEmbers:
                     return UiStrings.TalentWhyPoor.Template;
+
+                // FOUR REASONS NOW, and this one is the only one that names a
+                // decision the player already made rather than something they
+                // have yet to do.
+                case TalentPage.Refusal.AllegianceSworn:
+                    return UiStrings.TalentWhySworn.Template;
                 default:
                     return string.Empty;
             }
@@ -892,6 +901,7 @@ namespace PrincesPalace
                 case TalentPage.Refusal.NotEnoughEmbers: return UiStrings.TalentKickerCostly.Template;
                 case TalentPage.Refusal.Gated: return UiStrings.TalentKickerGated.Template;
                 case TalentPage.Refusal.NotAuthored: return UiStrings.TalentKickerUnwritten.Template;
+                case TalentPage.Refusal.AllegianceSworn: return UiStrings.TalentKickerSworn.Template;
                 default: return UiStrings.TalentKickerLocked.Template;
             }
         }
@@ -904,6 +914,13 @@ namespace PrincesPalace
                 case TalentPage.Refusal.PrerequisiteMissing: return UiStrings.TalentLocked;
                 case TalentPage.Refusal.Gated: return UiStrings.TalentLocked;
                 case TalentPage.Refusal.NotEnoughEmbers: return UiStrings.TalentNoEmbers;
+
+                // LOCKED rather than a word of its own. The button is the one
+                // place on this screen with no room to explain itself, and the
+                // kicker and the refusal line beside it both say which lock
+                // this is. A default of KINDLE on a stone that cannot be
+                // kindled is the failure this arm exists to stop.
+                case TalentPage.Refusal.AllegianceSworn: return UiStrings.TalentLocked;
                 default: return UiStrings.TalentInvest;
             }
         }
