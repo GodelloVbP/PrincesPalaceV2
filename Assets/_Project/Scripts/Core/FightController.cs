@@ -95,81 +95,61 @@ namespace PrincesPalace
         [SerializeField] internal Image[] enemyPlateBreakFills;
         [SerializeField] internal GameObject secondLifeBadge;
 
-        // transformStrip/transformStripText are GONE (2026-09-09, the
-        // HUD-column pass). A transformation reads out as a status badge on
-        // every surface now (StatusHud.TransformRow) rather than as a panel
-        // that could only ever describe whoever was acting.
-        [SerializeField] internal GameObject[] rosterPlates;
-        [SerializeField] internal TMP_Text[] rosterNames;
-        [SerializeField] internal TMP_Text[] rosterHpValues;
-        [SerializeField] internal Image[] rosterHpFills;
-
-        // The mana half of each roster card and its signature line -- the
-        // owner's 2026-09-09 mock-up gave the mini-plate three cells where it
-        // had one. Bound by name off FightScreen.RosterMpValues/RosterMpFills/
-        // RosterSignatures like every other indexed array here.
-        [SerializeField] internal TMP_Text[] rosterMpValues;
-        [SerializeField] internal Image[] rosterMpFills;
-        [SerializeField] internal TMP_Text[] rosterSignatures;
-
-        // THE SECOND METER'S OWN SURFACES, on every card (plan P7). Ui.Meter
-        // bakes its colours into the scene, so a meter that draws whatever
-        // pool its holder carries has to be repainted at runtime -- see
-        // FightScreen.PartyMpTag's own note for why the fill is not enough.
-        // rosterMpRims is CARD-MAJOR like rosterCardRims above.
-        [SerializeField] internal Image[] rosterMpShades;
-        [SerializeField] internal Image[] rosterMpRims;
-        [SerializeField] internal GameObject lowHpVignette;
-
-        // partyPortrait is GONE. It was a [SerializeField] nothing read and
-        // nothing assigned, wired to a node that was always inactive with no
-        // sprite -- see FightScreen.PartyName's own note where the NodeRef
-        // used to be declared.
-        [SerializeField] internal TMP_Text partyName;
-
-        // partyPlateArt and partyPlateThemes are GONE (2026-09-10). They were
-        // the runtime sprite swap for the plate's themed 2:1 kit frame, and
-        // the card has no frame any more -- see FightScreen.BuildPartyPlate
-        // for why a flat OutlineBox replaced it. Per-character identity is
-        // carried by the rim and name COLOUR now, not by a sprite.
-
-        // THE FOUR RIM IMAGES PER CARD (C3), bound by field name off
-        // FightScreen.PartyCardRims/RosterCardRims -- UiAutoBind matches an
-        // Image[] to a NodeRef list of the same name with no ScreenRegistry
-        // code, and UiWiringSweep refuses the build outright if either comes
-        // back null or empty.
+        // ---- the HUD column: three PC plates (2026-09-10) --------------------
         //
-        // rosterCardRims is CARD-MAJOR: card i's edges are i*RimsPerCard ..
-        // +3. See FightScreen.RosterCardRims' own note for why that is the
-        // one silent failure mode on this feature.
-        [SerializeField] internal Image[] partyCardRims;
-        [SerializeField] internal Image[] rosterCardRims;
+        // ONE ARRAY SHAPE FOR THE WHOLE COLUMN. Every one of these is
+        // PcPlateCount long and indexed by PLATE, so the paint routine is one
+        // loop over three identical surfaces rather than a party path and a
+        // roster path that had to be kept in step by hand. What replaced:
+        // partyName/partyHpFill/partyHpValue/partyMpFill/partyMpValue/
+        // partyMpTag/partyMpShade/partyMpRims/partyCardRims/partyBuffIcons/
+        // woolPips/woolValue and the whole roster* family.
+        //
+        // Bound by FIELD NAME off FightScreen's NodeRef lists of the same
+        // name -- UiAutoBind matches an Image[]/TMP_Text[]/GameObject[] to a
+        // list called the same thing with no ScreenRegistry code, and
+        // UiWiringSweep refuses the build outright if one comes back null or
+        // empty.
+        [SerializeField] internal GameObject[] pcPlates;
+
+        // The leather itself. THE identity surface: swapped at runtime to the
+        // occupant's own characters.json plateArt through PcPlateSprites,
+        // because which character sits in which slot is decided per
+        // encounter and cannot be baked.
+        [SerializeField] internal Image[] pcPlateArts;
+
+        // The acting halo -- shown on exactly one plate, tinted with that
+        // occupant's PcTheme.Rim. The plate's corner is rounded, so this is
+        // an art-shaped decal rather than four rim Images; see
+        // Domain/UiKit/PcPlateArt.GlowKey for why.
+        [SerializeField] internal Image[] pcPlateHighlights;
+
+        [SerializeField] internal TMP_Text[] pcNames;
+        [SerializeField] internal TMP_Text[] pcSignatures;
+        [SerializeField] internal TMP_Text[] pcHpValues;
+        [SerializeField] internal Image[] pcHpFills;
+        [SerializeField] internal TMP_Text[] pcMpValues;
+        [SerializeField] internal Image[] pcMpFills;
+
+        // THE SECOND METER'S OWN SURFACES (plan P7). Ui.Meter bakes its
+        // colours into the scene, so a meter that draws whatever pool its
+        // holder carries has to be repainted at runtime -- the fill is not
+        // enough, the band under it and the four rim edges carry the colour
+        // too. pcMpRims is CARD-MAJOR: plate i's edges are i*RimsPerCard..+3.
+        [SerializeField] internal Image[] pcMpShades;
+        [SerializeField] internal Image[] pcMpRims;
+
+        // Five per plate, CARD-MAJOR.
+        [SerializeField] internal GameObject[] pcStatusBadges;
+
         private const int RimsPerCard = 4;
 
-        [SerializeField] internal Image partyHpFill;
-        [SerializeField] internal TMP_Text partyHpValue;
-        [SerializeField] internal Image partyMpFill;
-        [SerializeField] internal TMP_Text partyMpValue;
+        [SerializeField] internal GameObject lowHpVignette;
 
-        // The party card's half of the pool meter. The TAG is a label here
-        // (the party card has room for one beside the bar; a roster card
-        // does not, and folds it into the value instead), so it is the one
-        // surface the two cards do not share.
-        [SerializeField] internal TMP_Text partyMpTag;
-        [SerializeField] internal Image partyMpShade;
-        [SerializeField] internal Image[] partyMpRims;
-
-        // Same "caption is a synthesised child with no NodeRef" story as
-        // enemyIntentIcons below -- each badge's Image and TMP glyph are both
-        // resolved at Start.
-        [SerializeField] internal GameObject[] partyBuffIcons;
-
-        // The enemy row (3 stage slots x 5 badges, slot-major) and roster
-        // row (2 plates x 5 badges, roster-major) FightScreen.
-        // BuildEnemyStatusRows/BuildRosterPlates declared -- see
-        // FightController.Hud.cs's RefreshEnemyStatusRows/RefreshRoster for
-        // how the flat index into each maps back to a stage slot or roster
-        // plate.
+        // The enemy row (3 stage slots x 5 badges, slot-major) FightScreen.
+        // BuildEnemyStatusRows declared -- see FightController.Hud.cs's
+        // RefreshEnemyStatusRows for how the flat index maps back to a
+        // stage slot. The PC column's own badges are pcStatusBadges above.
         [SerializeField] internal GameObject[] enemyStatusBadges;
 
         // One backing strip per enemy stage slot, hidden outright when that
@@ -177,8 +157,6 @@ namespace PrincesPalace
         // 7) -- the roster and party surfaces sit on their own painted
         // plates already and were never given a strip of their own.
         [SerializeField] internal GameObject[] enemyStatusStrips;
-
-        [SerializeField] internal GameObject[] rosterStatusBadges;
 
         // The ONE hover tooltip every status badge on every surface shares
         // (enemy row, party plate, roster row) -- repositioned per hover
@@ -200,22 +178,21 @@ namespace PrincesPalace
         // See FightController.Hud.cs for how every one of these is used.
 
         // Mirrors FightScreen's own EnemyStatusBadgesPerRow/
-        // RosterStatusBadgesPerRow (both private to that class, section 1's
-        // measured table) -- Package C codes against the node NAMES that
-        // registry produces, not against its private layout constants, so
-        // these are a second statement of the same "5 slots per row" fact
-        // rather than a shared one.
+        // PcStatusBadgesPerPlate (section 1's measured table) -- Package C
+        // codes against the node NAMES that registry produces, not against
+        // its private layout constants, so these are a second statement of
+        // the same "5 slots per row" fact rather than a shared one.
         private const int EnemyStatusBadgesPerRow = 5;
-        private const int RosterStatusBadgesPerRow = 5;
+        private const int PcStatusBadgesPerPlate = 5;
         private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
-        private const int RosterStatusBadgeCount = 10; // 2 roster plates x 5
 
-        // 12, UP FROM 6 (2026-09-09): the owner's mock-up gives the party
-        // plate TWO badge lines of six, and FightScreen.BuildPartyBuffIcons
-        // lays them out ROW-MAJOR so this stays one flat range that
-        // PaintStatusRow fills in order. The overflow chip is still the last
-        // slot, which is now the 12th rather than the 6th.
-        private const int PartyStatusBadgeCount = 12;
+        // 15, DOWN FROM 10 roster + 12 party (2026-09-10): the column is
+        // three identical plates of five now, so there is ONE flat range
+        // covering the whole party rather than two ranges with different
+        // widths that PaintStatusRow had to be told about separately. The
+        // overflow chip is still the last slot of each plate's five.
+        private const int PcStatusBadgeCount = PcPlateCount * PcStatusBadgesPerPlate;
+        private const int PcPlateCount = 3;
 
         private StatusBadgeParts[] _statusBadgeParts;
         private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
@@ -277,9 +254,6 @@ namespace PrincesPalace
         // RefreshEnemyStatusRows simply skips repositioning.
         private Vector2[] _enemyStatusStripHome;
         private Vector2[] _enemyStatusBadgeHome;
-
-        [SerializeField] internal Image[] woolPips;
-        [SerializeField] internal TMP_Text woolValue;
 
         [SerializeField] internal Button[] verbButtons;
         [SerializeField] internal TMP_Text[] verbLabels;
@@ -765,13 +739,35 @@ namespace PrincesPalace
                 SetFill(enemyPlateHpFills[i], recorded.Health, enemies[i].MaxHealth);
             }
 
-            var actor = ActingCharacter();
-            if (actor != null && vitals.TryGetValue(actor, out var mine))
+            // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one.
+            // This used to paint only the acting character's card, because
+            // that was the only party card with meters on it -- the two
+            // roster cards beside it showed live state and so lagged a beat
+            // behind the card above them. Three identical plates means a
+            // heal landing on an ally moves that ally's own bar on the frame
+            // the blow lands, which is what a snapshot is for.
+            //
+            // A member the snapshot does not mention is left alone rather
+            // than cleared: a snapshot is a record of a moment, and silence
+            // in it means "unchanged", not "gone".
+            var party = _session != null ? _session.Encounter.PlayerParty : null;
+            int plates = pcPlates != null ? pcPlates.Length : 0;
+            for (int i = 0; party != null && i < party.Count && i < plates; i++)
             {
-                partyHpValue.Set(UiStrings.HealthValue, mine.Health, actor.MaxHealth);
-                partyMpValue.Set(UiStrings.HealthValue, mine.Primary, actor.MaxMana);
-                SetFill(partyHpFill, mine.Health, actor.MaxHealth);
-                SetFill(partyMpFill, mine.Primary, actor.MaxMana);
+                var member = party[i];
+                if (member == null || !vitals.TryGetValue(member, out var recordedPc)) continue;
+
+                if (Has(pcHpValues, i))
+                {
+                    pcHpValues[i].Set(UiStrings.HealthValue, recordedPc.Health, member.MaxHealth);
+                }
+                if (Has(pcMpValues, i))
+                {
+                    pcMpValues[i].Set(UiStrings.PoolNamedValue,
+                        member.PrimaryPool?.ShortTag ?? "", recordedPc.Primary, member.MaxMana);
+                }
+                if (Has(pcHpFills, i)) SetFill(pcHpFills[i], recordedPc.Health, member.MaxHealth);
+                if (Has(pcMpFills, i)) SetFill(pcMpFills[i], recordedPc.Primary, member.MaxMana);
             }
         }
 

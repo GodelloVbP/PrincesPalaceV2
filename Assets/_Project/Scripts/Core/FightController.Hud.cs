@@ -61,15 +61,15 @@ namespace PrincesPalace
 
             RefreshMenuChrome();
             RefreshEnemyPlates();
-            RefreshPartyPlate();
+            RefreshPcPlates();
             RefreshInitiative();
             RefreshStage();
             RefreshLowHpVignette();
 
-            // AFTER all three status surfaces have repainted (RefreshStage's
-            // enemy row, RefreshPartyPlate's own row and its RefreshRoster
-            // call) -- see RefreshHoveredStatusTooltip's own comment for why
-            // this cannot just live inside one of the three.
+            // AFTER both status surfaces have repainted (RefreshStage's
+            // enemy row and RefreshPcPlates' three plate rows) -- see
+            // RefreshHoveredStatusTooltip's own comment for why this cannot
+            // just live inside one of them.
             RefreshHoveredStatusTooltip();
         }
 
@@ -560,54 +560,177 @@ namespace PrincesPalace
         private static bool Has<T>(T[] array, int index) where T : UnityEngine.Object =>
             array != null && index >= 0 && index < array.Length && array[index] != null;
 
-        private void RefreshPartyPlate()
+        // ---- the HUD column: three PC plates ---------------------------------
+        //
+        // ONE LOOP, ONE PLATE AT A TIME, and the only thing that varies
+        // between iterations is whether this plate's occupant is the one
+        // acting. That is the whole point of the 2026-09-10 model change:
+        // there used to be RefreshPartyPlate (the acting member, on a taller
+        // card with its own node names) and RefreshRoster (everybody else, on
+        // smaller ones), which meant every fact about a party member had two
+        // implementations that had to be kept in step by hand -- and the
+        // roster half was structurally unable to show things the party half
+        // could.
+        //
+        // ORDER IS THE PARTY'S ORDER, not "acting first". A plate belongs to
+        // a character for the whole fight; a plate that moved when the turn
+        // passed would undo the reason the plates carry portraits at all.
+        private void RefreshPcPlates()
         {
-            var actor = ActingCharacter();
-            if (actor == null) return;
+            if (pcPlates == null || _session == null) return;
 
-            partyName.SetContent(actor.Name);
-            partyHpValue.Set(UiStrings.HealthValue, actor.CurrentHealth, actor.MaxHealth);
-            partyMpValue.Set(UiStrings.HealthValue, actor.CurrentMana, actor.MaxMana);
-            SetFill(partyHpFill, actor.CurrentHealth, actor.MaxHealth);
-            SetFill(partyMpFill, actor.CurrentMana, actor.MaxMana);
+            var party = _session.Encounter.PlayerParty;
+            var acting = ActingCharacter();
 
             // CLEARED HERE, not in the tick: this method is the one entry
-            // point for a full HUD repaint (RefreshRoster is called from its
-            // own tail), so the pulse list is rebuilt exactly once per repaint
-            // and holds only the meters whose pool actually asked for it.
+            // point for a full column repaint, so the pulse list is rebuilt
+            // exactly once per repaint and holds only the meters whose pool
+            // actually asked for it.
             _pulsingMeters.Clear();
-            ApplyPoolTheme(actor.PrimaryPool, partyMpFill, partyMpShade, partyMpRims, 0,
-                partyMpTag, partyMpValue);
 
-            var kit = _session == null ? null : _session.KitFor(actor);
-            if (kit != null) ApplyCardTheme(partyCardRims, 0, partyName, kit.PlateTheme);
-
-            RefreshWool(actor);
-            RefreshPartyStatusRow(actor);
-            RefreshSecondLifeBadge();
-            RefreshRoster(actor);
-        }
-
-        // ONE CARD, ONE OCCUPANT'S COLOUR (C3) -- four rim Images and the
-        // name label, which is what "tinted" costs in uGUI: there is no
-        // inherited tint, and the card's own Panel draws nothing.
-        //
-        // GRACEFUL ON EVERY MISS, the house style the sprite swap this
-        // replaced already had: an unbound array, a short one, or a null
-        // element leaves the scene's own baked Blue standing rather than
-        // throwing or clearing the graphic. `Has` is the same guard every
-        // other indexed write on this screen uses.
-        private void ApplyCardTheme(Image[] rims, int baseIndex, TMP_Text name, ButtonTheme theme)
-        {
-            var colours = PcTheme.For(theme);
-
-            var rim = Hex(colours.Rim);
-            for (int e = 0; e < RimsPerCard; e++)
+            for (int i = 0; i < pcPlates.Length; i++)
             {
-                if (Has(rims, baseIndex + e)) rims[baseIndex + e].color = rim;
+                var member = party != null && i < party.Count ? party[i] : null;
+                RefreshPcPlate(i, member, member != null && member == acting);
             }
 
-            if (name != null) name.color = Hex(colours.Name);
+            RefreshSecondLifeBadge();
+        }
+
+        // OVER PlayerParty RATHER THAN LivingPlayerParty, deliberately: a
+        // downed ally is still worth showing here, at 0 HP, rather than
+        // vanishing from the column the moment they fall. A plate with no
+        // occupant at all (a party of two) is hidden outright -- there is no
+        // meaningful "empty plate" drawing, since the plate art IS a
+        // character.
+        private void RefreshPcPlate(int i, CombatantState member, bool isActing)
+        {
+            pcPlates[i].SetShown(member != null);
+
+            // A MISSING MEMBER STILL GETS ITS BADGE ROW PAINTED, with an
+            // empty list -- that is what deactivates all five rather than
+            // leaving them wearing a departed ally's last statuses.
+            var rows = member != null ? FightHudModel.StatusRowsFor(_session, member) : EmptyStatusRows;
+            PaintStatusRow(PcStatusBase + i * PcStatusBadgesPerPlate, PcStatusBadgesPerPlate,
+                reserveOverflowSlot: true, member, rows, showCounter: true);
+
+            if (member == null) return;
+
+            if (Has(pcNames, i)) pcNames[i].SetContent(member.Name);
+
+            if (Has(pcHpValues, i))
+            {
+                pcHpValues[i].Set(UiStrings.HealthValue, member.CurrentHealth, member.MaxHealth);
+            }
+            if (Has(pcHpFills, i)) SetFill(pcHpFills[i], member.CurrentHealth, member.MaxHealth);
+
+            // THE TAG COMES OFF THE POOL, not out of UiStrings (plan P7). A
+            // member with no pool cannot happen -- PrimaryPool is never null
+            // on a CombatantState -- but an empty shortTag would print a
+            // leading space, so it degrades to the numbers alone rather than
+            // to a literal "MP" that could be wrong.
+            if (Has(pcMpValues, i))
+            {
+                pcMpValues[i].Set(UiStrings.PoolNamedValue,
+                    member.PrimaryPool?.ShortTag ?? "", member.CurrentMana, member.MaxMana);
+            }
+            if (Has(pcMpFills, i)) SetFill(pcMpFills[i], member.CurrentMana, member.MaxMana);
+
+            // NEITHER A TAG NOR A VALUE, and both nulls are decisions.
+            //
+            // `tag`: there is no separate tag label on a plate -- the tag is
+            // the first argument of UiStrings.PoolNamedValue, drawn on the
+            // bar with the numbers, so RefreshPcPlate above writes it as part
+            // of the caption.
+            //
+            // `value`: the caption is drawn ON the fill this pool colours, so
+            // tinting it to match that fill is how it disappears. It stays
+            // FightHudPalette.TextPrimary for every pool -- see
+            // FightScreen's own note where the label is built. Passing the
+            // label here (which the first cut of this method did) painted
+            // "280/280" in pale pink on a full salmon HP bar and "MP 34/34"
+            // in pale blue on a full blue one; both were legible in the tree
+            // and neither was legible on screen.
+            ApplyPoolTheme(member.PrimaryPool,
+                Has(pcMpFills, i) ? pcMpFills[i] : null,
+                Has(pcMpShades, i) ? pcMpShades[i] : null,
+                pcMpRims, i * RimsPerCard,
+                tag: null, value: null);
+
+            RefreshPcSignature(i, member);
+
+            var kit = _session.KitFor(member);
+            ApplyPlateIdentity(i, kit, isActing);
+        }
+
+        // THE PLATE'S OWN ART AND ITS ACTING STATE, which are one job because
+        // both answer "whose plate is this and is it their turn".
+        //
+        // THE ART IS CONTENT (characters.json's plateArt, carried in on the
+        // kit) and cannot be baked: the three slots learn their occupant per
+        // encounter. THE HIGHLIGHT is the acting signal -- the plate's own
+        // silhouette as a halo, tinted with the occupant's identity colour --
+        // and the name brightens to PcTheme.Name with it. Exactly one plate
+        // in the column shows one at a time, which is what replaced moving
+        // the acting character onto a bigger card.
+        //
+        // GRACEFUL ON EVERY MISS, the house style: a null kit, an unbound
+        // array or a plate whose art did not load leaves what the scene baked
+        // rather than clearing the graphic. A kit is nullable (a session with
+        // no kit for a combatant), and a fixture-built kit authors no plate.
+        private void ApplyPlateIdentity(int i, PlayerKit kit, bool isActing)
+        {
+            if (Has(pcPlateArts, i) && kit != null)
+            {
+                var art = PcPlateSprites.For(kit.PlateArt);
+                if (art != null) pcPlateArts[i].sprite = art;
+            }
+
+            var colours = PcTheme.For(kit != null ? kit.PlateTheme : ButtonTheme.Blue);
+
+            if (Has(pcPlateHighlights, i))
+            {
+                pcPlateHighlights[i].gameObject.SetShown(isActing);
+
+                // FULL ALPHA on the rim hex, which carries 0.70 of its own --
+                // the halo is the loudest thing this column says and it says
+                // it for one character at a time, so it is drawn at the
+                // colour's full strength rather than at the rim's.
+                if (isActing) pcPlateHighlights[i].color = Opaque(Hex(colours.Rim));
+            }
+
+            if (Has(pcNames, i))
+            {
+                pcNames[i].color = isActing ? Hex(colours.Name) : Hex(FightHudPalette.TextPrimary);
+            }
+        }
+
+        private static Color Opaque(Color colour) => new Color(colour.r, colour.g, colour.b, 1f);
+
+        // The member's own signature resource as one line ("Wool 3/10"), or
+        // nothing at all.
+        //
+        // A NUMBER RATHER THAN SIXTEEN PIPS, as of 2026-09-10. The pip row
+        // was this column's one bespoke widget, it only ever existed on the
+        // acting card, and the owner's mock-ups never had it -- so a
+        // transformed or charged ALLY could not be read at all while the
+        // acting character got a meter nobody asked for. One template on
+        // every plate says the same thing in a tenth of the width.
+        //
+        // HIDDEN RATHER THAN BLANKED when the member carries no signature,
+        // which is two thirds of the party: a label set to "" still occupies
+        // its cell for UiAudit's purposes and reads as a missing value rather
+        // than as a character who simply has no meter.
+        private void RefreshPcSignature(int index, CombatantState member)
+        {
+            if (!Has(pcSignatures, index)) return;
+
+            var signature = member?.SignaturePool;
+            pcSignatures[index].gameObject.SetShown(signature != null);
+            if (signature == null) return;
+
+            pcSignatures[index].Set(UiStrings.SignatureNamedValue,
+                signature.DisplayName, signature.Current, signature.Max);
         }
 
         // ---- the second meter, painted from the pool its holder carries ------
@@ -767,14 +890,17 @@ namespace PrincesPalace
         // could therefore never show a transformed ally sitting in the roster
         // at all. A transformation is a StatusRow now
         // (FightHudModel.StatusRowsFor -> StatusHud.TransformRow), so every
-        // surface that already paints status badges -- the party plate, both
-        // roster cards, and the hover tooltip that names it in full -- picks
+        // surface that already paints status badges -- all three PC plates
+        // and the hover tooltip that names it in full -- picks
         // it up through PaintStatusRow with no code here at all. That is the
         // whole point of folding it in rather than adding a fourth writer.
 
         // The one badge on this screen that reads FightSession rather than
         // the acting character -- a Second Life charge belongs to the whole
-        // party's run, not to whoever happens to be acting this turn.
+        // party's run, not to whoever happens to be acting this turn. It has
+        // no per-character home for that reason, and sits in the free band at
+        // the foot of the bottom plate rather than moving with the turn --
+        // see FightScreen.PcSecondLifeY.
         private void RefreshSecondLifeBadge()
         {
             if (secondLifeBadge == null || _session == null) return;
@@ -783,108 +909,15 @@ namespace PrincesPalace
             secondLifeBadge.SetShown(available);
         }
 
-        // The two party members NOT currently acting, information only -- no
-        // swap mechanic, see FightScreen.BuildRosterPlates' own comment. Over
-        // PlayerParty rather than LivingPlayerParty deliberately: a downed
-        // ally is still worth showing here, at 0 HP, rather than vanishing
-        // from the roster the moment they fall.
-        private void RefreshRoster(CombatantState acting)
-        {
-            if (rosterPlates == null || _session == null) return;
-
-            var others = _session.Encounter.PlayerParty.Where(c => c != acting).ToList();
-            for (int i = 0; i < rosterPlates.Length; i++)
-            {
-                bool present = i < others.Count;
-                rosterPlates[i].SetShown(present);
-
-                // ROSTER-MAJOR, matching FightScreen.BuildRosterPlates: slot i's
-                // five badges are RosterStatusBase + i * RosterStatusBadgesPerRow.
-                // A missing member still gets its row painted with an empty list,
-                // which is what deactivates every one of its five badges rather
-                // than leaving them wearing a downed ally's last statuses.
-                var member = present ? others[i] : null;
-                var rows = present ? FightHudModel.StatusRowsFor(_session, member) : EmptyStatusRows;
-                PaintStatusRow(RosterStatusBase + i * RosterStatusBadgesPerRow, RosterStatusBadgesPerRow,
-                    reserveOverflowSlot: true, member, rows, showCounter: false);
-
-                if (!present) continue;
-
-                if (Has(rosterNames, i)) rosterNames[i].SetContent(member.Name);
-
-                // C3: the ally's own colour on their own card. KitFor is
-                // nullable (a session with no kit for a combatant), and a
-                // missing kit leaves the baked Blue rather than picking a
-                // theme -- same posture as the party card above.
-                var memberKit = _session.KitFor(member);
-                if (memberKit != null)
-                {
-                    ApplyCardTheme(rosterCardRims, i * RimsPerCard,
-                        Has(rosterNames, i) ? rosterNames[i] : null, memberKit.PlateTheme);
-                }
-
-                // TAGGED templates ("HP 34/40"), not HealthValue -- the
-                // number is drawn ON the bar now (the owner's 2026-09-09
-                // mock-up), where there is no separate tag label beside it to
-                // say which resource it is.
-                if (Has(rosterHpValues, i))
-                {
-                    rosterHpValues[i].Set(UiStrings.HpValueTagged, member.CurrentHealth, member.MaxHealth);
-                }
-                if (Has(rosterHpFills, i)) SetFill(rosterHpFills[i], member.CurrentHealth, member.MaxHealth);
-
-                // THE TAG COMES OFF THE POOL, not out of UiStrings (plan P7).
-                // A member with no pool at all cannot happen -- PrimaryPool
-                // is never null on a CombatantState -- but an empty shortTag
-                // would print a leading space, so it degrades to the numbers
-                // alone rather than to a literal "MP" that could be wrong.
-                if (Has(rosterMpValues, i))
-                {
-                    rosterMpValues[i].Set(UiStrings.PoolNamedValue,
-                        member.PrimaryPool?.ShortTag ?? "", member.CurrentMana, member.MaxMana);
-                }
-                if (Has(rosterMpFills, i)) SetFill(rosterMpFills[i], member.CurrentMana, member.MaxMana);
-
-                ApplyPoolTheme(member.PrimaryPool,
-                    Has(rosterMpFills, i) ? rosterMpFills[i] : null,
-                    Has(rosterMpShades, i) ? rosterMpShades[i] : null,
-                    rosterMpRims, i * RimsPerCard,
-                    tag: null, value: null);
-
-                RefreshRosterSignature(i, member);
-            }
-        }
-
-        // Cell 2 of the roster card: the member's own signature resource as
-        // one line ("Wool 3/10"), or nothing at all.
-        //
-        // HIDDEN RATHER THAN BLANKED when the member carries no signature,
-        // which is the normal case for two thirds of the roster -- a label
-        // set to "" still occupies its cell for A1's purposes and, more to
-        // the point, leaves an empty band under the bars that reads as a
-        // missing value rather than as a character who simply has no meter.
-        // Same graceful-degradation shape as RefreshWool one screen over.
-        private void RefreshRosterSignature(int index, CombatantState member)
-        {
-            if (!Has(rosterSignatures, index)) return;
-
-            var signature = member?.SignaturePool;
-            rosterSignatures[index].gameObject.SetShown(signature != null);
-            if (signature == null) return;
-
-            rosterSignatures[index].Set(UiStrings.SignatureNamedValue,
-                signature.DisplayName, signature.Current, signature.Max);
-        }
-
-        // ---- status badges (enemy row, party plate, roster row) ---------------
+        // ---- status badges (enemy stage rows, PC plates) ----------------------
         //
         // PLAN_STATUS_EFFECT_UI.md sections 1, 3, 6 and 7 -- ONE anatomy
         // (FightScreen.BuildStatusBadge's Glyph/Code/Counter three-child
         // button), one paint routine (PaintStatusRow), three call sites: the
         // enemy row from FightController.StageVisuals.cs's RefreshStage,
         // right beside RefreshIntentIcons so a status and an intent always
-        // paint off the same beat; the roster row from RefreshRoster above;
-        // the party plate from RefreshPartyStatusRow below. Replaces
+        // paint off the same beat; each PC plate from RefreshPcPlate above.
+        // Replaces
         // RefreshPartyBuffs outright -- BuffBadge/BuffBadgesFor/StatusBadge/
         // PillCode/PillCategory/CategoryOf are gone with it (Package A,
         // section 4/11).
@@ -945,14 +978,15 @@ namespace PrincesPalace
         private const float EnemyStatusPitch = 40f;
         private const float EnemyStatusStripPadX = 12f;
 
-        // ONE FLAT INDEX SPACE across all three surfaces (enemy first, then
-        // roster, then party) rather than three separate HoverIndex
-        // handlers -- one OnHoverStatusBadge, one tooltip cache, one
-        // "who is currently hovered" field, instead of three copies of each.
+        // ONE FLAT INDEX SPACE across both surfaces (the enemy stage rows
+        // first, then the three PC plates) rather than a HoverIndex handler
+        // per surface -- one OnHoverStatusBadge, one tooltip cache, one
+        // "who is currently hovered" field. It used to span THREE surfaces;
+        // the party plate and the roster rows became one uniform PC column
+        // on 2026-09-10, so the second and third ranges collapsed into one.
         private const int EnemyStatusBase = 0;
-        private const int RosterStatusBase = EnemyStatusBadgeCount;
-        private const int PartyStatusBase = RosterStatusBase + RosterStatusBadgeCount;
-        private const int TotalStatusBadges = PartyStatusBase + PartyStatusBadgeCount;
+        private const int PcStatusBase = EnemyStatusBadgeCount;
+        private const int TotalStatusBadges = PcStatusBase + PcStatusBadgeCount;
 
         // One layer per named child BuildStatusBadge actually built (Glyph/
         // Code/Counter), plus the ROOT's own Image -- every Ui.Button gets
@@ -992,8 +1026,7 @@ namespace PrincesPalace
             _statusBadgeParts = new StatusBadgeParts[TotalStatusBadges];
 
             WireStatusBadgeGroup(enemyStatusBadges, EnemyStatusBase);
-            WireStatusBadgeGroup(rosterStatusBadges, RosterStatusBase);
-            WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase);
+            WireStatusBadgeGroup(pcStatusBadges, PcStatusBase);
             CaptureEnemyStatusRowHomePositions();
 
             // CACHED ONCE HERE (S8's review), not re-fetched by
@@ -1323,7 +1356,7 @@ namespace PrincesPalace
             }
         }
 
-        // ONE PATH for all three surfaces -- enemy, roster and party alike
+        // ONE PATH for both surfaces -- enemy rows and PC plates alike
         // now share BuildStatusBadge's Glyph/Code/Counter anatomy (see
         // StatusBadgeParts' own header), so there is no longer a dedicated-
         // frame-or-not branch here. Glyph stays untinted (section 3: art is
@@ -1489,15 +1522,11 @@ namespace PrincesPalace
             _statusBadgeTooltip[flat] = string.Join("\n", lines);
         }
 
-        // ---- the three call sites -----------------------------------------------
-
-        private void RefreshPartyStatusRow(CombatantState actor)
-        {
-            if (partyBuffIcons == null || _session == null) return;
-
-            var rows = FightHudModel.StatusRowsFor(_session, actor);
-            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, reserveOverflowSlot: false, actor, rows, showCounter: true);
-        }
+        // ---- the two call sites -------------------------------------------------
+        //
+        // The PC column's own call is inside RefreshPcPlate, one plate at a
+        // time, because a plate's badges belong to that plate's occupant and
+        // nothing else on the column knows who that is.
 
         // Called from FightController.StageVisuals.cs's RefreshStage, right
         // beside RefreshIntentIcons, so a status row and an intent badge
@@ -1707,37 +1736,34 @@ namespace PrincesPalace
             PlaceStatusTooltip(flat, anchor);
         }
 
-        // Which physical badge slots share a row with `flat` -- the enemy and
-        // roster surfaces are several independent rows of
-        // EnemyStatusBadgesPerRow/RosterStatusBadgesPerRow each, the party
-        // plate is one row of PartyStatusBadgeCount. PlaceStatusTooltip needs
-        // this to widen its anchor past the single hovered badge to the
-        // whole row it sits in.
+        // Which physical badge slots share a row with `flat`. Both surfaces
+        // are now several independent rows of a fixed width -- the enemy
+        // stage rows of EnemyStatusBadgesPerRow, the PC plates of
+        // PcStatusBadgesPerPlate -- so this is two cases where it used to be
+        // three, and the third (the party plate's one long double line) is
+        // gone with the card that carried it. PlaceStatusTooltip needs this
+        // to widen its anchor past the single hovered badge to the whole row
+        // it sits in.
         private static void GetStatusRowRange(int flat, out int start, out int count)
         {
-            if (flat < RosterStatusBase)
+            if (flat < PcStatusBase)
             {
                 int slot = flat / EnemyStatusBadgesPerRow;
                 start = slot * EnemyStatusBadgesPerRow;
                 count = EnemyStatusBadgesPerRow;
             }
-            else if (flat < PartyStatusBase)
-            {
-                int local = (flat - RosterStatusBase) / RosterStatusBadgesPerRow;
-                start = RosterStatusBase + local * RosterStatusBadgesPerRow;
-                count = RosterStatusBadgesPerRow;
-            }
             else
             {
-                start = PartyStatusBase;
-                count = PartyStatusBadgeCount;
+                int plate = (flat - PcStatusBase) / PcStatusBadgesPerPlate;
+                start = PcStatusBase + plate * PcStatusBadgesPerPlate;
+                count = PcStatusBadgesPerPlate;
             }
         }
 
         // TooltipPlacement.Beside works in ONE local coordinate space; the
         // anchor and the tooltip do not share one here -- the enemy row
-        // sits under the stage panel, the roster row under a roster plate,
-        // the party row under the party plate, and StatusTooltip is a
+        // sits under the stage panel, a PC row under its own plate, and
+        // StatusTooltip is a
         // top-level HUD child. The anchor's centre is carried through WORLD
         // space first, the one conversion that is correct regardless of how
         // deep the anchor happens to be nested.
@@ -1786,7 +1812,7 @@ namespace PrincesPalace
             // Widen past the single hovered badge to the WHOLE row it shares
             // a parent with -- Beside only ever sees one anchor width, and
             // every one of the three surfaces places several badges under
-            // one parent (the enemy strip, the roster plate, the party
+            // one parent (the enemy strip, the PC plate
             // plate). Without this, flipping beside the first of several
             // badges lands the tooltip on top of the second rather than
             // beside the row (caught in this gate's own capture: the
@@ -1841,28 +1867,6 @@ namespace PrincesPalace
                 interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
 
             tooltipRect.anchoredPosition = new Vector2(at.X, at.Y);
-        }
-
-        private void RefreshWool(CombatantState actor)
-        {
-            var signature = actor.SignaturePool;
-            bool has = signature != null;
-            if (woolValue != null) woolValue.transform.parent.gameObject.SetShown(has);
-            if (!has || woolPips == null) return;
-
-            woolValue.Set(UiStrings.SignatureValue, signature.Current, signature.Max);
-
-            for (int i = 0; i < woolPips.Length; i++)
-            {
-                if (woolPips[i] == null) continue;
-
-                // Pips beyond the resource's own maximum are HIDDEN rather than
-                // drawn empty: sixteen slots under a character whose meter only
-                // goes to eight would read as a meter half broken.
-                bool exists = i < signature.Max;
-                woolPips[i].gameObject.SetShown(exists);
-                if (exists) woolPips[i].color = i < signature.Current ? PipFilled : PipEmpty;
-            }
         }
 
         // The ordinary chip tint, restored every refresh so a preview from a
@@ -2177,6 +2181,19 @@ namespace PrincesPalace
             foreach (var member in _session.Encounter.LivingPlayerParty) return member;
             return null;
         }
+
+        // Test-only door, named ...ForTest per house convention
+        // (FightBeatPlayer.WireStageForTest, FightController.StageShakesForTest)
+        // since Core's InternalsVisibleTo names only the Editor assembly and a
+        // PlayMode test sits outside that grant.
+        //
+        // WHY A TEST NEEDS IT AT ALL: with three fixed plates, WHICH one is
+        // the acting one is a speed question the fixture does not control, so
+        // PartyFormationCaptureTests has to ask rather than assume. Re-deriving
+        // "who is acting" in the test would be a second copy of this method
+        // and would pass on a controller that highlighted the wrong plate --
+        // which is the bug it exists to find.
+        public CombatantState ActingCharacterForTest() => ActingCharacter();
 
         // ---- small painting helpers -------------------------------------------
 

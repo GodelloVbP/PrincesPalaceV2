@@ -251,11 +251,19 @@ public static class ScreenRegistry
                 // someone has to remember (CLAUDE.md gotcha 3).
                 fight.enemyFallbackSprite = SceneBuilder.LoadSpriteByKey(FightScreen.FallbackPlateKey);
 
-                // The per-ButtonTheme 2x1 container bake is GONE (2026-09-10).
-                // It loaded one kit sprite per theme so RefreshPartyPlate could
-                // swap the party plate's frame; the plate is a flat
-                // Ui.OutlineBox now (FightScreen.BuildPartyPlate), so there is
-                // no frame to swap and the six sprites had no reader.
+                // NO PLATE ART IS BAKED HERE, and that is the point of the
+                // 2026-09-10 column pass. Which character's leather sits in
+                // which of the three slots is decided per encounter, so the
+                // sprites are loaded at runtime off characters.json's
+                // plateArt (PcPlateSprites) rather than serialised into the
+                // scene -- a character authored after the last scene build
+                // gets their own plate with no rebuild. The tree still bakes
+                // ONE default per slot so an unrefreshed scene is not three
+                // white quads; see PcPlateArt.BakedDefaults.
+                //
+                // The per-ButtonTheme 2x1 container bake this replaced was
+                // already gone: it loaded one kit sprite per theme for a
+                // frame the card no longer has.
 
                 // Something has to actually START a fight, or the scene opens on
                 // an empty stage and the screen cannot be looked at. Placeholder

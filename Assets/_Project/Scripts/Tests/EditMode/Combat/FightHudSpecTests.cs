@@ -14,7 +14,6 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(6, FightHudSpec.InitiativeSlots);
             Assert.AreEqual(3, FightHudSpec.StageSlotsPerSide);
-            Assert.AreEqual(16, FightHudSpec.WoolPips);
 
             // NOT v1 parity any more -- v1 shipped RUN as a fifth verb, and it
             // never actually let anyone flee (see FightScreen.BuildVerbColumn's

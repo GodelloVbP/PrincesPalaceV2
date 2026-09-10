@@ -58,7 +58,14 @@ that recolours a rim at runtime does not restate `Rim`'s naming convention) ·
 `PcTheme`/`PcColours` (what each `ButtonTheme` LOOKS like once it reaches a
 fight-HUD card: a rim hex at 0.70 alpha and a name hex, six explicit arms and
 `default: throw`. This is the other half of `ResolvedCharacter.PlateTheme` —
-content says which theme, this says what the theme is) · `UiString` ·
+content says which theme, this says what the theme is) ·
+`PcPlateArt` (the MEASURED SHAPE of a per-PC fight-HUD plate — aspect, safe
+interior, the fraction of the right end the embossed head owns, the acting-glow
+decal's key and pad, and the three baked defaults an unrefreshed scene shows.
+Every number pasted from `tools/normalize_pc_plates.py` and re-derived off the
+committed PNGs by `PcPlateArtTests`. WHICH plate a character wears is not here:
+that is `characters.json`'s `plateArt`, loaded at runtime by
+`Core/PcPlateSprites.cs`) · `UiString` ·
 `UiStrings` ·
 `UiSolver` ·
 `SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
@@ -397,9 +404,21 @@ sprite meshes, so `textureRectOffset` + `textureRect` is the opaque box);
 ### Domain — the screen tree
 
 `Domain/UiKit/Screens/FightScreen.cs` declares the whole screen: two mirrored
-stages, the initiative row, bark, enemy plates, party plate, three command
-columns, and the only two genuine `Ui.Pool` sites in the game (the spell VFX
-rect and the damage popups). `FightHudPalette.cs` holds the colours, which in
+stages, the initiative row, bark, enemy plates, the three PC plates, three
+command columns, and the only two genuine `Ui.Pool` sites in the game (the
+spell VFX rect and the damage popups).
+
+**The HUD column is three identical PC plates** (`BuildPcPlates`, 2026-09-10),
+one per party seat, 452 wide and `452 / PcPlateArt.Aspect` tall, stacked
+bottom-up from `FightSubmenuLayout.VisibleBottomLine` with a 4px gap. Each is
+the occupant's own leather plate art with their head embossed at the right end
+— identity is the ART, so the ACTING character is a tinted halo
+(`PcPlate{i}Highlight`) plus a brighter name rather than a promotion to a
+bigger card. This replaced a taller `PartyPlate` for whoever was acting plus
+two smaller `Roster{i}` cards for everyone else: two anatomies, two ledgers,
+two paint routines, and a roster half structurally unable to show what the
+party half could. Names are 16pt and every number 14pt, drawn ON 20px meters
+with `TypographyRole.TacticalData`'s outlined material. `FightHudPalette.cs` holds the colours, which in
 v1 were Editor-assembly `Color` fields the runtime controller could not read
 and therefore restated.
 

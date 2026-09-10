@@ -75,7 +75,6 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(FightHudSpec.InitiativeSlots, screen.InitiativeIcons.Count);
             Assert.AreEqual(FightHudSpec.EnemyPlates, screen.EnemyPlates.Count);
-            Assert.AreEqual(FightHudSpec.WoolPips, screen.WoolPips.Count);
             Assert.AreEqual(FightHudSpec.Verbs, screen.VerbButtons.Count);
             Assert.AreEqual(FightHudSpec.DamagePopups, screen.DamagePopups.Count);
             Assert.AreEqual(FightHudSpec.DetailStatRows, screen.DetailStatKeys.Count);
@@ -104,30 +103,30 @@ namespace PrincesPalace.Domain.Tests
             AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes,
                 s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
 
-            // The roster card grew from one readout to four in 2026-09-09's
-            // column pass, and RefreshRoster indexes all of them off the same
-            // loop counter -- exactly the shape the Store bug had.
-            AssertSameLength("roster", s.RosterPlates, s.RosterNames, s.RosterHpValues,
-                s.RosterHpFills, s.RosterMpValues, s.RosterMpFills, s.RosterMpShades,
-                s.RosterSignatures);
+            // TEN PARALLEL LISTS OVER ONE COLUMN, and RefreshPcPlate indexes
+            // every one of them off the same loop counter -- exactly the
+            // shape the Store bug had. One card language means one length to
+            // agree on, where the party plate and the roster cards used to
+            // be two families that could drift apart independently.
+            AssertSameLength("pc plates", s.PcPlates, s.PcPlateArts, s.PcPlateHighlights,
+                s.PcNames, s.PcSignatures, s.PcHpValues, s.PcHpFills,
+                s.PcMpValues, s.PcMpFills, s.PcMpShades);
 
-            // FOUR PER CARD, kept OUT of AssertSameLength above -- these are
-            // 4x the length of the roster lists by construction, so the
-            // helper would refuse them for being exactly right.
-            // FightController.ApplyCardTheme indexes rosterCardRims as
-            // i * RimsPerCard, so a list that is not 4x the cards paints one
-            // card's edges onto another's.
-            Assert.AreEqual(4, s.PartyCardRims.Count, "the party card has four rim edges");
-            Assert.AreEqual(s.RosterPlates.Count * 4, s.RosterCardRims.Count,
-                "rosterCardRims is CARD-MAJOR: exactly four edges per roster card, in order");
+            Assert.AreEqual(FightScreen.PcPlateCount, s.PcPlates.Count,
+                "one plate per party seat, always -- see BuildPcPlates' own header");
 
-            // THE SAME ARITHMETIC FOR THE POOL METER'S OWN RIM (plan P7).
-            // FightController.ApplyPoolTheme indexes rosterMpRims the same
-            // i * RimsPerCard way, so a list that is not 4x the cards recolours
+            // FOUR PER PLATE, kept OUT of AssertSameLength above -- these are
+            // 4x the length of the plate lists by construction, so the helper
+            // would refuse them for being exactly right.
+            // FightController.ApplyPoolTheme indexes pcMpRims as
+            // i * RimsPerCard, so a list that is not 4x the plates recolours
             // one ally's bar to another ally's resource.
-            Assert.AreEqual(4, s.PartyMpRims.Count, "the party card's pool meter has four rim edges");
-            Assert.AreEqual(s.RosterPlates.Count * 4, s.RosterMpRims.Count,
-                "rosterMpRims is CARD-MAJOR: exactly four meter rim edges per roster card, in order");
+            Assert.AreEqual(s.PcPlates.Count * 4, s.PcMpRims.Count,
+                "pcMpRims is CARD-MAJOR: exactly four meter rim edges per plate, in order");
+
+            // FIVE PER PLATE, same flattening, same silent failure mode.
+            Assert.AreEqual(s.PcPlates.Count * FightScreen.PcStatusBadgesPerPlate, s.PcStatusBadges.Count,
+                "pcStatusBadges is CARD-MAJOR: exactly five badges per plate, in order");
         }
 
         // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
@@ -166,12 +165,16 @@ namespace PrincesPalace.Domain.Tests
                 { "PartyHitFlashes", s.PartyHitFlashes }, { "PartyNameplates", s.PartyNameplates },
                 { "PartyFootShadows", s.PartyFootShadows }, { "PartyFootGlows", s.PartyFootGlows },
                 { "EnemyPlates", s.EnemyPlates }, { "VerbButtons", s.VerbButtons },
-                { "SubmenuRows", s.SubmenuRows }, { "WoolPips", s.WoolPips },
+                { "SubmenuRows", s.SubmenuRows },
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
-                { "PartyCardRims", s.PartyCardRims }, { "RosterCardRims", s.RosterCardRims },
-                { "PartyMpRims", s.PartyMpRims }, { "RosterMpRims", s.RosterMpRims },
-                { "RosterMpShades", s.RosterMpShades },
+                { "PcPlates", s.PcPlates }, { "PcPlateArts", s.PcPlateArts },
+                { "PcPlateHighlights", s.PcPlateHighlights },
+                { "PcNames", s.PcNames }, { "PcSignatures", s.PcSignatures },
+                { "PcHpValues", s.PcHpValues }, { "PcHpFills", s.PcHpFills },
+                { "PcMpValues", s.PcMpValues }, { "PcMpFills", s.PcMpFills },
+                { "PcMpShades", s.PcMpShades }, { "PcMpRims", s.PcMpRims },
+                { "PcStatusBadges", s.PcStatusBadges },
             };
 
             foreach (var pair in lists)
@@ -182,9 +185,7 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            Assert.IsTrue(s.PartyPlate.IsValid);
-            Assert.IsTrue(s.PartyMpTag.IsValid, "the pool meter's tag was never assigned a node");
-            Assert.IsTrue(s.PartyMpShade.IsValid, "the pool meter's shade was never assigned a node");
+            Assert.IsTrue(s.SecondLifeBadge.IsValid, "the party revive badge was never assigned a node");
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
             Assert.IsTrue(s.DetailDamageType.IsValid);
@@ -211,181 +212,259 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1080f, root.Rect.Height, 0.01f);
         }
 
-        [Test]
-        public void ThePartyPlateSitsWhereV1PutIt()
-        {
-            // LEFT EDGE ONLY, now -- the one thing that has stayed fixed
-            // through both B1 and B2. B1 moved the BOTTOM off a flat -500
-            // (the canvas's own 40px HUD margin, with no reference to the
-            // verb column at all) onto FightSubmenuLayout.VisibleBottomLine
-            // instead (see its own header). B2 then shrank WIDTH/HEIGHT for
-            // the cozy-plate pass (452x228.28 -> 380x191.92, still the 2:1
-            // aspect -- see BuildPartyPlate's own header) and re-solved the
-            // bottom against the SAME VisibleBottomLine at the new height,
-            // which is why the numbers below moved a second time.
-            //
-            // History: v1/A1 -500 (rect) / -385.858 (centre); B1 -486.972 /
-            // -372.830 (bottom moved onto the verb column's visible line);
-            // B2 -486.703 / -390.743 (bottom re-solved at the new, shorter
-            // height -- 0.27px from B1's own number, since VisibleBottomLine
-            // itself did not move and only the plate's own height did);
-            // 2026-09-07 -486.627 / -391.627, the kit repin. TWO numbers moved
-            // there and neither is a layout decision: the 2:1 art is at a true
-            // 2.0 now (it measured 1.98), so 380 wide is 190 tall rather than
-            // 191.92; and the Row6x1 plate's own bottom halo pad moved
-            // 0.0138 -> 0.0117 of the verb row's height, which is what shifts
-            // VisibleBottomLine itself by 0.11px.
-            //
-            // 2026-09-10, THE CARD: the plate stopped being a kit container
-            // and became the same Ui.OutlineBox the two roster cards are,
-            // only taller (see BuildPartyPlate's own header for the measured
-            // reason -- a 1%-of-canvas rim in front of a flat black field).
-            // Two numbers move with that. HEIGHT is 154 now: not an aspect's
-            // consequence any more, but the sum of the card's own ledger.
-            // And the BOTTOM lands exactly on VisibleBottomLine (-485.392)
-            // rather than 1.235px below it, because a flat box paints no
-            // transparent halo outside its rim -- rect bottom IS painted
-            // bottom, so the pad the container needed is 0.
-            var rect = RectOf("PartyPlate");
-            Assert.AreEqual(-920f, rect.Centre.X - rect.Width * 0.5f, 0.01f, "the left edge must not move");
-            Assert.AreEqual(-408.392f, rect.Centre.Y, 0.01f);
-            Assert.AreEqual(380f, rect.Width, 0.01f);
-            Assert.AreEqual(154f, rect.Height, 0.01f);
-            Assert.AreEqual(-485.392f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
-                "the bottom edge is FightSubmenuLayout.VisibleBottomLine itself now -- a flat card has no " +
-                "halo, so rect bottom == painted bottom");
-        }
+        // ---- the PC plate column (2026-09-10) --------------------------------
 
         [Test]
-        public void ThePartyPlateChildrenRideInsideTheFrame()
+        public void ThePcPlateStackIsFlushLeftAndBottomAtTheMeasuredAspect()
         {
-            // If the HP/MP rows or the wool meter were siblings of the frame
-            // rather than descendants, moving or hiding the plate would leave
-            // them stranded next to it instead of with it.
-            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
-            var names = Walk(plate).Select(n => n.Name).ToList();
+            // THE LEFT EDGE HAS NOT MOVED SINCE v1: -920. Everything else on
+            // this column has, twice, and the left edge is the one anchor
+            // the owner has kept fixed through all of it.
+            //
+            // WIDTH 452, back to the number the column carried before the
+            // 380-wide card pass -- the extra 72px is what pays for 16pt
+            // names and 14pt numbers instead of 12/10/9.
+            //
+            // HEIGHT IS NOT A LITERAL DECISION, it is 452 / PcPlateArt.Aspect
+            // = 80.5546. Pinned here as a literal anyway (gotcha 5) so a
+            // redelivered plate at a different aspect fails HERE, saying the
+            // art moved, rather than quietly letterboxing inside its rect.
+            //
+            // THE BOTTOM lands exactly on FightSubmenuLayout.VisibleBottomLine
+            // (-485.392), the same line the verb column and the skill panel
+            // end on: these plates are cropped to their own alpha bounding
+            // box, so their VisiblePad is 0 on every edge and rect bottom IS
+            // painted bottom.
+            var bottom = RectOf("PcPlate0");
+            Assert.AreEqual(-920f, bottom.Centre.X - bottom.Width * 0.5f, 0.01f, "the left edge must not move");
+            Assert.AreEqual(452f, bottom.Width, 0.01f);
+            Assert.AreEqual(80.5546f, bottom.Height, 0.01f);
+            Assert.AreEqual(-485.392f, bottom.Centre.Y - bottom.Height * 0.5f, 0.01f,
+                "the bottom edge is FightSubmenuLayout.VisibleBottomLine itself -- these plates carry no halo");
 
-            CollectionAssert.Contains(names, "PartyHpBar");
-            CollectionAssert.Contains(names, "PartyMpBar");
-            CollectionAssert.Contains(names, "WoolRow");
+            // STACKED BOTTOM-UP WITH A 4px GAP, every plate identical.
+            var middle = RectOf("PcPlate1");
+            var top = RectOf("PcPlate2");
+            Assert.AreEqual(84.5546f, middle.Centre.Y - bottom.Centre.Y, 0.01f, "plate height plus a 4px gap");
+            Assert.AreEqual(84.5546f, top.Centre.Y - middle.Centre.Y, 0.01f, "the same pitch all the way up");
 
-            // THE CARD, not a container: OutlineBox's own four rim edges are
-            // there, and the two nodes the kit-container shape produced are
-            // not. Named rather than counted -- "PartyPlateArt" reappearing
-            // would mean the container came back in some other form.
-            CollectionAssert.Contains(names, "PartyPlateRimTop");
-            CollectionAssert.DoesNotContain(names, "PartyPlateArt");
-            CollectionAssert.DoesNotContain(names, "PartyPlateContent");
+            foreach (string plate in new[] { "PcPlate0", "PcPlate1", "PcPlate2" })
+            {
+                var rect = RectOf(plate);
+                Assert.AreEqual(-920f, rect.Centre.X - rect.Width * 0.5f, 0.01f, plate + " left edge");
+                Assert.AreEqual(-468f, rect.Centre.X + rect.Width * 0.5f, 0.01f, plate + " right edge");
+            }
         }
 
-        // THE TWELVE NAMES, AS LITERALS -- CLAUDE.md gotcha 5.
+        // PINNED AS A LITERAL, not recomputed from PcPlateFirstY/PcPlatePitchY
+        // (CLAUDE.md's gotcha 5): a test that rebuilds the production
+        // expression can only catch a typo in itself.
         //
-        // This is the one assert that catches a card-major/edge-major mix-up
-        // in RosterCardRims, and it only catches it by being written out
-        // rather than rebuilt from $"{stem}Rim{edge}": a test that generated
-        // the expected names the same way the production code generates the
-        // actual ones can only find a typo in itself. The failure this
-        // guards is silent by construction -- rim edges are AsDecor, so
-        // UiAudit never looks at their colour, and a mix-up paints the wrong
-        // ally's colour on a card rather than throwing anything.
+        // THE BUDGET IS THE CONSTRAINT AND THE LITERAL IS THE MEASUREMENT.
+        // -160.627 is where the party stage's middle figure starts, and the
+        // stage draws OVER the HUD, so a stack whose top rises past it puts
+        // feet on plate text. Both asserts are kept: the LessOrEqual is the
+        // rule, the AreEqual is what makes an unnoticed drift toward it fail
+        // while there is still room to think about it.
+        private const float PcStackTopBudget = -160.627f;
+
+        // -235.7273: three 80.5546-tall plates and two 4px gaps stacked up
+        // from -485.392. It used to be -195.392 with a 154-tall card and two
+        // 66-tall roster cards; the column is 40px taller now and still 75px
+        // clear of its ceiling.
+        private const float PcStackTop = -235.7273f;
+
         [Test]
-        public void TheCardRimNodesCarryTheNamesTheControllerBindsTo()
+        public void ThePcPlateStackTopDoesNotRiseAboveItsBudget()
+        {
+            var top = RectOf("PcPlate2");
+            float stackTop = top.Centre.Y + top.Height * 0.5f;
+
+            Assert.LessOrEqual(stackTop, PcStackTopBudget,
+                $"the plate stack's top edge is at {stackTop}, past the {PcStackTopBudget} the party stage " +
+                "leaves it -- the stage draws over the HUD, so this puts feet on plate text");
+
+            Assert.AreEqual(PcStackTop, stackTop, 0.01f,
+                "the stack's top edge moved -- re-derive it and re-pin the literal, deliberately");
+        }
+
+        [Test]
+        public void EveryPcPlateCarriesItsOwnArtAndItsOwnActingHighlight()
         {
             var s = Screen();
 
-            CollectionAssert.AreEqual(
-                new[] { "PartyPlateRimTop", "PartyPlateRimBottom", "PartyPlateRimLeft", "PartyPlateRimRight" },
-                s.PartyCardRims.Select(r => r.Node.Name).ToList(),
-                "the party card's four edges, in Ui.RimEdgesOf's Top/Bottom/Left/Right order");
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                var plate = Walk(s.Root).First(n => n.Name == $"PcPlate{i}");
+                var names = Walk(plate).Select(n => n.Name).ToList();
 
-            CollectionAssert.AreEqual(
-                new[]
-                {
-                    "Roster0RimTop", "Roster0RimBottom", "Roster0RimLeft", "Roster0RimRight",
-                    "Roster1RimTop", "Roster1RimBottom", "Roster1RimLeft", "Roster1RimRight",
-                },
-                s.RosterCardRims.Select(r => r.Node.Name).ToList(),
-                "CARD-MAJOR: all four of card 0's edges, then all four of card 1's -- an edge-major " +
-                "flattening would paint card 1's colour onto three of card 0's edges");
+                CollectionAssert.Contains(names, $"PcPlate{i}Art");
+                CollectionAssert.Contains(names, $"PcPlate{i}Highlight");
+                CollectionAssert.Contains(names, $"PcPlate{i}HpBar");
+                CollectionAssert.Contains(names, $"PcPlate{i}MpBar");
+                CollectionAssert.Contains(names, $"PcPlate{i}Name");
+                CollectionAssert.Contains(names, $"PcPlate{i}Signature");
+            }
+
+            // THE ACTING CARD IS GONE, and named rather than counted: a
+            // "PartyPlate" or a "Roster0" reappearing would mean the two-card
+            // language came back in some other form.
+            var all = Walk(s.Root).Select(n => n.Name).ToList();
+            CollectionAssert.DoesNotContain(all, "PartyPlate");
+            CollectionAssert.DoesNotContain(all, "Roster0");
+            CollectionAssert.DoesNotContain(all, "WoolRow");
+            CollectionAssert.DoesNotContain(all, "WoolPip0");
         }
 
-        // THE SECOND METER'S OWN SURFACES, pinned as literals for the same
-        // reason the card rims above are (gotcha 5): every one of these is
-        // built by a helper from a stem, so a test that rebuilt the names
-        // from that stem would agree with the builder however wrong the
-        // builder got it. The fill's shade and the meter's four rim edges are
-        // AsDecor, so UiAudit never looks at their colour -- nothing but this
-        // and the runtime capture can tell the controller is repainting the
-        // right objects.
+        // THE ART IS THE IDENTITY, so three plates must not carry one sprite.
+        // The baked defaults are what an unrefreshed scene shows; the
+        // controller overwrites them from content, and
+        // PartyFormationCaptureTests checks the runtime half.
+        [Test]
+        public void TheThreePlatesAreBakedWithThreeDifferentHeads()
+        {
+            var s = Screen();
+            var keys = s.PcPlateArts.Select(a => a.Node.SpriteKey).ToList();
+
+            CollectionAssert.AllItemsAreNotNull(keys);
+            Assert.AreEqual(3, keys.Distinct().Count(),
+                "three plates baked with one sprite would read as three copies of one character");
+
+            foreach (string key in keys)
+            {
+                StringAssert.StartsWith("Assets/_Project/Resources/Plates/pc_", key,
+                    "a plate's baked key names the same PNG PcPlateSprites loads at runtime");
+            }
+        }
+
+        // NOTHING ENTERS THE HEAD ZONE. The embossed head owns the right
+        // ~19% of every plate (PcPlateArt.HeadZoneFrac, measured off the
+        // committed art), and a name or a badge running under a bear's muzzle
+        // is the one way this column can look broken while every rect in it
+        // is legal -- UiAudit checks overlap and containment, and a label
+        // sitting on its own plate's own art violates neither.
+        [Test]
+        public void NoTextOrBadgeEntersTheEmbossedHeadZone()
+        {
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                var plate = RectOf($"PcPlate{i}");
+                float headLeft = plate.Centre.X + FightScreen.PcHeadZoneLeft;
+
+                var occupants = new List<string>
+                {
+                    $"PcPlate{i}Name", $"PcPlate{i}Signature",
+                    $"PcPlate{i}HpBar", $"PcPlate{i}MpBar",
+                };
+                for (int k = 0; k < FightScreen.PcStatusBadgesPerPlate; k++)
+                {
+                    occupants.Add($"PcStatusBadge{i}_{k}");
+                }
+
+                foreach (string node in occupants)
+                {
+                    var rect = RectOf(node);
+                    Assert.LessOrEqual(rect.Centre.X + rect.Width * 0.5f, headLeft + 0.01f,
+                        $"{node} reaches x {rect.Centre.X + rect.Width * 0.5f}, into the head zone that " +
+                        $"starts at {headLeft} -- see PcPlateArt.HeadZoneFrac");
+                }
+            }
+        }
+
+        // THE OWNER'S OWN FLOOR: "it should feel like a proper HP bar, not a
+        // red bar". 20px, and the bars are where the numbers are drawn now,
+        // so this is also the box that has to hold 14pt text.
+        [Test]
+        public void BothMetersOnEveryPlateAreAtLeastTwentyPixelsTall()
+        {
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                Assert.GreaterOrEqual(RectOf($"PcPlate{i}HpBar").Height, 20f, $"PcPlate{i}HpBar");
+                Assert.GreaterOrEqual(RectOf($"PcPlate{i}MpBar").Height, 20f, $"PcPlate{i}MpBar");
+            }
+        }
+
+        // THE NAMES, AS LITERALS -- CLAUDE.md gotcha 5.
+        //
+        // This is the one assert that catches a card-major/edge-major mix-up
+        // in PcMpRims, and it only catches it by being written out rather
+        // than rebuilt from the stem: a test that generated the expected
+        // names the same way the production code generates the actual ones
+        // can only find a typo in itself. The failure this guards is silent
+        // by construction -- rim edges are AsDecor, so UiAudit never looks at
+        // their colour, and a mix-up paints the wrong ally's resource on a
+        // bar rather than throwing anything.
         [Test]
         public void ThePoolMeterNodesCarryTheNamesTheControllerBindsTo()
         {
             var s = Screen();
 
-            Assert.AreEqual("PartyMpTag", s.PartyMpTag.Node.Name);
-            Assert.AreEqual("PartyMpFillShade", s.PartyMpShade.Node.Name,
+            CollectionAssert.AreEqual(
+                new[] { "PcPlate0MpFillShade", "PcPlate1MpFillShade", "PcPlate2MpFillShade" },
+                s.PcMpShades.Select(r => r.Node.Name).ToList(),
                 "Ui.Meter names the band under the fill '<fillName>Shade'");
-
-            CollectionAssert.AreEqual(
-                new[] { "PartyMpBarRimTop", "PartyMpBarRimBottom", "PartyMpBarRimLeft", "PartyMpBarRimRight" },
-                s.PartyMpRims.Select(r => r.Node.Name).ToList(),
-                "the meter's rim is named off the TRACK, not the fill -- Ui.Meter passes trackName to Ui.Rim");
-
-            CollectionAssert.AreEqual(
-                new[] { "Roster0MpFillShade", "Roster1MpFillShade" },
-                s.RosterMpShades.Select(r => r.Node.Name).ToList());
 
             CollectionAssert.AreEqual(
                 new[]
                 {
-                    "Roster0MpBarRimTop", "Roster0MpBarRimBottom", "Roster0MpBarRimLeft", "Roster0MpBarRimRight",
-                    "Roster1MpBarRimTop", "Roster1MpBarRimBottom", "Roster1MpBarRimLeft", "Roster1MpBarRimRight",
+                    "PcPlate0MpBarRimTop", "PcPlate0MpBarRimBottom", "PcPlate0MpBarRimLeft", "PcPlate0MpBarRimRight",
+                    "PcPlate1MpBarRimTop", "PcPlate1MpBarRimBottom", "PcPlate1MpBarRimLeft", "PcPlate1MpBarRimRight",
+                    "PcPlate2MpBarRimTop", "PcPlate2MpBarRimBottom", "PcPlate2MpBarRimLeft", "PcPlate2MpBarRimRight",
                 },
-                s.RosterMpRims.Select(r => r.Node.Name).ToList(),
-                "CARD-MAJOR, like RosterCardRims -- FightController indexes these as i * RimsPerCard");
+                s.PcMpRims.Select(r => r.Node.Name).ToList(),
+                "CARD-MAJOR -- FightController indexes these as i * RimsPerCard, and the rim is named off " +
+                "the TRACK, not the fill (Ui.Meter passes trackName to Ui.Rim)");
         }
 
         // WHAT THE METER IS BAKED AS, which is MANA and has to stay mana.
         //
-        // The controller overwrites all six surfaces at runtime from the
+        // The controller overwrites every surface at runtime from the
         // holder's own pool (plan P7), and for every character shipped today
         // that pool IS mana -- so this pins that the bake and the pools.json
         // row cannot drift apart and make the first painted frame of a fight
-        // differ from the second. It reads FightHudPalette rather than the
-        // content row because a screen tree is Domain and cannot load
-        // content; PoolContentPinTests pins the row against these same
-        // constants from the other side.
+        // differ from the second.
         [Test]
         public void ThePoolMeterIsBakedAsMana()
         {
             var s = Screen();
 
-            Assert.AreEqual(FightHudPalette.MpBright, s.PartyMpFill.Node.ColorHex);
-            Assert.AreEqual(FightHudPalette.MpShade, s.PartyMpShade.Node.ColorHex);
-            Assert.AreEqual(FightHudPalette.MpBright, s.PartyMpTag.Node.ColorHex);
-            Assert.AreEqual(FightHudPalette.MpText, s.PartyMpValue.Node.ColorHex);
-
-            foreach (var edge in s.PartyMpRims)
+            foreach (var fill in s.PcMpFills)
             {
-                Assert.AreEqual(FightHudPalette.MpRim, edge.Node.ColorHex, edge.Node.Name);
+                Assert.AreEqual(FightHudPalette.MpBright, fill.Node.ColorHex, fill.Node.Name);
             }
 
-            foreach (var edge in s.RosterMpRims)
+            foreach (var shade in s.PcMpShades)
+            {
+                Assert.AreEqual(FightHudPalette.MpShade, shade.Node.ColorHex, shade.Node.Name);
+            }
+
+            // THE CAPTION IS THE EXCEPTION, and it is not baked as mana at
+            // all: it is drawn ON the fill, so its job is contrast against
+            // an arbitrary colour rather than agreement with one. Pinned as
+            // the neutral it must stay, beside the four surfaces that do
+            // carry the pool -- if it ever starts being themed, the first
+            // pool with a light fill makes it vanish.
+            foreach (var value in s.PcMpValues.Concat(s.PcHpValues))
+            {
+                Assert.AreEqual(FightHudPalette.TextPrimary, value.Node.ColorHex, value.Node.Name);
+            }
+
+            foreach (var edge in s.PcMpRims)
             {
                 Assert.AreEqual(FightHudPalette.MpRim, edge.Node.ColorHex, edge.Node.Name);
             }
         }
 
-        // THE ROSTER CAPTION NAMES ITS POOL BY PARAMETER, not by a literal.
-        // A card that printed "MP" over a bar full of somebody's rage is the
+        // THE POOL CAPTION NAMES ITS POOL BY PARAMETER, not by a literal.
+        // A plate that printed "MP" over a bar full of somebody's rage is the
         // whole failure this UiString change exists to prevent, and the
         // template is the one place it can be reintroduced.
         [Test]
-        public void TheRosterPoolCaptionTakesItsTagAsAnArgument()
+        public void ThePoolCaptionTakesItsTagAsAnArgument()
         {
             var s = Screen();
 
-            foreach (var value in s.RosterMpValues)
+            foreach (var value in s.PcMpValues)
             {
                 Assert.AreEqual(UiStrings.PoolNamedValue.Key, value.Node.Text.Key,
                     $"{value.Node.Name} must read its tag off the pool, not out of UiStrings");
@@ -393,6 +472,41 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual("FURY 100/100", UiStrings.PoolNamedValue.Format("FURY", 100, 100));
             Assert.AreEqual("MP 34/34", UiStrings.PoolNamedValue.Format("MP", 34, 34));
+        }
+
+        // THE OWNER'S TYPE SIZES, pinned where they can regress. The
+        // complaint that started this pass was 9/10pt numbers at 1080p.
+        [Test]
+        public void NamesAreSixteenPointAndEveryNumberIsFourteen()
+        {
+            var s = Screen();
+
+            foreach (var name in s.PcNames)
+            {
+                Assert.AreEqual(16, name.Node.FontSize, name.Node.Name);
+            }
+
+            foreach (var label in s.PcHpValues.Concat(s.PcMpValues).Concat(s.PcSignatures))
+            {
+                Assert.AreEqual(14, label.Node.FontSize, label.Node.Name);
+            }
+        }
+
+        // ON-BAR TEXT CARRIES THE DATA MATERIAL, which is the one role whose
+        // TMP material has an outline AND an underlay -- a number drawn on a
+        // meter has to stay readable over a full fill and over the empty
+        // track behind it alike. Stated as a role rather than as a per-label
+        // outline so the treatment lives in one place.
+        [Test]
+        public void EveryNumberDrawnOnABarUsesTheTacticalDataRole()
+        {
+            var s = Screen();
+
+            foreach (var label in s.PcHpValues.Concat(s.PcMpValues))
+            {
+                Assert.AreEqual(TypographyRole.TacticalData, label.Node.Role,
+                    $"{label.Node.Name} is drawn ON a meter and needs the outlined data material");
+            }
         }
 
         // TWO ABREAST, NOT A COLUMN OF THREE. Half-width plates in two columns
@@ -407,20 +521,19 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(first.Y, second.Y, 0.01f, "the first two sit side by side");
 
-            // 236, UP FROM 216 (owner's HQ-kit instruction, 2026-09-07):
-            // PlateW grew 200 to 220 so the Crimson TwoByOne frame's own
-            // content inset leaves the icon/name/tag/hp row the same usable
-            // width it always had -- see PlateW's own comment. The 16px
+            // 276, UP FROM 236 (owner, 2026-09-10, "enemy names keep
+            // truncating"): PlateW grew 220 to 260, which is what pays for a
+            // 118px name box at 14pt -- see PlateW's own comment. The 16px
             // gutter itself did not move; the plate width inside it did.
-            Assert.AreEqual(236f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
+            Assert.AreEqual(276f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
 
             Assert.AreEqual(first.X, third.X, 0.01f, "the third starts the next row under the first");
 
-            // 122, UP FROM 76: PlateH grew 64 to 110 (owner's HQ-kit
-            // instruction, 2026-09-07 -- ValidateContainerAspect at the new
-            // PlateW=220, see PlateH's own comment). The 12px gutter itself
-            // is unchanged; the plate height inside it grew.
-            Assert.AreEqual(122f, first.Y - third.Y, 0.01f, "plate height plus a 12px gutter");
+            // 142, UP FROM 122: PlateH is PlateW/2 (the 2:1 container's own
+            // aspect), so widening the plate to 260 makes it 130 tall. The
+            // 12px gutter itself is unchanged; the plate height inside it
+            // grew with the width.
+            Assert.AreEqual(142f, first.Y - third.Y, 0.01f, "plate height plus a 12px gutter");
 
             // 392 still, and the block's RIGHT edge is what is pinned -- it sits
             // against the same margin the heading and the standing-count do.
@@ -429,17 +542,17 @@ namespace PrincesPalace.Domain.Tests
 
             // The plates are the stage's ceiling: the tallest actor needs 300
             // above the front slot's ground line, so its head reaches 72, and
-            // the middle slot's reaches 89 while still just crossing the plates
-            // in x. Two rows of 110 (was 64, see PlateH's own comment) still
-            // clear both -- by less margin than before, since the taller
-            // plate and the wider gutter both push this edge down. 55, not
-            // 32: half of the new 110-tall plate, not the old 64.
+            // the middle slot's reaches 89 while still just crossing the
+            // plates in x. Two rows of 130 (was 110, see PlateW's 2026-09-10
+            // note) still clear both, with 36 of daylight against the 12 this
+            // layout is toleranced to. 65, not 55: half of the new 130-tall
+            // plate.
             //
-            // NOT RE-VERIFIED AGAINST tools/measure_stage.py as part of the
-            // HQ-kit conversion -- this Domain-only check uses the same
+            // NOT RE-VERIFIED AGAINST tools/measure_stage.py as part of
+            // either widening -- this Domain-only check uses the same
             // hand-derived 89f+12f the old assertion did, which is a real
             // gap this test cannot close on its own.
-            Assert.Greater(third.Y - 55f, 89f + 12f,
+            Assert.Greater(third.Y - 65f, 89f + 12f,
                 "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
         }
 
@@ -456,10 +569,13 @@ namespace PrincesPalace.Domain.Tests
             var tags = RectOf("EnemyPlate0Tags");
             var bar = RectOf("EnemyPlate0Bar");
 
-            // Name, HP and the BRK tag are one row now, not three.
+            // Name and HP are one row; BRK rides the BAR's row, right of
+            // the bar (2026-09-10 -- folding it into the name row is what had
+            // squeezed the name to 72px at 11pt, which is the complaint that
+            // started this pass).
             Assert.AreEqual(name.Centre.Y, hp.Centre.Y, 0.01f, "name and HP share the top row");
-            Assert.AreEqual(name.Centre.Y, tags.Centre.Y, 0.01f,
-                "BRK now lives IN the name row - it is not a row of its own any more");
+            Assert.AreEqual(bar.Centre.Y, tags.Centre.Y, 0.01f,
+                "BRK shares the bar's row now - it is not in the name row and not a row of its own");
 
             // Symmetric margins to the plate's own top/bottom edges is what
             // "no blank band" actually means: the old layout left an unequal
@@ -470,21 +586,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(topMargin, bottomMargin, 0.01f,
                 "the top row and the bar should be centred as one block, not offset toward one edge");
 
-            // 34, UP FROM 11: PlateH grew 64 to 110 (owner's HQ-kit
-            // instruction, 2026-09-07 -- see PlateH's own comment), and
-            // topY/barY did not move with it, so the block that used to sit
-            // with 11px of margin now sits with 34 -- still centred (the
-            // assertion above), just inside a taller frame.
-            Assert.AreEqual(34f, topMargin, 0.01f);
+            // 40.5, UP FROM 34: PlateH grew 110 to 130 with PlateW
+            // 220 -> 260 (see PlateW's own 2026-09-10 note) while the HP box
+            // grew 27 -> 34 with its font, and barY was re-solved against
+            // both -- see the two equations in BuildEnemyPlates' own topY/
+            // barY comment. Still centred (the assertion above), inside a
+            // taller frame, with a box 7px taller in it.
+            //
+            // hp is still the taller of the two top-row boxes at 34 against
+            // the name's 24, so its edge is still the row's real top edge.
+            Assert.AreEqual(40.5f, topMargin, 0.01f);
 
             // A deliberate small gap between the two rows, not the old blank
             // band (which was the full retired status line's own height).
+            // STILL 8, deliberately: the HP box grew 27 -> 34 with its font
+            // (10 -> 13pt) and barY was re-solved rather than left where it
+            // was, so the gap between the rows is the same one it has always
+            // been and the extra height came out of the outer margins.
             Assert.AreEqual(8f, hp.Bottom - bar.Top, 0.01f);
 
-            // The tag sits strictly between the name and the HP value at
-            // every audited aspect - it cannot collide with either.
-            Assert.LessOrEqual(name.Right, tags.Left, "BRK must not overlap the name");
-            Assert.LessOrEqual(tags.Right, hp.Left, "BRK must not overlap the HP value");
+            // The name cannot reach the HP value, and the bar cannot reach
+            // the tag that now shares its row.
+            Assert.LessOrEqual(name.Right, hp.Left, "the name must not overlap the HP value");
+            Assert.LessOrEqual(bar.Right, tags.Left, "the bar must not run under BRK");
         }
 
         [Test]
@@ -645,17 +769,6 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(FightStageAnchors.InitiativeIconSize + FightStageAnchors.InitiativeIconGap,
                 b - a, 0.01f);
-        }
-
-        [Test]
-        public void TheWoolPipsFitInsideThePlate()
-        {
-            var row = RectOf("WoolRow");
-            for (int i = 0; i < FightHudSpec.WoolPips; i++)
-            {
-                var pip = RectOf($"WoolPip{i}");
-                Assert.IsTrue(row.Contains(pip), $"WoolPip{i} escapes the wool row");
-            }
         }
 
         [Test]
@@ -1020,25 +1133,26 @@ namespace PrincesPalace.Domain.Tests
         {
             var attack = RectOf("Verb0");
             var panel = RectOf("SubmenuContainer");
-            var partyPlate = RectOf("PartyPlate");
+            var bottomPlate = RectOf("PcPlate0");
 
             float verbVisibleBottom = VisibleBottom(attack, Ui.PlateVisiblePad(Ui.PlateShapeFor(attack.Width, attack.Height)));
             float panelVisibleBottom = VisibleBottom(panel, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour));
 
-            // THE RAW RECT BOTTOM for the third surface, 2026-09-10 -- and
-            // the asymmetry is the point rather than an oversight. The verb
-            // row and the skill panel are kit art, which paints a
-            // transparent halo outside its own border, so their painted
-            // edge is inset from their rect and has to be corrected for.
-            // The party plate is a flat Ui.OutlineBox now: its rim edge IS
-            // its last painted pixel, so a pad here would move the
-            // comparison off the line it is checking.
-            float plateVisibleBottom = partyPlate.Centre.Y - partyPlate.Height * 0.5f;
+            // THE RAW RECT BOTTOM for the third surface, and the asymmetry
+            // is the point rather than an oversight. The verb row and the
+            // skill panel are kit art, which paints a transparent halo
+            // outside its own border, so their painted edge is inset from
+            // their rect and has to be corrected for. The PC plates are
+            // cropped to their own alpha bounding box
+            // (PcPlateArt.VisiblePad, measured at 0 on every edge), so their
+            // rect bottom IS their last painted pixel and a pad here would
+            // move the comparison off the line it is checking.
+            float plateVisibleBottom = bottomPlate.Centre.Y - bottomPlate.Height * 0.5f;
 
             Assert.AreEqual(verbVisibleBottom, panelVisibleBottom, 0.01f,
                 "the skill panel and the verb column no longer end on the same VISIBLE line");
             Assert.AreEqual(verbVisibleBottom, plateVisibleBottom, 0.01f,
-                "the party plate and the verb column no longer end on the same VISIBLE line");
+                "the bottom PC plate and the verb column no longer end on the same VISIBLE line");
             Assert.AreEqual(FightSubmenuLayout.VisibleBottomLine, verbVisibleBottom, 0.01f,
                 "and that line is FightSubmenuLayout.VisibleBottomLine, which is what all three are measured from");
         }
@@ -1157,19 +1271,19 @@ namespace PrincesPalace.Domain.Tests
             var screen = Screen();
             var root = UiSolver.Solve(screen.Root, UiFrames.Reference);
 
-            // 3 slots x 5 (4 statuses + the "+N" overflow chip), flattened
-            // slot-major; 2 roster rows x 5, flattened roster-major; the
-            // party plate raised 4 -> 6 with no new list.
+            // 3 stage slots x 5 (4 statuses + the "+N" overflow chip),
+            // flattened slot-major; 3 PC plates x 5, flattened card-major.
+            //
+            // ONE COUNT WHERE THERE WERE TWO (2026-09-10). The column used to
+            // carry 10 roster badges plus 12 on the acting card -- two ranges
+            // of different widths that PaintStatusRow had to be told about
+            // separately, and an ally's statuses were readable in five slots
+            // while the acting character's were readable in twelve. Every
+            // party member gets the same five now, which is what the
+            // controller's PcStatusBadgeCount has to agree with.
             Assert.AreEqual(15, screen.EnemyStatusBadges.Count);
             Assert.AreEqual(3, screen.EnemyStatusStrips.Count);
-            Assert.AreEqual(10, screen.RosterStatusBadges.Count);
-
-            // 12 SINCE 2026-09-09, up from 6: the owner's mock-up gives the
-            // party plate two badge lines of six. Row-major, so slot 6 starts
-            // the second line -- PartyBuffLinesAreSixWideAndRowMajor below
-            // pins that half; this one only pins the count the controller's
-            // PartyStatusBadgeCount has to agree with.
-            Assert.AreEqual(12, screen.PartyBuffIcons.Count);
+            Assert.AreEqual(15, screen.PcStatusBadges.Count);
 
             for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
             {
@@ -1186,32 +1300,23 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            for (int r = 0; r < 2; r++)
+            // ONE ANATOMY ON EVERY SURFACE. The first capture of this
+            // feature had the party row NOT carrying its own Glyph/Counter
+            // children, which forced a tinted root Image to double as the
+            // glyph and Code to carry a folded caption; every badge in the
+            // game comes out of BuildStatusBadge now, so this walks the PC
+            // plates with the same assertions as the enemy rows above.
+            for (int r = 0; r < FightScreen.PcPlateCount; r++)
             {
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < FightScreen.PcStatusBadgesPerPlate; i++)
                 {
-                    var name = $"RosterStatusBadge{r}_{i}";
+                    var name = $"PcStatusBadge{r}_{i}";
                     var badge = Find(root, name);
                     Assert.IsNotNull(badge, $"missing {name}");
                     Assert.IsNotNull(Find(badge, "Glyph"), $"{name} has no Glyph child");
                     Assert.IsNotNull(Find(badge, "Code"), $"{name} has no Code child");
                     Assert.IsNotNull(Find(badge, "Counter"), $"{name} has no Counter child");
                 }
-            }
-
-            // PartyBuff{i} is rebuilt through the same BuildStatusBadge
-            // anatomy as the enemy and roster rows above -- the first
-            // capture's worst defect was this row NOT having its own Glyph/
-            // Counter children, which forced a tinted root Image to double
-            // as the glyph and Code to carry a folded "CODE·N" caption.
-            for (int i = 0; i < 12; i++)
-            {
-                var name = $"PartyBuff{i}";
-                var badge = Find(root, name);
-                Assert.IsNotNull(badge, $"missing {name}");
-                Assert.IsNotNull(Find(badge, "Glyph"), $"{name} has no Glyph child");
-                Assert.IsNotNull(Find(badge, "Code"), $"{name} has no Code child");
-                Assert.IsNotNull(Find(badge, "Counter"), $"{name} has no Counter child");
             }
 
             Assert.IsNotNull(Find(root, "StatusTooltip"));
@@ -1240,11 +1345,11 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            for (int r = 0; r < 2; r++)
+            for (int r = 0; r < FightScreen.PcPlateCount; r++)
             {
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < FightScreen.PcStatusBadgesPerPlate; i++)
                 {
-                    var name = $"RosterStatusBadge{r}_{i}";
+                    var name = $"PcStatusBadge{r}_{i}";
                     Assert.IsTrue(Find(root, name).Source.StartInactive, $"{name} must start inactive");
                 }
             }
@@ -1380,107 +1485,6 @@ namespace PrincesPalace.Domain.Tests
         // on it. The budget is therefore the stack's own TOP, and it must not
         // rise.
         //
-        // PINNED AS A LITERAL, not recomputed from RosterFirstY/RosterPitchY/
-        // RosterPlateH (CLAUDE.md's gotcha 5): a test that rebuilds the
-        // production expression can only catch a typo in itself. -160.627 is
-        // what the stack topped out at BEFORE this pass, when the 136px
-        // between PartyPlateTopY and here was spent on
-        // 36 (transform strip) + 6 + 44 + 6 + 44. It is spent on
-        // 2 + 66 + 2 + 66 now, which is the same 136 -- that is the whole
-        // arithmetic of removing the strip.
-        private const float RosterStackTopBudget = -160.627f;
-
-        // WHERE THE STACK ACTUALLY TOPS OUT, as of the 2026-09-10 card pass:
-        // the party card shrank 190 -> 154 and its bottom rose 1.235px onto
-        // VisibleBottomLine itself, so everything stacked on it dropped
-        // 34.77px away from the budget line. Pinned as a literal BESIDE the
-        // budget rather than replacing it -- the budget is the constraint
-        // (never rise above it), this is the fact (where we are), and a
-        // change that silently spent the new headroom should fail here.
-        private const float RosterStackTop = -195.392f;
-
-        [Test]
-        public void TheRosterStackTopDoesNotRiseAboveItsBudget()
-        {
-            var top = RectOf("Roster1");
-            float stackTop = top.Centre.Y + top.Height * 0.5f;
-
-            Assert.LessOrEqual(stackTop, RosterStackTopBudget,
-                "the HUD column's top edge rose past its budget -- the party stage draws OVER this column, " +
-                "so a taller stack puts a figure's feet on top of the roster text. Pay for new rows by " +
-                "trimming cell heights, never by raising this line.");
-            Assert.AreEqual(RosterStackTop, stackTop, 0.01f,
-                "the stack top moved; if that was intended, re-derive this literal from the card ledger " +
-                "and say so, and check it still clears the budget above.");
-        }
-
-        // "Have all the containers be flush with one another on a horizontal
-        // axis. So no container bigger than the other in width" -- the owner,
-        // 2026-09-09. Three cards, one left edge, one right edge.
-        [Test]
-        public void EveryCardInTheHudColumnSharesTheSameVerticalEdges()
-        {
-            var cards = new[] { "PartyPlate", "Roster0", "Roster1" };
-
-            foreach (var card in cards)
-            {
-                var rect = RectOf(card);
-                Assert.AreEqual(-920f, rect.Left, 0.01f, $"{card}'s left edge");
-                Assert.AreEqual(-540f, rect.Right, 0.01f, $"{card}'s right edge");
-            }
-        }
-
-        // The mock-up's roster card: one outlined rectangle, three stacked
-        // cells, a hairline between each pair. Checked as ORDER and
-        // CLEARANCE rather than as coordinates -- the numbers are free to be
-        // retuned, the reading order is not.
-        [Test]
-        public void EachRosterCardStacksNameAndBarsThenSignatureThenBadges()
-        {
-            for (int r = 0; r < 2; r++)
-            {
-                var name = RectOf($"Roster{r}Name");
-                var hpBar = RectOf($"Roster{r}HpBar");
-                var mpBar = RectOf($"Roster{r}MpBar");
-                var rule0 = RectOf($"Roster{r}Rule0");
-                var signature = RectOf($"Roster{r}Signature");
-                var rule1 = RectOf($"Roster{r}Rule1");
-
-                Assert.LessOrEqual(hpBar.Top, name.Bottom, $"roster {r}: the bars must sit UNDER the name");
-                Assert.AreEqual(hpBar.Centre.Y, mpBar.Centre.Y, 0.01f,
-                    $"roster {r}: the mock-up puts the MP bar at the SAME height as the HP bar, not below it");
-                Assert.LessOrEqual(hpBar.Right, mpBar.Left, $"roster {r}: HP on the left half, MP on the right");
-
-                Assert.LessOrEqual(rule0.Top, hpBar.Bottom, $"roster {r}: rule 0 closes the bar cell");
-                Assert.LessOrEqual(signature.Top, rule0.Bottom, $"roster {r}: the signature line is cell 2");
-                Assert.LessOrEqual(rule1.Top, signature.Bottom, $"roster {r}: rule 1 closes the signature cell");
-
-                for (int i = 0; i < 5; i++)
-                {
-                    var badge = RectOf($"RosterStatusBadge{r}_{i}");
-                    Assert.LessOrEqual(badge.Top, rule1.Bottom,
-                        $"roster {r} badge {i} has left the third cell");
-                    Assert.IsTrue(RectOf($"Roster{r}").Contains(badge),
-                        $"roster {r} badge {i} escapes the card");
-                }
-            }
-        }
-
-        // The two numbers are drawn ON their own bars, which is the only way
-        // two meters fit across a 380px card -- so each value label has to be
-        // INSIDE its own track's rect, not beside it.
-        [Test]
-        public void TheRosterValuesAreDrawnOnTheirOwnBars()
-        {
-            for (int r = 0; r < 2; r++)
-            {
-                Assert.IsTrue(RectOf($"Roster{r}HpBar").Contains(RectOf($"Roster{r}HpValue")),
-                    $"roster {r}: the HP value has slipped off its bar");
-                Assert.IsTrue(RectOf($"Roster{r}MpBar").Contains(RectOf($"Roster{r}MpValue")),
-                    $"roster {r}: the MP value has slipped off its bar");
-            }
-        }
-
         // EVERY meter on this column is the same widget (Ui.Meter): a track,
         // the fill FightController.SetFill drains, and the two shading strips
         // that make it read as a bar rather than as a coloured rectangle.
@@ -1492,11 +1496,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryMeterOnTheHudColumnCarriesItsShadingInsideItsFill()
         {
-            var fills = new List<string> { "PartyHpFill", "PartyMpFill" };
-            for (int r = 0; r < 2; r++)
+            var fills = new List<string>();
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
             {
-                fills.Add($"Roster{r}HpFill");
-                fills.Add($"Roster{r}MpFill");
+                fills.Add($"PcPlate{i}HpFill");
+                fills.Add($"PcPlate{i}MpFill");
             }
 
             var root = Solve();
@@ -1513,39 +1517,74 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // "The bars should be slightly bigger in height. It should feel like
-        // a proper HP bar not a red bar. Same for MP." -- the owner. Pinned
-        // as a floor rather than an exact value: the point is that a future
-        // tidy-up cannot quietly shrink them back toward the 13.45 the
-        // capture was taken at.
+        // The two numbers are drawn ON their own bars, which is the only way
+        // two meters and a name fit on an 80px strip -- so each value label
+        // has to be INSIDE its own track's rect, not beside it.
         [Test]
-        public void TheHudColumnsBarsAreTallEnoughToReadAsMeters()
+        public void ThePcValuesAreDrawnOnTheirOwnBars()
         {
-            Assert.GreaterOrEqual(RectOf("PartyHpBar").Height, 20f, "the party HP bar is back to a stripe");
-            Assert.GreaterOrEqual(RectOf("PartyMpBar").Height, 20f, "the party MP bar is back to a stripe");
-
-            for (int r = 0; r < 2; r++)
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
             {
-                Assert.GreaterOrEqual(RectOf($"Roster{r}HpBar").Height, 12f, $"roster {r} HP bar");
-                Assert.GreaterOrEqual(RectOf($"Roster{r}MpBar").Height, 12f, $"roster {r} MP bar");
+                Assert.IsTrue(RectOf($"PcPlate{i}HpBar").Contains(RectOf($"PcPlate{i}HpValue")),
+                    $"plate {i}: the HP value has slipped off its bar");
+                Assert.IsTrue(RectOf($"PcPlate{i}MpBar").Contains(RectOf($"PcPlate{i}MpValue")),
+                    $"plate {i}: the pool value has slipped off its bar");
             }
         }
 
+        // The plate's reading order: name, signature and badges across the
+        // top; the two meters side by side under them, split by a hairline.
+        // Checked as ORDER and CLEARANCE rather than as coordinates -- the
+        // numbers are free to be retuned, the reading order is not.
         [Test]
-        public void PartyBuffLinesAreSixWideAndRowMajor()
+        public void EveryPlateStacksItsNameRowAboveItsTwoMeters()
         {
-            var first = RectOf("PartyBuff0");
-            var seventh = RectOf("PartyBuff6");
-
-            Assert.AreEqual(first.Centre.X, seventh.Centre.X, 0.01f,
-                "slot 6 must start the SECOND line under slot 0 -- PaintStatusRow fills a flat range in " +
-                "order, so a column-major layout would fill down before across");
-            Assert.Less(seventh.Centre.Y, first.Centre.Y, "the second line sits below the first");
-
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
             {
-                Assert.AreEqual(RectOf($"PartyBuff{i}").Centre.Y, RectOf($"PartyBuff{i + 1}").Centre.Y, 0.01f,
-                    $"badges {i} and {i + 1} are on the same line");
+                var plate = RectOf($"PcPlate{i}");
+                var name = RectOf($"PcPlate{i}Name");
+                var signature = RectOf($"PcPlate{i}Signature");
+                var hpBar = RectOf($"PcPlate{i}HpBar");
+                var mpBar = RectOf($"PcPlate{i}MpBar");
+
+                Assert.LessOrEqual(hpBar.Top, name.Bottom, $"plate {i}: the bars must sit UNDER the name row");
+                Assert.AreEqual(hpBar.Centre.Y, mpBar.Centre.Y, 0.01f,
+                    $"plate {i}: the pool bar sits at the SAME height as the HP bar, not below it");
+                Assert.LessOrEqual(hpBar.Right, mpBar.Left, $"plate {i}: HP on the left half, the pool on the right");
+
+                Assert.LessOrEqual(name.Right, signature.Left,
+                    $"plate {i}: the signature reads after the name, on the same row");
+                Assert.AreEqual(name.Centre.Y, signature.Centre.Y, 0.01f,
+                    $"plate {i}: name and signature share the top row");
+
+                for (int k = 0; k < FightScreen.PcStatusBadgesPerPlate; k++)
+                {
+                    var badge = RectOf($"PcStatusBadge{i}_{k}");
+                    Assert.LessOrEqual(signature.Right, badge.Left,
+                        $"plate {i} badge {k} has walked into the signature");
+                    Assert.IsTrue(plate.Contains(badge), $"plate {i} badge {k} escapes the plate");
+                }
+            }
+        }
+
+        // BADGES RUN LEFT TO RIGHT IN INDEX ORDER, which PaintStatusRow
+        // depends on: it walks a flat range and fills it in order, so a
+        // right-to-left flattening would put the first status furthest right
+        // and the "+N" overflow chip on the left end of the row.
+        [Test]
+        public void EveryPlatesBadgesRunLeftToRightInIndexOrder()
+        {
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                for (int k = 0; k + 1 < FightScreen.PcStatusBadgesPerPlate; k++)
+                {
+                    Assert.Less(RectOf($"PcStatusBadge{i}_{k}").Centre.X,
+                        RectOf($"PcStatusBadge{i}_{k + 1}").Centre.X,
+                        $"plate {i}: badge {k} must sit left of badge {k + 1}");
+                    Assert.AreEqual(RectOf($"PcStatusBadge{i}_{k}").Centre.Y,
+                        RectOf($"PcStatusBadge{i}_{k + 1}").Centre.Y, 0.01f,
+                        $"plate {i}: badges {k} and {k + 1} are on the same line");
+                }
             }
         }
 
@@ -1558,10 +1597,9 @@ namespace PrincesPalace.Domain.Tests
             var root = Solve();
 
             // A transformation is a StatusRow now (StatusHud.TransformRow),
-            // so it shows on the party plate AND on a transformed ally's
-            // roster card -- which the strip, describing only the acting
-            // character, never could. Its 36px is what bought the roster
-            // cards their extra cells.
+            // so it shows on every PC plate rather than only for whoever is
+            // acting -- which the strip, describing only the acting
+            // character, never could.
             Assert.IsNull(Find(root, "TransformStrip"));
             Assert.IsNull(Find(root, "TransformStripText"));
 

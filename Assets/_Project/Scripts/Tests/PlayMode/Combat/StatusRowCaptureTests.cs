@@ -133,7 +133,7 @@ namespace PrincesPalace.PlayModeTests
             session.GrantSpeedPercentForTest(actor, RelicEffect.SparringSaber, 30, 1);
 
             // ---- one OFF-TURN party member carries three statuses, so the
-            // roster mini-plate's own row (RosterStatusBadges, 20px, no
+            // PC plate's own row (PcStatusBadges, 20px, no
             // counter -- section 1's table) is actually exercised by this
             // capture too, rather than only the enemy row and the acting
             // party plate. Mixed polarity (one benefit, two detriments) for

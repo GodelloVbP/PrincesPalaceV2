@@ -149,32 +149,43 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(2)]
-        public void NoPartySlotStandsInsideTheRosterPlates(int slot)
+        public void NoPartySlotStandsInsideThePcPlateColumn(int slot)
         {
-            // -540, RE-READ OFF FightScreen 2026-09-09. This said -468 --
-            // the right edge of the 452-wide plates centred on -694, which
-            // had already been replaced by the 380-wide cards centred on
-            // -730 (PartyPlateWidth / PartyPlateCentreX,
-            // FightScreenTests.EveryCardInTheHudColumnSharesTheSameVertical-
-            // Edges pins -920..-540 from the solved screen). The old value
-            // was defended as "the wider block checks MORE slots, never
-            // fewer", which is true and still the wrong number to write
-            // down: a stale literal that happens to be conservative is
-            // indistinguishable from one that has silently stopped
-            // describing anything.
+            // RE-READ OFF FightScreen 2026-09-10, for the third time, and
+            // the discipline is the point: this literal has said -468, then
+            // -540, then -468 again as the column went 452 wide, 380 wide and
+            // 452 wide. Every stale value it carried was CONSERVATIVE (a
+            // wider block checks more slots, never fewer) and every one of
+            // them was still wrong to leave, because a literal that happens
+            // to over-cover is indistinguishable from one that has silently
+            // stopped describing anything.
+            //
+            // FightScreenTests.ThePcPlateStackIsFlushLeftAndBottomAtThe-
+            // MeasuredAspect pins -920..-468 from the solved screen; this is
+            // the same two numbers, restated here because the assembly is
+            // Domain-only.
             const float PlateLeft = -920f;
-            const float PlateRight = -540f;
 
-            // -195.392, not -161: the 2026-09-10 card pass shrank the party
-            // card 190 -> 154 and dropped its bottom onto VisibleBottomLine
-            // itself, so the whole column's top edge fell 34.77px. -161 would
-            // still PASS -- it claims the column is taller than it is, so it
-            // over-covers -- and that is exactly why it has to move. A stale
-            // literal that happens to be conservative is indistinguishable
-            // from one that has silently stopped describing anything, which
-            // is the argument this test's own header already makes about the
-            // -694 it replaced.
-            const float PlateTop = -195.392f;
+            // -468, RE-READ OFF FightScreen 2026-09-10. The column went back
+            // to 452 wide (PcPlateWidth) with the three-PC-plate pass, so its
+            // right edge moved out 72px from the 380-wide cards' -540. Wider
+            // means MORE slots are checked, never fewer -- and that is still
+            // not a reason to leave a stale number here: a literal that
+            // happens to be conservative is indistinguishable from one that
+            // has silently stopped describing anything, which is the argument
+            // this test already made twice.
+            const float PlateRight = -468f;
+
+            // -235.7273, up from -195.392: the 2026-09-10 HUD-column pass
+            // replaced one 154-tall card plus two 66-tall roster cards with
+            // three identical 80.55-tall PC plates, so the stack is 40px
+            // taller and its top edge rose by that much. Pinned rather than
+            // computed for the reason this test's own header gives -- this
+            // assembly is Domain-only and reaching into the UiKit screen for
+            // private layout constants would be the wrong dependency even if
+            // it could. FightScreenTests pins the same number from the other
+            // side, off the solved screen.
+            const float PlateTop = -235.7273f;
             const float RingDrop = 8f;
             const float Margin = 12f;
 
@@ -195,8 +206,8 @@ namespace PrincesPalace.Domain.Tests
             if (offset.X + RingReachRight < PlateLeft || offset.X - RingReachLeft > PlateRight) return;
 
             Assert.GreaterOrEqual(offset.Y - RingDrop, PlateTop + Margin,
-                $"party slot {slot}'s contact ring at y {offset.Y - RingDrop} is inside the roster " +
-                "plates (top edge -161), which draw over the stage - see FightStageAnchors.PartyFarY");
+                $"party slot {slot}'s contact ring at y {offset.Y - RingDrop} is inside the PC plate " +
+                "column (top edge -235.73), which draws over the stage - see FightStageAnchors.PartyFarY");
         }
 
         [Test]

@@ -104,8 +104,8 @@ namespace PrincesPalace.Domain.Tests
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => Walk(FightScreen.Build().Root).First(n => n.Name == "EnemyPlate0Frame")),
                 "EnemyPlate0FrameContent", ButtonTheme.Crimson, ContainerRatio.TwoByOne,
-                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 220f).X,
-                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 220f).Y)
+                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 260f).X,
+                Ui.ContainerSizeForWidth(ContainerRatio.TwoByOne, 260f).Y)
                 .SetName("EnemyPlate0Frame/Crimson/TwoByOne");
         }
 

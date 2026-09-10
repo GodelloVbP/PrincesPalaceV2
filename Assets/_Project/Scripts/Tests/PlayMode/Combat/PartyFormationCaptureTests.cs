@@ -359,22 +359,24 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // THE THREE CARDS WEAR THREE DIFFERENT PEOPLE'S COLOURS.
+        // THE THREE PLATES CARRY THREE DIFFERENT PEOPLE, and exactly one of
+        // them is highlighted as acting.
         //
-        // The only check that can catch a card-major/edge-major mix-up in
-        // FightController.rosterCardRims. Rim edges are AsDecor, so UiAudit
-        // never looks at their colour; FightScreenTests pins the twelve node
-        // NAMES, which proves the tree is built right but not that the
-        // controller indexes it right. This reads the colour actually on the
+        // FightScreenTests pins the node NAMES and the BAKED sprites, which
+        // proves the tree is built right but not that the controller indexes
+        // it right -- and a card-major/plate-major mix-up in the runtime
+        // write is silent by construction, because the highlight is AsDecor
+        // and UiAudit never looks at it. This reads what is actually on each
         // Image after a real RefreshUi, for the character actually on that
-        // card.
+        // plate.
         //
-        // NOT GRAPHICS-GATED, deliberately: the colours are component state,
-        // not pixels, so this runs headless with the rest of the suite. The
-        // full-frame PNGs the fixture above writes are the visual evidence
-        // that the result is legible; this is the evidence that it is right.
+        // NOT GRAPHICS-GATED, deliberately: sprites, colours and active flags
+        // are component state, not pixels, so this runs headless with the
+        // rest of the suite. The full-frame PNGs the fixture above writes are
+        // the visual evidence that the result is legible; this is the
+        // evidence that it is right.
         [UnityTest]
-        public IEnumerator EachHudCardWearsItsOwnOccupantsIdentityColour()
+        public IEnumerator EachPcPlateCarriesItsOwnOccupantAndExactlyOneIsActing()
         {
             yield return OpenTheScene();
 
@@ -386,40 +388,72 @@ namespace PrincesPalace.PlayModeTests
             var session = _fight.Session;
             Assert.IsNotNull(session, "the fight never started, so no card has an occupant");
 
-            // WHOSE CARD IS THIS is read off the card's own name label, not
-            // recomputed from the turn order. FightController decides which
-            // member each card shows (ActingCharacter, then RefreshRoster's
-            // "everyone else" ordering) and a test that re-derived that would
-            // pass on a controller that painted the right colour on the wrong
-            // card, which is precisely the bug this exists to find.
+            // WHOSE PLATE IS THIS is read off the plate's own name label,
+            // not recomputed from the party order. FightController decides
+            // which member each plate shows, and a test that re-derived that
+            // would pass on a controller that painted the right character
+            // onto the wrong plate -- precisely the bug this exists to find.
             var themes = new System.Collections.Generic.List<ButtonTheme>();
-            foreach (var card in new[]
-                     {
-                         ("PartyPlate", "PartyName"),
-                         ("Roster0", "Roster0Name"),
-                         ("Roster1", "Roster1Name"),
-                     })
+            var sprites = new System.Collections.Generic.List<string>();
+            var acting = new System.Collections.Generic.List<string>();
+            var actingCharacter = _fight.ActingCharacterForTest();
+
+            for (int i = 0; i < 3; i++)
             {
-                string who = Named(card.Item2)?.GetComponent<TMPro.TMP_Text>()?.text;
+                string nameNode = $"PcPlate{i}Name";
+                string who = Named(nameNode)?.GetComponent<TMPro.TMP_Text>()?.text;
                 Assert.IsFalse(string.IsNullOrWhiteSpace(who),
-                    $"{card.Item2} is blank -- the card names nobody, so nothing can be checked against it");
+                    $"{nameNode} is blank -- the plate names nobody, so nothing can be checked against it");
 
                 var occupant = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == who);
-                Assert.IsNotNull(occupant, $"{card.Item2} says '{who}', who is not in the party");
+                Assert.IsNotNull(occupant, $"{nameNode} says '{who}', who is not in the party");
 
                 var kit = session.KitFor(occupant);
-                Assert.IsNotNull(kit, $"{who} has no PlayerKit, so no theme could reach their card");
+                Assert.IsNotNull(kit, $"{who} has no PlayerKit, so no identity could reach their plate");
 
-                AssertCardWears(card.Item1, card.Item2, kit.PlateTheme, who);
+                // THE HEAD IS THE IDENTITY. A plate carrying somebody else's
+                // animal is the loudest possible version of this bug, and the
+                // only thing that can catch it is reading the sprite back.
+                var art = Named($"PcPlate{i}Art")?.GetComponent<Image>();
+                Assert.IsNotNull(art, $"PcPlate{i}Art is missing or carries no Image");
+                Assert.IsNotNull(art.sprite, $"PcPlate{i}Art drew no plate for {who}");
+                StringAssert.Contains(kit.PlateArt.Substring(kit.PlateArt.LastIndexOf('/') + 1),
+                    art.sprite.name,
+                    $"PcPlate{i} shows '{art.sprite.name}' while its label says {who}, whose " +
+                    $"plateArt is '{kit.PlateArt}'");
+                sprites.Add(art.sprite.name);
+
+                bool isActing = occupant == actingCharacter;
+                var highlight = Named($"PcPlate{i}Highlight");
+                Assert.IsNotNull(highlight, $"PcPlate{i}Highlight is missing");
+                Assert.AreEqual(isActing, highlight.activeInHierarchy,
+                    $"PcPlate{i} ({who}) is {(isActing ? "" : "not ")}acting but its halo is " +
+                    $"{(highlight.activeInHierarchy ? "on" : "off")}");
+
+                if (isActing)
+                {
+                    acting.Add(who);
+                    AssertPlateWearsWhileActing(i, kit.PlateTheme, who);
+                }
+
                 themes.Add(kit.PlateTheme);
             }
 
-            // MUTUALLY DISTINCT -- the whole point of a per-PC colour. If two
-            // cards agreed, every assert above would still pass while the
-            // column told the player nothing.
+            // EXACTLY ONE. "The acting PC is highlighted instead of moving to
+            // a bigger card" is the whole model; two halos or none says the
+            // column has stopped answering the question it exists for.
+            Assert.AreEqual(1, acting.Count,
+                "exactly one plate must read as acting -- found " + acting.Count + ": " +
+                string.Join(", ", acting));
+
+            // MUTUALLY DISTINCT -- the whole point of a per-PC identity. If
+            // two plates agreed, every assert above would still pass while
+            // the column told the player nothing.
             CollectionAssert.AllItemsAreUnique(themes,
-                "two of the three HUD cards wear the same identity colour: " +
+                "two of the three plates wear the same identity colour: " +
                 string.Join(", ", themes.Select(t => t.ToString())));
+            CollectionAssert.AllItemsAreUnique(sprites,
+                "two of the three plates carry the same head: " + string.Join(", ", sprites));
         }
 
         // ---- the second meter draws the pool its holder actually carries ----
@@ -469,9 +503,27 @@ namespace PrincesPalace.PlayModeTests
             var session = _fight.Session;
             Assert.IsNotNull(session, "the fight never started, so nobody holds a pool");
 
-            string who = Named("PartyName")?.GetComponent<TMPro.TMP_Text>()?.text;
-            var actor = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == who);
-            Assert.IsNotNull(actor, $"the party card names '{who}', who is not in the party");
+            // WHICH PLATE IS THE ACTING ONE, found rather than assumed: a
+            // plate belongs to a character for the whole fight now, so the
+            // acting one is whichever index the party happens to seat first
+            // and that is a speed question this fixture does not control.
+            var actingCharacter = _fight.ActingCharacterForTest();
+            Assert.IsNotNull(actingCharacter, "nobody is acting, so no plate holds the pool under test");
+
+            int actingPlate = -1;
+            for (int i = 0; i < 3 && actingPlate < 0; i++)
+            {
+                if (Named($"PcPlate{i}Name")?.GetComponent<TMPro.TMP_Text>()?.text == actingCharacter.Name)
+                {
+                    actingPlate = i;
+                }
+            }
+
+            Assert.GreaterOrEqual(actingPlate, 0,
+                $"no plate names the acting character ({actingCharacter.Name})");
+
+            string who = actingCharacter.Name;
+            var actor = actingCharacter;
 
             // BEFORE: the card must already read the acting character's OWN
             // pool. This is the "the meter draws whoever is standing there"
@@ -489,11 +541,18 @@ namespace PrincesPalace.PlayModeTests
             var actorPool = actor.PrimaryPool;
             Assert.IsNotNull(actorPool, $"{who} holds no primary pool, so the card has nothing to draw");
 
-            var partyFill = Named("PartyMpFill")?.GetComponent<Image>();
-            Assert.IsNotNull(partyFill, "PartyMpFill is missing or carries no Image");
+            var partyFill = Named($"PcPlate{actingPlate}MpFill")?.GetComponent<Image>();
+            Assert.IsNotNull(partyFill, $"PcPlate{actingPlate}MpFill is missing or carries no Image");
             AssertColour(Hex(actorPool.BrightHex), Opaque(partyFill.color),
-                $"PartyMpFill before ({actorPool.Id})");
-            Assert.AreEqual(actorPool.ShortTag, Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text);
+                $"PcPlate{actingPlate}MpFill before ({actorPool.Id})");
+
+            // THE TAG IS PART OF THE CAPTION NOW, not a label beside the bar:
+            // the numbers are drawn ON the meter and the template carries the
+            // pool's own shortTag as its first argument ("FURY 60/100"), so
+            // there is no separate node to read it off.
+            StringAssert.StartsWith(actorPool.ShortTag,
+                Named($"PcPlate{actingPlate}MpValue")?.GetComponent<TMPro.TMP_Text>()?.text,
+                "the caption must open with the pool's own shortTag");
 
             var pool = new ResourcePool(FuryFixture(), capacity: 100, gainPerTurn: 0);
             pool.Gain(60);
@@ -501,26 +560,34 @@ namespace PrincesPalace.PlayModeTests
             _fight.RefreshUi();
             yield return null;
 
-            Assert.AreEqual("FURY", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text,
-                "the tag is still a literal rather than the pool's own shortTag");
+            var value = Named($"PcPlate{actingPlate}MpValue")?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(value, $"PcPlate{actingPlate}MpValue is missing or carries no TMP_Text");
+            Assert.AreEqual("FURY 60/100", value.text,
+                "the caption is still a literal tag rather than the pool's own shortTag");
 
-            AssertColour(Hex(FixtureBrightHex), Opaque(partyFill.color), "PartyMpFill");
+            AssertColour(Hex(FixtureBrightHex), Opaque(partyFill.color), $"PcPlate{actingPlate}MpFill");
 
-            var shade = Named("PartyMpFillShade")?.GetComponent<Image>();
-            Assert.IsNotNull(shade, "PartyMpFillShade is missing or carries no Image");
-            AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedShadeAlpha), shade.color, "PartyMpFillShade");
+            var shade = Named($"PcPlate{actingPlate}MpFillShade")?.GetComponent<Image>();
+            Assert.IsNotNull(shade, $"PcPlate{actingPlate}MpFillShade is missing or carries no Image");
+            AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedShadeAlpha), shade.color,
+                $"PcPlate{actingPlate}MpFillShade");
 
             foreach (string edge in new[] { "Top", "Bottom", "Left", "Right" })
             {
-                var rim = Named("PartyMpBarRim" + edge)?.GetComponent<Image>();
-                Assert.IsNotNull(rim, $"PartyMpBarRim{edge} is missing or carries no Image");
-                AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedRimAlpha), rim.color, "PartyMpBarRim" + edge);
+                var rim = Named($"PcPlate{actingPlate}MpBarRim" + edge)?.GetComponent<Image>();
+                Assert.IsNotNull(rim, $"PcPlate{actingPlate}MpBarRim{edge} is missing or carries no Image");
+                AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedRimAlpha), rim.color,
+                    $"PcPlate{actingPlate}MpBarRim" + edge);
             }
 
-            var value = Named("PartyMpValue")?.GetComponent<TMPro.TMP_Text>();
-            Assert.IsNotNull(value, "PartyMpValue is missing or carries no TMP_Text");
-            AssertColour(Hex(FixtureTextHex), value.color, "PartyMpValue");
-            Assert.AreEqual("60/100", value.text);
+            // THE CAPTION MUST NOT HAVE MOVED. Every other surface of this
+            // meter took the pool's colours; this one is drawn ON the fill,
+            // so it stays FightHudPalette.TextPrimary whatever the row
+            // authored -- a caption tinted to match its own bar is a caption
+            // that disappears into it, which is what the first capture of
+            // this column showed at 14pt on a full HP bar.
+            AssertColour(Hex(FightHudPalette.TextPrimary), value.color,
+                $"PcPlate{actingPlate}MpValue must stay resource-neutral");
 
             // ---- the heartbeat, sampled across a whole loop ----
             //
@@ -533,22 +600,22 @@ namespace PrincesPalace.PlayModeTests
             var pulsed = new System.Collections.Generic.List<float>();
             var mana = new System.Collections.Generic.List<float>();
 
-            // THE CONTROL CARD IS CHOSEN, NOT ASSUMED. It was Roster0 flat
-            // until Bjorn's `fury` row shipped, and Roster0 is whichever of
-            // the two non-acting party members happens to sort first -- if
-            // that is Bjorn, "the mana bar never moved" would be sampling a
-            // bar the row explicitly asked to beat, and the control would
-            // fail for being right. So find a roster card whose occupant
-            // holds a pool that says pulse:false, and say so when there is
-            // none rather than quietly skipping.
+            // THE CONTROL PLATE IS CHOSEN, NOT ASSUMED. Bjorn's `fury` row
+            // says pulse:true, so "the mana bar never moved" sampled on his
+            // plate would be sampling a bar the row explicitly asked to beat
+            // and the control would fail for being right. Find a NON-acting
+            // plate whose occupant holds a pool that says pulse:false, and
+            // say so when there is none rather than quietly skipping.
             Image rosterFill = null;
-            for (int card = 0; card < 2 && rosterFill == null; card++)
+            for (int card = 0; card < 3 && rosterFill == null; card++)
             {
-                string occupantName = Named($"Roster{card}Name")?.GetComponent<TMPro.TMP_Text>()?.text;
+                if (card == actingPlate) continue;
+
+                string occupantName = Named($"PcPlate{card}Name")?.GetComponent<TMPro.TMP_Text>()?.text;
                 var occupant = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == occupantName);
                 if (occupant?.PrimaryPool == null || occupant.PrimaryPool.Pulse) continue;
 
-                rosterFill = Named($"Roster{card}MpFill")?.GetComponent<Image>();
+                rosterFill = Named($"PcPlate{card}MpFill")?.GetComponent<Image>();
             }
 
             for (int i = 0; i < 16; i++)
@@ -558,8 +625,8 @@ namespace PrincesPalace.PlayModeTests
                 if (rosterFill != null && rosterFill.gameObject.activeInHierarchy) mana.Add(rosterFill.color.a);
             }
 
-            Assert.AreEqual("FURY", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text,
-                "the party card changed hands mid-sample, so these alphas describe two different pools");
+            StringAssert.StartsWith("FURY", value.text,
+                "the plate changed hands mid-sample, so these alphas describe two different pools");
 
             Assert.Greater(pulsed.Max() - pulsed.Min(), 0.15f,
                 "the fixture row says pulse:true and the bar never moved -- sampled alphas: " +
@@ -573,7 +640,8 @@ namespace PrincesPalace.PlayModeTests
             // means the card was not found, not that there was nothing to
             // check.
             Assert.IsNotEmpty(mana,
-                "no roster card was sampled, so the 'only the pulsing row moves' control asserted nothing");
+                "no non-acting plate was sampled, so the 'only the pulsing row moves' control asserted " +
+                "nothing");
             {
                 Assert.AreEqual(0f, mana.Max() - mana.Min(), 0.0001f,
                     "a mana meter's alpha moved -- the tick is writing to meters whose row never asked");
@@ -598,21 +666,24 @@ namespace PrincesPalace.PlayModeTests
         private static Color WithAlpha(Color colour, float alpha) =>
             new Color(colour.r, colour.g, colour.b, alpha);
 
-        private void AssertCardWears(string cardStem, string nameNode, ButtonTheme theme, string who)
+        // WHAT AN ACTING PLATE LOOKS LIKE: its halo tinted with the
+        // occupant's rim colour at FULL alpha, and its name at the occupant's
+        // brighter name colour. The rim hex carries 0.70 of its own, which
+        // ApplyPlateIdentity opens to 1 deliberately -- the halo is the
+        // loudest thing the column says and it says it for one character at a
+        // time.
+        private void AssertPlateWearsWhileActing(int plate, ButtonTheme theme, string who)
         {
             var expected = PcTheme.For(theme);
-            var expectedRim = Hex(expected.Rim);
 
-            foreach (string edge in new[] { "Top", "Bottom", "Left", "Right" })
-            {
-                var rim = Named(cardStem + "Rim" + edge)?.GetComponent<Image>();
-                Assert.IsNotNull(rim, $"{cardStem}Rim{edge} is missing or carries no Image");
-                AssertColour(expectedRim, rim.color, $"{cardStem}Rim{edge} ({who}, {theme})");
-            }
+            var highlight = Named($"PcPlate{plate}Highlight")?.GetComponent<Image>();
+            Assert.IsNotNull(highlight, $"PcPlate{plate}Highlight is missing or carries no Image");
+            AssertColour(Opaque(Hex(expected.Rim)), highlight.color,
+                $"PcPlate{plate}Highlight ({who}, {theme})");
 
-            var label = Named(nameNode)?.GetComponent<TMPro.TMP_Text>();
-            Assert.IsNotNull(label, $"{nameNode} is missing or carries no TMP_Text");
-            AssertColour(Hex(expected.Name), label.color, $"{nameNode} ({who}, {theme})");
+            var label = Named($"PcPlate{plate}Name")?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(label, $"PcPlate{plate}Name is missing or carries no TMP_Text");
+            AssertColour(Hex(expected.Name), label.color, $"PcPlate{plate}Name ({who}, {theme})");
         }
 
         // 1/255 either way: the hex goes through ColorUtility and back out as

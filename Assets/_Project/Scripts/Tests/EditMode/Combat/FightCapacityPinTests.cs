@@ -140,27 +140,16 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the other two capacities ---------------------------------------------
 
-        [Test]
-        public void NoSignatureResourceHoldsMorePointsThanThereArePips()
-        {
-            string json = Read("characters.json");
-            var maxima = IntValues(json, "signatureMax");
-
-            // Not IsNotEmpty: a signature resource is optional and today only
-            // one character has one. Zero is a legitimate state, and the field
-            // guard below is what stops a RENAME turning this pin into a no-op
-            // that still reports green.
-            Assert.IsTrue(json.Contains("signature"),
-                "characters.json mentions no signature resource at all - either the field was renamed, in which case " +
-                "this pin now measures nothing, or the feature was removed and the pin should go with it.");
-
-            var over = maxima.Where(m => m > FightHudSpec.WoolPips).ToList();
-
-            Assert.IsEmpty(over,
-                $"the party plate draws {FightHudSpec.WoolPips} pips, and points past that are invisible: " +
-                $"{string.Join(", ", over)}. Fix by raising FightHudSpec.WoolPips (and re-checking the pip row still " +
-                $"fits inside the plate) or by lowering the resource's maximum.");
-        }
+        // NoSignatureResourceHoldsMorePointsThanThereArePips is GONE
+        // (2026-09-10). It pinned that no signature resource could hold more
+        // points than the acting card's 16-pip meter could DRAW, which was a
+        // real invisible-state bug for as long as the meter was pips. The
+        // HUD column draws every party member's signature as one numeric
+        // line on their own plate now ("Wool 3/10"), which has no ceiling to
+        // overflow -- so there is nothing left for this pin to measure and it
+        // goes rather than being kept green against a widget that does not
+        // exist. FightScreenTests' own text-fit audit is what now covers the
+        // only remaining failure mode, a number too wide for its box.
 
         [Test]
         public void OnePlatePerStageSlot()

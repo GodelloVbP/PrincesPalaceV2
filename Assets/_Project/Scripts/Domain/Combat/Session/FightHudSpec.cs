@@ -29,8 +29,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // popup does not vanish the instant the next beat starts (LifeSeconds
         // outlives BeatGapSeconds) -- six was already tight for three
         // simultaneous hits with nothing else in flight. Doubled rather than
-        // precisely counted: the pool is a display reservation the same way
-        // WoolPips is, not a hard ceiling worth chasing exactly -- see
+        // precisely counted: the pool is a display reservation rather than a
+        // hard ceiling worth chasing exactly -- see
         // FightBeatPlayer.ShowAmount's own "dropped, not queued" fallback for
         // what happens on the rare frame that still runs out.
         public const int DamagePopups = 12;
@@ -52,8 +52,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- what a cast may draw at once ---------------------------------------
         //
-        // All three are RESERVATIONS, not counts, the same rule WoolPips
-        // follows -- and none of them is trusted. SpellPoolCapacityTests counts
+        // All three are RESERVATIONS, not counts -- and none of them is
+        // trusted. SpellPoolCapacityTests counts
         // what the authored content of every skill and element actually asks
         // for, per band, and fails NAMING THE SKILL when it outgrows one. That
         // pin is what carries the weight; the numbers below are headroom over a
@@ -98,11 +98,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // `EnemyPlateCount = EnemyStageSlots` and so does this.
         public const int EnemyPlates = StageSlotsPerSide;
 
-        // The signature-resource pip row. Kept as a reserved capacity with a
-        // content pin rather than derived from content: hiding pips beyond the
-        // current maximum is proven behaviour, and deriving the count would
-        // change it for no gain.
-        public const int WoolPips = 16;
+        // WoolPips is GONE (2026-09-10). It reserved a 16-pip charge meter
+        // on the acting character's card; the HUD column draws every party
+        // member's signature as one numeric line ("Wool 3/10") on their own
+        // plate now, which has no ceiling to reserve and no pip to hide past
+        // the resource's own maximum. FightCapacityPinTests' pin went with
+        // it -- there is nothing left for a signature capacity to overflow.
 
         // The detail column's fixed stat rows: cost, power, target, effect,
         // scales.

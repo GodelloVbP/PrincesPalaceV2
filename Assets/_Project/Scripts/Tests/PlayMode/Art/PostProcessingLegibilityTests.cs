@@ -44,23 +44,35 @@ namespace PrincesPalace.PlayModeTests
         private const int Width = 1920;
         private const int Height = 1080;
 
-        // FightScreen.BuildPartyPlate: the card sits at (-730, -408.392),
-        // 380x154 -- a flat Ui.OutlineBox as of 2026-09-10, previously a Blue
-        // 2:1 kit container at (-694, -385.858) 452x228.283 and before that a
-        // flat panel_crimson sprite. PartyHpValue sits at card-local
-        // (PartyContentHalfW = 182, PartyHpRowY = 33) with a RIGHT pivot,
-        // 58.85x16.8, so its centre is 182 - 58.85/2 = 152.575 from the
-        // card's own centre. Stated here rather than read from the live rect
-        // on purpose -- if the tree moves the plate, this test should fail
-        // and be re-aimed, not silently follow it somewhere the vignette is
+        // FightScreen.BuildPcPlates, the BOTTOM plate: (-694, -445.1147),
+        // 452x80.5546 -- three identical per-PC leather plates as of
+        // 2026-09-10, previously a 380x154 flat Ui.OutlineBox at
+        // (-730, -408.392), before that a Blue 2:1 kit container at
+        // (-694, -385.858) 452x228.283, and before that a flat panel_crimson
+        // sprite.
+        //
+        // THE BOTTOM PLATE IS THE RIGHT ONE TO AIM AT, and more so than
+        // before: it is the corner of the screen furthest into the vignette,
+        // and its numbers are now drawn ON a meter rather than beside one, so
+        // this crop measures the harder case (14pt over a red fill under the
+        // grading) rather than text on a flat panel.
+        //
+        // PcPlate0HpValue: the caption rides the HP track, left-aligned 5px
+        // in from the track's left edge with a LEFT pivot and a box of
+        // (barW - 10) x 16, so its centre is exactly 5px right of the bar's
+        // own centre. barW = 171.8478, bar centre = -820.8325, bar row y =
+        // -458.615. Stated here rather than read from the live rect on
+        // purpose -- if the tree moves the plate, this test should fail and
+        // be re-aimed, not silently follow it somewhere the vignette is
         // weaker.
+        //
         // CENTRE and size, matching Place.At's own convention -- Place.At is
         // centre-anchored, so treating these as corners would aim every crop
         // half a plate up and to the left, which is the kind of mistake that
         // still produces plausible numbers.
-        private static readonly Rect PlateRect = CentredAt(-730f, -408.392f, 380f, 154f);
+        private static readonly Rect PlateRect = CentredAt(-694f, -445.1147f, 452f, 80.5546f);
         private static readonly Rect HpValueRect =
-            CentredAt(-730f + 182f - 58.85f * 0.5f, -408.392f + 33f, 58.85f, 16.8f);
+            CentredAt(-815.8325f, -458.6147f, 161.8478f, 16f);
 
         private static Rect CentredAt(float centreX, float centreY, float width, float height) =>
             new Rect(centreX - width * 0.5f, centreY - height * 0.5f, width, height);
