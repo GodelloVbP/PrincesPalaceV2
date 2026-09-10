@@ -508,5 +508,136 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(3, hero.SignaturePool.Current, "one attack, one grant, however many swings it produced");
         }
+
+        // ---- the PRIMARY pool's gainOnAttack -----------------------------------
+        //
+        // The other half of "what counts as an attack", and deliberately not
+        // the same answer as the three tests above. Wool's rule is narrow on
+        // purpose (only a basic swing); a rage bar's is the plain reading of
+        // the authored sentence -- Fury "gains when he deals damage" -- so it
+        // fires off any damaging ACTION, once, and off nothing that deals no
+        // damage. Phase E shipped it wired to the Attack verb like Wool, and
+        // Bjorn's Slam therefore built nothing at all.
+        //
+        // Every expected value below is a LITERAL (CLAUDE.md gotcha 5): the
+        // fixture authors 15, so a grant is 15 and no grant is 0.
+        //
+        // gainOnDamageTaken is 0 on this fixture even though Fury authors 10,
+        // and the zero is what makes the numbers below readable: every one of
+        // these actions ends the turn, the enemies reply inside
+        // AdvanceAfterAction, and a fixture that also gained on being hit
+        // would report the attack gain and the enemy's reply added together.
+        // The same reason the Wool fixtures three tests up author 0 there.
+        private static CombatantState Brawler(string name = "Bjorn")
+        {
+            var bjorn = Hero(name);
+            bjorn.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0, gainOnAttack: 15, gainOnDamageTaken: 0);
+            return bjorn;
+        }
+
+        // 100_000 DodgeRating curves to 99% and, against this file's fixed
+        // SeededRandom(3) on an otherwise-empty fixture, dodges -- the same
+        // device DodgeCoversEveryDamagePathTests uses, for the same reason.
+        private static void MakeUnhittable(CombatantState target) =>
+            target.ModifierEffects = new ModifierEffectSet(
+                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
+
+        [Test]
+        public void APlainAttackThatLandsFeedsThePrimaryPool()
+        {
+            var bjorn = Brawler();
+            var (session, _, encounter) = Fight(Kit(), bjorn);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            Assert.AreEqual(15, bjorn.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void ADamagingSkillFeedsThePrimaryPoolToo()
+        {
+            // THE DEFECT THIS PINS. A Slam is a Skill, and phase B's wiring
+            // sat inside the Attack verb, so this was 0.
+            var bjorn = Brawler();
+            var (session, _, encounter) = Fight(Kit(skills: new[] { Skill(SkillEffect.DamageSingle) }), bjorn);
+
+            session.CastSkill(0, encounter.Enemies[0]);
+
+            Assert.AreEqual(15, bjorn.PrimaryPool.Current, "a cast that deals damage is dealing damage");
+        }
+
+        [Test]
+        public void AThreeTargetSweepPaysThePrimaryPoolOnceAndNotThreeTimes()
+        {
+            // The damage funnel runs once per target. Without a per-action
+            // boundary this reads 45, which would make a sweep the only move
+            // a rage bar's owner ever wants.
+            var bjorn = Brawler();
+            var (session, _, _) = Fight(
+                Kit(skills: new[] { Skill(SkillEffect.DamageAll) }), bjorn,
+                Foe("A"), Foe("B"), Foe("C"));
+
+            session.CastSkill(0, null);
+
+            Assert.AreEqual(15, bjorn.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void AMissFeedsThePrimaryPoolNothing()
+        {
+            // The verb site paid whether or not the blow landed, which is the
+            // second half of the same bug: a rage bar filled by swinging at
+            // air.
+            var bjorn = Brawler();
+            var slippery = Foe("Slippery");
+            MakeUnhittable(slippery);
+            var (session, _, _) = Fight(Kit(), bjorn, slippery);
+
+            session.ExecuteAttack(slippery);
+
+            Assert.AreEqual(0, bjorn.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void AHealFeedsThePrimaryPoolNothing()
+        {
+            var bjorn = Brawler();
+            bjorn.CurrentHealth = 100;
+            var (session, _, _) = Fight(Kit(skills: new[] { Skill(SkillEffect.HealSelf) }), bjorn);
+
+            session.CastSkill(0, bjorn);
+
+            Assert.AreEqual(0, bjorn.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void DualWieldsSecondSwingDoesNotFeedThePrimaryPoolAgainEither()
+        {
+            // One action, one grant -- the same answer the signature pool
+            // gives two tests up, arrived at by a different route (a
+            // per-action lock rather than a single call site).
+            var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
+            var bjorn = Brawler();
+            var (session, _, encounter) = Fight(Kit(relics: new[] { relic }), bjorn);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            Assert.AreEqual(15, bjorn.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void ManaAuthorsZeroOnAttackSoNothingAboveChangesIt()
+        {
+            // The control. Every other character in the game holds the mana
+            // row, whose gainOnAttack is 0, so moving the grant to the damage
+            // funnel must be invisible to them.
+            var hero = Hero();
+            hero.PrimaryPool.TrySpend(10);
+            var (session, _, encounter) = Fight(Kit(), hero);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            Assert.AreEqual(40, hero.CurrentMana, "50 minus the 10 spent, and not a point of attack gain");
+        }
     }
 }

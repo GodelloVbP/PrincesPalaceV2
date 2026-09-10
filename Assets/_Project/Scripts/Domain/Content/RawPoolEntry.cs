@@ -60,7 +60,13 @@ namespace PrincesPalace.Domain.Content
         // plan's P1, landed in phase B).
         [ContentDoc("Gained at the start of each of the owner's turns; must not be negative.")]
         public int gainPerTurn;
-        [ContentDoc("Gained when the owner deals damage; must not be negative.")]
+        // ONE MEANING, TWO SEAMS -- see ResourcePool.GainOnAttack's own
+        // comment. A pool authored here is a character's PRIMARY pool, and the
+        // primary slot pays this off any damaging action. A signature resource
+        // is not authored in this file (it is still per-character on
+        // characters.json) and its slot pays only on the plain Attack verb,
+        // which is a rule about Wool rather than about this field.
+        [ContentDoc("Gained once when the owner performs an action that deals damage -- a plain attack or a damaging skill, once however many targets it hits, and never on a miss or a heal; must not be negative.")]
         public int gainOnAttack;
         [ContentDoc("Gained when the owner takes damage; must not be negative.")]
         public int gainOnDamageTaken;

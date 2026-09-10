@@ -153,6 +153,20 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 NotePoolActivity(actor, PoolActivity.Damage);
                 NotePoolActivity(target, PoolActivity.Damage);
+
+                // AND THE PRIMARY POOL'S gainOnAttack, for the same reason and
+                // in the same place. The owner's spec for Fury is "gains when
+                // he deals damage"; phase B wired it at the Attack VERB
+                // instead, which is where Wool's narrower rule lives, so a
+                // Slam that hit for 40 built nothing. Here it fires off any
+                // damaging action -- verb or skill -- and off none of the
+                // things that reach no damage: a miss returns before this
+                // funnel, a heal never enters it.
+                //
+                // Fired BEFORE CommitBeat, so the Vitals snapshot the HUD
+                // replays is the one taken after the gain: the meter moves on
+                // the beat that shows the hit, not on the next one.
+                GrantPrimaryOnDamagingAction(actor);
             }
 
             return result;

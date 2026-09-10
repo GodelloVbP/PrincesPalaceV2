@@ -212,5 +212,19 @@ namespace PrincesPalace.Domain.Combat.Session
         public static string SparringBucklerLockKeyFor(string combatantId) => "sparring_buckler:" + combatantId;
         public static string DancersAnkletLockKeyFor(string combatantId) => "dancers_anklet:" + combatantId;
         public static string InconspicuousKeyLockKeyFor(string combatantId) => "inconspicuous_key:" + combatantId;
+
+        // The PRIMARY pool's gainOnAttack, which fires from the damage funnel
+        // and therefore needs a "once per damaging action" boundary the funnel
+        // itself cannot supply: it runs once per TARGET, so a three-enemy
+        // sweep would otherwise pay three times.
+        //
+        // Once per TURN is the same boundary here, and not an approximation of
+        // it: an action ends the actor's turn, so the only way to act twice in
+        // one turn is to have been granted an extra one -- and an extra turn
+        // runs GrantTurnStart, which resets this lock, which is exactly the
+        // answer a Trample chain should get. Dual Wield's second swing shares
+        // the turn and so grants nothing extra, matching the rule the
+        // signature pool has always had at the Attack verb.
+        public static string PrimaryPoolAttackGainLockKeyFor(string combatantId) => "primary_pool_attack_gain:" + combatantId;
     }
 }

@@ -338,12 +338,15 @@ namespace PrincesPalace.Domain.Combat.Session
             // again either.
             GrantSignature(actor, actor.SignaturePool?.GainOnAttack ?? 0);
 
-            // BOTH POOLS HEAR THE SAME EVENT. Mana's gainOnAttack is 0, so
-            // this is inert until a row authors otherwise -- which is the
-            // point: a rage bar that fills by swinging is then a number in
-            // pools.json rather than a second call site somebody has to
-            // remember to add beside this one.
-            GrantPrimary(actor, actor.PrimaryPool?.GainOnAttack ?? 0);
+            // THE PRIMARY POOL IS NOT PAID HERE, and the omission is the
+            // point. It used to be, right on this line, which quietly gave a
+            // rage bar Wool's rule: a Slam that hit for 40 built nothing, and
+            // a swing that MISSED built the full amount, since this site fires
+            // whether or not the blow landed. Its grant moved to the damage
+            // funnel (ApplyAndCountDamage), where "the owner dealt damage" is
+            // a fact rather than an assumption -- see
+            // GrantPrimaryOnDamagingAction for why the two pools are allowed
+            // to disagree about what an attack is.
 
             // Dual Wield: a second full swing at the SAME target, only on a plain
             // attack (the relic's wording is "whenever you attack", not "whenever

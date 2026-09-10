@@ -141,7 +141,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `capacityRule` | string | (none -- required) | Required. How capacity is derived: 'WisdomDerived' (the authored capacity is a base every Max Mana source adds to) or 'Fixed' (the authored capacity is the whole number, from every source). | WisdomDerived, Fixed |
 | `capacity` | int | `0` | How much this pool holds; must be positive. Under 'WisdomDerived' it is the BASE every Max Mana source adds to, under 'Fixed' it is the entire capacity. |  |
 | `gainPerTurn` | int | `0` | Gained at the start of each of the owner's turns; must not be negative. |  |
-| `gainOnAttack` | int | `0` | Gained when the owner deals damage; must not be negative. |  |
+| `gainOnAttack` | int | `0` | Gained once when the owner performs an action that deals damage -- a plain attack or a damaging skill, once however many targets it hits, and never on a miss or a heal; must not be negative. |  |
 | `gainOnDamageTaken` | int | `0` | Gained when the owner takes damage; must not be negative. |  |
 | `decayPerIdleTurn` | int | `0` | Lost at the start of an idle turn (see decayUnless); must not be negative. 0 means the pool never decays. |  |
 | `decayUnless` | string | `""` | What stops a turn counting as idle: 'Damage' (dealt or taken) or 'AnyAction'. Blank means Damage, and it may only be authored on a pool that actually decays. | Damage, AnyAction |

@@ -1043,5 +1043,32 @@ namespace PrincesPalace.Domain.Combat.Session
                 combatant?.PrimaryPool?.Gain(amount);
             }
         }
+
+        // THE PRIMARY POOL'S gainOnAttack, paid once per damaging action.
+        //
+        // WHY THIS IS NOT AT THE ATTACK VERB, where the signature pool's grant
+        // is. The two pools answer "what counts as an attack" differently, and
+        // both answers are deliberate. Wool's is deliberately narrow: ONLY a
+        // basic swing builds it, which is what makes swinging anyway a real
+        // choice for a character whose attack barely dents a defence. A rage
+        // bar's is the plain reading of the word -- Bjorn's Fury is authored
+        // "gains when he deals damage", and a Slam that lands for 40 is
+        // dealing damage by any account the player would recognise. Wired at
+        // the verb it built nothing, and every point of the FURY 20/100 the
+        // phase E preview showed had come from being hit.
+        //
+        // Called from the damage funnel, which runs once per TARGET, so the
+        // lock is what makes a three-enemy sweep worth 15 rather than 45. See
+        // FightTuning.PrimaryPoolAttackGainLockKeyFor for why once-per-turn is
+        // the same boundary as once-per-action here.
+        private void GrantPrimaryOnDamagingAction(CombatantState actor)
+        {
+            int gain = actor?.PrimaryPool?.GainOnAttack ?? 0;
+            if (gain <= 0) return;
+
+            if (!_locks.OncePerTurn(FightTuning.PrimaryPoolAttackGainLockKeyFor(LedgerIdOf(actor)))) return;
+
+            GrantPrimary(actor, gain);
+        }
     }
 }

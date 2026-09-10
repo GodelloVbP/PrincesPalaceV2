@@ -37,7 +37,26 @@ namespace PrincesPalace.Domain.Combat
         public int Max;
 
         public int GainPerTurn;
+
+        // ONE MEANING, TWO SEAMS. On both pools this is "gained on a damaging
+        // action by the owner"; what differs is which actions the slot's own
+        // call site counts, and that is deliberate rather than drift.
+        //
+        //   PRIMARY  -- fired from the damage funnel (FightSession.Ledger's
+        //               ApplyAndCountDamage), so a plain attack, a damaging
+        //               skill, an enemy ability all pay it, once per action
+        //               however many targets they hit, and a miss or a heal
+        //               pays nothing. That is Fury's authored promise: "gains
+        //               when he deals damage".
+        //   SIGNATURE -- fired only from the Attack verb (FightSession's
+        //               ExecuteAttack). ONLY a basic swing builds Wool, which
+        //               is what makes swinging anyway a deliberate choice on
+        //               a character whose attack barely dents a defence.
+        //
+        // The narrower one is a rule about Wool, not about this field, so the
+        // name stays gainOnAttack on both.
         public int GainOnAttack;
+
         public int GainOnDamageTaken;
 
         // What an IDLE turn costs. Zero for mana and for every signature
