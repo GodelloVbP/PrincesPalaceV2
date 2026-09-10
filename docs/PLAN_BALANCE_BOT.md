@@ -327,8 +327,11 @@ profile. If it does not, the policy is wrong, not the game.
   rerolls in v1.
 - Damage variance left at production value.
 - The bot fields whatever `SaveData.ActiveSquad()` returns for the preset;
-  only Shawn is a real character, so presets field Shawn alone unless the
-  Late preset's recruit slots are meant to be exercised.
+  Shawn, Bjorn and Odette are the three fielded characters as of 2026-09-07
+  (this line originally said only Shawn was real — stale, corrected by the
+  2026-09-11 hunt against the bot's own batch data: `EquippedAtStart` carries
+  all three on Fresh, and every one of their non-gated skills was cast at
+  least once).
 - `reports/` is gitignored; nothing generated is committed.
 - Rest rooms are taken when party HP is under 50%, else the fight route.
   Treasure is always taken over a plain fight. This is `GreedyAggressive`'s

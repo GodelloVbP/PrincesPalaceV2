@@ -149,10 +149,14 @@ EditMode-testable):
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
 | `Combat/` | `Reach.cs` (`ReachKind` — `Any`/`Melee`/`ExplicitRanks` — plus a rank mask; the KIND is load-bearing, not just the mask: an authored front-only restriction, `Reach.FromContent`/`Reach.Ranks`, carries the same mask as `Melee` but is deliberately a different kind, because a relic that lifts the front-rank RULE — striking past a bodyguard — must not also unlock an authored aim restriction. `Reach` is a mutable struct on purpose: it lives inside `ResolvedSkill`, which is serialized onto a `ScriptableObject`, and Unity's serializer skips `readonly` fields — a `readonly Reach` would round-trip as `default` = `Any`, silently dropping every restriction while EditMode stayed green, since tests never cross the asset boundary); `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.RelicMechanics.cs` (the non-numeric relic mechanics from both balance passes — `NoteDeliberateMove` is the field-position half, fired only by `Move`, twice per call (the mover and the partner it displaced), separate from the turn-order sites that used to share its old name) |
 | `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`); `ContentDocAttribute` + `ContentSchema` (reflects over every `Raw*Entry` to generate `docs/CONTENT_SCHEMA.md` — see `ContentSchemaTests.cs`); `ResolvedCharacter.PlateTheme` (the character's IDENTITY COLOUR on every fight-HUD card that stands for them — rim and name, via `Domain/UiKit/PcTheme.cs`; `characters.json`'s `plateTheme` parsed case-insensitively against `UiKit.ButtonTheme` by `CharacterEntryResolver.TryResolveOne`, REQUIRED since 2026-09-10: an empty or unknown value refuses the build naming the character and the six valid theme names, because every valid value is some other character's colour; pinned by `CharacterEntryResolverTests`); the RESOURCE POOL type (`pools.json` -> `RawPoolEntry`/`PoolEntryResolver`/`ResolvedPool`, the three closed vocabularies in `PoolRules.cs`, and `Core/Content/PoolDefinition.cs` beside it) -- one pool is one clamped counter with a capacity, three gain triggers and a decay, so mana, a signature resource and Bjorn's Fury are the same runtime thing with different authored numbers rather than parallel systems; `capacityRule` is what separates "the authored number is a base every Max Mana source adds to" (mana) from "the authored number is the whole capacity from every source" (a flat 0..100 bar), and a character names its pool with `primaryPoolId`, defaulted to `"mana"` and refused unless `pools.json` defines it (`ContentBuilder` builds pools BEFORE characters and hands the ids down, the `RelicEntryResolver`/`achievementIds` shape); `PoolPrecedence.cs` is the RULE those two answers turn into (which sources a capacity and an income listen to), with `ContentDatabase.BuildPrimaryPool` summing the character-shaped terms it is fed. Phase B: every combatant's `CombatantState.PrimaryPool` is built from a row, `Domain/Combat/ResourcePool.cs` (was `SignatureResource.cs`) is its runtime, and `GameplayConstants.DefaultMaxMana` is gone -- `pools.json` is the only place the number 30 is written |
+| `DebugMenu/` | `DebugItem`, one row in the debug item picker — `Kind` is an int rather than `ItemKind` because `ItemKind` is a Core content enum this Domain type cannot see; the controller translates where it already has an `ItemDefinition` in hand |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
 | `Equipment/` | `EquipmentSlot(s)`, `EquipmentLoadout` |
+| `Glossary/` | `GlossaryCategory`, the rail order the glossary screen builds one button per — appending a value adds a button and nothing else, a new category is a value here plus a case in the Core adapter, never a new screen |
+| `Inventory/` | `InventoryEntry` (one stack of a held item, keyed by `(itemId, plus, modifierIds, riftTier)` — not by id alone, so two differently-rolled copies never silently merge) and `InventoryOps` (add/count/remove over a `List<InventoryEntry>` in one place, shared by `RunState.inventory` and `SaveData.stockpiledItems` so the stash uses the identical rules rather than a second copy) |
 | `Party/` | The Party screen's model, engine-free: `PartyFormation` (the 3-seat state machine — click-to-select-then-place, seats are mechanical since squad index 0 is the front rank, `PartyFormation.Drop` is the drag entry point a later package uses), `PartyMode` (Camp/Run/ViewOnly), `PartyOutcome`/`PartyToastKind` (what a command did, as data — display copy lives in `UiStrings`), `PartyCardState`/`PartySeatBadge`, `PartyRosterEntry` (id/name/`HasArt`, supplied by the caller — Domain cannot see `Resources`), `PartySeat` (Front/Middle/Rear constants), `PartySelectionSource` (Roster vs. a seat index) |
+| `Progression/` | `CarriedHealth` (what happens to current health when the maximum it is measured against moves under it — equipping +20 max health at 50/100 must not silently become 50/120), `LevelCurve` (what a level costs, kept in Domain rather than on `Character` so EditMode can pin it without Core), `RewardTrack`/`RewardTrackDefinition` (a reward track materialised for one character — milestones plus the filler mix an author, or `Default`, described), `RewardTrackNames` (display copy for a `TrackReward`, beside the table for the same reason as `RelicRarityNames`), `TrackNodeState` (the four states a node reads as, out of two integers — `level` and `claimedTrackLevel` — the distinction between a reward REACHED and one COLLECTED) |
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
@@ -170,7 +174,10 @@ plus `.Validation.cs` (`ValidateContent`) and `.Effective.cs`
 does this character actually have right now" family), same
 `public static partial class ContentDatabase` in all three, no namespace-
 binding constraint since it's a static class, not a MonoBehaviour),
-`GameplayManager.cs` (run lifecycle, screen switching via `OverlayState`),
+`RunManager.cs` (run lifecycle) and `Navigation.cs` (screen switching —
+scene-name constants in one place rather than string literals at each call
+site; deliberately thin, not a state machine) now cover what this row used
+to credit to a `GameplayManager.cs` that no longer exists in the tree,
 `ItemIcons.cs` (shared id→sprite lookup, also used for portraits — see
 `docs/CODE_STANDARDS.md` §2), `PreviewFight.cs` (everything
 `tools/preview.ps1 -Spell`/`-Character` decides about one throwaway fight —
@@ -194,9 +201,10 @@ Audio is the one family that does NOT go through `ContentDatabase`, because
 and therefore before it exists. Its two config tables are read by their own
 loaders instead, both the same shape (Resources path, `JsonUtility`, cache,
 `Reset()` seam, every failure degrading rather than throwing): `AudioLevels.cs`
-reads `audio_levels.json` (per-clip loudness correction) and `MusicLayers.cs`
-reads `music_layers.json` (which stems make up a floor's song, and which of
-them each intensity plays).
+reads `audio_levels.json` (per-clip loudness correction) and
+`Domain/Audio/MusicLayerResolver.cs` reads `music_layers.json` (which stems
+make up a floor's song, and which of them each intensity plays) — renamed
+from `MusicLayers.cs` and moved into `Domain/Audio/` alongside `MusicClock.cs`.
 
 ## Editor & tools map
 
@@ -486,8 +494,8 @@ are plain logic; only the PAINTING needs Unity.
 | `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticSwing` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
 
 **The static-art pilot (recommendation adopted from the now-archived
-`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`; its still-cited rule lives on in
-`docs/ART_PIPELINE.md`) — the five cues a single-drawing actor's swing was
+`docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md`; its still-cited rule lives on
+in `docs/ART_PIPELINE.md`) — the five cues a single-drawing actor's swing was
 missing.** Every actor is a single
 drawing per stance now, so the gate is purely the CLASS of beat, never a
 creature: a `StageApproach.Lunge` at a target that is somebody else.
