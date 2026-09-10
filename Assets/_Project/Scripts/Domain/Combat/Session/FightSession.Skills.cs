@@ -257,12 +257,32 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
+
+                    // SUMMED, NOT ASSUMED. CombatMath.RestoreMana "returns how
+                    // much actually landed, so a caller can say the true number
+                    // (or say nothing) rather than announcing an amount it hoped
+                    // for" -- and it refuses outright for a pool whose row says
+                    // restoredByManaEffects is false. This arm discarded every
+                    // return and announced a squad-wide restore whatever came
+                    // back, so a squad of Fury holders got a cheerful line and
+                    // an unmoved bar. The bot has previewed the same cast
+                    // correctly all along (Lookahead2Policy sums only the
+                    // members CanRestoreMana accepts), so the policy and the log
+                    // disagreed about one cast.
+                    //
+                    // The line still carries no NUMBER, unlike HealParty's two
+                    // cases up: a party restore lands a different figure on each
+                    // member and there is no one honest number to print. What it
+                    // can say truthfully is whether anything landed at all.
+                    int restored = 0;
                     foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
-                        CombatMath.RestoreMana(ally, amount);
+                        restored += CombatMath.RestoreMana(ally, amount);
                     }
 
-                    AppendMessage($"{actor.Name}'s {skill.DisplayName} restores the squad's mana!");
+                    AppendMessage(restored > 0
+                        ? $"{actor.Name}'s {skill.DisplayName} restores the squad's mana!"
+                        : $"{actor.Name}'s {skill.DisplayName} finds nothing to restore.");
                     break;
                 }
 

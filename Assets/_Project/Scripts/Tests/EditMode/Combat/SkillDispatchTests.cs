@@ -795,5 +795,54 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(40, bjorn.PrimaryPool.Current,
                 "turn two decayed a bar that had been poisoned for 20 the turn before");
         }
+
+        // ---- RestorePartyMana says what it did ---------------------------------
+        //
+        // Same contract as the Gift's: CombatMath.RestoreMana "returns how much
+        // actually landed, so a caller can say the true number (or say nothing)
+        // rather than announcing an amount it hoped for", and this arm threw the
+        // return away and announced a squad-wide restore unconditionally. The
+        // bot already previews the same cast correctly (Lookahead2Policy sums
+        // only members CanRestoreMana accepts), so the POLICY and the LOG
+        // disagreed about one cast.
+        //
+        // No skill in skills.json authors RestorePartyMana today, so this is an
+        // authoring trap rather than a live bug -- which is the reason to close
+        // it now rather than the reason not to.
+        [Test]
+        public void RestorePartyManaSaysNothingWasRestoredWhenNobodysPoolTakesIt()
+        {
+            // A squad of one Fury holder: every recipient the cast can reach
+            // refuses mana, so the true total is 0.
+            var bjorn = Hero("Bjorn");
+            bjorn.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0, 0, 0);
+            bjorn.PrimaryPool.RestoredByManaEffects = false;
+
+            var (session, _, _) = Fight(
+                Kit(skills: new[] { Skill(SkillEffect.RestorePartyMana, "Chorus", flatAmount: 25) }), bjorn);
+
+            session.CastSkill(0, null);
+
+            var lines = Messages(session).ToList();
+            Assert.IsFalse(lines.Any(m => m.Contains("restores the squad")),
+                "nobody's bar moved, so nothing restored the squad's anything");
+            Assert.IsTrue(lines.Any(m => m.Contains("finds nothing to restore")),
+                "and it has to say so rather than going quiet");
+        }
+
+        [Test]
+        public void RestorePartyManaStillAnnouncesARestoreThatLanded()
+        {
+            var hero = Hero();
+            hero.PrimaryPool.Current = 0;
+
+            var (session, _, _) = Fight(
+                Kit(skills: new[] { Skill(SkillEffect.RestorePartyMana, "Chorus", flatAmount: 25) }), hero);
+
+            session.CastSkill(0, null);
+
+            Assert.Greater(hero.CurrentMana, 0, "fixture: the cast has to actually restore something");
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("restores the squad")));
+        }
     }
 }
