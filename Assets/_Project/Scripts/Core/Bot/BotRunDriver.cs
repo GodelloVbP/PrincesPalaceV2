@@ -1040,7 +1040,7 @@ namespace PrincesPalace
             {
                 if (character == null) continue;
 
-                if (character.ClaimTrackRewards(RewardTracks.For(character), character.level)) changed = true;
+                if (ClaimKeepingTheCarriedFraction(character)) changed = true;
 
                 int guard = 0;
                 while (character.unspentStatPoints > 0 && guard++ < 1000)
@@ -1060,6 +1060,46 @@ namespace PrincesPalace
 
             if (changed) SaveSlotManager.SaveCurrent();
         }
+
+        // THE PAIR, IN THE ORDER RewardTrackController.Input.Claim TAKES IT.
+        //
+        // maxBefore is a photograph taken BEFORE the claim moves the watermark:
+        // EffectiveStats sums the track's MaxHealth entries at levels <=
+        // claimedTrackLevel, so reading it any later makes the scale a no-op.
+        // Claim's own header says this at length; what it could not say is that
+        // the bot is the second door onto the same claim and went through it
+        // without the photograph. Every max-health node the bot collected left
+        // the run holding the old absolute -- a permanently empty tail on the
+        // bar, one per node, compounding across a descent, and the batch
+        // reported the resulting weakness as the game being hard.
+        //
+        // A PRIVATE HELPER, NOT A SHARED ONE. "Move a maximum, keep the
+        // fraction" has four callers now (EquipmentOps, TalentOps, the reward
+        // track screen, and this) and wants to be one Core helper --
+        // TalentOps.RescalingCarriedHealth is already exactly that shape. It is
+        // not extracted here because TalentOps is being changed in the same
+        // pass by another hand, and a cross-file extraction under two editors
+        // at once is how a pair ends up applied zero times instead of four. A
+        // later pass should fold all four into it.
+        private static bool ClaimKeepingTheCarriedFraction(Character character)
+        {
+            if (character == null) return false;
+
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
+            if (!character.ClaimTrackRewards(RewardTracks.For(character), character.level)) return false;
+
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
+            return true;
+        }
+
+        // Test-only door onto the claim above, named ...ForTest per house
+        // convention (FightBeatPlayer.WireStageForTest, CharacterVoice.
+        // VoiceKeysForTest) because Core's InternalsVisibleTo names the Editor
+        // assembly and nothing else. PlayRun is the only other way in and it
+        // plays a whole descent, which cannot pin a literal at one claim.
+        public static bool ClaimTrackForTest(Character character) =>
+            ClaimKeepingTheCarriedFraction(character);
 
         // ---- the post-fight offer ------------------------------------------------
 
