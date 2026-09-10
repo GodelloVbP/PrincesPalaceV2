@@ -140,6 +140,90 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("costs neither mana nor resource", errors[0]);
         }
 
+        // ---- a free skill on a pool that opens empty (phase E) -----------------
+        //
+        // THE SAME SKILL, THE SAME EFFECT, TWO ANSWERS, and the difference is
+        // the owner's pool rather than anything on the row. A `startRule:
+        // Zero` pool holds nothing on turn one, so its holder owning no free
+        // action cannot act at all on the turn the fight begins -- the rule
+        // above cannot see that, because it only ever looked at the skill.
+        //
+        // All three of these hand the set in the way ContentBuilder computes
+        // it (pools, then characters, then skills), so the fixture states its
+        // own premise rather than depending on what pools.json happens to
+        // author.
+
+        [Test]
+        public void AFreeDamageSkill_IsStillRejectedForAManaHolder()
+        {
+            // THE CONTROL, and the half that would let the carve-out ship as a
+            // blanket amnesty: `bear` is in the refusing-books set and NOT in
+            // the zero-start set, and the free-action rule must still bite.
+            var entry = Minimal("free_swing", "bear");
+            entry.manaCost = 0;
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { entry }, new[] { "bear" }, System.Array.Empty<string>(),
+                out _, out var errors);
+
+            Assert.IsFalse(ok, "a mana holder's free damage skill is the original spam case and is unchanged");
+            StringAssert.Contains("costs neither mana nor resource", errors[0]);
+        }
+
+        [Test]
+        public void AFreeDamageSkill_IsAllowedForAZeroStartPoolHolder()
+        {
+            var entry = Minimal("slam", "bear");
+            entry.manaCost = 0;
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { entry }, null, new[] { "bear" },
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(0, resolved[0].ManaCost,
+                "Bjorn's slam is free because Fury starts at zero, not because the cost was forgotten");
+        }
+
+        [Test]
+        public void TheCarveOutIsPerOwnerRatherThanPerCatalogue()
+        {
+            // ONE RESOLVE, TWO OWNERS. Handing the set in per call would let
+            // a "zero-start pool exists anywhere in content" reading pass
+            // every assertion above; this is the case that separates them.
+            var bjorn = Minimal("brace", "bear");
+            bjorn.manaCost = 0;
+            var shawn = Minimal("shear", "sheep");
+            shawn.manaCost = 0;
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { bjorn, shawn }, null, new[] { "bear" },
+                out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual(1, errors.Count, string.Join("; ", errors));
+            StringAssert.Contains("shear", errors[0]);
+        }
+
+        [Test]
+        public void ProvokeStaysFreeForEverybody()
+        {
+            // Provoke's whole cost is the turn, which is why it was already
+            // exempt (see the resolver's own comment). The carve-out must not
+            // have moved that: this passes with an EMPTY zero-start set, i.e.
+            // on the exemption that was already there.
+            var entry = Minimal("bellow", "sheep");
+            entry.manaCost = 0;
+            entry.effect = "Provoke";
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { entry }, null, System.Array.Empty<string>(),
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(SkillEffect.Provoke, resolved[0].Effect);
+        }
+
         [Test]
         public void AResourceOnlySkill_IsAccepted()
         {

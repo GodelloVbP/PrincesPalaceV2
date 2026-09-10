@@ -485,7 +485,7 @@
       "characterId": "bear",
       "unlockLevel": 1,
       "effect": "DamageSingle",
-      "manaCost": 6,
+      "manaCost": 0,
       "flatAmount": 12,
       "meleeReach": true,
       "approach": "close",
@@ -511,7 +511,7 @@
       "unlockLevel": 1,
       "effect": "Ward",
       "targeting": "Self",
-      "manaCost": 5,
+      "manaCost": 0,
       "resourceCost": 0
     },
     {

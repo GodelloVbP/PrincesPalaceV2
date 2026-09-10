@@ -452,10 +452,24 @@ namespace PrincesPalace
             var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
             var unassigned = run?.unassignedSpellBooks ?? new List<string>();
 
+            // "SPELLS 0/3" ON A ROW THAT WILL NEVER READ 1/3 IS A LIE, and
+            // the collapsed header is the only part of this panel a player
+            // sees without opening it. The count says how many of three slots
+            // are filled; a character whose pool refuses books has no slots at
+            // all, so the fraction has no denominator to be out of and the
+            // header shows the word alone. The sentence inside the panel is
+            // where the reason lives -- a header has no room for one.
             if (spellsCount != null && character != null)
             {
-                int filled = learned.Count(e => e != null && e.characterId == character.definitionId);
-                spellsCount.Set(UiStrings.DossierSpellsCount, filled, SpellBooks.MaxSpellSlots);
+                if (!_canHoldSpellBooks)
+                {
+                    spellsCount.SetContent("");
+                }
+                else
+                {
+                    int filled = learned.Count(e => e != null && e.characterId == character.definitionId);
+                    spellsCount.Set(UiStrings.DossierSpellsCount, filled, SpellBooks.MaxSpellSlots);
+                }
             }
 
             // THE WHOLE SLOT BLOCK, OR ONE SENTENCE (plan P6, gate 3). Never

@@ -28,13 +28,15 @@ namespace PrincesPalace.Domain.Tests
         // primaryPoolId is checked against have to be the ones a build would
         // actually produce, the same way ContentBuilder resolves pools first
         // and hands the ids down.
-        private static List<string> PoolIds()
+        private static List<ResolvedPool> Pools()
         {
             var raw = ContentDataFiles.ParseFile<RawPoolFile>(ContentDataFiles.DataPath("pools.json")).pools;
             bool ok = PoolEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
             Assert.IsTrue(ok, "pools.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
-            return resolved.Select(pool => pool.Id).ToList();
+            return resolved;
         }
+
+        private static List<string> PoolIds() => Pools().Select(pool => pool.Id).ToList();
 
         private static List<ResolvedCharacter> Characters()
         {
@@ -44,10 +46,24 @@ namespace PrincesPalace.Domain.Tests
             return resolved;
         }
 
+        // AND THE POOL SETS, for the same reason the pool ids above exist:
+        // skills.json stopped resolving against itself alone the moment a
+        // rule turned on the OWNER's pool. Bjorn's slam and brace are free
+        // because `fury` starts at zero, and a resolve that was not told so
+        // refuses the file outright. PoolOwnership is the one derivation
+        // ContentBuilder uses too.
         private static List<ResolvedSkill> Skills()
         {
             var raw = ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills;
-            bool ok = SkillEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
+            var pools = Pools();
+            var characters = Characters();
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                raw,
+                PoolOwnership.BookRefusers(pools, characters),
+                PoolOwnership.ZeroStartOwners(pools, characters),
+                out var resolved, out var errors);
+
             Assert.IsTrue(ok, "skills.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
             return resolved;
         }

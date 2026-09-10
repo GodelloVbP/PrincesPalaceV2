@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
@@ -59,11 +62,12 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- who can hold a book at all (plan P6) -------------------------------
         //
-        // A FIXTURE POOL, because nothing authors a book-refusing row yet --
-        // Bjorn's `fury` is phase E. Same approach PartyFormationCaptureTests
-        // takes for the HUD meter: build the row the rule needs and state its
-        // switches here as literals, so this cannot start passing because some
-        // shipped row happened to change its mind.
+        // A FIXTURE POOL, KEPT NOW THAT `fury` SHIPS. It states the predicate's
+        // own switches as literals, so the rule is pinned against a row this
+        // file controls rather than against whatever pools.json currently
+        // says -- which is what keeps the shipped-content assertion below an
+        // assertion about CONTENT rather than a second reading of the same
+        // fact. Same split PartyFormationCaptureTests draws for the HUD meter.
         private static ResolvedPool BookRefusingFixture() =>
             new ResolvedPool(
                 "fury_fixture", "Fury", "FURY",
@@ -94,22 +98,142 @@ namespace PrincesPalace.PlayModeTests
 
         // THE ADAPTER IN FRONT OF THE PREDICATE, pinned against the real
         // roster: every gate in phase C asks a character id, not a pool.
+        //
+        // BY ID, NOT BY LOOP, since phase E. The loop this replaced said "all
+        // three" and would have kept passing had Bjorn's row been the one
+        // that stayed on mana; naming who answers what is the assertion.
         [Test]
-        public void EveryShippedCharacterCanCarrySpellBooks()
+        public void TheTwoManaHoldersCarryBooksAndTheFuryHolderDoesNot()
         {
             var roster = ContentDatabase.Characters.Select(c => c.id).ToList();
-            Assert.GreaterOrEqual(roster.Count, 3, "the catalogue loaded nothing, so this agrees with itself");
+            CollectionAssert.IsSupersetOf(roster, new[] { "sheep", "bear", "owl" },
+                "the catalogue loaded nothing recognisable, so this agrees with itself");
 
-            foreach (string id in roster)
-            {
-                Assert.IsTrue(ContentDatabase.CanHoldSpellBooks(id),
-                    $"'{id}' cannot hold spell books, but no shipped pool refuses them yet -- " +
-                    "if a pools.json row now says allowsSpellBooks false, this test and the shop, " +
-                    "dossier and reconcile tests around it need the refusing-side literals phase E adds");
-            }
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks("sheep"), "Shawn holds mana, and mana reads books");
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks("owl"), "Odette holds mana, and mana reads books");
+
+            Assert.IsFalse(ContentDatabase.CanHoldSpellBooks("bear"),
+                "Bjorn's primaryPoolId is 'fury', whose row authors allowsSpellBooks false");
 
             Assert.IsTrue(ContentDatabase.CanHoldSpellBooks("nobody_by_that_name"),
                 "an unknown character resolves to the mana fallback, not to a refusal");
+        }
+
+        // GATE 1 (plan P6). CanLearn is the single door in front of every
+        // learn and replace path -- LearnSpell and ReplaceSpell both consult
+        // it -- so -1 here is what makes the other five refusals unreachable
+        // rather than merely unlikely.
+        [Test]
+        public void CanLearnRefusesTheFuryHolderOutrightRatherThanForWantOfASlot()
+        {
+            RunManager.StartRun(4242UL);
+
+            Assert.AreEqual(-1, RunOrchestrator.CanLearn("bear"),
+                "Bjorn has three empty slots and still cannot learn: the refusal is the pool, not the slots");
+            Assert.AreEqual(0, RunOrchestrator.CanLearn(CharacterId),
+                "and it is per character -- Shawn's own first slot is still free");
+
+            GiveOneUnassignedCopy();
+            var result = RunOrchestrator.LearnSpell("bear", SkillId);
+            Assert.AreEqual(ShopOutcome.Refused, result.Outcome);
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, SkillId,
+                "a refused learn must leave the book on the pile rather than consuming it");
+            Assert.IsEmpty(RunManager.Run.learnedSpells);
+        }
+
+        // GATE 2, and the threshold is the whole point: ALL, not ANY. One
+        // book-less character in the squad must not take a book off the shelf
+        // for the two who can read it.
+        [Test]
+        public void ABookStaysOnTheShelfWhileAnybodyFieldedCanReadIt()
+        {
+            RunManager.StartRun(4242UL);
+
+            var squad = SaveSlotManager.CurrentSave.ActiveSquadIds();
+            CollectionAssert.Contains(squad, "bear",
+                "this fixture is only worth anything with the book-less character actually fielded");
+            Assert.IsTrue(squad.Any(id => ContentDatabase.CanHoldSpellBooks(id)),
+                "and only worth anything with somebody beside him who can read one");
+
+            CollectionAssert.Contains(
+                RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), SkillId,
+                "Bjorn cannot read it and it is still stock -- Shawn and Odette can");
+        }
+
+        // THE OTHER SIDE OF THAT THRESHOLD. A squad of nobody-can-read is the
+        // case where the card really is dead, and the shelf has to drop it or
+        // it stocks a purchase that can never be placed.
+        [Test]
+        public void ABookLeavesTheShelfOnlyWhenEveryFieldedCharacterRefusesIt()
+        {
+            RunManager.StartRun(4242UL);
+
+            var save = SaveSlotManager.CurrentSave;
+            Assert.IsNotNull(save.ActiveSquad().FirstOrDefault(c => c != null && c.definitionId == "bear"),
+                "no Bjorn in the squad, so there is no all-refuse case to build");
+
+            // A ONE-MEMBER SQUAD OF THE ONE WHO CANNOT READ, built through the
+            // save's own selection rather than by inventing a party the game
+            // cannot produce -- a solo Bjorn is an ordinary fielding, and it is
+            // the only shipped way to reach `squad.All(cannot read)`.
+            save.selectedCharacterIds = new List<string> { "bear" };
+
+            CollectionAssert.AreEqual(new[] { "bear" }, save.ActiveSquadIds(),
+                "the bench did not take, so this is still testing a mixed squad");
+
+            CollectionAssert.DoesNotContain(
+                RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), SkillId,
+                "a card nobody fielded could act on is a dead card holding a live card's slot");
+        }
+
+        // GATE 4. Reconcile runs on LOAD, so a save written before a
+        // character's pool changed reaches a fight through routes that never
+        // opened a save file (the tooling party, a preview) -- this is what
+        // makes the difference between "the entry is gone" and "the entry is
+        // gone AND could not have cast anything anyway".
+        [Test]
+        public void AStaleLearnedBookNeverReachesTheFuryHoldersKit()
+        {
+            RunManager.StartRun(4242UL);
+
+            // Written straight into the run, past LearnSpell's refusal, which
+            // is exactly the shape a save from before the pool changed has.
+            RunManager.Run.learnedSpells.Add(
+                new LearnedSpellEntry { characterId = "bear", skillId = SkillId, slot = 0 });
+
+            var bjorn = new Character { definitionId = "bear", level = 9 };
+            CollectionAssert.DoesNotContain(
+                ContentDatabase.AvailableSkillsFor(bjorn).Select(s => s.id).ToList(), SkillId,
+                "the learned-this-run route is gated on the pool, so a stale entry grants nothing");
+
+            // THE CONTROL: the same stale-looking entry on a mana holder IS
+            // honoured, so this is not passing because the route is broken.
+            var shawn = new Character { definitionId = CharacterId, level = 9 };
+            RunManager.Run.learnedSpells.Add(
+                new LearnedSpellEntry { characterId = CharacterId, skillId = SkillId, slot = 0 });
+            CollectionAssert.Contains(
+                ContentDatabase.AvailableSkillsFor(shawn).Select(s => s.id).ToList(), SkillId);
+        }
+
+        // AND THE PRUNE ITSELF. Loud rather than quiet: the other arms of
+        // Reconcile drop content that no longer exists, which the player can
+        // see for themselves; this one drops a spell off a character who
+        // still has three empty-looking slots.
+        [Test]
+        public void ReconcileReturnsTheFuryHoldersBookToTheUnplacedPile()
+        {
+            RunManager.StartRun(4242UL);
+            RunManager.Run.learnedSpells.Add(
+                new LearnedSpellEntry { characterId = "bear", skillId = SkillId, slot = 1 });
+
+            LogAssert.Expect(LogType.Warning, new Regex("bear.*can no longer carry spell books.*" + SkillId));
+
+            SaveSlotManager.CurrentSave.Reconcile();
+
+            Assert.IsEmpty(RunManager.Run.learnedSpells,
+                "the entry must not survive on a character who cannot hold it");
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, SkillId,
+                "and the book is returned, not destroyed -- somebody else can still place it");
         }
 
         // ---- content: bookOnly stays inert, bookTier does not -------------------

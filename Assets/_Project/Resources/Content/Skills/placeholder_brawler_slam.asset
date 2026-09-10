@@ -21,7 +21,7 @@ MonoBehaviour:
     UnlockLevel: 1
     Effect: 0
     Targeting: 0
-    ManaCost: 6
+    ManaCost: 0
     ResourceCost: 0
     SpendsAllResource: 0
     Power: 0

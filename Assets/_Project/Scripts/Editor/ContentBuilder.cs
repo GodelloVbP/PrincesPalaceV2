@@ -129,19 +129,21 @@ public static class ContentBuilder
             BuildEnemies();
             BuildItems();
             BuildSpellTiers();
-            // SKILLS AFTER POOLS AND CHARACTERS, and now for a second reason:
-            // a bookOnly skill whose owner's pool refuses spell books is
-            // unreachable content (plan P6, gate 5), and only the two
-            // catalogues above can say which owners those are. Empty on the
-            // shipped roster -- every character holds mana and mana reads
-            // books -- so this is a rule waiting for its first content, not a
-            // rule with nothing to say.
-            var bookRefusers = characters
-                .Where(c => !SpellBooks.CanHold(pools.FirstOrDefault(p => p.Id == c.PrimaryPoolId)))
-                .Select(c => c.Id)
-                .ToList();
-
-            var skills = BuildSkills(bookRefusers);
+            // SKILLS AFTER POOLS AND CHARACTERS, and now for two more
+            // reasons: whether a bookOnly skill is reachable at all, and
+            // whether a free player-selectable one is an authoring slip or
+            // its owner's only opening move, are both facts about the pool
+            // the OWNER carries -- and only the two catalogues above can say.
+            // Bjorn is the whole of both lists today (`fury` authors
+            // allowsSpellBooks false and startRule Zero); both were empty
+            // until his row landed.
+            //
+            // DERIVED IN PoolOwnership, NOT HERE, because two [D] test
+            // classes resolve the same three files under plain `dotnet test`
+            // with no Editor -- see that file's own header.
+            var skills = BuildSkills(
+                PoolOwnership.BookRefusers(pools, characters),
+                PoolOwnership.ZeroStartOwners(pools, characters));
             BuildModifiers();
 
             // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
@@ -462,13 +464,14 @@ public static class ContentBuilder
     // character's owned skills (id, displayName, unlockLevel,
     // damageInstances) to validate UnlockSkill and rule 4's level-1 element
     // set against.
-    private static IReadOnlyList<ResolvedSkill> BuildSkills(IReadOnlyCollection<string> bookRefusingOwnerIds)
+    private static IReadOnlyList<ResolvedSkill> BuildSkills(IReadOnlyCollection<string> bookRefusingOwnerIds,
+                                                            IReadOnlyCollection<string> zeroStartPoolOwnerIds)
     {
         // A LOCAL FUNCTION, the shape BuildCharacters and BuildRelics use to
         // close over a second resolver argument -- here the owners whose pool
-        // refuses spell books.
+        // refuses spell books, and the owners whose pool opens a fight empty.
         bool Resolve(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved, out List<string> errors) =>
-            SkillEntryResolver.TryResolveAll(entries, bookRefusingOwnerIds, out resolved, out errors);
+            SkillEntryResolver.TryResolveAll(entries, bookRefusingOwnerIds, zeroStartPoolOwnerIds, out resolved, out errors);
 
         return Build<RawSkillEntry, ResolvedSkill, SkillDefinition>(
             "BuildSkills", "Assets/_Project/ContentData/skills.json", SkillsPath, "skills",

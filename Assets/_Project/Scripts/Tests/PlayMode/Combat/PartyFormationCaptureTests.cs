@@ -473,14 +473,27 @@ namespace PrincesPalace.PlayModeTests
             var actor = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == who);
             Assert.IsNotNull(actor, $"the party card names '{who}', who is not in the party");
 
-            // BEFORE: everyone holds mana, so the card must read exactly what
-            // the scene baked. This is the "invisible until a row authors
-            // different colours" half of the claim, and it is checked first
-            // because it is the half a regression would break silently.
+            // BEFORE: the card must already read the acting character's OWN
+            // pool. This is the "the meter draws whoever is standing there"
+            // half of the claim, and it is checked first because it is the
+            // half a regression would break silently.
+            //
+            // READ OFF THE COMBATANT, NOT PINNED TO MANA. It was
+            // FightHudPalette.MpBright and the literal "MP" until Bjorn's
+            // `fury` row shipped, and who the fight seats first is a speed
+            // question this fixture does not control -- a pin on mana here
+            // would fail the day the turn order changed rather than the day
+            // the meter did. What is authored is pinned in
+            // PoolContentPinTests; what is pinned here is that the card
+            // agrees with its occupant.
+            var actorPool = actor.PrimaryPool;
+            Assert.IsNotNull(actorPool, $"{who} holds no primary pool, so the card has nothing to draw");
+
             var partyFill = Named("PartyMpFill")?.GetComponent<Image>();
             Assert.IsNotNull(partyFill, "PartyMpFill is missing or carries no Image");
-            AssertColour(Hex(FightHudPalette.MpBright), partyFill.color, "PartyMpFill before (mana)");
-            Assert.AreEqual("MP", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text);
+            AssertColour(Hex(actorPool.BrightHex), Opaque(partyFill.color),
+                $"PartyMpFill before ({actorPool.Id})");
+            Assert.AreEqual(actorPool.ShortTag, Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text);
 
             var pool = new ResourcePool(FuryFixture(), capacity: 100, gainPerTurn: 0);
             pool.Gain(60);
@@ -519,7 +532,24 @@ namespace PrincesPalace.PlayModeTests
             // which no static bar can satisfy.
             var pulsed = new System.Collections.Generic.List<float>();
             var mana = new System.Collections.Generic.List<float>();
-            var rosterFill = Named("Roster0MpFill")?.GetComponent<Image>();
+
+            // THE CONTROL CARD IS CHOSEN, NOT ASSUMED. It was Roster0 flat
+            // until Bjorn's `fury` row shipped, and Roster0 is whichever of
+            // the two non-acting party members happens to sort first -- if
+            // that is Bjorn, "the mana bar never moved" would be sampling a
+            // bar the row explicitly asked to beat, and the control would
+            // fail for being right. So find a roster card whose occupant
+            // holds a pool that says pulse:false, and say so when there is
+            // none rather than quietly skipping.
+            Image rosterFill = null;
+            for (int card = 0; card < 2 && rosterFill == null; card++)
+            {
+                string occupantName = Named($"Roster{card}Name")?.GetComponent<TMPro.TMP_Text>()?.text;
+                var occupant = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == occupantName);
+                if (occupant?.PrimaryPool == null || occupant.PrimaryPool.Pulse) continue;
+
+                rosterFill = Named($"Roster{card}MpFill")?.GetComponent<Image>();
+            }
 
             for (int i = 0; i < 16; i++)
             {
@@ -537,8 +567,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.LessOrEqual(pulsed.Max(), 1.001f, "the pulse overshot fully opaque");
 
             // THE CONTROL. Mana's row says pulse:false, so the tick must
-            // never have touched this Image at all.
-            if (mana.Count > 0)
+            // never have touched this Image at all. Two of the three party
+            // members hold mana and only one of them can be acting, so a
+            // roster card carrying one is always on screen -- an empty sample
+            // means the card was not found, not that there was nothing to
+            // check.
+            Assert.IsNotEmpty(mana,
+                "no roster card was sampled, so the 'only the pulsing row moves' control asserted nothing");
             {
                 Assert.AreEqual(0f, mana.Max() - mana.Min(), 0.0001f,
                     "a mana meter's alpha moved -- the tick is writing to meters whose row never asked");

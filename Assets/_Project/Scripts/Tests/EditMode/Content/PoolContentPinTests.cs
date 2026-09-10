@@ -32,13 +32,89 @@ namespace PrincesPalace.Domain.Tests
             ?? throw new AssertionException("pools.json has no 'mana' row; every character's primaryPoolId " +
                                             "defaults to it, so the catalogue cannot ship without one.");
 
+        private static ResolvedPool Fury() =>
+            Pools().SingleOrDefault(p => p.Id == "fury")
+            ?? throw new AssertionException("pools.json has no 'fury' row; Bjorn's primaryPoolId names it, " +
+                                            "so the character catalogue cannot build without one.");
+
         [Test]
-        public void ManaIsTheOnlyPoolShippedThisPhase()
+        public void TwoPoolsShip()
         {
-            // Fury is phase E. Pinned so the row cannot arrive without
-            // somebody reading this test, and the two phases' gates stay
-            // separable.
-            CollectionAssert.AreEqual(new[] { "mana" }, Pools().Select(p => p.Id).ToList());
+            // ORDER IS FILE ORDER and it is asserted, not just membership: a
+            // pool's SortOrder is its position here, and the meter, the sheet
+            // row and the cost label all read a pool by id rather than by
+            // index -- so the value of pinning the order is that an author
+            // moving a row sees this test rather than a silent reshuffle.
+            CollectionAssert.AreEqual(new[] { "mana", "fury" }, Pools().Select(p => p.Id).ToList());
+        }
+
+        [Test]
+        public void FuryIsARageBarRatherThanABudget()
+        {
+            var fury = Fury();
+
+            Assert.AreEqual("Fury", fury.DisplayName);
+            Assert.AreEqual("FURY", fury.ShortTag);
+
+            // FIXED IS THE HALF THAT MAKES "0..100, ALWAYS" TRUE. Every Max
+            // Mana source in the game -- the Wisdom bonus, talents, relics,
+            // the reward track, FlatMaxManaBonus -- adds to a WisdomDerived
+            // pool and to nothing else, so 100 is the whole number from every
+            // source and stays 100 for a Bjorn wearing every relic in the
+            // game. The consequence, accepted rather than hidden: a Max Mana
+            // talent or relic is a dead pick for him.
+            Assert.AreEqual(PoolCapacityRule.Fixed, fury.CapacityRule);
+            Assert.AreEqual(100, fury.Capacity);
+
+            // THE SHAPE, and it is the opposite of mana's. Mana opens full
+            // and only goes down; Fury opens at nothing and is earned by
+            // fighting -- so Bjorn's worst turn is his first and his best is
+            // his last, the arc Shawn's Wool already draws.
+            Assert.AreEqual(PoolStartRule.Zero, fury.StartRule);
+            Assert.AreEqual(0, fury.StartValue);
+
+            // NOTHING PER TURN, and that is the design rather than an
+            // omission: a rage bar that fills while its holder stands still
+            // is a mana bar with an orange skin. Both gains are earned by
+            // damage, in one direction or the other.
+            Assert.AreEqual(0, fury.GainPerTurn);
+            Assert.AreEqual(15, fury.GainOnAttack);
+            Assert.AreEqual(10, fury.GainOnDamageTaken);
+
+            // AND IT DRAINS IF HE DOES NEITHER. Damage is the narrow reading
+            // of "idle" (a turn spent on Provoke, an item or a Move decays);
+            // the owner can widen it to AnyAction by editing this one field,
+            // which is why DecayUnless is an enum and not a bool.
+            Assert.AreEqual(10, fury.DecayPerIdleTurn);
+            Assert.AreEqual(PoolDecayTrigger.Damage, fury.DecayUnless);
+
+            // The three switches that make Fury exotic rather than mana. A
+            // mana potion must not be a rage potion (RestoredByManaEffects),
+            // the meter beats (Pulse), and Bjorn carries no spell books --
+            // the fact five gates in Core read through SpellBooks.CanHold.
+            Assert.IsTrue(fury.Pulse);
+            Assert.IsFalse(fury.AllowsSpellBooks);
+            Assert.IsFalse(fury.RestoredByManaEffects);
+            Assert.IsFalse(fury.AbsorbsDamage);
+        }
+
+        [Test]
+        public void FuryIsOrangeAndNothingElseOnTheRosterIs()
+        {
+            // THE HEXES AS LITERALS, and the same reasoning
+            // PartyFormationCaptureTests' fixture row gives: the HUD test
+            // hands a fixture pool to a live combatant and asserts these
+            // three tokens, so if the shipped row ever disagreed with the
+            // fixture the capture would be photographing a colour nobody
+            // ships. This is the other end of that pair.
+            var fury = Fury();
+
+            Assert.AreEqual("#FF8A3A", fury.BrightHex);
+            Assert.AreEqual("#8E3A12", fury.DeepHex);
+            Assert.AreEqual("#FFD2B0", fury.TextHex);
+
+            Assert.AreNotEqual(Mana().BrightHex, fury.BrightHex,
+                "the two shipped meters draw in the same colour, so the bar tells the player nothing");
         }
 
         [Test]

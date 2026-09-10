@@ -46,4 +46,4 @@ MonoBehaviour:
     StartsInSquad: 1
     SquadSlot: 2
     PlateTheme: 1
-    PrimaryPoolId: mana
+    PrimaryPoolId: fury

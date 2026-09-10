@@ -129,10 +129,35 @@ namespace PrincesPalace.Domain.Tests
         // Pools before characters, because a character's primaryPoolId is
         // validated against these -- the same ordering ContentBuilder calls
         // load-bearing, mirrored rather than assumed.
-        private static List<string> PoolIds() =>
-            Resolve<RawPoolEntry, ResolvedPool>(
+        private static List<ResolvedPool> ResolvePools() =>
+            ResolveAllOf<RawPoolEntry, ResolvedPool>(
                 "pools.json", ContentDataFiles.ParseFile<RawPoolFile>(ContentDataFiles.DataPath("pools.json")).pools,
-                PoolEntryResolver.TryResolveAll, pool => pool.Id);
+                PoolEntryResolver.TryResolveAll);
+
+        private static List<string> PoolIds() => ResolvePools().Select(pool => pool.Id).ToList();
+
+        // The skill resolver with the two OWNER-pool facts already bound, the
+        // same shape ResolveCharacters uses for the pool ids and for the same
+        // reason: skills.json stopped resolving against itself alone the
+        // moment a rule turned on the pool its owner carries. Bjorn's slam
+        // and brace are free because `fury` starts at zero, and a resolve
+        // that was not told so refuses the file outright. PoolOwnership is
+        // the one derivation, shared with ContentBuilder.
+        private static List<ResolvedSkill> ResolveSkills()
+        {
+            var pools = ResolvePools();
+            var characters = ResolveCharacters();
+            var bookRefusers = PoolOwnership.BookRefusers(pools, characters);
+            var zeroStartOwners = PoolOwnership.ZeroStartOwners(pools, characters);
+
+            bool Resolver(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved,
+                          out List<string> errors) =>
+                SkillEntryResolver.TryResolveAll(entries, bookRefusers, zeroStartOwners, out resolved, out errors);
+
+            return ResolveAllOf<RawSkillEntry, ResolvedSkill>(
+                "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
+                Resolver);
+        }
 
         // The character resolver with the real pool ids already bound, so
         // both of the two places that resolve characters here go through one
@@ -189,9 +214,7 @@ namespace PrincesPalace.Domain.Tests
         private static List<string> RewardTrackIds()
         {
             var characters = ResolveCharacters();
-            var skills = ResolveAllOf<RawSkillEntry, ResolvedSkill>(
-                "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
-                SkillEntryResolver.TryResolveAll);
+            var skills = ResolveSkills();
 
             var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
 
@@ -250,9 +273,7 @@ namespace PrincesPalace.Domain.Tests
                     "spells.json", ContentDataFiles.ParseFile<RawSpellTierFile>(ContentDataFiles.DataPath("spells.json")).tiers,
                     SpellTierEntryResolver.TryResolveAll, tier => $"level_{tier.Level}"),
 
-                ["Skills"] = Resolve<RawSkillEntry, ResolvedSkill>(
-                    "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
-                    SkillEntryResolver.TryResolveAll, skill => skill.Id),
+                ["Skills"] = ResolveSkills().Select(skill => skill.Id).ToList(),
 
                 ["Modifiers"] = Resolve<RawModifierEntry, ResolvedModifier>(
                     "modifiers.json", ContentDataFiles.ParseFile<RawModifierFile>(ContentDataFiles.DataPath("modifiers.json")).modifiers,

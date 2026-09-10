@@ -494,8 +494,21 @@ namespace PrincesPalace.Content
                 // argument is about a player weighing this action against
                 // another; a monster's abilities are drawn by weight and it has
                 // neither mana nor wool to spend either way.
+                //
+                // AND ONLY WHERE THE OWNER OPENS THE FIGHT ABLE TO PAY. This
+                // half is easier to state here than in the resolver, which
+                // cannot see a catalogue: a pool authored `startRule: Zero`
+                // holds nothing on turn one, so its holder owning no free
+                // action cannot act at all on the turn the fight starts.
+                // Bjorn's `fury` is the shipped case and his slam and brace
+                // are the shipped skills; the same rule, phrased against the
+                // same fact, lives in SkillEntryResolver, whose comment
+                // records why it outlives the unauthored Fury prices.
+                bool ownerOpensEmpty =
+                    PrimaryPoolOf(skill.Data.CharacterId)?.StartRule == PoolStartRule.Zero;
+
                 if (skill.Data.PlayerSelectable && skill.Data.ManaCost == 0 && !skill.Data.CostsResource
-                    && skill.Data.Effect != SkillEffect.Provoke)
+                    && skill.Data.Effect != SkillEffect.Provoke && !ownerOpensEmpty)
                 {
                     errors.Add($"Skill '{skill.id}' costs nothing at all, so it strictly dominates every other action.");
                 }

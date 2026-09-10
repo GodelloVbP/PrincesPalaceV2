@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3851321f35c3ac84696f27a50f8239b7, type: 3}
+  m_Name: fury
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.PoolDefinition
+  data:
+    Id: fury
+    DisplayName: Fury
+    ShortTag: FURY
+    CapacityRule: 1
+    Capacity: 100
+    GainPerTurn: 0
+    GainOnAttack: 15
+    GainOnDamageTaken: 10
+    DecayPerIdleTurn: 10
+    DecayUnless: 0
+    StartRule: 1
+    StartValue: 0
+    BrightHex: '#FF8A3A'
+    DeepHex: '#8E3A12'
+    TextHex: '#FFD2B0'
+    Pulse: 1
+    AllowsSpellBooks: 0
+    RestoredByManaEffects: 0
+    AbsorbsDamage: 0
+    SortOrder: 1

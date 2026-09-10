@@ -28,7 +28,7 @@ namespace PrincesPalace.Domain.Content
         // The catalogue-blind overload, for the fixtures and for anything that
         // only wants skills.json checked against itself. Nobody refuses books.
         public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved, out List<string> errors) =>
-            TryResolveAll(entries, null, out resolved, out errors);
+            TryResolveAll(entries, null, null, out resolved, out errors);
 
         // THE ONE CROSS-CATALOGUE FACT THIS RESOLVER IS HANDED (plan P6,
         // gate 5): the owner ids whose primary pool refuses spell books,
@@ -48,6 +48,20 @@ namespace PrincesPalace.Domain.Content
         // shipped catalogue's own answer today.
         public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries,
                                          IReadOnlyCollection<string> bookRefusingOwnerIds,
+                                         out List<ResolvedSkill> resolved, out List<string> errors) =>
+            TryResolveAll(entries, bookRefusingOwnerIds, null, out resolved, out errors);
+
+        // THE SECOND CROSS-CATALOGUE FACT, threaded the same way and for the
+        // same reason: the owner ids whose primary pool authors
+        // `startRule: Zero`, i.e. who open every fight holding nothing. It is
+        // what the free-skill refusal below needs to tell an authoring slip
+        // from a design (see that rule's own comment).
+        //
+        // Null or empty means "everybody opens with something to spend",
+        // which was the whole catalogue's answer until Bjorn's `fury` row.
+        public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries,
+                                         IReadOnlyCollection<string> bookRefusingOwnerIds,
+                                         IReadOnlyCollection<string> zeroStartPoolOwnerIds,
                                          out List<ResolvedSkill> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedSkill>();
@@ -55,7 +69,7 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < entries.Count; i++)
             {
-                if (TryResolveOne(entries[i], i, resolved.Count, out var single, out string error))
+                if (TryResolveOne(entries[i], i, resolved.Count, zeroStartPoolOwnerIds, out var single, out string error))
                 {
                     resolved.Add(single);
                 }
@@ -98,7 +112,9 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveOne(RawSkillEntry raw, int index, int sortOrder, out ResolvedSkill resolvedSkill, out string error)
+        private static bool TryResolveOne(RawSkillEntry raw, int index, int sortOrder,
+                                          IReadOnlyCollection<string> zeroStartPoolOwnerIds,
+                                          out ResolvedSkill resolvedSkill, out string error)
         {
             resolvedSkill = default;
             string label = string.IsNullOrEmpty(raw.id) ? $"skills.json entry #{index + 1}" : $"skill '{raw.id}'";
@@ -189,11 +205,31 @@ namespace PrincesPalace.Domain.Content
             // the strand is for (handoff §6.2).
             bool touchesHealthOrMana = effect != SkillEffect.Provoke;
 
+            // AND ONLY WHEN THE OWNER HAS SOMETHING TO SPEND ON TURN ONE. A
+            // pool authored `startRule: Zero` opens every fight at nothing, so
+            // a character holding one who owns no free action cannot act at
+            // all on the turn the fight starts -- not "acts badly", cannot
+            // act. Charging for the opening move of a resource that is earned
+            // by moving is a circular price, and the rule above cannot see it
+            // because it only ever looked at the skill.
+            //
+            // THIS IS NOT A HOLE WAITING FOR BJORN'S REAL PRICES. Fury costs
+            // are unauthored today (his slam and brace are manaCost 0 in
+            // skills.json, pending the balance pass that authors them beside
+            // the gain numbers), and it would be fair to read this carve-out
+            // as interim scaffolding for that. It is not: even once every
+            // Fury cost is authored, SOMETHING in his kit has to be free or
+            // he opens every fight passing, so a Zero-start pool's first turn
+            // is a design fact rather than a placeholder. The carve-out stays.
+            //
             // AND ONLY WHEN SOMEBODY CHOOSES IT. The whole argument above is
             // about a player weighing this action against another one; a
             // monster's abilities are drawn by weight and it has no mana or
             // wool to spend either way. See RawSkillEntry.playerSelectable.
-            if (raw.playerSelectable && manaCost == 0 && resourceCost == 0 && touchesHealthOrMana)
+            bool ownerOpensEmpty = zeroStartPoolOwnerIds != null
+                                   && zeroStartPoolOwnerIds.Contains(raw.characterId);
+
+            if (raw.playerSelectable && manaCost == 0 && resourceCost == 0 && touchesHealthOrMana && !ownerOpensEmpty)
             {
                 error = $"{label}: a skill that costs neither mana nor resource is strictly better than every other action " +
                         "and would simply be spammed. Give it a cost.";
