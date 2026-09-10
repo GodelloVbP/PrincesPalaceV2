@@ -49,6 +49,10 @@ $SyncScenesToMain = $BuildScenes
 # moment ProjectVersion.txt did.
 $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
+# Test-RunnerFree -- see its header in tools/unity_lock.ps1. AUDIT #110 is the
+# reason it exists: this script had no lock check at all, so a runner another
+# session already had open was discovered only when Unity aborted into it.
+. (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
 # Shares discovery, areas and the structural gate with tools/test.ps1, so the
@@ -243,6 +247,16 @@ if ($violations.Count -gt 0) {
     foreach ($v in $violations) { Write-Host "  $v" }
     Write-Host "`nMove the file with git mv. tools/test_areas.ps1's header says what belongs in each of the seven areas."
     exit 1
+}
+
+# --- are the runners free? --------------------------------------------------
+#
+# BOTH of them, and before the sync -- mirroring main into a copy another
+# session's Unity has open is its own way to break a run, and this script
+# generates content and scenes into one of them. Costs one process-table read.
+# Refuses rather than waits; see Test-RunnerFree's header for why.
+foreach ($runner in $Runners) {
+    if (-not (Test-RunnerFree -RunnerPath $runner.Path -Label "the $($runner.Platform) runner")) { exit 1 }
 }
 
 if (-not $SkipSync) {

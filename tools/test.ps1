@@ -93,6 +93,10 @@ $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $RunnerProduct = $ProjectLeaf -replace '[^A-Za-z0-9]',''
 . (Join-Path $PSScriptRoot "unity_path.ps1")
+# Test-RunnerFree: is a runner copy free to launch into? See its own header --
+# it refuses rather than waits, and it branches on a Unity that CERTAINLY has
+# this path open rather than on any Unity at all.
+. (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
 $RunnerFor = @{
@@ -121,6 +125,56 @@ if ($SelfCheck) {
     $AreasTestsRoot = Join-Path $PSScriptRoot "test_areas_fixture"
 }
 
+# --- what a red dotnet slice is allowed to say ------------------------------
+#
+# A `dotnet test` transcript is mostly restore and build noise, so the failure
+# report is filtered. It was filtered by a whitelist of line PREFIXES --
+# "Failed", "Error Message", "Stack Trace", "Assert.", "  Expected",
+# "  But was", "error CS" -- and the 2026-09-11 runner audit planted an
+# Assert.Fail("planted") to see what came out of it:
+#
+#     Failed PlantedFailure_IsReportedByTheHarness [22 ms]
+#     Error Message:
+#     Stack Trace:
+#
+# Two empty headers. The message and the location were both dropped, because
+# in the actual transcript they are indented CHILDREN of those headers --
+# "   planted" and "     at ...Tests.cs:line 14" -- and neither indentation
+# was on the whitelist. The verdict was right, the exit code was right, and
+# the reader still had to open the transcript to learn anything at all. On a
+# red slice that is the whole point of the printout.
+#
+# So the shape changed from a line whitelist to a BLOCK: `dotnet test` writes
+# each failure as "  Failed <Name> [n ms]" followed by its detail and closed
+# by a blank line, and that block is copied out whole. Nothing about which
+# lines inside it are interesting has to be guessed, which is what the
+# whitelist was doing and getting wrong.
+#
+# error CS lines are kept separately: a compile failure never reaches the
+# "Failed <Name>" shape, and it is the other way this exits non-zero.
+#
+# Pure function over lines so tools/test.ps1 -List -SelfCheck can drive it
+# over a canned transcript -- a report that fails by going QUIET is exactly
+# the kind this repo has learned to pin (see Invoke-SelfCheck's own header).
+function Select-DotnetFailureDetail {
+    param([string[]]$Lines, [int]$Cap = 80)
+
+    $out = @()
+    $inBlock = $false
+    foreach ($line in $Lines) {
+        if ($out.Count -ge $Cap) { break }
+
+        if ($line -match '^\s*Failed\s+\S') { $inBlock = $true; $out += $line; continue }
+        if ($inBlock) {
+            if ($line -match '^\s*$') { $inBlock = $false; continue }
+            $out += $line
+            continue
+        }
+        if ($line -match 'error CS\d') { $out += $line }
+    }
+    return $out
+}
+
 $testIndex = Get-TestIndex
 $classes = Get-TestClasses -Index $testIndex
 $testAreas = Get-TestAreas -Index $testIndex
@@ -143,7 +197,45 @@ function Invoke-SelfCheck {
     $duplicates = @(Get-DuplicateClassNames -Index $Index)
     $blindSpots = @(Get-DiscoveryBlindSpots -Index $Index)
 
+    # A canned `dotnet test` transcript, copied from a real red run (the
+    # 2026-09-11 runner audit's planted Assert.Fail) rather than invented, so
+    # the indentation the old whitelist could not see is the real
+    # indentation. Kept here rather than in a fixture file because it is four
+    # expectations over one string, not a tree.
+    $cannedRed = @(
+        '  Determining projects to restore...',
+        '  All projects are up-to-date for restore.',
+        '  PrincesPalace.Domain -> C:\...\PrincesPalace.Domain.dll',
+        '[xUnit-ish noise nobody reads]',
+        '  Failed PlantedFailure_IsReportedByTheHarness [22 ms]',
+        '  Error Message:',
+        '   planted',
+        '  Stack Trace:',
+        '     at PrincesPalace.EditModeTests.PlantedTests.PlantedFailure() in C:\a\PlantedTests.cs:line 14',
+        '',
+        '1)    at PrincesPalace.EditModeTests.PlantedTests.PlantedFailure() in C:\a\PlantedTests.cs:line 14',
+        'Failed!  - Failed:     1, Passed:     1, Skipped:     0, Total:     2'
+    )
+    $cannedDetail = @(Select-DotnetFailureDetail -Lines $cannedRed)
+
+    $cannedCompileError = @(
+        '  Determining projects to restore...',
+        'C:\a\Thing.cs(12,20): error CS1002: ; expected [C:\a\Proj.csproj]',
+        'Build FAILED.'
+    )
+    $cannedCompileDetail = @(Select-DotnetFailureDetail -Lines $cannedCompileError)
+
     $expectations = @(
+        @{ Name = "a red dotnet run's assertion MESSAGE survives the filter"
+           Ok   = { ($cannedDetail | Where-Object { $_ -match '^\s+planted$' }).Count -eq 1 } }
+        @{ Name = "a red dotnet run's FILE AND LINE survive the filter"
+           Ok   = { ($cannedDetail | Where-Object { $_ -match 'PlantedTests\.cs:line 14' }).Count -eq 1 } }
+        @{ Name = "restore/build noise does NOT survive the filter"
+           Ok   = { ($cannedDetail | Where-Object { $_ -match 'up-to-date for restore|nobody reads' }).Count -eq 0 } }
+        @{ Name = "the failure block stops at its blank line (the '1)' repeat is not copied twice)"
+           Ok   = { ($cannedDetail | Where-Object { $_ -match '^1\)' }).Count -eq 0 -and $cannedDetail.Count -eq 5 } }
+        @{ Name = "a compile error is reported even with no 'Failed <Name>' block"
+           Ok   = { ($cannedCompileDetail | Where-Object { $_ -match 'error CS1002' }).Count -eq 1 -and $cannedCompileDetail.Count -eq 1 } }
         @{ Name = "[TestCase]-only fixture is discovered"
            Ok   = { $Index.ContainsKey("TestCaseOnlyFixtureTests") } }
         @{ Name = "a .cs file directly in a platform folder, in no area, is refused"
@@ -176,6 +268,8 @@ function Invoke-SelfCheck {
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalFixtureTests is' }).Count -eq 0 } }
         @{ Name = "nothing else is refused (8 structural, 1 duplicate, 1 blind spot)"
            Ok   = { $structural.Count -eq 8 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
+        @{ Name = "a green dotnet run produces no failure detail at all"
+           Ok   = { (@(Select-DotnetFailureDetail -Lines @('  Determining projects to restore...', 'Passed!  - Failed:     0, Passed:    34'))).Count -eq 0 } }
     )
 
     $misses = @()
@@ -377,6 +471,38 @@ if ($Changed) {
 
 $wanted = $wanted | Sort-Object -Unique
 
+# --- say it out loud when the tree is in a shape a slice cannot see ---------
+#
+# WHAT THIS IS FOR, in one measured example (2026-09-11 runner audit). A test
+# class was planted DIRECTLY in Tests/EditMode rather than in an area folder,
+# with a deliberately failing case in it. `test.ps1 rng` then printed
+#
+#     dotnet -- Passed!  - Failed: 0, Passed: 34, ...
+#     Passed. This was a SLICE -- ...
+#
+# and exited 0. Discovery does not descend outside the area folders, so the
+# orphan was in no area, in no slice, and in nothing this script said. The
+# same tree made run_tests_parallel.ps1 refuse outright, naming the file --
+# but that is the pre-commit gate, minutes of feedback away from the loop
+# where the mistake was just made, and the loop is where it can be fixed in a
+# `git mv`.
+#
+# WARNS, DOES NOT REFUSE, and that split is deliberate. The gate is the
+# enforcement (its own header says so, and it has no bypass flag); this is the
+# fast loop, which has to stay usable mid-refactor when a file is briefly in
+# the wrong place. -List already reports the same three lists and exits 0 for
+# the same reason. What was wrong was not that a slice ran -- it is that it
+# ran and said NOTHING, so "Passed" was the only sentence the reader got.
+$sliceStructural = @(Get-StructuralViolations)
+$sliceDuplicates = @(Get-DuplicateClassNames -Index $testIndex)
+$sliceBlindSpots = @(Get-DiscoveryBlindSpots -Index $testIndex)
+if ($sliceStructural.Count + $sliceDuplicates.Count + $sliceBlindSpots.Count -gt 0) {
+    Write-Host "WARNING: this tree has $($sliceStructural.Count) structural violation(s), $($sliceDuplicates.Count) duplicate class name(s) and $($sliceBlindSpots.Count) discovery blind spot(s)."
+    foreach ($v in ($sliceStructural + $sliceDuplicates + $sliceBlindSpots)) { Write-Host "  $v" }
+    Write-Host "A slice cannot run what discovery cannot see, so a PASS below does not cover the above."
+    Write-Host "tools/run_tests_parallel.ps1 refuses outright on all three.`n"
+}
+
 # --- split by HOST ---------------------------------------------------------
 # Everything the dotnet project compiles goes there; the rest goes to Unity.
 # -Unity forces the whole slice through Unity instead, which is the way to
@@ -430,6 +556,15 @@ if ($dotnetWanted) {
         & dotnet test $Dir --nologo --filter $TestFilter 2>&1 | Out-File -FilePath $LogPath -Encoding utf8
         return $LASTEXITCODE
     } -ArgumentList $solutionDir, $dotnetFilter, $dotnetLog
+}
+
+# --- is the runner free? ----------------------------------------------------
+# BEFORE the sync, not just before the launch: mirroring main into a copy some
+# other session's Unity has open is its own way to corrupt a run. See
+# Test-RunnerFree in tools/unity_lock.ps1 for why it refuses rather than waits
+# and why it branches on .Certain.
+foreach ($platform in $platforms) {
+    if (-not (Test-RunnerFree -RunnerPath $RunnerFor[$platform].Path -Label "the $platform runner")) { exit 1 }
 }
 
 # --- sync ------------------------------------------------------------------
@@ -538,10 +673,7 @@ if ($dotnetJob) {
         $allPassed = $false
         # The failure detail, and only that: a full `dotnet test` transcript is
         # mostly restore/build noise nobody reads.
-        $dotnetOut -split "`r?`n" |
-            Where-Object { $_ -match "^\s*(Failed|Error Message|Stack Trace|Assert\.|  Expected|  But was|error CS)" } |
-            Select-Object -First 60 |
-            ForEach-Object { Write-Host $_ }
+        Select-DotnetFailureDetail -Lines ($dotnetOut -split "`r?`n") | ForEach-Object { Write-Host $_ }
         Write-Host "Full transcript: $dotnetLog"
     }
 }
