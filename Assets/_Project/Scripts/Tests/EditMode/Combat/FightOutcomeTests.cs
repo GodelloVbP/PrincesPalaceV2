@@ -385,6 +385,48 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(session.PlayerWon);
         }
 
+        [Test]
+        public void AMutualWipeIsSettledAsTheWinItBecame()
+        {
+            // BOTH SIDES DOWN IN ONE PASS. IsOver is true and PlayerWon false,
+            // so ResolveVictory returns at its guard; ResolveOutcome sees a
+            // loss, spends the charge and raises the party -- and CombatEncounter
+            // .PlayerWon flips true the instant it does, because LivingEnemies
+            // is already empty. The fight is then over, won, and paid nothing:
+            // no "Victory!", no poses, no experience, no gold, and a charge
+            // burned on a fight that had already been won.
+            //
+            // NOT REACHABLE ON TODAY'S CONTENT and said so plainly: nothing in
+            // the game damages both sides in one pass. The retaliate/thorns
+            // affix that would (ModifierEntryResolver names it as a Phase C
+            // candidate) is not authored, and no ModifierEffect member exists
+            // for it. This pins the settlement ordering so the affix landing
+            // cannot land this with it.
+            var (session, hero, foe) = Fight();
+            session.SecondLifeCharges = 1;
+
+            hero.CurrentHealth = 0;
+            session.ExecuteAttack(foe);
+
+            Assert.IsTrue(session.IsOver);
+            Assert.IsTrue(session.PlayerWon, "fixture: reviving the party is what makes this a win");
+            Assert.IsNotNull(session.Payout, "the party won and was paid nothing at all");
+
+            // 20 is what this fixture's rat is authored to pay
+            // (Source("rat", 20, 10)), the same literal
+            // WinningSettlesAPayout pins -- read off the fixture, not
+            // recomputed from VictoryRewards.
+            Assert.AreEqual(20, session.Payout.Value.Experience);
+
+            // And the win is CELEBRATED, not merely banked. ResolveVictory ran
+            // once already and returned at its guard while PlayerWon was still
+            // false, so a fix that only settled the payout would pay a fight
+            // that never announced it had been won.
+            Assert.IsTrue(Lines(session).Any(m => m.Contains("Victory!")),
+                "the fight was won and never said so");
+            CollectionAssert.AreEqual(new[] { "shawn" }, session.VictoryVoiceIds.ToArray());
+        }
+
         // A charge must not be consumable by a fight that is over for another
         // reason -- winning, most obviously. Nobody is down, so there is
         // nothing to raise and nothing to spend.

@@ -59,9 +59,43 @@ namespace PrincesPalace.Domain.Combat.Session
             // branch in the defeat path, and nothing in the teardown changes.
             // That is the whole reason an in-fight revive is safe where a
             // run-level "continue" would not have been.
+            // AND ONLY WHEN THE REVIVE ACTUALLY LEFT A FIGHT TO CARRY ON.
+            //
+            // A mutual wipe -- both sides down in one pass -- arrives here with
+            // IsOver true and PlayerWon false, so ResolveVictory has already
+            // returned at its own guard. Raising the party then flips
+            // CombatEncounter.PlayerWon true on the spot, because LivingEnemies
+            // is already empty: the fight is over, WON, and about to be left
+            // with a null Payout and no victory at all, on a charge spent for a
+            // win the party had already earned. Re-testing IsOver here falls
+            // through to settle it instead, and is also what makes
+            // SettleIfOver's own `return _encounter.IsOver` correct on this
+            // path rather than merely correct on the ordinary one.
+            //
+            // Not reachable on today's content -- nothing damages both sides in
+            // one pass, and the retaliate affix that would is unauthored -- so
+            // this is a rule stated ahead of the content that needs it, pinned
+            // by FightOutcomeTests.AMutualWipeIsSettledAsTheWinItBecame.
             if (!_encounter.PlayerWon && TrySecondLife())
             {
-                return;
+                // The ordinary case: there are enemies left, so the fight
+                // carries on and there is nothing to settle yet.
+                if (!_encounter.IsOver) return;
+
+                // A MUTUAL WIPE'S REVIVE ENDS THE FIGHT INSTEAD, WON. Both
+                // sides went down in one pass, so this method was entered with
+                // PlayerWon false -- ResolveVictory had already returned at its
+                // own guard -- and raising the party flips
+                // CombatEncounter.PlayerWon true on the spot, because
+                // LivingEnemies is already empty. Returning here left the fight
+                // over, won, with a null Payout and no victory at all: no
+                // "Victory!", no poses, no voice ids, no experience, no gold,
+                // and a charge burned on a fight the party had already won.
+                //
+                // So the celebration is asked for a second time (idempotent on
+                // _victoryResolved, which is still false precisely because the
+                // first ask was too early) and the payout falls through below.
+                ResolveVictory();
             }
 
             _payoutResolved = true;
