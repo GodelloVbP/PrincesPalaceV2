@@ -313,5 +313,78 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(detail.Value.ExpectedDamage, 0,
                 "the safety-net swing must still preview real damage, exactly as before this fix");
         }
+
+        // ---- a summon the stage can no longer accept ------------------------------
+
+        [Test]
+        public void AFullStageZeroWeightsASummonAbility()
+        {
+            // FightSession.Skills.cs:383-387 states the whole point of the
+            // draw-time check: "THE CAP IS ALSO CHECKED AT DRAW TIME (see
+            // PrepareEnemyIntents' EffectivePoolFor), which is what stops the
+            // boss from visibly winding up for a call that then does nothing
+            // turn after turn." It checks the wrong cap.
+            //
+            // EffectivePoolFor only knows SummonCap, which counts the LIVING.
+            // The refusal that actually fires is CombatEncounter.TryAddEnemy's
+            // _enemies.Count >= maxSlots -- and _enemies NEVER SHRINKS
+            // (CombatEncounter.cs:21-23), so the stage cap counts every body
+            // ever fielded, corpses included. Start at two, summon one, and the
+            // third slot is gone for the rest of the fight -- while the living
+            // count drops back under the per-id cap every time the player
+            // clears one, re-arming the ability at full weight.
+            var hero = new CombatantState("Shawn", true, 100000, 30, 5, 1);
+            var warden = new CombatantState("Warden", false, 100000, 10, 1, 20);
+            var mate = new CombatantState("Mate", false, 100000, 10, 1, 20);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { warden, mate });
+
+            int summonsMade = 0;
+            FightSession.SummonFactory factory =
+                (string id, out CombatantState state, out EnemyKit kit) =>
+                {
+                    summonsMade++;
+                    state = new CombatantState("Rat" + summonsMade, false, 1, 0, 1, 1);
+                    kit = new EnemyKit(SummonSource("rat"), false);
+                    return true;
+                };
+
+            // summonCap 2 is the shipped forest_warden Roar row; the stage cap
+            // (FightHudSpec.StageSlotsPerSide, 3) is the one that bites.
+            var roar = new ResolvedSkill("roar", "Roar", "", "forest_warden", 1,
+                SkillEffect.Summon, SkillTargeting.Self, 0, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0, summonEnemyId: "rat", summonCap: 2);
+
+            var kits = new List<EnemyKit>
+            {
+                new EnemyKit(SummonSource("forest_warden"), false,
+                    new List<EnemyAbility> { EnemyAbility.Of(roar, 1f) }),
+                new EnemyKit(SummonSource("mate"), false),
+            };
+
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, null, null) },
+                kits, new SeededRandom(3), summonFactory: factory) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            // Nothing here can die: the driver just hands the turn round and
+            // round so the warden gets many draws off a stage that is full
+            // after the first one.
+            for (int i = 0; i < 12 && !session.IsOver; i++)
+            {
+                if (session.IsPlayerTurn) session.ExecuteAttack(encounter.Enemies[0]);
+                else session.AutoResolveEnemyTurns();
+            }
+
+            var lines = session.DrainBeats().SelectMany(b => b.Messages).ToList();
+
+            Assert.AreEqual(1, summonsMade,
+                "the warden kept being drawn for a call the stage could never accept");
+            Assert.IsFalse(lines.Any(l => l.Contains("no room left on the field")),
+                "the warden wound up for a Roar that fizzled");
+        }
+
+        private static ResolvedEnemy SummonSource(string id) =>
+            new ResolvedEnemy(id, id, new StatBlock(), 1, 1, false,
+                DamageType.Physical, DamageType.Physical, 0);
     }
 }

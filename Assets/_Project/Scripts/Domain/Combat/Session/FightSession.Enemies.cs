@@ -132,8 +132,25 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 if (ability.HasSkill && ability.Skill.Effect == SkillEffect.Summon)
                 {
+                    // BOTH CAPS, because only one of them is the one that
+                    // actually refuses. SummonCap counts the LIVING bodies of
+                    // that id; the refusal at ResolveSummon
+                    // (CombatEncounter.TryAddEnemy) counts the stage's slots
+                    // against a list that NEVER SHRINKS, so it is a cap on
+                    // total ever fielded, corpses included. Ask only the first
+                    // and a boss in a full encounter keeps Roar at full weight,
+                    // keeps being telegraphed with it, and fizzles on "there is
+                    // no room left on the field" turn after turn -- which is
+                    // precisely what the draw-time check exists to prevent
+                    // (Skills.cs:383-387 says so in writing).
+                    //
+                    // Zero-weighted, not removed, exactly like the two arms
+                    // below it: "capped this turn does not mean gone". A slot
+                    // cannot re-open today, but the rule now says what it means
+                    // rather than what the list happens to allow.
                     int living = LivingCountOf(ability.Skill.SummonEnemyId);
-                    if (living >= ability.Skill.SummonCap)
+                    if (living >= ability.Skill.SummonCap
+                        || _encounter.Enemies.Count >= _stageSlotsPerSide)
                     {
                         effective ??= new List<EnemyAbility>(abilities);
                         effective[i] = EnemyAbility.Of(ability.Skill, 0f);
