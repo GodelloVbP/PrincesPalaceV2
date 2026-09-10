@@ -30,6 +30,16 @@ namespace PrincesPalace
         private static ulong _mapSeed;
         private static int _mapStartStep = -1;
 
+        // THE THIRD INPUT. GenerateLegFor takes (runSeed, legStartStep,
+        // restBeforeBoss) and the key held the first two, so a run whose
+        // rest guarantee changed while a map was already cached kept serving
+        // the leg without its forced rests until something else called
+        // Forget(). Nothing grants restBeforeBoss today (RunSnapshot says so
+        // outright), which is the only reason this was not a live bug -- and
+        // exactly the shape that stops being latent the moment the level-30
+        // track reward is wired into StartRun the way that comment invites.
+        private static bool _mapRestBeforeBoss;
+
         public static bool HasRun => Save != null && Save.activeRun != null && Save.activeRun.hasRun;
 
         // THE ONE DEFINITION OF "a descent is under way", forwarded from the
@@ -106,12 +116,14 @@ namespace PrincesPalace
                 var run = Run;
                 if (run == null || !run.hasRun) return null;
 
-                if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep)
+                if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep
+                    || _mapRestBeforeBoss != run.restBeforeBoss)
                 {
                     _map = DescentMapGenerator.GenerateLegFor(run.runSeed, run.legStartStep,
                         restBeforeBoss: run.restBeforeBoss);
                     _mapSeed = run.runSeed;
                     _mapStartStep = run.legStartStep;
+                    _mapRestBeforeBoss = run.restBeforeBoss;
                 }
 
                 return _map;
@@ -480,13 +492,17 @@ namespace PrincesPalace
         }
 
         // Drops the cached map so the next query rebuilds it. Called whenever
-        // the seed or the leg changes -- a cache keyed by two fields still has
-        // to be invalidated when either moves.
+        // the seed or the leg changes -- a cache keyed by three fields still
+        // has to be invalidated when any of them moves.
+        //
+        // "Three" and not "two": the generator's third input, restBeforeBoss,
+        // was absent from the key and from this reset. See _mapRestBeforeBoss.
         private static void Forget()
         {
             _map = null;
             _mapSeed = 0;
             _mapStartStep = -1;
+            _mapRestBeforeBoss = false;
         }
 
         // For tests, which run many runs in one process.

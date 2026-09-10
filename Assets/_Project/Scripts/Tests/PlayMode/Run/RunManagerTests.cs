@@ -195,6 +195,60 @@ namespace PrincesPalace.PlayModeTests
                 "spending un-earned what had already been earned");
         }
 
+        // ---- the map cache holds every input the generator takes -----------
+        //
+        // RunManager.Map calls DescentMapGenerator.GenerateLegFor(runSeed,
+        // legStartStep, restBeforeBoss) and keyed its cache on the first two.
+        // Forget()'s own header said "a cache keyed by two fields still has to
+        // be invalidated when either moves" -- there are three.
+        //
+        // Not reachable today: nothing grants restBeforeBoss (RunSnapshot says
+        // so outright). It stops being latent the moment the level-30 track
+        // reward is wired into StartRun the way that same comment invites, and
+        // then the leg on screen keeps its old shape until something unrelated
+        // calls Forget().
+
+        [Test]
+        public void TheMapCacheNoticesARestGuaranteeArriving()
+        {
+            RunManager.StartRun(Seed);
+
+            string withoutTheGuarantee = Shape(RunManager.Map);
+
+            // What the generator produces for the run as it is about to be.
+            // Compared against rather than recomputed FROM: the assertion is
+            // that the cache noticed a third input move, and the only honest
+            // expected value for that is the generator's own answer.
+            string withTheGuarantee = Shape(
+                DescentMapGenerator.GenerateLegFor(Seed, 0, restBeforeBoss: true));
+
+            Assert.AreNotEqual(withoutTheGuarantee, withTheGuarantee,
+                "fixture: this seed's leg looks the same either way, so nothing here could fail -- " +
+                "pick a seed whose step-7 column is not already all Rest");
+
+            RunManager.Run.restBeforeBoss = true;
+
+            Assert.AreEqual(withTheGuarantee, Shape(RunManager.Map),
+                "the cached leg was served again without its forced rests");
+        }
+
+        // Column widths, room types and forward links -- everything a player
+        // would recognise as "this is the same map". Same shape string
+        // DescentLegSeedingTests uses, which is where this came from.
+        private static string Shape(DescentMap map)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            for (int d = 0; d < map.DepthCount; d++)
+            {
+                foreach (var node in map.AtDepth(d))
+                {
+                    parts.Add($"{d}.{node.Slot}:{node.Type}->[{string.Join(",", node.Next.OrderBy(n => n))}]");
+                }
+            }
+
+            return string.Join("|", parts);
+        }
+
         // ---- how deep they got, not how deep they last fought -------------
         //
         // RunSnapshot: "The furthest step reached, which is NOT `step` -- that
