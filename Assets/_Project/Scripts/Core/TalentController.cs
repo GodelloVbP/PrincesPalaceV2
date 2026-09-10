@@ -397,7 +397,13 @@ namespace PrincesPalace
             // rule.
             if (!HasEarnedARespec(character)) return;
 
-            character.Respec(ContentDatabase.SpentBy(character));
+            // THROUGH TalentOps, not straight onto the model. A respec moves
+            // max health twice over -- every talent's StatBonus and every
+            // invested Constitution point -- and the run carries current health
+            // as an absolute number against it. Character is Data and cannot
+            // reach ScaleCarriedHealth; TalentOps.Respec is the Core half that
+            // can, exactly as EquipmentOps is for a gear swap.
+            TalentOps.Respec(character, ContentDatabase.SpentBy(character));
 
             // Every resting loop belonged to stones that are now ash, and the
             // selection describes one of them. Both go with the embers.
