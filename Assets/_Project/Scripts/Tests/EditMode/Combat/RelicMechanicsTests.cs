@@ -782,6 +782,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, hero.CurrentHealth, "still pinned -- the shell ate the hit, not the wearer");
         }
 
+        // THE TWO EGG BRANCHES ARE STILL DAMAGE, and both of them used to
+        // return out of ApplyAndCountDamage before the pool bookkeeping at the
+        // bottom of it ever ran -- so a wearer whose primary pool fills by
+        // being hit got nothing for the blow that hatched the shell, nothing
+        // for every blow that landed on it afterwards, and read as having spent
+        // an idle turn while being beaten. The bookkeeping is at the TOP of
+        // that method now, ahead of every exit.
+        [Test]
+        public void TheBlowThatHatchesTheEggStillFeedsTheWearersPrimaryPool()
+        {
+            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            hero.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0,
+                gainOnAttack: 0, gainOnDamageTaken: 10);
+
+            session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatches
+
+            Assert.IsTrue(hero.IsPhoenixEgg, "fixture: this hit should have hatched the shell");
+            Assert.AreEqual(10, hero.PrimaryPool.Current);
+        }
+
+        [Test]
+        public void AHitOnTheShellStillFeedsTheWearersPrimaryPool()
+        {
+            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.PhoenixEgg);
+            session.DealDamageForTest(foe1, hero, 999, DamageType.Physical); // hatch, EggHealth = 100
+
+            // Set AFTER the hatch so the number below counts one blow, not two.
+            hero.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0,
+                gainOnAttack: 0, gainOnDamageTaken: 10);
+
+            session.DealDamageForTest(foe1, hero, 40, DamageType.Physical);
+
+            Assert.AreEqual(10, hero.PrimaryPool.Current);
+        }
+
         [Test]
         public void TheEggBreakingKillsTheWearerOutright()
         {

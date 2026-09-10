@@ -718,5 +718,82 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(10, bjorn.PrimaryPool.Current,
                 "a skill that deals damage is dealing damage, on both ends of the blow");
         }
+
+        // ---- a status tick is damage taken -------------------------------------
+        //
+        // THE DECISION THESE TWO PIN, stated once here rather than twice below.
+        // A poison tick IS damage the pool's owner took: it pays
+        // gainOnDamageTaken, and it makes the turn it lands in not an idle one
+        // for the decay. Poison is the only damage in the game that never
+        // passed through the session's funnel (StatusEffects.Tick writes health
+        // itself and FightSession only books a ledger row afterwards), so it was
+        // the one blow the pools could not hear -- and the shape that produced
+        // was the exact opposite of what a rage bar is for: a poisoned Bjorn
+        // standing still was ground down by 20 HP a turn AND lost 10 Fury a turn
+        // for the privilege.
+        //
+        // ORDER, AND IT IS DELIBERATE. GrantTurnStart ticks the pool before it
+        // ticks the statuses (FightSession.Riders), and that order is load-
+        // bearing elsewhere -- Runic's ward conversion reads the mana "including
+        // the regen this very turn-start just granted". So the decay at turn N's
+        // start judges the window that ENDED at turn N, and the poison tick a
+        // few lines later belongs to turn N. The first tick after being poisoned
+        // therefore still eats one decay; every tick after it does not, which is
+        // what the second test below pins.
+        private static (FightSession session, CombatantState bjorn) Poisoned(
+            int fury, int gainOnDamageTaken, int decayPerIdleTurn)
+        {
+            var bjorn = new CombatantState("Bjorn", true, 500, 30, 40, 100);
+            bjorn.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0,
+                gainOnAttack: 0, gainOnDamageTaken: gainOnDamageTaken);
+            bjorn.PrimaryPool.DecayPerIdleTurn = decayPerIdleTurn;
+            bjorn.PrimaryPool.Gain(fury);
+
+            // Speed 100 against 1: Speed is a CHARGE RATE here, not a rotation,
+            // so Bjorn takes every turn for the length of these tests and the
+            // monster never gets one. That is what keeps a swing of its own out
+            // of the numbers below without having to make anybody unhittable.
+            var foe = Foe("Slug");
+            StatusEffects.Apply(bjorn.Statuses, StatusEffectType.Poison, 20, 5, foe);
+
+            var encounter = new CombatEncounter(new[] { bjorn }, new[] { foe });
+            var session = new FightSession(encounter, new List<PlayerKit> { Kit() }, null,
+                new SeededRandom(3)) { DamageVarianceRange = 0f };
+
+            // Begin() is the turn boundary: it runs GrantTurnStart for whoever
+            // opens the fight, which is Bjorn.
+            session.Begin();
+            return (session, bjorn);
+        }
+
+        [Test]
+        public void APoisonTickIsDamageTakenLikeAnyOther()
+        {
+            // No decay authored here, so the only thing that can move the bar
+            // is the grant: 50 in, one 20-point tick, 10 out.
+            var (_, bjorn) = Poisoned(fury: 50, gainOnDamageTaken: 10, decayPerIdleTurn: 0);
+
+            Assert.AreEqual(480, bjorn.CurrentHealth, "the tick itself still deals its 20");
+            Assert.AreEqual(60, bjorn.PrimaryPool.Current, "the tick paid the pool nothing at all");
+        }
+
+        [Test]
+        public void APoisonTickMeansTheTurnItLandedInWasNotIdle()
+        {
+            // gainOnDamageTaken 0, so the decay is the only mover and the
+            // number below is about the idle test alone.
+            var (session, bjorn) = Poisoned(fury: 50, gainOnDamageTaken: 0, decayPerIdleTurn: 10);
+
+            // Turn one's start decayed against an empty window (nothing had
+            // happened yet), which is correct: 50 -> 40. Then the tick landed.
+            Assert.AreEqual(40, bjorn.PrimaryPool.Current, "turn one's decay");
+
+            // An item is the idle action -- it opens a beat and notes Action,
+            // never Damage, so nothing but the poison can keep turn two alive.
+            session.UseConsumable("Rag", 0, restoresMana: false);
+
+            Assert.AreEqual(40, bjorn.PrimaryPool.Current,
+                "turn two decayed a bar that had been poisoned for 20 the turn before");
+        }
     }
 }

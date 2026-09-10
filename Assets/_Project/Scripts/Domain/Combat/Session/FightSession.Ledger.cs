@@ -77,6 +77,22 @@ namespace PrincesPalace.Domain.Combat.Session
         private CombatMath.DamageResult ApplyAndCountDamage(
             CombatantState actor, CombatantState target, int amount, DamageType type)
         {
+            // THE POOLS HEAR THE BLOW FIRST, BEFORE ANY EXIT CAN SKIP THEM.
+            //
+            // This block used to sit at the bottom, beside the ledger rows,
+            // which meant the two Phoenix Egg early returns below jumped
+            // straight over it: every hit on a shell, and the fatal blow a
+            // hatch replaces, paid the victim's pool nothing and left their
+            // turn reading idle. Hoisted to the top so the claim this method's
+            // own comment makes -- one funnel, and no exit from it that the
+            // pools do not hear -- is true of every RETURN as well as of every
+            // caller.
+            //
+            // Read on the raw amount, ahead of Cursed Idol's bonus: whether
+            // this was a damaging action is a fact about the blow that was
+            // thrown, not about a relic that made it bigger.
+            NoteDamageForPools(actor, target, amount);
+
             // Phoenix Egg, already hatched: every further hit eats the
             // egg's OWN pool instead of the wearer's health -- see
             // PhoenixEggAbsorb's own header. Checked first and returns
@@ -142,51 +158,75 @@ namespace PrincesPalace.Domain.Combat.Session
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
             Ledger.Took(LedgerIdOf(target), toHealth, result.Absorbed);
 
-            // THE DAMAGE SEAM FOR POOL DECAY, and it is here for the same
-            // reason the ledger rows are: this is the ONE funnel every point
-            // of damage in the session passes through, so a seventh damage
-            // path cannot open without the pools hearing about it. Both ends
-            // of the blow count -- dealing and taking are each "not an idle
-            // turn" (the plan's attack point 5); a turn spent on Provoke, an
-            // item or a Move is idle and decays.
-            if (amount > 0)
-            {
-                NotePoolActivity(actor, PoolActivity.Damage);
-                NotePoolActivity(target, PoolActivity.Damage);
-
-                // AND THE PRIMARY POOL'S gainOnAttack, for the same reason and
-                // in the same place. The owner's spec for Fury is "gains when
-                // he deals damage"; phase B wired it at the Attack VERB
-                // instead, which is where Wool's narrower rule lives, so a
-                // Slam that hit for 40 built nothing. Here it fires off any
-                // damaging action -- verb or skill -- and off none of the
-                // things that reach no damage: a miss returns before this
-                // funnel, a heal never enters it.
-                //
-                // Fired BEFORE CommitBeat, so the Vitals snapshot the HUD
-                // replays is the one taken after the gain: the meter moves on
-                // the beat that shows the hit, not on the next one.
-                GrantPrimaryOnDamagingAction(actor);
-
-                // AND gainOnDamageTaken, at the same seam and for the same
-                // reason. It used to sit at the enemy's plain-swing verb
-                // beside Wool's, which meant a monster's SKILL, an AOE, a
-                // rider and every player-side blow paid the victim nothing.
-                // See GrantPrimaryOnDamageTaken for why this one carries no
-                // per-turn lock where its gainOnAttack twin does.
-                GrantPrimaryOnDamageTaken(target);
-            }
-
             return result;
+        }
+
+        // THE DAMAGE SEAM FOR THE POOLS, and it is here for the same reason
+        // the ledger rows are: this is the ONE funnel every point of damage in
+        // the session passes through, so a seventh damage path cannot open
+        // without the pools hearing about it. Both ends of the blow count --
+        // dealing and taking are each "not an idle turn" (the plan's attack
+        // point 5); a turn spent on Provoke, an item or a Move is idle and
+        // decays.
+        //
+        // ITS OWN METHOD rather than a block inside ApplyAndCountDamage,
+        // because there are two callers and the second is the one that proved
+        // a block was the wrong shape: a poison tick applies its own damage
+        // inside StatusEffects.Tick and only comes past here afterwards to be
+        // counted (RecordUnattributedDamage). While the pool bookkeeping lived
+        // inside the funnel's body, poison was damage the pools could not hear
+        // -- so a poisoned Bjorn standing still lost 20 health AND 10 Fury a
+        // turn, which is precisely backwards for a bar that fills by being
+        // ground down.
+        //
+        // `actor` may be null and that is the unattributed case, not an error:
+        // NotePoolActivity and GrantPrimaryOnDamagingAction are both no-ops on
+        // one.
+        private void NoteDamageForPools(CombatantState actor, CombatantState target, int amount)
+        {
+            if (amount <= 0) return;
+
+            NotePoolActivity(actor, PoolActivity.Damage);
+            NotePoolActivity(target, PoolActivity.Damage);
+
+            // THE PRIMARY POOL'S gainOnAttack. The owner's spec for Fury is
+            // "gains when he deals damage"; phase B wired it at the Attack
+            // VERB instead, which is where Wool's narrower rule lives, so a
+            // Slam that hit for 40 built nothing. Here it fires off any
+            // damaging action -- verb or skill -- and off none of the things
+            // that reach no damage: a miss returns before this funnel, a heal
+            // never enters it.
+            //
+            // Fired BEFORE CommitBeat, so the Vitals snapshot the HUD replays
+            // is the one taken after the gain: the meter moves on the beat
+            // that shows the hit, not on the next one.
+            GrantPrimaryOnDamagingAction(actor);
+
+            // AND gainOnDamageTaken, at the same seam and for the same reason.
+            // It used to sit at the enemy's plain-swing verb beside Wool's,
+            // which meant a monster's SKILL, an AOE, a rider and every
+            // player-side blow paid the victim nothing. See
+            // GrantPrimaryOnDamageTaken for why this one carries no per-turn
+            // lock where its gainOnAttack twin does.
+            GrantPrimaryOnDamageTaken(target);
         }
 
         // Damage with no one to blame: a poison tick, a detonation resolving
         // after its applier is already dead. Counted as taken, credited to
         // nobody -- inventing an attacker would put points in a column the
         // player would then not be able to account for.
+        //
+        // THE POOLS ARE TOLD HERE TOO, which is the whole reason this is not
+        // just a Ledger.Took call. A status tick is damage its victim took by
+        // every account that matters to a resource pool: it pays
+        // gainOnDamageTaken, and it makes the turn it landed in not an idle
+        // one. Credit is the only thing missing from it, and credit is a
+        // question about the ATTACKER -- passing null says there isn't one
+        // rather than skipping the bookkeeping the victim is owed.
         private void RecordUnattributedDamage(CombatantState target, int amount)
         {
             Ledger.Took(LedgerIdOf(target), amount);
+            NoteDamageForPools(null, target, amount);
         }
 
         // Heals report nothing, so the amount is measured rather than trusted:
