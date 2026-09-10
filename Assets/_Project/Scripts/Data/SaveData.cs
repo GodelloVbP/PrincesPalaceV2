@@ -594,8 +594,20 @@ namespace PrincesPalace
             activeRun.inventory ??= new List<InventoryEntry>();
             activeRun.currentHealth ??= new List<RunHealthEntry>();
             activeRun.clearedNodeIds ??= new List<int>();
+            activeRun.relicIds ??= new List<string>();
             activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
+
+            // THE RUN'S OWN RELICS, which this method pruned everything BUT.
+            //
+            // relicLoadout gets the same treatment further down and always
+            // has; the run's list did not, and it is the one that counts.
+            // FightEncounterAdapter.ResolveRelics skips an unresolvable id
+            // harmlessly, but RunOrchestrator.DraftHasAnotherRound counts
+            // relicIds.Count against RelicPool.StartingRelicsPerDescent -- so
+            // a relic renamed between quitting and resuming ends the draft a
+            // round early, having handed over one fewer relic than it says.
+            activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
 
             ReconcileLearnedSpells(activeRun);
             ReconcileShopStock(activeRun);
@@ -614,6 +626,17 @@ namespace PrincesPalace
             {
                 character.unlockedTalentIds ??= new List<string>();
                 character.unlockedTalentIds.RemoveAll(id => ContentDatabase.GetTalent(id) == null);
+
+                // The OTHER unlocked list, which this loop walked straight
+                // past. unlockedSkillIds is the Event room's mage's gift --
+                // nothing writes it today (ContentDatabase reads it and no
+                // production path fills it), so this is inert, exactly the way
+                // the modifierIds prune above says its own plumbing is. It is
+                // here so the two lists cannot drift on what "a reference to
+                // content that no longer exists" means the day one of them
+                // gets a writer.
+                character.unlockedSkillIds ??= new List<string>();
+                character.unlockedSkillIds.RemoveAll(id => ContentDatabase.GetSkill(id) == null);
 
                 // Strips talents that belong to a DIFFERENT character. Before
                 // talents had an owner, every node was available to everyone,

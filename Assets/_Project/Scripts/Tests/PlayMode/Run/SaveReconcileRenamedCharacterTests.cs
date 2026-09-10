@@ -190,5 +190,68 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(5, save.EmberTotal(),
                 "the wallet was cleared with nobody to receive what was in it");
         }
+
+        // ---- the two lists Reconcile walked past ---------------------------
+        //
+        // Reconcile prunes stockpiledItems, activeRun.inventory,
+        // activeRun.currentHealth, learnedSpells, unassignedSpellBooks,
+        // shopStock, unlockedTalentIds twice over, equipment,
+        // purchasedUpgradeIds, relicLoadout and selectedCharacterIds -- and
+        // then stopped short of activeRun.relicIds and Character.unlockedSkillIds.
+        //
+        // Its own posture, stated where relicLoadout is pruned: "Same tolerant
+        // posture as everything else in this method: drop the reference, keep
+        // the save loadable."
+        //
+        // The relic half is not cosmetic. FightEncounterAdapter.ResolveRelics
+        // skips an unresolvable id harmlessly, but
+        // RunOrchestrator.DraftHasAnotherRound counts relicIds.Count against
+        // RelicPool.StartingRelicsPerDescent -- so a relic renamed mid-draft
+        // ends the draft a round early, one relic short, silently.
+
+        [Test]
+        public void ARenamedRelicLeavesTheRunsList()
+        {
+            var save = new SaveData();
+            save.activeRun.hasRun = true;
+            save.activeRun.relicIds = new List<string> { "no_such_relic_was_ever_authored" };
+
+            save.Reconcile();
+
+            CollectionAssert.IsEmpty(save.activeRun.relicIds,
+                "an id naming no relic stayed on the run, where the draft counts it as one taken");
+        }
+
+        [Test]
+        public void ARealRelicSurvivesTheSamePrune()
+        {
+            var relic = ContentDatabase.Relics.First(r => r != null);
+
+            var save = new SaveData();
+            save.activeRun.hasRun = true;
+            save.activeRun.relicIds = new List<string> { relic.id, "no_such_relic_was_ever_authored" };
+
+            save.Reconcile();
+
+            CollectionAssert.AreEqual(new List<string> { relic.id }, save.activeRun.relicIds,
+                "the prune took a relic the player actually drafted");
+        }
+
+        [Test]
+        public void ARenamedGiftedSkillLeavesTheCharacterThatHeldIt()
+        {
+            // unlockedSkillIds has no writer today -- the Event room's mage is
+            // not built -- so this pins the plumbing rather than a reachable
+            // path, the same way the modifierIds prune beside it does.
+            var save = new SaveData();
+            save.roster = new List<Character> { new Character(FlaggedStarters()[0]) };
+            save.roster[0].unlockedSkillIds = new List<string> { "no_such_skill_was_ever_authored" };
+
+            save.Reconcile();
+
+            var character = save.roster.First(c => c.definitionId == FlaggedStarters()[0]);
+            CollectionAssert.IsEmpty(character.unlockedSkillIds,
+                "a gifted skill naming no content stayed on the character");
+        }
     }
 }
