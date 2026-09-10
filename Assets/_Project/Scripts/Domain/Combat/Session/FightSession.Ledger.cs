@@ -269,15 +269,36 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (target == null || target.IsAlive) return;
 
+            // THE BODY WENT DOWN, WHOEVER IS TO BLAME -- and that is a
+            // question about the VICTIM, so it is settled above the credit
+            // guard rather than behind it.
+            //
+            // CombatLedger splits ScoredKill(actorId) from WentDown(targetId)
+            // deliberately: they are questions about two different combatants
+            // and only the first is about credit. Until 2026-09-11 the guard
+            // below withheld both, which meant "times downed" could not report
+            // the one event it exists to report -- every monster swing reaches
+            // here with Nobody (FightSession.Enemies.cs), so a party member
+            // dying to a monster wrote nothing, and RunStatsController's row
+            // and the achievements reading it were structurally always zero.
+            Ledger.WentDown(LedgerIdOf(target));
+
             // Credited to nobody: no kill row, and no rider eligibility. The
             // poison tick in TickStatuses is the one caller that asks for
             // this, and it asks in writing -- an omission there would be
             // indistinguishable from the bug this method exists to kill.
+            //
+            // The enemy path asks for it too, and its own reason
+            // (FightSession.Enemies.cs) is entirely about the RIDER FLAG: an
+            // enemy turn resolves inside AdvanceAfterAction, after that method
+            // has read and reset _killedThisAction, so a flag raised here would
+            // survive to the player's next action and hand them a Trample the
+            // enemy earned. That argument covers everything still below this
+            // line and never covered the row above it.
             if (credit == KillCredit.Nobody) return;
 
             _killedThisAction = true;
             Ledger.ScoredKill(LedgerIdOf(actor));
-            Ledger.WentDown(LedgerIdOf(target));
             RelicsOnEachKill(actor, target);
         }
 

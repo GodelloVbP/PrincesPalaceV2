@@ -423,8 +423,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(victim.IsAlive, "fixture: the tick really killed");
             Assert.AreEqual(0, session.Ledger.For("hero").Kills,
                 "the applier is not credited for a tick that landed turns later");
-            Assert.AreEqual(0, session.Ledger.For("Victim").TimesDowned,
-                "and no kill row is written for the body either");
+
+            // BUT THE BODY STILL WENT DOWN. This assertion read 0 until the
+            // 2026-09-11 hunt, on the reasoning that "no kill row is written
+            // for the body either" -- which conflated two different questions
+            // about two different combatants. Kills is about the ATTACKER and
+            // is what credit governs; TimesDowned is about the VICTIM and is a
+            // fact regardless of who, if anyone, is to blame. CombatLedger
+            // splits ScoredKill(actorId) from WentDown(targetId) for exactly
+            // that reason.
+            Assert.AreEqual(1, session.Ledger.For("Victim").TimesDowned,
+                "a poison death is still a body going down");
 
             // The other half of the exception, and the one a lost pairing
             // would break in the opposite direction: no rider eligibility. The
@@ -434,6 +443,37 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(Trampled(Drain(session)),
                 "a death credited to nobody must not arm the rider block either");
+        }
+
+        // ---- the OTHER half of the exception: a party member going down -------
+
+        [Test]
+        public void APartyMemberFelledByAMonsterIsRecordedAsHavingGoneDown()
+        {
+            // Every monster swing reaches SettleDeath with KillCredit.Nobody
+            // (FightSession.Enemies.cs:913), and the guard that implements it
+            // sat ABOVE Ledger.WentDown -- so "times downed" could not report
+            // the one event it exists to report. RunStatsController's own row,
+            // and Achievements, read a counter that was structurally always
+            // zero for the party.
+            //
+            // Enemies.cs:900-911 argues the Nobody in writing, and the argument
+            // is entirely about the RIDER FLAG: raising it on an enemy turn
+            // would survive to the player's next action and hand them a Trample
+            // the enemy earned. Sound, and it says nothing about the victim's
+            // own row. TurnRiderTests.AMonstersKillDoesNotEarnThePlayerAnExtraTurn
+            // is the assertion that keeps it intact.
+            var hero = new CombatantState("Shawn", true, 10, 0, 1, 1);
+            var killer = new CombatantState("Rat", false, 999999, 0, 500, 100);
+            var (session, _) = Fight(hero, Kit(), killer);
+
+            session.AutoResolveEnemyTurns();
+
+            Assert.IsFalse(hero.IsAlive, "fixture: the monster's swing really killed");
+            Assert.AreEqual(1, session.Ledger.For("hero").TimesDowned,
+                "a party member felled by a monster was never recorded as having gone down");
+            Assert.AreEqual(0, session.Ledger.For("Rat").Kills,
+                "credit is still withheld -- that half of the Nobody rule is deliberate");
         }
 
         // ---- fixture plumbing -------------------------------------------------
