@@ -80,6 +80,40 @@ namespace PrincesPalace.PlayModeTests
                 RunOrchestrator.CurrentShopStock.Select(e => e.contentId + ":" + e.price).ToList());
         }
 
+        // THE RULE, PINNED TO THE THING THAT ACTUALLY KEEPS IT.
+        //
+        // "An open shop from an older build is left exactly as it was rolled
+        // and the new generator applies at the next node: a shop that
+        // reshuffles itself because the game updated is a free reroll granted
+        // by a patch note." That rule holds, and run.shopStockVersion is not
+        // why -- the field is written in three places and compared in none. It
+        // holds because the shelf is STORED and EnsureShopStock returns early
+        // while one is open, whatever version rolled it.
+        //
+        // So the rule gets a test of its own rather than resting on an unread
+        // field. Passes today; it is here so that a future ReconcileShopStock
+        // that decides to re-roll a stale shelf fails rather than reads the
+        // field's header as "already handled".
+        [Test]
+        public void AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled()
+        {
+            OpenAShop();
+            var asRolled = RunOrchestrator.CurrentShopStock
+                .Select(e => e.section + "/" + e.index + ":" + e.contentId + ":" + e.price)
+                .ToList();
+
+            RunManager.Run.shopStockVersion = ShopStock.StockVersion - 1;
+
+            SaveSlotManager.CurrentSave.Reconcile();
+            RunOrchestrator.EnsureShopStock();
+
+            CollectionAssert.AreEqual(asRolled,
+                RunOrchestrator.CurrentShopStock
+                    .Select(e => e.section + "/" + e.index + ":" + e.contentId + ":" + e.price)
+                    .ToList(),
+                "a shelf reshuffled itself because the build moved on, which is a free reroll");
+        }
+
         [Test]
         public void TheShelfIsEveryCountTheSectionsDeclare()
         {

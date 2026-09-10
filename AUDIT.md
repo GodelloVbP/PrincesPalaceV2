@@ -1303,3 +1303,37 @@ from 2 in the same pass that halved `CombatMath.DamageScale`, with its own
 comment explaining why. So there is no discrepancy between the two paths today;
 option 1 would still want the field carried, but as tuning headroom rather than
 as a mismatch to repair.
+
+## Findings from the run-outside-combat bug hunt, 2026-09-10
+
+### 112. `RunSnapshot.shopStockVersion` is written in four places and read in none
+
+`Data/RunSnapshot.cs` declares it; `Core/Bot/RunOrchestrator.Shop.cs:129` sets it
+to `ShopStock.StockVersion` on a roll and `:154` back to 0 on leaving;
+`Data/SaveData.cs:851,865` zero it on both of `ReconcileShopStock`'s discard
+paths. Nothing anywhere compares it against `ShopStock.StockVersion` (`ShopStock.cs:208`).
+
+Same shape as #50 and #87: a field that is written, persisted and never
+consulted. Ranked low deliberately -- the rule it appears to enforce does hold.
+"An open shop from an older build is left exactly as it was rolled" is true
+because the shelf is STORED and `EnsureShopStock` returns early while
+`ShopIsOpen(run)`, whatever version produced it. The field buys nothing on top
+of that.
+
+The hazard is the header, and that half is fixed rather than filed: the comment
+used to state the rule as though this field were the thing keeping it, which is
+what a future `ReconcileShopStock` deciding to re-roll a stale shelf would read
+as "already handled". It now says record-not-gate, and
+`ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled` pins the
+rule against the storage instead.
+
+What is left for an owner's call is the field itself. Three options, none of
+them a fixer's to pick: read it (compare in `ReconcileShopStock` and re-roll a
+stale shelf, which is the behaviour the old header described and NOT today's);
+delete it and its four writers, as `grantedGold` was deleted in the same pass;
+or keep it as the record it now says it is, on the argument that "which
+generator made this shelf" is worth having on disk the day the shelf format
+changes. Kept, unchanged in behaviour, pending that call.
+
+Test: `ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled`
+(passes today, and pins the rule to something other than an unread field).

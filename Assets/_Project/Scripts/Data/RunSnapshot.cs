@@ -90,11 +90,27 @@ namespace PrincesPalace
 
         public int gold;
 
-        // Not optional. EndRun subtracts this back out before banking, so a
-        // run resumed without it would convert the free head start into
-        // permanent Gold on retreat — a straight reintroduction of P0 #1, the
-        // infinite money printer, through the back door.
-        public int grantedGold;
+        // `grantedGold` used to sit here, with a header claiming "EndRun
+        // subtracts this back out before banking, so a run resumed without it
+        // would convert the free head start into permanent Gold on retreat -- a
+        // straight reintroduction of P0 #1, the infinite money printer, through
+        // the back door."
+        //
+        // None of that was true. A tree-wide grep found exactly one hit: the
+        // declaration. Neither EndRun nor RunSettlement mentioned it, and there
+        // is no banking left to subtract from -- a run's gold is forfeited
+        // whole (RunSettlement.cs, GoldLost). The "start with N gold" reward it
+        // was for does not exist.
+        //
+        // Deleted rather than re-commented, because the hazard was not the
+        // field, it was a stated safety mechanism that would be TRUSTED. The
+        // next person adding a head-start reward would have read that header as
+        // "already handled" and shipped the money printer it describes. An
+        // absent field asks the question; a lying one answers it wrong.
+        //
+        // Nothing on disk carries a meaning for it: JsonUtility ignores a field
+        // it cannot map, so an old save's `grantedGold: 0` simply drops, and
+        // there was never a non-zero one to drop.
 
         public List<InventoryEntry> inventory = new List<InventoryEntry>();
         public List<RunHealthEntry> currentHealth = new List<RunHealthEntry>();
@@ -249,11 +265,32 @@ namespace PrincesPalace
         // at -1 rather than 0.
         public int shopNodeId = -1;
 
-        // Which generator produced shopStock (ShopStock.StockVersion). An
-        // open shop from an older build is left exactly as it was rolled and
-        // the new generator applies at the next node: a shop that reshuffles
-        // itself because the game updated is a free reroll granted by a patch
-        // note.
+        // Which generator produced shopStock (ShopStock.StockVersion).
+        //
+        // A RECORD, NOT A GATE, and the difference matters enough to say. This
+        // header used to read as though something enforced a rule with it --
+        // "an open shop from an older build is left exactly as it was rolled
+        // and the new generator applies at the next node: a shop that
+        // reshuffles itself because the game updated is a free reroll granted
+        // by a patch note." The rule does hold, and nothing reads this field to
+        // make it hold: it holds because the shelf is STORED. EnsureShopStock
+        // returns early when ShopIsOpen, so an existing shelf is never
+        // re-rolled whatever version produced it.
+        //
+        // Written in three places (EnsureShopStock, LeaveShop, and both of
+        // SaveData.ReconcileShopStock's discard paths) and compared in none.
+        // ReconcileShopStock is the one place that WOULD enforce it, and it
+        // never looks -- so a future version of that method deciding to re-roll
+        // a stale shelf would read the old header as "already handled".
+        //
+        // Kept rather than deleted, unlike grantedGold above: this one is
+        // written to every save that has a shop open, a test asserts it after a
+        // roll, and "which generator made this shelf" is a real fact worth
+        // having on disk the day the shelf format changes. What was wrong was
+        // the header, not the field. Filed as AUDIT #112.
+        //
+        // ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled
+        // pins the rule itself against the storage, rather than against this.
         public int shopStockVersion;
 
         // ---- learned spells (docs/PLAN_SHOP.md §1b) -------------------------
