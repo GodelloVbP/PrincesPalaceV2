@@ -889,6 +889,63 @@ namespace PrincesPalace.Domain.Tests
         }
 
 
+        // ---- what an item card promises the character actually holding it ----
+        //
+        // CombatMath.RestoreMana already refuses a pool whose row says
+        // restoredByManaEffects is false (phase B), so the affordance and the
+        // effect have to agree or the card is lying. A fixture pool, not the
+        // shipped mana row: nothing authors a refusing pool yet, and that is
+        // exactly the case this exists to hold.
+        private static ResourcePool RefusingPool() =>
+            new ResourcePool(FuryRow(), capacity: 100, gainPerTurn: 0);
+
+        private static ResolvedPool FuryRow() =>
+            new ResolvedPool(
+                "fury", "Fury", "FURY",
+                PoolCapacityRule.Fixed, 100,
+                0, 15, 10,
+                10, PoolDecayTrigger.Damage,
+                PoolStartRule.Zero, 0,
+                "#FF8A3A", "#8E3A12", "#FFD2B0",
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                sortOrder: 1);
+
+        [Test]
+        public void AManaPotionSaysSoForAPoolThatAcceptsIt()
+        {
+            var stack = new SatchelStack("elixir", "Elixir", 2, restoresMana: true);
+            var panel = FightHudModel.DetailForItem(stack);
+
+            Assert.AreEqual("Restores mana.", panel.Body);
+            CollectionAssert.Contains(panel.Stats, ("EFFECT", "MANA"));
+        }
+
+        [Test]
+        public void AManaPotionSaysItDoesNothingForAPoolThatRefusesIt()
+        {
+            var stack = new SatchelStack("elixir", "Elixir", 2, restoresMana: true);
+            var panel = FightHudModel.DetailForItem(stack, RefusingPool());
+
+            Assert.AreEqual("No effect on Fury.", panel.Body);
+
+            // THE EFFECT CELL TOO. It is the same claim in one word, so
+            // leaving it reading MANA would put the lie one column over from
+            // the sentence that just withdrew it.
+            CollectionAssert.Contains(panel.Stats, ("EFFECT", "-"));
+        }
+
+        [Test]
+        public void AHealthPotionIsUnaffectedByWhicheverPoolTheActorHolds()
+        {
+            var stack = new SatchelStack("potion", "Potion", 2, restoresMana: false);
+
+            foreach (var panel in new[] { FightHudModel.DetailForItem(stack), FightHudModel.DetailForItem(stack, RefusingPool()) })
+            {
+                Assert.AreEqual("Restores health.", panel.Body);
+                CollectionAssert.Contains(panel.Stats, ("EFFECT", "HEAL"));
+            }
+        }
+
         private static CombatantState Foe(string name) =>
             new CombatantState(name, false, 40, 0, 5, 3);
     }

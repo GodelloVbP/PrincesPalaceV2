@@ -777,20 +777,49 @@ namespace PrincesPalace.Domain.Combat.Session
             return ItemStatLines.Coloured(BrokenHex, "BRK");
         }
 
-        public static DetailPanel DetailForItem(SatchelStack stack)
+        // WHAT THIS ITEM WOULD DO FOR THE CHARACTER HOLDING IT, which for a
+        // mana potion is now a question about their pool rather than a
+        // constant.
+        //
+        // CombatMath.RestoreMana already refuses a pool whose row says
+        // restoredByManaEffects is false and returns 0 (phase B), so an
+        // affordance reading "Restores mana." over a bar the potion cannot
+        // touch would be the card and the effect disagreeing -- the exact
+        // split that predicate exists to close. One predicate, two readers.
+        //
+        // The pool is OPTIONAL and null reads as mana-shaped: the callers
+        // with no actor in hand (a detail panel built before the turn
+        // resolves) get the sentence they have always got rather than a
+        // hedge.
+        public static DetailPanel DetailForItem(SatchelStack stack, ResourcePool primaryPool = null)
         {
+            bool refuses = stack.RestoresMana
+                           && primaryPool != null && !primaryPool.RestoredByManaEffects;
+
+            string body;
+            if (!stack.RestoresMana) body = "Restores health.";
+            else if (refuses) body = $"No effect on {PoolName(primaryPool)}.";
+            else body = "Restores mana.";
+
             var panel = new DetailPanel
             {
                 Name = stack.DisplayName,
                 Kind = "ITEM",
-                Body = stack.RestoresMana ? "Restores mana." : "Restores health.",
+                Body = body,
             };
             panel.Stats.Add(("COST", "1"));
             panel.Stats.Add(("POWER", "-"));
             panel.Stats.Add(("TARGET", "SELF"));
-            panel.Stats.Add(("EFFECT", stack.RestoresMana ? "MANA" : "HEAL"));
+
+            // "-", not "MANA", when the pool refuses it. The EFFECT cell is
+            // the same claim the body makes in one word, so leaving it
+            // reading MANA would put the lie back one column over.
+            panel.Stats.Add(("EFFECT", !stack.RestoresMana ? "HEAL" : refuses ? "-" : "MANA"));
             return panel;
         }
+
+        private static string PoolName(ResourcePool pool) =>
+            string.IsNullOrWhiteSpace(pool?.DisplayName) ? "this resource" : pool.DisplayName;
 
         // The breadcrumb under the verb column. Letterspaced by hand, as v1
         // authored it -- that spacing is typography, not data.

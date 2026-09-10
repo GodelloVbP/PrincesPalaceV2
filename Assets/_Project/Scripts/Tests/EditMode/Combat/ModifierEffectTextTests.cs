@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
@@ -124,6 +125,70 @@ namespace PrincesPalace.Domain.Tests
         {
             var effect = new ModifierEffect(ModifierEffectType.FlatManaRegenBonus, 2);
             Assert.AreEqual($"{Keyword("+2")} MP/turn", ModifierEffectText.Describe(effect));
+        }
+
+        // THE TWO MANA FRAGMENTS AGAINST A POOL THAT IGNORES THEM.
+        //
+        // A Fixed pool's authored capacity is the WHOLE number from every
+        // source (PoolPrecedence.Capacity), and its income takes the same
+        // shape, so both of these affixes move a Fury bar by exactly zero.
+        // The card has to say so: the character sheet already drops the
+        // Wisdom link on that row for the same reason, and an item promising
+        // "+10 Max Mana" to someone it does nothing for is the same lie one
+        // screen over.
+        //
+        // A FIXTURE POOL, not the shipped mana row: the whole promise of
+        // PoolCapacityRule.Fixed is about a row nobody has authored yet, and
+        // a rule reachable only through the catalogue can only be tested
+        // against the row the catalogue ships (PoolPrecedence's own header
+        // makes the same argument).
+        private static ResolvedPool FuryFixture() =>
+            new ResolvedPool(
+                "fury", "Fury", "FURY",
+                PoolCapacityRule.Fixed, 100,
+                0, 15, 10,
+                10, PoolDecayTrigger.Damage,
+                PoolStartRule.Zero, 0,
+                "#FF8A3A", "#8E3A12", "#FFD2B0",
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                sortOrder: 1);
+
+        [Test]
+        public void FlatMaxManaBonus_SaysItDoesNothingForAFixedPool()
+        {
+            var effect = new ModifierEffect(ModifierEffectType.FlatMaxManaBonus, 10);
+            Assert.AreEqual("no effect on Fury", ModifierEffectText.Describe(effect, FuryFixture()));
+        }
+
+        [Test]
+        public void FlatManaRegenBonus_SaysItDoesNothingForAFixedPool()
+        {
+            var effect = new ModifierEffect(ModifierEffectType.FlatManaRegenBonus, 2);
+            Assert.AreEqual("no effect on Fury", ModifierEffectText.Describe(effect, FuryFixture()));
+        }
+
+        // A WisdomDerived pool is what every character shipped today carries,
+        // so passing one must change nothing at all -- this is the control
+        // that proves the two tests above are gated on the RULE and not
+        // merely on "a pool was passed".
+        [Test]
+        public void AWisdomDerivedPool_ReadsExactlyAsNoPoolAtAll()
+        {
+            var mana = new ResolvedPool(
+                "mana", "Mana", "MP",
+                PoolCapacityRule.WisdomDerived, 30,
+                0, 0, 0,
+                0, PoolDecayTrigger.Damage,
+                PoolStartRule.Full, 0,
+                "#7EA8E6", "#3A5A9A", "#C4D8F2",
+                pulse: false, allowsSpellBooks: true, restoredByManaEffects: true, absorbsDamage: false,
+                sortOrder: 0);
+
+            var capacity = new ModifierEffect(ModifierEffectType.FlatMaxManaBonus, 10);
+            var regen = new ModifierEffect(ModifierEffectType.FlatManaRegenBonus, 2);
+
+            Assert.AreEqual($"{Keyword("+10")} Max Mana", ModifierEffectText.Describe(capacity, mana));
+            Assert.AreEqual($"{Keyword("+2")} MP/turn", ModifierEffectText.Describe(regen, mana));
         }
 
         [Test]

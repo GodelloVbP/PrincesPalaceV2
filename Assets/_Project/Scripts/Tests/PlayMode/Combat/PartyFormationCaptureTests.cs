@@ -11,6 +11,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.UiKit;
 
@@ -420,6 +421,147 @@ namespace PrincesPalace.PlayModeTests
                 "two of the three HUD cards wear the same identity colour: " +
                 string.Join(", ", themes.Select(t => t.ToString())));
         }
+
+        // ---- the second meter draws the pool its holder actually carries ----
+        //
+        // A FIXTURE POOL, HANDED TO A REAL COMBATANT IN A REAL SCENE. Nothing
+        // authors a non-mana row yet (that is phase E), and the whole point of
+        // plan P7 is that the meter stopped being a mana bar -- so the only
+        // way to test it before that content exists is to build the row the
+        // test needs and give it to whoever is acting. The hexes are stated
+        // here as literals so this cannot start passing because some shipped
+        // row happens to be orange.
+        //
+        // WHAT THE CONTROL PROVES. The roster cards keep mana throughout, so
+        // their fill alpha must not move by a single frame's worth. "The
+        // pulse is gated on the row" is the claim, and a tick that wrote to
+        // every meter would satisfy every other assert in here.
+        private static ResolvedPool FuryFixture() =>
+            new ResolvedPool(
+                "fury_fixture", "Fury", "FURY",
+                PoolCapacityRule.Fixed, 100,
+                0, 15, 10,
+                10, PoolDecayTrigger.Damage,
+                PoolStartRule.Zero, 0,
+                FixtureBrightHex, FixtureDeepHex, FixtureTextHex,
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                sortOrder: 99);
+
+        private const string FixtureBrightHex = "#FF8A3A";
+        private const string FixtureDeepHex = "#8E3A12";
+        private const string FixtureTextHex = "#FFD2B0";
+
+        // Ui.Meter's own derivation, restated as this test's expectation
+        // rather than read off the production constant: deepHex at 0.70 for
+        // the rim and 0.44 for the band under the fill, which is what
+        // FightHudPalette.MpRim/MpShade are relative to MpDeep and what
+        // RawPoolEntry.deepHex promises an author.
+        private const float ExpectedRimAlpha = 179f / 255f;
+        private const float ExpectedShadeAlpha = 112f / 255f;
+
+        [UnityTest]
+        public IEnumerator TheSecondMeterWearsItsPoolsColoursAndOnlyPulsesWhenTheRowSaysSo()
+        {
+            yield return OpenTheScene();
+            yield return null;
+            yield return null;
+
+            var session = _fight.Session;
+            Assert.IsNotNull(session, "the fight never started, so nobody holds a pool");
+
+            string who = Named("PartyName")?.GetComponent<TMPro.TMP_Text>()?.text;
+            var actor = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == who);
+            Assert.IsNotNull(actor, $"the party card names '{who}', who is not in the party");
+
+            // BEFORE: everyone holds mana, so the card must read exactly what
+            // the scene baked. This is the "invisible until a row authors
+            // different colours" half of the claim, and it is checked first
+            // because it is the half a regression would break silently.
+            var partyFill = Named("PartyMpFill")?.GetComponent<Image>();
+            Assert.IsNotNull(partyFill, "PartyMpFill is missing or carries no Image");
+            AssertColour(Hex(FightHudPalette.MpBright), partyFill.color, "PartyMpFill before (mana)");
+            Assert.AreEqual("MP", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text);
+
+            var pool = new ResourcePool(FuryFixture(), capacity: 100, gainPerTurn: 0);
+            pool.Gain(60);
+            actor.PrimaryPool = pool;
+            _fight.RefreshUi();
+            yield return null;
+
+            Assert.AreEqual("FURY", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text,
+                "the tag is still a literal rather than the pool's own shortTag");
+
+            AssertColour(Hex(FixtureBrightHex), Opaque(partyFill.color), "PartyMpFill");
+
+            var shade = Named("PartyMpFillShade")?.GetComponent<Image>();
+            Assert.IsNotNull(shade, "PartyMpFillShade is missing or carries no Image");
+            AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedShadeAlpha), shade.color, "PartyMpFillShade");
+
+            foreach (string edge in new[] { "Top", "Bottom", "Left", "Right" })
+            {
+                var rim = Named("PartyMpBarRim" + edge)?.GetComponent<Image>();
+                Assert.IsNotNull(rim, $"PartyMpBarRim{edge} is missing or carries no Image");
+                AssertColour(WithAlpha(Hex(FixtureDeepHex), ExpectedRimAlpha), rim.color, "PartyMpBarRim" + edge);
+            }
+
+            var value = Named("PartyMpValue")?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(value, "PartyMpValue is missing or carries no TMP_Text");
+            AssertColour(Hex(FixtureTextHex), value.color, "PartyMpValue");
+            Assert.AreEqual("60/100", value.text);
+
+            // ---- the heartbeat, sampled across a whole loop ----
+            //
+            // NOT TWO SAMPLES 0.3s APART. The envelope is lub-dub-REST: two
+            // thumps in the first quarter of the loop and the remainder at
+            // the floor, which is what a heartbeat looks like and which means
+            // two arbitrary moments can legitimately read the same alpha.
+            // This walks more than one full 1.1s loop and asserts the SPREAD,
+            // which no static bar can satisfy.
+            var pulsed = new System.Collections.Generic.List<float>();
+            var mana = new System.Collections.Generic.List<float>();
+            var rosterFill = Named("Roster0MpFill")?.GetComponent<Image>();
+
+            for (int i = 0; i < 16; i++)
+            {
+                yield return new WaitForSecondsRealtime(0.08f);
+                pulsed.Add(partyFill.color.a);
+                if (rosterFill != null && rosterFill.gameObject.activeInHierarchy) mana.Add(rosterFill.color.a);
+            }
+
+            Assert.AreEqual("FURY", Named("PartyMpTag")?.GetComponent<TMPro.TMP_Text>()?.text,
+                "the party card changed hands mid-sample, so these alphas describe two different pools");
+
+            Assert.Greater(pulsed.Max() - pulsed.Min(), 0.15f,
+                "the fixture row says pulse:true and the bar never moved -- sampled alphas: " +
+                string.Join(", ", pulsed.Select(a => a.ToString("0.000", CultureInfo.InvariantCulture))));
+            Assert.LessOrEqual(pulsed.Max(), 1.001f, "the pulse overshot fully opaque");
+
+            // THE CONTROL. Mana's row says pulse:false, so the tick must
+            // never have touched this Image at all.
+            if (mana.Count > 0)
+            {
+                Assert.AreEqual(0f, mana.Max() - mana.Min(), 0.0001f,
+                    "a mana meter's alpha moved -- the tick is writing to meters whose row never asked");
+                Assert.AreEqual(1f, mana[0], 0.004f, "mana's bar is no longer fully opaque");
+            }
+
+            if (!CanvasCapture.IsSupported) yield break;
+
+            var canvas = RootCanvas();
+            if (canvas == null) yield break;
+
+            string dir = CaptureOutput.LabelDir("pool_meter");
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            Directory.CreateDirectory(dir);
+            CanvasCapture.RenderToFile(canvas, Path.Combine(dir, "fury_meter_fourthree_1920x1440.png"),
+                (int)UiFrames.FourThree.X, (int)UiFrames.FourThree.Y);
+            Debug.Log($"[PoolMeterCapture] wrote the fixture-pool frame to {dir}");
+        }
+
+        private static Color Opaque(Color colour) => new Color(colour.r, colour.g, colour.b, 1f);
+
+        private static Color WithAlpha(Color colour, float alpha) =>
+            new Color(colour.r, colour.g, colour.b, alpha);
 
         private void AssertCardWears(string cardStem, string nameNode, ButtonTheme theme, string who)
         {

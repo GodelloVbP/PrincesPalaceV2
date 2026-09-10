@@ -286,6 +286,21 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
         public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
         public static readonly UiString StatMaxMana = UiString.Define("stat.maxmana", "Max Mana");
+
+        // THE SAME ROW, NAMED BY THE POOL THE CHARACTER ACTUALLY HOLDS --
+        // "Max Fury" for a character whose primaryPoolId is not mana. The
+        // dossier writes this over the baked StatMaxMana above once it knows
+        // whose sheet is open; the BAKE stays the untemplated entry so a
+        // scene nobody has refreshed reads the shipped truth rather than a
+        // placeholder (the same posture the roster cards' baked rim colour
+        // takes).
+        //
+        // Runtime-only, so UiTextFitAudit measures the baked "Max Mana"
+        // rather than this sample -- stated rather than assumed. The box is
+        // 170px at 15pt and this sample is the longest resource name on the
+        // roster; the gap only opens for a pool named longer than that.
+        public static readonly UiString StatMaxPool =
+            UiString.Define("stat.maxpool", "Max {0}", "Max Moonlight");
         public static readonly UiString StatSignatureGain =
             UiString.Define("stat.signaturegain", "Focus / turn");
         public static readonly UiString StatManaRegen = UiString.Define("stat.manaregen", "Mana Regen");
@@ -629,7 +644,24 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString EnemiesHeading = UiString.Define("enemies_heading", "E N E M I E S");
         public static readonly UiString WoolHeading = UiString.Define("wool_heading", "WOOL");
         public static readonly UiString HpTag = UiString.Define("hp_tag", "HP");
-        public static readonly UiString MpTag = UiString.Define("mp_tag", "MP");
+
+        // MpTag ("MP") is GONE. The party card's second meter draws whichever
+        // pool its holder carries, and the tag beside it is that pool's own
+        // shortTag (pools.json) rather than authored copy -- see
+        // PoolNamedValue below for the roster card's version of the same
+        // move.
+        //
+        // TEMPLATED SO THE AUDIT CAN SEE THE WORST CASE, which is the whole
+        // reason this is not just a Runtime label. PoolEntryResolver caps
+        // shortTag at MaxShortTagLength (6) and says in its own comment that
+        // nothing downstream would notice a longer one until somebody looked
+        // at a screenshot -- this is the other end of that: six wide glyphs
+        // is what UiTextFitAudit measures the tag box against, so a legal
+        // tag cannot wrap. It was found the only way it could be, by
+        // looking: a four-letter fixture tag wrapped to "FUR"/"Y" in the
+        // first capture of this meter.
+        public static readonly UiString PoolTag =
+            UiString.Define("pool_tag", "{0}", "WISDOM");
         public static readonly UiString Continue = UiString.Define("continue", "Continue");
 
         // Plate templates. v1 formatted these inline in FightController, in five
@@ -648,8 +680,26 @@ namespace PrincesPalace.Domain.UiKit
         // whole thing UiStrings exists to stop.
         public static readonly UiString HpValueTagged =
             UiString.Define("hp_value_tagged", "HP {0}/{1}", "HP 9999/9999");
-        public static readonly UiString MpValueTagged =
-            UiString.Define("mp_value_tagged", "MP {0}/{1}", "MP 9999/9999");
+
+        // MpValueTagged ("MP {0}/{1}") is GONE, and this replaced it rather
+        // than joining it. The reasoning above still holds for HP -- "HP" is
+        // authored UI copy and belongs here -- but the second meter's tag
+        // stopped being copy the day mana became a content row: the pool a
+        // character actually holds owns its own shortTag (pools.json), and a
+        // roster card that printed a literal "MP" would say MP over a bar
+        // full of somebody's rage. So the tag is a PARAMETER here, exactly
+        // as the signature line's resource name below already is.
+        //
+        // A CLONE OF SignatureNamedValue, not a reuse of it, because the two
+        // are measured against different boxes: this one is drawn ON a
+        // 174px roster bar at 9pt, that one across the card at 10pt, and one
+        // shared AuditSample would silently pick whichever worst case was
+        // written first. The sample is the longest tag a pool is likely to
+        // author against the widest numbers the existing MP sample already
+        // covered, so this cannot be a narrower promise than the entry it
+        // replaced.
+        public static readonly UiString PoolNamedValue =
+            UiString.Define("pool_named_value", "{0} {1}/{2}", "FURY 9999/9999");
 
         // The roster's signature line -- "Wool 3/10". The NAME is content
         // (characters.json's own resource display name), so it is a

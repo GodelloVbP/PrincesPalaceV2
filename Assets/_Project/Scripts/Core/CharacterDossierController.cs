@@ -142,6 +142,15 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] statPreviews;
         [SerializeField] internal GameObject[] statHighlights;
 
+        // THE ROW LABELS, and exactly one of them is not static: the pool
+        // row reads "Max Fury" for a character who does not hold mana (plan
+        // P7). Everything else in this column is authored copy that no
+        // character can change, and stays baked -- the array exists so ONE
+        // row can be rewritten, not so the list becomes runtime text.
+        // FightScreen.StatNames has declared these nodes since the sheet was
+        // built; this is the first field to bind them.
+        [SerializeField] internal TMP_Text[] statNames;
+
         // The portrait slot. The FACES ARE NOT BOUND HERE any more: they were
         // an IconEntry[] baked by ScreenRegistry from every character with a
         // portraitPath, which meant the scene held a photograph of the roster
@@ -185,6 +194,15 @@ namespace PrincesPalace
         // WisdomDerived until a character is resolved -- that is what mana is
         // and what every character shipped today carries.
         private PoolCapacityRule _primaryPoolRule = PoolCapacityRule.WisdomDerived;
+
+        // AND WHAT IT IS CALLED, threaded the same way and for the same
+        // reason: the pool row's LABEL is the pool's own displayName, so a
+        // Fury holder's sheet says "Max Fury" rather than naming a resource
+        // they do not have. "Mana" until a character is resolved, matching
+        // the label the scene bakes.
+        private string _primaryPoolName = ManaDisplayNameFallback;
+
+        private const string ManaDisplayNameFallback = "Mana";
 
         private void OnEnable()
         {
@@ -538,7 +556,11 @@ namespace PrincesPalace
 
             RefreshIdentity(character);
             _scores = scores;
-            _primaryPoolRule = PrimaryPoolRuleFor(character);
+            var primaryPool = PrimaryPoolFor(character);
+            _primaryPoolRule = primaryPool?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
+            _primaryPoolName = string.IsNullOrWhiteSpace(primaryPool?.DisplayName)
+                ? ManaDisplayNameFallback
+                : primaryPool.DisplayName;
             RefreshAttributes(scores, character.definitionId);
 
             // AFTER RefreshAttributes, not inside RefreshIdentity where it
@@ -1116,8 +1138,22 @@ namespace PrincesPalace
 
                 statValues[i].SetContent(DisplayValue(character, stat, stats, scores));
                 statHighlights[i].SetShown(false);
+
+                // THE ONE ROW WHOSE LABEL IS NOT AUTHORED COPY. Written on
+                // every refresh rather than only when it differs, because the
+                // dossier pages between characters in place: a label left
+                // standing from the previous sheet is exactly the drift
+                // UiStrings exists to stop, and the write is one string per
+                // open.
+                if (stat == SheetStat.MaxMana && Has(statNames, i))
+                {
+                    statNames[i].Set(UiStrings.StatMaxPool, _primaryPoolName);
+                }
             }
         }
+
+        private static bool Has<T>(T[] array, int index) where T : UnityEngine.Object =>
+            array != null && index >= 0 && index < array.Length && array[index] != null;
 
         // Two rows do not live on StatBlock -- SheetStats.ValueOf returns 0 for
         // them by design rather than inventing a number, so they are resolved
@@ -1163,11 +1199,10 @@ namespace PrincesPalace
         // because the pool is content and a save carries only the id.
         // WisdomDerived when nothing resolves, which is the shipped answer
         // and the one that keeps the sheet reading as it always has.
-        private static PoolCapacityRule PrimaryPoolRuleFor(Character character)
+        private static ResolvedPool PrimaryPoolFor(Character character)
         {
             var definition = ContentDatabase.GetCharacter(character?.definitionId);
-            var pool = ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
-            return pool?.Data?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
+            return ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
         }
 
         // THE mechanic: light the rows this attribute actually feeds, and dim

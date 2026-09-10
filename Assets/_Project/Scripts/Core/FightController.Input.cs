@@ -971,6 +971,14 @@ namespace PrincesPalace
             TryForcedFirstAction();
             PollGamepadNavigation();
 
+            // ABOVE the characterSheetPanel guard below, and that placement
+            // is the point: the sheet being unwired is a reason not to read
+            // its two hotkeys, not a reason for a card on the HUD behind it
+            // to stop breathing. Costs one int compare on every frame of
+            // every fight shipped today -- no pool authors pulse yet, so the
+            // list it guards is empty (see RefreshPoolPulse).
+            RefreshPoolPulse();
+
             if (characterSheetPanel == null) return;
 
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);

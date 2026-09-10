@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Equipment
 {
@@ -69,7 +70,14 @@ namespace PrincesPalace.Domain.Equipment
         // both return null, never an empty list -- the same "nothing to
         // show" signal ModifierComparisonLines below and
         // ItemStatLines.ModifierSection both key off of.
-        public static List<(string Id, string Line)> LinePairs(IReadOnlyList<Effect> effects)
+        //
+        // `primaryPool` is the VIEWER's pool, passed straight through to
+        // ModifierEffectText so a Max Mana affix can say "no effect on Fury"
+        // to the character it would do nothing for. Optional and
+        // null-means-mana: a listing with no viewer (the shop's plain card)
+        // reads exactly as it always has.
+        public static List<(string Id, string Line)> LinePairs(IReadOnlyList<Effect> effects,
+            ResolvedPool primaryPool = null)
         {
             if (effects == null || effects.Count == 0)
             {
@@ -80,7 +88,7 @@ namespace PrincesPalace.Domain.Equipment
             foreach (var group in effects.GroupBy(e => e.Id))
             {
                 string fragments = string.Join(", ", group
-                    .Select(e => ModifierEffectText.Describe(e.Value))
+                    .Select(e => ModifierEffectText.Describe(e.Value, primaryPool))
                     .Where(fragment => fragment.Length > 0));
 
                 if (fragments.Length == 0) continue;
@@ -115,9 +123,9 @@ namespace PrincesPalace.Domain.Equipment
         // Runs even when `candidateEffects` itself is null: an item with
         // zero affixes replacing one that had some is still a real loss.
         public static IReadOnlyList<string> ComparisonLines(IReadOnlyList<Effect> candidateEffects,
-            IReadOnlyList<EquippedModifier> equipped)
+            IReadOnlyList<EquippedModifier> equipped, ResolvedPool primaryPool = null)
         {
-            var pairs = LinePairs(candidateEffects);
+            var pairs = LinePairs(candidateEffects, primaryPool);
 
             if (equipped == null || equipped.Count == 0)
             {

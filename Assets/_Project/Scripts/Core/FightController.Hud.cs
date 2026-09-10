@@ -571,6 +571,14 @@ namespace PrincesPalace
             SetFill(partyHpFill, actor.CurrentHealth, actor.MaxHealth);
             SetFill(partyMpFill, actor.CurrentMana, actor.MaxMana);
 
+            // CLEARED HERE, not in the tick: this method is the one entry
+            // point for a full HUD repaint (RefreshRoster is called from its
+            // own tail), so the pulse list is rebuilt exactly once per repaint
+            // and holds only the meters whose pool actually asked for it.
+            _pulsingMeters.Clear();
+            ApplyPoolTheme(actor.PrimaryPool, partyMpFill, partyMpShade, partyMpRims, 0,
+                partyMpTag, partyMpValue);
+
             var kit = _session == null ? null : _session.KitFor(actor);
             if (kit != null) ApplyCardTheme(partyCardRims, 0, partyName, kit.PlateTheme);
 
@@ -600,6 +608,158 @@ namespace PrincesPalace
             }
 
             if (name != null) name.color = Hex(colours.Name);
+        }
+
+        // ---- the second meter, painted from the pool its holder carries ------
+        //
+        // WHY THIS IS A RUNTIME WRITE AT ALL. Ui.Meter bakes its four colours
+        // into the scene at build time and Ui.Label bakes its tag, which was
+        // right for as long as the second meter WAS mana. It is not any more:
+        // a combatant's PrimaryPool is built from a pools.json row
+        // (ContentDatabase.BuildPrimaryPool), and the row owns the tag and
+        // the three hexes. A baked meter can only be one pool's meter, so a
+        // second pool would have meant a second meter, hidden behind the
+        // first -- which is a special case wearing a prefab.
+        //
+        // The bake is not wasted: it is MANA's palette, the pool everyone
+        // shipped today holds, so an unrefreshed scene reads true and this
+        // method writes back the identical values for them. Mana therefore
+        // renders pixel-for-pixel as it did before this change; the meter
+        // only looks different the day a row authors different numbers.
+        //
+        // RIM AND SHADE ARE DERIVED, NOT AUTHORED (RawPoolEntry.deepHex says
+        // so): deepHex at 0.70 and 0.44, which is exactly what
+        // FightHudPalette.MpRim/MpShade are relative to MpDeep. Two authored
+        // fields fewer, and no way for a row to author a rim that disagrees
+        // with its own bar.
+        //
+        // GRACEFUL ON EVERY MISS, the house style: a null pool, an unparseable
+        // hex or a short array leaves the baked value standing rather than
+        // clearing the graphic to magenta.
+        private const float MeterRimAlpha = 179f / 255f;    // #..B3, FightHudPalette.MpRim
+        private const float MeterShadeAlpha = 112f / 255f;  // #..70, FightHudPalette.MpShade
+
+        private void ApplyPoolTheme(ResourcePool pool, Image fill, Image shade, Image[] rims, int baseIndex,
+                                    TMP_Text tag, TMP_Text value)
+        {
+            if (pool == null) return;
+
+            if (TryHex(pool.BrightHex, out var bright))
+            {
+                if (fill != null)
+                {
+                    fill.color = bright;
+
+                    // ENROLLED ONLY IF THE ROW ASKED. A pool with pulse false
+                    // is never written again after this line -- see
+                    // RefreshPoolPulse for why that matters more than it
+                    // looks.
+                    if (pool.Pulse) _pulsingMeters.Add(new PulsingMeter { Fill = fill, Base = bright });
+                }
+
+                if (tag != null) tag.color = bright;
+            }
+
+            if (TryHex(pool.DeepHex, out var deep))
+            {
+                if (shade != null) shade.color = WithAlpha(deep, MeterShadeAlpha);
+
+                var rim = WithAlpha(deep, MeterRimAlpha);
+                for (int e = 0; e < RimsPerCard; e++)
+                {
+                    if (Has(rims, baseIndex + e)) rims[baseIndex + e].color = rim;
+                }
+            }
+
+            if (tag != null) tag.Set(UiStrings.PoolTag, pool.ShortTag);
+            if (value != null && TryHex(pool.TextHex, out var text)) value.color = text;
+        }
+
+        private static bool TryHex(string hex, out Color colour)
+        {
+            colour = default;
+            return !string.IsNullOrEmpty(hex) && ColorUtility.TryParseHtmlString(hex, out colour);
+        }
+
+        private static Color WithAlpha(Color colour, float alpha) =>
+            new Color(colour.r, colour.g, colour.b, alpha);
+
+        // ---- the heartbeat ---------------------------------------------------
+        //
+        // A pool whose row says pulse:true breathes. Arithmetic over the clock
+        // on Update, not a coroutine -- the same shape RewardTrackController.
+        // Motion's own idle animations take, and for the same reason: a
+        // coroutine per meter would need starting, stopping and restarting
+        // every time the acting character changed, which is three lifecycles
+        // to get wrong for a value that is a pure function of the time.
+        //
+        // UNSCALED, DELIBERATELY. The battle-speed preset scales the beat
+        // clock so a player who set 3x watches the fight resolve faster; a
+        // resting heartbeat is not part of the fight's resolution, it is
+        // ambient state on a card, and speeding it up with the combat would
+        // make the HUD read as agitated at exactly the moment the player
+        // chose to hurry. It also keeps beating while a beat is paused, which
+        // is the whole point of an idle animation.
+        //
+        // ALPHA, NOT SCALE OR WIDTH. SetFill owns the fill's anchorMax (that
+        // is the drain), so anything touching the RectTransform here would
+        // fight it every frame; colour is the one channel nothing else on
+        // this meter writes per frame.
+        //
+        // A REST IS PART OF THE SHAPE. Two thumps close together, the second
+        // weaker, then most of the loop at the floor -- lub-dub, pause. That
+        // means two arbitrary samples can legitimately read the same alpha,
+        // which is why the test that proves it moves samples across a whole
+        // loop rather than twice.
+        private const float PoolPulseLoop = 1.1f;
+        private const float PoolPulseFloorAlpha = 0.7f;
+        private const float PoolPulseSecondBeatPhase = 0.22f;
+        private const float PoolPulseSecondBeatWeight = 0.72f;
+        private const float PoolPulseBeatHalfWidth = 0.11f;
+
+        private struct PulsingMeter
+        {
+            public Image Fill;
+
+            // The colour the pool asked for, kept beside the Image because the
+            // tick multiplies its alpha and must not compound: reading the
+            // alpha back off the Image would make every frame a fraction of
+            // the last one and fade the bar out entirely.
+            public Color Base;
+        }
+
+        private readonly List<PulsingMeter> _pulsingMeters = new List<PulsingMeter>();
+
+        private void RefreshPoolPulse()
+        {
+            // THE EARLY RETURN IS THE CONTRACT, not an optimisation. Mana's
+            // row says pulse:false, so nothing enrols, so this method writes
+            // to no Image on any frame of any fight shipped today -- there is
+            // no per-frame cost and no per-frame colour write to collide with
+            // a repaint.
+            if (_pulsingMeters.Count == 0) return;
+
+            float phase = Mathf.Repeat(Time.unscaledTime / PoolPulseLoop, 1f);
+            float beat = Mathf.Max(
+                Thump(phase, 0f),
+                Thump(phase, PoolPulseSecondBeatPhase) * PoolPulseSecondBeatWeight);
+            float alpha = Mathf.Lerp(PoolPulseFloorAlpha, 1f, beat);
+
+            for (int i = 0; i < _pulsingMeters.Count; i++)
+            {
+                var meter = _pulsingMeters[i];
+                if (meter.Fill == null) continue;
+                meter.Fill.color = WithAlpha(meter.Base, meter.Base.a * alpha);
+            }
+        }
+
+        // One raised-cosine bump centred on `centre`, measured around the
+        // loop so a beat at phase 0 does not clip at the seam.
+        private static float Thump(float phase, float centre)
+        {
+            float d = Mathf.Abs(Mathf.Repeat(phase - centre + 0.5f, 1f) - 0.5f);
+            if (d >= PoolPulseBeatHalfWidth) return 0f;
+            return 0.5f * (1f + Mathf.Cos(Mathf.PI * d / PoolPulseBeatHalfWidth));
         }
 
         // RefreshTransformStrip is GONE (2026-09-09). The strip it painted was
@@ -673,11 +833,23 @@ namespace PrincesPalace
                 }
                 if (Has(rosterHpFills, i)) SetFill(rosterHpFills[i], member.CurrentHealth, member.MaxHealth);
 
+                // THE TAG COMES OFF THE POOL, not out of UiStrings (plan P7).
+                // A member with no pool at all cannot happen -- PrimaryPool
+                // is never null on a CombatantState -- but an empty shortTag
+                // would print a leading space, so it degrades to the numbers
+                // alone rather than to a literal "MP" that could be wrong.
                 if (Has(rosterMpValues, i))
                 {
-                    rosterMpValues[i].Set(UiStrings.MpValueTagged, member.CurrentMana, member.MaxMana);
+                    rosterMpValues[i].Set(UiStrings.PoolNamedValue,
+                        member.PrimaryPool?.ShortTag ?? "", member.CurrentMana, member.MaxMana);
                 }
                 if (Has(rosterMpFills, i)) SetFill(rosterMpFills[i], member.CurrentMana, member.MaxMana);
+
+                ApplyPoolTheme(member.PrimaryPool,
+                    Has(rosterMpFills, i) ? rosterMpFills[i] : null,
+                    Has(rosterMpShades, i) ? rosterMpShades[i] : null,
+                    rosterMpRims, i * RimsPerCard,
+                    tag: null, value: null);
 
                 RefreshRosterSignature(i, member);
             }
@@ -1965,7 +2137,10 @@ namespace PrincesPalace
             // confidently describes a different command is not.
             if (index < 0 || index >= rows.Count) return FightHudModel.DetailForNoSelection(_menu.Branch);
 
-            if (_menu.Branch == MenuBranch.Item) return FightHudModel.DetailForItem(_satchel[index]);
+            if (_menu.Branch == MenuBranch.Item)
+            {
+                return FightHudModel.DetailForItem(_satchel[index], actor?.PrimaryPool);
+            }
 
             // THROUGH THE OPTION'S OWN INDEX, not the row position: a row can
             // sit at a different position than its skill's kit.Skills slot the

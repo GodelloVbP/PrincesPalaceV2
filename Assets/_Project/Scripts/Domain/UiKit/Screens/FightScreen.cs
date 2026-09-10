@@ -157,6 +157,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PartyHpValue;
         public NodeRef PartyMpFill;
         public NodeRef PartyMpValue;
+
+        // THE SECOND METER IS NOT A MANA BAR ANY MORE (plan P7). It draws
+        // whatever pool its holder actually carries -- mana for everyone
+        // shipped today, and whatever a character trades mana for tomorrow
+        // (ContentData/pools.json owns the tag and the three hexes). Ui.Meter
+        // BAKES its colours at scene-build time and Ui.Label bakes its tag,
+        // so every surface of that meter that is not the resource-neutral
+        // sheen has to be reachable at runtime: the fill, the band under it,
+        // the four rim edges, the tag and the value.
+        //
+        // The HP meter beside it stays baked. Red is health on every card
+        // whoever's card it is (contract C3's own line), so there is nothing
+        // for a controller to decide about it.
+        //
+        // PartyMpRims is the same Top/Bottom/Left/Right order Ui.RimEdgesOf
+        // returns; there is only one card here, so no flattening.
+        public NodeRef PartyMpTag;
+        public NodeRef PartyMpShade;
+        public List<NodeRef> PartyMpRims = new List<NodeRef>();
         public List<NodeRef> PartyBuffIcons = new List<NodeRef>();
 
         // The one tooltip every status badge on every surface shares --
@@ -189,6 +208,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RosterMpValues = new List<NodeRef>();
         public List<NodeRef> RosterMpFills = new List<NodeRef>();
         public List<NodeRef> RosterSignatures = new List<NodeRef>();
+
+        // The roster half of the runtime-coloured pool meter (see
+        // PartyMpTag's own note). There is no separate tag label on a roster
+        // card -- the tag is the first argument of UiStrings.PoolNamedValue,
+        // drawn on the bar with the numbers -- so these are the fill's band
+        // and the rim only.
+        //
+        // RosterMpRims is flattened CARD-MAJOR, 4i..4i+3, the same
+        // convention (and the same silent failure mode) as RosterCardRims
+        // below.
+        public List<NodeRef> RosterMpShades = new List<NodeRef>();
+        public List<NodeRef> RosterMpRims = new List<NodeRef>();
 
         // One status row per roster mini-plate, flattened ROSTER-MAJOR (r0's
         // five badges, then r1's), same convention as EnemyStatusBadges.
@@ -1406,6 +1437,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // and a centre, so widening the value box moves the bar's end and
         // nothing else.
         private const float PartyTagW = 20f;
+
+        // THE POOL TAG'S BOX IS WIDER THAN "HP"'s, and has to be. "MP" fitted
+        // in 20 because "MP" was the only tag this row could ever draw; the
+        // meter now draws whichever pool its holder carries, and
+        // PoolEntryResolver lets a row author a shortTag up to
+        // MaxShortTagLength (6). A four-letter fixture tag wrapped to
+        // "FUR"/"Y" in the first capture of this meter, which is exactly the
+        // failure UiTextFitAudit exists to catch and could not, because it
+        // measured the baked "MP".
+        //
+        // The number is not chosen, it is what the audit accepts for
+        // UiStrings.PoolTag's own six-wide-glyph sample at 10pt -- so the
+        // rule ("a legal shortTag cannot wrap") is mechanised rather than
+        // eyeballed, and re-measured automatically if the font or the size
+        // moves.
+        //
+        // BOTH BARS MOVE WITH IT, not just the second: PartyBarLeft is one
+        // expression, so the HP and pool bars keep sharing a span and stay
+        // aligned. What it costs is 22px of bar, out of 277.
+        private const float PartyPoolTagW = 42f;
         private const float PartyValueW = 58.85f;
         private const float PartyRowGapX = 4f;
 
@@ -1415,7 +1466,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // already reserved, so neither costs the stack any height.
         private const float PartySignatureRuleY = -2f;
         private const float PartyStatusRuleY = -24f;
-        private static float PartyBarLeft => -PartyContentHalfW + PartyTagW + PartyRowGapX;
+        private static float PartyBarLeft => -PartyContentHalfW + PartyPoolTagW + PartyRowGapX;
         private static float PartyBarRight => PartyContentHalfW - PartyValueW - PartyRowGapX;
         private static float PartyBarW => PartyBarRight - PartyBarLeft;
         private static float PartyBarCentreX => (PartyBarLeft + PartyBarRight) * 0.5f;
@@ -1471,7 +1522,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var hpValue = Ui.Label("PartyHpValue", UiStrings.HealthValue, new UiVec(PartyValueW, 16.8f), 10,
                 FightHudPalette.HpText, Place.At(PartyContentHalfW, PartyHpRowY, new UiVec(1f, 0.5f)));
 
-            var mpTag = Ui.Label("PartyMpTag", UiStrings.MpTag, new UiVec(PartyTagW, 16.8f), 10,
+            var mpTag = Ui.Label("PartyMpTag", UiStrings.PoolTag, new UiVec(PartyPoolTagW, 16.8f), 10,
                 FightHudPalette.MpBright, Place.At(-PartyContentHalfW, PartyMpRowY, new UiVec(0f, 0.5f)));
 
             // THE MANA-COST OVERLAY (PartyMpPreview) IS GONE, balance-bot
@@ -1494,6 +1545,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PartyHpValue = hpValue;
             PartyMpFill = mp.Fill;
             PartyMpValue = mpValue;
+
+            // EVERY BAKED SURFACE OF THE SECOND METER, handed to the
+            // controller. What is baked here is MANA's own palette, and it
+            // has to be: this is the pool every character shipped today
+            // holds, so a scene nobody has refreshed shows the shipped truth
+            // rather than a grey placeholder. RefreshPartyPlate overwrites
+            // all six with the acting character's own pool on the first
+            // repaint, and for mana it writes the identical values -- the
+            // pools.json row's brightHex/deepHex/textHex ARE
+            // FightHudPalette.MpBright/MpDeep/MpText, and the rim and shade
+            // are that deep at the same 0.70/0.44 this recipe bakes.
+            PartyMpTag = mpTag;
+            PartyMpShade = mp.Shade;
+            foreach (var edge in Ui.RimEdgesOf(mp.Track)) PartyMpRims.Add(edge);
 
             // TWO HAIRLINES, THE SAME ONES THE ROSTER CARDS USE, and they are
             // an addition to the mock-up rather than something it drew.
@@ -1661,7 +1726,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         FightHudPalette.TextPrimary, Place.At(-halfBarW * 0.5f + 4f, 0f, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
-                var mpValue = Ui.Label($"Roster{i}MpValue", UiStrings.MpValueTagged, new UiVec(100f, 13f), 9,
+                // THE TAG IS AN ARGUMENT, not "MP" (plan P7). The HP caption
+                // above keeps its literal because health is health on every
+                // card; this one names whichever pool the ally actually
+                // holds, which is content. Its COLOUR stays TextPrimary and
+                // is deliberately not themed: the caption is drawn on top of
+                // the bar, so its job is contrast against an arbitrary fill,
+                // and matching the HP caption beside it is what keeps the two
+                // halves of one card reading as one card.
+                var mpValue = Ui.Label($"Roster{i}MpValue", UiStrings.PoolNamedValue, new UiVec(100f, 13f), 9,
                         FightHudPalette.TextPrimary, Place.At(-halfBarW * 0.5f + 4f, 0f, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
@@ -1705,6 +1778,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 RosterHpFills.Add(hp.Fill);
                 RosterMpValues.Add(mpValue);
                 RosterMpFills.Add(mp.Fill);
+                RosterMpShades.Add(mp.Shade);
+                foreach (var edge in Ui.RimEdgesOf(mp.Track)) RosterMpRims.Add(edge);
                 RosterSignatures.Add(signature);
 
                 var cells = new List<UiNode>

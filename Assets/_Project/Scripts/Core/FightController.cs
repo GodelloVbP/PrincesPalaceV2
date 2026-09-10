@@ -111,6 +111,14 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] rosterMpValues;
         [SerializeField] internal Image[] rosterMpFills;
         [SerializeField] internal TMP_Text[] rosterSignatures;
+
+        // THE SECOND METER'S OWN SURFACES, on every card (plan P7). Ui.Meter
+        // bakes its colours into the scene, so a meter that draws whatever
+        // pool its holder carries has to be repainted at runtime -- see
+        // FightScreen.PartyMpTag's own note for why the fill is not enough.
+        // rosterMpRims is CARD-MAJOR like rosterCardRims above.
+        [SerializeField] internal Image[] rosterMpShades;
+        [SerializeField] internal Image[] rosterMpRims;
         [SerializeField] internal GameObject lowHpVignette;
 
         // partyPortrait is GONE. It was a [SerializeField] nothing read and
@@ -142,6 +150,14 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text partyHpValue;
         [SerializeField] internal Image partyMpFill;
         [SerializeField] internal TMP_Text partyMpValue;
+
+        // The party card's half of the pool meter. The TAG is a label here
+        // (the party card has room for one beside the bar; a roster card
+        // does not, and folds it into the value instead), so it is the one
+        // surface the two cards do not share.
+        [SerializeField] internal TMP_Text partyMpTag;
+        [SerializeField] internal Image partyMpShade;
+        [SerializeField] internal Image[] partyMpRims;
 
         // Same "caption is a synthesised child with no NodeRef" story as
         // enemyIntentIcons below -- each badge's Image and TMP glyph are both

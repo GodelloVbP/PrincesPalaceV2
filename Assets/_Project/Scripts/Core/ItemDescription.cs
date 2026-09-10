@@ -37,7 +37,7 @@ namespace PrincesPalace
         {
             if (item == null) return "";
             return ItemStatLines.Card(item.StatBonusAt(plus), item.abilityScoreBonus, ScalingDescription(item),
-                WeaponDamageLine(item, plus, viewer), ModifierLines(item, riftTier, modifierIds));
+                WeaponDamageLine(item, plus, viewer), ModifierLines(item, riftTier, modifierIds, viewer));
         }
 
         // "Fiery -- <Keyword>+20%</Keyword> Fire dmg on hit", one line per
@@ -46,10 +46,25 @@ namespace PrincesPalace
         // the case ModifierComparisonLines itself degrades to when there is
         // nothing currently equipped to diff against.
         private static IReadOnlyList<string> ModifierLines(ItemDefinition item, RiftTier riftTier,
-            IReadOnlyList<string> modifierIds)
+            IReadOnlyList<string> modifierIds, Character viewer)
         {
-            return ModifierAffixLines.LinePairs(ResolvedModifierEffects(item, riftTier, modifierIds))
+            return ModifierAffixLines.LinePairs(ResolvedModifierEffects(item, riftTier, modifierIds),
+                    PrimaryPoolOf(viewer))
                 ?.Select(pair => pair.Line).ToList();
+        }
+
+        // THE POOL THE VIEWER ACTUALLY HOLDS, for the one affix family whose
+        // answer depends on it: every Max Mana and mana-regen source applies
+        // to a WisdomDerived pool and to no other (PoolPrecedence), so a card
+        // shown to a Fixed pool's owner promises nothing it cannot deliver.
+        // Null viewer -- a listing with nobody chosen -- reads as mana, which
+        // is what every character shipped today carries.
+        private static ResolvedPool PrimaryPoolOf(Character viewer)
+        {
+            if (viewer == null) return null;
+
+            var definition = ContentDatabase.GetCharacter(viewer.definitionId);
+            return ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
         }
 
         // ONE item copy's rolled modifiers, scaled -- pulled off
@@ -110,11 +125,12 @@ namespace PrincesPalace
         // gain/loss/unchanged classification -- see that method's own header
         // for the full rule.
         private static IReadOnlyList<string> ModifierComparisonLines(ItemDefinition item, RiftTier riftTier,
-            IReadOnlyList<string> modifierIds, IReadOnlyList<string> equippedModifierIds)
+            IReadOnlyList<string> modifierIds, IReadOnlyList<string> equippedModifierIds, Character viewer)
         {
             return ModifierAffixLines.ComparisonLines(
                 ResolvedModifierEffects(item, riftTier, modifierIds),
-                ResolvedEquippedModifiers(equippedModifierIds));
+                ResolvedEquippedModifiers(equippedModifierIds),
+                PrimaryPoolOf(viewer));
         }
 
         // The rolled modifier ids on whatever is CURRENTLY worn in the slot
@@ -321,7 +337,7 @@ namespace PrincesPalace
                     : definition.Data.DisplayName;
                 var equippedModifierIds = EquippedModifierIds(member, candidate);
                 rows.Add((name, Compare(member, candidate, candidatePlus),
-                    ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds)));
+                    ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds, member)));
             }
 
             return ItemStatLines.SquadBody(rows);
@@ -349,7 +365,7 @@ namespace PrincesPalace
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison,
                 WeaponDamageLine(candidate, candidatePlus, character),
-                ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds));
+                ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds, character));
         }
     }
 }

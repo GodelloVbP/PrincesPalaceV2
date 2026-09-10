@@ -108,7 +108,8 @@ namespace PrincesPalace.Domain.Tests
             // column pass, and RefreshRoster indexes all of them off the same
             // loop counter -- exactly the shape the Store bug had.
             AssertSameLength("roster", s.RosterPlates, s.RosterNames, s.RosterHpValues,
-                s.RosterHpFills, s.RosterMpValues, s.RosterMpFills, s.RosterSignatures);
+                s.RosterHpFills, s.RosterMpValues, s.RosterMpFills, s.RosterMpShades,
+                s.RosterSignatures);
 
             // FOUR PER CARD, kept OUT of AssertSameLength above -- these are
             // 4x the length of the roster lists by construction, so the
@@ -119,6 +120,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(4, s.PartyCardRims.Count, "the party card has four rim edges");
             Assert.AreEqual(s.RosterPlates.Count * 4, s.RosterCardRims.Count,
                 "rosterCardRims is CARD-MAJOR: exactly four edges per roster card, in order");
+
+            // THE SAME ARITHMETIC FOR THE POOL METER'S OWN RIM (plan P7).
+            // FightController.ApplyPoolTheme indexes rosterMpRims the same
+            // i * RimsPerCard way, so a list that is not 4x the cards recolours
+            // one ally's bar to another ally's resource.
+            Assert.AreEqual(4, s.PartyMpRims.Count, "the party card's pool meter has four rim edges");
+            Assert.AreEqual(s.RosterPlates.Count * 4, s.RosterMpRims.Count,
+                "rosterMpRims is CARD-MAJOR: exactly four meter rim edges per roster card, in order");
         }
 
         // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
@@ -161,6 +170,8 @@ namespace PrincesPalace.Domain.Tests
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
                 { "PartyCardRims", s.PartyCardRims }, { "RosterCardRims", s.RosterCardRims },
+                { "PartyMpRims", s.PartyMpRims }, { "RosterMpRims", s.RosterMpRims },
+                { "RosterMpShades", s.RosterMpShades },
             };
 
             foreach (var pair in lists)
@@ -172,6 +183,8 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Assert.IsTrue(s.PartyPlate.IsValid);
+            Assert.IsTrue(s.PartyMpTag.IsValid, "the pool meter's tag was never assigned a node");
+            Assert.IsTrue(s.PartyMpShade.IsValid, "the pool meter's shade was never assigned a node");
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
             Assert.IsTrue(s.DetailDamageType.IsValid);
@@ -294,6 +307,92 @@ namespace PrincesPalace.Domain.Tests
                 s.RosterCardRims.Select(r => r.Node.Name).ToList(),
                 "CARD-MAJOR: all four of card 0's edges, then all four of card 1's -- an edge-major " +
                 "flattening would paint card 1's colour onto three of card 0's edges");
+        }
+
+        // THE SECOND METER'S OWN SURFACES, pinned as literals for the same
+        // reason the card rims above are (gotcha 5): every one of these is
+        // built by a helper from a stem, so a test that rebuilt the names
+        // from that stem would agree with the builder however wrong the
+        // builder got it. The fill's shade and the meter's four rim edges are
+        // AsDecor, so UiAudit never looks at their colour -- nothing but this
+        // and the runtime capture can tell the controller is repainting the
+        // right objects.
+        [Test]
+        public void ThePoolMeterNodesCarryTheNamesTheControllerBindsTo()
+        {
+            var s = Screen();
+
+            Assert.AreEqual("PartyMpTag", s.PartyMpTag.Node.Name);
+            Assert.AreEqual("PartyMpFillShade", s.PartyMpShade.Node.Name,
+                "Ui.Meter names the band under the fill '<fillName>Shade'");
+
+            CollectionAssert.AreEqual(
+                new[] { "PartyMpBarRimTop", "PartyMpBarRimBottom", "PartyMpBarRimLeft", "PartyMpBarRimRight" },
+                s.PartyMpRims.Select(r => r.Node.Name).ToList(),
+                "the meter's rim is named off the TRACK, not the fill -- Ui.Meter passes trackName to Ui.Rim");
+
+            CollectionAssert.AreEqual(
+                new[] { "Roster0MpFillShade", "Roster1MpFillShade" },
+                s.RosterMpShades.Select(r => r.Node.Name).ToList());
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "Roster0MpBarRimTop", "Roster0MpBarRimBottom", "Roster0MpBarRimLeft", "Roster0MpBarRimRight",
+                    "Roster1MpBarRimTop", "Roster1MpBarRimBottom", "Roster1MpBarRimLeft", "Roster1MpBarRimRight",
+                },
+                s.RosterMpRims.Select(r => r.Node.Name).ToList(),
+                "CARD-MAJOR, like RosterCardRims -- FightController indexes these as i * RimsPerCard");
+        }
+
+        // WHAT THE METER IS BAKED AS, which is MANA and has to stay mana.
+        //
+        // The controller overwrites all six surfaces at runtime from the
+        // holder's own pool (plan P7), and for every character shipped today
+        // that pool IS mana -- so this pins that the bake and the pools.json
+        // row cannot drift apart and make the first painted frame of a fight
+        // differ from the second. It reads FightHudPalette rather than the
+        // content row because a screen tree is Domain and cannot load
+        // content; PoolContentPinTests pins the row against these same
+        // constants from the other side.
+        [Test]
+        public void ThePoolMeterIsBakedAsMana()
+        {
+            var s = Screen();
+
+            Assert.AreEqual(FightHudPalette.MpBright, s.PartyMpFill.Node.ColorHex);
+            Assert.AreEqual(FightHudPalette.MpShade, s.PartyMpShade.Node.ColorHex);
+            Assert.AreEqual(FightHudPalette.MpBright, s.PartyMpTag.Node.ColorHex);
+            Assert.AreEqual(FightHudPalette.MpText, s.PartyMpValue.Node.ColorHex);
+
+            foreach (var edge in s.PartyMpRims)
+            {
+                Assert.AreEqual(FightHudPalette.MpRim, edge.Node.ColorHex, edge.Node.Name);
+            }
+
+            foreach (var edge in s.RosterMpRims)
+            {
+                Assert.AreEqual(FightHudPalette.MpRim, edge.Node.ColorHex, edge.Node.Name);
+            }
+        }
+
+        // THE ROSTER CAPTION NAMES ITS POOL BY PARAMETER, not by a literal.
+        // A card that printed "MP" over a bar full of somebody's rage is the
+        // whole failure this UiString change exists to prevent, and the
+        // template is the one place it can be reintroduced.
+        [Test]
+        public void TheRosterPoolCaptionTakesItsTagAsAnArgument()
+        {
+            var s = Screen();
+
+            foreach (var value in s.RosterMpValues)
+            {
+                Assert.AreEqual(UiStrings.PoolNamedValue.Key, value.Node.Text.Key,
+                    $"{value.Node.Name} must read its tag off the pool, not out of UiStrings");
+            }
+
+            Assert.AreEqual("FURY 100/100", UiStrings.PoolNamedValue.Format("FURY", 100, 100));
+            Assert.AreEqual("MP 34/34", UiStrings.PoolNamedValue.Format("MP", 34, 34));
         }
 
         // TWO ABREAST, NOT A COLUMN OF THREE. Half-width plates in two columns

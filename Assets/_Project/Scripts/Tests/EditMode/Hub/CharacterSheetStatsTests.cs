@@ -55,6 +55,30 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(keys.Where(string.IsNullOrEmpty).ToList());
         }
 
+        // THE POOL ROW IS THE ONE ROW WHOSE LABEL IS NOT AUTHORED COPY.
+        //
+        // CharacterDossierController writes it from the character's own pool
+        // (plan P7), so a Fury holder's sheet says "Max Fury" rather than
+        // naming a resource they do not have. What is pinned here is the
+        // TEMPLATE, not the controller: the controller's half needs a scene,
+        // and this is the half that can silently drift into "Max: Fury" or
+        // "Fury Max" on a rewrite.
+        //
+        // THE BAKED LABEL STAYS "Max Mana" and that is deliberate -- an
+        // unrefreshed scene reads the shipped truth rather than a
+        // placeholder, and for every character shipped today the two agree
+        // exactly, which is what the second assert holds.
+        [Test]
+        public void ThePoolRowIsNamedByThePoolTheCharacterHolds()
+        {
+            Assert.AreEqual("Max Fury", UiStrings.StatMaxPool.Format("Fury"));
+            Assert.AreEqual(UiStrings.StatMaxMana.Format(), UiStrings.StatMaxPool.Format("Mana"),
+                "the runtime label for mana must be identical to the one the scene bakes, or the row " +
+                "changes the instant a dossier is opened");
+            Assert.AreEqual(UiStrings.StatMaxMana.Key, SheetStats.LabelFor(SheetStat.MaxMana).Key,
+                "the BAKED label is still the untemplated entry -- see StatMaxPool's own note");
+        }
+
         // Distinct values in every field, so a row reading the wrong one
         // cannot pass by coincidence.
         private static StatBlock Stats() => new StatBlock

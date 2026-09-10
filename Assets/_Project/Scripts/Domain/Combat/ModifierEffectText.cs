@@ -1,4 +1,5 @@
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
@@ -62,8 +63,30 @@ namespace PrincesPalace.Domain.Combat
         // with "this is better/worse than what you have equipped".
         public const string KeywordHex = "#E0B84D";
 
-        public static string Describe(ModifierEffect effect)
+        // WHO IS READING THE CARD, as far as this class needs to know: the
+        // primary pool the viewer holds. Optional and null-means-mana, so
+        // every caller with no character in scope (the shop's plain listing,
+        // a tooltip built before a viewer is chosen) prints exactly what it
+        // always did.
+        //
+        // TWO FRAGMENTS DEPEND ON IT, and both for the same reason. Phase B
+        // made every Max Mana and every mana-regen source WisdomDerived-only
+        // (PoolPrecedence.Capacity/GainPerTurn): for a Fixed pool the
+        // authored number is the whole number from every source, so a relic
+        // promising "+10 Max Mana" moves that bar by nothing. Printing the
+        // promise anyway is the precise lie the sheet already refuses to
+        // tell by dropping the Wisdom link (SheetStats.FedBy); this is the
+        // same refusal on the item card.
+        //
+        // WHAT IS NOT FIXED BY THIS: nothing hides the talent or the relic
+        // from a Fixed pool's owner, so it is still a dead pick they can
+        // make. Saying so is cheap; filtering the trees is a change to what
+        // the game OFFERS and is the owner's call, noted rather than built.
+        public static string Describe(ModifierEffect effect, ResolvedPool primaryPool = null)
         {
+            bool poolIgnoresManaSources =
+                primaryPool != null && primaryPool.CapacityRule != PoolCapacityRule.WisdomDerived;
+
             switch (effect.Type)
             {
                 case ModifierEffectType.ElementalDamageOnHitPercent:
@@ -94,7 +117,9 @@ namespace PrincesPalace.Domain.Combat
                     return $"{Keyword($"{effect.Magnitude}%")} on hit: push back {FightTuning.ModifierPushBackSlots} in turn order";
 
                 case ModifierEffectType.FlatMaxManaBonus:
-                    return $"{Keyword($"+{effect.Magnitude}")} Max Mana";
+                    return poolIgnoresManaSources
+                        ? $"no effect on {PoolName(primaryPool)}"
+                        : $"{Keyword($"+{effect.Magnitude}")} Max Mana";
 
                 case ModifierEffectType.FlatManaRegenBonus:
                     // "MP/turn", not "Mana Regen" -- matching the exact
@@ -103,7 +128,18 @@ namespace PrincesPalace.Domain.Combat
                     // bonus, not the longer label UiStrings.StatManaRegen
                     // uses on the character sheet (a different screen with
                     // room for the fuller word).
-                    return $"{Keyword($"+{effect.Magnitude}")} MP/turn";
+                    //
+                    // SAME GATE AS THE CAPACITY LINE ABOVE, and not an
+                    // extension of the plan's attack point 3 but the other
+                    // half of it: PoolPrecedence.GainPerTurn takes exactly
+                    // the same shape as Capacity, on purpose, because a pool
+                    // that ignored outside capacity but not outside income
+                    // would be two rules wearing one word. A card that
+                    // refused the first and printed the second would put
+                    // that inconsistency in front of the player.
+                    return poolIgnoresManaSources
+                        ? $"no effect on {PoolName(primaryPool)}"
+                        : $"{Keyword($"+{effect.Magnitude}")} MP/turn";
 
                 case ModifierEffectType.NextSkillManaDiscountPercent:
                     return $"{Keyword($"-{effect.Magnitude}%")} next skill cost after a hit";
@@ -149,6 +185,12 @@ namespace PrincesPalace.Domain.Combat
         // call rather than six copies of the same ItemStatLines.Coloured
         // literal.
         private static string Keyword(string text) => ItemStatLines.Coloured(KeywordHex, text);
+
+        // NOT WRAPPED IN KeywordHex, deliberately. That colour means "this is
+        // the rolled number to notice"; a refusal has no number, and painting
+        // it gold would make a dead affix the brightest thing on the card.
+        private static string PoolName(ResolvedPool pool) =>
+            string.IsNullOrWhiteSpace(pool?.DisplayName) ? "this resource" : pool.DisplayName;
 
         // 0.25 -> "25", not "0.25%". A rate constant is authored as a
         // fraction (FightTuning.RunicWardConversionRate's own doc comment

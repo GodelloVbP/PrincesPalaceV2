@@ -534,10 +534,25 @@ namespace PrincesPalace.Domain.UiKit
             // three serialized fields as a side effect of a refactor.
             public readonly UiNode Fill;
 
-            internal MeterNodes(UiNode track, UiNode fill)
+            // THE BAND UNDER THE FILL, handed back for the same reason
+            // Ui.RimEdgesOf exists: a caller that recolours a meter at
+            // RUNTIME (the fight HUD's second meter wears its holder's own
+            // resource, whose colours are content) needs the Image, and the
+            // alternative is every such caller rebuilding $"{fillName}Shade"
+            // itself -- which puts this recipe's naming convention in as
+            // many places as there are callers and makes a typo silent,
+            // because the shade is AsDecor and UiAudit never looks at it.
+            //
+            // The SHEEN is deliberately not exposed: it is a fixed warm
+            // white by design (see MeterSheenHex), the one part of the
+            // recipe that is the same on every bar whatever colour it is.
+            public readonly UiNode Shade;
+
+            internal MeterNodes(UiNode track, UiNode fill, UiNode shade)
             {
                 Track = track;
                 Fill = fill;
+                Shade = shade;
             }
         }
 
@@ -595,7 +610,7 @@ namespace PrincesPalace.Domain.UiKit
             }
 
             var track = Panel(trackName, place, UiSize.Fixed(size), parts).Coloured(trackHex);
-            return new MeterNodes(track, fill);
+            return new MeterNodes(track, fill, shade);
         }
 
         // OutlineButton (the hairline-rim, no-plate button) retired
