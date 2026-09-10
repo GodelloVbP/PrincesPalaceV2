@@ -1013,14 +1013,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 (victim.SignaturePool?.GainOnDamageTaken ?? 0)
                 + victim.Talents.Best(TalentEffectType.WoolOnHitTaken));
 
-            // The primary pool hears the same hit, on the same terms -- per
-            // HIT, not per point. Zero for mana; a rage bar that fills by
-            // being ground down authors a number instead of needing a hook.
-            //
-            // The TALENT term is deliberately NOT summed in here: WoolOnHit-
-            // Taken is Shawn's tree feeding Shawn's fleece, and a talent that
-            // says "wool" must not quietly pay a different resource.
-            GrantPrimary(victim, victim.PrimaryPool?.GainOnDamageTaken ?? 0);
+            // THE PRIMARY POOL'S HALF IS NOT HERE ANY MORE. It sat beside the
+            // wool grant, which put it at the enemy's plain-swing VERB -- the
+            // one place Wool's deliberately narrow rule belongs and the wrong
+            // place for a rage bar. See GrantPrimaryOnDamageTaken, called from
+            // the damage funnel, for where it went and what it now hears.
         }
 
         // Adds to a combatant's signature resource if it has one. A no-op for
@@ -1069,6 +1066,39 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!_locks.OncePerTurn(FightTuning.PrimaryPoolAttackGainLockKeyFor(LedgerIdOf(actor)))) return;
 
             GrantPrimary(actor, gain);
+        }
+
+        // THE PRIMARY POOL'S gainOnDamageTaken, paid once per damaging HIT
+        // TAKEN, and the mirror image of the method above.
+        //
+        // WHY THIS IS NOT AT THE ENEMY'S ATTACK VERB, where it used to be and
+        // where the signature pool's grant still is. Wired there it heard
+        // exactly one kind of blow -- a monster's plain swing -- and paid
+        // nothing for a monster SKILL (ResolveEnemyAction's skill branch
+        // returns several lines before the verb's grant: the Bog Witch's Mud
+        // Burst, the Golem's Boulder Slam, the Warden's Overhead Slam and
+        // Grapple are all that branch), nothing for an AOE, nothing for a
+        // rider or a relic's free swing, and nothing at all for damage a
+        // party member took from anything other than a monster's fist. From
+        // the funnel it hears every point of damage in the session, which is
+        // what the funnel is for.
+        //
+        // NO LOCK, deliberately, and this is the one place the two halves of
+        // the pair differ. gainOnAttack is once per ACTION because the funnel
+        // runs once per target and a three-enemy sweep is one swing; being hit
+        // is not one event that reached several people, it is several events
+        // that each reached one. A rage bar fills per blow, so three enemies
+        // hitting Bjorn in a round pay three times -- and the "per HIT, not
+        // per point" rule the verb site already stated is preserved, since the
+        // funnel runs once per blow however large it was.
+        //
+        // The TALENT term is deliberately NOT summed in here: WoolOnHitTaken
+        // is Shawn's tree feeding Shawn's fleece, and a talent that says
+        // "wool" must not quietly pay a different resource. It stays at the
+        // verb with the wool grant.
+        private static void GrantPrimaryOnDamageTaken(CombatantState victim)
+        {
+            GrantPrimary(victim, victim?.PrimaryPool?.GainOnDamageTaken ?? 0);
         }
     }
 }

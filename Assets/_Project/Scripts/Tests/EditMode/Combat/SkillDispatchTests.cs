@@ -639,5 +639,84 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(40, hero.CurrentMana, "50 minus the 10 spent, and not a point of attack gain");
         }
+
+        // ---- the PRIMARY pool's gainOnDamageTaken ------------------------------
+        //
+        // The other half of the same pair, and the same defect the block above
+        // fixed for gainOnAttack: the grant sat at the enemy's plain-swing VERB
+        // (GrantSignatureForHitTaken), which is where WOOL's narrower rule
+        // lives, so every other way of taking a hit paid nothing at all -- an
+        // enemy SKILL (the Bog Witch's Mud Burst, the Golem's Boulder Slam, the
+        // Warden's Overhead Slam and Grapple all return down the skill branch),
+        // an AOE, a relic's free swing, an on-hit rider.
+        //
+        // The two tests below field the SAME victim and the SAME single hit and
+        // differ only in how the monster throws it, so the literal has to be
+        // the same number twice. gainOnAttack is 0 on this fixture for the
+        // reason the Brawler fixture above authors 0 the other way round:
+        // Bjorn swings first here, and a fixture that also gained on attacking
+        // would report the two added together.
+        private static CombatantState Punchbag(string name = "Bjorn")
+        {
+            // 5000 health so the blow cannot kill him and cap the reading at
+            // whatever HP he had left, and 5000 on the monster so Bjorn's own
+            // opening swing cannot fell it before it replies.
+            var bjorn = new CombatantState(name, true, 5000, 30, 40, 10);
+            bjorn.PrimaryPool = new ResourcePool("fury", "Fury", 100, 0, gainOnAttack: 0, gainOnDamageTaken: 10);
+            return bjorn;
+        }
+
+        // Weight 1 against nothing else, so the draw cannot pick anything but
+        // the ability handed in -- this is about the wiring, not the dice.
+        private static (FightSession session, CombatantState bjorn, CombatantState monster) HitBy(
+            EnemyAbility only)
+        {
+            var bjorn = Punchbag();
+            var monster = new CombatantState("Witch", false, 5000, 0, 12, 9);
+            var source = new ResolvedEnemy("witch", "Witch", new StatBlock(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0);
+            var kit = new EnemyKit(source, false, new List<EnemyAbility> { only });
+
+            var session = new FightSession(new CombatEncounter(new[] { bjorn }, new[] { monster }),
+                new List<PlayerKit> { Kit() }, new List<EnemyKit> { kit }, new SeededRandom(7))
+            {
+                DamageVarianceRange = 0f,
+            };
+
+            // Begin() is what commits the intent. Without it the monster
+            // arrives at ResolveEnemyAction with nothing telegraphed and falls
+            // back to a plain swing, which would make both tests below the
+            // same test.
+            session.Begin();
+            return (session, bjorn, monster);
+        }
+
+        [Test]
+        public void APlainEnemySwingFeedsTheVictimsPrimaryPool()
+        {
+            // The control: this one has always worked, because the grant was
+            // wired to exactly this verb and nothing else.
+            var (session, bjorn, monster) = HitBy(EnemyAbility.LegacyAttack("Swing", 1f, 1f));
+
+            session.ExecuteAttack(monster);
+
+            Assert.AreEqual(10, bjorn.PrimaryPool.Current, "one hit taken, one grant");
+        }
+
+        [Test]
+        public void ADamagingEnemySkillFeedsTheVictimsPrimaryPoolToo()
+        {
+            // THE DEFECT THIS PINS. The skill branch of ResolveEnemyAction
+            // returns before the verb's grant is ever reached, so this read 0
+            // -- a rage bar that four of the six shipped monsters could not
+            // fill by hitting its owner.
+            var (session, bjorn, monster) = HitBy(
+                EnemyAbility.Of(Skill(SkillEffect.DamageSingle, displayName: "Mud Burst"), 1f));
+
+            session.ExecuteAttack(monster);
+
+            Assert.AreEqual(10, bjorn.PrimaryPool.Current,
+                "a skill that deals damage is dealing damage, on both ends of the blow");
+        }
     }
 }

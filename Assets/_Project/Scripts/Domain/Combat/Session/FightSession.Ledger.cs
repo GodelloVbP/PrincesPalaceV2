@@ -167,6 +167,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 // replays is the one taken after the gain: the meter moves on
                 // the beat that shows the hit, not on the next one.
                 GrantPrimaryOnDamagingAction(actor);
+
+                // AND gainOnDamageTaken, at the same seam and for the same
+                // reason. It used to sit at the enemy's plain-swing verb
+                // beside Wool's, which meant a monster's SKILL, an AOE, a
+                // rider and every player-side blow paid the victim nothing.
+                // See GrantPrimaryOnDamageTaken for why this one carries no
+                // per-turn lock where its gainOnAttack twin does.
+                GrantPrimaryOnDamageTaken(target);
             }
 
             return result;
