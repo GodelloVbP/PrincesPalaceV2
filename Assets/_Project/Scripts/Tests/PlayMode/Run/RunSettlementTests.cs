@@ -154,6 +154,44 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, result.EmbersEarned, "nothing to pay it onto");
         }
 
+        // ---- what a load hands the settlement -------------------------------------
+
+        // Settle reads exactly two run lists that Reconcile used to walk past:
+        // bossesKilled and ledger. The boss list is the one that is money --
+        // an ember per boss never killed before, and the id then goes onto
+        // save.defeatedBossIds permanently, where DefeatDistinctBosses counts
+        // it. A boss renamed in enemies.json between quitting and resuming
+        // would pay for an id nothing can name, and the same boss under its
+        // new name would pay again.
+        [Test]
+        public void ABossContentNoLongerHasIsDroppedByTheLoadRatherThanPaidFor()
+        {
+            var save = Save;
+            save.activeRun = new RunSnapshot { hasRun = true };
+            save.activeRun.bossesKilled.Add("a_boss_enemies_json_no_longer_names");
+
+            save.Reconcile();
+
+            Assert.IsEmpty(save.activeRun.bossesKilled,
+                "a kill against an id content cannot resolve survived the load");
+            Assert.AreEqual(0, RunSettlement.Settle(save, save.activeRun).EmbersEarned,
+                "and it was paid an ember on the way out");
+        }
+
+        // The other half: the two lists get the ??= guard the other seven get.
+        // JsonUtility writes an explicit null for a list a save was written
+        // without, and Settle dereferences both.
+        [Test]
+        public void ARunWhoseBossListAndLedgerAreNullLoadsRatherThanThrowing()
+        {
+            var save = Save;
+            save.activeRun = new RunSnapshot { hasRun = true, bossesKilled = null, ledger = null };
+
+            Assert.DoesNotThrow(() => save.Reconcile());
+            Assert.IsNotNull(save.activeRun.bossesKilled);
+            Assert.IsNotNull(save.activeRun.ledger);
+        }
+
         // ---- folding a fight into a run ------------------------------------------
 
         [Test]

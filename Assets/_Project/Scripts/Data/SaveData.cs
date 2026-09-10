@@ -595,6 +595,14 @@ namespace PrincesPalace
             activeRun.currentHealth ??= new List<RunHealthEntry>();
             activeRun.clearedNodeIds ??= new List<int>();
             activeRun.relicIds ??= new List<string>();
+
+            // THE TWO LISTS RunSettlement ACTUALLY READS, and the two this
+            // method walked past. Every other run list above is guarded here
+            // and pruned somewhere; bossesKilled and ledger were neither, which
+            // left the only run-scoped values a load hands straight to a payout
+            // as the only ones nothing checked.
+            activeRun.bossesKilled ??= new List<string>();
+            activeRun.ledger ??= new List<RunLedgerEntry>();
             activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
 
@@ -608,6 +616,30 @@ namespace PrincesPalace
             // a relic renamed between quitting and resuming ends the draft a
             // round early, having handed over one fewer relic than it says.
             activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
+
+            // THE RUN'S BOSS KILLS, which are money. RunSettlement pays an
+            // ember per boss the profile has never killed and then writes that
+            // id into save.defeatedBossIds permanently, where
+            // DefeatDistinctBosses counts it. A boss renamed in enemies.json
+            // between quitting and resuming would therefore pay for a dead id
+            // AND leave it on the lifetime list, while the same boss under its
+            // new id pays again -- one rename, two embers, and a distinct-boss
+            // count that names something the game no longer has.
+            //
+            // LOUD, unlike the tolerant prunes above. Dropping a dangling item
+            // costs the player nothing they can see; dropping a boss kill takes
+            // away a payout they earned, and that should be in the log if
+            // anyone ever comes looking for the missing ember.
+            foreach (var bossId in activeRun.bossesKilled
+                         .Where(id => ContentDatabase.GetEnemy(id) == null)
+                         .ToList())
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[Reconcile] the run says it killed '{bossId}', which is no longer an enemy in content. " +
+                    "Dropping the kill rather than paying an ember for an id nothing can name.");
+
+                activeRun.bossesKilled.Remove(bossId);
+            }
 
             ReconcileLearnedSpells(activeRun);
             ReconcileShopStock(activeRun);
