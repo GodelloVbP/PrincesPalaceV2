@@ -65,13 +65,31 @@ namespace PrincesPalace.Domain.Content
         public bool StartsInSquad;
         public int SquadSlot;
 
-        // Which of the kit's six themes the fight HUD's party plate wears
-        // for this character -- content-authored (RawCharacterEntry.
-        // plateTheme), not a Core-side default, so a new character's card
-        // colour is a one-line JSON edit rather than a code change. Blue by
-        // default (the same default battleSpriteFacing/attackType use for
-        // an unauthored field).
+        // The character's identity colour on every fight-HUD card that
+        // stands for them (Domain.UiKit.PcTheme turns it into a rim hex and
+        // a name hex) -- content-authored (RawCharacterEntry.plateTheme),
+        // not a Core-side default, so a new character's colour is a one-line
+        // JSON edit rather than a code change.
+        //
+        // THE INITIALISER IS A FIXTURE DEFAULT, NOT A CONTENT ONE.
+        // CharacterEntryResolver now REFUSES an unauthored plateTheme, so
+        // nothing that came through content can reach this value; what can
+        // is the parameterless serializer constructor and the dozen tests
+        // that build a ResolvedCharacter by hand. Blue rather than nothing,
+        // because default(ButtonTheme) is Gold -- and a fixture silently
+        // wearing Gold looks authored, which is worse than one wearing the
+        // colour the untinted card is baked with.
         public ButtonTheme PlateTheme = ButtonTheme.Blue;
+
+        // Which pools.json resource this character's skills spend -- their
+        // PRIMARY pool, distinct from the optional private SignatureId
+        // above. "mana" for everyone shipped today; CharacterEntryResolver
+        // refuses an id pools.json does not define, so this is always a real
+        // pool by the time anything holds it.
+        //
+        // NOTHING READS IT YET. Phase A of the pool work is the catalogue
+        // only; CombatantState learns about pools in phase B.
+        public string PrimaryPoolId = "mana";
 
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.Signature for why that distinction is kept
@@ -97,10 +115,18 @@ namespace PrincesPalace.Domain.Content
             // with; making them all pass `false, 0` would be eighteen
             // arguments of noise for one fact only characters.json has.
             bool startsInSquad = false, int squadSlot = 0,
-            // Same reasoning, same place: a plate theme is one more fact
-            // most existing callers (fixtures that build a ResolvedCharacter
-            // by hand, not through the resolver) have no opinion about.
-            ButtonTheme plateTheme = ButtonTheme.Blue)
+            // Same reasoning, same place, and it stays OPTIONAL even though
+            // content must now author the theme: C# forbids a required
+            // parameter after an optional one, so dropping the value would
+            // mean a dozen fixtures passing `false, 0, <theme>` for a fact
+            // none of them has an opinion about. See PlateTheme's own note
+            // above for why the value is Blue rather than absent.
+            ButtonTheme plateTheme = ButtonTheme.Blue,
+            // Same place, same reasoning again, and here the default is
+            // also the shipped answer: every character in the game spends
+            // mana, so a fixture that has no opinion about pools gets the
+            // one every real row has.
+            string primaryPoolId = "mana")
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -123,6 +149,7 @@ namespace PrincesPalace.Domain.Content
             StartsInSquad = startsInSquad;
             SquadSlot = squadSlot;
             PlateTheme = plateTheme;
+            PrimaryPoolId = string.IsNullOrWhiteSpace(primaryPoolId) ? "mana" : primaryPoolId;
         }
     }
 }

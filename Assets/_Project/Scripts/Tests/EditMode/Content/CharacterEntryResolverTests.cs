@@ -14,6 +14,14 @@ namespace PrincesPalace.Domain.Tests
     // art-path conventions, not an arbitrary enum field).
     public class CharacterEntryResolverTests
     {
+        // The pool ids ContentBuilder hands the resolver. A LITERAL rather
+        // than a read of pools.json: every case here is about one character
+        // field, and reading the real catalogue would make a pool row's
+        // rename fail these for a reason that has nothing to do with what
+        // they assert. The one case that IS about the catalogue names its
+        // own ids inline.
+        private static readonly string[] KnownPools = { "mana" };
+
         // Same discipline StartingSquadResolverTests' own Character() uses:
         // every field the resolver checks before it ever reaches plateTheme
         // has to be valid, or a case here could fail for the wrong reason --
@@ -40,6 +48,13 @@ namespace PrincesPalace.Domain.Tests
                 charisma = 10,
                 startsInSquad = true,
                 squadSlot = slot,
+
+                // REQUIRED as of 2026-09-10 -- plateTheme is a character's
+                // identity colour now, so an unauthored one refuses the
+                // build. These three exist only to satisfy the whole-file
+                // starting-squad rule, so any valid theme does; a case that
+                // is ABOUT the theme uses Probe() below.
+                plateTheme = "Blue",
             };
         }
 
@@ -71,7 +86,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 Starter("a", 1), Starter("b", 2), Starter("c", 3), Probe(plateTheme),
             };
-            bool ok = CharacterEntryResolver.TryResolveAll(entries, out var all, out var errors);
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
             probe = ok ? all.Single(c => c.Id == "probe") : null;
             error = ok ? null : string.Join(" | ", errors);
             return ok;
@@ -98,13 +113,17 @@ namespace PrincesPalace.Domain.Tests
                 wisdom = wisdom,
                 intelligence = intelligence,
                 charisma = charisma,
+
+                // Authored so an ABILITY-SCORE case cannot fail for a theme
+                // reason -- plateTheme is required now.
+                plateTheme = "Blue",
             };
         }
 
         private static bool ResolveScores(RawCharacterEntry probe, out ResolvedCharacter resolved, out string error)
         {
             var entries = new List<RawCharacterEntry> { Starter("a", 1), Starter("b", 2), Starter("c", 3), probe };
-            bool ok = CharacterEntryResolver.TryResolveAll(entries, out var all, out var errors);
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
             resolved = ok ? all.Single(c => c.Id == "probe") : null;
             error = ok ? null : string.Join(" | ", errors);
             return ok;
@@ -145,12 +164,27 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains(badValue.ToString(), error, "the refusal must name the bad value");
         }
 
+        // WAS EmptyPlateTheme_DefaultsToBlue, until 2026-09-10. The theme
+        // stopped selecting one of six near-identical dark kit frames and
+        // became the character's identity colour on every HUD card that
+        // stands for them -- at which point there is no such thing as a
+        // sensible default, because every valid value is somebody else's
+        // colour and Blue in particular is Odette's. An unauthored row would
+        // not look unthemed; it would look like her.
         [Test]
-        public void EmptyPlateTheme_DefaultsToBlue()
+        public void EmptyPlateTheme_RefusesTheBuild()
         {
-            Assert.IsTrue(Resolve("", out var resolved, out var error),
-                "an unauthored plateTheme should still build: " + error);
-            Assert.AreEqual(ButtonTheme.Blue, resolved.PlateTheme);
+            Assert.IsFalse(Resolve("", out _, out string error),
+                "an unauthored plateTheme must refuse the build, not fall through to Blue");
+
+            StringAssert.Contains("probe", error, "the refusal must name the character");
+            StringAssert.Contains("plateTheme", error, "the refusal must name the field");
+
+            foreach (var theme in System.Enum.GetNames(typeof(ButtonTheme)))
+            {
+                StringAssert.Contains(theme, error,
+                    $"the refusal must list every valid theme so an author can fix it in one pass -- '{theme}' is missing");
+            }
         }
 
         [TestCase("Silver", ButtonTheme.Silver)]
@@ -177,6 +211,105 @@ namespace PrincesPalace.Domain.Tests
             {
                 StringAssert.Contains(name, error, "the refusal must list the valid ButtonTheme names");
             }
+        }
+
+        // ---- primaryPoolId -------------------------------------------------
+        //
+        // Which resource a character's skills spend, as a pools.json id. The
+        // field defaults to "mana" so the whole shipped roster needed no
+        // edit; what has to be pinned is that the default really is mana,
+        // that a blank behaves like an absent key, and that an id no pool
+        // defines is refused rather than carried around as a dangling
+        // string.
+
+        private static RawCharacterEntry ProbeWithPool(string primaryPoolId, bool authorTheField)
+        {
+            var probe = new RawCharacterEntry
+            {
+                id = "probe",
+                displayName = "Probe",
+                role = "Tank",
+                maxHealth = 30,
+                speed = 5,
+                attack = 5,
+                physicalDefense = 5,
+                magicalDefense = 3,
+                strength = 10,
+                dexterity = 10,
+                constitution = 10,
+                wisdom = 10,
+                intelligence = 10,
+                charisma = 10,
+
+                // Authored explicitly so a later change to how plateTheme
+                // is defaulted cannot make a POOL case fail for a theme
+                // reason.
+                plateTheme = "Blue",
+            };
+
+            // `authorTheField` is what separates "the author omitted the
+            // key" (JsonUtility leaves the C# initialiser in place) from
+            // "the author wrote an empty string". Both must mean mana, and
+            // only writing them differently proves it.
+            if (authorTheField)
+            {
+                probe.primaryPoolId = primaryPoolId;
+            }
+
+            return probe;
+        }
+
+        private static bool ResolvePool(RawCharacterEntry probe, string[] knownPools,
+            out ResolvedCharacter resolved, out string error)
+        {
+            var entries = new List<RawCharacterEntry> { Starter("a", 1), Starter("b", 2), Starter("c", 3), probe };
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, knownPools, out var all, out var errors);
+            resolved = ok ? all.Single(c => c.Id == "probe") : null;
+            error = ok ? null : string.Join(" | ", errors);
+            return ok;
+        }
+
+        [Test]
+        public void AnOmittedPrimaryPoolId_IsMana()
+        {
+            Assert.IsTrue(ResolvePool(ProbeWithPool(null, authorTheField: false), KnownPools,
+                    out var resolved, out string error),
+                "a character that says nothing about pools must still build: " + error);
+            Assert.AreEqual("mana", resolved.PrimaryPoolId);
+        }
+
+        [Test]
+        public void AnEmptyPrimaryPoolId_IsAlsoMana()
+        {
+            Assert.IsTrue(ResolvePool(ProbeWithPool("", authorTheField: true), KnownPools,
+                    out var resolved, out string error),
+                "an explicitly blank primaryPoolId must mean the same as an omitted one: " + error);
+            Assert.AreEqual("mana", resolved.PrimaryPoolId);
+        }
+
+        [Test]
+        public void AnAuthoredPrimaryPoolId_ResolvesWhenThatPoolExists()
+        {
+            // Two ids in the catalogue, so this cannot pass by the resolver
+            // simply accepting whatever it is handed against a one-element
+            // list.
+            Assert.IsTrue(ResolvePool(ProbeWithPool("fury", authorTheField: true), new[] { "mana", "fury" },
+                    out var resolved, out string error),
+                "a pool the catalogue defines must be accepted: " + error);
+            Assert.AreEqual("fury", resolved.PrimaryPoolId);
+        }
+
+        [Test]
+        public void AnUnknownPrimaryPoolId_RefusesTheBuild_NamingTheIdAndTheKnownPools()
+        {
+            Assert.IsFalse(ResolvePool(ProbeWithPool("rage", authorTheField: true), new[] { "mana", "fury" },
+                    out _, out string error),
+                "a primaryPoolId no pool defines must not be carried around as a dangling string");
+
+            StringAssert.Contains("probe", error, "the refusal must name the character");
+            StringAssert.Contains("rage", error, "the refusal must name the bad value");
+            StringAssert.Contains("mana", error, "the refusal must list the pools that do exist");
+            StringAssert.Contains("fury", error, "the refusal must list the pools that do exist");
         }
     }
 }

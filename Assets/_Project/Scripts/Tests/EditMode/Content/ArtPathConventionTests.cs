@@ -297,13 +297,18 @@ namespace PrincesPalace.Domain.Tests
             battle.battleSpritePath = "Assets/_Project/Art/Characters/sheep.png";
 
             Assert.IsFalse(CharacterEntryResolver.TryResolveAll(
-                new List<RawCharacterEntry> { portrait }, out _, out var portraitErrors));
+                new List<RawCharacterEntry> { portrait }, KnownPools, out _, out var portraitErrors));
             StringAssert.Contains("portraitPath", string.Join(" ", portraitErrors));
 
             Assert.IsFalse(CharacterEntryResolver.TryResolveAll(
-                new List<RawCharacterEntry> { battle }, out _, out var battleErrors));
+                new List<RawCharacterEntry> { battle }, KnownPools, out _, out var battleErrors));
             StringAssert.Contains("battleSpritePath", string.Join(" ", battleErrors));
         }
+
+        // The pool ids ContentBuilder hands the resolver, as a literal: these
+        // cases are about art paths, so reading the real pools.json would let
+        // a pool rename fail an art-path test.
+        private static readonly string[] KnownPools = { "mana" };
 
         private static RawCharacterEntry MinimalCharacter()
         {
@@ -326,6 +331,13 @@ namespace PrincesPalace.Domain.Tests
                 wisdom = 10,
                 intelligence = 8,
                 charisma = 8,
+
+                // Required since 2026-09-10, and checked BEFORE the two path
+                // fields in TryResolveOne -- so without it every case here
+                // would refuse for a theme reason and the StringAssert on
+                // "portraitPath" would fail, which is the wrong-reason
+                // masquerade this method's own header is about.
+                plateTheme = "Blue",
             };
         }
     }

@@ -46,3 +46,4 @@ MonoBehaviour:
     StartsInSquad: 1
     SquadSlot: 3
     PlateTheme: 3
+    PrimaryPoolId: mana

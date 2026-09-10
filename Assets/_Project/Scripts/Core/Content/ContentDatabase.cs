@@ -34,6 +34,7 @@ namespace PrincesPalace.Content
         private const string AchievementResourcePath = "Content/Achievements";
         private const string ModifierResourcePath = "Content/Modifiers";
         private const string RewardTrackResourcePath = "Content/RewardTracks";
+        private const string PoolResourcePath = "Content/Pools";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -46,6 +47,17 @@ namespace PrincesPalace.Content
         private static List<AchievementDefinition> _achievements;
         private static List<ModifierDefinition> _modifiers;
         private static List<RewardTrackDefinitionAsset> _rewardTracks;
+        private static List<PoolDefinition> _pools;
+
+        // Every combat resource pool, authored order. Nothing in the fight
+        // reads one yet -- phase A of the pool work is the catalogue only,
+        // and CombatantState learns about pools in phase B. Listed here now
+        // so the type is loaded, ordered and id-swept like every other
+        // catalogue rather than bolted on when the first reader arrives.
+        public static IReadOnlyList<PoolDefinition> Pools
+        {
+            get { EnsureLoaded(); return _pools; }
+        }
 
         // Characters in authored roster order.
         public static IReadOnlyList<CharacterDefinition> Characters
@@ -378,6 +390,7 @@ namespace PrincesPalace.Content
             _achievements = null;
             _modifiers = null;
             _rewardTracks = null;
+            _pools = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test
@@ -397,6 +410,17 @@ namespace PrincesPalace.Content
         {
             EnsureLoaded();
             return _characters.FirstOrDefault(c => c.id == id);
+        }
+
+        // The pool a character's primaryPoolId names. Null when nothing
+        // matches, the same graceful shape every other Get*(id) here has --
+        // and the content build already refused an unknown id, so a null
+        // here means the catalogue was swapped out from under a save, not
+        // that an author typed the wrong thing.
+        public static PoolDefinition GetPool(string id)
+        {
+            EnsureLoaded();
+            return _pools.FirstOrDefault(p => p.id == id);
         }
 
         public static TalentDefinition GetTalent(string id)
@@ -760,6 +784,9 @@ namespace PrincesPalace.Content
                 return;
             }
 
+            // POOLS FIRST, mirroring the order ContentBuilder writes them in
+            // -- a character names a pool, never the other way round.
+            _pools = LoadOrdered<PoolDefinition>(PoolResourcePath);
             _characters = LoadOrdered<CharacterDefinition>(CharacterResourcePath);
             _talents = LoadOrdered<TalentDefinition>(TalentResourcePath);
             _upgrades = LoadOrdered<UpgradeDefinition>(UpgradeResourcePath);

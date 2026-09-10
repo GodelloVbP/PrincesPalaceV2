@@ -38,7 +38,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `portraitPath` | string | `""` | Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder. |  |
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
-| `plateTheme` | string | `""` | Which UiKit.ButtonTheme the fight HUD's party plate wears for this character, matched case-insensitively; empty means Blue. | Gold, Crimson, Violet, Blue, Green, Silver |
+| `plateTheme` | string | `""` | Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build. | Gold, Crimson, Violet, Blue, Green, Silver |
+| `primaryPoolId` | string | `"mana"` | The pools.json id of the resource this character's skills spend; refused unless pools.json defines it, and blank means 'mana'. |  |
 | `signatureId` | string | `""` | The id of this character's private signature resource; empty means the character has none. |  |
 | `signatureDisplayName` | string | `""` | The name shown for the signature resource, e.g. 'Wool'. |  |
 | `signatureCapacity` | int | `0` | How much signature resource this character can hold. |  |
@@ -129,6 +130,30 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `displayName` | string | (none -- required) | The name shown for this modifier ('Rift affix'). |  |
 | `description` | string | `""` | Flavor/rules text shown to the player. |  |
 | `effects` | RawModifierEffect[] (below) | `[]` | The single rule this modifier grants; more than one entry is rejected. |  |
+
+## pools.json -- `RawPoolEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | (none -- required) | Stable identifier a character's primaryPoolId names; unique across every content type. |  |
+| `displayName` | string | (none -- required) | The name shown for this pool, e.g. 'Mana'; the character sheet's max-resource row reads it. |  |
+| `shortTag` | string | (none -- required) | The short tag drawn on the combat meter, e.g. 'MP'; no whitespace, at most 6 characters. |  |
+| `capacityRule` | string | (none -- required) | Required. How capacity is derived: 'WisdomDerived' (the authored capacity is a base every Max Mana source adds to) or 'Fixed' (the authored capacity is the whole number, from every source). | WisdomDerived, Fixed |
+| `capacity` | int | `0` | How much this pool holds; must be positive. Under 'WisdomDerived' it is the BASE every Max Mana source adds to, under 'Fixed' it is the entire capacity. |  |
+| `gainPerTurn` | int | `0` | Gained at the start of each of the owner's turns; must not be negative. |  |
+| `gainOnAttack` | int | `0` | Gained when the owner deals damage; must not be negative. |  |
+| `gainOnDamageTaken` | int | `0` | Gained when the owner takes damage; must not be negative. |  |
+| `decayPerIdleTurn` | int | `0` | Lost at the start of an idle turn (see decayUnless); must not be negative. 0 means the pool never decays. |  |
+| `decayUnless` | string | `""` | What stops a turn counting as idle: 'Damage' (dealt or taken) or 'AnyAction'. Blank means Damage, and it may only be authored on a pool that actually decays. | Damage, AnyAction |
+| `startRule` | string | (none -- required) | Required. What the pool holds at the start of a fight: 'Full', 'Zero', or 'Value' (see startValue). | Full, Zero, Value |
+| `startValue` | int | `0` | Only for startRule 'Value': what the pool opens a fight at, 1..capacity. Must be 0 under any other start rule. |  |
+| `brightHex` | string | (none -- required) | The meter fill colour, '#RRGGBB' or '#RRGGBBAA'. |  |
+| `deepHex` | string | (none -- required) | The meter's dark tone, '#RRGGBB' or '#RRGGBBAA'; its rim and shade are derived from this at 0.70 and 0.44 alpha. |  |
+| `textHex` | string | (none -- required) | The colour of the meter's own text, '#RRGGBB' or '#RRGGBBAA'. |  |
+| `pulse` | bool | `false` | Whether the meter beats like a heartbeat while the fight runs. |  |
+| `allowsSpellBooks` | bool | `true` | Whether a character whose primary pool this is may hold spell books. |  |
+| `restoredByManaEffects` | bool | `true` | Whether mana potions, RestorePartyMana and the bot's mana accounting refill this pool. |  |
+| `absorbsDamage` | bool | `false` | Whether this pool soaks incoming damage before health, the way a signature resource can. |  |
 
 ## relics.json -- `RawRelicEntry`
 

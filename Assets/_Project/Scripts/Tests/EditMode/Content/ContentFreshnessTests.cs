@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Tests
             "\n\nRun: powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_content.ps1" +
             "\n(or tools/preview.ps1 -Build, which picks that route or the open-Editor one for you).";
 
-        // A build writes eleven folders. Fewer than eight means the stamp is
+        // A build writes twelve folders. Fewer than eight means the stamp is
         // describing something other than this catalogue, and every check
         // below would agree with it.
         private const int MinimumFolders = 8;
@@ -78,7 +78,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.GreaterOrEqual(stamp.IdsByFolder.Count, MinimumFolders,
                 $"content_stamp.json lists only {stamp.IdsByFolder.Count} folder(s); a completed build writes " +
-                "eleven. Every other check here would pass vacuously against a stamp that describes almost nothing." + Fix);
+                "twelve. Every other check here would pass vacuously against a stamp that describes almost nothing." + Fix);
 
             CollectionAssert.IsNotEmpty(stamp.InputHash ?? "",
                 "content_stamp.json carries no inputHash, so nothing can tell whether the tree matches its inputs." + Fix);

@@ -23,10 +23,23 @@ namespace PrincesPalace.Domain.Tests
     // the same trio.
     public class RewardTrackContentPinTests
     {
+        // The real pools.json through the real resolver, because this file
+        // reads the real characters.json -- the pool ids a character's
+        // primaryPoolId is checked against have to be the ones a build would
+        // actually produce, the same way ContentBuilder resolves pools first
+        // and hands the ids down.
+        private static List<string> PoolIds()
+        {
+            var raw = ContentDataFiles.ParseFile<RawPoolFile>(ContentDataFiles.DataPath("pools.json")).pools;
+            bool ok = PoolEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
+            Assert.IsTrue(ok, "pools.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
+            return resolved.Select(pool => pool.Id).ToList();
+        }
+
         private static List<ResolvedCharacter> Characters()
         {
             var raw = ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters;
-            bool ok = CharacterEntryResolver.TryResolveAll(raw, out var resolved, out var errors);
+            bool ok = CharacterEntryResolver.TryResolveAll(raw, PoolIds(), out var resolved, out var errors);
             Assert.IsTrue(ok, "characters.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
             return resolved;
         }

@@ -41,14 +41,27 @@ namespace PrincesPalace.Domain.Content
         // starting member could be drawn.
         public const int DefaultSquadSize = FightHudSpec.StageSlotsPerSide;
 
-        public static bool TryResolveAll(IReadOnlyList<RawCharacterEntry> entries, out List<ResolvedCharacter> resolved, out List<string> errors)
+        // TAKES THE KNOWN POOL IDS, the way RelicEntryResolver takes the
+        // known achievement ids: ContentBuilder resolves pools.json FIRST
+        // and hands the real ids down, so the only source of truth for what
+        // resources exist is the file that defines them rather than a
+        // constant here that content has to match by hand.
+        //
+        // REQUIRED, not an optional parameter defaulting to null. Every
+        // caller either has the pool ids or is a fixture that can pass the
+        // one shipped id in a literal; an optional parameter would be a hole
+        // a later caller falls into silently, and the failure would be a
+        // primaryPoolId typo shipping as a character whose resource does not
+        // exist.
+        public static bool TryResolveAll(IReadOnlyList<RawCharacterEntry> entries, IReadOnlyCollection<string> knownPoolIds,
+            out List<ResolvedCharacter> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedCharacter>();
             errors = new List<string>();
 
             for (int i = 0; i < entries.Count; i++)
             {
-                if (TryResolveOne(entries[i], i, resolved.Count, out var single, out string error))
+                if (TryResolveOne(entries[i], i, resolved.Count, knownPoolIds, out var single, out string error))
                 {
                     resolved.Add(single);
                 }
@@ -110,7 +123,8 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveOne(RawCharacterEntry raw, int index, int sortOrder, out ResolvedCharacter resolvedCharacter, out string error)
+        private static bool TryResolveOne(RawCharacterEntry raw, int index, int sortOrder,
+            IReadOnlyCollection<string> knownPoolIds, out ResolvedCharacter resolvedCharacter, out string error)
         {
             resolvedCharacter = default;
             string label = string.IsNullOrEmpty(raw.id) ? $"characters.json entry #{index + 1}" : $"character '{raw.id}'";
@@ -146,10 +160,37 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!TryParseEnum(raw.plateTheme, out ButtonTheme plateTheme, ButtonTheme.Blue))
+            // REQUIRED, the two-argument overload -- exactly as role above.
+            // Empty used to fall back to Blue, which was fine while the theme
+            // only picked one of six near-identical dark kit frames. It is
+            // the character's IDENTITY COLOUR now (PcTheme): the rim and the
+            // name on every HUD card that stands for them, and Blue is
+            // Odette's. An unauthored row would not look unthemed, it would
+            // look like Odette, which is the plausible-wrong-answer this
+            // codebase refuses (docs/CODE_STANDARDS.md Sec5).
+            if (!TryParseEnum(raw.plateTheme, out ButtonTheme plateTheme))
             {
-                error = $"{label}: plateTheme '{raw.plateTheme}' is not a ButtonTheme. " +
+                error = $"{label}: plateTheme '{raw.plateTheme}' is required and must name a ButtonTheme " +
+                        $"— it is this character's identity colour on every HUD card. " +
                         $"Valid: {NamesOf<ButtonTheme>()}.";
+                return false;
+            }
+
+            // WHICH RESOURCE THIS CHARACTER'S SKILLS SPEND, checked against
+            // the pools the build actually produced rather than against a
+            // list here -- see TryResolveAll's header. Blank resolves to
+            // "mana" (the field's own default, restated so a row that
+            // explicitly writes "" behaves like one that omits the key), and
+            // an unknown id is refused naming the ids that do exist, because
+            // the alternative is a character whose meter has no colour, no
+            // capacity and no name.
+            string primaryPoolId = string.IsNullOrWhiteSpace(raw.primaryPoolId) ? "mana" : raw.primaryPoolId.Trim();
+            if (knownPoolIds == null || !knownPoolIds.Contains(primaryPoolId))
+            {
+                string known = knownPoolIds == null || knownPoolIds.Count == 0
+                    ? "(none -- pools.json resolved nothing)"
+                    : string.Join(", ", knownPoolIds);
+                error = $"{label}: primaryPoolId '{primaryPoolId}' is not a pool in pools.json. Known: {known}.";
                 return false;
             }
 
@@ -280,7 +321,8 @@ namespace PrincesPalace.Domain.Content
                 sortOrder,
                 raw.startsInSquad,
                 raw.squadSlot,
-                plateTheme);
+                plateTheme,
+                primaryPoolId);
             error = null;
             return true;
         }

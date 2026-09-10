@@ -48,6 +48,12 @@ namespace PrincesPalace.Domain.Tests
                 charisma = 10,
                 startsInSquad = starts,
                 squadSlot = slot,
+
+                // Required since 2026-09-10 (the character's identity
+                // colour), and stated here for the same reason the ability
+                // scores are: a SQUAD rejection that is really a theme
+                // rejection proves nothing about the squad.
+                plateTheme = "Blue",
             };
         }
 
@@ -59,16 +65,21 @@ namespace PrincesPalace.Domain.Tests
             Character("bench", false, 0),
         };
 
+        // The pool ids ContentBuilder hands the resolver, as a literal: every
+        // case here is about the squad rule, so reading the real pools.json
+        // would let a pool rename fail a squad test.
+        private static readonly string[] KnownPools = { "mana" };
+
         private static string Resolve(List<RawCharacterEntry> entries)
         {
-            bool ok = CharacterEntryResolver.TryResolveAll(entries, out var resolved, out var errors);
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var resolved, out var errors);
             return ok ? null : string.Join(" | ", errors);
         }
 
         [Test]
         public void ThreeFlaggedCharactersWithDistinctSlotsResolve()
         {
-            Assert.IsTrue(CharacterEntryResolver.TryResolveAll(AValidFile(), out var resolved, out var errors),
+            Assert.IsTrue(CharacterEntryResolver.TryResolveAll(AValidFile(), KnownPools, out var resolved, out var errors),
                 "a file with exactly three starters should build: " + string.Join(" | ", errors));
 
             var squad = resolved.Where(c => c.StartsInSquad).OrderBy(c => c.SquadSlot).Select(c => c.Id).ToList();
@@ -95,7 +106,7 @@ namespace PrincesPalace.Domain.Tests
                 Character("b", true, 2),
             };
 
-            Assert.IsTrue(CharacterEntryResolver.TryResolveAll(shuffled, out var resolved, out _));
+            Assert.IsTrue(CharacterEntryResolver.TryResolveAll(shuffled, KnownPools, out var resolved, out _));
 
             CollectionAssert.AreEqual(new[] { "a", "b", "c" },
                 resolved.Where(c => c.StartsInSquad).OrderBy(c => c.SquadSlot).Select(c => c.Id).ToList());

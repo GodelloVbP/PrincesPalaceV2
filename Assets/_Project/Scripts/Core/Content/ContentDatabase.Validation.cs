@@ -71,6 +71,17 @@ namespace PrincesPalace.Content
                          ("Enemy", _enemies.Select(x => x.id)),
                          ("Item", _items.Select(x => x.id)),
                          ("Skill", _skills.Select(x => x.id)),
+
+                         // Pools join the sweep like every other catalogue.
+                         // There is deliberately NO second "a character
+                         // names a known pool" check beside it: pools are
+                         // built before characters and a failed pool build
+                         // writes no characters at all, so a check here
+                         // could only ever fire on input
+                         // CharacterEntryResolver had already accepted --
+                         // the unreachable shape this file's header says was
+                         // deleted from the codebase.
+                         ("Pool", _pools.Select(x => x.id)),
                      })
             {
                 foreach (string id in ids)

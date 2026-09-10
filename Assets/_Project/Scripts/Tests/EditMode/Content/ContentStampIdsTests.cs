@@ -18,7 +18,7 @@ namespace PrincesPalace.Domain.Tests
     // something else. The plan this work came from promised exactly this check
     // and it was never written.
     //
-    // What is compared: for each of the ten folders a build writes, the ids
+    // What is compared: for each of the twelve folders a build writes, the ids
     // the REAL resolvers produce from the CURRENT ContentData/*.json against
     // the ids the stamp lists. A difference is named, both ways round.
     //
@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
             "\n\nRun: powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_content.ps1" +
             "\n(or tools/preview.ps1 -Build, which picks that route or the open-Editor one for you).";
 
-        // Eleven folders today. Eight is the same floor ContentFreshnessTests
+        // Twelve folders today. Eight is the same floor ContentFreshnessTests
         // uses: below it, the comparison is describing something other than
         // this catalogue and every agreement it reports is an accident.
         private const int MinimumTypesCompared = 8;
@@ -126,6 +126,30 @@ namespace PrincesPalace.Domain.Tests
             return ids;
         }
 
+        // Pools before characters, because a character's primaryPoolId is
+        // validated against these -- the same ordering ContentBuilder calls
+        // load-bearing, mirrored rather than assumed.
+        private static List<string> PoolIds() =>
+            Resolve<RawPoolEntry, ResolvedPool>(
+                "pools.json", ContentDataFiles.ParseFile<RawPoolFile>(ContentDataFiles.DataPath("pools.json")).pools,
+                PoolEntryResolver.TryResolveAll, pool => pool.Id);
+
+        // The character resolver with the real pool ids already bound, so
+        // both of the two places that resolve characters here go through one
+        // statement of "which pools exist" rather than two.
+        private static List<ResolvedCharacter> ResolveCharacters()
+        {
+            var poolIds = PoolIds();
+
+            bool Resolver(IReadOnlyList<RawCharacterEntry> entries, out List<ResolvedCharacter> resolved,
+                          out List<string> errors) =>
+                CharacterEntryResolver.TryResolveAll(entries, poolIds, out resolved, out errors);
+
+            return ResolveAllOf<RawCharacterEntry, ResolvedCharacter>(
+                "characters.json", ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters,
+                Resolver);
+        }
+
         // Achievements first, because relics are validated against their ids
         // -- the same ordering ContentBuilder calls load-bearing.
         private static List<string> AchievementIds() =>
@@ -164,9 +188,7 @@ namespace PrincesPalace.Domain.Tests
         // else and every book-only spell in the game is authored to "sheep".
         private static List<string> RewardTrackIds()
         {
-            var characters = ResolveAllOf<RawCharacterEntry, ResolvedCharacter>(
-                "characters.json", ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters,
-                CharacterEntryResolver.TryResolveAll);
+            var characters = ResolveCharacters();
             var skills = ResolveAllOf<RawSkillEntry, ResolvedSkill>(
                 "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,
                 SkillEntryResolver.TryResolveAll);
@@ -199,9 +221,9 @@ namespace PrincesPalace.Domain.Tests
         private static Dictionary<string, List<string>> ResolvedByFolder() =>
             new Dictionary<string, List<string>>(StringComparer.Ordinal)
             {
-                ["Characters"] = Resolve<RawCharacterEntry, ResolvedCharacter>(
-                    "characters.json", ContentDataFiles.ParseFile<RawCharacterFile>(ContentDataFiles.DataPath("characters.json")).characters,
-                    CharacterEntryResolver.TryResolveAll, character => character.Id),
+                ["Pools"] = PoolIds(),
+
+                ["Characters"] = ResolveCharacters().Select(character => character.Id).ToList(),
 
                 ["Talents"] = Resolve<RawTalentEntry, ResolvedTalent>(
                     "talents.json", ContentDataFiles.ParseFile<RawTalentFile>(ContentDataFiles.DataPath("talents.json")).talents,
@@ -306,7 +328,7 @@ namespace PrincesPalace.Domain.Tests
                 "the stamp says -- " + string.Join(", ", empty));
         }
 
-        // Eleven folders are mirrored above and a build writes eleven. A type added
+        // Twelve folders are mirrored above and a build writes twelve. A type added
         // to ContentBuilder without a row here would be a type this check
         // silently stops covering, and the stamp is the only place that says
         // how many there are.

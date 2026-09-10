@@ -90,12 +90,31 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which way the battle art is drawn in its source file: 'Right' or 'Left'.")]
         public string battleSpriteFacing = "";
 
-        // Which of the kit's six themes the fight HUD's party plate wears
-        // for this character. Parsed the same way battleSpriteFacing is
-        // (case-insensitive, empty means the sensible default) against
-        // UiKit.ButtonTheme, in CharacterEntryResolver.
-        [ContentDoc("Which UiKit.ButtonTheme the fight HUD's party plate wears for this character, matched case-insensitively; empty means Blue.")]
+        // THIS CHARACTER'S IDENTITY COLOUR, worn by the rim and the name of
+        // every fight-HUD card that stands for them (Domain.UiKit.PcTheme
+        // turns the theme into the two hexes). Matched case-insensitively
+        // against UiKit.ButtonTheme, and REQUIRED: unlike battleSpriteFacing
+        // or attackType there is no sensible default, because every value is
+        // some other character's colour.
+        [ContentDoc("Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build.")]
         public string plateTheme = "";
+
+        // WHICH RESOURCE THIS CHARACTER'S SKILLS SPEND, as a pools.json id.
+        //
+        // DEFAULTS TO "mana", which is what makes this field free: every
+        // authored character and every enemy carries mana today, so the
+        // whole roster keeps working with no row edited, and a character
+        // who trades mana for something else says so in one line rather
+        // than in a special case per screen. CharacterEntryResolver refuses
+        // an id pools.json does not define, naming the known ones -- the
+        // RelicEntryResolver/achievementIds shape, so the only source of
+        // truth for what pools exist is the file that defines them.
+        //
+        // NOT the same field as signatureId below: a signature resource is
+        // a SECOND, private pool alongside the primary one (Shawn has both
+        // mana and Wool). This is the one a skill's manaCost spends.
+        [ContentDoc("The pools.json id of the resource this character's skills spend; refused unless pools.json defines it, and blank means 'mana'.")]
+        public string primaryPoolId = "mana";
 
         // Optional private combat resource. An empty signatureId means the
         // character has none — that is the meaningful distinction, not a
