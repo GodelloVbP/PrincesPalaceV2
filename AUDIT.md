@@ -1306,6 +1306,16 @@ as a mismatch to repair.
 
 ## Findings from the run-outside-combat bug hunt, 2026-09-10
 
+Four Opus hunters (combat and the resource-pool model; the run outside combat; the fight
+stage and its presentation; verification/content tooling plus UiKit) reported rather than
+fixed, and four fixers worked from those reports — which is what let a finding be graded as
+an owner's call before anyone spent a commit on it. Full write-up, including the deferred
+work and the untuned Fury economy: `docs/BUG_HUNT_2026-09-10.md`. This hunt has TWO register
+entries and they sit under different headers: #112 below, and #111 (`absorbsDamage`), which
+was appended to the 2026-09-08 layered-spell section above rather than here. Left where it
+is — this register does not renumber or relocate — but noted, because a reader looking for
+this hunt's findings under this heading would find half of them.
+
 ### 112. `RunSnapshot.shopStockVersion` is written in four places and read in none
 
 `Data/RunSnapshot.cs` declares it; `Core/Bot/RunOrchestrator.Shop.cs:129` sets it
