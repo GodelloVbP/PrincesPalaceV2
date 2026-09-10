@@ -89,6 +89,32 @@ public static class UiWiringSweep
                         problems.Add($"  {controller.GetType().Name}.{property.propertyPath} is an empty array");
                     }
                 }
+                else if (property.propertyType == SerializedPropertyType.Generic)
+                {
+                    // A SINGULAR (non-array) serializable struct/class field.
+                    // enterChildren is false for every NextVisible call past
+                    // the first, so without this the outer walk reports
+                    // "Generic, not an array" and moves straight to the next
+                    // sibling -- never inspecting this field's own object
+                    // references. Mirrors the array-element case above
+                    // (Members()), for the day a type like IconEntry is used
+                    // as a single field instead of only ever IconEntry[].
+                    // Nothing in this project does that today, so this path
+                    // is currently unreached by any real controller -- it
+                    // exists so the NEXT one that does it doesn't silently
+                    // lose E3 coverage the way the array case did before
+                    // Members() was added.
+                    foreach (var member in Members(property))
+                    {
+                        if (member.propertyType == SerializedPropertyType.ObjectReference
+                            && member.objectReferenceValue == null)
+                        {
+                            problems.Add(
+                                $"  {controller.GetType().Name}.{property.propertyPath}." +
+                                $"{member.name} is null");
+                        }
+                    }
+                }
             }
         }
 
