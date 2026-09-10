@@ -42,6 +42,37 @@ namespace PrincesPalace
         // non-null with their emptiness expressed in their contents.
         public bool hasRun;
 
+        // WHETHER THE PARTY HAS ACTUALLY GONE DOWN, which is a different
+        // question from `hasRun` and the one most callers mean.
+        //
+        // A run EXISTS from the moment the descent gate rolls the relic draft,
+        // and that draft is offered IN THE HUB and deliberately survives
+        // leaving and coming back (RelicDraftTests pins it). So `hasRun` is
+        // true while the player is standing in the hub with nothing under way
+        // -- SystemMenuController's `inDescent` comment states exactly this,
+        // and had to carry a second flag because of it.
+        //
+        // RunManager.EndRun read `hasRun` and treated the two alike, so the
+        // hub's Main Menu button on a drafted-but-unwalked run stripped every
+        // roster character's gear and the whole stockpile and counted a
+        // lifetimeRunsEnded -- the same symptom 95c0b8b3 fixed for the
+        // no-run-at-all case, reached through the door that guard left open.
+        //
+        // DERIVED, not a fourth serialized flag. Three fields already record
+        // "the party moved": `step` leaves 0 only through RunManager.MoveTo,
+        // `roomsCleared` and `clearedNodeIds` only through a room that
+        // finished. A flag would be a fourth thing to write and a fourth
+        // thing to forget, and JsonUtility would carry it into saves that
+        // predate it as false anyway -- which is the right answer for an
+        // in-flight run only by luck.
+        //
+        // NOT what SystemMenuController asks. That is "is THIS SCENE part of a
+        // descent", answered at build time, and it is true on the map at the
+        // entry node -- where this is still false because nothing has moved
+        // yet. Two honest questions, deliberately not merged.
+        public bool DescentIsUnderWay =>
+            hasRun && (step > 0 || roomsCleared > 0 || (clearedNodeIds != null && clearedNodeIds.Count > 0));
+
         public ulong runSeed;
 
         // BOTH are needed and they are not the same number. `step` advances

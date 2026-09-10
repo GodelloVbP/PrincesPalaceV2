@@ -54,6 +54,14 @@ namespace PrincesPalace
         //
         // Which scene you are in cannot be got wrong at runtime, and the hub is
         // never part of a descent by construction.
+        //
+        // The observation above is now also a model: RunSnapshot's
+        // DescentIsUnderWay (forwarded as RunManager.DescentIsUnderWay) is what
+        // EndRun asks before it strips gear, because it read hasRun and stripped
+        // a roster over a draft that never left the hub. This field is NOT that
+        // question and does not become it -- on the map at the entry node this
+        // scene is part of a descent while nothing has moved yet, so
+        // DescentIsUnderWay is still false and these two tabs must still show.
         [SerializeField] internal bool inDescent;
 
         private bool _wired;

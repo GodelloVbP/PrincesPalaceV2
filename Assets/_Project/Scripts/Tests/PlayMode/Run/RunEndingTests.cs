@@ -327,5 +327,90 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(endedBefore, Save.lifetimeRunsEnded,
                 "a run that never happened was counted as one that ended");
         }
+
+        // ---- ending a draft that never went anywhere -------------------------
+        //
+        // The guard above asks HasRun, and HasRun turns out not to be the
+        // question. RunOrchestrator.StartRun runs on the descent-gate PRESS,
+        // in the hub, with the relic draft opening over the hub afterwards --
+        // so between the press and the first room, hasRun is true and nothing
+        // has been walked. SystemMenuController's own `inDescent` comment says
+        // this outright ("HasRun is true while the player is standing in the
+        // hub with no descent under way") and had to carry a second flag for it.
+        //
+        // So the hub's Main Menu button, both of ExitsController's doors and an
+        // alt-F4 at the draft all reached the two clears with a run that had
+        // done nothing: gear off every roster character, the whole stockpile
+        // emptied, one more lifetimeRunsEnded. Same symptom as 95c0b8b3,
+        // through the door that fix left open.
+        //
+        // The pair below is the whole contract: nothing walked is discarded
+        // untouched, one room walked is stripped exactly as 95c0b8b3 intends.
+
+        [Test]
+        public void ADraftThatNeverLeftTheHubIsNotARunWorthStripping()
+        {
+            var character = Save.roster.FirstOrDefault();
+            Assert.IsNotNull(character, "fixture: the save has nobody to equip");
+
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+
+            Save.stockpiledItems.Clear();
+            Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
+            Save.stockpiledItems.Add(new InventoryEntry("mana_potion", 1));
+            Save.stockpiledItems.Add(new InventoryEntry("iron_helm", 1));
+
+            // The gate's own sequence: StartRun, then the draft opens over the
+            // hub. No MoveTo, no ClearCurrentRoom -- the party never left.
+            RunManager.StartRun(31337);
+            RunManager.Run.relicDrafted = true;
+            RunManager.Run.relicIds.Add("dual_wield");
+
+            Assert.IsTrue(RunManager.HasRun, "fixture: the draft means a run exists");
+            Assert.IsFalse(RunManager.DescentIsUnderWay,
+                "fixture: and it has not gone anywhere yet");
+
+            RunManager.EndRun();
+
+            Assert.AreEqual(3, Save.stockpiledItems.Count,
+                "walking to the title from the hub emptied the pack over a descent that never started");
+            Assert.IsFalse(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
+                "the hub stripped what the player was wearing over a descent that never started");
+            Assert.AreEqual(0, Save.lifetimeRunsEnded,
+                "a descent that never started was counted as one that ended");
+            Assert.IsFalse(RunManager.HasRun,
+                "the run still has to END -- leaving the hub for the title kills it, it just costs nothing");
+        }
+
+        [Test]
+        public void ARunThatEnteredOneRoomIsStrippedLikeAnyOther()
+        {
+            var character = Save.roster.FirstOrDefault();
+            Assert.IsNotNull(character, "fixture: the save has nobody to equip");
+
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+
+            Save.stockpiledItems.Clear();
+            Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
+            Save.stockpiledItems.Add(new InventoryEntry("mana_potion", 1));
+            Save.stockpiledItems.Add(new InventoryEntry("iron_helm", 1));
+
+            RunManager.StartRun(31337);
+            var choices = RunManager.Choices();
+            Assert.IsNotEmpty(choices, "fixture: a fresh run should offer somewhere to go");
+            RunManager.MoveTo(choices[0].Id);
+
+            Assert.IsTrue(RunManager.DescentIsUnderWay,
+                "fixture: one room in is a descent under way");
+
+            RunManager.EndRun();
+
+            Assert.AreEqual(0, Save.stockpiledItems.Count,
+                "the run's haul outlived the run -- 95c0b8b3's rule still holds one room in");
+            Assert.IsTrue(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
+                "wearing an item is still a way to launder run loot into the profile");
+            Assert.AreEqual(1, Save.lifetimeRunsEnded,
+                "a descent that started and ended was not counted");
+        }
     }
 }

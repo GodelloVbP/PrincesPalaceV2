@@ -32,6 +32,15 @@ namespace PrincesPalace
 
         public static bool HasRun => Save != null && Save.activeRun != null && Save.activeRun.hasRun;
 
+        // THE ONE DEFINITION OF "a descent is under way", forwarded from the
+        // snapshot that owns it (RunSnapshot.DescentIsUnderWay).
+        //
+        // Distinct from HasRun, which is true from the moment the relic draft
+        // is rolled -- in the hub, before anything has been walked. Anything
+        // asking "is the party down there" asks this; anything asking "is
+        // there a snapshot to read" asks HasRun.
+        public static bool DescentIsUnderWay => Run?.DescentIsUnderWay ?? false;
+
         // A RUN DOES NOT SURVIVE THE PROCESS.
         //
         // "Leaving a descent, or anything that does not continue the run, kills
@@ -200,6 +209,33 @@ namespace PrincesPalace
 
             var save = Save;
             if (save == null) return new RunSettlement.Result();
+
+            // AND A RUN THAT NEVER LEFT THE HUB IS THE SAME SHAPE OF NOTHING.
+            //
+            // The guard above asks HasRun, and HasRun is not the question. A
+            // run exists from the moment the descent gate rolls the relic
+            // draft, and that draft is offered IN THE HUB -- so pressing the
+            // gate, seeing the draft, and then leaving to the title without
+            // entering a single room reached everything below this line with
+            // hasRun true and nothing walked. Every roster character's
+            // equipment cleared, the whole stockpile cleared, and one more
+            // lifetimeRunsEnded, for a descent that did not happen. Alt-F4 at
+            // the draft is the same thing on the next boot, through
+            // SettleAnyRunAPreviousSessionLeftBehind.
+            //
+            // DISCARDED RATHER THAN SETTLED, and that costs nothing: an
+            // unwalked run has no rooms, no bosses, no ledger and no gold, so
+            // Settle would fold zeroes and increment a counter that means "a
+            // descent ended". The run itself still ends -- "leaving a descent,
+            // or anything that does not continue the run, kills the run" holds
+            // whether or not the run was worth closing books on.
+            if (!save.activeRun.DescentIsUnderWay)
+            {
+                save.activeRun = new RunSnapshot { hasRun = false };
+                Forget();
+                Persist();
+                return new RunSettlement.Result();
+            }
 
             var settlement = RunSettlement.Settle(save, save.activeRun);
 
