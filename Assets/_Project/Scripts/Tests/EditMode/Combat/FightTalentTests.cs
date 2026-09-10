@@ -248,6 +248,115 @@ namespace PrincesPalace.Domain.Tests
                 "the gift is wool, not the caster's own mana");
         }
 
+        // ---- who a Gift: Mana actually lands on -------------------------------
+        //
+        // GiftRecipient was "the first living party member who is not the
+        // caster", and its own comment said why that was allowed to be a
+        // placeholder: "the squad is one deep by default and two at most, so
+        // 'an ally' is unambiguous today -- there is exactly one candidate or
+        // none. It needs a real target picker the moment a third party slot
+        // exists." That slot exists (41b470d4), and with a Fury holder standing
+        // in it the placeholder spent the wool and the turn pouring mana into a
+        // bar that refuses mana -- and announced a number that never landed.
+        private static ResourcePool Fury() =>
+            new ResourcePool("fury", "Fury", 100, 0, gainOnAttack: 15, gainOnDamageTaken: 10)
+            {
+                ShortTag = "FURY",
+                RestoredByManaEffects = false,
+            };
+
+        [Test]
+        public void AGiftOfManaSkipsAnAllyWhosePoolRefusesIt()
+        {
+            var shawn = Hero("Shawn");
+            var bjorn = Hero("Bjorn", speed: 8);
+            bjorn.PrimaryPool = Fury();
+
+            // 60 max, 20 in the bar. 40% of 60 is 24, so the literal below is
+            // 44 and nothing here re-derives it.
+            var odette = new CombatantState("Odette", true, 500, 60, 40, 8);
+            odette.PrimaryPool.Current = 20;
+
+            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+
+            // Party order puts Bjorn in front of Odette on purpose: he is what
+            // "the first living ally" used to find.
+            var (session, _) = Fight(new[] { shawn, bjorn, odette }, new[] { Foe() },
+                Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
+
+            session.CastSkill(0, null);
+
+            Assert.AreEqual(44, odette.CurrentMana, "the gift went to the ally who could not use it");
+            Assert.AreEqual(0, bjorn.PrimaryPool.Current, "a Fury bar is not a mana bar");
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("Odette") && m.Contains("24")),
+                "the line has to name who got it and how much actually landed");
+        }
+
+        [Test]
+        public void AGiftOfManaPrefersTheAllyMissingTheMost()
+        {
+            var shawn = Hero("Shawn");
+
+            // Both take mana; the first in party order is the fuller one, so
+            // "first living ally" and "emptiest ally" disagree.
+            var full = new CombatantState("Nearly Full", true, 500, 60, 40, 8);
+            full.PrimaryPool.Current = 55;
+            var drained = new CombatantState("Drained", true, 500, 60, 40, 8);
+            drained.PrimaryPool.Current = 10;
+
+            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+
+            var (session, _) = Fight(new[] { shawn, full, drained }, new[] { Foe() },
+                Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
+
+            session.CastSkill(0, null);
+
+            Assert.AreEqual(34, drained.CurrentMana, "10 + 24");
+            Assert.AreEqual(55, full.CurrentMana, "untouched");
+        }
+
+        [Test]
+        public void AGiftOfManaIsRefusedWhenNoAllysPoolTakesMana()
+        {
+            var shawn = Hero("Shawn");
+            var bjorn = Hero("Bjorn", speed: 8);
+            bjorn.PrimaryPool = Fury();
+
+            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+
+            var (session, _) = Fight(new[] { shawn, bjorn }, new[] { Foe() },
+                Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
+
+            bool cast = session.CastSkill(0, null);
+
+            Assert.IsFalse(cast, "refused before the wool and the turn are paid, like Shatter with no wards");
+
+            // The refusal opens no beat, so it lands in the immediate list --
+            // the same place every pre-cast refusal in this file goes.
+            Assert.IsTrue(session.DrainImmediateMessages().Any(m => m.Contains("nobody to give it to")));
+        }
+
+        [Test]
+        public void TheOtherTwoGiftsStillTakeTheFirstLivingAlly()
+        {
+            // The control. Gift: Fury and Gift: Haste say nothing about mana,
+            // so a Fury holder is a perfectly good recipient for both and the
+            // placeholder's answer is still the right one for them.
+            var shawn = Hero("Shawn");
+            var bjorn = Hero("Bjorn", speed: 8);
+            bjorn.PrimaryPool = Fury();
+
+            Talents(shawn, new TalentEffect(TalentEffectType.GiftAttackBonusPercent, 50));
+
+            var (session, _) = Fight(new[] { shawn, bjorn }, new[] { Foe() },
+                Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")));
+
+            session.CastSkill(0, null);
+
+            Assert.IsTrue(bjorn.Statuses.Any(s => s.Type == StatusEffectType.Empowered),
+                "Gift: Fury has no opinion about what resource the ally carries");
+        }
+
         [Test]
         public void GiftFuryIsSpentBySwingingAndNotByTheClock()
         {

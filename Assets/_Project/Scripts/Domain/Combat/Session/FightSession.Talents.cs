@@ -257,7 +257,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.GiftMana:
                 case SkillEffect.GiftFury:
                 case SkillEffect.GiftHaste:
-                    if (GiftRecipient(actor) == null)
+                    // ASKED PER EFFECT, which is what makes the mana refusal
+                    // free: GiftRecipient answers "nobody" for a squad whose
+                    // only living allies carry a pool mana cannot touch, and
+                    // this branch already knew what to do with "nobody".
+                    if (GiftRecipient(actor, skill.Effect) == null)
                     {
                         refusal = $"{actor.Name} has nobody to give it to.";
                         return false;
@@ -276,15 +280,47 @@ namespace PrincesPalace.Domain.Combat.Session
                 .Where(c => c.IsAlive && WardedByThisActor(c, caster))
                 .ToList();
 
-        // Who a Gift lands on.
+        // Who a Gift lands on, ASKED PER EFFECT.
         //
-        // The first living party member who is not the caster, with no picker.
-        // That is not a placeholder: the squad is one deep by default and two at
-        // most, so "an ally" is unambiguous today -- there is exactly one
-        // candidate or none. It needs a real target picker the moment a third
-        // party slot exists.
-        private CombatantState GiftRecipient(CombatantState caster) =>
-            _encounter.PlayerParty.FirstOrDefault(a => !ReferenceEquals(a, caster) && a.IsAlive);
+        // It used to be "the first living party member who is not the caster"
+        // for all three gifts, and its own comment said why that was allowed:
+        // "the squad is one deep by default and two at most, so 'an ally' is
+        // unambiguous today... It needs a real target picker the moment a third
+        // party slot exists." That slot exists (FightHudSpec.StageSlotsPerSide
+        // is 3; the party formation landed 41b470d4), and the first ally in a
+        // three-deep squad is now routinely Bjorn -- whose pool refuses mana
+        // outright. Gift: Mana was spending two Wool and a turn pouring 24 mana
+        // into a Fury bar and announcing that it had.
+        //
+        // GIFT: FURY AND GIFT: HASTE KEEP THE OLD ANSWER, and that is not
+        // laziness. Neither says anything about a resource -- one applies
+        // Empowered, the other moves a turn up the order -- so every living
+        // ally is a valid recipient for both and the first one is as good a
+        // pick as any. Only the mana gift has something a pool can disagree
+        // with, which is why the effect is a parameter rather than this method
+        // growing one rule for everybody.
+        //
+        // THE MANA PICK IS "EMPTIEST FIRST", not "first that qualifies": a gift
+        // is a fixed percentage of the recipient's own maximum, so handing it
+        // to whoever is missing the most is the only reading under which the
+        // number the caster spent wool for is the number that lands. LINQ's
+        // OrderByDescending is stable, so a tie falls back to party order --
+        // the old answer, restricted to allies who can take it.
+        private CombatantState GiftRecipient(CombatantState caster, SkillEffect effect)
+        {
+            var allies = _encounter.PlayerParty.Where(a => !ReferenceEquals(a, caster) && a.IsAlive);
+
+            if (effect != SkillEffect.GiftMana) return allies.FirstOrDefault();
+
+            // CombatMath.CanRestoreMana is the SAME predicate the potion, the
+            // relic top-up, Lucky Deck and the bot's missing-mana accounting
+            // all read. A fifth copy of "does this pool take mana effects"
+            // would be a fifth thing to get wrong.
+            return allies
+                .Where(CombatMath.CanRestoreMana)
+                .OrderByDescending(a => a.MaxMana - a.CurrentMana)
+                .FirstOrDefault();
+        }
 
         // Detonates every ward the caster has out. Each one throws a share of her
         // Attack at a random enemy.
@@ -357,7 +393,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // The three Wool Gifts, resolved against whoever GiftRecipient found.
         private void ResolveGift(CombatantState caster, ResolvedSkill skill)
         {
-            var ally = GiftRecipient(caster);
+            var ally = GiftRecipient(caster, skill.Effect);
             if (ally == null) return;
 
             switch (skill.Effect)
@@ -366,8 +402,24 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     int percent = caster.Talents.Best(TalentEffectType.GiftManaPercent);
                     int amount = System.Math.Max(1, ally.MaxMana * percent / 100);
-                    CombatMath.RestoreMana(ally, amount);
-                    AppendMessage($"{caster.Name} presses wool into {ally.Name}'s hands - {amount} mana back.");
+
+                    // THE RETURN, NOT THE REQUEST. CombatMath.RestoreMana is
+                    // measured for exactly this -- "returns how much actually
+                    // landed, so a caller can say the true number (or say
+                    // nothing) rather than announcing an amount it hoped for"
+                    // -- and this line printed `amount` regardless. It clamps
+                    // at the recipient's own maximum, so a gift to a nearly
+                    // full ally said 24 and moved 5.
+                    int landed = CombatMath.RestoreMana(ally, amount);
+
+                    // The pool NAMES ITSELF, the same way the potion's line
+                    // does (FightSession.Items). For today's roster that is
+                    // the word "mana" it always printed.
+                    string unit = (ally.PrimaryPool?.DisplayName ?? "").ToLowerInvariant();
+
+                    AppendMessage(landed > 0
+                        ? $"{caster.Name} presses wool into {ally.Name}'s hands - {landed} {unit} back."
+                        : $"{caster.Name} presses wool into {ally.Name}'s hands - there was nothing left to give back.");
                     break;
                 }
 
