@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
@@ -571,7 +572,7 @@ namespace PrincesPalace
             SetFill(partyMpFill, actor.CurrentMana, actor.MaxMana);
 
             var kit = _session == null ? null : _session.KitFor(actor);
-            ApplyPartyPlateTheme(kit);
+            if (kit != null) ApplyCardTheme(partyCardRims, 0, partyName, kit.PlateTheme);
 
             RefreshWool(actor);
             RefreshPartyStatusRow(actor);
@@ -579,25 +580,26 @@ namespace PrincesPalace
             RefreshRoster(actor);
         }
 
-        // THE PLATE'S OWN FRAME, swapped rather than baked -- C1. sheep
-        // Silver, owl Blue, bear Gold (ResolvedCharacter.
-        // PlateTheme, authored per characters.json's plateTheme field and
-        // carried onto PlayerKit by FightEncounterAdapter.KitFor).
+        // ONE CARD, ONE OCCUPANT'S COLOUR (C3) -- four rim Images and the
+        // name label, which is what "tinted" costs in uGUI: there is no
+        // inherited tint, and the card's own Panel draws nothing.
         //
-        // GRACEFUL ON EVERY MISS, the house style: no kit (no session yet),
-        // no baked array (an older scene, or a test build with nothing
-        // wired), or an index the array does not cover all leave the
-        // scene's own baked Blue frame standing rather than clearing the
-        // Image or throwing.
-        private void ApplyPartyPlateTheme(PlayerKit kit)
+        // GRACEFUL ON EVERY MISS, the house style the sprite swap this
+        // replaced already had: an unbound array, a short one, or a null
+        // element leaves the scene's own baked Blue standing rather than
+        // throwing or clearing the graphic. `Has` is the same guard every
+        // other indexed write on this screen uses.
+        private void ApplyCardTheme(Image[] rims, int baseIndex, TMP_Text name, ButtonTheme theme)
         {
-            if (partyPlateArt == null || partyPlateThemes == null || kit == null) return;
+            var colours = PcTheme.For(theme);
 
-            int index = (int)kit.PlateTheme;
-            if (index < 0 || index >= partyPlateThemes.Length) return;
+            var rim = Hex(colours.Rim);
+            for (int e = 0; e < RimsPerCard; e++)
+            {
+                if (Has(rims, baseIndex + e)) rims[baseIndex + e].color = rim;
+            }
 
-            var themed = partyPlateThemes[index];
-            if (themed != null) partyPlateArt.sprite = themed;
+            if (name != null) name.color = Hex(colours.Name);
         }
 
         // RefreshTransformStrip is GONE (2026-09-09). The strip it painted was
@@ -649,6 +651,17 @@ namespace PrincesPalace
                 if (!present) continue;
 
                 if (Has(rosterNames, i)) rosterNames[i].SetContent(member.Name);
+
+                // C3: the ally's own colour on their own card. KitFor is
+                // nullable (a session with no kit for a combatant), and a
+                // missing kit leaves the baked Blue rather than picking a
+                // theme -- same posture as the party card above.
+                var memberKit = _session.KitFor(member);
+                if (memberKit != null)
+                {
+                    ApplyCardTheme(rosterCardRims, i * RimsPerCard,
+                        Has(rosterNames, i) ? rosterNames[i] : null, memberKit.PlateTheme);
+                }
 
                 // TAGGED templates ("HP 34/40"), not HealthValue -- the
                 // number is drawn ON the bar now (the owner's 2026-09-09

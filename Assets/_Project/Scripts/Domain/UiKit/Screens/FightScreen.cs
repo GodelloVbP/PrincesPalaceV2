@@ -134,10 +134,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef PartyPlate;
 
-        // The plate's frame sprite (Container's "Art" child) -- see
-        // BuildPartyPlate's own note. C1: swapped at runtime by
-        // RefreshPartyPlate off the acting character's PlateTheme.
-        public NodeRef PartyPlateArt;
+        // PartyPlateArt is GONE (2026-09-10). It named the themed 2:1 kit
+        // sprite Ui.Container hung under the plate, which the card no longer
+        // has -- see BuildPartyPlate's own note for why a flat OutlineBox
+        // replaced the container outright.
 
         // PartyPortrait is GONE (2026-09-09, the HUD-column pass). It was
         // declared Inactive() with a null sprite key and had no writer
@@ -193,6 +193,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // One status row per roster mini-plate, flattened ROSTER-MAJOR (r0's
         // five badges, then r1's), same convention as EnemyStatusBadges.
         public List<NodeRef> RosterStatusBadges = new List<NodeRef>();
+
+        // THE RIM EDGES EVERY CARD IN THIS COLUMN WEARS ITS OCCUPANT'S
+        // COLOUR ON (C3). Four Images per card, because uGUI has no
+        // inherited tint -- the card's own Panel draws nothing, so there is
+        // no single graphic to colour.
+        //
+        // RosterCardRims is flattened CARD-MAJOR: card i's four edges are
+        // 4i..4i+3, in Ui.RimEdgesOf's Top/Bottom/Left/Right order. That is
+        // the same flattening RosterStatusBadges above uses, and it is the
+        // one thing here that can fail silently -- rim edges are AsDecor, so
+        // UiAudit never looks at their colour, and an edge-major mix-up
+        // paints the wrong card rather than throwing. Pinned by
+        // FightScreenTests' literal node-name test and by
+        // PartyFormationCaptureTests' three-distinct-colours assert.
+        public List<NodeRef> PartyCardRims = new List<NodeRef>();
+        public List<NodeRef> RosterCardRims = new List<NodeRef>();
 
         public List<NodeRef> VerbButtons = new List<NodeRef>();
         public List<NodeRef> VerbLabels = new List<NodeRef>();
@@ -1278,50 +1294,49 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the party plate ----------------------------------------------------
 
-        // BLUE, 2:1 CONTAINER ART -- the character's own stat card, so the
-        // informational/defensive theme (the same one HOLD BACK uses in the
-        // verb column) rather than Crimson, which is EnemyPlate{i}'s own
-        // theme now (see BuildEnemyPlates) for the same "this is the other
-        // side" reason panel_crimson.png used to wear it for no reason at
-        // all. FightHudPalette itself never tied this slot to a colour --
-        // its hex tokens are HP/MP/text roles, not a per-plate theme -- so
-        // there was nothing here to defer to. (FallbackPlateKey still names
-        // panel_crimson.png, but only for the stage actor's own missing-art
-        // fallback now -- see FightController.StageVisuals -- not for
-        // either plate.)
+        // ONE CARD LANGUAGE FOR THE WHOLE COLUMN (2026-09-10). This was a
+        // Blue 2:1 kit container until the owner measured what it actually
+        // draws: container_blue_2x1.png's rim is 16px on a 1536-wide canvas,
+        // i.e. 1% of the art, in front of a near-black field -- so at 380
+        // wide the rim is 4px and the field is flat black, and the card read
+        // as a void with a hairline round it. That is a property of the ART,
+        // not of the import: resampling the source three ways (box mip
+        // chain, Lanczos, bilinear) gave indistinguishable results. The two
+        // roster cards below have always been Ui.OutlineBox -- a fill, four
+        // rim edges, hairline rules -- which is exactly the shape that reads
+        // at this size, so the party card is now the same box, only taller.
+        // (FallbackPlateKey still names panel_crimson.png, but only for the
+        // stage actor's own missing-art fallback -- see
+        // FightController.StageVisuals -- not for any plate.)
         //
-        // COZY, B2 (balance-bot pass): 452x228 was sized for a header row
-        // (name + "LV1 UTILITY") that no longer exists -- PartyClass is gone
-        // below, see its own note -- and left the HP/MP rows and the wool
-        // meter floating in a card built for a fourth fact it no longer
-        // states. 380 keeps the 2:1 aspect (380/2.0 = 190, exactly on it
-        // since the 2026-09-07 kit repin put the art at a true 2.0; it was
-        // 191.92 against the old measured 1.98); the height derives from it
-        // rather than being pinned separately, same discipline the old
-        // 452/1.98 used.
+        // HEIGHT IS A LITERAL NOW, with the ledger below, because it is no
+        // longer the consequence of an aspect ratio: a flat box has none.
+        // 154 is the sum of the ledger, and the ledger is the design.
+        // 380 stays -- the owner's "every card in this column flush on both
+        // vertical edges" (left -920, right -540) is what fixes it.
         // Public: FightScreenTests (a separate assembly, no InternalsVisibleTo
         // grant to it) reads these rather than restating the numbers.
         public const float PartyPlateWidth = 380f;
-        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 190, was 191.92
+        public const float PartyPlateHeight = 154f;
         private const float PartyPlateCentreX = -730f; // LEFT EDGE STAYS AT -920 -- see BuildPartyPlate's own note
 
-        // VISIBLE-BOTTOM FLUSH NOW (B1), not the fixed -500 HUD margin it
-        // used to be: -500 WAS the canvas's own 40px margin above the floor
+        // VISIBLE-BOTTOM FLUSH (B1), not the fixed -500 HUD margin it used to
+        // be: -500 WAS the canvas's own 40px margin above the floor
         // (UiFrames.Reference.Y * -0.5 + 40), chosen with no reference to the
         // verb column at all, which is why the plate's own visible bottom
         // used to sit ~14px below the verb column's -- two rects that agreed
-        // on nothing lined up by coincidence or not at all. It is now placed
-        // exactly like FightSubmenuLayout's own frame (see
-        // FightSubmenuLayout.VisibleBottomLine's comment for the halo this
-        // corrects for): the CENTRE that puts the plate's own visible bottom
-        // (rect bottom + height * its 2:1 art's own bottom VisiblePad) on
-        // the same line the verb column's visible bottom sits on. Computed,
-        // not const, because Ui.PlateVisiblePad/ContainerVisiblePad are
-        // ordinary (non-const) static methods -- see PartyPlateWidth/Height's
-        // own note for why the two consts above stay literal.
+        // on nothing lined up by coincidence or not at all.
+        //
+        // ZERO BOTTOM PAD, and that is the whole difference the card made: a
+        // kit container paints a transparent halo outside its own border, so
+        // its rect bottom and its PAINTED bottom are different lines and the
+        // gap between them had to be corrected for here. A flat OutlineBox
+        // has no halo -- the rim edge is the last painted pixel -- so rect
+        // bottom == painted bottom and the correction is 0. The line itself
+        // is unchanged: -485.392, FightSubmenuLayout.VisibleBottomLine, the
+        // same one the verb column and the skill panel end on.
         private static float PartyPlateCentreY =>
-            Ui.CentreYForVisibleBottom(FightSubmenuLayout.VisibleBottomLine, PartyPlateHeight,
-                Ui.ContainerVisiblePad(ContainerRatio.TwoByOne).Bottom);
+            Ui.CentreYForVisibleBottom(FightSubmenuLayout.VisibleBottomLine, PartyPlateHeight, 0f);
 
         // ---- the plate's content stack, 2026-09-09 --------------------------
         //
@@ -1337,41 +1352,53 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // actually asked for ("it should feel like a proper HP bar", "two
         // lines for status effects", "snug with barely any vertical padding").
         //
-        // THE CONTENT BOX IS DERIVED, NOT RESTATED. Every x below is measured
-        // off PartyContentHalfW/H, which come from the SAME
-        // Ui.ContainerContentInset the emitter insets ContainerContent by --
-        // so a re-measured 2:1 frame moves the rows with it rather than
-        // leaving them 3px inside a border that moved. The Ys are literals
-        // with the ledger below, the way every other rect on this screen is:
-        // they are a stack, and a stack reads as numbers.
+        // THE CONTENT BOX IS THE CARD, INSET BY ITS OWN PADDING. It used to
+        // be Ui.ContainerContentInset's measured fraction of a kit frame,
+        // because the rows sat inside a ContainerContent child the emitter
+        // inset for them; with the frame gone there is no measured inset to
+        // defer to, so the rows are children of the card itself and the
+        // padding is the roster cards' own RosterPadX -- one number for the
+        // whole column rather than a second convention for the top card.
         //
-        // THE VERTICAL LEDGER, top to bottom, in content-local Y
-        // (content is 169.1 tall, so +-84.55):
-        //   83.0  .. 55.0   name          28
-        //   49.0  .. 27.0   HP row        22   (gap 6)
-        //   21.0  .. -1.0   MP row        22   (gap 6)
-        //   -7.0  .. -27.0  signature     20   (gap 6)
-        //   -33.0 .. -55.0  badge line 1  22   (gap 6)
-        //   -60.0 .. -82.0  badge line 2  22   (gap 5)
-        // leaving 1.55 of padding at the top and 2.55 at the bottom, which is
-        // the "barely any vertical padding" the mock-up asks for.
-        private static float PartyContentHalfW =>
-            PartyPlateWidth * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Left);
+        // THE VERTICAL LEDGER, top to bottom, in CARD-local Y (the card is
+        // 154 tall, so +-77) -- and 154 IS this ledger summed:
+        //   73.0  .. 47.0   name          26   (4 top pad)
+        //   43.0  .. 23.0   HP row        20   (gap 4)
+        //   20.0  ..  0.0   MP row        20   (gap 3)
+        //        -2.0       PartySignatureRule, mid-gap of a 4 gap
+        //   -4.0  .. -22.0  signature     18
+        //        -24.0      PartyStatusRule, mid-gap of a 4 gap
+        //   -26.0 .. -48.0  badge line 1  22
+        //   -51.0 .. -73.0  badge line 2  22   (gap 3)
+        //                                       4 bottom pad
+        // 4+26+4+20+3+20+4+18+4+22+3+22+4 = 154.
+        //
+        // THE 4px OUTER PAD IS WHAT PAYS FOR 20px BARS. The first cut of this
+        // ledger spent 6 top and bottom and gave the bars 18, which trips
+        // FightScreenTests' own floor -- the owner set 20 as the point below
+        // which a meter reads as a stripe again, and that floor is a design
+        // decision, not a consequence of the old 190-tall card. Two pixels
+        // off each outer pad buys both bars back to 20 with the ledger still
+        // summing to 154, and "barely any vertical padding" is the owner's
+        // own phrase for this card, so 4 is if anything nearer the brief
+        // than 6 was.
+        private const float PartyPadX = RosterPadX;
+        private static float PartyContentHalfW => PartyPlateWidth * 0.5f - PartyPadX;
 
-        private static float PartyContentHalfH =>
-            PartyPlateHeight * (0.5f - Ui.ContainerContentInset(ContainerRatio.TwoByOne).Top);
-
-        private const float PartyNameY = 69f;
-        private const float PartyNameH = 28f;
-        private const float PartyHpRowY = 38f;
+        // 26 at 20pt is the SAME 1.3 box/font ratio the 28/20 row had --
+        // UiTextFitAudit measures the box against the font, so shrinking one
+        // without the other is what actually fails it.
+        private const float PartyNameY = 60f;
+        private const float PartyNameH = 26f;
+        private const float PartyHpRowY = 33f;
         private const float PartyMpRowY = 10f;
 
-        // 22, UP FROM 13.45 -- the owner's note on the 2026-09-09 capture,
-        // and the reason Ui.Meter exists at all. A 13px bar is a coloured
-        // stripe however it is shaded; 22 is enough height for the sheen and
-        // the shade band to be separately visible, which is what makes it
-        // read as a meter.
-        private const float PartyBarH = 22f;
+        // 20, DOWN FROM 22 and floored there: the owner's "it should feel
+        // like a proper HP bar, not a red bar" was pinned as >= 20 in
+        // FightScreenTests, and Ui.Meter's sheen/shade bands are FRACTIONAL
+        // (40%/25% of the bar), so 20 still shows both separately. This is
+        // the one row in the ledger above that may not give ground.
+        private const float PartyBarH = 20f;
 
         // The tag sits OUTSIDE the bar on the left and the value OUTSIDE it
         // on the right (the mock-up's own arrangement), so the bar's span is
@@ -1384,10 +1411,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The two hairlines that split the card into the same three regions
         // the roster cards have -- see BuildPartyPlate's own note for why
-        // they exist. Each sits in the middle of a 6px gap the ledger above
+        // they exist. Each sits in the middle of a 4px gap the ledger above
         // already reserved, so neither costs the stack any height.
-        private const float PartySignatureRuleY = -4f;
-        private const float PartyStatusRuleY = -30f;
+        private const float PartySignatureRuleY = -2f;
+        private const float PartyStatusRuleY = -24f;
         private static float PartyBarLeft => -PartyContentHalfW + PartyTagW + PartyRowGapX;
         private static float PartyBarRight => PartyContentHalfW - PartyValueW - PartyRowGapX;
         private static float PartyBarW => PartyBarRight - PartyBarLeft;
@@ -1468,10 +1495,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PartyMpFill = mp.Fill;
             PartyMpValue = mpValue;
 
-            var plate = Ui.Container("PartyPlate", ButtonTheme.Blue, ContainerRatio.TwoByOne,
-                Place.At(PartyPlateCentreX, PartyPlateCentreY),
-                new UiVec(PartyPlateWidth, PartyPlateHeight));
-
             // TWO HAIRLINES, THE SAME ONES THE ROSTER CARDS USE, and they are
             // an addition to the mock-up rather than something it drew.
             //
@@ -1499,18 +1522,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 signatureRule, BuildWoolRow(), statusRule,
             };
             content.AddRange(BuildPartyBuffIcons());
-            Ui.ContainerContent(plate, ContainerRatio.TwoByOne, "PartyPlateContent", content.ToArray());
+
+            // THE SAME CALL BuildRosterPlates MAKES, without .Inactive():
+            // one fill, four rim edges, the rows inside. That is the whole
+            // of contract C1 -- there is now exactly one card recipe on this
+            // column, and the party card differs from a roster card only in
+            // being taller.
+            var plate = Ui.OutlineBox("PartyPlate",
+                Place.At(PartyPlateCentreX, PartyPlateCentreY),
+                new UiVec(PartyPlateWidth, PartyPlateHeight),
+                FightHudPalette.PanelPrimary, PcTheme.For(ButtonTheme.Blue).Rim, content);
 
             PartyPlate = plate;
-
-            // THE FRAME ART ITSELF, not the plate's non-drawing wrapper --
-            // Ui.Container's BuildFrameHolder returns `plate` as a plain
-            // Panel with the themed sprite as its one Decor child (named
-            // "PartyPlateArt" by the "name + Art" convention every
-            // Container/FlagBanner uses). RefreshPartyPlate needs this
-            // node specifically to swap the runtime theme sprite -- the
-            // wrapper itself carries no Image to swap.
-            PartyPlateArt = plate.Children.FirstOrDefault();
+            foreach (var edge in Ui.RimEdgesOf(plate)) PartyCardRims.Add(edge);
 
             return plate;
         }
@@ -1704,13 +1728,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // rules that split it into three cells. No backing strip
                 // inside it -- the card itself is the painted surface the
                 // enemy rows' strips exist to provide on bare stage floor.
+                // BAKED AS THE UNTINTED PC CARD (PcTheme.For(Blue).Rim), not
+                // as BorderPartyGold. RefreshRoster overwrites this with the
+                // occupant's own colour on the first repaint, so what the
+                // baked value has to be is "a card whose character has not
+                // been read yet" -- and a gold rim under a blue-themed
+                // occupant would read as a deliberate second card language
+                // for the one frame it survives (and forever, in a screenshot
+                // of a scene nobody has refreshed).
                 var plate = Ui.OutlineBox($"Roster{i}",
                         Place.At(PartyPlateCentreX, RosterFirstY + i * RosterPitchY),
                         new UiVec(RosterPlateW, RosterPlateH),
-                        FightHudPalette.PanelPrimary, FightHudPalette.BorderPartyGold, cells)
+                        FightHudPalette.PanelPrimary, PcTheme.For(ButtonTheme.Blue).Rim, cells)
                     .Inactive();
 
                 RosterPlates.Add(plate);
+                foreach (var edge in Ui.RimEdgesOf(plate)) RosterCardRims.Add(edge);
                 return plate;
             });
         }
@@ -1737,8 +1770,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const float PartyBuffIconSize = 22f;
         private const float PartyBuffPitch = 28.4f;
-        private const float PartyBuffRow0Y = -44f;
-        private const float PartyBuffRow1Y = -71f;
+        private const float PartyBuffRow0Y = -37f;
+        private const float PartyBuffRow1Y = -62f;
 
         private static float PartyBuffX0 => -PartyContentHalfW + PartyBuffIconSize * 0.5f;
 
@@ -1767,8 +1800,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // 16 pips rather than a fraction. A charge meter you can watch fill
         // without reading numbers is the whole reason this is not just another
         // "3/16" label.
-        private const float WoolRowY = -17f;
-        private const float WoolRowH = 20f;
+        private const float WoolRowY = -13f;
+        private const float WoolRowH = 18f;
         private const float WoolTagW = 50f;
         private const float WoolValueW = 48f;
         private const float WoolPipW = 11f;

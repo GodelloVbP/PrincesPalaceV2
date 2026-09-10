@@ -119,18 +119,25 @@ namespace PrincesPalace
         // used to be declared.
         [SerializeField] internal TMP_Text partyName;
 
-        // The plate's own frame art -- C1. Swapped by RefreshPartyPlate off
-        // the acting character's ResolvedCharacter.PlateTheme (carried onto
-        // PlayerKit), falling back to whatever SceneBuilder baked (Blue) on
-        // a missing kit, a missing array or an out-of-range theme.
-        [SerializeField] internal Image partyPlateArt;
+        // partyPlateArt and partyPlateThemes are GONE (2026-09-10). They were
+        // the runtime sprite swap for the plate's themed 2:1 kit frame, and
+        // the card has no frame any more -- see FightScreen.BuildPartyPlate
+        // for why a flat OutlineBox replaced it. Per-character identity is
+        // carried by the rim and name COLOUR now, not by a sprite.
 
-        // One 2x1 container sprite per ButtonTheme, indexed by (int)theme --
-        // loaded once at scene-build time (ScreenRegistry.Fight) through the
-        // same Ui.ContainerKey/LoadSpriteByKey path Ui.Container itself bakes
-        // the default frame from, so the runtime swap can never name a
-        // different file than the tree's own baked art would.
-        [SerializeField] internal Sprite[] partyPlateThemes;
+        // THE FOUR RIM IMAGES PER CARD (C3), bound by field name off
+        // FightScreen.PartyCardRims/RosterCardRims -- UiAutoBind matches an
+        // Image[] to a NodeRef list of the same name with no ScreenRegistry
+        // code, and UiWiringSweep refuses the build outright if either comes
+        // back null or empty.
+        //
+        // rosterCardRims is CARD-MAJOR: card i's edges are i*RimsPerCard ..
+        // +3. See FightScreen.RosterCardRims' own note for why that is the
+        // one silent failure mode on this feature.
+        [SerializeField] internal Image[] partyCardRims;
+        [SerializeField] internal Image[] rosterCardRims;
+        private const int RimsPerCard = 4;
+
         [SerializeField] internal Image partyHpFill;
         [SerializeField] internal TMP_Text partyHpValue;
         [SerializeField] internal Image partyMpFill;

@@ -49,8 +49,17 @@ living at construction sites. There are no construction sites now.
 `UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiTextAlign` ·
 `UiNode` ·
 `NodeRef` · `Ui` (the factories — `ContainerKey(theme, ratio)` is the one place
-the kit's `container_<theme>_<ratio>` path format lives, so a party-plate theme
-swap is one call rather than a restated string) · `UiString` · `UiStrings` ·
+the kit's `container_<theme>_<ratio>` path format lives; it went callerless on
+2026-09-10 when the fight HUD's party plate stopped being a themed 2:1
+container, and is kept because it is the format's only statement.
+`RimEdgesOf(box)` hands back an `OutlineBox`'s four `{name}Rim{Top,Bottom,Left,
+Right}` children in that order, throwing on anything but four — so a caller
+that recolours a rim at runtime does not restate `Rim`'s naming convention) ·
+`PcTheme`/`PcColours` (what each `ButtonTheme` LOOKS like once it reaches a
+fight-HUD card: a rim hex at 0.70 alpha and a name hex, six explicit arms and
+`default: throw`. This is the other half of `ResolvedCharacter.PlateTheme` —
+content says which theme, this says what the theme is) · `UiString` ·
+`UiStrings` ·
 `UiSolver` ·
 `SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
 (`VisibleBottomLine` — `CommandBottom` plus the verb row's own bottom PAINT

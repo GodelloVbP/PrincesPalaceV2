@@ -44,21 +44,23 @@ namespace PrincesPalace.PlayModeTests
         private const int Width = 1920;
         private const int Height = 1080;
 
-        // FightScreen.BuildPartyPlate: the plate sits at (-694, -385.858),
-        // 452x228.283 (a Blue 2:1 container now, was a flat 452x216
-        // panel_crimson sprite -- the bottom edge stayed at -500, so only the
-        // centre and height moved), and PartyHpValue sits at plate-local
-        // (194, 4) with a right pivot, 70x20 -- content coordinates are
-        // unchanged by the container move, only the plate's own world centre
-        // is. Stated here rather than read from the live rect on purpose --
-        // if the tree moves the plate, this test should fail and be re-aimed,
-        // not silently follow it somewhere the vignette is weaker.
+        // FightScreen.BuildPartyPlate: the card sits at (-730, -408.392),
+        // 380x154 -- a flat Ui.OutlineBox as of 2026-09-10, previously a Blue
+        // 2:1 kit container at (-694, -385.858) 452x228.283 and before that a
+        // flat panel_crimson sprite. PartyHpValue sits at card-local
+        // (PartyContentHalfW = 182, PartyHpRowY = 33) with a RIGHT pivot,
+        // 58.85x16.8, so its centre is 182 - 58.85/2 = 152.575 from the
+        // card's own centre. Stated here rather than read from the live rect
+        // on purpose -- if the tree moves the plate, this test should fail
+        // and be re-aimed, not silently follow it somewhere the vignette is
+        // weaker.
         // CENTRE and size, matching Place.At's own convention -- Place.At is
         // centre-anchored, so treating these as corners would aim every crop
         // half a plate up and to the left, which is the kind of mistake that
         // still produces plausible numbers.
-        private static readonly Rect PlateRect = CentredAt(-694f, -385.858f, 452f, 228.283f);
-        private static readonly Rect HpValueRect = CentredAt(-694f + 194f - 35f, -385.858f + 4f, 70f, 20f);
+        private static readonly Rect PlateRect = CentredAt(-730f, -408.392f, 380f, 154f);
+        private static readonly Rect HpValueRect =
+            CentredAt(-730f + 182f - 58.85f * 0.5f, -408.392f + 33f, 58.85f, 16.8f);
 
         private static Rect CentredAt(float centreX, float centreY, float width, float height) =>
             new Rect(centreX - width * 0.5f, centreY - height * 0.5f, width, height);

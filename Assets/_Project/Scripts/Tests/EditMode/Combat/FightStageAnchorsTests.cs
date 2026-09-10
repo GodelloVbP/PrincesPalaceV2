@@ -164,7 +164,17 @@ namespace PrincesPalace.Domain.Tests
             // describing anything.
             const float PlateLeft = -920f;
             const float PlateRight = -540f;
-            const float PlateTop = -161f;
+
+            // -195.392, not -161: the 2026-09-10 card pass shrank the party
+            // card 190 -> 154 and dropped its bottom onto VisibleBottomLine
+            // itself, so the whole column's top edge fell 34.77px. -161 would
+            // still PASS -- it claims the column is taller than it is, so it
+            // over-covers -- and that is exactly why it has to move. A stale
+            // literal that happens to be conservative is indistinguishable
+            // from one that has silently stopped describing anything, which
+            // is the argument this test's own header already makes about the
+            // -694 it replaced.
+            const float PlateTop = -195.392f;
             const float RingDrop = 8f;
             const float Margin = 12f;
 

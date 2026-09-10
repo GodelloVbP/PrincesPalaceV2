@@ -53,11 +53,12 @@ namespace PrincesPalace.Domain.Tests
                 DefeatScreen.PanelWidth, DefeatScreen.FrameHeight)
                 .SetName("DefeatFrame/Crimson/ThreeByTwo");
 
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => Walk(FightScreen.Build().Root).First(n => n.Name == "PartyPlate")),
-                "PartyPlateContent", ButtonTheme.Blue, ContainerRatio.TwoByOne,
-                FightScreen.PartyPlateWidth, FightScreen.PartyPlateHeight)
-                .SetName("PartyPlate/Blue/TwoByOne");
+            // PartyPlate/Blue/TwoByOne is GONE (2026-09-10). The fight HUD's
+            // party card is a flat Ui.OutlineBox now, not a kit container --
+            // FightScreen.BuildPartyPlate's own header has the measured
+            // reason. The 2x1 PNG itself still has two live users
+            // (EnemyPlate*Frame, GlossaryFrame) and is still pinned against
+            // its own art by UiKitAspectPinTests.
 
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => Walk(FightScreen.Build().Root).First(n => n.Name == "SubmenuContainer")),

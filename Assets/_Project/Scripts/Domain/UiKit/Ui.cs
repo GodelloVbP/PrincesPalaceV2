@@ -425,6 +425,51 @@ namespace PrincesPalace.Domain.UiKit
             Solid(name, colorHex, size, Place.At(x, y))
                 .AsDecor();
 
+        // THE FOUR EDGES BACK OUT AGAIN, in the order Rim yielded them
+        // (Top, Bottom, Left, Right).
+        //
+        // A caller that recolours a rim at RUNTIME needs the four Images, not
+        // the box -- the fight HUD's cards wear their occupant's identity
+        // colour, and uGUI has no inherited tint, so that is four writes per
+        // card. The alternative was for every such caller to rebuild
+        // $"{name}Rim{edge}" itself, which puts Rim's naming convention in as
+        // many places as there are callers and makes a typo silent: a rim
+        // edge is AsDecor, so UiAudit never looks at it, and a card that
+        // simply never got recoloured looks like a card whose character has
+        // no colour.
+        //
+        // OutlineBox's own signature is deliberately untouched by this -- its
+        // other callers (Options, Run statistics, Exits, the system menu, the
+        // shop's chips) paint their rim once at build time and have nothing
+        // to hand back.
+        //
+        // Throws rather than returning what it found: fewer than four edges
+        // means the box was not built by OutlineBox/Rim at all, and a caller
+        // silently tinting two of them is the exact failure this exists to
+        // stop.
+        public static IReadOnlyList<UiNode> RimEdgesOf(UiNode box)
+        {
+            if (box == null) throw new ArgumentNullException(nameof(box));
+
+            var found = new List<UiNode>();
+            foreach (string edge in RimEdgeOrder)
+            {
+                var child = box.Children.FirstOrDefault(c => c.Name == box.Name + "Rim" + edge);
+                if (child != null) found.Add(child);
+            }
+
+            if (found.Count != 4)
+            {
+                throw new InvalidOperationException(
+                    $"'{box.Name}' has {found.Count} of the 4 rim edges Ui.Rim names -- it was not built " +
+                    "by Ui.OutlineBox/Ui.Rim, so there is no rim here to recolour.");
+            }
+
+            return found;
+        }
+
+        private static readonly string[] RimEdgeOrder = { "Top", "Bottom", "Left", "Right" };
+
         // A FILL AND THE RIM THAT TRACES IT, as one box.
         //
         // Rim above gives the four edges; every caller that wanted a *card*

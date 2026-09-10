@@ -12,6 +12,7 @@ using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stage;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -355,6 +356,103 @@ namespace PrincesPalace.PlayModeTests
                     "that, so a ring this close to centre means the foot-band measurement collapsed to ~0 " +
                     "again (the exact shape of the C3 bug), not that Shawn's art happens to be centred.");
             }
+        }
+
+        // THE THREE CARDS WEAR THREE DIFFERENT PEOPLE'S COLOURS.
+        //
+        // The only check that can catch a card-major/edge-major mix-up in
+        // FightController.rosterCardRims. Rim edges are AsDecor, so UiAudit
+        // never looks at their colour; FightScreenTests pins the twelve node
+        // NAMES, which proves the tree is built right but not that the
+        // controller indexes it right. This reads the colour actually on the
+        // Image after a real RefreshUi, for the character actually on that
+        // card.
+        //
+        // NOT GRAPHICS-GATED, deliberately: the colours are component state,
+        // not pixels, so this runs headless with the rest of the suite. The
+        // full-frame PNGs the fixture above writes are the visual evidence
+        // that the result is legible; this is the evidence that it is right.
+        [UnityTest]
+        public IEnumerator EachHudCardWearsItsOwnOccupantsIdentityColour()
+        {
+            yield return OpenTheScene();
+
+            // Two frames, per docs/CODE_STANDARDS.md Sec8: Start() runs one
+            // frame after SetActive, and RefreshUi is what writes these.
+            yield return null;
+            yield return null;
+
+            var session = _fight.Session;
+            Assert.IsNotNull(session, "the fight never started, so no card has an occupant");
+
+            // WHOSE CARD IS THIS is read off the card's own name label, not
+            // recomputed from the turn order. FightController decides which
+            // member each card shows (ActingCharacter, then RefreshRoster's
+            // "everyone else" ordering) and a test that re-derived that would
+            // pass on a controller that painted the right colour on the wrong
+            // card, which is precisely the bug this exists to find.
+            var themes = new System.Collections.Generic.List<ButtonTheme>();
+            foreach (var card in new[]
+                     {
+                         ("PartyPlate", "PartyName"),
+                         ("Roster0", "Roster0Name"),
+                         ("Roster1", "Roster1Name"),
+                     })
+            {
+                string who = Named(card.Item2)?.GetComponent<TMPro.TMP_Text>()?.text;
+                Assert.IsFalse(string.IsNullOrWhiteSpace(who),
+                    $"{card.Item2} is blank -- the card names nobody, so nothing can be checked against it");
+
+                var occupant = session.Encounter.PlayerParty.FirstOrDefault(c => c.Name == who);
+                Assert.IsNotNull(occupant, $"{card.Item2} says '{who}', who is not in the party");
+
+                var kit = session.KitFor(occupant);
+                Assert.IsNotNull(kit, $"{who} has no PlayerKit, so no theme could reach their card");
+
+                AssertCardWears(card.Item1, card.Item2, kit.PlateTheme, who);
+                themes.Add(kit.PlateTheme);
+            }
+
+            // MUTUALLY DISTINCT -- the whole point of a per-PC colour. If two
+            // cards agreed, every assert above would still pass while the
+            // column told the player nothing.
+            CollectionAssert.AllItemsAreUnique(themes,
+                "two of the three HUD cards wear the same identity colour: " +
+                string.Join(", ", themes.Select(t => t.ToString())));
+        }
+
+        private void AssertCardWears(string cardStem, string nameNode, ButtonTheme theme, string who)
+        {
+            var expected = PcTheme.For(theme);
+            var expectedRim = Hex(expected.Rim);
+
+            foreach (string edge in new[] { "Top", "Bottom", "Left", "Right" })
+            {
+                var rim = Named(cardStem + "Rim" + edge)?.GetComponent<Image>();
+                Assert.IsNotNull(rim, $"{cardStem}Rim{edge} is missing or carries no Image");
+                AssertColour(expectedRim, rim.color, $"{cardStem}Rim{edge} ({who}, {theme})");
+            }
+
+            var label = Named(nameNode)?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(label, $"{nameNode} is missing or carries no TMP_Text");
+            AssertColour(Hex(expected.Name), label.color, $"{nameNode} ({who}, {theme})");
+        }
+
+        // 1/255 either way: the hex goes through ColorUtility and back out as
+        // a float per channel, so an exact equality would be pinning float
+        // round-tripping rather than the colour.
+        private static void AssertColour(Color expected, Color actual, string what)
+        {
+            Assert.AreEqual(expected.r, actual.r, 0.004f, what + " red");
+            Assert.AreEqual(expected.g, actual.g, 0.004f, what + " green");
+            Assert.AreEqual(expected.b, actual.b, 0.004f, what + " blue");
+            Assert.AreEqual(expected.a, actual.a, 0.004f, what + " alpha");
+        }
+
+        private static Color Hex(string hex)
+        {
+            Assert.IsTrue(ColorUtility.TryParseHtmlString(hex, out var parsed), $"'{hex}' is not a colour");
+            return parsed;
         }
 
         // C3: |ring centre x - foot-band midpoint x| < 6px, for whichever

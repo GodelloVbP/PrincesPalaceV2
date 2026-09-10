@@ -109,6 +109,16 @@ namespace PrincesPalace.Domain.Tests
             // loop counter -- exactly the shape the Store bug had.
             AssertSameLength("roster", s.RosterPlates, s.RosterNames, s.RosterHpValues,
                 s.RosterHpFills, s.RosterMpValues, s.RosterMpFills, s.RosterSignatures);
+
+            // FOUR PER CARD, kept OUT of AssertSameLength above -- these are
+            // 4x the length of the roster lists by construction, so the
+            // helper would refuse them for being exactly right.
+            // FightController.ApplyCardTheme indexes rosterCardRims as
+            // i * RimsPerCard, so a list that is not 4x the cards paints one
+            // card's edges onto another's.
+            Assert.AreEqual(4, s.PartyCardRims.Count, "the party card has four rim edges");
+            Assert.AreEqual(s.RosterPlates.Count * 4, s.RosterCardRims.Count,
+                "rosterCardRims is CARD-MAJOR: exactly four edges per roster card, in order");
         }
 
         // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
@@ -150,6 +160,7 @@ namespace PrincesPalace.Domain.Tests
                 { "SubmenuRows", s.SubmenuRows }, { "WoolPips", s.WoolPips },
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
+                { "PartyCardRims", s.PartyCardRims }, { "RosterCardRims", s.RosterCardRims },
             };
 
             foreach (var pair in lists)
@@ -161,7 +172,6 @@ namespace PrincesPalace.Domain.Tests
             }
 
             Assert.IsTrue(s.PartyPlate.IsValid);
-            Assert.IsTrue(s.PartyPlateArt.IsValid);
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
             Assert.IsTrue(s.DetailDamageType.IsValid);
@@ -212,17 +222,26 @@ namespace PrincesPalace.Domain.Tests
             // 191.92; and the Row6x1 plate's own bottom halo pad moved
             // 0.0138 -> 0.0117 of the verb row's height, which is what shifts
             // VisibleBottomLine itself by 0.11px.
+            //
+            // 2026-09-10, THE CARD: the plate stopped being a kit container
+            // and became the same Ui.OutlineBox the two roster cards are,
+            // only taller (see BuildPartyPlate's own header for the measured
+            // reason -- a 1%-of-canvas rim in front of a flat black field).
+            // Two numbers move with that. HEIGHT is 154 now: not an aspect's
+            // consequence any more, but the sum of the card's own ledger.
+            // And the BOTTOM lands exactly on VisibleBottomLine (-485.392)
+            // rather than 1.235px below it, because a flat box paints no
+            // transparent halo outside its rim -- rect bottom IS painted
+            // bottom, so the pad the container needed is 0.
             var rect = RectOf("PartyPlate");
             Assert.AreEqual(-920f, rect.Centre.X - rect.Width * 0.5f, 0.01f, "the left edge must not move");
-            Assert.AreEqual(-391.627f, rect.Centre.Y, 0.01f);
+            Assert.AreEqual(-408.392f, rect.Centre.Y, 0.01f);
             Assert.AreEqual(380f, rect.Width, 0.01f);
-            Assert.AreEqual(190f, rect.Height, 0.01f);
-            Assert.AreEqual(-486.627f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
-                "the bottom edge is solved from FightSubmenuLayout.VisibleBottomLine, not a flat -500");
+            Assert.AreEqual(154f, rect.Height, 0.01f);
+            Assert.AreEqual(-485.392f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
+                "the bottom edge is FightSubmenuLayout.VisibleBottomLine itself now -- a flat card has no " +
+                "halo, so rect bottom == painted bottom");
         }
-
-        // The party plate's container theme/ratio and content inset are
-        // covered by KitContainerPlacementTests, not repeated here.
 
         [Test]
         public void ThePartyPlateChildrenRideInsideTheFrame()
@@ -236,6 +255,45 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(names, "PartyHpBar");
             CollectionAssert.Contains(names, "PartyMpBar");
             CollectionAssert.Contains(names, "WoolRow");
+
+            // THE CARD, not a container: OutlineBox's own four rim edges are
+            // there, and the two nodes the kit-container shape produced are
+            // not. Named rather than counted -- "PartyPlateArt" reappearing
+            // would mean the container came back in some other form.
+            CollectionAssert.Contains(names, "PartyPlateRimTop");
+            CollectionAssert.DoesNotContain(names, "PartyPlateArt");
+            CollectionAssert.DoesNotContain(names, "PartyPlateContent");
+        }
+
+        // THE TWELVE NAMES, AS LITERALS -- CLAUDE.md gotcha 5.
+        //
+        // This is the one assert that catches a card-major/edge-major mix-up
+        // in RosterCardRims, and it only catches it by being written out
+        // rather than rebuilt from $"{stem}Rim{edge}": a test that generated
+        // the expected names the same way the production code generates the
+        // actual ones can only find a typo in itself. The failure this
+        // guards is silent by construction -- rim edges are AsDecor, so
+        // UiAudit never looks at their colour, and a mix-up paints the wrong
+        // ally's colour on a card rather than throwing anything.
+        [Test]
+        public void TheCardRimNodesCarryTheNamesTheControllerBindsTo()
+        {
+            var s = Screen();
+
+            CollectionAssert.AreEqual(
+                new[] { "PartyPlateRimTop", "PartyPlateRimBottom", "PartyPlateRimLeft", "PartyPlateRimRight" },
+                s.PartyCardRims.Select(r => r.Node.Name).ToList(),
+                "the party card's four edges, in Ui.RimEdgesOf's Top/Bottom/Left/Right order");
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "Roster0RimTop", "Roster0RimBottom", "Roster0RimLeft", "Roster0RimRight",
+                    "Roster1RimTop", "Roster1RimBottom", "Roster1RimLeft", "Roster1RimRight",
+                },
+                s.RosterCardRims.Select(r => r.Node.Name).ToList(),
+                "CARD-MAJOR: all four of card 0's edges, then all four of card 1's -- an edge-major " +
+                "flattening would paint card 1's colour onto three of card 0's edges");
         }
 
         // TWO ABREAST, NOT A COLUMN OF THREE. Half-width plates in two columns
@@ -867,7 +925,16 @@ namespace PrincesPalace.Domain.Tests
 
             float verbVisibleBottom = VisibleBottom(attack, Ui.PlateVisiblePad(Ui.PlateShapeFor(attack.Width, attack.Height)));
             float panelVisibleBottom = VisibleBottom(panel, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour));
-            float plateVisibleBottom = VisibleBottom(partyPlate, Ui.ContainerVisiblePad(ContainerRatio.TwoByOne));
+
+            // THE RAW RECT BOTTOM for the third surface, 2026-09-10 -- and
+            // the asymmetry is the point rather than an oversight. The verb
+            // row and the skill panel are kit art, which paints a
+            // transparent halo outside its own border, so their painted
+            // edge is inset from their rect and has to be corrected for.
+            // The party plate is a flat Ui.OutlineBox now: its rim edge IS
+            // its last painted pixel, so a pad here would move the
+            // comparison off the line it is checking.
+            float plateVisibleBottom = partyPlate.Centre.Y - partyPlate.Height * 0.5f;
 
             Assert.AreEqual(verbVisibleBottom, panelVisibleBottom, 0.01f,
                 "the skill panel and the verb column no longer end on the same VISIBLE line");
@@ -1224,15 +1291,28 @@ namespace PrincesPalace.Domain.Tests
         // arithmetic of removing the strip.
         private const float RosterStackTopBudget = -160.627f;
 
+        // WHERE THE STACK ACTUALLY TOPS OUT, as of the 2026-09-10 card pass:
+        // the party card shrank 190 -> 154 and its bottom rose 1.235px onto
+        // VisibleBottomLine itself, so everything stacked on it dropped
+        // 34.77px away from the budget line. Pinned as a literal BESIDE the
+        // budget rather than replacing it -- the budget is the constraint
+        // (never rise above it), this is the fact (where we are), and a
+        // change that silently spent the new headroom should fail here.
+        private const float RosterStackTop = -195.392f;
+
         [Test]
         public void TheRosterStackTopDoesNotRiseAboveItsBudget()
         {
             var top = RectOf("Roster1");
+            float stackTop = top.Centre.Y + top.Height * 0.5f;
 
-            Assert.AreEqual(RosterStackTopBudget, top.Centre.Y + top.Height * 0.5f, 0.01f,
-                "the HUD column's top edge moved -- the party stage draws OVER this column, so a taller " +
-                "stack puts a figure's feet on top of the roster text. Pay for new rows by trimming cell " +
-                "heights, never by raising this line.");
+            Assert.LessOrEqual(stackTop, RosterStackTopBudget,
+                "the HUD column's top edge rose past its budget -- the party stage draws OVER this column, " +
+                "so a taller stack puts a figure's feet on top of the roster text. Pay for new rows by " +
+                "trimming cell heights, never by raising this line.");
+            Assert.AreEqual(RosterStackTop, stackTop, 0.01f,
+                "the stack top moved; if that was intended, re-derive this literal from the card ledger " +
+                "and say so, and check it still clears the budget above.");
         }
 
         // "Have all the containers be flush with one another on a horizontal

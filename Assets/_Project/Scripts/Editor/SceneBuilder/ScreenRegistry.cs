@@ -251,19 +251,11 @@ public static class ScreenRegistry
                 // someone has to remember (CLAUDE.md gotcha 3).
                 fight.enemyFallbackSprite = SceneBuilder.LoadSpriteByKey(FightScreen.FallbackPlateKey);
 
-                // One 2x1 container sprite per ButtonTheme (C1), through the
-                // SAME Ui.ContainerKey the tree's own Ui.Container("PartyPlate",
-                // ButtonTheme.Blue, ...) built its baked frame from -- so a
-                // runtime swap can never name a file the baked one did not
-                // already prove exists. Indexed by (int)theme, matching
-                // RefreshPartyPlate's ApplyPartyPlateTheme lookup.
-                var plateThemes = (ButtonTheme[])Enum.GetValues(typeof(ButtonTheme));
-                fight.partyPlateThemes = new Sprite[plateThemes.Length];
-                foreach (var theme in plateThemes)
-                {
-                    fight.partyPlateThemes[(int)theme] =
-                        SceneBuilder.LoadSpriteByKey(Ui.ContainerKey(theme, ContainerRatio.TwoByOne));
-                }
+                // The per-ButtonTheme 2x1 container bake is GONE (2026-09-10).
+                // It loaded one kit sprite per theme so RefreshPartyPlate could
+                // swap the party plate's frame; the plate is a flat
+                // Ui.OutlineBox now (FightScreen.BuildPartyPlate), so there is
+                // no frame to swap and the six sprites had no reader.
 
                 // Something has to actually START a fight, or the scene opens on
                 // an empty stage and the screen cannot be looked at. Placeholder
