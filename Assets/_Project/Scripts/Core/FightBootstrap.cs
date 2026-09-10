@@ -569,8 +569,18 @@ namespace PrincesPalace
             var item = ContentDatabase.GetItem(itemId);
             if (save == null || item == null) return;
 
-            fight.Session?.UseConsumable(item.displayName, item.amount,
-                item.effect == ItemEffect.RestoreMana);
+            bool used = fight.Session?.UseConsumable(item.displayName, item.amount,
+                item.effect == ItemEffect.RestoreMana) ?? false;
+
+            // NOT SPENT UNLESS IT WAS USED, and this line used to run whatever
+            // the session did with the press. A mana potion pressed by a
+            // character whose pool refuses mana effects was deleted from the
+            // stockpile and written to disk for a bar that never moved -- the
+            // session refuses that press outright now (it costs no turn either)
+            // and says so by returning false.
+            //
+            // The stack is only worth re-reading when one actually left it.
+            if (!used) return;
 
             // Spent from the stash and written immediately, then the column is
             // handed the new counts -- otherwise it keeps showing what the

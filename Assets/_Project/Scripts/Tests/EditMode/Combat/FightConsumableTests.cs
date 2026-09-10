@@ -139,5 +139,78 @@ namespace PrincesPalace.Domain.Tests
             Assert.DoesNotThrow(() => session.UseConsumable("", 10, restoresMana: false));
             Assert.AreEqual(110, AfterTheDrink(session, hero).Health);
         }
+
+        // ---- a potion the drinker's pool refuses --------------------------------
+        //
+        // ONE PREDICATE, THREE READERS, which is what DetailForItem's own header
+        // already claims and what this closes. CombatMath.RestoreMana refuses a
+        // pool whose row says restoredByManaEffects is false and restores 0; the
+        // hover panel says so ("No effect on Fury."); the ROW -- the thing a
+        // hand actually presses -- advertised MANA and let the press through.
+        // The result was a potion deleted from the save and a turn spent for a
+        // bar that never moved.
+        private static ResourcePool FuryPool()
+        {
+            var pool = new ResourcePool("fury", "Fury", 100, 0, gainOnAttack: 15, gainOnDamageTaken: 10);
+            pool.ShortTag = "FURY";
+            pool.RestoredByManaEffects = false;
+            return pool;
+        }
+
+        [Test]
+        public void AManaPotionsRowSaysSoForAPoolThatCannotDrinkIt()
+        {
+            var satchel = new List<SatchelStack>
+            {
+                new SatchelStack("ether", "Mana Draught", 3, restoresMana: true),
+            };
+
+            var rows = FightHudModel.ItemRows(satchel, FuryPool());
+
+            Assert.AreEqual("CONSUMABLE  ·  NO EFFECT", rows[0].Meta);
+            Assert.IsFalse(rows[0].CanPay, "an unpressable row is what stops the potion being spent");
+            Assert.AreEqual("x3", rows[0].Cost, "the count is still the truth about the stack");
+        }
+
+        [Test]
+        public void AHealthPotionsRowIsUnaffectedByTheDrinkersPool()
+        {
+            // The control. Only a MANA potion has anything to disagree with a
+            // pool about.
+            var satchel = new List<SatchelStack>
+            {
+                new SatchelStack("potion", "Potion", 2, restoresMana: false),
+            };
+
+            var rows = FightHudModel.ItemRows(satchel, FuryPool());
+
+            Assert.AreEqual("CONSUMABLE  ·  HEALTH", rows[0].Meta);
+            Assert.IsTrue(rows[0].CanPay);
+        }
+
+        [Test]
+        public void DrinkingAManaPotionOnAPoolThatRefusesItIsRefused()
+        {
+            var (session, hero, _) = Fight();
+            hero.PrimaryPool = FuryPool();
+
+            bool used = session.UseConsumable("Mana Draught", 40, restoresMana: true);
+
+            Assert.IsFalse(used, "the caller has to be told, or it deletes the item anyway");
+            Assert.AreEqual(0, hero.PrimaryPool.Current, "nothing landed");
+            Assert.IsFalse(session.DrainBeats().Any(b => b.Actor != null && !b.Actor.IsPlayerSide),
+                "a refused press must not cost the turn either");
+        }
+
+        [Test]
+        public void DrinkingAPotionThatDoesLandStillReportsItWasUsed()
+        {
+            // The other half of the same contract: `true` is what tells the
+            // caller to spend the item, so a working potion must still say it.
+            var (session, hero, _) = Fight();
+            hero.CurrentHealth = 100;
+
+            Assert.IsTrue(session.UseConsumable("Health Potion", 40, restoresMana: false));
+        }
     }
 }

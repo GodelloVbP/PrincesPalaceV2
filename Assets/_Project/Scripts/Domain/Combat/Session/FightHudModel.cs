@@ -189,24 +189,54 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Column B for the item branch. Items never cost mana, so nothing here
         // previews on the bar.
-        public static IReadOnlyList<SubmenuRow> ItemRows(IReadOnlyList<SatchelStack> satchel)
+        //
+        // TAKES THE DRINKER'S POOL for the same reason DetailForItem does, and
+        // this is the reader that was missing. The hover panel already said "No
+        // effect on Fury." over a row whose own meta read MANA and whose canPay
+        // was true -- so the panel was honest and the thing a hand actually
+        // presses was not, and the press went through: potion gone from the
+        // save, turn spent, bar unmoved. One predicate, three readers.
+        //
+        // The pool is OPTIONAL and null reads as mana-shaped, matching
+        // DetailForItem exactly: a caller with no actor in hand gets the rows
+        // it has always got rather than a hedge.
+        public static IReadOnlyList<SubmenuRow> ItemRows(
+            IReadOnlyList<SatchelStack> satchel, ResourcePool primaryPool = null)
         {
             var rows = new List<SubmenuRow>();
             if (satchel == null) return rows;
 
             foreach (var stack in satchel)
             {
+                bool refuses = ItemRefusedBy(stack.RestoresMana, primaryPool);
+
                 rows.Add(new SubmenuRow(
                     stack.DisplayName,
-                    stack.RestoresMana ? "CONSUMABLE  ·  MANA" : "CONSUMABLE  ·  HEALTH",
+                    refuses ? "CONSUMABLE  ·  NO EFFECT"
+                        : stack.RestoresMana ? "CONSUMABLE  ·  MANA"
+                        : "CONSUMABLE  ·  HEALTH",
                     "x" + stack.Count,
-                    canPay: stack.Count > 0,
+
+                    // The COUNT is still shown, and still true. What "cannot
+                    // pay" means here is "this would do nothing", not "you have
+                    // none" -- a greyed row over an x3 is the honest reading of
+                    // a satchel holding three potions this character cannot use.
+                    canPay: stack.Count > 0 && !refuses,
                     meetsRequirement: true,
                     manaCost: 0));
             }
 
             return rows;
         }
+
+        // WOULD THIS ITEM DO NOTHING FOR THIS POOL. The one predicate behind
+        // the row, the hover panel and the press (FightSession.UseConsumable),
+        // so the three cannot answer differently -- which is exactly what they
+        // did while the row had no pool to ask about.
+        //
+        // A null pool reads as mana-shaped: see ItemRows' own header.
+        public static bool ItemRefusedBy(bool restoresMana, ResourcePool primaryPool) =>
+            restoresMana && primaryPool != null && !primaryPool.RestoredByManaEffects;
 
         // Column B for the move branch. TWO ROWS, ALWAYS BOTH SHOWN, one per
         // direction -- an illegal one is dimmed with its reason in the cost
@@ -793,8 +823,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // hedge.
         public static DetailPanel DetailForItem(SatchelStack stack, ResourcePool primaryPool = null)
         {
-            bool refuses = stack.RestoresMana
-                           && primaryPool != null && !primaryPool.RestoredByManaEffects;
+            bool refuses = ItemRefusedBy(stack.RestoresMana, primaryPool);
 
             string body;
             if (!stack.RestoresMana) body = "Restores health.";

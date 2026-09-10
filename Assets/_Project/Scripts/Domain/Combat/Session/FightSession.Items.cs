@@ -17,10 +17,31 @@ namespace PrincesPalace.Domain.Combat.Session
         // COSTS THE TURN, like every other action. A free heal would make the
         // item column strictly better than defending, and every fight would
         // open with the whole satchel.
-        public void UseConsumable(string displayName, int amount, bool restoresMana)
+        //
+        // RETURNS WHETHER THE ITEM WAS ACTUALLY SPENT, and it was void. Core
+        // removed the stack from the stockpile and saved regardless of what
+        // happened in here, which was harmless for as long as every press did
+        // something -- and stopped being harmless the moment a pool could
+        // refuse a mana potion outright. A caller that deletes an item has to
+        // be told whether the item was used.
+        //
+        // FALSE IS A REFUSAL, NOT A FAILURE: no beat, no message, no turn. The
+        // row the press came from is greyed for the same reason by the same
+        // predicate (FightHudModel.ItemRefusedBy), so reaching here at all
+        // means something upstream is not asking -- and a refusal that still
+        // cost the turn would be the worse of the two answers.
+        //
+        // It is deliberately NOT the same thing as "restored 0". Drinking at
+        // full health restores 0, spends the potion and costs the turn, and
+        // says "nothing changes" -- the player chose to do that and the potion
+        // genuinely could have worked. A pool that refuses mana outright is a
+        // press that could never have worked.
+        public bool UseConsumable(string displayName, int amount, bool restoresMana)
         {
             var actor = Current;
-            if (actor == null) return;
+            if (actor == null) return false;
+
+            if (FightHudModel.ItemRefusedBy(restoresMana, actor.PrimaryPool)) return false;
 
             BeginBeat(actor, actor);
             SetStance(actor, Stances.Cast);
@@ -64,6 +85,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             CommitBeat();
             AdvanceAfterAction();
+            return true;
         }
     }
 }

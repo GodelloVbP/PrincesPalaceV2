@@ -192,6 +192,18 @@ namespace PrincesPalace.Domain.Bot
                 foreach (var stack in satchel)
                 {
                     if (stack.Count <= 0) continue;
+
+                    // A POTION THIS ACTOR'S POOL REFUSES IS NOT A LEGAL
+                    // ACTION, by the same rule the Move block below states:
+                    // a row the menu would refuse never reaches a policy.
+                    // FightHudModel.ItemRefusedBy is the predicate the greyed
+                    // row and the session's own press both read, so a mana
+                    // draught in front of a Fury holder is offered to nobody
+                    // -- and cannot be picked into a command the session
+                    // refuses, which spends no turn and would leave the run
+                    // loop asking the same actor forever.
+                    if (FightHudModel.ItemRefusedBy(stack.RestoresMana, actor.PrimaryPool)) continue;
+
                     actions.Add(new FightAction(
                         FightActionKind.Item, actor,
                         itemId: stack.ItemId, itemDisplayName: stack.DisplayName,
