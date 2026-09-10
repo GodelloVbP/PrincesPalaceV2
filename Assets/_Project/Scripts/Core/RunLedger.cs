@@ -15,13 +15,26 @@ namespace PrincesPalace
     // held anywhere would be a second thing that can be wrong.
     public static class RunLedger
     {
-        // Adds one fight's counters onto the run's.
+        // Adds one fight's counters onto the run's, FOR THE PARTY ONLY.
         //
         // Called for a LOST fight as well as a won one. What a character did in
         // the fight that killed them is part of the run, and dropping it would
         // make the death screen quietly under-report the most dramatic fight in
         // it.
-        public static void Fold(RunSnapshot run, CombatLedger fight)
+        //
+        // THE PARTY FILTER IS THE POINT OF THE THIRD PARAMETER. A CombatLedger
+        // is BOTH sides: every enemy swing goes through the same funnel and
+        // accrues onto a line keyed by the enemy's definition id (see
+        // FightSession.Ledger's LedgerIdOf). Folding all of it made every
+        // "summed across the party" figure -- the run-stats pane, the defeat
+        // screen, save.lifetimeDamageDealt and the million_damage achievement
+        // off it -- count the monsters too.
+        //
+        // Filtered HERE rather than where the sums are read, because the sums
+        // are read in four places and this is the one door a row comes through.
+        // A null or empty set folds NOTHING: "the party is unknown" has to lose
+        // rows rather than admit every enemy, or the parameter buys nothing.
+        public static void Fold(RunSnapshot run, CombatLedger fight, IReadOnlyCollection<string> partyIds)
         {
             if (run == null || fight == null) return;
 
@@ -29,6 +42,8 @@ namespace PrincesPalace
 
             foreach (var id in fight.Ids)
             {
+                if (partyIds == null || !partyIds.Contains(id)) continue;
+
                 var line = fight.For(id);
                 var entry = EntryFor(run, id);
 

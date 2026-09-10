@@ -397,7 +397,16 @@ namespace PrincesPalace
             // that killed them is part of the run -- dropping it would make the
             // death screen under-report the most dramatic fight in it, which is
             // the one fight the player most wants described.
-            RunLedger.Fold(run, session?.Ledger);
+            // THE PARTY, AND ONLY THE PARTY. A CombatLedger carries both sides
+            // of the fight, so the ids are worked out here the same way
+            // WriteBackHealth below works them out -- the fielded party through
+            // KitFor -- rather than by asking content whether an id names a
+            // character. Content cannot answer for a test fixture's party, and
+            // an id-shaped question that content gets wrong silently drops a
+            // real character's whole run. FieldedIds is that same list, already
+            // named, and reusing it is what keeps the fold and the write-back
+            // from ever disagreeing about who was in the fight.
+            RunLedger.Fold(run, session?.Ledger, FieldedIds(session));
 
             // HP CARRIED FORWARD, also before the win check, and for a related
             // reason: a loss ends the run through EndRun below, and the defeat
@@ -533,7 +542,10 @@ namespace PrincesPalace
         // encounter (at 0 HP when it was built) is downed rather than absent.
         private static IReadOnlyList<string> FieldedIds(FightSession session)
         {
-            if (session == null) return new List<string>();
+            // Guarded down to the party itself, not just the session: the
+            // ledger fold above runs before the win check and so before
+            // anything else has had a reason to touch the encounter.
+            if (session?.Encounter?.PlayerParty == null) return new List<string>();
 
             return session.Encounter.PlayerParty
                 .Select(session.KitFor)

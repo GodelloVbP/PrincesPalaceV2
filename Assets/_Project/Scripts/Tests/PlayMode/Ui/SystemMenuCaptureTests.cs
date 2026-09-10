@@ -340,7 +340,7 @@ namespace PrincesPalace.PlayModeTests
                 RunManager.BankPayout(40);
                 RunLedger.RecordRoom(run, won: true, expGained: 30, step: 6);
                 RunManager.BankPayout(88);
-                RunLedger.Fold(run, LoudFight());
+                RunLedger.Fold(run, LoudFight(), new[] { "a", "b" });
 
                 yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
                 yield return null;

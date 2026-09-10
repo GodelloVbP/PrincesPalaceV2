@@ -40,6 +40,11 @@ namespace PrincesPalace.PlayModeTests
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
+        // Who was fielded. RunOrchestrator.SettleFight builds this off the live
+        // session; here it is written down, because a fixture that derived it
+        // from the ledger it is checking would agree with anything.
+        private static readonly string[] Party = { "shawn" };
+
         private static RunSnapshot Run(int gold = 0, params string[] bosses)
         {
             var run = new RunSnapshot { hasRun = true, gold = gold };
@@ -161,8 +166,8 @@ namespace PrincesPalace.PlayModeTests
             fight.Restored("shawn", 15);
             fight.ScoredKill("shawn");
 
-            RunLedger.Fold(run, fight);
-            RunLedger.Fold(run, fight);
+            RunLedger.Fold(run, fight, Party);
+            RunLedger.Fold(run, fight, Party);
 
             var entry = RunLedger.For(run, "shawn");
             Assert.AreEqual(240, entry.physicalDealt, "two identical fights sum rather than replace");
@@ -170,6 +175,33 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(24, entry.shielded);
             Assert.AreEqual(30, entry.healed);
             Assert.AreEqual(2, entry.kills);
+        }
+
+        // A CombatLedger is BOTH sides of the fight: every enemy swing accrues
+        // onto a line keyed by the enemy's definition id. Folding all of it put
+        // the monsters into a number the game calls the party's, and this is
+        // the sharpest end of it -- lifetimeDamageDealt is what the
+        // million_damage achievement counts, so the threshold fired at roughly
+        // half the authored figure.
+        //
+        // Pinned at the FOLD rather than at the sum: the sums are read in four
+        // places and cannot tell a character id from an enemy one, while the
+        // fold is handed the party that was actually fielded.
+        [Test]
+        public void AnEnemysOwnLedgerRowIsNotBankedAsDamageTheSquadDealt()
+        {
+            var run = Run();
+            var fight = new CombatLedger();
+            fight.Dealt("shawn", DamageType.Physical, 300);
+            fight.Dealt("rat", DamageType.Physical, 500);
+
+            RunLedger.Fold(run, fight, Party);
+            RunSettlement.Settle(Save, run);
+
+            Assert.AreEqual(300, Save.lifetimeDamageDealt,
+                "the rat's 500 was banked as damage the party dealt");
+            Assert.AreEqual(0, RunLedger.For(run, "rat").TotalDealt,
+                "the enemy got a row on the run's ledger at all");
         }
 
         [Test]
