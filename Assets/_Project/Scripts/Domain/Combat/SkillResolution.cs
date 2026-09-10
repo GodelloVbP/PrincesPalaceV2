@@ -207,6 +207,20 @@ namespace PrincesPalace.Domain.Combat
         // costs-by-id map, re-authors those rows, loops this one rule, and
         // invents a book costing a pool its buyer does not have. See the
         // plan's P5.
+        //
+        // PRICED BEFORE DISCOUNTS, DELIBERATELY. `manaCost` here is the
+        // AUTHORED cost, and Runic's PendingManaDiscountPercent is applied
+        // afterwards by FightSession.ChargeSkillMana -- so a wearer with 3
+        // mana, a 6-cost skill and a 50% discount armed sees the row greyed
+        // for a cast the game would in fact have charged 3 for. That is one-
+        // sided in the player's disfavour and it is the decision, not an
+        // oversight: ChargeSkillMana's own header states it ("Conservative
+        // rather than wrong: the discount is a bonus on a cast the player
+        // could already pay for, not a new way to afford one they could not").
+        // Cross-referenced from here because a reader arriving at
+        // affordability from this side had no way to find that sentence, and
+        // an unexplained mismatch between what the menu refuses and what the
+        // charge takes reads as a bug every time it is rediscovered.
         public static bool CanAfford(CombatantState actor, int manaCost, int resourceCost)
         {
             if (actor == null)
