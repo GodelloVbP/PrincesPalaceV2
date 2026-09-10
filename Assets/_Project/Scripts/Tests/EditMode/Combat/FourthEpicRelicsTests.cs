@@ -216,7 +216,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _) = Fight(RelicEffect.LuckyDeck);
             hero.CurrentHealth = 1;
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
 
             session.LuckyDeckHealForTest(hero);
 
@@ -311,7 +311,7 @@ namespace PrincesPalace.Domain.Tests
                 session.Begin();
 
                 hero.CurrentHealth = hero.MaxHealth / 2;
-                hero.CurrentMana = 0;
+                hero.PrimaryPool.Current = 0;
                 int heroSpeedBefore = hero.Speed;
                 int foeBHealthBefore = foeB.CurrentHealth;
 

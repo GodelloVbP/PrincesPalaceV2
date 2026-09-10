@@ -336,7 +336,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // attack barely dents an enemy's defence -- and it is why Skill does
             // not grant it, and why Dual Wield's second swing does not grant it
             // again either.
-            GrantSignature(actor, actor.Signature?.GainOnAttack ?? 0);
+            GrantSignature(actor, actor.SignaturePool?.GainOnAttack ?? 0);
+
+            // BOTH POOLS HEAR THE SAME EVENT. Mana's gainOnAttack is 0, so
+            // this is inert until a row authors otherwise -- which is the
+            // point: a rage bar that fills by swinging is then a number in
+            // pools.json rather than a second call site somebody has to
+            // remember to add beside this one.
+            GrantPrimary(actor, actor.PrimaryPool?.GainOnAttack ?? 0);
 
             // Dual Wield: a second full swing at the SAME target, only on a plain
             // attack (the relic's wording is "whenever you attack", not "whenever

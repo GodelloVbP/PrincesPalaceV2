@@ -49,11 +49,18 @@ namespace PrincesPalace.Content
         private static List<RewardTrackDefinitionAsset> _rewardTracks;
         private static List<PoolDefinition> _pools;
 
-        // Every combat resource pool, authored order. Nothing in the fight
-        // reads one yet -- phase A of the pool work is the catalogue only,
-        // and CombatantState learns about pools in phase B. Listed here now
-        // so the type is loaded, ordered and id-swept like every other
-        // catalogue rather than bolted on when the first reader arrives.
+        // THE POOL EVERYTHING WITH NO OPINION GETS: every enemy, every
+        // character who does not name another one, and the fallback when a
+        // named row has gone missing from a save's catalogue. Named here
+        // rather than typed at each of those sites, because "which row is
+        // the default" is one decision and the three sites must not be able
+        // to disagree about it.
+        public const string ManaPoolId = "mana";
+
+        // Every combat resource pool, authored order. A character's
+        // primaryPoolId names one (ContentDatabase.PrimaryPoolFor), and
+        // CombatantState.PrimaryPool is built from it for every combatant in
+        // every fight -- see BuildPrimaryPool for the capacity chain.
         public static IReadOnlyList<PoolDefinition> Pools
         {
             get { EnsureLoaded(); return _pools; }

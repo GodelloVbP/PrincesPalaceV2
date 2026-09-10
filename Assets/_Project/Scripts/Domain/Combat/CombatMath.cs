@@ -552,7 +552,7 @@ namespace PrincesPalace.Domain.Combat
             // tick can walk around is not the rule it claims to be.
             amount = CapSpikeDamage(amount, target);
 
-            int absorbed = target.Signature != null ? target.Signature.Absorb(amount) : 0;
+            int absorbed = target.SignaturePool != null ? target.SignaturePool.Absorb(amount) : 0;
             int toHealth = amount - absorbed;
 
             // Last Stand T3. Checked BEFORE health is written rather than by
@@ -622,14 +622,46 @@ namespace PrincesPalace.Domain.Combat
             return actor.MaxHealth * above * HealPermillePerWisdomPoint / 1000;
         }
 
+        // SPENDS FROM THE PRIMARY POOL -- whatever this combatant's skills
+        // actually pay in, which is mana for everyone shipped today. Clamped
+        // rather than all-or-nothing: affordability was already checked by
+        // SkillResolution.CanAfford before anything reaches here, and a
+        // silent refusal at this depth would fire the ability for free.
         public static void SpendMana(CombatantState combatant, int amount)
         {
-            combatant.CurrentMana = Math.Max(0, combatant.CurrentMana - amount);
+            combatant?.PrimaryPool?.SpendUpTo(amount);
         }
 
-        public static void RestoreMana(CombatantState combatant, int amount)
+        // POURS INTO THE PRIMARY POOL, and REFUSES on a pool that does not
+        // take mana effects -- returning 0, which is what makes the refusal
+        // visible instead of silent. Every caller here is something the
+        // player understands as "mana comes back": a mana potion
+        // (FightSession.UseConsumable), RestorePartyMana, Lucky Deck's red
+        // card, the relic that tops up a fraction of what is missing.
+        //
+        // WITHOUT THE REFUSAL A MANA POTION IS A RAGE POTION. A pool a
+        // character earns by fighting must not be refillable from the
+        // satchel, and the honest place to say so is here rather than at
+        // each of the five call sites -- see ResourcePool.RestoredByManaEffects
+        // and the plan's attack point 2.
+        //
+        // Returns how much actually landed, so a caller can say the true
+        // number (or say nothing) rather than announcing an amount it hoped
+        // for. Was void; every existing caller ignores the result and still
+        // compiles.
+        public static int RestoreMana(CombatantState combatant, int amount)
         {
-            combatant.CurrentMana = Math.Min(combatant.MaxMana, combatant.CurrentMana + amount);
+            return CanRestoreMana(combatant) ? combatant.PrimaryPool.Gain(amount) : 0;
         }
+
+        // WHETHER A MANA EFFECT WOULD DO ANYTHING FOR THIS COMBATANT, asked
+        // separately from doing it because two other things need the answer
+        // BEFORE the effect resolves: the bot's missing-mana accounting
+        // (Lookahead2Policy), which would otherwise value a party mana heal
+        // by how empty a bar it cannot touch is, and the affordance text a
+        // potion shows. One predicate, so the answer cannot differ between
+        // "what the card says" and "what happens".
+        public static bool CanRestoreMana(CombatantState combatant) =>
+            combatant?.PrimaryPool != null && combatant.PrimaryPool.RestoredByManaEffects;
     }
 }

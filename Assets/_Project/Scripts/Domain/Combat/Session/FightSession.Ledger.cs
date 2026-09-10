@@ -142,6 +142,19 @@ namespace PrincesPalace.Domain.Combat.Session
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
             Ledger.Took(LedgerIdOf(target), toHealth, result.Absorbed);
 
+            // THE DAMAGE SEAM FOR POOL DECAY, and it is here for the same
+            // reason the ledger rows are: this is the ONE funnel every point
+            // of damage in the session passes through, so a seventh damage
+            // path cannot open without the pools hearing about it. Both ends
+            // of the blow count -- dealing and taking are each "not an idle
+            // turn" (the plan's attack point 5); a turn spent on Provoke, an
+            // item or a Move is idle and decays.
+            if (amount > 0)
+            {
+                NotePoolActivity(actor, PoolActivity.Damage);
+                NotePoolActivity(target, PoolActivity.Damage);
+            }
+
             return result;
         }
 

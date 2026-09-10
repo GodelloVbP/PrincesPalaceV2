@@ -87,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
             // showing real text for a text-contrast measurement to mean
             // anything.
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
-            hero.Signature = new SignatureResource("wool", "Wool", 16, 0, 2, 0);
+            hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, 2, 0);
             var foe = new CombatantState("Front", false, 5000, 10, 8, 4);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });

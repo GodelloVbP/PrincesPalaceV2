@@ -178,6 +178,14 @@ namespace PrincesPalace
         private AbilityScoreBlock _scores;
         private AbilityScoreBlock _previewScores;
 
+        // WHICH CAPACITY RULE THE SHOWN CHARACTER'S PRIMARY POOL USES, held
+        // for the same reason _scores is: the sheet's hover mechanic and the
+        // equip preview both have to know whether Wisdom moves the pool row
+        // at all, and for a Fixed pool it does not (see SheetStats.FedBy).
+        // WisdomDerived until a character is resolved -- that is what mana is
+        // and what every character shipped today carries.
+        private PoolCapacityRule _primaryPoolRule = PoolCapacityRule.WisdomDerived;
+
         private void OnEnable()
         {
             Wire();
@@ -530,6 +538,7 @@ namespace PrincesPalace
 
             RefreshIdentity(character);
             _scores = scores;
+            _primaryPoolRule = PrimaryPoolRuleFor(character);
             RefreshAttributes(scores, character.definitionId);
 
             // AFTER RefreshAttributes, not inside RefreshIdentity where it
@@ -1149,6 +1158,18 @@ namespace PrincesPalace
             return true;
         }
 
+        // WHICH CAPACITY RULE THIS CHARACTER'S POOL PLAYS BY. Resolved
+        // through ContentDatabase rather than read off a field on Character,
+        // because the pool is content and a save carries only the id.
+        // WisdomDerived when nothing resolves, which is the shipped answer
+        // and the one that keeps the sheet reading as it always has.
+        private static PoolCapacityRule PrimaryPoolRuleFor(Character character)
+        {
+            var definition = ContentDatabase.GetCharacter(character?.definitionId);
+            var pool = ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
+            return pool?.Data?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
+        }
+
         // THE mechanic: light the rows this attribute actually feeds, and dim
         // the rest so the answer is unmissable.
         private void LightRowsFor(int cell, bool entered)
@@ -1156,7 +1177,7 @@ namespace PrincesPalace
             if (statHighlights == null || cell < 0 || cell >= _cellOrder.Count) return;
 
             var fed = entered
-                ? new HashSet<SheetStat>(SheetStats.Feeds(_cellOrder[cell]))
+                ? new HashSet<SheetStat>(SheetStats.Feeds(_cellOrder[cell], _primaryPoolRule))
                 : new HashSet<SheetStat>();
 
             for (int i = 0; i < SheetStats.Derived.Length && i < statHighlights.Length; i++)
@@ -1380,9 +1401,16 @@ namespace PrincesPalace
                 // These two are derived from WISDOM and CHARISMA, so an item
                 // that shifts an ability score shifts them as well -- which a
                 // StatDelta alone would miss entirely.
+                //
+                // UNLESS THE POOL IS Fixed, in which case Wisdom moves its
+                // capacity by nothing and the honest preview is 0. Reading
+                // the same rule the row's own Wisdom link reads, so the
+                // highlight and the preview cannot disagree.
                 case SheetStat.MaxMana:
-                    return AbilityDerivation.MaxManaBonus(_previewScores)
-                         - AbilityDerivation.MaxManaBonus(_scores);
+                    return _primaryPoolRule != PoolCapacityRule.WisdomDerived
+                        ? 0
+                        : AbilityDerivation.MaxManaBonus(_previewScores)
+                          - AbilityDerivation.MaxManaBonus(_scores);
                 case SheetStat.SignatureGain:
                     return AbilityDerivation.SignatureGainBonus(_previewScores)
                          - AbilityDerivation.SignatureGainBonus(_scores);
@@ -1404,7 +1432,8 @@ namespace PrincesPalace
             if (!entered || cell >= _cellOrder.Count) { HideTooltip(); return; }
 
             var score = _cellOrder[cell];
-            ShowTooltip(AbilityScores.ShortName(score), SheetStats.PerPointSummary(_scores, score),
+            ShowTooltip(AbilityScores.ShortName(score),
+                       SheetStats.PerPointSummary(_scores, score, _primaryPoolRule),
                        RectOf(attributeCells, cell));
         }
 

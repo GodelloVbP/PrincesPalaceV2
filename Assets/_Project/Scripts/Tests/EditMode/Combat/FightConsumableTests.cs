@@ -63,12 +63,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _) = Fight();
             hero.CurrentHealth = 100;
-            hero.CurrentMana = 5;
+            hero.PrimaryPool.Current = 5;
 
             session.UseConsumable("Ether", 15, restoresMana: true);
             var after = AfterTheDrink(session, hero);
 
-            Assert.AreEqual(20, after.Mana);
+            Assert.AreEqual(20, after.Primary);
             Assert.AreEqual(100, after.Health, "a mana potion does not heal");
         }
 

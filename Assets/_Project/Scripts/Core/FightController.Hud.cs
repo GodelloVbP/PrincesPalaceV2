@@ -696,7 +696,7 @@ namespace PrincesPalace
         {
             if (!Has(rosterSignatures, index)) return;
 
-            var signature = member?.Signature;
+            var signature = member?.SignaturePool;
             rosterSignatures[index].gameObject.SetShown(signature != null);
             if (signature == null) return;
 
@@ -1673,7 +1673,7 @@ namespace PrincesPalace
 
         private void RefreshWool(CombatantState actor)
         {
-            var signature = actor.Signature;
+            var signature = actor.SignaturePool;
             bool has = signature != null;
             if (woolValue != null) woolValue.transform.parent.gameObject.SetShown(has);
             if (!has || woolPips == null) return;
@@ -1952,7 +1952,7 @@ namespace PrincesPalace
                 var chosen = AsChosen(SelectedSkill(), _menu);
                 return chosen == null
                     ? FightHudModel.DetailForNoSelection(_menu.Branch)
-                    : FightHudModel.DetailForSkill(_session, actor, chosen, actor?.Signature?.DisplayName);
+                    : FightHudModel.DetailForSkill(_session, actor, chosen, actor?.SignaturePool?.DisplayName);
             }
 
             var rows = CurrentRows();
@@ -1980,7 +1980,7 @@ namespace PrincesPalace
             if (options != null && index < options.Count)
             {
                 var skill = AsChosen(options[index].Skill, _menu);
-                return FightHudModel.DetailForSkill(_session, actor, skill, actor?.Signature?.DisplayName);
+                return FightHudModel.DetailForSkill(_session, actor, skill, actor?.SignaturePool?.DisplayName);
             }
 
             // Every skill-branch row now has a ResolvedSkill behind it --

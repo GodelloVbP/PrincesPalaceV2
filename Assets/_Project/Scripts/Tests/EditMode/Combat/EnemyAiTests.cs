@@ -403,13 +403,13 @@ namespace PrincesPalace.Domain.Tests
             // Granted per HIT rather than per point of damage, so a swarm of
             // weak attackers is not a better generator than one real threat.
             var hero = Hero();
-            hero.Signature = new SignatureResource("wool", "Wool", 16,
+            hero.SignaturePool = new ResourcePool("wool", "Wool", 16,
                 gainPerTurn: 0, gainOnAttack: 0, gainOnDamageTaken: 2);
             var (session, _, monster) = OneOnOne(Source("golem"), hero);
 
             session.ExecuteAttack(monster);
 
-            Assert.AreEqual(2, hero.Signature.Current);
+            Assert.AreEqual(2, hero.SignaturePool.Current);
         }
 
         [Test]

@@ -9,7 +9,7 @@ namespace PrincesPalace.Domain.Combat
     // figure, and what a turn-start tick does to Poison/Regen and every
     // status's remaining duration.
     //
-    // Engine-free and pure, same as CombatMath and SignatureResource — the
+    // Engine-free and pure, same as CombatMath and ResourcePool — the
     // rules about which skills apply which statuses live in Content and
     // Core, not here.
     //

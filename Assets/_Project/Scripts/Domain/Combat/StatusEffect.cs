@@ -170,7 +170,7 @@ namespace PrincesPalace.Domain.Combat
     // anything but the holder's own turns would make a status quietly last
     // longer in real time on a slow combatant and shorter on a fast one,
     // which is not how any of this project's other per-turn numbers work
-    // (compare SignatureResource.GainPerTurn, ManaRegen).
+    // (compare ResourcePool.GainPerTurn, ManaRegen).
     public sealed class ActiveStatus
     {
         public readonly StatusEffectType Type;

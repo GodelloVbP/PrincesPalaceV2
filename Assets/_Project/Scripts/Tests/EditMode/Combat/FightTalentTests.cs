@@ -52,8 +52,8 @@ namespace PrincesPalace.Domain.Tests
         private static IEnumerable<string> Messages(FightSession session) =>
             session.DrainBeats().SelectMany(b => b.Messages);
 
-        private static SignatureResource Wool(int perTurn = 0, int onAttack = 0, int onDamageTaken = 0) =>
-            new SignatureResource("wool", "Wool", 16, perTurn, onAttack, onDamageTaken);
+        private static ResourcePool Wool(int perTurn = 0, int onAttack = 0, int onDamageTaken = 0) =>
+            new ResourcePool("wool", "Wool", 16, perTurn, onAttack, onDamageTaken);
 
         // ---- the Fragile Lamb: wards ---------------------------------------------
 
@@ -87,7 +87,7 @@ namespace PrincesPalace.Domain.Tests
             // A ward that paid on every hit it absorbed would return more wool
             // than it cost and the economy would run backwards.
             var lamb = Hero("Lamb");
-            lamb.Signature = Wool();
+            lamb.SignaturePool = Wool();
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
                 new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2),
@@ -98,7 +98,7 @@ namespace PrincesPalace.Domain.Tests
             session.Begin();
 
             session.CastSkill(0, null);
-            int afterOneTurn = lamb.Signature.Current;
+            int afterOneTurn = lamb.SignaturePool.Current;
 
             Assert.LessOrEqual(afterOneTurn, 2, "at most one payout, however many blows landed");
         }
@@ -235,7 +235,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
-            ally.CurrentMana = 0;
+            ally.PrimaryPool.Current = 0;
             Talents(lamb, new TalentEffect(TalentEffectType.GiftManaPercent, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
@@ -556,21 +556,21 @@ namespace PrincesPalace.Domain.Tests
             // Stacking would take the Ram's ceiling to +4 a turn and make a
             // 7-cost transform a two-turn purchase from full health.
             var ram = Hero("Ram");
-            ram.Signature = Wool(perTurn: 1);
+            ram.SignaturePool = Wool(perTurn: 1);
             Talents(ram, new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 3, threshold: 50));
             ram.CurrentHealth = ram.MaxHealth / 4;
 
             var (session, encounter) = Fight(new[] { ram }, new[] { Foe() }, Kit());
             session.Begin();
 
-            Assert.AreEqual(3, ram.Signature.Current, "3, not 1 + 3");
+            Assert.AreEqual(3, ram.SignaturePool.Current, "3, not 1 + 3");
         }
 
         [Test]
         public void ProvokeT3PaysForBeingTheOneEverythingIsAimedAt()
         {
             var ram = Hero("Ram");
-            ram.Signature = Wool(perTurn: 1);
+            ram.SignaturePool = Wool(perTurn: 1);
             Talents(ram,
                 new TalentEffect(TalentEffectType.ProvokedDamageReductionPercent, 30),
                 new TalentEffect(TalentEffectType.ProvokeHitsEveryEnemy, 1),
@@ -579,14 +579,14 @@ namespace PrincesPalace.Domain.Tests
             var (session, encounter) = Fight(new[] { ram }, new[] { Foe("A"), Foe("B") },
                 Kit(Skill(SkillEffect.Provoke, "Bellow")));
             session.Begin();
-            int atStart = ram.Signature.Current;
+            int atStart = ram.SignaturePool.Current;
 
             session.CastSkill(0, null);
 
             // Both enemies were provoked, so the next turn start is baseline
             // plus one per goaded enemy -- income he ARRANGED, on top of the
             // income his health handed him.
-            Assert.Greater(ram.Signature.Current, atStart + 1);
+            Assert.Greater(ram.SignaturePool.Current, atStart + 1);
         }
 
         [Test]
@@ -596,7 +596,7 @@ namespace PrincesPalace.Domain.Tests
             // the evidence is gone -- and a poison tick does not consume a ward
             // and must not pay for one.
             var lamb = Hero("Lamb");
-            lamb.Signature = Wool();
+            lamb.SignaturePool = Wool();
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
                 new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2));
@@ -605,14 +605,14 @@ namespace PrincesPalace.Domain.Tests
             var (session, encounter) = Fight(new[] { lamb }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
             session.Begin();
-            int atStart = lamb.Signature.Current;
+            int atStart = lamb.SignaturePool.Current;
 
             // A turn that opens with a poison tick and nothing else.
             session.CastSkill(0, null);
             session.DrainBeats();
 
             Assert.Less(lamb.CurrentHealth, lamb.MaxHealth, "fixture: the poison really ticked");
-            Assert.LessOrEqual(lamb.Signature.Current, atStart + 2,
+            Assert.LessOrEqual(lamb.SignaturePool.Current, atStart + 2,
                 "at most the one payout a genuine hit earns, never one per tick");
         }
     }

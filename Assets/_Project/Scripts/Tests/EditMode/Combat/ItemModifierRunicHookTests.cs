@@ -109,7 +109,7 @@ namespace PrincesPalace.Domain.Tests
         public void UnspentMana_ConvertsToAWardAtTurnStart_AtTheWeakFixedRate()
         {
             var hero = Hero(mana: 100, speed: 50);
-            hero.CurrentMana = 40;
+            hero.PrimaryPool.Current = 40;
             var foe = Foe(speed: 1);
             Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
 
@@ -130,7 +130,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheWardConversion_NeverFiresWithoutTheModifier()
         {
             var hero = Hero(mana: 100, speed: 50);
-            hero.CurrentMana = 40;
+            hero.PrimaryPool.Current = 40;
             var foe = Foe(speed: 1);
 
             var session = Session(hero, foe);
@@ -144,7 +144,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheWardConversion_IsCappedRatherThanScalingUnbounded()
         {
             var hero = Hero(mana: 1000, speed: 50);
-            hero.CurrentMana = 1000;
+            hero.PrimaryPool.Current = 1000;
             var foe = Foe(speed: 1);
             Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
 

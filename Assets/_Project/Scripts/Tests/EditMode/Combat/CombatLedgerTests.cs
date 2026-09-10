@@ -141,7 +141,7 @@ namespace PrincesPalace.Domain.Tests
         public void ManaRestorationIsNotCountedAsHealing()
         {
             var (session, hero, _) = Fight();
-            hero.CurrentMana = 5;
+            hero.PrimaryPool.Current = 5;
 
             session.UseConsumable("Ether", 20, restoresMana: true);
 

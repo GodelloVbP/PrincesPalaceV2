@@ -175,8 +175,8 @@ namespace PrincesPalace.Domain.Tests
             {
                 var hero = Hero();
                 var ally = Hero("Ally");
-                hero.CurrentMana = 0;
-                ally.CurrentMana = 0;
+                hero.PrimaryPool.Current = 0;
+                ally.PrimaryPool.Current = 0;
                 var encounter = new CombatEncounter(new[] { hero, ally }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.RestorePartyMana, flatAmount: 20)));
 
@@ -268,7 +268,7 @@ namespace PrincesPalace.Domain.Tests
                 var lamb = Hero("Lamb");
                 Talents(lamb, new TalentEffect(TalentEffectType.GiftManaPercent, 50));
                 var ally = Hero("Ally");
-                ally.CurrentMana = 0;
+                ally.PrimaryPool.Current = 0;
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
 

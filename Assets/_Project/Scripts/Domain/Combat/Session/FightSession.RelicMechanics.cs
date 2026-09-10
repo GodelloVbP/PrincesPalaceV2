@@ -102,22 +102,27 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || percentOfMissing <= 0) return 0;
 
-            if (actor.Signature != null)
+            if (actor.SignaturePool != null)
             {
-                int missing = actor.Signature.Max - actor.Signature.Current;
+                int missing = actor.SignaturePool.Max - actor.SignaturePool.Current;
                 int restore = missing * percentOfMissing / 100;
-                return restore > 0 ? actor.Signature.Gain(restore) : 0;
+                return restore > 0 ? actor.SignaturePool.Gain(restore) : 0;
             }
 
-            if (actor.MaxMana > 0)
+            var primary = actor.PrimaryPool;
+            if (primary != null && primary.Max > 0)
             {
-                int missing = actor.MaxMana - actor.CurrentMana;
+                int missing = primary.Max - primary.Current;
                 int restore = missing * percentOfMissing / 100;
                 if (restore <= 0) return 0;
 
-                int before = actor.CurrentMana;
-                CombatMath.RestoreMana(actor, restore);
-                return actor.CurrentMana - before;
+                // Through RestoreMana rather than Gain, so a pool that
+                // refuses mana effects refuses this too: the relic's own
+                // wording is "restores mana", and a pool the satchel cannot
+                // fill must not be fillable by a trinket either. Returns what
+                // actually landed, which is 0 for such a pool -- and the
+                // caller then says nothing rather than announcing a zero.
+                return CombatMath.RestoreMana(actor, restore);
             }
 
             return 0;

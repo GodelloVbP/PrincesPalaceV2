@@ -34,14 +34,27 @@ namespace PrincesPalace.Domain.Combat.Session
             // healing column. Mana deliberately does not: restoring mana is not
             // healing, and folding the two would make a support character's
             // headline number depend on which resource they topped up.
+            //
+            // RestoreMana REFUSES a primary pool that does not take mana
+            // effects, restoring 0 -- so a mana potion drunk by a character
+            // whose resource is earned rather than poured falls through to
+            // the "nothing changes" line below on its own, with no second
+            // check here. See CombatMath.RestoreMana.
             if (restoresMana) CombatMath.RestoreMana(actor, amount);
             else HealAndCount(actor, amount);
 
             int restored = (restoresMana ? actor.CurrentMana : actor.CurrentHealth) - before;
 
+            // The pool NAMES ITSELF rather than the line saying "mana": for
+            // the shipped roster that prints the same word it always did, and
+            // for anyone else it prints theirs.
+            string unit = restoresMana
+                ? (actor.PrimaryPool?.DisplayName ?? "").ToLowerInvariant()
+                : "health";
+
             string what = string.IsNullOrEmpty(displayName) ? "something" : displayName;
             AppendMessage(restored > 0
-                ? $"{actor.Name} uses {what} and recovers {restored} {(restoresMana ? "mana" : "health")}."
+                ? $"{actor.Name} uses {what} and recovers {restored} {unit}."
                 : $"{actor.Name} uses {what}, and nothing changes.");
 
             // Recorded as a heal so the floating number comes up green rather

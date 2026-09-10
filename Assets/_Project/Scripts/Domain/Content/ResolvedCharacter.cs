@@ -92,7 +92,7 @@ namespace PrincesPalace.Domain.Content
         public string PrimaryPoolId = "mana";
 
         // Empty id means no resource at all, rather than a zero-capacity one
-        // -- see CombatantState.Signature for why that distinction is kept
+        // -- see CombatantState.SignaturePool for why that distinction is kept
         // sharp.
         public bool HasSignatureResource => !string.IsNullOrWhiteSpace(SignatureId);
 

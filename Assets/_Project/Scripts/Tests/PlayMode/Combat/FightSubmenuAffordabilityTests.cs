@@ -103,7 +103,7 @@ namespace PrincesPalace.PlayModeTests
             // single repaint is not enough to even START the fade toward the
             // right target; it needs a SECOND, unrelated repaint (another
             // hover, another beat) before the plate ever begins to darken.
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
             _fight.RefreshUi();
 
             // ThemedButtonState fades the plate over FadeSeconds (0.12s)

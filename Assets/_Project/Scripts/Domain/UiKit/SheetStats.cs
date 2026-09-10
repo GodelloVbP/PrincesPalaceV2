@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
@@ -145,14 +146,32 @@ namespace PrincesPalace.Domain.UiKit
         // SPELL does rather than what the character is. Hovering it
         // highlights nothing, and PerPointSummary says so explicitly rather
         // than printing a misleading "+0".
-        public static AbilityScore[] FedBy(SheetStat stat)
+
+        // THE PRIMARY POOL'S CAPACITY RULE DECIDES WHETHER WISDOM FEEDS THE
+        // POOL ROW AT ALL, and it has to: a Fixed pool is exactly its
+        // authored capacity from every source (PoolCapacityRule.Fixed), so
+        // for its owner Wisdom moves that number by nothing. Lighting the row
+        // anyway would be the precise lie this table exists to prevent -- the
+        // row highlights and the figure never changes.
+        //
+        // A RULE ENUM RATHER THAN THE POOL. Domain/UiKit cannot see
+        // ContentDatabase, and the sheet needs exactly one bit of the
+        // definition here. The default is WisdomDerived because that is what
+        // mana is and what every character shipped today carries; the
+        // dossier passes the real answer (CharacterDossierController), and a
+        // caller with no character in hand -- the feed test, the screen tree
+        // -- gets the shipped truth rather than a guess.
+        public static AbilityScore[] FedBy(SheetStat stat, PoolCapacityRule primaryPoolRule = PoolCapacityRule.WisdomDerived)
         {
             switch (stat)
             {
                 case SheetStat.MaxHealth: return new[] { AbilityScore.Constitution };
                 case SheetStat.PhysicalDefense: return new[] { AbilityScore.Constitution };
                 case SheetStat.Speed: return new[] { AbilityScore.Dexterity };
-                case SheetStat.MaxMana: return new[] { AbilityScore.Wisdom };
+                case SheetStat.MaxMana:
+                    return primaryPoolRule == PoolCapacityRule.WisdomDerived
+                        ? new[] { AbilityScore.Wisdom }
+                        : System.Array.Empty<AbilityScore>();
                 case SheetStat.MagicalDefense: return new[] { AbilityScore.Wisdom };
                 case SheetStat.SignatureGain: return new[] { AbilityScore.Charisma };
                 default: return System.Array.Empty<AbilityScore>();
@@ -160,12 +179,12 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         // The rows one attribute feeds, for the hover highlight.
-        public static SheetStat[] Feeds(AbilityScore score)
+        public static SheetStat[] Feeds(AbilityScore score, PoolCapacityRule primaryPoolRule = PoolCapacityRule.WisdomDerived)
         {
             var rows = new System.Collections.Generic.List<SheetStat>();
             foreach (var stat in Derived)
             {
-                foreach (var source in FedBy(stat))
+                foreach (var source in FedBy(stat, primaryPoolRule))
                 {
                     if (source == score) { rows.Add(stat); break; }
                 }
@@ -185,12 +204,13 @@ namespace PrincesPalace.Domain.UiKit
         // Derived by bumping the score by one and re-reading, so it is exact at
         // whatever the character actually has and cannot drift from the
         // formula.
-        public static string PerPointSummary(AbilityScoreBlock scores, AbilityScore score)
+        public static string PerPointSummary(AbilityScoreBlock scores, AbilityScore score,
+                                             PoolCapacityRule primaryPoolRule = PoolCapacityRule.WisdomDerived)
         {
             var bumped = scores.With(score, scores[score] + 1);
             var parts = new List<string>();
 
-            foreach (var stat in Feeds(score))
+            foreach (var stat in Feeds(score, primaryPoolRule))
             {
                 int gain = DerivedBonus(stat, bumped) - DerivedBonus(stat, scores);
                 if (gain != 0) parts.Add($"{(gain > 0 ? "+" : "")}{gain} {LabelFor(stat).Template}");
@@ -201,7 +221,12 @@ namespace PrincesPalace.Domain.UiKit
                 // True of Intelligence always, and of any score whose next point
                 // lands mid-step on a rounded curve. Saying "nothing" is better
                 // than printing "+0".
-                return Feeds(score).Length == 0
+                //
+                // AND OF WISDOM, for a character whose primary pool is Fixed:
+                // Feeds drops the pool row for them, so the summary says
+                // Magical Defense alone rather than promising a capacity that
+                // will not move.
+                return Feeds(score, primaryPoolRule).Length == 0
                     ? "Feeds no stat directly - it scales weapons and skills."
                     : "The next point does not move a stat.";
             }

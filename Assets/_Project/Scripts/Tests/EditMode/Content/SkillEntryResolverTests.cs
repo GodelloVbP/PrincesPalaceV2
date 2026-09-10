@@ -431,7 +431,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ResourceToSpend_TakesTheCost_OrEverythingWhenSpendsAll()
         {
-            var wool = new SignatureResource("wool", "Wool", 16, 2, 3, 1);
+            var wool = new ResourcePool("wool", "Wool", 16, 2, 3, 1);
             wool.Gain(11);
 
             Assert.AreEqual(6, SkillResolution.ResourceToSpend(wool, 6, spendsAll: false));
@@ -445,16 +445,16 @@ namespace PrincesPalace.Domain.Tests
         public void CanAfford_ChecksBothMana_AndTheResourceMinimum()
         {
             var actor = Actor();
-            actor.CurrentMana = 10;
-            actor.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1);
-            actor.Signature.Gain(4);
+            actor.PrimaryPool.Current = 10;
+            actor.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1);
+            actor.SignaturePool.Gain(4);
 
             Assert.IsTrue(SkillResolution.CanAfford(actor, 10, 4));
             Assert.IsFalse(SkillResolution.CanAfford(actor, 11, 4), "Not enough mana");
             Assert.IsFalse(SkillResolution.CanAfford(actor, 10, 5), "Not enough resource");
 
             var noResource = Actor();
-            noResource.CurrentMana = 10;
+            noResource.PrimaryPool.Current = 10;
             Assert.IsFalse(SkillResolution.CanAfford(noResource, 10, 1), "No resource at all cannot pay a resource cost");
             Assert.IsTrue(SkillResolution.CanAfford(noResource, 10, 0), "But a mana-only skill is fine");
         }

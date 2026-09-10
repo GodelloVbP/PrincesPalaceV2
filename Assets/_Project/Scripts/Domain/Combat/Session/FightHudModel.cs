@@ -127,7 +127,7 @@ namespace PrincesPalace.Domain.Combat.Session
             var rows = new List<SubmenuRow>();
             if (options == null || actor == null) return rows;
 
-            string resourceName = actor.Signature?.DisplayName;
+            string resourceName = actor.SignaturePool?.DisplayName;
 
             foreach (var option in options)
             {
@@ -144,7 +144,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // stopping them.
                     option.CooldownRemaining > 0
                         ? CooldownLabel(option.CooldownRemaining)
-                        : CostLabel(skill, resourceName),
+                        : CostLabel(skill, resourceName, PrimaryTagOf(actor)),
                     option.Affordable,
                     meetsRequirement: true,
                     skill.ManaCost,
@@ -326,18 +326,31 @@ namespace PrincesPalace.Domain.Combat.Session
         private static string CooldownLabel(int turns) =>
             turns == 1 ? "1 TURN" : $"{turns} TURNS";
 
-        public static string CostLabel(ResolvedSkill skill, string resourceName)
+        // BOTH TAGS COME FROM THE CASTER, not from this file. "MP" used to be
+        // a literal here, which was true only for as long as every caster
+        // spent mana: `manaCost` means "spent from the primary pool", so the
+        // number's unit is that pool's own shortTag. Prints "6 MP" for
+        // everyone shipped today, and does so by reading the row rather than
+        // by agreeing with it.
+        public static string CostLabel(ResolvedSkill skill, string resourceName, string primaryTag)
         {
             string resource = string.IsNullOrWhiteSpace(resourceName) ? "" : " " + resourceName.ToUpperInvariant();
+            string primary = string.IsNullOrWhiteSpace(primaryTag) ? "" : " " + primaryTag.ToUpperInvariant();
 
             if (skill.ResourceCost > 0 && skill.ManaCost > 0)
             {
-                return $"{skill.ManaCost} MP + {skill.ResourceCost}{resource}";
+                return $"{skill.ManaCost}{primary} + {skill.ResourceCost}{resource}";
             }
 
             if (skill.ResourceCost > 0) return $"{skill.ResourceCost}{resource}";
-            return skill.ManaCost > 0 ? skill.ManaCost + " MP" : "FREE";
+            return skill.ManaCost > 0 ? skill.ManaCost + primary : "FREE";
         }
+
+        // What the cost column prints beside a primary-pool number. Falls
+        // back to nothing rather than to "MP" when there is no actor: a card
+        // built with no caster in hand cannot know the unit, and a guessed
+        // unit is worse than a bare number.
+        private static string PrimaryTagOf(CombatantState actor) => actor?.PrimaryPool?.ShortTag ?? "";
 
         // What the POWER stat shows: pre-mitigation damage from the caster's
         // OWN stats/relics/buffs, before the target's armor/resistance/
@@ -388,7 +401,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // relic/skill that genuinely does have a cooldown reads as having
             // none: nothing on this card ever said so.
             int cooldown = session?.CooldownRemaining(actor, skill.Id) ?? 0;
-            panel.Stats.Add(("COST", cooldown > 0 ? CooldownLabel(cooldown) : CostLabel(skill, resourceName)));
+            panel.Stats.Add(("COST", cooldown > 0 ? CooldownLabel(cooldown) : CostLabel(skill, resourceName, PrimaryTagOf(actor))));
             panel.Stats.Add(("POWER", PowerLabel(session, actor, skill)));
 
             // Both of these printed the enum: "SINGLEENEMY" and "DAMAGESINGLE".

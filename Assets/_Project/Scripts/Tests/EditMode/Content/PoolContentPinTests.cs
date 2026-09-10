@@ -54,22 +54,25 @@ namespace PrincesPalace.Domain.Tests
             // the reward track and FlatMaxManaBonus all add to.
             Assert.AreEqual(PoolCapacityRule.WisdomDerived, mana.CapacityRule);
 
-            // 30 IS A DUPLICATE OF GameplayConstants.DefaultMaxMana, and it
-            // is written out as a literal here because that is the whole
-            // point of the pin. Domain cannot reference Core, so for this
-            // one phase the number exists twice; phase B is what deletes one
-            // of the two copies, and this literal is what makes a drift
-            // between them fail rather than pass.
+            // 30 IS NOW THE ONLY COPY. It used to duplicate
+            // GameplayConstants.DefaultMaxMana; phase B deleted that constant
+            // (and the class it was alone in) once every reader started
+            // building its pool from this row, so this file is where the
+            // number lives and this literal is what a silent edit fails
+            // against.
             Assert.AreEqual(30, mana.Capacity);
 
             // Mana is a budget: it opens full and only goes down.
             Assert.AreEqual(PoolStartRule.Full, mana.StartRule);
             Assert.AreEqual(0, mana.StartValue);
 
-            // gainPerTurn 0 does NOT mean mana stops regenerating. Regen is
-            // still state.ManaRegen, derived by AbilityDerivation and ticked
-            // by FightSession.Riders; phase B moves it into this row, and
-            // authoring a gain here now would double it.
+            // gainPerTurn 0 does NOT mean mana stops regenerating: for a
+            // WisdomDerived pool the authored number is a BASE and the
+            // derived manaRegen stat (Wisdom + gear + talents + track) is
+            // added on top of it (ContentDatabase.BuildPrimaryPool). Every
+            // point of mana's regen is derived, so the base is 0 -- and
+            // authoring a number here would ADD to what a character already
+            // regenerates rather than replace it.
             Assert.AreEqual(0, mana.GainPerTurn);
             Assert.AreEqual(0, mana.GainOnAttack);
             Assert.AreEqual(0, mana.GainOnDamageTaken);

@@ -14,29 +14,51 @@ namespace PrincesPalace.Domain.Combat
 
         public int MaxHealth;
         public int CurrentHealth;
-        public int MaxMana;
-        public int CurrentMana;
 
         public int Attack;
         public int Speed;
 
-        // Equipment-set stats. Zero for anyone wearing nothing, which is
-        // every enemy and every unequipped character — so nothing changes
-        // shape for a combatant that does not use them.
+        // THE RESOURCE THIS COMBATANT'S SKILLS SPEND. Mana for everyone
+        // shipped today; a character can trade it for something else by
+        // naming a different pools.json row (RawCharacterEntry.primaryPoolId).
         //
-        // Set after construction rather than taken as constructor arguments:
-        // CombatantState is built in several places and from three different
-        // sources, and a seven-argument constructor growing to ten is how the
-        // wrong number ends up in the wrong slot.
-        public int ManaRegen;
+        // NEVER NULL, and that is the difference between this slot and
+        // SignaturePool below: a signature resource is a mechanic only some
+        // combatants have, while EVERY combatant pays for something. A
+        // nullable primary pool would put a `?.` in front of every cost check
+        // in the game and make "cannot afford" and "has no resource at all"
+        // indistinguishable at the call site.
+        public ResourcePool PrimaryPool;
+
+        // THE THREE FIELDS THIS REPLACED, kept as read-only views onto the
+        // pool so the ~40 places that only ASK a question -- the bot's
+        // missing-mana sum, the item log line, the relic that reads how much
+        // is missing, the HUD -- did not all have to be retyped to say the
+        // same thing. They are truthful rather than merely compiling: while
+        // every shipped primary pool is mana, "CurrentMana" and
+        // "PrimaryPool.Current" are the same number under two names.
+        //
+        // They will stop being truthful the moment a character's primary pool
+        // is not mana (phase E), which is why they are getters and not
+        // fields: a reader keeps working and a WRITER does not compile, so
+        // the ~25 sites that used to assign mana had to say which pool they
+        // meant. Phase F renames the readers and deletes these.
+        public int MaxMana => PrimaryPool != null ? PrimaryPool.Max : 0;
+        public int CurrentMana => PrimaryPool != null ? PrimaryPool.Current : 0;
+        public int ManaRegen => PrimaryPool != null ? PrimaryPool.GainPerTurn : 0;
 
         // Mechanic (e), ARMOR PENETRATION: a flat amount subtracted from a
         // target's broad Defense (physical only -- see CombatMath.
         // BroadDefense) before mitigation, floored at 0 there. A derived
-        // stat on the ATTACKER, the same "set once at kit-build time" shape
-        // ManaRegen already uses -- gear/relics add to it via
+        // stat on the ATTACKER, set once at kit-build time and never
+        // recomputed -- gear/relics add to it via
         // RelicModifiers.Apply(RelicStat.ArmorPenetration, ...), same as
         // every other flat/percent stat on this class.
+        //
+        // Set after construction rather than taken as a constructor
+        // argument: CombatantState is built in several places and from three
+        // different sources, and a six-argument constructor growing to ten is
+        // how the wrong number ends up in the wrong slot.
         public int ArmorPenetration;
 
         // The only two defensive stats — the old single generic `Defense`
@@ -51,11 +73,18 @@ namespace PrincesPalace.Domain.Combat
         // retuned nothing. See ResistanceByType.
         public ResistanceByType TypedResistance;
 
-        // Null for everyone who has no signature resource, which today is
-        // everyone except Shawn. A nullable reference rather than a
-        // zero-capacity instance so "has one" is a single unambiguous check
-        // and no combatant pays for a mechanic it does not use.
-        public SignatureResource Signature;
+        // THE SECOND, PRIVATE POOL: null for everyone who has no signature
+        // resource, which today is everyone except Shawn. A nullable
+        // reference rather than a zero-capacity instance so "has one" is a
+        // single unambiguous check and no combatant pays for a mechanic it
+        // does not use.
+        //
+        // The same TYPE as PrimaryPool and a different SLOT. Two named
+        // fields rather than a keyed list because nothing indexes a pool by
+        // id, and because a skill's two cost fields (manaCost, resourceCost)
+        // then name their pool at the call site instead of through a lookup
+        // that can miss.
+        public ResourcePool SignaturePool;
 
         // Null for everyone without a stagger meter — every player character
         // and most enemies. Same nullable-reference reasoning as Signature,
@@ -210,16 +239,50 @@ namespace PrincesPalace.Domain.Combat
 
         public bool IsAlive => CurrentHealth > 0;
 
-        public CombatantState(string name, bool isPlayerSide, int maxHealth, int maxMana, int attack, int speed)
+        // THE POOL-AWARE CONSTRUCTOR, and the one every real fight now builds
+        // through. The pool arrives already resolved -- capacity chain run,
+        // start rule applied -- because the chain reads talents, relics, the
+        // reward track and gear, none of which Domain can see. See
+        // ContentDatabase.BuildPrimaryPool.
+        public CombatantState(string name, bool isPlayerSide, int maxHealth, ResourcePool primaryPool, int attack, int speed)
         {
             Name = name;
             IsPlayerSide = isPlayerSide;
             MaxHealth = maxHealth;
             CurrentHealth = maxHealth;
-            MaxMana = maxMana;
-            CurrentMana = maxMana;
+            PrimaryPool = primaryPool ?? DefaultManaPool(0);
             Attack = attack;
             Speed = speed;
+        }
+
+        // COMPATIBILITY OVERLOAD -- 254 call sites, nearly all of them test
+        // fixtures, hand an int where a fight now hands a pool. Kept rather
+        // than fixed up in this phase for one reason: a rename and a rewiring
+        // are two things to review, and 254 mechanical edits in the same
+        // commit would bury the twelve that are not mechanical.
+        //
+        // REMOVE AFTER PHASE F, when `manaCost` becomes `primaryCost` and
+        // every fixture has to say which pool it means anyway.
+        //
+        // The pool it builds is mana-shaped by construction, not by lookup:
+        // Domain cannot reach ContentDatabase, and a fixture asking for "30
+        // mana" is asking for the default pool rather than for whatever
+        // pools.json currently says. Full at the start, no decay, no
+        // triggered gain -- exactly what the two int fields it replaced meant.
+        public CombatantState(string name, bool isPlayerSide, int maxHealth, int maxMana, int attack, int speed)
+            : this(name, isPlayerSide, maxHealth, DefaultManaPool(maxMana), attack, speed)
+        {
+        }
+
+        // The id/name/tag a hand-built mana pool wears. Duplicated from the
+        // `mana` row's three strings and NOT from its capacity, which is the
+        // duplication that mattered and is gone: capacity arrives as an
+        // argument here, and every real fight reads it off the row.
+        private static ResourcePool DefaultManaPool(int maxMana)
+        {
+            var pool = new ResourcePool("mana", "Mana", maxMana, 0, 0, 0) { ShortTag = "MP" };
+            pool.Gain(maxMana);
+            return pool;
         }
     }
 }

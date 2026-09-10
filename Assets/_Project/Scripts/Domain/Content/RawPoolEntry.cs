@@ -5,7 +5,8 @@ namespace PrincesPalace.Domain.Content
     // One combat resource pool, exactly as typed into pools.json.
     //
     // WHY THIS TYPE EXISTS. Mana was code: a constant in Core
-    // (GameplayConstants.DefaultMaxMana), a capacity chain in
+    // (GameplayConstants.DefaultMaxMana, deleted in phase B once this row
+    // became its one source), a capacity chain in
     // ContentDatabase.Effective, three colours in FightHudPalette and a
     // "everyone has mana" assumption threaded through the fight. The owner's
     // standing per-PC requirement -- one character trades mana for a
@@ -53,9 +54,10 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("How much this pool holds; must be positive. Under 'WisdomDerived' it is the BASE every Max Mana source adds to, under 'Fixed' it is the entire capacity.")]
         public int capacity;
 
-        // The three gain triggers SignatureResource already has, because a
-        // pool and a signature resource are the same runtime thing with
-        // different authored numbers (the plan's P1).
+        // The three gain triggers ResourcePool has, because a primary pool
+        // and a signature resource ARE the same runtime thing with different
+        // authored numbers -- one class, two slots on CombatantState (the
+        // plan's P1, landed in phase B).
         [ContentDoc("Gained at the start of each of the owner's turns; must not be negative.")]
         public int gainPerTurn;
         [ContentDoc("Gained when the owner deals damage; must not be negative.")]

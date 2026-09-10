@@ -12,9 +12,9 @@ namespace PrincesPalace.Domain.Tests
     // the test that pins the new default.
     public class SignatureResourceTests
     {
-        private static SignatureResource Wool(int max = 16, int perTurn = 2, int onAttack = 3, int onDamage = 1)
+        private static ResourcePool Wool(int max = 16, int perTurn = 2, int onAttack = 3, int onDamage = 1)
         {
-            return new SignatureResource("wool", "Wool", max, perTurn, onAttack, onDamage, absorbsDamage: true);
+            return new ResourcePool("wool", "Wool", max, perTurn, onAttack, onDamage, absorbsDamage: true);
         }
 
         // The arc the whole character is built on: empty at the start, so
@@ -124,28 +124,28 @@ namespace PrincesPalace.Domain.Tests
         public void ApplyDamage_SpendsTheResourceBeforeHealth()
         {
             var shawn = Fighter();
-            shawn.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
-            shawn.Signature.Gain(5);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
+            shawn.SignaturePool.Gain(5);
 
             int absorbed = CombatMath.ApplyDamage(shawn, 3);
 
             Assert.AreEqual(3, absorbed);
             Assert.AreEqual(30, shawn.CurrentHealth, "Health should be untouched while the fleece holds");
-            Assert.AreEqual(2, shawn.Signature.Current);
+            Assert.AreEqual(2, shawn.SignaturePool.Current);
         }
 
         [Test]
         public void ApplyDamage_OverflowsIntoHealthOnceTheResourceIsGone()
         {
             var shawn = Fighter();
-            shawn.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
-            shawn.Signature.Gain(2);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
+            shawn.SignaturePool.Gain(2);
 
             int absorbed = CombatMath.ApplyDamage(shawn, 9);
 
             Assert.AreEqual(2, absorbed);
             Assert.AreEqual(23, shawn.CurrentHealth, "The remaining 7 should land on health");
-            Assert.AreEqual(0, shawn.Signature.Current);
+            Assert.AreEqual(0, shawn.SignaturePool.Current);
         }
 
         // Absorption must never keep someone standing who should have died,
@@ -154,8 +154,8 @@ namespace PrincesPalace.Domain.Tests
         public void ApplyDamage_CanStillBeLethalOnceTheResourceIsExhausted()
         {
             var shawn = Fighter(maxHealth: 10);
-            shawn.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
-            shawn.Signature.Gain(4);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
+            shawn.SignaturePool.Gain(4);
 
             CombatMath.ApplyDamage(shawn, 100);
 
@@ -167,11 +167,11 @@ namespace PrincesPalace.Domain.Tests
         public void ApplyDamage_OfZero_TouchesNothing()
         {
             var shawn = Fighter();
-            shawn.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
-            shawn.Signature.Gain(5);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbsDamage: true);
+            shawn.SignaturePool.Gain(5);
 
             Assert.AreEqual(0, CombatMath.ApplyDamage(shawn, 0));
-            Assert.AreEqual(5, shawn.Signature.Current);
+            Assert.AreEqual(5, shawn.SignaturePool.Current);
             Assert.AreEqual(30, shawn.CurrentHealth);
         }
 
@@ -183,7 +183,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AbsorbPerPoint_LetsOnePointSoakAWholeScaledHit()
         {
-            var wool = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
+            var wool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
             wool.Gain(4);
 
             Assert.AreEqual(30, wool.Absorb(30), "Three points' worth");
@@ -193,7 +193,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AbsorbPerPoint_CoversOnlyWhatIsActuallyHeld()
         {
-            var wool = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
+            var wool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
             wool.Gain(2);
 
             Assert.AreEqual(20, wool.Absorb(500), "Two points is twenty damage and not a point more");
@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void APartialPointOfAbsorption_StillCostsAWholePoint()
         {
-            var wool = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
+            var wool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
             wool.Gain(3);
 
             Assert.AreEqual(1, wool.Absorb(1));
@@ -220,7 +220,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WithoutAnAuthoredScale_OnePointSoaksExactlyOneDamage()
         {
-            var plain = new SignatureResource("x", "X", 16, 2, 3, 1, absorbsDamage: true);
+            var plain = new ResourcePool("x", "X", 16, 2, 3, 1, absorbsDamage: true);
             plain.Gain(5);
 
             Assert.AreEqual(5, plain.Absorb(40));
@@ -234,11 +234,11 @@ namespace PrincesPalace.Domain.Tests
         public void ApplyDamage_ReportsScaledAbsorptionAndSpendsHealthForTheRest()
         {
             var shawn = Fighter(maxHealth: 300);
-            shawn.Signature = new SignatureResource("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
-            shawn.Signature.Gain(5);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 16, 2, 3, 1, absorbPerPoint: 10, absorbsDamage: true);
+            shawn.SignaturePool.Gain(5);
 
             Assert.AreEqual(50, CombatMath.ApplyDamage(shawn, 80), "Five points soaked fifty of the eighty");
-            Assert.AreEqual(0, shawn.Signature.Current);
+            Assert.AreEqual(0, shawn.SignaturePool.Current);
             Assert.AreEqual(270, shawn.CurrentHealth, "The remaining thirty reached health");
         }
 
@@ -251,12 +251,12 @@ namespace PrincesPalace.Domain.Tests
         public void WithoutOptingIn_TheResourceSoaksNothing()
         {
             var shawn = Fighter();
-            shawn.Signature = new SignatureResource("wool", "Wool", 10, 1, 0, 0);
-            shawn.Signature.Gain(9);
+            shawn.SignaturePool = new ResourcePool("wool", "Wool", 10, 1, 0, 0);
+            shawn.SignaturePool.Gain(9);
 
             Assert.AreEqual(0, CombatMath.ApplyDamage(shawn, 12));
             Assert.AreEqual(18, shawn.CurrentHealth, "Every point of it should have reached health");
-            Assert.AreEqual(9, shawn.Signature.Current, "And the fleece should be untouched, ready to spend");
+            Assert.AreEqual(9, shawn.SignaturePool.Current, "And the fleece should be untouched, ready to spend");
         }
     }
 }

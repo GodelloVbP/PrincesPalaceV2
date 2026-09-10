@@ -448,7 +448,7 @@ namespace PrincesPalace.Domain.Tests
             // The player should learn what their character has rather than watch
             // the list change length as their mana moves.
             var (session, hero) = Fight(Skill("cheap", "Cheap", manaCost: 1), Skill("dear", "Dear", manaCost: 999));
-            hero.CurrentMana = 5;
+            hero.PrimaryPool.Current = 5;
 
             var rows = FightHudModel.SkillRows(session, hero);
 
@@ -463,7 +463,7 @@ namespace PrincesPalace.Domain.Tests
             // They render identically today. The distinction has to already
             // exist here for anything to ever say which it is.
             var (session, hero) = Fight(Skill("dear", "Dear", manaCost: 999));
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
 
             var row = FightHudModel.SkillRows(session, hero)[0];
 
@@ -527,9 +527,31 @@ namespace PrincesPalace.Domain.Tests
             var manaOnly = Skill("a", "Bolt", manaCost: 5);
             var free = Skill("b", "Shout", manaCost: 0);
 
-            Assert.AreEqual("5 MP", FightHudModel.CostLabel(manaOnly, "Wool"));
-            Assert.AreEqual("FREE", FightHudModel.CostLabel(free, "Wool"),
+            Assert.AreEqual("5 MP", FightHudModel.CostLabel(manaOnly, "Wool", "MP"));
+            Assert.AreEqual("FREE", FightHudModel.CostLabel(free, "Wool", "MP"),
                 "a skill that costs nothing says so - '0 MP' reads as a missing value");
+        }
+
+        // BOTH UNITS COME FROM THE CASTER. "MP" was a literal inside
+        // CostLabel until mana became one pool among several; a caster whose
+        // primary pool is not mana must not be told their skill costs MP.
+        // Pinned as literals rather than rebuilt from the tag, so a change to
+        // the format string is a failure here rather than a silent agreement.
+        [Test]
+        public void TheCostColumnPrintsThePrimaryPoolsOwnTag()
+        {
+            var manaOnly = Skill("a", "Bolt", manaCost: 6);
+            var both = new ResolvedSkill("c", "Shear", "It does a thing.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 6, 3, false, 12, 0, false,
+                null, SpellPresentation.None, 0);
+
+            Assert.AreEqual("6 MP", FightHudModel.CostLabel(manaOnly, "Wool", "MP"),
+                "every character shipped today spends mana, and the column must still read exactly this");
+            Assert.AreEqual("6 FURY", FightHudModel.CostLabel(manaOnly, "Wool", "FURY"));
+            Assert.AreEqual("6 FURY + 3 WOOL", FightHudModel.CostLabel(both, "Wool", "FURY"));
+
+            // No caster in hand: a bare number rather than a guessed unit.
+            Assert.AreEqual("6", FightHudModel.CostLabel(manaOnly, "", ""));
         }
 
         [Test]

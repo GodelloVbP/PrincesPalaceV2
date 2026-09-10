@@ -45,7 +45,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var v = new Vitals(12, 7, 3);
             Assert.AreEqual(12, v.Health);
-            Assert.AreEqual(7, v.Mana);
+            Assert.AreEqual(7, v.Primary);
             Assert.AreEqual(3, v.Signature);
         }
 

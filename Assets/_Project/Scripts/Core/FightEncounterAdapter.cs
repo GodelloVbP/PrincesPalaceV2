@@ -89,9 +89,15 @@ namespace PrincesPalace
             }
 
             // Mana is NOT part of StatBlock -- it is derived from ability scores
-            // for a character, and monsters have none. They get the default pool
-            // so a monster skill that costs mana can still be paid for, rather
-            // than a zero that would silently make every such skill unusable.
+            // for a character, and monsters have none. They get the `mana` row
+            // at its authored capacity so a monster skill that costs mana can
+            // still be paid for, rather than a zero that would silently make
+            // every such skill unusable.
+            //
+            // NEUTRAL SCORES AND NO RELICS, passed explicitly: an enemy has
+            // never had a Wisdom term or a relic on its pool, and saying so
+            // in the arguments is what keeps that true now that the capacity
+            // chain is shared with the two character paths.
             // Speed is NOT depth-scaled. It is a rate, feeding a scheduler that
             // clamps at 2.5x anyway, and the same reasoning AbilityDerivation
             // applies to the player's Dexterity applies to a monster: an enemy
@@ -101,7 +107,8 @@ namespace PrincesPalace
             // parameter, unchanged behaviour from before this phase.)
             var state = new CombatantState(definition.Data.DisplayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
-                GameplayConstants.DefaultMaxMana,
+                ContentDatabase.BuildPrimaryPool(ContentDatabase.ManaPoolId,
+                    ScalingProfile.NeutralScores, null, manaRegen: 0),
                 DifficultyCurve.ScaleAttack(stats.attack, depthStep),
                 stats.speed);
 
@@ -179,13 +186,21 @@ namespace PrincesPalace
             // is the one place the two are chosen between.
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
+            // RESOLVED BEFORE THE COMBATANT, not after it, because the pool
+            // needs them: FlatMaxManaBonus and FlatManaRegenBonus are gear
+            // terms in the capacity chain, and a pool that arrives at
+            // construction cannot be topped up by a line further down without
+            // reopening the question of whether Current followed Max. Nothing
+            // else about this moved -- ModifierEffects is a pure function of
+            // the character's loadout and was always computable here.
+            var modifierEffects = ContentDatabase.ModifierEffects(character);
+
             var state = new CombatantState(definition.Data.DisplayName, true,
                 RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
-                RelicModifiers.Apply(ContentDatabase.EffectiveMaxMana(character), RelicStat.MaxMana, modifiers),
+                ContentDatabase.BuildPrimaryPool(character, modifiers, modifierEffects, stats.manaRegen),
                 RelicModifiers.Apply(attack, RelicStat.Attack, modifiers),
                 RelicModifiers.Apply(stats.speed, RelicStat.Speed, modifiers));
 
-            state.ManaRegen = stats.manaRegen;
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
 
             // Balance pass 2: Jo-Sun's Book of Anatomy and Vampire Dentures,
@@ -223,7 +238,7 @@ namespace PrincesPalace
             // Built from the CHARACTER, so a signature whose capacity a talent
             // widened arrives at that width. Its single call site until now was
             // its own definition.
-            state.Signature = ContentDatabase.BuildSignatureResource(character);
+            state.SignaturePool = ContentDatabase.BuildSignatureResource(character);
 
             // Every TalentEffectType-gated rule a character's unlocked
             // talents grant -- Sharp Horns' penetration/shred, Last Stand's
@@ -243,24 +258,17 @@ namespace PrincesPalace
             // Real, droppable content as of Phase C — every equipped item's
             // rolled modifiers, already scaled by tier/riftTier (see
             // ContentDatabase.ModifierEffects' own header).
-            state.ModifierEffects = ContentDatabase.ModifierEffects(character);
+            state.ModifierEffects = modifierEffects;
 
-            // Runic's mana pool -- the SAME seam a relic's flat MaxMana/
-            // ManaRegen bonus reaches CombatantState through, just summed
-            // AFTER relics rather than inside RelicModifiers.Apply (which
-            // only ever reads RelicModifier, not ModifierEffect). MaxMana is
-            // bumped by the identical amount CurrentMana is, so a Runic
-            // wearer starts the fight with a genuinely full pool rather than
-            // full-relative-to-the-pre-modifier number the constructor
-            // already set CurrentMana from.
-            int bonusMaxMana = state.ModifierEffects.Best(ModifierEffectType.FlatMaxManaBonus);
-            if (bonusMaxMana > 0)
-            {
-                state.MaxMana += bonusMaxMana;
-                state.CurrentMana += bonusMaxMana;
-            }
-
-            state.ManaRegen += state.ModifierEffects.Best(ModifierEffectType.FlatManaRegenBonus);
+            // RUNIC'S MANA POOL MOVED INTO THE CHAIN. FlatMaxManaBonus and
+            // FlatManaRegenBonus used to be added to the CombatantState here,
+            // after construction, with the comment that Max and Current had
+            // to be bumped by the same amount or the wearer would open the
+            // fight one modifier short of full. That pairing is now
+            // structural rather than remembered: the pool is built at its
+            // final capacity and its startRule fills it (see
+            // ContentDatabase.BuildPrimaryPool), so there is no second
+            // number to keep in step.
 
             // The elemental family's typed-resistance half -- the SAME seam
             // relic-granted typed resistance already reaches state.TypedResistance
@@ -297,11 +305,13 @@ namespace PrincesPalace
             var stats = definition.Data.BaseStats;
             var scores = definition.Data.AbilityScores;
 
-            // Health and mana are BASE PLUS DERIVED, because that is what the
-            // ability scores are for -- reading the StatBlock alone would give a
-            // character none of the pool their own build earned them.
+            // Health is BASE PLUS DERIVED, because that is what the ability
+            // scores are for -- reading the StatBlock alone would give a
+            // character none of the pool their own build earned them. The
+            // primary pool takes the same shape, inside BuildPrimaryPool: the
+            // row's authored capacity plus the Wisdom term, then relics --
+            // and only when the row says WisdomDerived.
             int maxHealth = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores);
-            int maxMana = GameplayConstants.DefaultMaxMana + AbilityDerivation.MaxManaBonus(scores);
 
             // Relic modifiers land on the FINAL figures, after the ability
             // scores have contributed -- a +15% attack relic is 15% of what the
@@ -314,11 +324,10 @@ namespace PrincesPalace
             // already reflects via DerivedStats.
             var state = new CombatantState(definition.Data.DisplayName, true,
                 RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
-                RelicModifiers.Apply(maxMana, RelicStat.MaxMana, modifiers),
+                ContentDatabase.BuildPrimaryPool(definition.Data.PrimaryPoolId, scores, modifiers, stats.manaRegen),
                 RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
                 RelicModifiers.Apply(stats.speed + AbilityDerivation.SpeedBonus(scores), RelicStat.Speed, modifiers));
 
-            state.ManaRegen = stats.manaRegen;
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
 
             // Balance pass 2 -- same reasoning as the save-backed overload
@@ -353,7 +362,7 @@ namespace PrincesPalace
 
             if (definition.Data.HasSignatureResource)
             {
-                state.Signature = new SignatureResource(
+                state.SignaturePool = new ResourcePool(
                     definition.Data.SignatureId, definition.Data.SignatureDisplayName,
                     definition.Data.SignatureCapacity, definition.Data.SignatureGainPerTurn,
                     definition.Data.SignatureGainOnAttack, definition.Data.SignatureGainOnDamageTaken,

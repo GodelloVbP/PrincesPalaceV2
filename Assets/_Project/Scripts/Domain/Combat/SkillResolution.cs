@@ -187,7 +187,7 @@ namespace PrincesPalace.Domain.Combat
         // flagged spendsAll takes everything the caster has, which is what
         // lets a capstone scale with a whole fight's hoarding instead of a
         // fixed cost.
-        public static int ResourceToSpend(SignatureResource resource, int cost, bool spendsAll)
+        public static int ResourceToSpend(ResourcePool resource, int cost, bool spendsAll)
         {
             if (resource == null)
             {
@@ -200,6 +200,13 @@ namespace PrincesPalace.Domain.Combat
         // Whether the caster can pay. A spendsAll skill still needs its
         // stated cost as a MINIMUM, so a capstone cannot be cast on an empty
         // gauge for nothing.
+        // `manaCost` MEANS "SPENT FROM THE PRIMARY POOL" -- only the field
+        // name is still mana-specific, and phase F renames it (31 authored
+        // rows). A skill authored at 6 therefore costs 6 of whatever its
+        // caster's pool is, with nothing re-authored: the alternative, a
+        // costs-by-id map, re-authors those rows, loops this one rule, and
+        // invents a book costing a pool its buyer does not have. See the
+        // plan's P5.
         public static bool CanAfford(CombatantState actor, int manaCost, int resourceCost)
         {
             if (actor == null)
@@ -207,7 +214,7 @@ namespace PrincesPalace.Domain.Combat
                 return false;
             }
 
-            if (actor.CurrentMana < manaCost)
+            if (actor.PrimaryPool == null || !actor.PrimaryPool.CanSpend(manaCost))
             {
                 return false;
             }
@@ -217,7 +224,7 @@ namespace PrincesPalace.Domain.Combat
                 return true;
             }
 
-            return actor.Signature != null && actor.Signature.CanSpend(resourceCost);
+            return actor.SignaturePool != null && actor.SignaturePool.CanSpend(resourceCost);
         }
     }
 }

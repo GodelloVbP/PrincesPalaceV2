@@ -78,7 +78,7 @@ namespace PrincesPalace.Domain.Content
                            "confusing the roster.");
             }
 
-            // A signature resource id is what CombatantState.Signature keys
+            // A signature resource id is what CombatantState.SignaturePool keys
             // on; two characters sharing one would make their resources
             // indistinguishable.
             foreach (var duplicate in resolved.Where(c => c.HasSignatureResource)

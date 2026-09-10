@@ -245,7 +245,7 @@ namespace PrincesPalace.Content
         // serialise. Mana already fully refills each fight; a resource whose
         // whole premise is "compounds WITHIN a fight" persisting across them
         // would be the odd one out.
-        public static SignatureResource BuildSignatureResource(Character character)
+        public static ResourcePool BuildSignatureResource(Character character)
         {
             EnsureLoaded();
 
@@ -315,7 +315,7 @@ namespace PrincesPalace.Content
             bool absorbs = definition.Data.SignatureAbsorbsDamage
                            || track.HasUnlocked(TrackReward.SignatureAbsorbs, claimed);
 
-            return new SignatureResource(
+            return new ResourcePool(
                 definition.Data.SignatureId,
                 string.IsNullOrWhiteSpace(definition.Data.SignatureDisplayName)
                     ? definition.Data.SignatureId
@@ -629,15 +629,59 @@ namespace PrincesPalace.Content
             return ActiveLoadout(character).Scores;
         }
 
-        // A character's max mana including every talent they've unlocked.
-        // Base value is GameplayConstants.DefaultMaxMana rather than a
-        // per-CharacterDefinition field — every character starts from the
-        // same mana pool today, only talents differentiate it.
+        // THE POOL ROW A CHARACTER'S primaryPoolId NAMES, and the one place
+        // that lookup is written. Falls back to the mana row when the id
+        // resolves to nothing -- which the content build already refuses, so
+        // reaching the fallback means the catalogue was swapped out from
+        // under a save rather than that an author typed the wrong thing.
+        // Graceful degradation, the house posture: a save whose pool went
+        // missing plays as mana instead of throwing.
+        public static PoolDefinition PrimaryPoolFor(string primaryPoolId)
+        {
+            EnsureLoaded();
+
+            var named = string.IsNullOrWhiteSpace(primaryPoolId) ? null : GetPool(primaryPoolId);
+            return named ?? GetPool(ManaPoolId);
+        }
+
+        // A character's max primary-pool capacity, every source summed.
+        //
+        // THE BASE IS THE ROW, not a constant: GameplayConstants.
+        // DefaultMaxMana was the other copy of pools.json's `capacity: 30`
+        // and is gone with this phase, so there is exactly one place the
+        // number 30 is written and it is the file an author edits.
+        //
+        // EVERY BONUS IS WisdomDerived-ONLY (plan P3, amended by attack point
+        // 3). For a Fixed pool the authored capacity is the WHOLE number from
+        // every source -- that is the difference between the two rules and
+        // the entire reason capacityRule is an enum. The consequence, priced
+        // in rather than hidden: a Max Mana talent or relic is a dead pick
+        // for a Fixed pool's owner, and the sheet says so by dropping the
+        // Wisdom link (SheetStats.FedBy).
+        //
+        // NO RELICS AND NO GEAR HERE -- both need the drafted relic list and
+        // the resolved modifier set, which only the encounter adapter holds.
+        // This is the sheet's number and the base BuildPrimaryPool finishes;
+        // passing a null modifier list is the identity case of
+        // RelicModifiers.Apply, so the two share one rule rather than two.
         public static int EffectiveMaxMana(Character character)
         {
             EnsureLoaded();
 
-            int total = GameplayConstants.DefaultMaxMana;
+            var definition = GetCharacter(character.definitionId);
+            var pool = PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
+            if (pool?.Data == null) return 0;
+
+            return PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), null, 0);
+        }
+
+        // EVERY ADDITIVE Max Mana TERM A CHARACTER CARRIES, summed. Whether
+        // any of it counts is PoolPrecedence's decision, not this method's --
+        // the sum is the same arithmetic for both rules and only one of them
+        // spends it.
+        private static int MaxManaBonuses(Character character)
+        {
+            int total = 0;
 
             foreach (string talentId in character.unlockedTalentIds)
             {
@@ -656,7 +700,73 @@ namespace PrincesPalace.Content
             total += RewardTracks.For(character)
                 .CollectedTotal(TrackReward.MaxMana, character.claimedTrackLevel);
 
-            return Mathf.Max(0, total);
+            return total;
+        }
+
+        // THE WHOLE CAPACITY CHAIN, ENDED. One statement of precedence for
+        // the primary pool, in the order the numbers actually apply:
+        //
+        //   1. the row's authored capacity           (always)
+        //   2. talents, Wisdom, the reward track     (WisdomDerived only)
+        //   3. RelicStat.MaxMana                     (WisdomDerived only)
+        //   4. ModifierEffectType.FlatMaxManaBonus   (WisdomDerived only)
+        //
+        // Steps 1-2 are EffectiveMaxMana; 3 and 4 are here because they need
+        // the drafted relics and the resolved gear the adapter holds. The
+        // arithmetic is unchanged from what FightEncounterAdapter did inline
+        // before this phase -- relic percent/flat first, then the gear
+        // modifier on top -- so a Runic wearer's number is the same number.
+        //
+        // GAIN PER TURN TAKES THE SAME SHAPE as capacity, and for the same
+        // reason: the row's authored gainPerTurn is a BASE, and for a
+        // WisdomDerived pool EffectiveStats.manaRegen (Wisdom + gear +
+        // talents + track) and FlatManaRegenBonus are added on top; for a
+        // Fixed pool the authored number is the whole income. Mana authors 0
+        // because every point of its regen is derived -- which is why the row
+        // reading 0 does NOT mean mana stopped regenerating. manaRegen is
+        // passed in rather than re-derived because the adapter has already
+        // resolved the stat block.
+        public static ResourcePool BuildPrimaryPool(Character character,
+                                                    IReadOnlyList<RelicModifier> modifiers,
+                                                    ModifierEffectSet modifierEffects,
+                                                    int manaRegen)
+        {
+            EnsureLoaded();
+
+            var definition = GetCharacter(character.definitionId);
+            var pool = PrimaryPoolFor(definition?.Data?.PrimaryPoolId);
+            if (pool?.Data == null) return null;
+
+            var effects = modifierEffects ?? ModifierEffectSet.Empty;
+
+            int capacity = PoolPrecedence.Capacity(pool.Data, MaxManaBonuses(character), modifiers,
+                effects.Best(ModifierEffectType.FlatMaxManaBonus));
+            int gainPerTurn = PoolPrecedence.GainPerTurn(pool.Data,
+                manaRegen + effects.Best(ModifierEffectType.FlatManaRegenBonus));
+
+            return new ResourcePool(pool.Data, capacity, gainPerTurn);
+        }
+
+        // The same chain for the two paths that have a DEFINITION and no
+        // save: the tooling party (opening the Fight scene directly) and
+        // every enemy. Neither has talents, a reward track or gear, so only
+        // the ability-score term and the relic modifiers survive -- and an
+        // enemy has neither of those either, which is why it passes neutral
+        // scores and a null modifier list and gets exactly the row's
+        // authored capacity, as it always did.
+        public static ResourcePool BuildPrimaryPool(string primaryPoolId,
+                                                    AbilityScoreBlock scores,
+                                                    IReadOnlyList<RelicModifier> modifiers,
+                                                    int manaRegen)
+        {
+            EnsureLoaded();
+
+            var pool = PrimaryPoolFor(primaryPoolId);
+            if (pool?.Data == null) return null;
+
+            return new ResourcePool(pool.Data,
+                PoolPrecedence.Capacity(pool.Data, AbilityDerivation.MaxManaBonus(scores), modifiers, 0),
+                PoolPrecedence.GainPerTurn(pool.Data, manaRegen));
         }
 
         // A character's actual Skill mana cost including their level's

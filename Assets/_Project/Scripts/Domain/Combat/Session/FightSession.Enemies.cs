@@ -919,7 +919,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (landed.Absorbed > 0)
             {
-                AppendMessage($"{target.Name}'s {target.Signature.DisplayName} soaks {landed.Absorbed} of it.");
+                AppendMessage($"{target.Name}'s {target.SignaturePool.DisplayName} soaks {landed.Absorbed} of it.");
             }
 
             // Last Stand T3. Said out loud because it is otherwise invisible: a
@@ -1010,8 +1010,17 @@ namespace PrincesPalace.Domain.Combat.Session
             if (victim == null) return;
 
             GrantSignature(victim,
-                (victim.Signature?.GainOnDamageTaken ?? 0)
+                (victim.SignaturePool?.GainOnDamageTaken ?? 0)
                 + victim.Talents.Best(TalentEffectType.WoolOnHitTaken));
+
+            // The primary pool hears the same hit, on the same terms -- per
+            // HIT, not per point. Zero for mana; a rage bar that fills by
+            // being ground down authors a number instead of needing a hook.
+            //
+            // The TALENT term is deliberately NOT summed in here: WoolOnHit-
+            // Taken is Shawn's tree feeding Shawn's fleece, and a talent that
+            // says "wool" must not quietly pay a different resource.
+            GrantPrimary(victim, victim.PrimaryPool?.GainOnDamageTaken ?? 0);
         }
 
         // Adds to a combatant's signature resource if it has one. A no-op for
@@ -1020,7 +1029,18 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (amount > 0)
             {
-                combatant?.Signature?.Gain(amount);
+                combatant?.SignaturePool?.Gain(amount);
+            }
+        }
+
+        // The same for the primary pool, which every combatant has. Kept as
+        // its own method rather than a two-pool loop so a call site names
+        // which pool it is paying and cannot pay the wrong one by omission.
+        private static void GrantPrimary(CombatantState combatant, int amount)
+        {
+            if (amount > 0)
+            {
+                combatant?.PrimaryPool?.Gain(amount);
             }
         }
     }

@@ -94,14 +94,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 return false;
             }
 
-            int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
+            int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
             ChargeSkillMana(actor, skill.ManaCost);
 
             // Spent alongside the mana, and for the same reason it is spent
             // here rather than at the end: the cast is committed at this point.
             // A resolution that lands on nothing still cost the turn.
             BeginCooldown(actor, skill);
-            actor.Signature?.TrySpend(resourceSpent);
+            actor.SignaturePool?.TrySpend(resourceSpent);
 
             // Only a cast that can actually deal damage spends Gift: Fury. A
             // ward burning somebody else's gift would be a present the player
@@ -782,7 +782,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 return total;
             }
 
-            int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
+            int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
             var castType = ActorAttackType(actor) ?? DamageType.Physical;
 
             return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,

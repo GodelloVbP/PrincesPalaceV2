@@ -263,7 +263,7 @@ namespace PrincesPalace.Domain.Tests
         public void AMissingElementIsRefusedBeforeTheCostCheck()
         {
             var (session, hero, foe) = Fight(ElementalAffinity.Neutral);
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
 
             Assert.IsFalse(session.CastSkill(Orb(), foe));
 

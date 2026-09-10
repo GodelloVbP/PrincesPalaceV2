@@ -228,7 +228,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // once-per-turn locks must survive until THEIR turn starts.
             _locks.ResetTurn(LedgerIdOf(actor));
 
-            RegenerateMana(actor);
+            TickPrimaryPool(actor);
             ApplyRunicWardConversion(actor);
             TickStatuses(actor);
             TickCooldowns(actor);
@@ -248,7 +248,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Phoenix Egg: the shell's own 3-turn clock.
             TickPhoenixEgg(actor);
 
-            var signature = actor.Signature;
+            var signature = actor.SignaturePool;
             if (signature == null) return;
 
             int owed = SignaturePerTurnFor(actor);
@@ -260,10 +260,24 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        private void RegenerateMana(CombatantState actor)
+        // THE ONE TURN-START TICK FOR THE PRIMARY POOL, and the whole of the
+        // gain/decay rule for it. Was RegenerateMana, which only ever added
+        // ManaRegen; the pool now owns both halves, so widening this to a
+        // resource that decays on an idle turn is authored rather than coded
+        // (ResourcePool.TickTurnStart).
+        //
+        // NOT through CombatMath.RestoreMana, and the difference matters: a
+        // per-turn gain is the pool's own income, not a mana effect, so a
+        // pool that refuses potions still regenerates whatever it authored.
+        //
+        // The per-turn gain for the SIGNATURE pool is deliberately still at
+        // the bottom of GrantTurnStart rather than folded in here: it is
+        // Charisma-scaled and talent-fed (SignaturePerTurnFor), it says
+        // something when it overflows, and moving it would change the order
+        // two pools fill in for no gain.
+        private void TickPrimaryPool(CombatantState actor)
         {
-            if (actor == null || actor.ManaRegen <= 0) return;
-            CombatMath.RestoreMana(actor, actor.ManaRegen);
+            actor?.PrimaryPool?.TickTurnStart();
         }
 
         // Runic's mana->Ward conversion: at the start of the wearer's own

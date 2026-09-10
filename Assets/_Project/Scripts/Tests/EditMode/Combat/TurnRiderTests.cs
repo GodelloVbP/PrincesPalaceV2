@@ -321,8 +321,8 @@ namespace PrincesPalace.Domain.Tests
         public void TheTurnOpensWithManaRegenerated()
         {
             var hero = Hero(maxMana: 20);
-            hero.CurrentMana = 0;
-            hero.ManaRegen = 3;
+            hero.PrimaryPool.Current = 0;
+            hero.PrimaryPool.GainPerTurn = 3;
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
             encounter.GrantExtraTurn(hero);   // hands the turn back so the opening is hero's
 

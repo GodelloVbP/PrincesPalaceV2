@@ -35,6 +35,24 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 SetStance(actor, Stances.Cast);
             }
+
+            // THE ACTION SEAM FOR POOL DECAY. Every action a combatant takes
+            // opens a beat, so this is the one place that can say "this turn
+            // was not idle" without a flag at each verb. Only a pool authored
+            // decayUnless: AnyAction reads it; the shipped rule is the
+            // narrower Damage one, reported from the damage funnel instead.
+            NotePoolActivity(actor, PoolActivity.Action);
+        }
+
+        // BOTH POOLS HEAR IT. Which of them cares is the pool's own authored
+        // DecayUnless, not the caller's business -- a call site deciding
+        // which pool an event is "for" is how the two drift apart.
+        private static void NotePoolActivity(CombatantState combatant, PoolActivity kind)
+        {
+            if (combatant == null) return;
+
+            combatant.PrimaryPool?.NoteActivity(kind);
+            combatant.SignaturePool?.NoteActivity(kind);
         }
 
         // Closes the current beat and queues it. The snapshot is taken HERE, at
@@ -380,7 +398,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // one reports 0 rather than being absent from the snapshot, so playback
         // never has to test for a missing key.
         private int SignatureOf(CombatantState combatant) =>
-            combatant.Signature?.Current ?? 0;
+            combatant.SignaturePool?.Current ?? 0;
 
         // Everything recorded since the last drain, handed to the view. Drains
         // rather than exposes, so a beat cannot be played twice.

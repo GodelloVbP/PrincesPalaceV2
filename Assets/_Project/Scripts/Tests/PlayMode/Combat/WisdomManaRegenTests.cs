@@ -63,9 +63,15 @@ namespace PrincesPalace.PlayModeTests
                 partyCharacters: new List<Character> { shawn });
             Assert.IsNotNull(built, "fixture: a real fight must build");
 
-            Assert.AreEqual(3, built.Party[0].ManaRegen,
-                "the WIS-derived baseline must reach the real combatant a fight actually runs on, " +
+            Assert.AreEqual(3, built.Party[0].PrimaryPool.GainPerTurn,
+                "the WIS-derived baseline must reach the real combatant's PRIMARY POOL, which is " +
+                "where per-turn income lives now -- built by ContentDatabase.BuildPrimaryPool at " +
                 "the same FightEncounterAdapter seam every other derived stat already reaches");
+
+            // mana's own row authors gainPerTurn 0, so this 3 is entirely the
+            // derived term added on top of that base (PoolPrecedence.
+            // GainPerTurn). The compatibility view reads the same number.
+            Assert.AreEqual(3, built.Party[0].ManaRegen);
         }
 
         // THE MECHANISM: mana actually rises by that amount at turn start,
@@ -92,7 +98,8 @@ namespace PrincesPalace.PlayModeTests
             var foe = session.Encounter.Enemies.FirstOrDefault();
             Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
 
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
+            Assert.AreEqual(3, hero.PrimaryPool.GainPerTurn, "fixture: the pool carries the regen");
             // A LARGE speed gap and one granted extra turn, the same fixture
             // shape TurnRiderTests' own turn-start tests rely on -- hands the
             // very next turn straight back to the hero rather than letting a
@@ -115,7 +122,9 @@ namespace PrincesPalace.PlayModeTests
             session.ExecuteAttack(foe);
 
             Assert.AreEqual(3, hero.CurrentMana,
-                "mana must rise by exactly the WIS-derived regen at the turn the hero's own action opened");
+                "mana must rise by exactly the WIS-derived regen at the turn the hero's own action " +
+                "opened -- through ResourcePool.TickTurnStart now, which is the ONE turn-start tick " +
+                "for a primary pool (gain, then idle decay, which mana authors as 0)");
         }
     }
 }

@@ -92,7 +92,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
 
             var hero = new CombatantState("Shawn", true, 300, heroMana, 40, 10);
-            hero.Signature = new SignatureResource("wool", "Wool", 16, 0, 2, 0);
+            hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, 2, 0);
 
             var foes = new[]
             {

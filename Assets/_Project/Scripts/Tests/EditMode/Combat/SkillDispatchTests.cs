@@ -259,7 +259,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var skill = Skill(SkillEffect.RestorePartyMana, "Focus", flatAmount: 20);
             var hero = Hero();
-            hero.CurrentMana = 0;
+            hero.PrimaryPool.Current = 0;
             var (session, _, _) = Fight(Kit(skills: new[] { skill }), hero);
 
             session.CastSkill(0, null);
@@ -483,17 +483,17 @@ namespace PrincesPalace.Domain.Tests
             // what makes swinging anyway a deliberate choice rather than a
             // wasted turn. Skill deliberately does not grant it.
             var swinger = Hero();
-            swinger.Signature = new SignatureResource("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
+            swinger.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
             var (swing, _, swingFoes) = Fight(Kit(), swinger);
             swing.ExecuteAttack(swingFoes.Enemies[0]);
-            Assert.AreEqual(3, swinger.Signature.Current);
+            Assert.AreEqual(3, swinger.SignaturePool.Current);
 
             var caster = Hero();
-            caster.Signature = new SignatureResource("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
+            caster.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
             var (cast, _, castFoes) = Fight(Kit(skills: new[] { Skill(SkillEffect.DamageSingle) }), caster);
             cast.CastSkill(0, castFoes.Enemies[0]);
 
-            Assert.AreEqual(0, caster.Signature.Current, "a cast is not a swing");
+            Assert.AreEqual(0, caster.SignaturePool.Current, "a cast is not a swing");
         }
 
         [Test]
@@ -501,12 +501,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var relic = new ResolvedRelic("dual", "Dual Wield", "", RelicEffect.DualWield, 0);
             var hero = Hero();
-            hero.Signature = new SignatureResource("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
+            hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
             var (session, _, encounter) = Fight(Kit(relics: new[] { relic }), hero);
 
             session.ExecuteAttack(encounter.Enemies[0]);
 
-            Assert.AreEqual(3, hero.Signature.Current, "one attack, one grant, however many swings it produced");
+            Assert.AreEqual(3, hero.SignaturePool.Current, "one attack, one grant, however many swings it produced");
         }
     }
 }

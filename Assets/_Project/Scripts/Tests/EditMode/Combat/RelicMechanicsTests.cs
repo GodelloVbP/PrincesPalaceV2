@@ -73,7 +73,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
                 skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
-            hero.CurrentMana = 50; // 50 missing
+            hero.PrimaryPool.Current = 50; // 50 missing
 
             session.CastSkill(0, foe1); // marks foe1, costs 0 mana (test skill is authored free)
             session.ExecuteAttack(foe1); // consumes the mark
@@ -86,7 +86,7 @@ namespace PrincesPalace.Domain.Tests
         public void AnAttackWithNoMarkRestoresNothing()
         {
             var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100);
-            hero.CurrentMana = 50;
+            hero.PrimaryPool.Current = 50;
 
             session.ExecuteAttack(foe1); // no spell was cast first -- nothing marked
 
@@ -719,7 +719,7 @@ namespace PrincesPalace.Domain.Tests
             // an incidental hit before the test's own hit ever lands.
             // AbsorbPerPoint 1, Current 10: a 10-point hit is absorbed in
             // full (min(10*1, 10) == 10), toHealth == 0.
-            hero.Signature = new SignatureResource("shield", "Shield", 10, 0, 0, 0,
+            hero.SignaturePool = new ResourcePool("shield", "Shield", 10, 0, 0, 0,
                 absorbPerPoint: 1, absorbsDamage: true) { Current = 10 };
 
             session.DealDamageForTest(foe1, hero, 10, DamageType.Physical);
@@ -745,7 +745,7 @@ namespace PrincesPalace.Domain.Tests
             // comment. AbsorbPerPoint 1, Current 3: a 10-point hit is only
             // absorbed for 3 (min(3*1, 10) == 3), toHealth == 7 -- the
             // wearer is genuinely hit, so the vest must still fire.
-            hero.Signature = new SignatureResource("shield", "Shield", 10, 0, 0, 0,
+            hero.SignaturePool = new ResourcePool("shield", "Shield", 10, 0, 0, 0,
                 absorbPerPoint: 1, absorbsDamage: true) { Current = 3 };
 
             session.DealDamageForTest(foe1, hero, 10, DamageType.Physical);

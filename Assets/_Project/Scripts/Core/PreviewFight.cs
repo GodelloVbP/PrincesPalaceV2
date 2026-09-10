@@ -516,15 +516,20 @@ namespace PrincesPalace
                          ?? built.Party?.FirstOrDefault();
             if (caster == null) return;
 
-            // MANA AND RESOURCE FULL. A preview that opens on an unaffordable
-            // row photographs a greyed button, and the author reads it as the
+            // BOTH POOLS FULL. A preview that opens on an unaffordable row
+            // photographs a greyed button, and the author reads it as the
             // spell being broken rather than the caster being poor.
-            caster.CurrentMana = caster.MaxMana;
-            if (caster.Signature != null)
+            //
+            // Gain(Max) rather than an assignment, so a pool that starts
+            // empty (a rage bar) is filled by the same line rather than by a
+            // second one somebody has to notice is missing -- Gain clamps at
+            // capacity, so "gain a whole pool's worth" is always exactly full.
+            caster.PrimaryPool.Gain(caster.PrimaryPool.Max);
+            if (caster.SignaturePool != null)
             {
-                caster.Signature.Current = caster.Signature.Max;
-                plan.Notes.Add($"{caster.Signature.DisplayName} filled to " +
-                               $"{caster.Signature.Max} for the cast");
+                caster.SignaturePool.Current = caster.SignaturePool.Max;
+                plan.Notes.Add($"{caster.SignaturePool.DisplayName} filled to " +
+                               $"{caster.SignaturePool.Max} for the cast");
             }
 
             // REQUIREMENTS WAIVED, ONE SCORE AT A TIME AND ONLY THE UNMET ONES.

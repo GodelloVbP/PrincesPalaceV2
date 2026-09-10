@@ -118,7 +118,7 @@ namespace PrincesPalace.Domain.Content
 
         // Optional private combat resource. An empty signatureId means the
         // character has none — that is the meaningful distinction, not a
-        // zero capacity (see CombatantState.Signature).
+        // zero capacity (see CombatantState.SignaturePool).
         [ContentDoc("The id of this character's private signature resource; empty means the character has none.")]
         public string signatureId = "";
         [ContentDoc("The name shown for the signature resource, e.g. 'Wool'.")]

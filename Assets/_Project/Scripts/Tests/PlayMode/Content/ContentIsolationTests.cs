@@ -158,8 +158,8 @@ namespace PrincesPalace.PlayModeTests
             var session = built.Session;
 
             var hero = built.Party[0];
-            hero.CurrentMana = hero.MaxMana;
-            if (hero.Signature != null) hero.Signature.Current = hero.Signature.Max;
+            hero.PrimaryPool.Current = hero.MaxMana;
+            if (hero.SignaturePool != null) hero.SignaturePool.Current = hero.SignaturePool.Max;
 
             session.Begin();
 

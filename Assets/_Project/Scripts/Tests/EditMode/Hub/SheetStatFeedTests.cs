@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -114,6 +115,36 @@ namespace PrincesPalace.Domain.Tests
                 CollectionAssert.IsNotEmpty(SheetStats.Feeds(score),
                     $"{score} lights no row, so hovering it on the sheet does nothing");
             }
+        }
+
+        // THE SAME TRUTHFULNESS RULE, FOR A CHARACTER WHOSE POOL IS Fixed.
+        //
+        // A Fixed pool is exactly its authored capacity from every source
+        // (PoolCapacityRule.Fixed), so Wisdom moves that number by nothing.
+        // Lighting the row anyway would be the precise lie this whole file
+        // exists to prevent: the row highlights and the figure never changes.
+        // Nothing authors a Fixed pool yet, which is why this cannot be a
+        // content-driven check and is pinned against the rule instead.
+        [Test]
+        public void WisdomStopsFeedingThePoolRowForAFixedPool()
+        {
+            CollectionAssert.Contains(SheetStats.FedBy(SheetStat.MaxMana, PoolCapacityRule.WisdomDerived),
+                AbilityScore.Wisdom,
+                "mana is WisdomDerived and every character shipped today carries it");
+
+            CollectionAssert.IsEmpty(SheetStats.FedBy(SheetStat.MaxMana, PoolCapacityRule.Fixed));
+
+            CollectionAssert.AreEqual(
+                new[] { SheetStat.MagicalDefense },
+                SheetStats.Feeds(AbilityScore.Wisdom, PoolCapacityRule.Fixed),
+                "Wisdom still mitigates magic for such a character - it just buys them no capacity");
+
+            // And the hover copy agrees with the highlight rather than
+            // promising a pool that will not move.
+            StringAssert.DoesNotContain("Max Mana",
+                SheetStats.PerPointSummary(Neutral(), AbilityScore.Wisdom, PoolCapacityRule.Fixed));
+            StringAssert.Contains("Max Mana",
+                SheetStats.PerPointSummary(Neutral(), AbilityScore.Wisdom, PoolCapacityRule.WisdomDerived));
         }
     }
 }

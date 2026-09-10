@@ -213,8 +213,16 @@ namespace PrincesPalace.Domain.Bot
                         int missing;
                         if (effect == SkillEffect.RestorePartyMana)
                         {
+                            // A PARTY MEMBER WHOSE POOL REFUSES MANA EFFECTS
+                            // CONTRIBUTES NOTHING TO "MISSING MANA", because
+                            // the cast will not fill it (CombatMath.
+                            // RestoreMana returns 0 there). Counting them
+                            // would have the bot value a party heal by how
+                            // empty a bar it cannot touch is -- and would
+                            // make a rage bar the strongest argument for
+                            // casting a mana spell.
                             missing = session.Encounter.LivingPlayerParty
-                                .Sum(c => System.Math.Max(0, c.MaxMana - c.CurrentMana));
+                                .Sum(c => CombatMath.CanRestoreMana(c) ? System.Math.Max(0, c.MaxMana - c.CurrentMana) : 0);
                         }
                         else if (effect == SkillEffect.HealParty)
                         {

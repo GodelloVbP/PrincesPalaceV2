@@ -348,7 +348,7 @@ namespace PrincesPalace.Domain.Tests
         public void InsufficientManaRefusesTheCastAndSpendsNothing()
         {
             var (session, hero, foes) = Fight(Neutral, Neutral, Neutral);
-            hero.CurrentMana = ManaCost - 1;
+            hero.PrimaryPool.Current = ManaCost - 1;
             int health = foes[0].CurrentHealth;
 
             Assert.IsFalse(session.CastSkill(Cinderfault(), foes[0]),
@@ -370,8 +370,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var cinderfault = Cinderfault();
             var (session, hero, foes) = Fight(Neutral, Neutral, Neutral);
-            hero.MaxMana = 9999;
-            hero.CurrentMana = 9999;
+            hero.PrimaryPool.Max = 9999;
+            hero.PrimaryPool.Current = 9999;
 
             Assert.IsTrue(session.CastSkill(cinderfault, foes[0]), "turn 1 casts");
 
@@ -394,8 +394,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var cinderfault = Cinderfault();
             var (session, hero, foes) = Fight(Neutral, Neutral, Neutral);
-            hero.MaxMana = 9999;
-            hero.CurrentMana = 9999;
+            hero.PrimaryPool.Max = 9999;
+            hero.PrimaryPool.Current = 9999;
 
             Assert.IsTrue(session.CastSkill(cinderfault, foes[0]), "turn 1 casts");
 

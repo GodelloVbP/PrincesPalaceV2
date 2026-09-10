@@ -753,9 +753,9 @@ namespace PrincesPalace
             if (actor != null && vitals.TryGetValue(actor, out var mine))
             {
                 partyHpValue.Set(UiStrings.HealthValue, mine.Health, actor.MaxHealth);
-                partyMpValue.Set(UiStrings.HealthValue, mine.Mana, actor.MaxMana);
+                partyMpValue.Set(UiStrings.HealthValue, mine.Primary, actor.MaxMana);
                 SetFill(partyHpFill, mine.Health, actor.MaxHealth);
-                SetFill(partyMpFill, mine.Mana, actor.MaxMana);
+                SetFill(partyMpFill, mine.Primary, actor.MaxMana);
             }
         }
 

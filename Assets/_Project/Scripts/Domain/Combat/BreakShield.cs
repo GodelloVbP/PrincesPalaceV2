@@ -10,13 +10,13 @@ namespace PrincesPalace.Domain.Combat
     // turn is actually skipped, so the window is always the same length
     // regardless of how it was reached.
     //
-    // Independent of health entirely, same as SignatureResource is: a fully
+    // Independent of health entirely, same as ResourcePool is: a fully
     // healthy monster can be broken and a nearly-dead one can still be
     // carrying a full shield. Nullable-by-reference on CombatantState for
     // the same reason Signature is — most combatants, everyone but a
     // handful of enemies, pay nothing for a mechanic they do not have.
     //
-    // Engine-free and pure, same as SignatureResource — the rules about
+    // Engine-free and pure, same as ResourcePool — the rules about
     // who has one and how big live in Content (EnemyDefinition) and Core
     // (FightController), not here.
     public sealed class BreakShield

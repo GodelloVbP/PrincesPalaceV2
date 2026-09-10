@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // a two-turn purchase from full health.
         private int SignaturePerTurnFor(CombatantState actor)
         {
-            var signature = actor?.Signature;
+            var signature = actor?.SignaturePool;
             if (signature == null) return 0;
 
             int perTurn = signature.GainPerTurn;
