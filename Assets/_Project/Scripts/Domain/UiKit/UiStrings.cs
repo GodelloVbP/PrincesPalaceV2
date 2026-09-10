@@ -532,6 +532,20 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DossierUnassignedEmpty =
             UiString.Define("dossier.unassigned_empty", "NOTHING TO PLACE");
         public static readonly UiString DossierSlotEmpty = UiString.Define("dossier.slot_empty", "EMPTY");
+
+        // WHAT STANDS WHERE THE THREE SLOTS WOULD BE for a character whose
+        // primary pool refuses spell books (plan P6, gate 3). One sentence,
+        // not three greyed chips: a disabled control invites a click and then
+        // says nothing about why, and the reason here is not "not yet" but
+        // "never".
+        //
+        // SENTENCE CASE among this panel's small caps, on purpose -- it is a
+        // statement about a character, not a label on a box, and the name in
+        // it is content ("Bjorn", not "BJORN"). The sample is a name longer
+        // than any on the roster.
+        public static readonly UiString DossierNoSpellBooks =
+            UiString.Define("dossier.no_spell_books", "{0} cannot carry spell books",
+                "Somebody cannot carry spell books");
         public static readonly UiString DossierSlotFilled =
             UiString.Define("dossier.slot_filled", "{0}", "LIGHTNING BOLT");
 

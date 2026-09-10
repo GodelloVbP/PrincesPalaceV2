@@ -644,6 +644,26 @@ namespace PrincesPalace.Content
             return named ?? GetPool(ManaPoolId);
         }
 
+        // THE SAME LOOKUP FROM THE OTHER END: a character id, not a pool id.
+        // Callers that start from a character were writing the two-step out
+        // (CharacterDossierController, ItemDescription); stating it once is
+        // what keeps a later change to the fallback from reaching some of
+        // them and not others.
+        public static ResolvedPool PrimaryPoolOf(string characterId)
+        {
+            var definition = GetCharacter(characterId);
+            return PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
+        }
+
+        // WHETHER THIS CHARACTER CAN CARRY A SPELL BOOK AT ALL (plan P6), and
+        // the only place a character id becomes that answer. The rule itself
+        // is SpellBooks.CanHold; this is the id -> pool step in front of it,
+        // written once so the shop, the dossier, the orchestrator and the save
+        // reconcile cannot come to different conclusions about the same
+        // character.
+        public static bool CanHoldSpellBooks(string characterId) =>
+            SpellBooks.CanHold(PrimaryPoolOf(characterId));
+
         // A character's max primary-pool capacity, every source summed.
         //
         // THE BASE IS THE ROW, not a constant: GameplayConstants.

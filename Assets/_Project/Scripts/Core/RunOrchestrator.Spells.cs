@@ -24,6 +24,17 @@ namespace PrincesPalace
         // question, once this one has answered "is there room".
         public static int CanLearn(string characterId)
         {
+            // NO POOL, NO SLOTS (plan P6, gate 1). A character whose primary
+            // pool refuses spell books has nowhere to put one, which is the
+            // same answer this method already gives a character with three
+            // full slots -- so every caller that already handles -1 handles
+            // this without a second question. That is the whole reason the
+            // refusal lives HERE and not at five call sites: LearnSpell's
+            // lowest-free-slot overload, the shop card's "all slots full"
+            // line and the bot's SpellAssignmentView all read CanLearn, and
+            // none of them had to learn a new word.
+            if (!ContentDatabase.CanHoldSpellBooks(characterId)) return -1;
+
             var run = RunManager.Run;
             var used = OccupiedSlots(run, characterId);
 
@@ -60,6 +71,15 @@ namespace PrincesPalace
                 return ShopResult.Refused(ShopRefusal.BadIndex);
             if (slot < 0 || slot >= SpellBooks.MaxSpellSlots) return ShopResult.Refused(ShopRefusal.NoFreeSlot);
 
+            // THE SAME REFUSAL CanLearn GIVES, restated because this overload
+            // does not go through it -- a caller who names the slot has
+            // already decided there is one. The dossier hides the slot block
+            // entirely for such a character, so nothing can press this today;
+            // it is here so that a caller who does not paint a screen (a bot
+            // policy, a later tool) cannot walk past the gate by naming an
+            // index.
+            if (!ContentDatabase.CanHoldSpellBooks(characterId)) return ShopResult.Refused(ShopRefusal.NoFreeSlot);
+
             run.unassignedSpellBooks ??= new List<string>();
             if (!run.unassignedSpellBooks.Contains(skillId)) return ShopResult.Refused(ShopRefusal.NotOwned);
 
@@ -91,6 +111,11 @@ namespace PrincesPalace
             if (string.IsNullOrEmpty(characterId) || string.IsNullOrEmpty(skillId))
                 return ShopResult.Refused(ShopRefusal.BadIndex);
             if (slot < 0 || slot >= SpellBooks.MaxSpellSlots) return ShopResult.Refused(ShopRefusal.BadIndex);
+
+            // Same gate as LearnSpell's explicit overload above, same reason.
+            // A character who cannot hold a book cannot hold one by trading a
+            // book they should never have had either.
+            if (!ContentDatabase.CanHoldSpellBooks(characterId)) return ShopResult.Refused(ShopRefusal.NoFreeSlot);
 
             run.unassignedSpellBooks ??= new List<string>();
             if (!run.unassignedSpellBooks.Contains(skillId)) return ShopResult.Refused(ShopRefusal.NotOwned);

@@ -399,9 +399,11 @@ namespace PrincesPalace
         }
 
         // THE BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus
-        // any skillId every FIELDED character already knows (§2d's "owned by
-        // everyone" rule -- a card nobody could act on is a dead card taking
-        // a live card's slot). "Fielded" is the active squad
+        // any skillId NO fielded character could use -- because they already
+        // know it, or because their primary pool refuses spell books at all
+        // (§2d's "owned by everyone" rule, widened by plan P6 -- a card
+        // nobody could act on is a dead card taking a live card's slot).
+        // "Fielded" is the active squad
         // (SaveData.ActiveSquadIds), same definition §3e uses for the
         // dossier's row count. A skill known by SOME but not all fielded
         // characters is still offered -- the shop carries no per-character
@@ -425,12 +427,27 @@ namespace PrincesPalace
             var squad = save?.ActiveSquadIds() ?? new List<string>();
             var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
 
-            bool EveryoneKnows(string skillId) =>
+            // "EVERYONE KNOWS IT" BECAME "NOBODY CAN USE IT" (plan P6, gate
+            // 2). The rule §2d states is "a card nobody could act on is a
+            // dead card taking a live card's slot", and knowing the book was
+            // only ever ONE way to be unable to act on it -- a character
+            // whose primary pool refuses books is another, and the shelf has
+            // to read them the same way or it stocks a card that cannot be
+            // placed anywhere.
+            //
+            // THE THRESHOLD IS ALL, NOT ANY, and deliberately: one book-less
+            // character in the squad must not take a book off the shelf for
+            // the two who could read it. That is the same bargain the
+            // knows-it half already struck (a skill known by SOME fielded
+            // characters is still offered), and the shop card's own fact line
+            // is what tells the player who it is for.
+            bool NobodyCanUse(string skillId) =>
                 squad.Count > 0 && squad.All(id =>
-                    learned.Exists(e => e != null && e.characterId == id && e.skillId == skillId));
+                    !ContentDatabase.CanHoldSpellBooks(id)
+                    || learned.Exists(e => e != null && e.characterId == id && e.skillId == skillId));
 
             return ContentDatabase.Skills
-                .Where(s => s != null && s.Data.BookTier > 0 && !EveryoneKnows(s.id))
+                .Where(s => s != null && s.Data.BookTier > 0 && !NobodyCanUse(s.id))
                 .Select(s => new ShopStock.BookCandidate(s.id, s.Data.BookTier))
                 .ToList();
         }

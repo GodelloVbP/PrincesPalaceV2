@@ -65,6 +65,67 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("characterId is required", errors[0]);
         }
 
+        // ---- a book nobody can hold (plan P6, gate 5) -------------------------
+        //
+        // THE ONLY GATE OF PHASE C THAT IS TESTABLE WITHOUT CONTENT, and the
+        // reason it is shaped as a parameter: no shipped pool refuses books
+        // (that is Bjorn's `fury` row, phase E), so the set of refusing owners
+        // is handed in rather than looked up. ContentBuilder computes it from
+        // the pool and character catalogues it has already built; these three
+        // state the rule against a set the fixture names itself.
+
+        [Test]
+        public void ABookOnlySkillWhoseOwnerRefusesBooks_IsRefusedNamingBoth()
+        {
+            var entry = Minimal("rage_ward", "bear");
+            entry.bookOnly = true;
+            entry.bookTier = 1;
+            entry.unlockLevel = -1;
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { entry }, new[] { "bear" }, out _, out var errors);
+
+            Assert.IsFalse(ok, "a book-only skill owned by somebody who cannot hold a book is unreachable content");
+            Assert.AreEqual(1, errors.Count, string.Join("; ", errors));
+            StringAssert.Contains("rage_ward", errors[0]);
+            StringAssert.Contains("bear", errors[0]);
+            StringAssert.Contains("refuses spell books", errors[0]);
+        }
+
+        // THE CONTROL, and it is the half that would let the rule ship
+        // inverted: the SAME owner, the SAME refusing set, and a skill that
+        // is not book-only is perfectly fine. Bjorn's own kit is exactly this
+        // case -- authored skills he levels into, on a pool that reads no
+        // books at all.
+        [Test]
+        public void AnOrdinarySkillOwnedByABookRefuser_Resolves()
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { Minimal("slam", "bear") }, new[] { "bear" },
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(1, resolved.Count);
+        }
+
+        // AND THE OTHER CONTROL: a book-only skill owned by somebody who is
+        // NOT in the refusing set. Every one of the six shipped book spells is
+        // this case today, which is why the shipped build stays green.
+        [Test]
+        public void ABookOnlySkillOwnedByABookHolder_Resolves()
+        {
+            var entry = Minimal("mud_burst", "sheep");
+            entry.bookOnly = true;
+            entry.bookTier = 1;
+            entry.unlockLevel = -1;
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { entry }, new[] { "bear" }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(int.MaxValue, resolved[0].UnlockLevel);
+        }
+
         // A free action is strictly better than every other action and would
         // simply be spammed.
         [Test]

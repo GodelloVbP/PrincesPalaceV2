@@ -786,6 +786,23 @@ namespace PrincesPalace
         // learned spell the moment it was learned -- bookTier is the "is this
         // still a book-eligible skill" question Phase A actually needs
         // answered, and it is meaningful from the day this ships.
+        //
+        // AND A THIRD KIND OF BROKEN, added with the pool model (plan P6,
+        // gate 4): the book is fine, the character is fine, and the two can
+        // no longer go together because that character's primary pool stopped
+        // reading books between the save and the load. The entry is dropped
+        // rather than left to sit inert -- an unreachable slot is exactly the
+        // "purchase with no effect" AvailableSkillsFor's own header records.
+        //
+        // THE BOOK GOES BACK TO THE POOL, not into the bin: nothing about the
+        // copy is wrong, only who is holding it, and a different squad member
+        // can still place it. Same call ReplaceSpell makes for a displaced
+        // book, and the same reasoning (§7.1 point 5).
+        //
+        // LOUD, because this one is silent otherwise. The other three arms
+        // drop content that no longer exists, which the player can see for
+        // themselves; this one drops a spell off a character who still has
+        // three empty-looking slots.
         private static void ReconcileLearnedSpells(RunSnapshot run)
         {
             run.learnedSpells ??= new List<LearnedSpellEntry>();
@@ -793,6 +810,19 @@ namespace PrincesPalace
 
             run.learnedSpells.RemoveAll(e => e == null || !IsBookEligible(e.skillId)
                 || ContentDatabase.GetCharacter(e.characterId) == null);
+
+            foreach (var entry in run.learnedSpells
+                         .Where(e => !ContentDatabase.CanHoldSpellBooks(e.characterId))
+                         .ToList())
+            {
+                UnityEngine.Debug.LogWarning(
+                    $"[Reconcile] '{entry.characterId}' can no longer carry spell books, so '{entry.skillId}' " +
+                    $"has left slot {entry.slot} and gone back to the unplaced pile.");
+
+                run.learnedSpells.Remove(entry);
+                run.unassignedSpellBooks.Add(entry.skillId);
+            }
+
             run.unassignedSpellBooks.RemoveAll(id => !IsBookEligible(id));
         }
 

@@ -332,9 +332,19 @@ namespace PrincesPalace.Content
             // LearnedSpellEntry already carries the characterId it was learned
             // for, and that -- not the skill's -- is the ownership that means
             // anything for a book.
+            //
+            // AND GATED ON THE POOL (plan P6, gate 4). SaveData.Reconcile
+            // prunes a learned book from a character who cannot hold one, so
+            // in a live run this arm is unreachable -- but Reconcile runs on
+            // LOAD, and a save written before a character's pool changed
+            // reaches a fight through routes that never opened a save file
+            // (the tooling party, a preview). Cheap to state here, and it is
+            // the difference between "the entry is gone" and "the entry is
+            // gone AND could not have cast anything anyway".
             var run = RunManager.Run;
+            bool canHoldBooks = CanHoldSpellBooks(character.definitionId);
             bool LearnedThisRun(SkillDefinition s) =>
-                s.Data.BookOnly && run != null && run.learnedSpells != null
+                s.Data.BookOnly && canHoldBooks && run != null && run.learnedSpells != null
                 && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
 
             // THE SAME BASE PREDICATE the no-Character-record route uses,

@@ -25,7 +25,30 @@ namespace PrincesPalace.Domain.Content
         private const int DefaultPower = 0;
         private const int DefaultFlatAmount = 0;
 
-        public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved, out List<string> errors)
+        // The catalogue-blind overload, for the fixtures and for anything that
+        // only wants skills.json checked against itself. Nobody refuses books.
+        public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved, out List<string> errors) =>
+            TryResolveAll(entries, null, out resolved, out errors);
+
+        // THE ONE CROSS-CATALOGUE FACT THIS RESOLVER IS HANDED (plan P6,
+        // gate 5): the owner ids whose primary pool refuses spell books,
+        // computed by ContentBuilder from the pool and character catalogues it
+        // has already built (pools, then characters, then skills -- see its
+        // own ordering note). A bookOnly skill authored against one of them
+        // can never be learned by anybody, because the only route to it is a
+        // book its owner cannot hold; it is dead content that still costs a
+        // shop slot and a drop roll.
+        //
+        // AN EXTRA PARAMETER RATHER THAN A REQUIRED ONE, unlike
+        // CharacterEntryResolver's poolIds. That one guards a field every
+        // character row authors, so a caller forgetting it would skip a live
+        // check; this one has a single production caller and twenty-eight
+        // fixtures whose skills name owners no character catalogue contains at
+        // all. Null or empty means "nothing refuses books", which is the
+        // shipped catalogue's own answer today.
+        public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries,
+                                         IReadOnlyCollection<string> bookRefusingOwnerIds,
+                                         out List<ResolvedSkill> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedSkill>();
             errors = new List<string>();
@@ -39,6 +62,17 @@ namespace PrincesPalace.Domain.Content
                 else
                 {
                     errors.Add(error);
+                }
+            }
+
+            if (bookRefusingOwnerIds != null && bookRefusingOwnerIds.Count > 0)
+            {
+                foreach (var skill in resolved.Where(s => s.BookOnly && bookRefusingOwnerIds.Contains(s.CharacterId)))
+                {
+                    errors.Add($"skill '{skill.Id}': bookOnly is set and it belongs to '{skill.CharacterId}', " +
+                               "whose primary pool refuses spell books — the only way to reach a book-only skill " +
+                               "is to learn the book, and that character can never hold one. Give it an owner who " +
+                               "can carry books, or drop bookOnly and author an unlockLevel.");
                 }
             }
 

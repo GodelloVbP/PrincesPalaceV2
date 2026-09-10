@@ -82,6 +82,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SpellSlots = new List<NodeRef>();
         public List<NodeRef> SpellSlotNames = new List<NodeRef>();
         public List<NodeRef> SpellSlotSelections = new List<NodeRef>();
+
+        // Stands in the band the three slots occupy, for a character whose
+        // pool refuses books. Exactly one of the two is ever on screen; see
+        // BuildSpellsPanel.
+        public NodeRef SpellsNoBooksLine;
+
         public NodeRef UnassignedEmptyHint;
         public List<NodeRef> UnassignedRows = new List<NodeRef>();
         public List<NodeRef> UnassignedNames = new List<NodeRef>();
@@ -696,6 +702,31 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 SpellSlotNames.Add(name);
                 children.Add(slot);
             }
+
+            // WHAT REPLACES THE THREE SLOTS for a character whose primary pool
+            // refuses spell books (plan P6, gate 3). Centred in the band they
+            // occupy, so the panel's own geometry does not move for either
+            // reading -- the divider and everything under it stay where they
+            // are whichever of the two is up.
+            //
+            // DECOR, which is also what exempts it from A1: it overlaps all
+            // three slot buttons by construction and CheckSiblingOverlap skips
+            // any pair with a decor side, so there is no AllowOverlap to
+            // declare here (A7 would refuse one on a decor node as a waiver
+            // that waives nothing). Nothing about this line takes a click.
+            //
+            // The pattern is FightScreen's roster signature row: hidden
+            // outright rather than blanked, because a label set to "" is still
+            // a box the text-fit audit reasons about and still reads as a
+            // missing value rather than as an absence with a reason.
+            float slotBandHeight = SpellBooks.MaxSpellSlots * slotHeight + (SpellBooks.MaxSpellSlots - 1) * slotGap;
+            var noBooks = Ui.Label("DossierSpellsNoBooksLine", UiStrings.DossierNoSpellBooks,
+                    new UiVec(DossierLayout.ContentAWidth, 24f), 14, TextDim,
+                    Place.At(cx, slotTop - slotBandHeight * 0.5f))
+                .AsDecor()
+                .Inactive();
+            SpellsNoBooksLine = noBooks;
+            children.Add(noBooks);
 
             float dividerY = slotTop - SpellBooks.MaxSpellSlots * (slotHeight + slotGap);
             children.Add(Ui.Solid("DossierSpellsDivider", Rule,

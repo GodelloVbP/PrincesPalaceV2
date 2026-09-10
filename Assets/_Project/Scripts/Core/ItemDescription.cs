@@ -59,13 +59,8 @@ namespace PrincesPalace
         // shown to a Fixed pool's owner promises nothing it cannot deliver.
         // Null viewer -- a listing with nobody chosen -- reads as mana, which
         // is what every character shipped today carries.
-        private static ResolvedPool PrimaryPoolOf(Character viewer)
-        {
-            if (viewer == null) return null;
-
-            var definition = ContentDatabase.GetCharacter(viewer.definitionId);
-            return ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
-        }
+        private static ResolvedPool PrimaryPoolOf(Character viewer) =>
+            viewer == null ? null : ContentDatabase.PrimaryPoolOf(viewer.definitionId);
 
         // ONE item copy's rolled modifiers, scaled -- pulled off
         // ContentDatabase.ModifierEffectsForItem (the ScriptableObject seam)

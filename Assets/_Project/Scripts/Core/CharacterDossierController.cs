@@ -61,6 +61,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] spellSlots;
         [SerializeField] internal TMP_Text[] spellSlotNames;
         [SerializeField] internal Image[] spellSlotSelections;
+        [SerializeField] internal TMP_Text spellsNoBooksLine;
         [SerializeField] internal GameObject unassignedEmptyHint;
         [SerializeField] internal Button[] unassignedRows;
         [SerializeField] internal TMP_Text[] unassignedNames;
@@ -203,6 +204,14 @@ namespace PrincesPalace
         private string _primaryPoolName = ManaDisplayNameFallback;
 
         private const string ManaDisplayNameFallback = "Mana";
+
+        // AND WHETHER THAT POOL READS SPELL BOOKS (plan P6, gate 3), held
+        // beside the other two because it is the same fact about the same
+        // resolved row and RefreshSpells is reached both from Refresh and
+        // directly from a row press. True until a character is resolved --
+        // mana reads books, and that is what every character shipped today
+        // carries.
+        private bool _canHoldSpellBooks = true;
 
         private void OnEnable()
         {
@@ -449,11 +458,34 @@ namespace PrincesPalace
                 spellsCount.Set(UiStrings.DossierSpellsCount, filled, SpellBooks.MaxSpellSlots);
             }
 
+            // THE WHOLE SLOT BLOCK, OR ONE SENTENCE (plan P6, gate 3). Never
+            // three greyed chips: a disabled control says "not yet" and the
+            // answer here is "never", so the three boxes go entirely and the
+            // line that replaces them names the character and the reason.
+            //
+            // The pool question is asked once per resolved character
+            // (_canHoldSpellBooks) rather than per slot -- this method is also
+            // reached from a row press, which is why it is a field and not a
+            // local.
+            if (spellsNoBooksLine != null)
+            {
+                spellsNoBooksLine.gameObject.SetActive(!_canHoldSpellBooks && character != null);
+                if (!_canHoldSpellBooks && character != null)
+                {
+                    spellsNoBooksLine.Set(UiStrings.DossierNoSpellBooks, DisplayNameOf(character));
+                }
+            }
+
             if (spellSlots != null)
             {
                 for (int i = 0; i < spellSlots.Length; i++)
                 {
-                    string skillId = character == null
+                    if (spellSlots[i] != null && spellSlots[i].gameObject.activeSelf != _canHoldSpellBooks)
+                    {
+                        spellSlots[i].gameObject.SetActive(_canHoldSpellBooks);
+                    }
+
+                    string skillId = character == null || !_canHoldSpellBooks
                         ? null
                         : learned.FirstOrDefault(e => e != null && e.characterId == character.definitionId && e.slot == i)?.skillId;
 
@@ -561,6 +593,7 @@ namespace PrincesPalace
             _primaryPoolName = string.IsNullOrWhiteSpace(primaryPool?.DisplayName)
                 ? ManaDisplayNameFallback
                 : primaryPool.DisplayName;
+            _canHoldSpellBooks = SpellBooks.CanHold(primaryPool);
             RefreshAttributes(scores, character.definitionId);
 
             // AFTER RefreshAttributes, not inside RefreshIdentity where it
@@ -824,12 +857,22 @@ namespace PrincesPalace
 
         private static Color TierColour(int tier) => Hex(RarityBands.HexColorForTier(tier));
 
+        // WHAT TO CALL THIS CHARACTER ON SCREEN, falling back to the id so a
+        // definition that has gone missing still names something a bug report
+        // can be written about. Two readers now -- the header and the
+        // no-spell-books line -- so it is a method rather than two copies of
+        // the same three-way expression.
+        private static string DisplayNameOf(Character character)
+        {
+            var definition = ContentDatabase.GetCharacter(character?.definitionId);
+            return definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
+                ? character?.definitionId ?? ""
+                : definition.Data.DisplayName;
+        }
+
         private void RefreshIdentity(Character character)
         {
-            var definition = ContentDatabase.GetCharacter(character.definitionId);
-            string name = definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
-                ? character.definitionId
-                : definition.Data.DisplayName;
+            string name = DisplayNameOf(character);
 
             if (characterName != null) characterName.SetContent(name);
             if (subLine != null) subLine.SetContent($"Level {character.level}");
@@ -1199,11 +1242,8 @@ namespace PrincesPalace
         // because the pool is content and a save carries only the id.
         // WisdomDerived when nothing resolves, which is the shipped answer
         // and the one that keeps the sheet reading as it always has.
-        private static ResolvedPool PrimaryPoolFor(Character character)
-        {
-            var definition = ContentDatabase.GetCharacter(character?.definitionId);
-            return ContentDatabase.PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
-        }
+        private static ResolvedPool PrimaryPoolFor(Character character) =>
+            ContentDatabase.PrimaryPoolOf(character?.definitionId);
 
         // THE mechanic: light the rows this attribute actually feeds, and dim
         // the rest so the answer is unmissable.

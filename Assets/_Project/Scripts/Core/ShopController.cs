@@ -518,7 +518,17 @@ namespace PrincesPalace
             var knownBy = squad.Where(c => c != null
                 && learned.Exists(e => e != null && e.characterId == c.definitionId && e.skillId == skillId)).ToList();
 
-            var eligible = squad.Where(c => c != null && !knownBy.Contains(c)).ToList();
+            // ELIGIBLE MEANS "COULD ACTUALLY END UP HOLDING THIS", which is
+            // two facts now (plan P6, gate 2): does not already know it, AND
+            // can hold a book at all. Both lines below read this list -- the
+            // all-slots-full line and the "for N of M" count -- and both are
+            // lies if it counts somebody whose pool refuses books: the first
+            // would say "every slot is full" of a character with no slots,
+            // and the second would offer the book to a party member who can
+            // never take it.
+            var eligible = squad
+                .Where(c => c != null && !knownBy.Contains(c) && ContentDatabase.CanHoldSpellBooks(c.definitionId))
+                .ToList();
 
             // Every eligible (doesn't-already-know-it) fielded character is
             // full. Not "nobody can ever place it" -- a replace still can --

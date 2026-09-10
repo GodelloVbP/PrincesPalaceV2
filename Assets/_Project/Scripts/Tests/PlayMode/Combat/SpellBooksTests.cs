@@ -57,6 +57,61 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.unassignedSpellBooks.Add(skillId);
         }
 
+        // ---- who can hold a book at all (plan P6) -------------------------------
+        //
+        // A FIXTURE POOL, because nothing authors a book-refusing row yet --
+        // Bjorn's `fury` is phase E. Same approach PartyFormationCaptureTests
+        // takes for the HUD meter: build the row the rule needs and state its
+        // switches here as literals, so this cannot start passing because some
+        // shipped row happened to change its mind.
+        private static ResolvedPool BookRefusingFixture() =>
+            new ResolvedPool(
+                "fury_fixture", "Fury", "FURY",
+                PoolCapacityRule.Fixed, 100,
+                0, 15, 10,
+                10, PoolDecayTrigger.Damage,
+                PoolStartRule.Zero, 0,
+                "#FF8A3A", "#8E3A12", "#FFD2B0",
+                pulse: true, allowsSpellBooks: false, restoredByManaEffects: false, absorbsDamage: false,
+                sortOrder: 99);
+
+        [Test]
+        public void ManaReadsBooksAndAPoolThatSaysOtherwiseDoesNot()
+        {
+            var mana = ContentDatabase.PrimaryPoolFor(ContentDatabase.ManaPoolId)?.Data;
+            Assert.IsNotNull(mana, "the shipped catalogue has no mana row, so this asserts nothing");
+            Assert.IsTrue(SpellBooks.CanHold(mana), "mana's row authors allowsSpellBooks true");
+
+            Assert.IsFalse(SpellBooks.CanHold(BookRefusingFixture()),
+                "a row that authors allowsSpellBooks false must refuse");
+
+            // Graceful degradation, the house posture: a pool that has gone
+            // missing from a save's catalogue plays as mana, and mana reads
+            // books. The alternative -- refusing -- would strip a live run's
+            // learned spells the first time a content edit renamed a row.
+            Assert.IsTrue(SpellBooks.CanHold(null), "a missing pool degrades to the shipped answer");
+        }
+
+        // THE ADAPTER IN FRONT OF THE PREDICATE, pinned against the real
+        // roster: every gate in phase C asks a character id, not a pool.
+        [Test]
+        public void EveryShippedCharacterCanCarrySpellBooks()
+        {
+            var roster = ContentDatabase.Characters.Select(c => c.id).ToList();
+            Assert.GreaterOrEqual(roster.Count, 3, "the catalogue loaded nothing, so this agrees with itself");
+
+            foreach (string id in roster)
+            {
+                Assert.IsTrue(ContentDatabase.CanHoldSpellBooks(id),
+                    $"'{id}' cannot hold spell books, but no shipped pool refuses them yet -- " +
+                    "if a pools.json row now says allowsSpellBooks false, this test and the shop, " +
+                    "dossier and reconcile tests around it need the refusing-side literals phase E adds");
+            }
+
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks("nobody_by_that_name"),
+                "an unknown character resolves to the mana fallback, not to a refusal");
+        }
+
         // ---- content: bookOnly stays inert, bookTier does not -------------------
 
         [Test]
