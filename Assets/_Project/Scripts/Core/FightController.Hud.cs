@@ -2056,7 +2056,13 @@ namespace PrincesPalace
             switch (CurrentSubmenuKind())
             {
                 case SubmenuKind.Element: return FightHudModel.ElementRows(SelectedSkill());
-                case SubmenuKind.Item: return FightHudModel.ItemRows(_satchel);
+                // THE SAME POOL DetailPanelForSelection HANDS DetailForItem, ~90
+                // lines below. Both readers describe one satchel stack to one
+                // character, so they ask the one predicate the same question --
+                // the row was the last of the three readers still asking it
+                // without an actor, which is what let a mana potion advertise
+                // MANA to a Fury holder and then be refused on press.
+                case SubmenuKind.Item: return FightHudModel.ItemRows(_satchel, ActingCharacter()?.PrimaryPool);
                 case SubmenuKind.Move: return FightHudModel.MoveRows(_session, ActingCharacter());
                 default: return FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
             }
@@ -2113,6 +2119,13 @@ namespace PrincesPalace
         // What Column C is actually showing right now, for a test to read
         // the same panel RefreshDetail paints from.
         public DetailPanel CurrentDetailForTest() => CurrentDetail();
+
+        // The rows Column B is BUILT from, same door, same reason. The row's
+        // Meta never reaches the scene -- the tree paints a mark and a name and
+        // nothing else (FightScreen.BuildSubmenuRows) -- so the only way to
+        // check that this branch asked about the right character's pool is to
+        // read what the controller handed the view.
+        public IReadOnlyList<SubmenuRow> CurrentRowsForTest() => CurrentRows();
 
         private DetailPanel CurrentDetail()
         {
