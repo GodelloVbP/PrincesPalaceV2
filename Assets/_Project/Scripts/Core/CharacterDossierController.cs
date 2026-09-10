@@ -386,9 +386,19 @@ namespace PrincesPalace
         // ---- spell books (docs/PLAN_SHOP.md §1g, gate 3) -------------------------
 
         // Which unassigned-book row is selected, as an index into the SAME
-        // snapshot RefreshSpells just painted -- not into run.unassignedSpellBooks
-        // directly, because a duplicate skillId can occupy more than one row
-        // and "row 2" has to mean row 2, not "some row with this skillId".
+        // snapshot RefreshSpells just painted rather than into
+        // run.unassignedSpellBooks live, so the index cannot outlive the list
+        // it was taken against.
+        //
+        // IT DOES NOT BUY WHAT IT USED TO CLAIM. The comment here said the
+        // snapshot exists because "a duplicate skillId can occupy more than one
+        // row and 'row 2' has to mean row 2, not 'some row with this skillId'".
+        // That distinction is defeated one hop later: both LearnSpell and
+        // ReplaceSpell take the id off the pool with
+        // run.unassignedSpellBooks.Remove(skillId), which removes the FIRST
+        // match, not the row that was selected. Harmless -- two copies of one
+        // book are interchangeable, so which one goes carries no information --
+        // but the snapshot is a bounds-and-staleness guard, not row identity.
         private int _selectedUnassignedRow = -1;
         private List<string> _unassignedSnapshot = new List<string>();
 

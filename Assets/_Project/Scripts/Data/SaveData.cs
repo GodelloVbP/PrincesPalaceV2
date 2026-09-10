@@ -803,12 +803,21 @@ namespace PrincesPalace
         // stockpiledItems gets above: a content edit under a live run is not
         // worth discarding the run over.
         //
-        // CHECKED AGAINST bookTier > 0, not against bookOnly. bookOnly stays
-        // false on every skill until Phase E's flip (docs/handoffs/shop_v2/
+        // CHECKED AGAINST bookTier > 0, not against bookOnly.
+        //
+        // THE REASON THIS USED TO GIVE IS SPENT. It said "bookOnly stays false
+        // on every skill until Phase E's flip (docs/handoffs/shop_v2/
         // GAP_AUDIT.md, Gate 3), so a check against it here would prune every
-        // learned spell the moment it was learned -- bookTier is the "is this
-        // still a book-eligible skill" question Phase A actually needs
-        // answered, and it is meaningful from the day this ships.
+        // learned spell the moment it was learned". The flip has happened: all
+        // six bookTier > 0 skills in skills.json (static_fleece, golden_fleece,
+        // mud_burst, frost_flare, cinderfault, lightning_bolt) carry
+        // bookOnly: true today, so the two predicates now agree.
+        //
+        // They agree by COINCIDENCE, which is the thing to know. bookTier is
+        // still the right question here -- "is this a skill a book can be" --
+        // but ContentDatabase.AvailableSkillsFor gates the KIT on BookOnly, so
+        // the prune and the read would disagree the day a bookTier > 0 skill
+        // ships with bookOnly: false. Nothing refuses that combination.
         //
         // AND A THIRD KIND OF BROKEN, added with the pool model (plan P6,
         // gate 4): the book is fine, the character is fine, and the two can

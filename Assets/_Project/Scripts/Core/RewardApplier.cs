@@ -87,9 +87,20 @@ namespace PrincesPalace
                 // track existed or before a reward kind was implemented is
                 // still owed it and can still collect it. Nothing expires.
                 //
-                // TO REVERT: put `character.ClaimTrackRewards();` back on the
-                // line below. The reward track screen keeps working either way
-                // -- it would simply have nothing to collect.
+                // THIS IS DECIDED, and the revert note that used to sit here is
+                // gone rather than corrected. It said "TO REVERT: put
+                // `character.ClaimTrackRewards();` back on the line below",
+                // naming an overload that does not exist: the method is
+                // (RewardTrackDefinition track, int throughLevel) since
+                // claiming became per-node. Following it literally with
+                // ClaimTrackRewards(RewardTracks.For(character), character.level)
+                // would restore exactly the collect-everything auto-claim that
+                // Character.cs records as the reported bug ("it still auto
+                // claims" -- every node on the rail a collect-everything button
+                // wearing a different number).
+                //
+                // Manual collection is the design, not a state to be undone.
+                // See the reward-track design handoff section 3.
 
                 reward.Characters.Add(new CharacterReward(
                     character.definitionId,

@@ -130,10 +130,22 @@ namespace PrincesPalace
             if (Refused()) return ShopResult.Refused(ShopRefusal.Injected);
 
             // 2. APPLY. The displaced skillId is captured before the slot is
-            // overwritten, and the removal-from-pool happens before the
-            // pool gains the displaced entry back -- so a duplicate copy of
-            // the SAME skillId (buy two, learn one, replace with the other)
-            // cannot be confused for the one just displaced.
+            // overwritten, and the removal-from-pool happens before the pool
+            // gains the displaced entry back.
+            //
+            // THE ORDERING IS RIGHT AND THE REASON IT USED TO GIVE IS NOT. It
+            // claimed the ordering stopped "a duplicate copy of the SAME
+            // skillId (buy two, learn one, replace with the other)" being
+            // confused for the one just displaced. That case cannot get here:
+            // AlreadyKnows returns AlreadyKnown above, so replacing slot N
+            // (holding X) with a second copy of X is refused before the
+            // ordering matters. The ordering survives as the plainer property
+            // -- remove what is being spent, then bank what came back -- which
+            // is the same posture every other mutation in this file takes.
+            //
+            // And the removal is by VALUE: Remove(skillId) takes the first
+            // matching entry, not a particular one. Two copies of one book are
+            // interchangeable, so which one goes carries no information.
             string displaced = existing.skillId;
             run.unassignedSpellBooks.Remove(skillId);
             existing.skillId = skillId;
