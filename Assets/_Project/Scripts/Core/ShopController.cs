@@ -87,6 +87,15 @@ namespace PrincesPalace
         private int _packPage;
         private bool _wired;
 
+        // WHY THE LAST MUTATION DID NOTHING, or default when it did something.
+        //
+        // A UiString rather than a ShopResult: what the screen holds is the
+        // line it is showing, and keeping the result instead would leave two
+        // places (here and PaintDetail) deciding what a refusal means. Cleared
+        // when another card is selected, when the pack opens and when the shop
+        // does -- a refusal is about one press and outlives nothing else.
+        private UiString _refusal;
+
         // Raised when LEAVE actually leaves. The map owns navigation, the
         // same reason the draft's Finished exists.
         public System.Action Finished;
@@ -101,6 +110,7 @@ namespace PrincesPalace
             _leaveArmed = false;
             _packOpen = false;
             _packPage = 0;
+            _refusal = default;
             if (packRoot != null) packRoot.SetActive(false);
 
             Paint();
@@ -164,7 +174,34 @@ namespace PrincesPalace
             _selectedSection = section;
             _selectedIndex = index;
             _leaveArmed = false;
+            _refusal = default;
             Paint();
+        }
+
+        // ---- saying why a mutation did nothing (AUDIT #115) ------------------
+        //
+        // The one place a ShopResult becomes words. Commit, Reroll and SellRow
+        // each hand their result here instead of discarding it, and PaintDetail
+        // shows whatever is standing rather than the selected card's
+        // description -- which is what makes "cleared on the next selection"
+        // the whole of the clearing rule.
+        //
+        // NOTHING IS SAID ABOUT A SUCCESS. A card that turns SOLD and a purse
+        // that drops say it already, and a line confirming what the screen just
+        // showed is noise the next refusal has to be read through.
+        private void PaintRefusal(ShopResult result)
+        {
+            if (result.Outcome == ShopOutcome.Ok)
+            {
+                _refusal = default;
+                return;
+            }
+
+            _refusal = result.Outcome == ShopOutcome.AppliedNotPersisted
+                ? UiStrings.ShopAppliedNotPersisted
+                : result.Reason == ShopRefusal.NotEnoughGold
+                    ? UiStrings.ShopRefusedNotEnoughGold
+                    : UiStrings.ShopRefusedGeneric;
         }
 
         private void Buy()
@@ -195,13 +232,17 @@ namespace PrincesPalace
                 _selectedIndex = -1;
             }
 
+            PaintRefusal(result);
             _leaveArmed = false;
             Paint();
         }
 
         private void Reroll(int section)
         {
-            RunOrchestrator.RerollSection(section);
+            // KEPT, not discarded. A reroll is a purchase like any other and
+            // refuses NotEnoughGold the same way -- the interactable gate on
+            // the button is a hint, not the decision.
+            var result = RunOrchestrator.RerollSection(section);
 
             // A reroll replaces the whole shelf, so a selection into it is
             // now pointing at a card that may not exist any more.
@@ -211,6 +252,7 @@ namespace PrincesPalace
                 _selectedIndex = -1;
             }
 
+            PaintRefusal(result);
             _leaveArmed = false;
             Paint();
         }
@@ -245,6 +287,7 @@ namespace PrincesPalace
             _selectedSection = -1;
             _selectedIndex = -1;
             _leaveArmed = false;
+            _refusal = default;
 
             if (packRoot != null) packRoot.SetActive(true);
             Paint();
@@ -253,6 +296,12 @@ namespace PrincesPalace
         private void ClosePack()
         {
             _packOpen = false;
+
+            // A sell's refusal belongs to the pack it was pressed in. Carrying
+            // it out onto the shelf would be a line about a row nothing on
+            // screen is showing any more.
+            _refusal = default;
+
             if (packRoot != null) packRoot.SetActive(false);
             Paint();
         }
@@ -278,7 +327,13 @@ namespace PrincesPalace
             if (entry == null) return;
 
             int quantity = all ? entry.count : 1;
-            RunOrchestrator.Sell(absolute, quantity);
+
+            // KEPT for the same reason Reroll's is. A sell can refuse NotInBag
+            // -- SellPriceOf answers 0 for an item the catalogue no longer has
+            // and the row stays pressable in the SELL ALL column -- and that
+            // refusal used to be thrown away here.
+            var result = RunOrchestrator.Sell(absolute, quantity);
+            PaintRefusal(result);
 
             // Selling can drop the page below its own content (the last
             // item on a page sold away), so re-clamp before painting.
@@ -407,6 +462,15 @@ namespace PrincesPalace
         private void PaintDetail(RunSnapshot run)
         {
             if (detailLabel == null) return;
+
+            // AHEAD OF THE DESCRIPTION, and ahead of the pack check too: a
+            // sell is refused from inside the pack modal, and a refusal
+            // nobody can see is what #115 was.
+            if (_refusal.IsValid)
+            {
+                detailLabel.Set(_refusal);
+                return;
+            }
 
             if (_packOpen || _selectedSection < 0)
             {

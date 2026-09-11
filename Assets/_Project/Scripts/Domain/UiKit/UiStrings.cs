@@ -542,6 +542,32 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString ShopDetailEmpty = UiString.Define("shop.detail_empty", "SELECT A CARD");
 
+        // WHY A SHOP MUTATION DID NOTHING (AUDIT #115). The shop refuses
+        // through RunOrchestrator's ShopResult rather than by greying a card
+        // out -- that is deliberate, and ShopResult's own header says "the
+        // screen can say so" -- but the screen said nothing at all, so a
+        // press one gold short read as a dead button.
+        //
+        // THREE LINES, NOT TEN. ShopRefusal has ten values and seven of them
+        // are a call arriving out of order: a bad index, no shop, a card
+        // already sold. A player cannot act on the difference between those,
+        // so they share one line and the two a player DOES cause get their
+        // own. Painted into the detail label the selected card's description
+        // already owns, which is why they are sentence-shaped rather than
+        // chip-shaped and why they clear on the next selection.
+        public static readonly UiString ShopRefusedNotEnoughGold =
+            UiString.Define("shop.refused_not_enough_gold", "Not enough gold");
+        public static readonly UiString ShopRefusedGeneric =
+            UiString.Define("shop.refused_generic", "Can't do that");
+
+        // NOT A REFUSAL AT ALL, which is why it is not one of the two above:
+        // the purchase HAPPENED and the disk write did not (SaveSystem.Save
+        // catches its own exception and answers false). "You cannot afford
+        // this" and "this will not survive being closed" are opposite pieces
+        // of news and a player who confuses them loses the run.
+        public static readonly UiString ShopAppliedNotPersisted =
+            UiString.Define("shop.applied_not_persisted", "Bought, but the save did not write");
+
         // "THE PACK" on the modal's own title, "PACK" on the button that
         // opens it -- the prototype's wording for each, and the reason they
         // are two entries rather than one reused twice.
