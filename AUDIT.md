@@ -2688,6 +2688,9 @@ fix below reverses that.
    divider already owns.
 
 Repro: `learnedSpells=[{shawn, mud_burst, 0}]`, `unassignedSpellBooks=["mud_burst"]`, select the
-row, press slot 1. `DossierSpellSlotsTests` already builds this state; the capture from
-`tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.DossierSpellSlotsTests` is where
-it is visible.
+row, press slot 1. `DossierSpellSlotsTests` already builds this state -- but it writes no
+picture of it, so the overlap was measured across the two captures that fixture DOES write:
+in `spell_slots_present.png` the three slot names sit at y = 397, 461 and 525, centred at
+x = 385 in a 1920x1080 capture, and in `spell_slots_refused.png` the borrowed line draws at
+y = 461, x = 385. Same node, middle slot's row, to the pixel. A fixture that photographs the
+AlreadyKnown state is the other thing missing here.
