@@ -365,39 +365,38 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(session.DrainImmediateMessages());
         }
 
-        // ---- WHAT AN EXTRA TURN RE-PAYS: an owner decision, parked here ------
+        // ---- WHAT AN EXTRA TURN RE-PAYS: decided, AUDIT #113 ------------------
         //
-        // GrantTurnStart treats "a fresh actor's turn" and "the same actor's
-        // extra turn" identically. AdvanceAfterAction calls GrantExtraTurn
-        // BEFORE AdvanceTurn, so a Trample or a Bloodlust puts the same actor
-        // back on Current and the whole thirteen-step block runs for them a
-        // second time: the poison tick, every non-IsSpentByTheTurn duration
-        // countdown, the cooldown countdown, and both duration clocks
-        // (TickTransform, TickPhoenixEgg).
+        // A bonus action is the SAME turn and re-pays nothing. Until
+        // 2026-09-11 the one GrantTurnStart treated "a fresh actor's turn" and
+        // "the same actor's extra turn" identically: AdvanceAfterAction calls
+        // GrantExtraTurn BEFORE AdvanceTurn, so a Trample or a Bloodlust put
+        // the same actor back on Current and the whole thirteen-step block ran
+        // for them a second time -- the poison tick, every
+        // non-IsSpentByTheTurn duration countdown, the cooldown countdown, and
+        // both duration clocks (TickTransform, TickPhoenixEgg).
         //
-        // The clearance ledger's row K8 cleared exactly two of those thirteen
-        // steps -- _locks.ResetTurn and TickPrimaryPool -- and argued they were
-        // intended. The other eleven were never examined.
+        // The owner's line: the clearance ledger's row K8 had already cleared
+        // exactly two of those thirteen -- _locks.ResetTurn and
+        // TickPrimaryPool -- as things an ACTION pays for, and those two (plus
+        // the two recomputes that read them) are now the whole of
+        // ReopenTurnFor. Every clock stayed with OpenTurnFor.
         //
-        // WHY THESE ARE [Ignore]d RATHER THAN FIXED. Every option here is a
-        // balance number and belongs to the owner: not paying poison twice is a
-        // straight buff to a Trample build, not refunding cooldowns is a
-        // straight nerf. The three cases below are the reproduction, kept in
-        // the tree rather than in a scratch project so the decision has
-        // something to be made against. They FAIL today, by design.
-        //
-        // The one part that is not a balance question is the third: talents.json
-        // ships sheep_ram_trample_3 ("A kill does not cost you the turn") as a
-        // PREREQUISITE of sheep_ram_converge (Black Ram Mode, "7 wool for three
-        // turns"), so nobody can own the form without owning the rider that
-        // eats it -- and the form's splash makes the kill that eats it more
-        // likely. A three-turn form that reliably lasts two is a content row
+        // The three cases below are the reproduction, written while the
+        // decision was open and [Ignore]d until it was made. The one that was
+        // never a balance question is the third: talents.json ships
+        // sheep_ram_trample_3 ("A kill does not cost you the turn") as a
+        // PREREQUISITE of sheep_ram_converge (Black Ram Mode, "7 wool for
+        // three turns"), so nobody can own the form without owning the rider
+        // that ate it -- and the form's splash makes the kill that ate it more
+        // likely. A three-turn form that reliably lasted two is a content row
         // lying about itself.
-
-        private const string ExtraTurnDecision = "AUDIT #113 pending: what an extra turn re-pays";
+        //
+        // AFreshActorsTurnStillOpensWithTheFullTickBlock, at the bottom, is
+        // the control: ReopenTurnFor is narrower than OpenTurnFor, and that
+        // test is what says OpenTurnFor was not narrowed alongside it.
 
         [Test]
-        [Ignore(ExtraTurnDecision)]
         public void APoisonedTramplerIsPoisonedOncePerRoundNotOncePerKill()
         {
             var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
@@ -411,6 +410,15 @@ namespace PrincesPalace.Domain.Tests
             session.ExecuteAttack(encounter.Enemies[1]);
             session.ExecuteAttack(encounter.Enemies[2]);
 
+            // THE FOURTH ACTION IS THE ROUND. Fight() builds the session but
+            // does not start it, so the hero's opening turn is never opened by
+            // anything and a cap of 3 against three 1-HP foes never reaches a
+            // second boundary either -- three kills, three extra actions, and
+            // no turn start at all. Swinging at the tank kills nothing, so the
+            // turn genuinely passes, the tank acts, and the hero's NEXT turn
+            // opens: one boundary, and the one poison tick this counts.
+            session.ExecuteAttack(encounter.Enemies[3]);
+
             int poisonLines = AllMessages(session).Count(m => m.Contains("poison damage"));
 
             Assert.AreEqual(1, poisonLines,
@@ -418,7 +426,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        [Ignore(ExtraTurnDecision)]
         public void ATramplersStatusDurationsTickOncePerRound()
         {
             var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
@@ -438,7 +445,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        [Ignore(ExtraTurnDecision)]
         public void ThreeTurnsOfBlackRamModeSurviveARoundInWhichHeTramples()
         {
             var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
@@ -454,6 +460,31 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(2, form.TurnsRemaining,
                 "one round of Black Ram Mode cost two of its three turns because the trample re-opened the turn");
+        }
+
+        [Test]
+        public void AFreshActorsTurnStillOpensWithTheFullTickBlock()
+        {
+            // The control for the three above. They all assert an ABSENCE --
+            // a tick that did not happen -- and an absence is equally
+            // satisfied by deleting the tick outright, so this pins the other
+            // side: no rider fires here, every action is a genuine turn
+            // boundary, and OpenTurnFor still pays the whole bill.
+            var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
+            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 100000));
+
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 10, 99);
+
+            // Nothing dies, so the turn passes to the tank and comes back --
+            // one fresh opening of the hero's turn, inside this one call.
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            int poisonLines = AllMessages(session).Count(m => m.Contains("poison damage"));
+
+            Assert.AreEqual(1, poisonLines, "a fresh turn still ticks statuses");
+            Assert.AreEqual(98,
+                hero.Statuses.First(s => s.Type == StatusEffectType.Poison).TurnsRemaining,
+                "a fresh turn still ages durations");
         }
     }
 }

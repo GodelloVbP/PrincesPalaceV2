@@ -24,6 +24,20 @@ namespace PrincesPalace.Domain.Combat.Session
         private CombatantState _trampleChainActor;
         private int _trampleChainCount;
 
+        // Set by whichever grant fired, read and cleared once by
+        // AdvanceAfterAction immediately after AdvanceTurn. It is the only
+        // thing that can tell the two kinds of turn apart at that line: both
+        // grants call GrantExtraTurn BEFORE the advance, so by the time the
+        // queue has moved, "the same actor is Current" is equally true of a
+        // trample and of a one-combatant fight.
+        //
+        // A field rather than a return value because the two grants are not
+        // called from the same place -- Bloodlust arrives through
+        // RelicsOnKill (FightSession.Relics.cs) -- and threading a bool back
+        // out through the relic block would put the fact somewhere it is not
+        // about.
+        private CombatantState _grantedExtraTurnTo;
+
         // Everything after an action resolves: extra turns, then the schedule
         // moves on, then the next actor's turn-start bookkeeping.
         private void AdvanceAfterAction()
@@ -77,7 +91,26 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _encounter.AdvanceTurn();
-            GrantTurnStart();
+
+            // AUDIT #113: an extra action is the SAME turn, so it re-pays
+            // nothing. Read-then-reset here for the same reason
+            // _killedThisAction is read that way at the top of this method:
+            // whichever branch runs below, the next action starts clean.
+            var extraTurnFor = _grantedExtraTurnTo;
+            _grantedExtraTurnTo = null;
+
+            if (_encounter != null && !_encounter.IsOver)
+            {
+                var opening = _encounter.Current;
+                if (extraTurnFor != null && ReferenceEquals(opening, extraTurnFor))
+                {
+                    ReopenTurnFor(opening);
+                }
+                else
+                {
+                    OpenTurnFor(opening);
+                }
+            }
 
             // Every enemy turn between this action and the player's next one
             // resolves right here, synchronously, before the view has drawn a
@@ -168,6 +201,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             _trampleChainActor = actor;
             _trampleChainCount = soFar + 1;
+            _grantedExtraTurnTo = actor;
             AppendMessage($"{actor.Name} tramples straight over the body and keeps going!");
             return true;
         }
@@ -185,6 +219,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 _bloodlustChainActor = actor;
                 _bloodlustChainCount = chainSoFar + 1;
+                _grantedExtraTurnTo = actor;
                 AppendMessage($"{actor.Name}'s Bloodlust surges - one more turn!");
                 return;
             }
@@ -213,13 +248,24 @@ namespace PrincesPalace.Domain.Combat.Session
             return kit != null && kit.HasRelic(effect);
         }
 
-        // The next actor's turn opens: mana regenerates, statuses tick, and a
-        // signature resource fills by its per-turn allowance.
+        // Hands the turn to whoever is Current and OPENS it. The entry every
+        // caller that genuinely moved the schedule on uses: Begin,
+        // StepToNextTurn (FightSession.Enemies.cs) and AutoResolveEggTurns
+        // (FightSession.RelicMechanics.cs). AdvanceAfterAction does not come
+        // through here, because it is the one caller that has to choose --
+        // see ReopenTurnFor.
         private void GrantTurnStart()
         {
             if (_encounter == null || _encounter.IsOver) return;
 
-            var actor = _encounter.Current;
+            OpenTurnFor(_encounter.Current);
+        }
+
+        // A NEW actor's turn opens: mana regenerates, statuses tick, and a
+        // signature resource fills by its per-turn allowance. Everything a
+        // turn costs its owner is paid exactly here.
+        private void OpenTurnFor(CombatantState actor)
+        {
             if (actor == null) return;
 
             // Mechanic (f): a fresh actor's turn is the turn boundary that
@@ -258,6 +304,56 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{actor.Name}'s {signature.DisplayName} is as full as it will get.");
             }
+        }
+
+        // THE SAME ACTOR TAKES ANOTHER ACTION. Trample and Bloodlust buy an
+        // extra ACTION, not an extra turn, and this is what that distinction
+        // costs in code: a turn is paid for once, when it opens, and an extra
+        // action inside it re-pays nothing.
+        //
+        // AUDIT #113. Until 2026-09-11 an extra turn ran the whole of
+        // OpenTurnFor a second time, so a trampling hero was poisoned once per
+        // KILL, every status duration he carried aged once per kill, his
+        // cooldowns refunded a turn per kill, and Black Ram Mode -- a form
+        // talents.json sells as "three turns", and whose prerequisite is the
+        // Trample talent itself -- reliably lost two of those three inside one
+        // round. The content row was lying about itself, which is the half of
+        // this that was never a balance question.
+        //
+        // WHAT IS PAID AGAIN, and why it is exactly these:
+        //
+        //   _locks.ResetTurn -- an OncePerTurn lock gates one ACTION's worth
+        //   of a relic or a talent, and the extra action is an action. Cleared
+        //   by the clearance ledger's row K8, which reasoned about precisely
+        //   this pair.
+        //
+        //   TickPrimaryPool -- the pool's income is per action taken, not per
+        //   turn of the clock (K8 again). It is also the one step the
+        //   remaining two read, which is what keeps them here:
+        //
+        //   ApplyRunicWardConversion -- a RECOMPUTE, not an event. Its whole
+        //   contract is "whatever mana is sitting unspent RIGHT NOW, including
+        //   the regen this very turn-start just granted", so dropping it while
+        //   keeping the grant above would leave the ward reading off mana that
+        //   no longer exists. It refreshes rather than stacks (StatusEffects.
+        //   Apply takes the max), so running it again cannot compound.
+        //
+        //   RefreshNecklaceSpeed -- likewise a function of current health
+        //   rather than an event, and idempotent for the same reason.
+        //
+        // Everything else is a CLOCK, and a clock that ticks on an action
+        // rather than on a turn is the bug: TickStatuses (the poison tick and
+        // every duration countdown), TickCooldowns, TickSpeedBuffs,
+        // TickLambTurnStart, TickTransform, TickPhoenixEgg, and the signature
+        // pool's per-turn gain.
+        private void ReopenTurnFor(CombatantState actor)
+        {
+            if (actor == null) return;
+
+            _locks.ResetTurn(actor);
+            TickPrimaryPool(actor);
+            ApplyRunicWardConversion(actor);
+            RefreshNecklaceSpeed(actor);
         }
 
         // THE ONE TURN-START TICK FOR THE PRIMARY POOL, and the whole of the
