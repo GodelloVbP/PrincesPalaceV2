@@ -133,6 +133,13 @@ namespace PrincesPalace.PlayModeTests
         // And the top-up, which is the one place the new order does reach an
         // existing save: a profile short a member gains the one a fresh
         // profile would, rather than whichever roster row sorts first.
+        //
+        // THE FIXTURE NOW SAYS WHY THE SQUAD IS SHORT (AUDIT #118). A save one
+        // member short is ambiguous on its own -- the cap grew, or the player
+        // benched somebody -- and squadSizeSeen is the fact that separates the
+        // two. `1` is a profile written while the squad was still solo, which
+        // is the case this top-up was built for and the only one it still
+        // fires in.
         [Test]
         public void ReconcileTopsUpAShortSquadFromTheContentDefault()
         {
@@ -141,6 +148,7 @@ namespace PrincesPalace.PlayModeTests
             var save = SaveData.CreateNew();
             var starters = FlaggedStarters();
             save.selectedCharacterIds = new List<string> { starters[2] };
+            save.squadSizeSeen = 1;
 
             save.Reconcile();
 
@@ -149,6 +157,60 @@ namespace PrincesPalace.PlayModeTests
                 "what was already selected stays where it was");
             CollectionAssert.AreEquivalent(starters, save.ActiveSquadIds(),
                 "and the empty seats are filled from content's own starting squad");
+        }
+
+        // AUDIT #118. A squad shorter than the cap is not evidence that the cap
+        // grew. The player benches a member from the party screen, Persist
+        // writes the short seat list, and the next load used to hand the
+        // benched character straight back -- in the REAR seat, because that is
+        // where TopUpOrder lands.
+        //
+        // squadSizeSeen is what the top-up reads instead of the count: it tops
+        // up only the seats the CAP opened, and a cap that has not moved opens
+        // none.
+        [Test]
+        public void ADeliberatelyShortSquadIsNotToppedBackUp()
+        {
+            SaveData.TestSquadOfThreeEnabled = true;
+
+            var save = SaveData.CreateNew();
+            var starters = FlaggedStarters();
+
+            // Two of the three, with squadSizeSeen left where CreateNew put it
+            // -- this profile has already seen a cap of three and chose to
+            // field two.
+            save.selectedCharacterIds = new List<string> { starters[0], starters[1] };
+            Assert.AreEqual(3, save.squadSizeSeen,
+                "fixture: a fresh profile records the cap it was built against");
+
+            save.Reconcile();
+
+            Assert.AreEqual(2, save.ActiveSquadIds().Count,
+                "the benched character was handed back by the next load, so Bench is undone by quitting");
+            CollectionAssert.AreEqual(new[] { starters[0], starters[1] }, save.ActiveSquadIds(),
+                "and the two the player kept stay where they were put");
+        }
+
+        // The converse, and the reason squadSizeSeen is a recorded fact rather
+        // than a comparison against the roster: a seat emptied in the MIDDLE of
+        // the formation stays empty rather than being closed up (AUDIT #93).
+        // ActiveSquad already skips an empty seat, so the squad is two either
+        // way -- what changes is who is in the front rank.
+        [Test]
+        public void AnEmptySeatInTheMiddleOfTheFormationSurvivesReconcile()
+        {
+            SaveData.TestSquadOfThreeEnabled = true;
+
+            var save = SaveData.CreateNew();
+            var starters = FlaggedStarters();
+            save.selectedCharacterIds = new List<string> { "", starters[1], starters[2] };
+
+            save.Reconcile();
+
+            CollectionAssert.AreEqual(new[] { "", starters[1], starters[2] }, save.selectedCharacterIds,
+                "the front rank the player emptied was closed up, promoting the middle seat unchosen");
+            Assert.AreEqual(2, save.ActiveSquadIds().Count,
+                "an empty seat is an empty seat, not a member");
         }
 
         [Test]

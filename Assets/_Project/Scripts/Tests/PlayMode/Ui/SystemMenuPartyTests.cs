@@ -514,6 +514,78 @@ namespace PrincesPalace.PlayModeTests
                 "figure in the seat row, matching the fight stage rather than being shrunk to match the slot");
         }
 
+        // ---- benching writes a seat, not a shorter list (AUDIT #93, #118) ----
+        //
+        // PartySeatGapRoundTripTests transcribes PartyController.SeatList and
+        // the Refresh loop rather than calling them -- it is engine-free
+        // Domain and cannot stand up a MonoBehaviour -- so THIS is what stops
+        // the transcription drifting away from production in silence. It
+        // presses the affordance and reads the file.
+        [UnityTest]
+        public IEnumerator BenchingTheFrontRankerWritesAnEmptyFrontSeatRatherThanPromotingTheMiddle()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            NodeOf("PartySeat0Button").GetComponent<Button>().onClick.Invoke();
+            var bench = NodeOf("PartyBenchLink");
+            Assert.IsNotNull(bench, "the Party pane has no PartyBenchLink");
+            Assert.IsTrue(bench.activeInHierarchy,
+                "the bench affordance is not offered for a selected front-ranker in Camp");
+            bench.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.IsNull(party.Formation.SeatIds[PartySeat.Front],
+                "fixture: the model should be holding the hole");
+
+            SaveSlotManager.Forget();
+            var reloaded = SaveSlotManager.CurrentSave;
+            CollectionAssert.AreEqual(
+                new[] { "", "bear", "owl" }, reloaded.selectedCharacterIds,
+                "the save compacted the hole away, so bear is the seat enemy melee concentrates on " +
+                "and nobody chose that");
+            CollectionAssert.AreEqual(
+                new[] { "bear", "owl" }, reloaded.ActiveSquadIds(),
+                "an empty seat is a seat, not a party member");
+        }
+
+        // AND THE BENCH SURVIVES THE RELOAD (AUDIT #118). Reconcile runs on
+        // every load; its top-up used to read "two of a possible three" as a
+        // vacancy and hand the benched member straight back.
+        [UnityTest]
+        public IEnumerator ABenchedMemberIsStillBenchedAfterTheSaveIsReloaded()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+            save.Reconcile();
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            yield return null;
+
+            NodeOf("PartySeat0Button").GetComponent<Button>().onClick.Invoke();
+            NodeOf("PartyBenchLink").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            // A fresh load: SaveSystem.Load runs Migrate and Reconcile, which
+            // is the step the finding is about.
+            SaveSlotManager.Forget();
+            var reloaded = SaveSlotManager.CurrentSave;
+
+            CollectionAssert.AreEqual(
+                new[] { "bear", "owl" }, reloaded.ActiveSquadIds(),
+                "the benched member was handed back by the load, so Bench is undone by quitting");
+        }
+
         // ---- fixture --------------------------------------------------------------
 
         private static IEnumerator LoadScene(string name)

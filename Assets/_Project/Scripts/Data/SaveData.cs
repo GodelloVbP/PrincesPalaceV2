@@ -129,7 +129,42 @@ namespace PrincesPalace
 
         public int exp;
         public List<Character> roster = new List<Character>();
+
+        // THE PARTY'S SEATS, IN SEAT ORDER, AND AN EMPTY SEAT IS ONE OF THEM.
+        //
+        // This was a compact list of whoever is fielded, and the compaction
+        // was the bug (AUDIT #93): PartyFormation keeps seats by index and
+        // leaves a hole where one is vacated, because "POSITIONS ARE
+        // MECHANICAL, not cosmetic -- seat 0 is the front rank enemy melee
+        // concentrates on". Benching the front-ranker and reloading therefore
+        // promoted whoever was in Middle into Front, silently, and combat had
+        // already promoted them before any reload because ActiveSquad reads
+        // this same list.
+        //
+        // An empty seat is EmptySeat (the empty string) in place. Trailing
+        // empties are not written -- a hole carries positional information
+        // only when somebody sits behind it, and keeping the tail would leave
+        // a solo save three entries long for one member.
         public List<string> selectedCharacterIds = new List<string>();
+
+        // THE CAP THIS PROFILE HAS ALREADY SEEN, which is what separates "the
+        // squad is short because the cap grew" from "the squad is short
+        // because the player benched somebody" (AUDIT #118).
+        //
+        // Reconcile's top-up used to read the two as one: a selection shorter
+        // than EffectiveMaxSquadSize() meant seats to fill, so benching a
+        // member from the party screen was undone by the next load, which
+        // handed them back in the REAR seat because that is where TopUpOrder
+        // lands. The count cannot answer the question; only a recorded fact
+        // can.
+        //
+        // ZERO ON EVERY SAVE WRITTEN BEFORE THIS FIELD EXISTED (JsonUtility
+        // keeps the initialiser for a missing key), which reads as "this
+        // profile has never seen a cap" and so tops up exactly once, exactly
+        // as it did before. Reconcile stamps the current cap on the way out,
+        // so the second load onwards respects a bench.
+        public int squadSizeSeen;
+
         public List<string> purchasedUpgradeIds = new List<string>();
 
         // Every boss this profile has ever put down, across all runs.
@@ -265,10 +300,28 @@ namespace PrincesPalace
             return total;
         }
 
+        // WHAT AN EMPTY SEAT LOOKS LIKE IN selectedCharacterIds, and the one
+        // question every reader of that list asks.
+        //
+        // The empty string rather than null, because JsonUtility writes a null
+        // element of a List<string> as "" and reads it back as "" -- a null
+        // sentinel would not survive its own round trip, so this is the one
+        // the serializer already produces rather than a second one layered on
+        // top of it. Both are tolerated on the way in for the same reason
+        // every other Reconcile guard is tolerant.
+        public const string EmptySeat = "";
+
+        public static bool IsEmptySeat(string id) => string.IsNullOrEmpty(id);
+
         public List<Character> ActiveSquad()
         {
+            // An empty seat resolves to nobody and drops out here, exactly as
+            // an id content no longer has always did -- "who is in the party"
+            // is a question about members, not about seats.
             var selected = selectedCharacterIds
-                .Select(id => roster.FirstOrDefault(c => c != null && c.definitionId == id))
+                .Select(id => IsEmptySeat(id)
+                    ? null
+                    : roster.FirstOrDefault(c => c != null && c.definitionId == id))
                 .Where(c => c != null)
                 .ToList();
 
@@ -323,6 +376,10 @@ namespace PrincesPalace
             }
 
             data.selectedCharacterIds = starters.Take(data.EffectiveMaxSquadSize()).ToList();
+
+            // A fresh profile has seen exactly the cap it was built against,
+            // so it is already topped up and the first bench sticks.
+            data.squadSizeSeen = data.EffectiveMaxSquadSize();
 
             // The starting kit: one of every item flagged startingStock in
             // items.json. Granted HERE and nowhere else — Reconcile
@@ -761,7 +818,23 @@ namespace PrincesPalace
             relicLoadout.RemoveWhere((characterId, relicId) =>
                 ContentDatabase.GetRelic(relicId) == null || roster.All(c => c.definitionId != characterId));
 
-            selectedCharacterIds.RemoveAll(id => ContentDatabase.GetCharacter(id) == null);
+
+            // AN EMPTY SEAT IS NOT A DANGLING REFERENCE. This drop is for ids
+            // naming content that is gone -- a renamed character -- and those
+            // still CLOSE UP and get replaced, which is what
+            // SaveReconcileRenamedCharacterTests pins and why it is a
+            // RemoveAll rather than a blank-in-place: nobody chose that hole,
+            // and a squad silently down to two would hide behind
+            // ActiveSquad's whole-roster fallback.
+            //
+            // A seat the PLAYER emptied is the opposite case and is skipped
+            // here, or Reconcile would undo every bench on the way past
+            // (AUDIT #93).
+            int droppedForMissingContent = selectedCharacterIds.RemoveAll(
+                id => !IsEmptySeat(id) && ContentDatabase.GetCharacter(id) == null);
+
+            TrimTrailingEmptySeats();
+
             int effectiveMax = EffectiveMaxSquadSize();
 
             if (selectedCharacterIds.Count > effectiveMax)
@@ -770,24 +843,38 @@ namespace PrincesPalace
                 // not currently possible, just defensive) — trim rather than
                 // silently exceeding it.
                 selectedCharacterIds = selectedCharacterIds.Take(effectiveMax).ToList();
+                TrimTrailingEmptySeats();
             }
-            else if (selectedCharacterIds.Count < effectiveMax)
+            else if (effectiveMax > squadSizeSeen || droppedForMissingContent > 0)
             {
-                // Tops up newly-available slots (a new character added to
-                // the roster, or extra_recruit_slot just purchased) without
-                // disturbing whatever was already selected — this is what
-                // lets a save transition cleanly instead of only working out
-                // right for a brand new one.
+                // ONLY WHEN THE CAP GREW, OR WHEN CONTENT TOOK SOMEBODY AWAY
+                // (AUDIT #118).
                 //
-                // EXISTING SAVES KEEP THEIR SQUAD, and this loop is why: it
-                // only ever ADDS, never reorders and never removes anything
-                // the player chose. A profile written before startsInSquad
-                // existed loads with exactly the selection it had.
+                // "The squad is short" and "there is a seat to fill" are two
+                // different facts, and the count can only ever tell you the
+                // first. The player benches one of three, Persist writes two,
+                // and this loop used to read that as a vacancy and hand the
+                // benched character straight back -- in the REAR seat, because
+                // that is where TopUpOrder lands. A visible affordance undone
+                // by quitting.
+                //
+                // squadSizeSeen is the second fact. It is stamped at the
+                // bottom of this method, so the growth is measured against the
+                // last cap this profile actually reconciled against rather
+                // than against the roster or the selection.
+                //
+                // EXISTING SAVES STILL KEEP THEIR SQUAD, which is what this
+                // loop was always for: it only ever ADDS, never reorders and
+                // never removes anything the player chose. A profile written
+                // while the squad was solo gains the two seats the squad of
+                // three opened, once.
                 //
                 // The top-up order follows content's starting squad first and
                 // roster order after it, so a save that is short a member
                 // gains the same one a fresh profile would rather than
-                // whichever row sorts first.
+                // whichever row sorts first. Appended rather than poured into
+                // the holes: a hole is a seat the player emptied on purpose,
+                // and a wider cap is no reason to fill it.
                 foreach (var character in TopUpOrder())
                 {
                     if (selectedCharacterIds.Count >= effectiveMax)
@@ -800,6 +887,21 @@ namespace PrincesPalace
                         selectedCharacterIds.Add(character.definitionId);
                     }
                 }
+            }
+
+            squadSizeSeen = effectiveMax;
+        }
+
+        // A trailing hole carries no positional information -- there is nobody
+        // behind it to promote -- and keeping it would leave a solo save three
+        // entries long for one member. Leading and middle holes stay exactly
+        // where they are; those are the ones that say who is in the front rank.
+        private void TrimTrailingEmptySeats()
+        {
+            while (selectedCharacterIds.Count > 0
+                   && IsEmptySeat(selectedCharacterIds[selectedCharacterIds.Count - 1]))
+            {
+                selectedCharacterIds.RemoveAt(selectedCharacterIds.Count - 1);
             }
         }
 

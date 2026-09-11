@@ -307,6 +307,12 @@ namespace PrincesPalace
             {
                 string id = i < seatIds.Count ? seatIds[i] : null;
 
+                // SaveData.EmptySeat back into the model's own null. The save
+                // spells an empty seat "" because that is what JsonUtility
+                // round-trips (SaveData.EmptySeat says why); PartyFormation
+                // spells it null. One line, at the one seam between them.
+                if (SaveData.IsEmptySeat(id)) id = null;
+
                 // DEFENSIVE, not a second copy of SaveData's own
                 // reconciliation (SaveData.ReconcileSelection and siblings
                 // already keep selectedCharacterIds inside the roster and
@@ -380,20 +386,45 @@ namespace PrincesPalace
             ShowToast(outcome);
         }
 
-        // Writes the seats back in seat order, non-null entries only -- the
-        // shape save.selectedCharacterIds has always carried (SaveData.
-        // ActiveSquad reads it the same way). WRITTEN ON EVERY COMMIT rather
-        // than on close: this is a menu the player can leave through Escape,
-        // a tab switch or a scene change, none of which run a save-on-exit
-        // hook today, and a formation change lost to any of those would read
-        // as a much worse bug than the extra disk writes cost.
+        // Writes the seats back IN SEAT ORDER, HOLES AND ALL. WRITTEN ON EVERY
+        // COMMIT rather than on close: this is a menu the player can leave
+        // through Escape, a tab switch or a scene change, none of which run a
+        // save-on-exit hook today, and a formation change lost to any of those
+        // would read as a much worse bug than the extra disk writes cost.
         private void Persist()
         {
             var save = SaveSlotManager.CurrentSave;
             if (save == null || Formation == null) return;
 
-            save.selectedCharacterIds = Formation.SeatIds.Where(id => id != null).ToList();
+            save.selectedCharacterIds = SeatList(Formation.SeatIds);
             SaveSlotManager.SaveCurrent();
+        }
+
+        // THE SEAT LIST THE SAVE CARRIES (AUDIT #93, owner's call 2026-09-11).
+        //
+        // This used to be `SeatIds.Where(id => id != null)`, and the filter was
+        // the bug: PartyFormation leaves a hole where a seat is vacated because
+        // "POSITIONS ARE MECHANICAL, not cosmetic -- seat 0 is the front rank
+        // enemy melee concentrates on", and dropping the hole moved everybody
+        // behind it one rank forward. Bench the front-ranker, reload, and Mid
+        // was the melee magnet the player never put there.
+        //
+        // An empty seat is SaveData.EmptySeat in place. The TRAILING ones go:
+        // a hole says something only when somebody sits behind it, and keeping
+        // the tail would write three entries for a solo save's one member.
+        //
+        // Static and internal so PartySeatGapRoundTripTests can transcribe it
+        // exactly -- that suite is engine-free Domain and cannot stand up a
+        // MonoBehaviour, so the transcription is what keeps the two honest.
+        internal static List<string> SeatList(IReadOnlyList<string> seatIds)
+        {
+            var seats = seatIds.Select(id => id ?? SaveData.EmptySeat).ToList();
+            while (seats.Count > 0 && SaveData.IsEmptySeat(seats[seats.Count - 1]))
+            {
+                seats.RemoveAt(seats.Count - 1);
+            }
+
+            return seats;
         }
 
         // ---- P4: drag-and-drop ---------------------------------------------------
