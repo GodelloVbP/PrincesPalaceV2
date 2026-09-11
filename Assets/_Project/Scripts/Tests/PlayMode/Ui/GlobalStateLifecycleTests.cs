@@ -212,5 +212,49 @@ namespace PrincesPalace.PlayModeTests
                 "re-enabling credited the whole gap at once, so the tracker is differencing a " +
                 "timestamp rather than accumulating deltas");
         }
+
+        // ---- E9: does time in the menu count as playtime? -------------------------
+
+        // AN OWNER DECISION, WRITTEN DOWN AS A TEST RATHER THAN AS A QUESTION.
+        //
+        // PlaytimeTracker ticks Time.unscaledDeltaTime, so the clock the system
+        // menu stops does not stop this: every second spent staring at the
+        // options pane is banked as playtime. That is a defensible answer and
+        // it may well be the intended one -- but nothing in the code, the docs
+        // or the commit history says so, and the header that explains what this
+        // tracker deliberately does NOT count (main-menu time, at length) is
+        // silent about pauses.
+        //
+        // So this pins the CURRENT behaviour and is ignored, which is the
+        // honest state: the expected value is a choice nobody has made. Delete
+        // the [Ignore] if paused time counting is the answer; invert the
+        // assertion and switch the tracker to Time.deltaTime if it is not.
+        // Either way the decision gets recorded here instead of staying
+        // implicit in a field nobody chose.
+        [UnityTest]
+        [Ignore("hunt 2026-09-11: pins current behaviour (paused time IS playtime) - the expected " +
+                "value is an owner decision nothing in the code or docs has made")]
+        public IEnumerator TimeSpentInTheSystemMenuCountsAsPlaytime()
+        {
+            yield return SceneManager.LoadSceneAsync(Navigation.Hub, LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = UnityEngine.Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+
+            menu.Open();
+            Assert.AreEqual(0f, Time.timeScale, "fixture: the menu did not pause the game");
+
+            float before = SaveSlotManager.CurrentSave.totalPlaySeconds;
+            for (int i = 0; i < 5; i++) yield return null;
+            float after = SaveSlotManager.CurrentSave.totalPlaySeconds;
+
+            menu.Close();
+
+            Assert.Greater(after, before,
+                "time spent with the game paused is no longer counted as playtime - if that is the " +
+                "decision, this test is the place it was written down");
+        }
     }
 }
