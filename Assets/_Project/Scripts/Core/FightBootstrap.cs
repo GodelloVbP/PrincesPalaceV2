@@ -585,8 +585,16 @@ namespace PrincesPalace
             // Spent from the stash and written immediately, then the column is
             // handed the new counts -- otherwise it keeps showing what the
             // fight opened with.
-            InventoryOps.TryRemove(save.stockpiledItems, itemId);
-            SaveSlotManager.SaveCurrent();
+            //
+            // THROUGH THE ORCHESTRATOR, which is where the spend went when the
+            // bot needed it. SpendConsumable's own header names this handler as
+            // the reason it exists and says why only the SPEND moved and not
+            // the command -- and this handler then kept its own copy of the two
+            // lines anyway, so the one rule had two bodies and the extraction
+            // bought nothing here. Same bodies today, which is exactly when to
+            // collapse them: the moment they differ, one of the two doors is
+            // wrong and nothing says which.
+            RunOrchestrator.SpendConsumable(itemId);
             fight.RefreshSatchel(RunOrchestrator.BuildSatchel());
         }
 }
