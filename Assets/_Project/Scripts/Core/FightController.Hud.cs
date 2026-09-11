@@ -572,23 +572,35 @@ namespace PrincesPalace
         // roster half was structurally unable to show things the party half
         // could.
         //
-        // ORDER IS THE SLOT'S ORDER, not "acting first" and not the live
-        // party list's. A plate belongs to a character for the whole fight:
-        // a plate that moved when the turn passed would undo the reason the
-        // plates carry portraits at all, and a plate that moved when the
-        // FORMATION did costs the same thing for the same reason.
+        // ORDER IS THE FIELD'S ORDER, not "acting first" and not the
+        // fight-long slot's. The column paints the party as it STANDS --
+        // front, middle, rear, in the order Encounter.PlayerParty holds at
+        // the moment of this repaint -- so a Move that trades two members'
+        // places trades their cards with them. A plate does NOT belong to a
+        // character for the whole fight; it belongs to whoever is standing
+        // at that rank now, and the whole card moves at once (art, name,
+        // theme, badges and both meters all come off `member` below).
         //
-        // THE SECOND HALF IS A FIX (hunt 2026-09-11, F7), not a restatement.
-        // This loop used to walk the live party list and paint plate i with
-        // party[i], which made the column reorder itself the moment a Move
-        // traded two members' list positions -- while PaintVitals, replaying
-        // a round that had already finished resolving, wrote each member's
-        // recorded numbers to a card that had not moved yet. Both halves now
-        // address a plate the way the stage addresses a figure's drawing,
-        // its nameplate, its flash and its fade: by SLOT, which belongs to
-        // one combatant until the fight ends (FightController.cs's _slotOf,
-        // and DrawSide's own header on why position and identity are
-        // indexed differently).
+        // THAT IS A DECISION, not a default (AUDIT #144, owner 2026-09-11).
+        // 4c4bddc3 made this loop slot-indexed while fixing PaintVitals and
+        // named the consequence in its own message -- "the HUD column no
+        // longer reorders itself when a Move reorders the field" -- as a side
+        // effect of a correctness fix rather than something the brief asked
+        // for. The owner's call is that the column follows the field: Move
+        // costs a whole turn and buys nothing but position, so the column
+        // that lists the party by rank has to show that the rank changed.
+        //
+        // WHAT REPLACES THE SLOT IS A PAINTED-OCCUPANCY RECORD, not a
+        // re-read of the live list at paint time. _plateOccupants is written
+        // here and READ by PaintVitals, which is what keeps F7's second half
+        // fixed: a round has finished resolving before its first beat plays
+        // (AfterResolution repaints the menu chrome ONLY, deliberately), so
+        // for the length of that playback the live list is already in the
+        // new order while the cards are still in the old one. Painting a
+        // beat by live index lands the two moved members' numbers on each
+        // other's portraits, which is the bug; painting by fight-long slot
+        // avoids it by freezing the column, which is what #144 rejected.
+        // Painting by what is CURRENTLY ON THE CARD does neither.
         private void RefreshPcPlates()
         {
             if (pcPlates == null || _session == null) return;
@@ -602,39 +614,32 @@ namespace PrincesPalace
             // actually asked for it.
             _pulsingMeters.Clear();
 
-            // Rebuilt per repaint rather than cached: the occupancy it
-            // records is _slotOf's, which only Bind writes, but a plate with
-            // no occupant has to be painted as empty every time regardless.
+            // Rewritten whole on every repaint, never patched: it records
+            // what THIS repaint put on the column, and a plate with no
+            // occupant at all (a party of two) has to be recorded as empty
+            // rather than left holding a departed ally.
             if (_plateOccupants == null || _plateOccupants.Length != pcPlates.Length)
             {
                 _plateOccupants = new CombatantState[pcPlates.Length];
             }
-            else
-            {
-                System.Array.Clear(_plateOccupants, 0, _plateOccupants.Length);
-            }
-
-            for (int i = 0; party != null && i < party.Count; i++)
-            {
-                var member = party[i];
-                if (member == null) continue;
-
-                int plate = SlotIndexOf(member);
-                if (plate >= 0 && plate < _plateOccupants.Length) _plateOccupants[plate] = member;
-            }
 
             for (int i = 0; i < pcPlates.Length; i++)
             {
-                var member = _plateOccupants[i];
+                var member = party != null && i < party.Count ? party[i] : null;
+
+                _plateOccupants[i] = member;
                 RefreshPcPlate(i, member, member != null && member == acting);
             }
 
             RefreshSecondLifeBadge();
         }
 
-        // Who this repaint put on each plate. Scratch for the loop above, not
-        // a second source of truth -- _slotOf is that, and this is only the
-        // per-plate view of it the loop needs to paint an unoccupied plate.
+        // WHICH MEMBER EACH CARD IS CURRENTLY SHOWING -- the painted-occupancy
+        // record of AUDIT #144, and the source of truth for the question
+        // "which plate do this member's numbers go on", which is neither the
+        // live party list (it reorders before the beats that describe the
+        // reorder have played) nor _slotOf (which never reorders at all).
+        // Written only by RefreshPcPlates above, read only by PaintVitals.
         private CombatantState[] _plateOccupants;
 
         // OVER PlayerParty RATHER THAN LivingPlayerParty, deliberately: a

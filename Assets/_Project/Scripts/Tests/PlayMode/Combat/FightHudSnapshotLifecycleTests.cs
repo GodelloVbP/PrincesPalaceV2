@@ -37,6 +37,17 @@ namespace PrincesPalace.PlayModeTests
     //    repaint drew them. Their numbers landed on each other's portraits
     //    for the rest of the playback.
     //
+    // AND AUDIT #144, the design question 4c4bddc3 did not settle. Fixing
+    // (2) by addressing the plates by SLOT froze the column: it kept its
+    // opening order for the whole fight, and a Move was visible only as two
+    // figures trading places on the stage. The owner's call (2026-09-11) is
+    // that the column FOLLOWS THE FIELD -- so a third test below pins the
+    // reorder, and the two above it stay exactly as they were, because the
+    // rule that replaces the slot has to keep both of them green. That rule
+    // is a painted-occupancy record: RefreshPcPlates writes which member it
+    // put on each card, PaintVitals reads it, and the two orders differ for
+    // precisely the length of one playback.
+    //
     // DRIVEN THROUGH THE REAL SCENE, a hand-built three-member session, and
     // the real buttons -- FightFlowTests' shape, extended to three party
     // members because both defects need a party that can Move and three
@@ -269,6 +280,49 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(samples, 1, "fixture: playback was never actually sampled mid-flight");
 
             AssertEveryCardCarriesItsOwnNumbers("after the move settled");
+        }
+
+        // ---- #144: the column follows the field --------------------------------
+
+        // THE INVERSE OF WHAT 4c4bddc3 SHIPPED. That commit's slot-indexing
+        // meant Alpha's card stayed at plate 0 for the whole fight no matter
+        // where Alpha stood; the owner's call is that the card follows the
+        // rank, so after a BACK the front card is the ally who took the
+        // front.
+        //
+        // READ OFF THE NAME, and the name only, because the three fixture
+        // kits are identical (PlayModeSparkFixture.Kit): plate art and plate
+        // theme genuinely do move with the member -- RefreshPcPlate paints
+        // every one of them off the same `member` -- but this fixture cannot
+        // tell them apart, so it does not claim to. The meters it CAN tell
+        // apart, and AssertEveryCardCarriesItsOwnNumbers below is the check
+        // that they moved with the name rather than staying behind.
+        [UnityTest]
+        public IEnumerator AMoveReordersTheColumnToFollowTheField()
+        {
+            yield return LoadThreeMemberFight();
+
+            Assert.AreEqual("Alpha", NameOnPlate(0), "fixture: Alpha opens at the front");
+            Assert.AreEqual("Beta", NameOnPlate(1), "fixture: Beta opens one rank behind Alpha");
+
+            // The same two clicks as the test above -- MOVE (verb 3), then
+            // BACK (row 1). Alpha and Beta trade places.
+            Click("Verb3");
+            Click("CharacterSkill1");
+
+            float deadline = Time.realtimeSinceStartup + 15f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsFalse(_fight.IsBusy, "playback never finished");
+
+            Assert.AreEqual("Beta", NameOnPlate(0),
+                "Alpha moved BACK and Beta took the front rank, but the front card still shows " +
+                "Alpha: the column is holding its opening order instead of following the field");
+            Assert.AreEqual("Alpha", NameOnPlate(1),
+                "Beta came forward, so Alpha's card belongs where Beta's was");
+
+            // THE WHOLE CARD MOVED, not just the caption: each plate's
+            // denominator has to be its new occupant's maximum.
+            AssertEveryCardCarriesItsOwnNumbers("after the column followed the move");
         }
 
         // ---- F7, first half: the denominator -----------------------------------

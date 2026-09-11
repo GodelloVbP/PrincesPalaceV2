@@ -752,24 +752,37 @@ namespace PrincesPalace
             // than cleared: a snapshot is a record of a moment, and silence
             // in it means "unchanged", not "gone".
             //
-            // BY SLOT, NOT BY LIST POSITION (hunt 2026-09-11, F7). This was
-            // the one per-combatant lookup in the file still reading a party
-            // member's index back out of the live list -- exactly the bug
-            // _slotOf exists for, and for exactly the same reason: the round
-            // has already finished resolving by the time a beat plays, so a
-            // Move in it has already traded two members' list positions while
-            // the cards they own are still where RefreshPcPlates last drew
-            // them. The two moved members' numbers landed on each other's
-            // portraits for the rest of the playback.
-            var party = _session != null ? _session.Encounter.PlayerParty : null;
-            int plates = pcPlates != null ? pcPlates.Length : 0;
-            for (int i = 0; party != null && i < party.Count; i++)
+            // ONTO THE CARD THAT IS CURRENTLY SHOWING THE MEMBER -- the
+            // painted-occupancy record, walked plate-first (hunt 2026-09-11
+            // F7, then AUDIT #144, owner 2026-09-11).
+            //
+            // NEITHER OF THE TWO OBVIOUS INDEXES IS THE RIGHT ONE. The live
+            // party list is wrong because the round has already finished
+            // resolving by the time a beat plays, so a Move in it has traded
+            // two members' list positions while their cards are still where
+            // RefreshPcPlates last drew them -- that was F7's second half,
+            // the two moved members' numbers landing on each other's
+            // portraits for the rest of the playback. _slotOf is wrong
+            // because a slot never moves, so addressing by it forces the
+            // column to sit in its opening order for the whole fight, which
+            // is the behaviour #144 reversed.
+            //
+            // What is right is the third thing: whom RefreshPcPlates last
+            // PUT on each card. That answer is correct during the playback
+            // (the cards have not moved yet) and correct after it (the
+            // repaint at OnPlaybackFinished moves the cards and rewrites the
+            // record in the same pass). A null record means no repaint has
+            // run at all, so no card is showing anybody and there is nothing
+            // to paint onto -- Bind repaints before any beat can play.
+            //
+            // Length-bounded by the record itself rather than by pcPlates:
+            // its only writer sizes it FROM pcPlates, and every array this
+            // loop then writes is bounds-checked by Has().
+            var occupants = _plateOccupants;
+            for (int plate = 0; occupants != null && plate < occupants.Length; plate++)
             {
-                var member = party[i];
+                var member = occupants[plate];
                 if (member == null || !vitals.TryGetValue(member, out var recordedPc)) continue;
-
-                int plate = SlotIndexOf(member);
-                if (plate < 0 || plate >= plates) continue;
 
                 int maxHealth = RecordedMax(recordedPc.MaxHealth, member.MaxHealth);
                 int maxPrimary = RecordedMax(recordedPc.MaxPrimary, member.MaxMana);
