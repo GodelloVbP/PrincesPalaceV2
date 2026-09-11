@@ -577,38 +577,57 @@ namespace PrincesPalace.Domain.Combat.Session
         // The shared half of both splashes: who counts as "either side", and
         // saying what happened.
         //
-        // "Adjacent" is index adjacency in Enemies, which is the same order the
-        // stage draws front-to-back -- so the enemies either side on screen are
-        // the enemies either side here, and no new positional concept had to be
-        // invented for one talent.
+        // "ADJACENT" IS WHAT THE PLAYER SEES -- the monsters drawn either side
+        // of the victim. That is rank, not list index, and the two stopped
+        // agreeing when position became a function of rank: ranks compress
+        // behind a corpse the instant it falls (CombatEncounter.LivingRankOf,
+        // "death compresses the ranks behind the corpse with no bookkeeping to
+        // keep in sync"; BeatFormation, "position is a per-beat function of
+        // rank"). Walking raw indices therefore aimed the splash at a gap: with
+        // three monsters, once the MIDDLE one died the splash was dead for the
+        // rest of the fight even though the two survivors stood side by side.
+        // Black Ram Mode's splash fires on every landed hit, so that was not a
+        // corner.
         //
-        // Dead neighbours are skipped but still COUNTED as neighbours: a corpse
-        // in slot 1 does not make slots 0 and 2 adjacent to each other. Splash
-        // never chains -- it is computed from the original hit, never recursively
-        // from its own kills, or one blow would cascade down a whole row.
-        // Takes the SOURCE as well as the epicentre, so the splash is credited
-        // to whoever caused it. Both callers already hold the actor; without it
-        // the two widest damage sources in the game would land in nobody's
-        // column and the ledger would quietly under-report every Black Ram.
+        // THE EPICENTRE STILL HOLDS ITS OWN RANK EVEN WHEN IT HAS JUST DIED,
+        // which is why this counts ranks here rather than calling LivingRankOf:
+        // a kill splash is always fired over a fresh corpse, and BeatFormation
+        // says the same thing about the screen -- "a corpse holds its rank
+        // until it has faded out". For a LIVING epicentre this is exactly
+        // LivingRankOf; for the one that just fell it is the rank it is still
+        // being drawn in. An older corpse holds nothing and is stepped over.
+        //
+        // Splash never chains -- it is computed from the original hit, never
+        // recursively from its own kills, or one blow would cascade down a
+        // whole row. Takes the SOURCE as well as the epicentre, so the splash
+        // is credited to whoever caused it. Both callers already hold the
+        // actor; without it the two widest damage sources in the game would
+        // land in nobody's column and the ledger would quietly under-report
+        // every Black Ram.
         private void SplashOntoNeighbours(CombatantState source, CombatantState epicentre, int splash, string cause)
         {
             if (epicentre == null || splash <= 0) return;
 
-            var enemies = _encounter.Enemies;
-            int index = -1;
-            for (int i = 0; i < enemies.Count; i++)
+            // The enemy line as it is DRAWN: everyone holding a rank, in order.
+            var line = new List<CombatantState>();
+            int epicentreRank = -1;
+            foreach (var enemy in _encounter.Enemies)
             {
-                if (ReferenceEquals(enemies[i], epicentre)) { index = i; break; }
+                if (enemy == null) continue;
+                if (!enemy.IsAlive && !ReferenceEquals(enemy, epicentre)) continue;
+
+                if (ReferenceEquals(enemy, epicentre)) epicentreRank = line.Count;
+                line.Add(enemy);
             }
 
-            if (index < 0) return;
+            if (epicentreRank < 0) return;
 
-            foreach (int neighbour in new[] { index - 1, index + 1 })
+            foreach (int neighbour in new[] { epicentreRank - 1, epicentreRank + 1 })
             {
-                if (neighbour < 0 || neighbour >= enemies.Count) continue;
+                if (neighbour < 0 || neighbour >= line.Count) continue;
 
-                var bystander = enemies[neighbour];
-                if (bystander == null || !bystander.IsAlive) continue;
+                var bystander = line[neighbour];
+                if (!bystander.IsAlive) continue;
 
                 DealDamage(source, bystander, splash, AttackTypeOf(source), KillCredit.Attacker);
                 SetStance(bystander, bystander.IsAlive ? Stances.Hurt : Stances.Defeated);

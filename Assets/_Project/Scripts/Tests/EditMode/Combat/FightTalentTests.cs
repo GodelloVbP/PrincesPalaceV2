@@ -448,21 +448,58 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(far.MaxHealth, far.CurrentHealth, "and it stopped there");
         }
 
+        // ADJACENCY IS WHAT THE PLAYER SEES. Ranks compress behind a corpse the
+        // instant it falls (BeatFormation), so a body in the middle of the line
+        // leaves the two survivors standing side by side -- and the splash has
+        // to reach across it. The old rule walked raw list indices, which meant
+        // a three-monster fight lost its splash entirely the moment the middle
+        // one died.
         [Test]
-        public void ACorpseDoesNotMakeItsNeighboursAdjacentToEachOther()
+        public void ACorpseInTheLineDoesNotBlockTheSplash()
         {
             var ram = Hero("Ram");
             Talents(ram, new TalentEffect(TalentEffectType.KillSplashPercentOfAttack, 100));
             var frail = Foe("Frail", health: 1);
             var corpse = Foe("Corpse");
-            var far = Foe("Far");
+            var behind = Foe("Behind");
             corpse.CurrentHealth = 0;
 
-            var (session, _) = Fight(new[] { ram }, new[] { frail, corpse, far }, Kit());
+            var (session, _) = Fight(new[] { ram }, new[] { frail, corpse, behind }, Kit());
 
             session.ExecuteAttack(frail);
 
-            Assert.AreEqual(far.MaxHealth, far.CurrentHealth);
+            Assert.Less(behind.CurrentHealth, behind.MaxHealth,
+                "the corpse holds no rank, so Behind is the monster standing beside the victim");
+        }
+
+        // The Black Ram's own splash fires on EVERY landed hit, so the fight
+        // this pins is not a corner: with three monsters, once the middle one
+        // died the splash used to be dead for the rest of the fight.
+        //
+        // Literal: attack 100, splash 40% of the damage dealt, so the neighbour
+        // takes 40 off its 1000000.
+        [Test]
+        public void ASplashReachesTheMonsterStandingBesideTheVictim()
+        {
+            var ram = Hero("Ram", health: 1000000, attack: 100, speed: 500);
+            var a = Foe("A", health: 1000000);
+            var b = Foe("B", health: 1);
+            var c = Foe("C", health: 1000000);
+
+            var (session, encounter) = Fight(new[] { ram }, new[] { a, b, c }, Kit());
+            Transformation.Enter(ram, "Black Ram Mode", 99, 0, 0, 0, 40);
+
+            // Swing one lands on the front rank A; the splash reaches B, which
+            // is on 1 HP and dies.
+            session.ExecuteAttack(a);
+            Assert.IsFalse(b.IsAlive, "fixture: the splash was supposed to kill B");
+            Assert.AreEqual(0, encounter.LivingRankOf(a));
+            Assert.AreEqual(1, encounter.LivingRankOf(c), "fixture: C now stands where B was drawn");
+
+            session.ExecuteAttack(a);
+
+            Assert.AreEqual(999960, c.CurrentHealth,
+                "the monster standing beside the victim took nothing: the splash walked off the corpse's list index");
         }
 
         [Test]
