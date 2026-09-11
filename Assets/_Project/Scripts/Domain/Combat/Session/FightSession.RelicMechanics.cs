@@ -402,8 +402,18 @@ namespace PrincesPalace.Domain.Combat.Session
             int amount = actor.MaxHealth * FightTuning.EssenceSiphonHealPercent / 100;
             if (amount <= 0) return;
 
-            HealAndCount(actor, amount);
-            AppendMessage($"{actor.Name} draws {amount} HP from {victim.Name}'s fading essence.");
+            // The return, not the request: the siphon fires on a kill, which
+            // is exactly when the holder is most likely to already be full,
+            // and "draws 40 HP" over an unmoved bar is the same defect the
+            // heal arms in FightSession.Skills.cs carried.
+            // The return, not the request: the siphon fires on a kill, which
+            // is exactly when the holder is most likely to already be full,
+            // and "draws 40 HP" over an unmoved bar is the same defect the
+            // heal arms in FightSession.Skills.cs carried.
+            int drawn = HealAndCount(actor, amount);
+            if (drawn <= 0) return;
+
+            AppendMessage($"{actor.Name} draws {drawn} HP from {victim.Name}'s fading essence.");
         }
 
         // ---- disgruntled lackey -----------------------------------------------------------

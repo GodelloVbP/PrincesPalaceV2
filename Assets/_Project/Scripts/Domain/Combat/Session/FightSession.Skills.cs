@@ -229,9 +229,18 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
-                    HealAndCount(actor, amount);
-                    RecordBeatAmount(amount, isHealing: true);
-                    AppendMessage($"{actor.Name} uses {skill.DisplayName} and recovers {amount} HP.");
+
+                    // THE RETURN, NOT THE REQUEST. One recipient, so there is
+                    // exactly one honest number and no excuse for printing the
+                    // other one: HealAndCount clamps at max health, and this
+                    // arm used to pop and announce `amount` regardless, so a
+                    // Mend on a full bar booked 0 in the ledger while the log
+                    // said 40 and a green +40 floated over a bar that had not
+                    // moved. Same shape UseConsumable and Gift: Mana already
+                    // use.
+                    int landed = HealAndCount(actor, amount);
+                    RecordBeatAmount(landed, isHealing: true);
+                    AppendMessage($"{actor.Name} uses {skill.DisplayName} and recovers {landed} HP.");
                     ApplySkillStatus(skill, actor, actor);
                     break;
                 }
@@ -241,14 +250,29 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
+
+                    // SUMMED, NOT ASSUMED -- RestorePartyMana's rule, applied
+                    // to the arm two cases up that was left alone when it
+                    // landed. A party heal lands a different figure on every
+                    // member, so the per-ally request is the one number that
+                    // is true of nobody; the SUM is what the squad gained and
+                    // is what the line now says.
+                    int total = 0;
+                    int casterGained = 0;
                     foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
-                        HealAndCount(ally, amount);
+                        int landed = HealAndCount(ally, amount);
+                        total += landed;
+                        if (ReferenceEquals(ally, actor)) casterGained = landed;
                         ApplySkillStatus(skill, ally, actor);
                     }
 
-                    RecordBeatAmount(amount, isHealing: true);
-                    AppendMessage($"{actor.Name}'s {skill.DisplayName} mends the squad for {amount}.");
+                    // The BEAT is opened on the caster (BeginBeat(actor, actor)
+                    // above), so its popup floats over one bar and gets what
+                    // that bar gained. The squad total belongs in the line,
+                    // where it is labelled as the squad's.
+                    RecordBeatAmount(casterGained, isHealing: true);
+                    AppendMessage($"{actor.Name}'s {skill.DisplayName} mends the squad for {total}.");
                     break;
                 }
 

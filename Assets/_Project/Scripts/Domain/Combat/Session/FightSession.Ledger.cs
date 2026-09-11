@@ -264,9 +264,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // Heals report nothing, so the amount is measured rather than trusted:
         // CombatMath.Heal clamps at max health and a 200-point heal on a
         // character missing 30 restored 30.
-        private void HealAndCount(CombatantState target, int amount)
+        //
+        // RETURNS THAT MEASUREMENT, because it already had it and every caller
+        // that says a number out loud needs it. It was void until 2026-09-11
+        // and the delta was computed here, handed to the ledger and thrown
+        // away -- so the ledger booked 0 for a heal on a full bar in the same
+        // call whose log line said 40 and whose beat floated a green +40. The
+        // potion path (FightSession.Items.cs) states the rule the callers now
+        // all follow: "the number the player sees is the number that
+        // happened".
+        private int HealAndCount(CombatantState target, int amount)
         {
-            if (target == null || amount <= 0) return;
+            if (target == null || amount <= 0) return 0;
 
             int before = target.CurrentHealth;
             CombatMath.Heal(target, amount);
@@ -278,7 +287,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // the fight.
             WorldEndersCrownCheck(target);
 
-            Ledger.Restored(LedgerIdOf(target), target.CurrentHealth - before);
+            int landed = target.CurrentHealth - before;
+            Ledger.Restored(LedgerIdOf(target), landed);
+            return landed;
         }
 
         // THE ONE PLACE A DEATH IS SETTLED, and the reason the pairing it

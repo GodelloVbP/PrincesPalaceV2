@@ -475,6 +475,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(53, hero.CurrentHealth, "3% of 100 max health = 3, healed on top of 50");
         }
 
+        // The relic fires on a kill, which is exactly when the holder is most
+        // likely to be at full health already -- so it is the announcement
+        // that has to be measured, not the request. See HealAndCount's header.
+        [Test]
+        public void AFullHealthHolderIsNotToldItDrewAnything()
+        {
+            var (session, hero, foe1, _) = FightWithSpeed(RelicEffect.EssenceSiphon, heroSpeed: 100, foeSpeed: 1);
+            foe1.CurrentHealth = 1;
+
+            Assert.AreEqual(hero.MaxHealth, hero.CurrentHealth, "fixture: the holder starts full");
+
+            session.ExecuteAttack(foe1);
+
+            var lines = session.DrainBeats().SelectMany(b => b.Messages).ToList();
+            Assert.IsFalse(lines.Any(m => m.Contains("fading essence")),
+                "nothing was drawn, so nothing is announced: " + string.Join(" | ", lines));
+        }
+
         [Test]
         public void KillingASummonHealsNothing()
         {

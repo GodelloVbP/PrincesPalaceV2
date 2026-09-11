@@ -231,6 +231,54 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(beat.Amount, 0);
         }
 
+        // THE RETURN, NOT THE REQUEST -- the rule the potion path
+        // (FightSession.Items.cs), Gift: Mana and RestorePartyMana all already
+        // state in writing. HealAndCount clamps at max health, so a 40-point
+        // Mend on a hero at full health moves nothing: the ledger recorded 0
+        // while the log said 40 and a green +40 floated over a full bar.
+        [Test]
+        public void AHealOnAFullHealthHeroRecordsNothing()
+        {
+            var skill = Skill(SkillEffect.HealSelf, "Mend", flatAmount: 40);
+            var hero = Hero();
+            var (session, _, _) = Fight(Kit(skills: new[] { skill }), hero);
+
+            Assert.AreEqual(hero.MaxHealth, hero.CurrentHealth, "fixture: the hero starts at full health");
+
+            session.CastSkill(0, null);
+            var beats = session.DrainBeats();
+            var beat = beats[0];
+
+            Assert.AreEqual(0, beat.Amount, "no green popup over a bar that did not move");
+            Assert.IsTrue(beats.SelectMany(b => b.Messages).Any(m => m.EndsWith("recovers 0 HP.")),
+                "the line announced the request rather than what landed: "
+                + string.Join(" | ", beats.SelectMany(b => b.Messages)));
+        }
+
+        // The party arm has one honest number too -- it is the SUM of what
+        // landed, not the per-ally request repeated.
+        [Test]
+        public void APartyHealAnnouncesWhatTheSquadActuallyGained()
+        {
+            var skill = Skill(SkillEffect.HealParty, "Rally", flatAmount: 60);
+            var hero = Hero();
+            var ally = Hero("Ally");
+            hero.CurrentHealth = hero.MaxHealth - 10;
+
+            var encounter = new CombatEncounter(new[] { hero, ally }, new[] { Foe() });
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { Kit(skills: new[] { skill }) }, null, new SeededRandom(3))
+            { DamageVarianceRange = 0f };
+
+            session.CastSkill(0, null);
+            var lines = Messages(session).ToList();
+
+            // The caster was missing 10 and the ally nothing, so 10 landed in
+            // total however generous the cast was.
+            Assert.IsTrue(lines.Any(m => m.Contains("mends the squad for 10.")),
+                "the squad line has to sum the returns: " + string.Join(" | ", lines));
+        }
+
         [Test]
         public void HealPartyMendsEveryLivingAlly_AndSkipsTheFallen()
         {
