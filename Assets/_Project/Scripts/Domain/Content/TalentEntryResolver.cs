@@ -13,8 +13,8 @@ namespace PrincesPalace.Domain.Content
     // Talent Tree v2 (2026-08-02) replaced the scrolled 21-row ladder with a
     // FIXED, non-scrolling per-path skeleton (root -> 3x3 grid ->
     // convergence -> 3-way branch -> capstone, 21 slots) shared identically
-    // by every path/character — SceneBuilder.Talents.cs bakes the skeleton's
-    // shape once; talents.json only supplies which talent occupies which
+    // by every path/character — Domain/Talents/TalentSkeleton.cs bakes the
+    // skeleton's shape once; talents.json only supplies which talent occupies which
     // (column=path, row=slot) address. MaxColumn is now exactly 3 paths and
     // MaxRow exactly the skeleton's 21 slots, both hard ceilings rather than
     // generous headroom, since the shape is no longer content-driven. Those

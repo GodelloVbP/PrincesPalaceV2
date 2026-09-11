@@ -314,7 +314,7 @@ namespace PrincesPalace
                 if (SaveData.IsEmptySeat(id)) id = null;
 
                 // DEFENSIVE, not a second copy of SaveData's own
-                // reconciliation (SaveData.ReconcileSelection and siblings
+                // reconciliation (SaveData.Reconcile and siblings
                 // already keep selectedCharacterIds inside the roster and
                 // duplicate-free before anything reaches this screen). This
                 // is the one guard at the seam CODE_STANDARDS SS5 asks for --

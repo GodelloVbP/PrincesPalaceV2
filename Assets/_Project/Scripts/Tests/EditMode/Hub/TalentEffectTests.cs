@@ -75,10 +75,11 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Exactly AT the threshold counts. "Below 33%" in the design means
-        // "at or below" everywhere else in this codebase
-        // (IsBelowHealthFraction, BreakShield), and a rule that switched on
-        // one point of health later than the number printed on the node
-        // would read as a bug.
+        // "at or below," the same rule BreakShield's own stagger meter
+        // follows (Current == 0 breaks it, not one point past zero -- see
+        // BreakShield.Deplete), and a rule that switched on one point of
+        // health later than the number printed on the node would read as a
+        // bug the same way.
         [Test]
         public void AHealthGate_IsSatisfiedExactlyAtItsThreshold()
         {

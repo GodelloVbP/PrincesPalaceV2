@@ -87,7 +87,9 @@ namespace PrincesPalace.Domain.Rewards
         // than stopping at the first failure. Distributionally identical, and
         // it costs the same number of draws whatever the outcome -- which is
         // what keeps a seeded run reproducible when these odds are retuned.
-        // The same reasoning as RarityTable.Pick taking exactly one draw.
+        // RarityTable.RollTier and RollPlus route through this same Climb
+        // rather than drawing once themselves; the fixed-count discipline is
+        // the point, not a comparison to some other single-draw method.
         //
         // maxRungs is a PARAMETER rather than always MaxRungs so a shorter
         // ladder (ModifierTable's 3-rung RiftTier climb) can reuse this exact

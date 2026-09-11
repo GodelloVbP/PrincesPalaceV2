@@ -21,7 +21,7 @@ namespace PrincesPalace.Domain.Combat
         // than with a level curve.
         // `type`/`axis` are appended last with defaults so every existing
         // call site keeps compiling unchanged — only the two damage call
-        // sites in FightController.Actions.cs pass real values; a heal or a
+        // sites in FightSession.Skills.cs pass real values; a heal or a
         // mana restore never reads either.
         public static int Amount(
             SkillEffect effect,

@@ -118,10 +118,12 @@ namespace PrincesPalace.Domain.Combat
         // number either side of it, which is the same lesson CLAUDE.md
         // gotcha #5 records about pinning formulas with literals.
         //
-        // At or BELOW, inclusive: "below 33%" reads as inclusive everywhere
-        // else in this codebase (FightController.IsBelowHealthFraction,
-        // BreakShield), and a rule that switched on one point of health later
-        // than the number printed on the node would read as a bug.
+        // At or BELOW, inclusive: BreakShield's own stagger meter breaks the
+        // instant Current reaches zero, not one point past it (BreakShield.
+        // Deplete's Current == 0 check) -- the same inclusive-at-threshold
+        // rule this gate follows, and a rule that switched on one point of
+        // health later than the number printed on the node would read as a
+        // bug the same way.
         private static bool AtOrBelow(CombatantState holder, int threshold)
         {
             if (holder == null || holder.MaxHealth <= 0)

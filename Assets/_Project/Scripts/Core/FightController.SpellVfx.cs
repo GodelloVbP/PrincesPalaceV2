@@ -56,7 +56,7 @@ namespace PrincesPalace
         // the frame count -- exactly the expression that used to live here --
         // because changing that would retime five shipped spells whose art went
         // momentarily unreadable. Both derivations live in SpellPerformance,
-        // which is the only thing in the program that reads layerFormat.
+        // which is the only thing in the program that reads layerFormat at run time.
         public float ImpactDelayFor(CombatBeat beat) => ResolveCast(beat)?.HitCueSeconds ?? 0f;
 
         // Every layer of this beat's cast, fanned out to the targets it struck,

@@ -992,7 +992,7 @@ namespace PrincesPalace
         private static readonly Color CounterEmphasis = Hex(FightHudPalette.HpBright);
         private const float CounterPatchEmphasisScale = 1.3f;
 
-        // ---- the appearance pop (PLAN_STATUS_EFFECT_UI.md section 6/D7 lineage) --
+        // ---- the appearance pop (PLAN_STATUS_EFFECT_UI.md section 6, package C) --
         //
         // GameSettings (checked before adding this) carries no reduced-motion
         // switch -- display and audio only. Rather than invent a setting
@@ -2202,7 +2202,7 @@ namespace PrincesPalace
 
         // The rows Column B is BUILT from, same door, same reason. The row's
         // Meta never reaches the scene -- the tree paints a mark and a name and
-        // nothing else (FightScreen.BuildSubmenuRows) -- so the only way to
+        // nothing else (FightScreen.BuildSubmenuColumn) -- so the only way to
         // check that this branch asked about the right character's pool is to
         // read what the controller handed the view.
         public IReadOnlyList<SubmenuRow> CurrentRowsForTest() => CurrentRows();
