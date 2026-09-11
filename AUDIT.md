@@ -2694,3 +2694,97 @@ in `spell_slots_present.png` the three slot names sit at y = 397, 461 and 525, c
 x = 385 in a 1920x1080 capture, and in `spell_slots_refused.png` the borrowed line draws at
 y = 461, x = 385. Same node, middle slot's row, to the pixel. A fixture that photographs the
 AlreadyKnown state is the other thing missing here.
+
+## Findings from the total bug hunt, 2026-09-11 (stage 3, the combat seam)
+
+The rest of this hunt's combat findings were restores and are committed: F9 (`e071ad9a`, the
+POWER row's stale attack bonus), F5 (`0aad2cec`, a heal announcing the request), F6
+(`a6054cfd`, wool from any hit taken), F1 (`777701ff`, splash by living rank -- a CHOICE the
+orchestrator made, flip-able, see its commit message), F4 (`15b1560d`, Magic Marker mana-first
+-- likewise), F3 (`c0e72b3a`, the timed slow's missing refresh) and four small restores
+(`310c4f43`). The three below need the owner.
+
+### 147. "The Flock" wards exactly one ally, and which one is decided by the field formation
+
+Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Talents.cs`,
+`ApplyWard`: with `WardSpreadsToAllies` but not `WardSpreadsToWholeParty`, the loop wards the
+first living non-caster in `_encounter.PlayerParty` order and `break`s.
+
+Since the positions pass, **party list order IS the field formation**, and the player changes it
+with Move. So which ally receives the Flock ward is decided by who happens to be standing
+furthest forward -- which nothing states, nothing tests, and no player would guess. The talent's
+own header (`:210-213`) explains only the STRENGTH of the spread ("a PERCENTAGE OF THE WARD'S
+OWN strength ... one strand tunes the construct, the other decides how far it reaches"), never
+who gets it.
+
+There is no intent evidence either way, which is why this is filed rather than fixed. The
+contrast that makes it worth filing is `GiftRecipient` in the same file: it had the identical
+"the first ally is as good as any" answer and was given an explicit pick when the third party
+slot landed, with its reasoning written out -- "the squad is one deep by default and two at
+most, so 'an ally' is unambiguous today... It needs a real target picker the moment a third
+party slot exists." That slot exists. The Flock is the other place that sentence applies and it
+was not revisited.
+
+**Two options.**
+1. **Give it a pick, the way Gift: Mana got one.** The natural reading for a damage ward is
+   "whoever most needs it" -- lowest current health, or lowest fraction of maximum -- with
+   party order as the stable tiebreak, exactly the shape `GiftRecipient` uses. Costs one
+   `OrderBy` and one test; makes the talent's value legible and stops a Move silently
+   redirecting it.
+2. **Say the rule out loud and keep it.** "The ward spreads to the ally standing nearest the
+   front" is a defensible design -- it makes formation matter and rewards the player for
+   putting the right character forward -- but it has to be in the talent's description, not
+   only in a `break`. Costs a line of content and a comment.
+
+Either way a test pins it; today nothing does, so the answer can change under a refactor without
+anything going red.
+
+### 148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates
+
+Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Enemies.cs`, in
+`ResolveEnemyAction`: a plain-swing commitment made before the enemy was Rooted is re-drawn with
+`EnemyAbilityDraw.Pick(effective, _rng?.NextFloat() ?? 0f)`.
+
+That draw happens ONLY when the player rooted the enemy after its intent was committed -- a
+branch whose frequency is decided by how the player is playing. The file states the opposite
+rule three separate times, most plainly at `PrepareEnemyIntents`: "THE ROLL STILL HAPPENS EITHER
+WAY, and it has to: the draw's position in the RNG stream is what keeps a seeded run
+reproducible, and a preview that skipped the draw would give the fight a different shape from
+the one being previewed". The same file refused exactly this shape once already for the target
+re-pick and took a forfeit instead.
+
+**The impact is narrower than the rule sounds**, and that is why this is low rather than urgent:
+a replay fed the same player actions still reproduces, because the same actions produce the same
+branches. What breaks is seed-to-seed comparability between two runs that differ in whether a
+Root landed -- which is the balance bot's determinism lens, not a player-visible bug.
+
+**Two options.**
+1. **Pass a literal `0f`, the way `RootedEnemyHasNoLegalAction` deliberately does** -- its own
+   comment: "passing a literal 0f (not `_rng.NextFloat()`) costs nothing from the seeded stream
+   -- this is a query, not a commitment". The redraw would then always take the first legal
+   entry rather than a weighted one, which is a real behavioural narrowing for a monster with
+   two legal skills and worth saying so.
+2. **Write the exception into the header.** State that the Root redraw is the one draw whose
+   frequency depends on play, and what that does and does not cost. Cheapest, and honest, but
+   it leaves the invariant with a hole in it that the next reader has to re-derive.
+
+### 149. Lucky Deck's red card says "a moment to recover" even when nothing recovered
+
+Found 2026-09-11 by the combat finder as a suspected sixth instance of F5 (`0aad2cec`), checked
+by the F5 fixer and found NOT to be one. `Domain/Combat/Session/FightSession.Relics.cs`,
+`LuckyDeckHeal`: it heals a percentage of max health and restores a percentage of max mana, then
+announces "{name}'s Lucky Deck turns up a red card - a moment to recover." The line carries **no
+number**, so there is nothing for it to misreport and F5's fix does not reach it.
+
+What remains is the weaker variant of the same question: a holder at full health with a full
+primary pool draws the red card, nothing moves, and the log still says a moment to recover. The
+precedent either way is in the same neighbourhood -- `RestorePartyMana` prints "finds nothing to
+restore" when nothing landed, while plenty of flavour lines say something happened without
+claiming a figure.
+
+**Two options.**
+1. **Measure it like everything else.** `HealAndCount` now returns what landed and
+   `CombatMath.RestoreMana` always did, so the line can say "a moment to recover" or "and it is
+   no use to him right now" on the same evidence the other announcements use. Two lines.
+2. **Leave it.** It is a flavour line about drawing a card, not a claim about a number, and the
+   card WAS drawn. Nothing is measurably wrong.
