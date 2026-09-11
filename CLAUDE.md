@@ -112,7 +112,8 @@ rebuild content and nothing else** — `tools/build_content.ps1`, ~14s, in place
 Neither is a gate: preview runs one capture fixture and no part of the suite,
 so a green preview says the picture came out, not that anything still passes.
 
-**Before committing** — everything, ~120-130s:
+**Before committing** — everything, ~340s (measured 2026-09-11: 17s sync, then
+PlayMode's 311s dominates the wall clock):
 ```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
 ```
