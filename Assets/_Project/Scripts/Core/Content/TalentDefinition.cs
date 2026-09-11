@@ -46,10 +46,16 @@ namespace PrincesPalace.Content
         public string id => data != null ? data.Id : "";
 
         // Availability is deliberately NOT folded into
-        // ContentDatabase.PrerequisitesMet, which SceneBuilder and
-        // TalentController both reuse for the connector line — a node being
-        // someone else's is a different question from its prerequisites being
-        // met, and conflating them would make the line lie.
+        // ContentDatabase.PrerequisitesMet — a node being someone else's is a
+        // different question from its prerequisites being met, and conflating
+        // them would make the connector line lie.
+        //
+        // That sentence used to name SceneBuilder and TalentController as
+        // reusing PrerequisitesMet "for the connector line". Neither does, and
+        // neither ever has: the live prerequisite check is TalentPage.Evaluate
+        // walking TalentSkeleton.Parents, and the connector lines are drawn
+        // from that same skeleton. The distinction this draws is still the
+        // right one; the callers it cited were not.
         public bool IsSharedByEveryCharacter => data == null || data.IsShared;
 
         public bool IsAvailableTo(Character character)

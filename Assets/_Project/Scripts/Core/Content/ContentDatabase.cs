@@ -563,6 +563,15 @@ namespace PrincesPalace.Content
         // this only actually branches behaviour for the two convergence
         // nodes per path, which name all 3 and unlock from any completed
         // route.
+        //
+        // NOT THE LIVE RULE, and no production caller. The prerequisite check
+        // the screen, the bot and the frontier all pass through is
+        // TalentPage.Evaluate's walk of TalentSkeleton.Parents
+        // (Refusal.PrerequisiteMissing); the two agree by measurement rather
+        // than by assumption -- talents.json declares its prerequisites
+        // explicitly and they match the skeleton for all 294 authored talents,
+        // which TalentPage's own header records. Kept as the content-side
+        // statement of the rule for anything reading talents.json directly.
         public static bool PrerequisitesMet(TalentDefinition talent, Character character)
         {
             var prerequisites = talent.Data.Prerequisites;
@@ -717,6 +726,12 @@ namespace PrincesPalace.Content
         // lifetime cap. Never negative — a save from before the cap existed
         // is over budget rather than broken, and reports 0 left rather than a
         // negative allowance the UI would then have to special-case.
+        //
+        // THIS IS THE BUDGET THE GATE READS. It had no caller at all until the
+        // cap became a refusal on the player's own path; it is now the number
+        // TalentOps.Kindle, the talent screen's colouring pass and the bot's
+        // preset builder all hand to TalentPage.Evaluate, which refuses
+        // BudgetSpent against it.
         public static int EmbersLeftFor(Character character)
         {
             return Mathf.Max(0, EmberSpendCap - SpentBy(character));
@@ -735,6 +750,18 @@ namespace PrincesPalace.Content
         // Nothing in the prerequisite system could express this: prerequisites
         // only ever look UPWARD within one path, so no arrangement of them
         // can say "and not that one, over there".
+        //
+        // THE RULE IS ENFORCED IN Domain/Talents/TalentPage, NOT HERE, and
+        // this member has no production caller. It was written when the screen
+        // resolved its own colouring against the content; TalentPage replaced
+        // that pass and the rule did not come across, so for a long while
+        // nothing enforced it anywhere and both of a character's roots could be
+        // lit (TalentPage.Refusal.AllegianceSworn is the fix). It could not
+        // simply be called from there: TalentPage is Domain and cannot see a
+        // TalentDefinition, a Character or this class. So the rule lives one
+        // layer down, where the screen, the bot and the frontier all reach it,
+        // and this stays as the content-side statement of WHY -- which is what
+        // the paragraphs above are, and they are still true.
         public static TalentDefinition AllegianceRootOf(Character character)
         {
             if (character == null)
@@ -749,6 +776,11 @@ namespace PrincesPalace.Content
         // Whether this specific talent is blocked by an allegiance already
         // sworn. False for every node that is not a root, and false for the
         // root already lit (so the UI can still offer to refund it).
+        //
+        // No production caller: TalentPage.Evaluate answers this for the live
+        // path, in the same two shapes -- only a root, and never the one
+        // already sworn, which still reads AlreadyTaken. See AllegianceRootOf
+        // above for why the rule sits in Domain rather than here.
         public static bool IsBlockedByAllegiance(TalentDefinition talent, Character character)
         {
             if (talent == null || talent.Data.Row != 0)
@@ -764,6 +796,12 @@ namespace PrincesPalace.Content
         // regardless of which specific nodes earned them -- what the two
         // convergence nodes' gates check against, on top of (not instead of)
         // PrerequisitesMet.
+        //
+        // No caller of any kind, production or test. TalentPage.SpentOn is the
+        // live version, counted against the tree the screen holds rather than
+        // against the catalogue, and its own header says why the two cannot be
+        // one function: "real content ids carry no path in them". This is the
+        // content-side reading of the same quantity.
         public static int SpentInPath(Character character, TalentDefinition talent)
         {
             return TalentsFor(character)
@@ -773,6 +811,12 @@ namespace PrincesPalace.Content
 
         // True when talent's point-gate (if any) is satisfied. 0 always
         // passes -- most nodes carry no gate at all.
+        //
+        // No production caller. This is the one of the three whose rule DID
+        // come back: TalentPage.Refusal.Gated restored it after the migration
+        // dropped it, and TalentGateTests pins it. The gate itself travels on
+        // TalentSlot.MinSpent, which is how Domain answers without ever seeing
+        // a TalentDefinition.
         public static bool MinSpentMet(TalentDefinition talent, Character character)
         {
             return talent.Data.MinSpent <= 0 || SpentInPath(character, talent) >= talent.Data.MinSpent;
@@ -780,18 +824,30 @@ namespace PrincesPalace.Content
 
         // Every rule about whether a node may be lit, EXCEPT affordability.
         //
-        // One function rather than four checks the caller composes, because
-        // there are now four of them and they have to agree between the
-        // talent screen's colouring pass, its click handler and its tests.
-        // Three of the four are new in one change, which is exactly when a
-        // "the caller remembers to && them all" arrangement starts silently
-        // dropping one.
+        // THE CALLERS THIS ONCE NAMED DO NOT EXIST, and the correction is
+        // worth more than the paragraph it replaces. It said "there are now
+        // four of them and they have to agree between the talent screen's
+        // colouring pass, its click handler and its tests" -- there were none,
+        // and there never have been. The screen's colouring pass and its click
+        // handler both go through TalentPage.Evaluate (Domain), which carried
+        // three of these four rules and not the other two: the allegiance and
+        // the spend cap were enforced NOWHERE until they were added there as
+        // Refusal.AllegianceSworn and Refusal.BudgetSpent.
+        //
+        // A dead function that reads as the rulebook is worse than no function
+        // at all, and that is the whole lesson of this one: the composition
+        // argument was right, and the composed version simply was not what
+        // anybody called. Evaluate is now the single place the four are
+        // composed. This is kept as the content-side statement of the same
+        // four -- accurate again, but documentation rather than the rule, and
+        // a fifth rule added here would reach nothing.
         //
         // Affordability is deliberately NOT in here. The wallet is a
         // GameplayManager-owned save concern and ContentDatabase is a content
         // lookup; folding it in would drag a save dependency into every
-        // content test. The two callers ask the wallet themselves, through
-        // its own atomic TrySpend.
+        // content test. TalentPage takes the wallet as a parameter for the
+        // mirror-image reason -- it is Domain, and the save is not its
+        // business.
         public static bool MeetsGates(TalentDefinition talent, Character character)
         {
             if (talent == null || character == null)
