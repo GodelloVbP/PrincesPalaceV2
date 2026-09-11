@@ -2396,7 +2396,7 @@ of the shipped behaviour.
    it against `ACinderfaultOverALiveTailSharesNoRendererWithIt`, which currently asserts the
    opposite for a different case.
 
-### 144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move
+### ~~144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move~~ -- fixed in `6740399e`: the owner took option 2 on 2026-09-11 ("move"). `_plateOccupants` stopped being scratch for one loop and became the painted-occupancy record itself: `RefreshPcPlates` walks the party in FORMATION order and writes which member it put on each card, `PaintVitals` reads that record instead of looking any index up. During a Move's playback the record says what the screen says (the cards have not been repainted yet, because `AfterResolution` deliberately repaints the menu chrome only); at `OnPlaybackFinished` the repaint moves the cards and rewrites the record in one pass. Option 1's cost was the whole finding -- a turn spent on nothing but position, readable only as two figures sliding past each other on the stage. Option 2 turned out smaller than this entry estimated: the record has no lifecycle of its own to keep synchronized against Move, death or revive, because it is rewritten whole by the one repaint that already handles all three. Pinned by `FightHudSnapshotLifecycleTests.AMoveReordersTheColumnToFollowTheField`, seen red (`Expected: "Beta" But was: "Alpha"`); `4c4bddc3`'s two tests are unaltered and stayed green throughout; full reasoning in the commit message
 
 `4c4bddc3` fixed two real defects in `FightController.Hud.cs`'s `PaintVitals` (a beat painting a
 stale maximum, and a Move-reordered party list landing two members' numbers on each other's
