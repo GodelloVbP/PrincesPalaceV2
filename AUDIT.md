@@ -1364,7 +1364,25 @@ full version). Tests: `TurnRiderTests` (un-`[Ignore]` the three),
 `KillCreditTests`, `ChilledStatusTests`, `RelicMechanicsTests`,
 `StatusEffectsTests`.
 
-### 114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards
+### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc`: the owner took neither filed option — the starting kit is DELETED, so there is no third universe left for the two filters to disagree about
+
+**The answer, 2026-09-11.** Option 1 was "`Candidates()` reads `Offerable`"; option 2 was "keep the kit and
+correct the header". The owner's answer was that a new profile should not open wearing anything: the six
+`startingStock` rows are gone from `items.json`, along with their six generated assets and metas. `items.json` is
+the two potions now, neither of them `IsEquippable`, so `Candidates()` and `ContentDatabase.Offerable` currently
+select the identical set — and the green test `OnlyEquippablesAreOffered`, which a fixer could not have broken to
+satisfy a header, did not have to be broken to get there. The `startingStock` FIELD survives, unauthored and still
+pinned by `ItemEntryResolverTests`; `items.json`'s `_readme` records why the kit went. Stage 2's coverage
+denominator and the roll's universe now agree, which they differed on by exactly these six ids.
+
+The code half landed the same day in `5fc4eb51`, independently and from the other side: `Candidates()` now calls
+`ContentDatabase.Offerable` rather than re-typing the `IsEquippable` predicate, so the two cannot drift apart
+again the next time a hand-authored equippable is added, and `OnlyEquippablesAreOffered` was rewritten as
+`OnlyOfferableItemsAreOffered` plus `TheStartingKitIsNeverOfferedAsAReward` — a rule that keeps saying something
+the day a `startingStock` row is authored again. Either commit alone would have fixed the symptom; together they
+close both the row and the seam.
+
+The original finding follows.
 
 Found 2026-09-11 by the `ContentDatabase` seam finder (F3). Filed rather than
 fixed because the intent evidence CONFLICTS -- one of the two sources is a
@@ -1676,6 +1694,15 @@ next caller will otherwise read the wrong one.
 
 ### 121. Shawn's Wool authors `signatureAbsorbsDamage: false`, and `characters.json`'s own `_readme` says wool eats damage first
 
+> **STILL OPEN — but the file no longer contradicts itself (annotated in `90c41655`).** #127's fix rewrote the
+> `_readme` paragraph and took the armour sentence with it. The prose now says plainly that wool does NOT absorb
+> today, that `ResourcePool.Absorb` returns 0 while the flag is false, and that the sheep track's
+> `SignatureAbsorbs` reward at level 60 is what switches the armour half on. That is option 2 as far as the
+> DISAGREEMENT goes, and it deliberately does not touch option 1. What stays the owner's, and is the only reason
+> this is still open: whether level 60 is the right place to hand the absorb over, or whether the base row should
+> ship `true` and that milestone buy something else. Either way the F5 fix at `165c5746` — a poison tick the pool
+> absorbs in full is now counted and said — is dead code until a Shawn actually reaches 60.
+
 Found 2026-09-11 by the `FightSession` seam finder, as a note beside F5. It is
 a content/doc disagreement in one file, which is why it is the owner's and not
 a fixer's.
@@ -1935,7 +1962,19 @@ disagree on the row.
    `attackApproach` on a row with `attackWeight: 0`, the same "no meaning on that effect" rule
    `SkillEntryResolver` already applies five times (see #145).
 
-### 127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only
+### ~~127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only~~ — fixed in `90c41655`: option 2, the prose. The owner's reasoning is that Wool is per-turn-led AT BASE and grows, through the reward track and the Black Ram talents
+
+**The answer, 2026-09-11.** The row is right and the paragraph was describing an engine this tree has never had.
+Wool builds per turn; capacity and income grow at later levels (`SignatureGainPerTurn` at 10 and 50,
+`SignatureCapacity` at 25 and 100, `SignatureGainOnDamageTaken` at 40, twelve more capacity through the filler);
+and talents add other income on top — sworn to the Black Ram, `WoolOnHitTaken` and `WoolPerTurnBelowHealth` at
+67% and 33% health are what make a damage-taken engine reach him at all. So the base row is the floor of a curve
+rather than the whole economy, and the paragraph now says that. `signatureGainOnAttack` stays authored at 0 and
+stays sourceless — no `TrackReward` member and no `RawTalentEntry` field pays it — which the paragraph now states
+outright instead of leaving to a reader to discover. The absorb sentence was rewritten in the same commit; see
+#121 above, which stays open on the balance question alone.
+
+The original finding follows.
 
 `Assets/_Project/ContentData/characters.json`, row `sheep`: `signatureGainPerTurn: 1`,
 `signatureGainOnAttack: 0`, `signatureGainOnDamageTaken: 0`. The file's own `_readme` says of
@@ -2000,7 +2039,18 @@ a folder with a provenance that no skill plays.
 1. Delete the folder and its recipe.
 2. Keep it as the single-sheet fallback and say so in the recipe's `_notes`.
 
-### 130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand
+### ~~130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand~~ — fixed in `44258f3e`: option 1, he. The four player-facing strings are swept; the two CODE comments are not, and that is recorded below rather than quietly left
+
+**The answer, 2026-09-11:** he. `talents.json:sheep_lamb_ward_3` and `skills.json`'s `fleece_ward`, `shatter` and
+`gift_mana` now read he/him/himself. Odette's pronouns were not touched — `characters.json` still says owl wears
+Shawn's face "until her own portrait is drawn", which is about her.
+
+**Still outstanding, deliberately.** `FightSession.Talents.cs:325-326` and `:343` carry the same "her" in code
+comments ("Each one throws a share of her Attack", "Her OWN ward is worth triple"). `Domain/Combat` belonged to
+another fixer in the pass that made this change, so those two lines were reported rather than edited. Until they
+land, a grep for Shawn's pronoun still finds a disagreement — just not one a player can read.
+
+The original finding follows.
 
 `characters.json`'s `_readme` is consistent ("his abilities shear it off", "He starts every
 fight at zero"), and the Black Ram talent strand agrees (`sheep_ram_trample_3` "he is heavy, not
@@ -2035,7 +2085,24 @@ consistent with each other and not part of this finding.
 2. Leave it on the graceful-degradation path and note in the row why (a stated placeholder,
    rather than an unnoticed gap).
 
-### 132. The bog witch is the only monster weak to the element it attacks with
+### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth
+
+**The answer, 2026-09-11.** Not "was it a transposed pair", and not "keep the glass cannon and add a
+justification rule". The four elements were chosen by hand on theme: Wind and Arcane cut through a bog, Water and
+Earth are the bog. She is no longer weak to her own `attackType`, so the roster's seven-for-seven pattern holds
+without her having to resist Poison.
+
+`"weakness": "Wind, Arcane"` / `"resistance": "Water, Earth"` is also the first SHIPPED use of
+`RawEnemyEntry`'s comma list, which until now had only ever been exercised by the resolver's own synthetic tests.
+The two sets are disjoint, so the both-lists refusal has nothing to catch. `EnemyContentPinTests` gained the pin —
+it had no weakness/resistance assertion of any kind before, which is part of why this sat unnoticed — and it also
+asserts she is not weak to her own `attackType`, so the exact shape this finding describes fails loudly next time
+rather than passing quietly.
+
+**Blind spot B6 in #145 is NOT closed by this.** No resolver rule was added; the one live instance was authored
+away. A future row may still name its own `attackType` as a weakness and validate clean.
+
+The original finding follows.
 
 `enemies.json:bog_witch`: `"attackType": "Poison"`, `"weakness": "Poison"`,
 `"resistance": "Nature"`. Every other elementally-typed row resists its own attack type: `imp`
@@ -2066,6 +2133,24 @@ agree with their actors'), but art shipping in the build with no route to the sc
 2. Prune the four files and their metas.
 
 ### 134. The roster's per-character content is uneven, and Bjorn cannot be given a reward track under the current `TrackReward` model
+
+> **THE AUTHORING HALF IS ~~DONE~~ (`f432a366`). THE MODEL GAP IN THE HEADING STAYS OPEN.** The owner's answer to
+> "should Bjorn have a track" was "why not?", so `reward_tracks.json` now authors a `bear` track: the same twelve
+> fixed milestone levels, filler summing to 87, and the same Respec / StatPoint-10 / SecondLife spine sheep and owl
+> have. It is authored AROUND the gap rather than through it, and every detour is a rule rather than a taste — no
+> `Signature*` reward, because rule 5 refuses one on a character with no `signatureId`; no `MaxMana` and no
+> `ManaRegen`, because both resolve CLEAN on him and then pay nothing (`fury`'s `capacityRule` is `Fixed` and
+> `restoredByManaEffects` is false — blind spot B9 in #145, still open); and no `UnlockSkill` milestone at all,
+> because all three `placeholder_brawler_*` skills author `unlockLevel: 1` and are his from level one, so there is
+> no skill left for a level to hand him.
+>
+> **What is still missing is exactly the thing this heading names.** `TrackReward` has no member that pays into a
+> primary pool other than mana, so nothing on his track can make his own resource bigger or faster the way sheep's
+> `SignatureCapacity` rows do for wool. His track pays max health, stat points and Physical damage instead, and a
+> hundred levels of it leave Fury exactly where level 1 found it. The numbers are first values and the row's
+> `_comment` says so; the balance pass that authors what Fury BUYS (see `pools.json`'s `fury` `_comment`) is the
+> pass that should retune them, and is the natural place to add the missing reward member. Odette's zero talents
+> and the unauthored column 2 on every character are also untouched.
 
 | character | skills | talents | reward track |
 |---|---|---|---|
@@ -2111,7 +2196,14 @@ was written, but nothing establishes what the intended top of the curve is.
 2. Confirm 9 is the intended ceiling (Skill deliberately flattens for the rest of a run) and say
    so explicitly in the `_readme`, replacing the "curve deepens with level" framing.
 
-### 136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist
+### ~~136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist~~ — fixed in `5d46970d`: option 1, deleted as superseded by `test.ps1` and `run_tests_parallel.ps1`; `docs/CODE_MAP.md`'s entry went with it
+
+Seven places still name it in PROSE and were left alone as outside that pass's scope: `tools/unity_path.ps1:3`,
+`tools/bot.ps1:23` and `:161`, `tools/graphics_tests.ps1:3` and `:76`, `tools/run_tests_parallel.ps1:38`,
+`docs/PLAN_BALANCE_BOT.md:164` and `docs/WORKFLOW.md:162`. None of them is a call; all describe a shape ("mirrors
+run_tests.ps1", "dot-sourced by run_tests.ps1"). They now name a file that does not exist.
+
+The original finding follows.
 
 `tools/run_tests.ps1:12-13`:
 ```
@@ -2179,7 +2271,9 @@ wrong.
    `docs/BOT_SUMMARY_SCHEMA.md`'s "Partial batches" section to describe the sharded reality
    rather than the pre-sharding mechanism it currently documents.
 
-### 138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way
+### ~~138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way~~ — fixed in `5d46970d`: option 1, deleted. The grep was re-run over `.cs`, `.json` and `.md` first, and the only hits outside the file itself were this register and the hunt's own notes
+
+The original finding follows.
 
 `Assets/_Project/Scripts/Domain/Combat/CombatAction.cs` (whole file, 17 lines):
 `public enum CombatAction { Attack, Skill, Item, Run, Default }`.
@@ -2199,7 +2293,20 @@ corroborates or contradicts it.
 2. Confirm it is scaffolding for a menu-level action distinct from `FightActionKind` (a `Run`/
    `Default` choice the bot-facing enum does not need) and give it a first caller.
 
-### 139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix
+### ~~139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix~~ — fixed in `5d46970d`: option 1, the dead file deleted — but ONLY the dead-code half of it
+
+> **THE DESIGN QUESTION IS NOT ANSWERED, AND IT DOES NOT GO AWAY WITH THE FILE.** `OverlayAnchors`'s header argued
+> that slot cells sitting on the mannequin make the dossier read as "a stack of boxes with a purple shape behind
+> it", and its flanking-column geometry cleared that overlap by construction. The live `DossierLayout` keeps the
+> older mannequin-hugging numbers, and `CharacterDossierScreen.cs:883` carries an `AllowOverlap` exemption for
+> exactly that overlap. Nobody has yet looked at the rendered screen with real equipped-item icons over the
+> mannequin at its sub-10% alpha, which is what BOTH filed options said was needed before deciding. Deleting 194
+> lines nothing called does not settle it — it only stops a dead file arguing one side of it.
+
+`DebugMenuScreen.cs` cited `OverlayAnchors` as one of its two examples of an anchors sibling and now cites
+`DossierLayout`, which is where the dossier's slot geometry actually lives.
+
+The original finding follows.
 
 `Assets/_Project/Scripts/Domain/UiKit/OverlayAnchors.cs` (194 lines) vs.
 `Assets/_Project/Scripts/Domain/UiKit/DossierLayout.cs` (753 lines, live) and its caller
@@ -2245,7 +2352,15 @@ and `OverlayAnchors` stopped being called at all.
    worth revisiting — check the actual screen with real equipped-item icons over the mannequin
    before deciding.
 
-### 140. AUDIT.md's own archival rule was not followed for thirteen struck findings
+### ~~140. AUDIT.md's own archival rule was not followed for thirteen struck findings~~ — fixed in `5d46970d`: option 1. #62's and #64's inline write-ups moved verbatim to `docs/AUDIT_STRUCK_ARCHIVE.md`; #66-#76 are recorded there as one block, because they never had a write-up here to move
+
+That distinction matters for whoever runs the cross-check next. #66-#76 were struck the day they were found and
+their headings say "full reasoning in the commit message", so there was nothing verbatim to relocate, and
+paraphrasing eleven commits into the archive would have created a second and worse copy of what git already holds.
+They are listed in the archive under one heading that says exactly that — which is what stops the set-comparison
+that produced this finding from reporting them as missing forever.
+
+The original finding follows.
 
 This register's own header states: "A struck finding's full write-up does not stay here: it
 moves, verbatim, to `docs/AUDIT_STRUCK_ARCHIVE.md`, and this file keeps only the one-line struck
