@@ -47,14 +47,14 @@ namespace PrincesPalace.Domain.Tests
             SkillResolution.Amount(SkillEffect.HealSelf, caster, caster,
                 WoolgatheringPower, WoolgatheringFlat, WoolgatheringWool, false);
 
-        // ANCHOR ONE: a fresh Shawn. Wisdom 14 as characters.json authors him,
+        // ANCHOR ONE: a fresh Shawn. Wisdom 12 as characters.json authors him,
         // against a level-1 health pool the balance bot measures at 360-390.
         //
-        // 40 flat + 2x4 wool + (400 x 4 x 5 / 1000) = 40 + 8 + 8 = 56.
+        // 40 flat + 2x4 wool + (400 x 2 x 5 / 1000) = 40 + 8 + 4 = 52.
         [Test]
-        public void FreshShawn_HealsFiftySix()
+        public void FreshShawn_HealsFiftyTwo()
         {
-            Assert.AreEqual(56, Woolgathering(Caster(maxHealth: 400, wisdom: 14)));
+            Assert.AreEqual(52, Woolgathering(Caster(maxHealth: 400, wisdom: 12)));
         }
 
         // ANCHOR TWO: a level-60 build that actually spent its stat points on
