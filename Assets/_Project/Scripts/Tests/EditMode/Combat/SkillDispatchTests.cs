@@ -844,5 +844,83 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(hero.CurrentMana, 0, "fixture: the cast has to actually restore something");
             Assert.IsTrue(Messages(session).Any(m => m.Contains("restores the squad")));
         }
+
+        // ---- the POWER row on the skill card ---------------------------------
+
+        // The row is a promise about the cast that is ABOUT TO HAPPEN
+        // (FightHudModel.cs's DetailForSkill header: pre-mitigation damage from
+        // the caster's own stats/relics/buffs). The buff half of that rides
+        // CombatantState.BonusAttackPercent, which only an ACTION writes -- so a
+        // preview reading the raw field quotes the previous action's board in
+        // both directions: it misses a ward bonus the cast will apply, and it
+        // keeps quoting a Gift: Fury the player already spent.
+        //
+        // Literal, not recomputed: attack 100 with no scaling set is a scaled
+        // attack of 100, plus flatAmount 100 = 200 bare, and 150 + 100 = 250 at
+        // +50%.
+        private static ResolvedSkill PowerRowHit() =>
+            new ResolvedSkill("headbutt", "Headbutt", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 100, false,
+                null, SpellPresentation.None, 0);
+
+        [Test]
+        public void ThePowerRowMatchesTheCastItDescribes_WithAWardJustLanded()
+        {
+            var ward = new ResolvedSkill("fleece_ward", "Fleece Ward", "", "hero", 1, SkillEffect.Ward,
+                SkillEntryResolver.DefaultTargetingFor(SkillEffect.Ward), 0, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0);
+            var hit = PowerRowHit();
+
+            var hero = new CombatantState("Shawn", true, 1000, 30, 100, 500);
+            hero.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardDamageBonusSelf, 50),
+            });
+
+            var (session, _, _) = Fight(Kit(skills: new[] { ward, hit }), hero, Foe("Foe", 1000000));
+
+            session.CastSkill(0, hero);
+            Assert.IsTrue(StatusEffects.IsWarded(hero), "fixture: the ward landed on its caster");
+
+            Assert.AreEqual(250, session.PreviewSkillPower(hero, hit),
+                "the card has to see the ward bonus the very next cast will apply");
+        }
+
+        [Test]
+        public void ThePowerRowMatchesTheCastItDescribes_AfterTheGiftWasSpent()
+        {
+            var hit = PowerRowHit();
+            var hero = new CombatantState("Shawn", true, 1000, 30, 100, 500);
+            var (session, _, _) = Fight(Kit(skills: new[] { hit }), hero, Foe("Foe", 1000000));
+
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Empowered, 50, 99, hero);
+            session.CastSkill(0, session.Encounter.Enemies[0]);
+
+            Assert.AreEqual(200, session.PreviewSkillPower(hero, hit),
+                "the gift was burned by that cast; the card must stop quoting it");
+        }
+
+        // The worse bug the fix must not introduce: a card that spends the gift
+        // by being looked at.
+        [Test]
+        public void PreviewingAPowerRowNeverSpendsTheGift()
+        {
+            var hit = PowerRowHit();
+            var hero = new CombatantState("Shawn", true, 1000, 30, 100, 500);
+            var (session, _, _) = Fight(Kit(skills: new[] { hit }), hero, Foe("Foe", 1000000));
+
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Empowered, 50, 99, hero);
+
+            Assert.AreEqual(250, session.PreviewSkillPower(hero, hit), "the gift is still in hand");
+            Assert.AreEqual(250, session.PreviewSkillPower(hero, hit), "and hovering twice does not spend it");
+
+            var foe = session.Encounter.Enemies[0];
+            int before = foe.CurrentHealth;
+            session.CastSkill(0, foe);
+
+            Assert.AreEqual(250, before - foe.CurrentHealth,
+                "the cast still got the empowerment the previews quoted");
+        }
     }
 }

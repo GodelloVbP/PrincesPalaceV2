@@ -389,6 +389,14 @@ namespace PrincesPalace.Domain.Combat
             return gift.Magnitude;
         }
 
+        // What Gift: Fury is worth WITHOUT spending it. The read-only half of
+        // ConsumeEmpowerment, and the only thing a preview may ask: a skill
+        // card that burned the gift by being looked at would be a worse bug
+        // than the stale number that made this necessary. Same FirstOrDefault
+        // as above deliberately, so the two can never name different gifts.
+        public static int EmpowermentWorth(CombatantState attacker) =>
+            attacker?.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Empowered)?.Magnitude ?? 0;
+
         public readonly struct TickReport
         {
             // What reached HEALTH.

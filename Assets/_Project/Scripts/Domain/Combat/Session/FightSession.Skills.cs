@@ -787,26 +787,52 @@ namespace PrincesPalace.Domain.Combat.Session
         // and only place a defense term is subtracted. The fixed-damage
         // branch mirrors ResolveDamageInstances' own scaling (multiplier,
         // AwayFromZero, floored at 1 per packet), for the same reason.
+        //
+        // THE ATTACK BONUS IS RE-ASKED, NOT READ OFF THE BOARD.
+        // CombatantState.BonusAttackPercent is a snapshot of the last ACTION
+        // (RefreshAttackBonus is its only writer, and it runs at cast time),
+        // while this row is a promise about the NEXT one -- so reading the
+        // field made the card wrong in both directions: blind to a ward bonus
+        // the following cast applied, and still quoting a Gift: Fury that cast
+        // had already spent. The honest figure comes from AttackBonusFor, the
+        // read-only half of the same rule, asked with the same `spendingGift`
+        // predicate the real cast passes at :109.
+        //
+        // BORROWED AND PUT BACK rather than passed down: CombatMath.ScaledAttack
+        // folds the percentage into the ATTACK term before SkillResolution's
+        // additive flatAmount, so there is no way to scale the finished figure
+        // here without inventing a second rounding of the same rule. The field
+        // is restored in a finally, so the board a preview leaves behind is
+        // byte-for-byte the one it found.
         public int PreviewSkillPower(CombatantState actor, ResolvedSkill skill)
         {
             if (actor == null) return 0;
 
-            if (skill.HasFixedDamage)
+            int stashed = actor.BonusAttackPercent;
+            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift: DealsDamage(skill));
+            try
             {
-                float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
-                int total = 0;
-                foreach (var instance in skill.DamageInstances)
+                if (skill.HasFixedDamage)
                 {
-                    total += System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
+                    float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
+                    int total = 0;
+                    foreach (var instance in skill.DamageInstances)
+                    {
+                        total += System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
+                    }
+                    return total;
                 }
-                return total;
+
+                int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
+                var castType = ActorAttackType(actor) ?? DamageType.Physical;
+
+                return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
+                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
             }
-
-            int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
-            var castType = ActorAttackType(actor) ?? DamageType.Physical;
-
-            return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
-                skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+            finally
+            {
+                actor.BonusAttackPercent = stashed;
+            }
         }
 
         // ---- riders on a resolved skill --------------------------------------

@@ -134,9 +134,36 @@ namespace PrincesPalace.Domain.Combat.Session
         // damage the actor deals. `spendingGift` is false for a cast that heals
         // or buffs -- Gift: Fury is "your next ATTACK", and burning it on a Ward
         // would be a gift the player never got.
+        //
+        // The ARITHMETIC lives in AttackBonusFor below and this is the only
+        // thing that writes the field or spends the gift, because the skill
+        // card has to ask the same question about a cast that has not happened
+        // yet. It read the leftover field instead until 2026-09-11, which is a
+        // snapshot of the PREVIOUS action's board: the card missed a ward bonus
+        // the very next cast applied, and went on quoting a Gift: Fury that
+        // cast had already burned.
         private void RefreshAttackBonus(CombatantState actor, bool spendingGift)
         {
             if (actor == null) return;
+
+            actor.BonusAttackPercent = AttackBonusFor(actor, spendingGift);
+
+            // The return is deliberately dropped: AttackBonusFor already
+            // counted the gift's magnitude. This call is the SPENDING of it,
+            // and it is the one line the read-only sibling must not have.
+            if (spendingGift)
+            {
+                StatusEffects.ConsumeEmpowerment(actor);
+            }
+        }
+
+        // What the actor's attack bonus WOULD be for an action of this shape.
+        // Pure: writes no field, spends no gift, so the skill-detail card can
+        // ask it about the cast the player is looking at (FightSession.Skills's
+        // PreviewSkillPower) without the hover changing the fight.
+        private int AttackBonusFor(CombatantState actor, bool spendingGift)
+        {
+            if (actor == null) return 0;
 
             int bonus = 0;
 
@@ -160,10 +187,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (spendingGift)
             {
-                bonus += StatusEffects.ConsumeEmpowerment(actor);
+                bonus += StatusEffects.EmpowermentWorth(actor);
             }
 
-            actor.BonusAttackPercent = bonus;
+            return bonus;
         }
 
         private static bool WardedByThisActor(CombatantState wearer, CombatantState caster) =>
