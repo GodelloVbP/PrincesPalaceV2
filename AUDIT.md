@@ -1163,7 +1163,7 @@ redirect was never spent) is a design call; the comment at `:664` reads as
 
 ## Findings from the layered-spell pass, 2026-09-08
 
-### 106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive
+### ~~106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive~~ — fixed in `16eeb5aa`: `BeginAppearancePop` sets the badge's final scale directly instead of starting a coroutine when the screen cannot host one. The guard is NOT the one proposed below and the difference is measured: at that teardown repaint `isActiveAndEnabled` still reads **true** — nothing called `SetActive`, the whole SCENE is unloading — and the scheduler refuses anyway, so the error still fired from the same line with the proposed guard in place (stack in the runner log). `gameObject.scene.isLoaded` is the flag that has already flipped. Asserted by `FightTeardownLifecycleTests.LoadingAFightOverALiveOneWithEverythingInFlightLogsNothing`, which abandons a real round (a popup mid-rise, a death fade mid-fade, a lunge mid-tween) with no `LogAssert.ignoreFailingMessages` anywhere in it, and was seen red with this exact message. The four Fight fixtures that tolerate it across a scene swap can now drop that line; none was touched here.
 
 Found by `SpellRuntimeCaptureTests` becoming the first fixture in the suite to
 load `Fight` twice in one class: the second `LoadSceneAsync(..., Single)`
