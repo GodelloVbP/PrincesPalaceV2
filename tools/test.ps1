@@ -262,6 +262,8 @@ function Invoke-SelfCheck {
            Ok   = { ($structural | Where-Object { $_ -match "'OuterFixtureTests' nested" }).Count -eq 0 } }
         @{ Name = "one class name in two files is refused"
            Ok   = { ($duplicates | Where-Object { $_ -match '^DuplicatedFixtureTests is declared by 2 files' }).Count -eq 1 } }
+        @{ Name = "a partial fixture split across two files in the same area is NOT refused"
+           Ok   = { ($duplicates | Where-Object { $_ -match 'SamePartialFixtureTests' }).Count -eq 0 } }
         @{ Name = "an internal fixture beside a public one is a blind spot"
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalOnlyFixtureTests is declared here' }).Count -eq 1 } }
         @{ Name = "the public fixture beside it is NOT a blind spot"

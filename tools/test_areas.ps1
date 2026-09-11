@@ -217,9 +217,12 @@ function Get-TestIndex {
     if ($script:TestIndexCache -and -not $Fresh) { return $script:TestIndexCache }
 
     $found = @{}
-    # name -> every file that declares it. The index above can only hold one
-    # entry per name, so this is where a collision survives long enough to be
-    # reported. See Get-DuplicateClassNames.
+    # name -> every SITE that declares it (RelPath/Area/IsPartial). The index
+    # above can only hold one entry per name, so this is where a collision
+    # survives long enough to be reported. See Get-DuplicateClassNames. Kept
+    # as objects, not bare paths, because telling a real duplicate from a
+    # `partial` fixture split across files needs both the modifier and the
+    # area of every declaration, not just its path.
     $sites = @{}
     foreach ($platform in @("EditMode", "PlayMode")) {
         foreach ($folder in ($AreaFolders + $SharedFolder)) {
@@ -236,8 +239,18 @@ function Get-TestIndex {
                     $name = $match.Groups[1].Value
                     # A base class is not a suite; it has no tests of its own.
                     if ($name -like "*TestBase") { continue }
+                    # The matched text runs from the attributes through the
+                    # modifiers to "class", so it still carries "partial" when
+                    # the declaration has it -- no second read of the file.
+                    $isPartial = $match.Value -match '\bpartial\b'
                     if (-not $sites.ContainsKey($name)) { $sites[$name] = @() }
-                    if ($sites[$name] -notcontains $rel) { $sites[$name] += $rel }
+                    if (-not ($sites[$name] | Where-Object { $_.RelPath -eq $rel })) {
+                        $sites[$name] += [PSCustomObject]@{
+                            RelPath   = $rel
+                            Area      = $area
+                            IsPartial = $isPartial
+                        }
+                    }
                     $found[$name] = [PSCustomObject]@{
                         Platform = $platform
                         Area     = $area
@@ -263,8 +276,18 @@ function Get-TestIndex {
 # and both classes have it.
 #
 # Refused rather than disambiguated. Two suites with one name is a naming
-# accident every time; the fix is a rename, and it is cheaper than teaching
-# every downstream filter to carry a namespace.
+# accident every time -- EXCEPT when every declaration of that name is
+# `partial` and they all sit in the same area folder: that shape is a large
+# fixture deliberately split across files (the same reason this codebase's
+# own production code splits FightController.Hud.cs, TmpBootstrap.Typography.
+# cs, etc. into partials), not an accident, and NUnit runs the pieces as one
+# class regardless of how many files declared them. A `partial` piece
+# colliding with a NON-partial declaration of the same name, or with a
+# `partial` declaration in a DIFFERENT area, is still refused: that is either
+# a genuine compile error (C# requires every partial piece to agree) or a
+# fixture straddling two areas, which the area-based test runner cannot
+# honour either way. The fix for an actual accident is still a rename; it is
+# cheaper than teaching every downstream filter to carry a namespace.
 function Get-DuplicateClassNames {
     param([hashtable]$Index = (Get-TestIndex))
 
@@ -273,7 +296,11 @@ function Get-DuplicateClassNames {
     foreach ($name in ($script:TestSiteCache.Keys | Sort-Object)) {
         $sites = @($script:TestSiteCache[$name])
         if ($sites.Count -lt 2) { continue }
-        $dupes += "$name is declared by $($sites.Count) files -- $($sites -join ' and ') -- so discovery keeps only one of them and a run named for it may test the other. Rename one."
+        $allPartial = -not ($sites | Where-Object { -not $_.IsPartial })
+        $areas = @($sites | Select-Object -ExpandProperty Area -Unique)
+        if ($allPartial -and $areas.Count -eq 1) { continue }
+        $relPaths = $sites | Select-Object -ExpandProperty RelPath
+        $dupes += "$name is declared by $($sites.Count) files -- $($relPaths -join ' and ') -- so discovery keeps only one of them and a run named for it may test the other. Rename one."
     }
     return $dupes
 }
