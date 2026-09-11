@@ -846,7 +846,26 @@ finding #77), which is a validation-rule addition, not a `StanceManifest` bug fi
 duplicate `spritePath` is ever legitimately authored (two stances sharing art) is a content-authoring
 question this register can't answer from the code alone.
 
-### 93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen
+### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d
+
+**The answer, 2026-09-11.** Owner's call, of the two coherent readings the finding named: the SAVE learns to
+carry a hole. An empty front rank is a formation the player can choose, so `selectedCharacterIds` is a seat list
+and an empty seat is `SaveData.EmptySeat` in place.
+
+The sentinel is the empty string rather than null, and that is forced rather than stylistic: `JsonUtility`
+writes a null element of a `List<string>` as `""` and reads it back as `""`, so a null hole would not survive
+its own round trip. `SaveData.IsEmptySeat` is what readers ask; `PartyController` translates once, at the one
+seam between the save's `""` and `PartyFormation`'s null.
+
+TRAILING holes are still dropped. A hole says something only when somebody sits behind it, and keeping the tail
+would write three entries for a solo save's one member.
+
+The transcription problem the ignored test always had is now covered from the other side:
+`PartySeatGapRoundTripTests` still transcribes `PartyController.SeatList` and the `Refresh` loop because it is
+engine-free Domain, but two PlayMode tests in `SystemMenuPartyTests` press the bench affordance and read the
+file back, so a drifting transcription fails somewhere.
+
+The original finding follows.
 
 `Core/PartyController.cs:395`: `save.selectedCharacterIds = Formation.SeatIds.Where(id => id !=
 null).ToList();` — every save writes the seat list with empty seats filtered out entirely, rather
@@ -1364,7 +1383,7 @@ full version). Tests: `TurnRiderTests` (un-`[Ignore]` the three),
 `KillCreditTests`, `ChilledStatusTests`, `RelicMechanicsTests`,
 `StatusEffectsTests`.
 
-### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc`: the owner took neither filed option — the starting kit is DELETED, so there is no third universe left for the two filters to disagree about
+### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc` (content) and `5fc4eb51` (code): the owner took neither filed option — the starting kit is DELETED, and `Candidates()` asks `ContentDatabase.Offerable` rather than re-typing a predicate, so there is no third universe left for the two filters to disagree about
 
 **The answer, 2026-09-11.** Option 1 was "`Candidates()` reads `Offerable`"; option 2 was "keep the kit and
 correct the header". The owner's answer was that a new profile should not open wearing anything: the six
@@ -1432,7 +1451,27 @@ Side effect worth recording either way: stage 2's bot coverage denominator
 exactly these six ids, so the coverage figure is measured against a list the
 roll does not use.
 
-### 115. The shop screen produces refusals it may not guess at, and displays none of them
+### ~~115. The shop screen produces refusals it may not guess at, and displays none of them~~ — fixed in `bbe23ff6`: option 1, one `PaintRefusal(ShopResult)` into the existing `detailLabel`, and `Reroll`/`SellRow` stopped discarding their results
+
+**The answer, 2026-09-11.** Owner's call: show the refusal, minimal effort, "can't afford" is the important
+one. So option 1 (reuse `detailLabel`) over option 2 (a dedicated line, a screen-tree change and a
+`-BuildScenes` run), and the cost of that choice — a refusal replaces the selected card's description — is paid
+by an explicit clearing rule: the line goes on the next selection, on opening or closing the pack, and on
+opening the shop.
+
+Three strings, not ten. Seven of `ShopRefusal`'s ten values describe a call arriving out of order and a player
+cannot act on the difference, so they share "Can't do that"; `NotEnoughGold` gets "Not enough gold";
+`AppliedNotPersisted` gets "Bought, but the save did not write", because it is the opposite news and a player
+who reads it as "you cannot afford this" loses the run. `Reroll` and `SellRow` keep their results too — a reroll
+refuses `NotEnoughGold` the same way a purchase does, and `SELL ALL` has no interactable gate against `NotInBag`
+at all (#F5's asymmetry, still open).
+
+`ShopScreenRefusalTests` drives the buttons rather than the orchestrator, because the mechanism was never in
+doubt and only a press crosses the gap the finding is about. KNOWN AND LEFT: a sell's refusal is painted while
+the pack modal is up, and the keeper panel it lands in may sit behind that modal; it is cleared on close, so it
+cannot leak onto the shelf as a line about a row nothing is showing.
+
+The original finding follows.
 
 Found 2026-09-11 by the `RunOrchestrator` seam finder (F4). Confirmed for
 `NotEnoughGold`; candidate for `AppliedNotPersisted`.
@@ -1481,7 +1520,26 @@ the three sites that currently discard the result.
 purchase happened and the save did not, which is not the same news as "you
 cannot afford this".
 
-### 116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out
+### ~~116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out~~ — fixed in `ed24933b`: option 3, "You already have this spell prepared" in the spell panel's existing status line, and the green would-fill preview is suppressed for a book the character already carries
+
+**The answer, 2026-09-11.** Owner's wording and owner's placement. Option 3 (a message line) rather than an
+OWNED marker on the slot chip or the row, and it is the only one of the three that needs no screen-tree change
+and therefore no scene rebuild: the line borrows `DossierSpellsNoBooksLine`'s node, and the two can never be up
+at once because a character who cannot hold a book cannot already have one.
+
+Both halves of the finding are closed, not just the visible one. `PressSlot` reads `result.Reason` now, and
+`RefreshSpells` asks ONCE per refresh — not per slot — whether the selected book is already in one of this
+character's slots, because that is a fact about the book and the character and the slot the press lands on
+cannot change it. That is what stops the screen promising a placement it then refuses.
+
+The refusal belongs to one press: selecting another row, paging to another character, closing the panel and a
+successful placement all clear it.
+
+NOT MEASURED: the line is 36 characters against `DossierNoSpellBooks`' 33-character audit sample, in the same
+14pt band at the same 381px width, so it fits with room — but `UiTextFitAudit` runs at scene build and this
+change deliberately triggers none.
+
+The original finding follows.
 
 Found 2026-09-11 by the `RunOrchestrator` seam finder (F3), confirmed by
 inspection of both paths.
@@ -1531,7 +1589,29 @@ select the row, press slot 1; assert `learnedSpells.Count == 1` (passes today)
 and the OWNED marker visible (red today). Touches
 `CharacterDossierController` plus one `UiStrings` addition, so `-BuildScenes`.
 
-### 117. The boot settle rewrites slot 0, so Continue points at the wrong slot
+### ~~117. The boot settle rewrites slot 0, so Continue points at the wrong slot~~ — fixed in `b8242045`: option 3, the `[RuntimeInitializeOnLoadMethod]` boot check is gone and `SaveSlotManager.EnterSlot` -> `SettleOnOpening` is the whole of the rule's enforcement
+
+**The answer, 2026-09-11.** Owner's words: "if your last played save was 3, Continue should open save 3." Option
+3 of the three, as the register recommended — it removes a mechanism rather than adding a special-cased write or
+a save field and a migration for a fact the filesystem already keeps.
+
+Nothing was lost with it. The boot check could only ever SEE slot 0 (that is what "before any scene" means), so
+every slot it was written for was already covered by `SettleOnOpening`, which runs from `EnterSlot` AFTER
+`CurrentSlot` is set and therefore reaches all five. `MostRecentSlot`'s mtime rule is untouched.
+
+`SaveSlotFlowTests.SettlingARunLeftInSlotZeroDoesNotStealContinueFromTheSlotLastPlayed` reflects over
+`RunManager`'s `[RuntimeInitializeOnLoadMethod]` members rather than naming the method that used to do this, so
+what it pins is "nothing RunManager runs at boot may write a save" — a second boot hook added later under any
+name is caught without the test being edited. `OpeningSlotZeroStillSettlesTheRunAPreviousSessionLeftInIt` is the
+other half, and it is why removing the check did not make slot 0 the one slot a descent outlives the process in.
+
+Worth keeping for the next fixture of this shape: the test ages slot 0's file by an hour rather than relying on
+write ORDER. Two writes inside one system-clock tick carry the same mtime on Windows, and `MostRecentSlot`
+breaks a tie toward the lower slot.
+
+Related #123 turns on the same invariant and is still open; this answer does not settle it.
+
+The original finding follows.
 
 Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F4).
 
@@ -1574,7 +1654,31 @@ invoke the boot settle, assert `MostRecentSlot() == 2`. Red today: 0.
 Related: #123 below turns on the same invariant (a run never survives into
 gameplay) and its answer should be decided with this one.
 
-### 118. Benching a character is undone by the next load
+### ~~118. Benching a character is undone by the next load~~ — fixed in `82385df6`, together with #93: option 1, the save records the fact — `squadSizeSeen` for the cap, a hole in `selectedCharacterIds` for the seat
+
+**The answer, 2026-09-11.** Owner's call: benching survives a reload. Option 1 (store the fact), not option 2
+(benching is within-session and the screen says so) — an affordance weaker than it looks is not the thing to
+ship.
+
+Two facts, because the two questions are different and the register said so: a hole-carrying
+`selectedCharacterIds` alone does NOT fix this, since the top-up counts ENTRIES against `effectiveMax`.
+`squadSizeSeen` is the cap this profile last reconciled against, stamped at the bottom of `Reconcile`, and the
+top-up fires only when `effectiveMax` exceeds it. It is 0 on every save written before the field existed —
+JsonUtility keeps the initialiser for a missing key — which reads as "has never seen a cap" and so tops up
+exactly once, exactly as before.
+
+THE CASE THAT IS NOT THE PLAYER'S CHOICE KEEPS ITS OLD BEHAVIOUR, and this is the part worth remembering: an id
+naming content that is gone still closes up and is still replaced, because nobody chose that hole and a squad
+silently down to two would hide behind `ActiveSquad`'s whole-roster fallback. That is a second trigger on the
+same loop, counted locally from the drop rather than stored, and it is what
+`SaveReconcileRenamedCharacterTests` has always pinned.
+
+`ReconcileTopsUpAShortSquadFromTheContentDefault` keeps passing with one added fixture line —
+`squadSizeSeen = 1`, a profile written while the squad was still solo. That is the case the top-up was built
+for and the only one it still fires in; the register was right that the two tests contradicted each other, and
+stating the fixture is what resolves it rather than deleting either.
+
+The original finding follows.
 
 Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F7). Filed because
 the fix CHOOSES between two readings of one field, and a green test asserts the
@@ -1619,7 +1723,25 @@ it the first way.
 
 Answer this together with #93; they are the same field read two ways.
 
-### 119. `SaveData.relicLoadout` is a serialized field with no writer and no reader
+### ~~119. `SaveData.relicLoadout` is a serialized field with no writer and no reader~~ — fixed in `a7ebbf28`: option 1, the field, its prune, the `RelicLoadout` type and its unit tests are all deleted
+
+**The answer, 2026-09-11.** Owner's call: delete. Option 2 (wire it into per-character relic assignment) is a
+design decision with a screen behind it and is not on the roadmap.
+
+No migration and no version bump. `JsonUtility` DROPS an unknown key on load, so an existing save's
+`"relicLoadout": {}` is simply ignored — the same no-migration deletion `grantedGold` got in the pass that filed
+#112, and it is only safe because the field was empty on every save ever written. A field with real data in it
+is the case `SaveData`'s version comment covers instead.
+
+Three comments named the type and would have pointed at nothing: `ContentDatabase.Relics` now says relics are
+run-scoped and there is no per-character assignment, `RunSnapshot`'s in-band-discriminator note cites `Wallet`
+alone, and `SaveReconcileRenamedCharacterTests`' list of what `Reconcile` prunes drops the entry. A comment
+pointing at a deleted type is the drift the deletion was supposed to prevent.
+
+What stands where the field did is a comment, because the hazard was never the field — it was a future reader
+seeing a relic loadout on the save and concluding relics were already handled.
+
+The original finding follows.
 
 Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F8). Same family
 as #50, #87 and #112, and stronger than all of them: those are written and
