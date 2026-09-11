@@ -30,12 +30,27 @@ been where a bypass lived rather than in the check itself:
     quoted string, a heredoc body) is skipped rather than guessed at.
   * WHICH TOKEN IS THE PROGRAM. It was token 0, flatly, so anything the shell
     lets you put in front of a command hid it: `(`, `{`, the `then`/`do` of a
-    compound statement, an environment assignment. Those are stripped now.
+    compound statement, an environment assignment, or an ordinary Unix
+    wrapper program that execs its trailing arguments as a child process
+    (`env`, `nice`, `time`, `sudo`, `command`). Those are stripped now. `time`
+    is a Git-Bash/MSYS shell reserved word, not only a program, so timing a
+    slow stage over a large tree was a realistic accidental bypass on this
+    repo's own documented shell, not merely an adversarial one.
 
 Both are tested in deny_broad_staging_test.py, one case per shape.
+
+A THIRD GAP, in the check itself rather than before it: SWEEPING_ADD_ARGS only
+enumerated the four spellings CLAUDE.md names (-A/--all/-u/--update and the
+"." family). `git add <some directory>` was never checked at all, even though
+the stated danger -- sweeping another session's uncommitted work -- applies
+just as much to a broad subtree as to the whole tree, only scoped smaller.
+is_directory_arg() closes that: a trailing separator is a directory by syntax
+alone, and anything else is checked against the real filesystem so a real
+extensionless filename is never mistaken for one.
 """
 
 import json
+import os
 import re
 import shlex
 import sys
@@ -54,9 +69,14 @@ SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
 
 # Shell words that can legally precede a command without being the command:
 # the openers of a subshell or brace group, the keywords that introduce the
-# body of a compound statement, and `!`. An environment assignment
+# body of a compound statement, `!`, and the ordinary wrapper programs that
+# take the real command as trailing arguments and exec it (env/nice/time/
+# sudo/command -- see the module docstring). An environment assignment
 # (`GIT_PAGER=cat git ...`) is matched by ASSIGNMENT below rather than listed.
-COMMAND_PREFIXES = {"(", "{", "!", "then", "do", "else", "elif"}
+COMMAND_PREFIXES = {
+    "(", "{", "!", "then", "do", "else", "elif",
+    "env", "nice", "time", "sudo", "command",
+}
 
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
@@ -128,6 +148,20 @@ def commands(command):
             yield segment
 
 
+def is_directory_arg(arg):
+    """True if `arg` names a directory rather than a file.
+
+    A trailing separator is always a directory by syntax alone -- `foo/`
+    means "the directory named foo" whether or not it currently exists.
+    Anything else is checked against the real filesystem (os.path.isdir),
+    not guessed at from spelling, so a real extensionless filename is never
+    mistaken for one.
+    """
+    if arg.endswith("/") or arg.endswith("\\"):
+        return True
+    return os.path.isdir(arg)
+
+
 def offence(segment):
     """Return a reason string if this one command stages broadly, else None."""
     # `(`, `{`, `then`, `FOO=bar` -- shell words that sit in front of the
@@ -175,6 +209,24 @@ def offence(segment):
                 return (
                     "`git {} {}` bundles a sweeping flag (-A/-u) into a short "
                     "flag cluster.".format(subcommand, arg)
+                )
+
+        # Second pass, after the exact-spelling check above: any remaining
+        # argument that is not a flag and names a directory sweeps everything
+        # under it -- the same hazard the four named spellings cover, just
+        # scoped to one subtree instead of the whole tree.
+        past_separator = False
+        for arg in args:
+            if arg == "--" and not past_separator:
+                past_separator = True
+                continue
+            if not past_separator and arg.startswith("-"):
+                continue
+            if is_directory_arg(arg):
+                return (
+                    "`git {} {}` stages a whole directory, including any "
+                    "change belonging to another session sharing this "
+                    "working tree.".format(subcommand, arg)
                 )
 
     if subcommand == "commit":

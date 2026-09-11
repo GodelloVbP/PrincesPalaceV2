@@ -103,6 +103,40 @@ class ShellShapesThatUsedToWalkStraightPastItTests(unittest.TestCase):
     def test_behind_an_environment_assignment(self):
         self.assertDenied("GIT_PAGER=cat " + GIT + " add -A")
 
+    def test_behind_a_command_wrapper(self):
+        # Ordinary Unix wrapper programs that take "the real command" as
+        # trailing arguments and exec it as a child process -- the same
+        # shape as the shell words above, just spelled as a program instead
+        # of a keyword. `time` in particular is a Git-Bash/MSYS shell
+        # reserved word, so this is a realistic accidental bypass on this
+        # repo's own documented shell, not only an adversarial one.
+        self.assertDenied("env GIT_PAGER=cat " + GIT + " add -A")
+        self.assertDenied("nice " + GIT + " add -A")
+        self.assertDenied("time " + GIT + " add -A")
+        self.assertDenied("command " + GIT + " add -A")
+        self.assertDenied("sudo " + GIT + " add -A")
+
+
+class DeniesStagingADirectoryTests(unittest.TestCase):
+    """CLAUDE.md's rule is titled "Stage by explicit path, always" -- a
+    directory is not a file path. SWEEPING_ADD_ARGS only knew the four named
+    shortcuts (-A/--all/-u/./etc); a broad subtree staged by name walked
+    straight past it, sweeping exactly what -A sweeps, just scoped smaller.
+    """
+
+    def assertDenied(self, command):
+        self.assertIsNotNone(decision(command), "should have been denied: " + command)
+
+    def test_a_directory_argument_is_refused(self):
+        self.assertDenied(GIT + " add Assets/")
+        self.assertDenied(GIT + " add Assets/_Project/Scripts/")
+        self.assertDenied(GIT + " add Assets/_Project")
+
+    def test_one_directory_among_several_paths_is_still_refused(self):
+        self.assertDenied(
+            GIT + " add Assets/_Project/Scripts/Domain Assets/_Project/Scripts/Core"
+        )
+
 
 class LeavesLegitimateStagingAloneTests(unittest.TestCase):
     """A false refusal costs more than it looks like it does.
