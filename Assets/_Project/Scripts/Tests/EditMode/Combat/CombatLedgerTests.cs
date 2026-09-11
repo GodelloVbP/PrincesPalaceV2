@@ -97,6 +97,30 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void OverkillIsNotCountedAsDamageTaken()
+        {
+            // AUDIT #124a, owner's call 2026-09-11. CombatLedger's own header
+            // says DamageTaken is "what reached this combatant's HEALTH", and
+            // 490 of a 500-point blow on a 10-HP rat reached nothing at all.
+            //
+            // Literal 10 rather than "the rat's health before the blow": the
+            // whole finding was a figure derived from the wrong quantity, and a
+            // test that derives its own expectation the same way would pass
+            // against either behaviour.
+            var (session, hero, foe) = Fight(foeHealth: 10);
+
+            session.DealDamageForTest(hero, foe, 500, DamageType.Physical);
+
+            Assert.AreEqual(10, session.Ledger.For("Rat").DamageTaken,
+                "the rat had ten health, so ten is what the blow reached");
+
+            // The other side of the same decision: the swing that was thrown
+            // is still booked whole.
+            Assert.AreEqual(500, session.Ledger.For(HeroId).TotalDealt,
+                "damage dealt is a claim about the blow, not about the body");
+        }
+
+        [Test]
         public void WhatAShieldAteIsNeverFoldedIntoWhatWasTaken()
         {
             // Adding the two would double-count every blow against a ward, and

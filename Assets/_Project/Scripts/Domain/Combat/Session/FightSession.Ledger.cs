@@ -120,6 +120,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // than inside TotalDamage.
             amount += CursedIdolBonus(actor, target, amount);
 
+            // Read BEFORE the blow lands, because it is the only moment the
+            // answer exists: ApplyDamageDetailed clamps the target at zero and
+            // reports what it dealt, not what there was to deal it to. See the
+            // toHealth clamp below.
+            int healthBefore = target == null ? 0 : target.CurrentHealth;
+
             var result = CombatMath.ApplyDamageDetailed(target, amount);
 
             // Both mechanic (c)'s stack and mechanic (b)'s crossing-check
@@ -155,8 +161,27 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
             }
 
+            // NO OVERKILL IN DAMAGE TAKEN (AUDIT #124a, owner's call
+            // 2026-09-11). CombatLedger's own header says this column is "what
+            // reached this combatant's HEALTH", and a 500-point blow on a
+            // 10-HP target reached ten of it. Clamped to what there was to
+            // reach, so the column says what it is named after.
+            //
+            // ONLY THE TAKEN SIDE. Ledger.Dealt on the line below still books
+            // the whole swing: "damage dealt" is a claim about the blow that
+            // was thrown, and these two columns are allowed to disagree for
+            // the same reason Absorbed is handed over separately from toHealth.
+            //
+            // BELOW THE VEST GATE ON PURPOSE, not folded into the clamp above
+            // it. Berserker's Vest asks "did this blow reach my health", which
+            // is the post-absorb figure it already reads; whether a rider that
+            // arrives after the body fell should fire at all is the other half
+            // of #124 and is still an open owner's call. This line changes the
+            // ledger and nothing else.
+            int booked = target != null && toHealth > healthBefore ? healthBefore : toHealth;
+
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
-            Ledger.Took(LedgerIdOf(target), toHealth, result.Absorbed);
+            Ledger.Took(LedgerIdOf(target), booked, result.Absorbed);
 
             return result;
         }
