@@ -302,6 +302,19 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // Same "this field has no meaning on that effect" rule
+            // ignoresDefense, queuePushSlots, meleeReach, reachSlots,
+            // transform and summonEnemyId already follow (the seventh
+            // instance). damageInstances replaces the Attack/power formula
+            // entirely — see TryResolveDamageInstances's own refusal above —
+            // so there is no formula left for an authored axis to scale.
+            if (instances.Length > 0 && !string.IsNullOrWhiteSpace(raw.scalingAxis))
+            {
+                error = $"{label}: scalingAxis has no meaning on a skill with damageInstances — " +
+                        "damageInstances replace the Attack-scaled formula entirely.";
+                return false;
+            }
+
             if (!TryResolveTransform(raw, label, effect, out var transform, out error))
             {
                 return false;

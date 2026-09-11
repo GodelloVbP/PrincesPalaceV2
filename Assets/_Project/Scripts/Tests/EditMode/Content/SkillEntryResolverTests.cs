@@ -412,6 +412,37 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("Earth", error);
             StringAssert.Contains("elements does not offer", error);
         }
+
+        // Same "no meaning on that effect" rule as ignoresDefense,
+        // queuePushSlots, meleeReach, reachSlots, transform and
+        // summonEnemyId (the seventh instance) -- scalingAxis has nothing
+        // left to scale once damageInstances replaces the Attack/power
+        // formula outright. cinderfault authored both until this rule
+        // caught it (S4-C6).
+        [Test]
+        public void ScalingAxis_WithDamageInstances_IsRefused()
+        {
+            var entry = Minimal("packet", "owl");
+            entry.damageInstances = new[] { new RawDamageInstance { type = "Fire", amount = 10 } };
+            entry.scalingAxis = "Spell";
+
+            StringAssert.Contains("no meaning on a skill with damageInstances", ErrorFrom(entry));
+        }
+
+        // The other way: scalingAxis authored alone, with no
+        // damageInstances at all, resolves normally -- the rule fires only
+        // on the combination, not on the field by itself.
+        [Test]
+        public void ScalingAxis_WithoutDamageInstances_Resolves()
+        {
+            var entry = Minimal("swing");
+            entry.scalingAxis = "Weapon";
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(ScalingAxis.Weapon, resolved[0].ScalingAxis);
+        }
     }
 
     public class SkillResolutionTests

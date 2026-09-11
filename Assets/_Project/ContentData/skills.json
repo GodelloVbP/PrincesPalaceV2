@@ -128,7 +128,6 @@
       "effect": "DamageAll",
       "manaCost": 15,
       "cooldownTurns": 3,
-      "scalingAxis": "Spell",
       "damageInstances": [
         {
           "type": "Fire",
