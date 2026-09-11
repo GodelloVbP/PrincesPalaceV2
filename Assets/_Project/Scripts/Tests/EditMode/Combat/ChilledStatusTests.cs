@@ -208,6 +208,32 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, target.Speed, "the one-turn slow must revert exactly after the target's own next turn starts");
         }
 
+        // THE MALUS TWIN'S OWN REFRESH RULE, which nothing reached until this
+        // test: both production callers pass turns: 0 and revoke for
+        // themselves, so the one-turn slow GrantSpeedMalusPercent's
+        // "REFRESHED, NOT STACKED" comment describes had no caller left to
+        // prove it. It was not true -- only TurnsLeft was reset while Granted
+        // and Speed went on compounding, exactly the defect the BUFF side
+        // carried for eleven months. Loaded for the next timed malus.
+        //
+        // Literal: 30% of a true base of 100 is 30, once however many times it
+        // lands, so 70. Compounding gives 40.
+        [Test]
+        public void ASecondTimedSlowRefreshesRatherThanCompounds()
+        {
+            var actor = Fighter("Hero", true);
+            var target = Fighter("Foe", false, speed: 100);
+            var session = Session(new CombatEncounter(new[] { actor }, new[] { target }));
+
+            session.GrantSpeedMalusPercentForTest(target, RelicEffect.LuckyDeck, 30, turns: 1);
+            Assert.AreEqual(70, target.Speed, "fixture: one slow takes 30 off the true base");
+
+            session.GrantSpeedMalusPercentForTest(target, RelicEffect.LuckyDeck, 30, turns: 1);
+
+            Assert.AreEqual(70, target.Speed,
+                "a second slow from the same source resets the clock, it does not deepen the malus");
+        }
+
         // ---- composing with the necklace ramp (a BUFF, untouched by this phase) ----
 
         private static ResolvedRelic Relic(RelicEffect effect) =>

@@ -188,6 +188,15 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
 
+            // HANDING THE PREVIOUS GRANT BACK FIRST, exactly as the buff twin
+            // does and for the same reason. This line was missing here: the
+            // "REFRESHED, NOT STACKED" comment below reset TurnsLeft while
+            // Granted and Speed both went on compounding, which is the same
+            // defect the buff side carried for eleven months and fixed with
+            // this one line. `turns > 0` only, so a turns: 0 malus keeps
+            // accumulating the way its two callers intend.
+            if (turns > 0) RevokeSpeedBuff(actor, source);
+
             if (!_speedBuffs.TryGetValue(actor, out var forActor))
             {
                 forActor = new Dictionary<object, SpeedBuff>();
@@ -214,6 +223,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // wears off resets the one-turn clock rather than compounding the
             // malus -- the same rule the buff side follows, and the same
             // reason: two slows should not be worse than one applied twice.
+            // The revoke at the top of this method is what makes that true of
+            // the MAGNITUDE as well as the clock; this line alone only ever
+            // moved the clock.
             buff.TurnsLeft = turns > 0 ? turns : -1;
 
             // Never past the point of taking a combatant to 0 -- RevokeSpeedBuff
@@ -390,6 +402,13 @@ namespace PrincesPalace.Domain.Combat.Session
             GrantSpeedPercent(actor, source, percent, turns, capPercent) > 0;
 
         public void TickSpeedBuffsForTest(CombatantState actor) => TickSpeedBuffs(actor);
+
+        // The malus twin's seam. It has no production caller passing turns > 0
+        // today -- both of them pass 0 and revoke for themselves -- so this is
+        // the only way to reach the timed-refresh rule the method states, and
+        // a rule nothing can reach is a rule nothing can check.
+        public int GrantSpeedMalusPercentForTest(CombatantState actor, object source, int percent, int turns) =>
+            GrantSpeedMalusPercent(actor, source, percent, turns);
 
         // Chilled's own seam, for the same reason the buff seams above
         // exist: a one-status application's Speed effect is fully
