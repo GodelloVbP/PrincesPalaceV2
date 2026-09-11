@@ -117,11 +117,24 @@ namespace PrincesPalace
 
         // ---- the run's own history ------------------------------------------
         //
-        // Stored HERE rather than accumulated in memory, and that is the whole
-        // point: a run survives quitting to the main menu and coming back, so
-        // anything the death screen wants to say about "this run" has to
-        // survive with it. Every field below is a running total written after
-        // each fight.
+        // Stored HERE rather than accumulated in memory. The reason this used
+        // to give -- "a run survives quitting to the main menu and coming
+        // back" -- is not true of this build and the correction matters,
+        // because it is the premise every run-scoped prune in SaveData.Reconcile
+        // rests on. RunManager says the opposite in as many words: "A RUN DOES
+        // NOT SURVIVE THE PROCESS ... Deliberately not a resume." Boot settles
+        // whatever is in slot 0, EnterSlot settles every other slot before its
+        // first scene, and every in-process route to the main menu goes through
+        // EndRun -- so nothing ever loads a run and plays it.
+        //
+        // What IS true, and is reason enough for these to be stored: the death
+        // screen draws after EndRun has already replaced the snapshot, so the
+        // totals have to survive the fight that ends the run and reach
+        // RunSettlement, which reads them one last time on the way out. The
+        // rest is PLUMBING KEPT READY for the day a resume is built; it costs
+        // a few fields on disk and is not a claim that a resume exists.
+        //
+        // Every field below is a running total written after each fight.
         //
         // Nothing here is read by combat. It exists so the run can be described
         // afterwards, which is a thing the game previously could not do at all:

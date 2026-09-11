@@ -541,13 +541,25 @@ namespace PrincesPalace
         // Reconciles a save against currently authored content: adds
         // characters that were introduced since the save was written, drops
         // references to content that no longer exists, and tops up
-        // selectedCharacterIds to EffectiveMaxSquadSize(). Public (not just
-        // called from Migrate/Load) specifically so a purchase that changes
-        // EffectiveMaxSquadSize — buying extra_recruit_slot — can call this
-        // immediately instead of only taking effect on the next full
-        // reload. AUDIT.md P0 #3: this was previously private, and nothing
-        // outside Migrate/Load ever called it, so a purchased upgrade
-        // showed "(Owned)" while doing nothing for the rest of the session.
+        // selectedCharacterIds to EffectiveMaxSquadSize().
+        //
+        // PUBLIC, AND THE REASON IS NOT THE ONE THIS COMMENT USED TO GIVE. It
+        // said the visibility existed so that buying extra_recruit_slot could
+        // reconcile immediately rather than at the next full reload (AUDIT.md
+        // P0 #3). There is no such caller and never was one under this tree:
+        // the only production `.Reconcile()` outside Migrate/Load is
+        // ProfilePresets.cs, the bot's profile builder, and
+        // purchasedUpgradeIds has no production writer at all -- upgrades.json
+        // says as much itself ("there is no Principality shop screen yet, so
+        // nothing has ever charged anybody 50 for anything"). The described
+        // purchase cannot happen, so the justification described a caller that
+        // does not exist.
+        //
+        // What is true today: it is public because the bot builds a profile
+        // in memory and has to settle it against content without a load, and
+        // because tests reach it directly. If a Principality shop is ever
+        // built, calling this after a purchase IS the right move -- the
+        // sentence above was a plan, and it is recorded here as one.
         public void Reconcile()
         {
             wallet ??= new Wallet();

@@ -31,8 +31,23 @@ namespace PrincesPalace
         // it gets an explicit reset hook rather than relying on a reload.
         public static void Reset() => Last = new RoomResolution.Outcome(RoomResolution.Kind.None);
 
-        // Returns true when the room resolved here and the caller should clear
-        // it and redraw; false when it hands off to a screen instead.
+        // Returns true when the room resolved here, false when it hands off to
+        // a screen instead.
+        //
+        // THE RETURN IS ADVISORY, which this used to claim more strongly than
+        // the code supports: it said the caller "should clear it and redraw"
+        // off this bool, and the one production caller
+        // (RunOrchestrator.ArriveAt) discards it and clears unconditionally.
+        // That is not a bug today and the reason is worth writing down rather
+        // than rediscovering: false comes back only for Fight, EliteFight,
+        // Boss and Entry (RoomResolution.Resolve), and ArriveAt routes all four
+        // away before it reaches this call -- so the only answer it can
+        // actually receive is true. Dead, not wrong.
+        //
+        // It stays a bool because a SECOND caller -- one that can hand in a
+        // fight type -- would need it, and silently clearing a fight room is
+        // how a fight gets skipped. If you are writing that caller, honour the
+        // return.
         public static bool Resolve(RunSnapshot run, RoomType roomType)
         {
             // Keyed to the NODE, so re-entering the same treasure room after a

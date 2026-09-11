@@ -447,6 +447,14 @@ namespace PrincesPalace
             var entry = Map?.Entry;
             if (entry != null) run.currentNodeId = entry.Id;
 
+            // THE SECOND WRITE OF THIS LEG, and deliberately not avoided.
+            // HealPartyToFull persists on its own because a rest room reaches
+            // it through RoomResolver, which writes nothing -- the rule across
+            // this seam is that the mutator owns the write (RunEncounter.
+            // HealPartyToFull says so at length). This Persist is for the new
+            // leg and the new entry node, which the heal knows nothing about.
+            // Two full writes at roughly 5.7ms is the price of callers not
+            // having to know whether their callee already wrote.
             Persist();
         }
 

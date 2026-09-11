@@ -164,6 +164,18 @@ namespace PrincesPalace
         // that a rest room and the end of a leg heal by the same code. Two
         // implementations of "restore the party" is exactly the kind of pair
         // that drifts, and one of them would have been the one nobody tested.
+        //
+        // WHO OWNS THE WRITE: the mutator does, and that is the rule across
+        // this seam rather than a decision taken here. A method that changes
+        // the run persists it, because its callers are not all the same -- a
+        // rest room resolves through RoomResolver, which writes nothing of its
+        // own, so a heal that waited to be persisted by somebody else would be
+        // lost on the one path that has nobody else. The cost is that a caller
+        // which ALSO persists for its own reasons writes twice:
+        // RunManager.AdvanceLeg heals and then Persists its new leg, about
+        // 5.7ms for the pair. That is accepted, not overlooked -- a caller
+        // cannot know whether the callee it just used had another writer, and
+        // "persist once, at the top" would put that knowledge in every caller.
         public static void HealPartyToFull(RunSnapshot run)
         {
             var save = SaveSlotManager.CurrentSave;
