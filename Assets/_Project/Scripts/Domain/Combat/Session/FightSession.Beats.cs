@@ -388,7 +388,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var c in _encounter.PlayerParty.Concat(_encounter.Enemies))
             {
-                snapshot[c] = new Vitals(c.CurrentHealth, c.CurrentMana, SignatureOf(c));
+                snapshot[c] = new Vitals(c.CurrentHealth, c.CurrentMana, SignatureOf(c),
+                                         c.MaxHealth, c.MaxMana);
             }
 
             return snapshot;

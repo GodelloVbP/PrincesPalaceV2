@@ -735,8 +735,9 @@ namespace PrincesPalace
                 enemyPlates[i].gameObject.SetShown(standing);
                 if (!standing) continue;
 
-                enemyPlateHps[i].Set(UiStrings.HealthValue, recorded.Health, enemies[i].MaxHealth);
-                SetFill(enemyPlateHpFills[i], recorded.Health, enemies[i].MaxHealth);
+                int enemyMax = RecordedMax(recorded.MaxHealth, enemies[i].MaxHealth);
+                enemyPlateHps[i].Set(UiStrings.HealthValue, recorded.Health, enemyMax);
+                SetFill(enemyPlateHpFills[i], recorded.Health, enemyMax);
             }
 
             // EVERY PARTY MEMBER IN THE SNAPSHOT, not just the acting one.
@@ -750,26 +751,52 @@ namespace PrincesPalace
             // A member the snapshot does not mention is left alone rather
             // than cleared: a snapshot is a record of a moment, and silence
             // in it means "unchanged", not "gone".
+            //
+            // BY SLOT, NOT BY LIST POSITION (hunt 2026-09-11, F7). This was
+            // the one per-combatant lookup in the file still reading a party
+            // member's index back out of the live list -- exactly the bug
+            // _slotOf exists for, and for exactly the same reason: the round
+            // has already finished resolving by the time a beat plays, so a
+            // Move in it has already traded two members' list positions while
+            // the cards they own are still where RefreshPcPlates last drew
+            // them. The two moved members' numbers landed on each other's
+            // portraits for the rest of the playback.
             var party = _session != null ? _session.Encounter.PlayerParty : null;
             int plates = pcPlates != null ? pcPlates.Length : 0;
-            for (int i = 0; party != null && i < party.Count && i < plates; i++)
+            for (int i = 0; party != null && i < party.Count; i++)
             {
                 var member = party[i];
                 if (member == null || !vitals.TryGetValue(member, out var recordedPc)) continue;
 
-                if (Has(pcHpValues, i))
+                int plate = SlotIndexOf(member);
+                if (plate < 0 || plate >= plates) continue;
+
+                int maxHealth = RecordedMax(recordedPc.MaxHealth, member.MaxHealth);
+                int maxPrimary = RecordedMax(recordedPc.MaxPrimary, member.MaxMana);
+
+                if (Has(pcHpValues, plate))
                 {
-                    pcHpValues[i].Set(UiStrings.HealthValue, recordedPc.Health, member.MaxHealth);
+                    pcHpValues[plate].Set(UiStrings.HealthValue, recordedPc.Health, maxHealth);
                 }
-                if (Has(pcMpValues, i))
+                if (Has(pcMpValues, plate))
                 {
-                    pcMpValues[i].Set(UiStrings.PoolNamedValue,
-                        member.PrimaryPool?.ShortTag ?? "", recordedPc.Primary, member.MaxMana);
+                    pcMpValues[plate].Set(UiStrings.PoolNamedValue,
+                        member.PrimaryPool?.ShortTag ?? "", recordedPc.Primary, maxPrimary);
                 }
-                if (Has(pcHpFills, i)) SetFill(pcHpFills[i], recordedPc.Health, member.MaxHealth);
-                if (Has(pcMpFills, i)) SetFill(pcMpFills[i], recordedPc.Primary, member.MaxMana);
+                if (Has(pcHpFills, plate)) SetFill(pcHpFills[plate], recordedPc.Health, maxHealth);
+                if (Has(pcMpFills, plate)) SetFill(pcMpFills[plate], recordedPc.Primary, maxPrimary);
             }
         }
+
+        // A RECORDED MAXIMUM, OR LIVE IF THE MOMENT DID NOT RECORD ONE.
+        //
+        // Vitals gained its two maxima in the same change as the call sites
+        // above; the three-argument constructor that does not set them is
+        // still what the EditMode beat fixtures build, and a zero denominator
+        // is the one value that cannot be painted. Graceful degradation to
+        // live state is the house style, and live state is what every one of
+        // these call sites read before the maxima existed at all.
+        private static int RecordedMax(int recorded, int live) => recorded > 0 ? recorded : live;
 
         // EVERY LIVING CAST, ABANDONED. Wired to the beat player's EndFight
         // rather than to its Flush: a tail from the previous round is supposed
