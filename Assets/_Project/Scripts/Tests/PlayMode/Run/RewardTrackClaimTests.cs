@@ -475,10 +475,20 @@ namespace PrincesPalace.PlayModeTests
         // RewardTrackDefinition.Default directly; what is left to prove is
         // that a character with no authored track actually RESOLVES to it
         // rather than to an empty one or to somebody else's.
+        //
+        // THE ID USED TO BE "bear". It stopped being a valid subject on
+        // 2026-09-11, when the owner answered AUDIT #134 with "why not?" and
+        // Bjorn got an authored track of his own -- every character on the
+        // shipped roster now has one, so the fallback can only be reached by
+        // an id no reward_tracks.json row names. That is not a reason to
+        // delete this test: RewardTracks.For's miss path is still live (it is
+        // what a save carrying a character id from a future or removed row
+        // lands on), and "turtle" is the honest subject for it, being a
+        // placeholder the roster deliberately does not author.
         [Test]
         public void AnUnauthoredCharacterResolvesToTheGeneratedDefault()
         {
-            var track = RewardTracks.For("bear");
+            var track = RewardTracks.For("turtle");
 
             Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
                 "40 filler singles plus level 80's ten");

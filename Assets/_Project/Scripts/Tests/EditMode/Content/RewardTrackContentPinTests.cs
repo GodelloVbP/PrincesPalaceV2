@@ -12,7 +12,8 @@ namespace PrincesPalace.Domain.Tests
     // SkillEntryResolver, RewardTrackEntryResolver -- and materialises the
     // result with RewardTrackDefinition.From, the same shape a live save
     // would read. Pins the literal numbers docs/PLAN_REWARD_TRACKS.md §5 and
-    // §10 P6 computed for Shawn's and Odette's shipped tracks, so a retune
+    // §10 P6 computed for Shawn's and Odette's shipped tracks -- and the
+    // rules Bjorn's later one had to be authored inside -- so a retune
     // that silently changes what a level pays is caught here rather than
     // only by eye on the screen.
     //
@@ -94,6 +95,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static RewardTrackDefinition Sheep() => Tracks()["sheep"];
         private static RewardTrackDefinition Owl() => Tracks()["owl"];
+        private static RewardTrackDefinition Bear() => Tracks()["bear"];
 
         // ---- sheep's four content-specific milestones, §5 ----
 
@@ -171,11 +173,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, entry.Amount);
         }
 
-        // ---- the spine, identical on both tracks, §5 "the spine stays identical" ----
+        // ---- the spine, identical on every track, §5 "the spine stays identical" ----
 
         [TestCase("sheep")]
+        [TestCase("bear")]
         [TestCase("owl")]
-        public void TheSpineIsIdenticalOnBothTracks(string characterId)
+        public void TheSpineIsIdenticalOnEveryTrack(string characterId)
         {
             var track = Tracks()[characterId];
 
@@ -281,15 +284,88 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("+2% FIRE DAMAGE", RewardTrackNames.Of(Owl().At(6)));
         }
 
-        // ---- no bear entry ----
+        // ---- bear's track, authored 2026-09-11 on the owner's answer to
+        // AUDIT #134 ----
         //
-        // The bear-uses-the-default assertion belongs to P4's
-        // RewardTracks.For tests (Core), not here -- this only pins that
-        // reward_tracks.json authors nothing for it, which is P6's own scope.
+        // Until then reward_tracks.json authored nothing for him and he
+        // levelled on RewardTrackDefinition.Default; the test that stood here
+        // asserted exactly that absence. What replaces it pins the three
+        // things about his track that are NOT free choices, because each one
+        // is a rule that would otherwise be rediscovered by a build failure
+        // months from now:
+        //
+        //  - no Signature* reward anywhere on it. He has no signatureId, so
+        //    rule 5 refuses one outright -- his resource is the `fury` POOL,
+        //    and TrackReward still has nothing that pays into a primary pool
+        //    other than mana. That model gap is what AUDIT #134 keeps open
+        //    after the authoring half of it was answered.
+        //  - no MaxMana and no ManaRegen. Both resolve CLEAN on him and then
+        //    pay nothing, because fury's capacityRule is Fixed and it is not
+        //    restoredByManaEffects (resolver blind spot B9, AUDIT #145) --
+        //    the one failure mode a green build would not have shown.
+        //  - no UnlockSkill milestone. All three of his skills author
+        //    unlockLevel 1, so there is no skill left for a level to grant.
+        //
+        // The AMOUNTS are deliberately not pinned beyond the spine and one
+        // total: they are first values awaiting the balance pass that also
+        // authors what Fury buys, and pinning each one would turn that pass
+        // into a test edit.
         [Test]
-        public void BearHasNoAuthoredTrack()
+        public void BearHasAnAuthoredTrack()
         {
-            Assert.IsFalse(Tracks().ContainsKey("bear"));
+            Assert.IsTrue(Tracks().ContainsKey("bear"),
+                "reward_tracks.json stopped authoring a track for bear -- he falls back to the generated default.");
+        }
+
+        [Test]
+        public void BearsTrackPaysNothingHisResourceCannotReceive()
+        {
+            var track = Bear();
+            var forbidden = new[]
+            {
+                TrackReward.SignatureCapacity,
+                TrackReward.SignatureGainPerTurn,
+                TrackReward.SignatureGainOnDamageTaken,
+                TrackReward.SignatureAbsorbs,
+                TrackReward.MaxMana,
+                TrackReward.ManaRegen,
+            };
+
+            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
+            {
+                var entry = track.At(level);
+                CollectionAssert.DoesNotContain(forbidden, entry.Reward,
+                    $"bear level {level}: Bjorn has no signature and spends `fury`, not mana.");
+            }
+        }
+
+        [Test]
+        public void BearsTrackGrantsNoSkill()
+        {
+            var track = Bear();
+
+            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
+            {
+                Assert.AreNotEqual(TrackReward.UnlockSkill, track.At(level).Reward,
+                    $"bear level {level}: all three of his skills unlock at level 1, so a grant here pays nothing.");
+            }
+        }
+
+        // The one place a literal total earns its keep: moving him off the
+        // generated default was not meant to change what he is paid by an
+        // order of magnitude. The default pays 229 max health and 50 stat
+        // points (RewardTrackDefinitionTests pins both); this pays 225 and 50.
+        [Test]
+        public void BearsFullyCollectedTotals()
+        {
+            var track = Bear();
+
+            Assert.AreEqual(225, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
+                "max health -- 6 milestone nodes at 15 plus 27 filler nodes at 5");
+            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel),
+                "stat points -- 40 filler singles plus level 80's ten, the same 50 both other tracks pay");
+            Assert.AreEqual(50, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel),
+                "Physical damage -- three milestones at 10 plus 20 filler nodes at 1");
         }
     }
 }
