@@ -727,21 +727,8 @@ namespace PrincesPalace
                 // player is carrying SOMETHING and a silently shorter list
                 // would be worse than an honest unknown.
                 relicNames[i].SetContent(definition?.Data.DisplayName ?? held[i]);
-                relicMetas[i].SetContent(definition == null ? "" : RarityWord(definition.Data.Rarity));
+                relicMetas[i].SetContent(definition == null ? "" : Domain.Content.RelicRarityNames.Of(definition.Data.Rarity));
                 relicBodies[i].SetContent(definition?.Data.Description ?? "");
-            }
-        }
-
-        private static string RarityWord(Domain.Content.RelicRarity rarity)
-        {
-            switch (rarity)
-            {
-                case Domain.Content.RelicRarity.Common: return "COMMON";
-                case Domain.Content.RelicRarity.Uncommon: return "UNCOMMON";
-                case Domain.Content.RelicRarity.Rare: return "RARE";
-                case Domain.Content.RelicRarity.UltraRare: return "ULTRA-RARE";
-                case Domain.Content.RelicRarity.Mythic: return "MYTHIC";
-                default: return "GODLIKE";
             }
         }
 
