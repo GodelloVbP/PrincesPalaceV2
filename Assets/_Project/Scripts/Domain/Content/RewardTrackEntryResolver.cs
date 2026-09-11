@@ -350,8 +350,9 @@ namespace PrincesPalace.Domain.Content
                          && against.HasValue && !context.Level1DamageTypes.Contains(against.Value))
             {
                 error = $"{trackLabel}, {where}: filler {against} damage is not an element this character can deal " +
-                        "at level 1 (their own attackType, or a damageInstances entry on a skill they own with " +
-                        "unlockLevel <= 1) -- only a MILESTONE may place an element the character has not unlocked yet.";
+                        "at level 1 (their own attackType, a damageInstances entry on a skill they own with " +
+                        "unlockLevel <= 1, or an element a level-1 skill's own Elements list lets them choose) -- " +
+                        "only a MILESTONE may place an element the character has not unlocked yet.";
                 return false;
             }
 

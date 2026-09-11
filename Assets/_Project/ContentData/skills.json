@@ -212,7 +212,7 @@
     {
       "id": "headbutt",
       "displayName": "Headbutt",
-      "description": "Not elegant. Puts them at the back of the line thinking about it.",
+      "description": "Not elegant. Knocks the target a place down the order.",
       "characterId": "sheep",
       "unlockLevel": 999,
       "effect": "DamageSingle",

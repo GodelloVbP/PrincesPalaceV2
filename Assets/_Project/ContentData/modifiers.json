@@ -100,7 +100,7 @@
     {
       "id": "hardened",
       "displayName": "Hardened",
-      "description": "A brute, physical edge on every hit. Elemental family: Physical, the damage half -- Ironclad is Physical's resistance affix and Juggernaut is Physical's stagger-proc affix, both split off this modifier's old three-effect bundle (the one family with a third effect, since Physical had no typed-resistance twin worth calling out the way the other five elements do -- see Ironclad and Juggernaut's own descriptions).",
+      "description": "A brute, physical edge on every hit. Elemental family: Physical, the damage half -- Ironclad is Physical's resistance affix and Juggernaut is Physical's stagger-proc affix, both split off this modifier's old three-effect bundle (one of three families -- alongside Ice's Frostbite and Nature's Entangling -- that carries a third, proc effect beyond its damage and resistance halves; see Ironclad and Juggernaut's own descriptions).",
       "effects": [
         { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Physical" }
       ]
@@ -124,7 +124,7 @@
     {
       "id": "vampiric",
       "displayName": "Vampiric",
-      "description": "Every hit landed feeds the wearer a little of what it took. Base 15% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer role rather than replacing it, and the tier/rift curve is where a build actually gets scary. Already single-effect since Phase C; untouched by the affix split.",
+      "description": "Every hit landed feeds the wearer a little of what it took. Base 8% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer role rather than replacing it, and the tier/rift curve is where a build actually gets scary. Already single-effect since Phase C; untouched by the affix split.",
       "effects": [
         { "type": "LifestealPercent", "magnitude": 8 }
       ]
@@ -132,7 +132,7 @@
     {
       "id": "stalwart",
       "displayName": "Stalwart",
-      "description": "Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard that gives less ground under pressure, split into its own roll so the two can no longer only ever be found together.",
+      "description": "Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's base (2) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard that gives less ground under pressure, split into its own roll so the two can no longer only ever be found together.",
       "effects": [
         { "type": "FlatPhysicalDamageReduction", "magnitude": 2 }
       ]
@@ -140,7 +140,7 @@
     {
       "id": "bulwark",
       "displayName": "Bulwark",
-      "description": "A guard that gives less ground under pressure. BreakShieldDepletionResistPercent (30) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side. Split off Stalwart's old bundle so a roll grants the flat mitigation or the shield-resist, never both.",
+      "description": "A guard that gives less ground under pressure. BreakShieldDepletionResistPercent (15) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side. Split off Stalwart's old bundle so a roll grants the flat mitigation or the shield-resist, never both.",
       "effects": [
         { "type": "BreakShieldDepletionResistPercent", "magnitude": 15 }
       ]
@@ -156,7 +156,7 @@
     {
       "id": "fortunate",
       "displayName": "Fortunate",
-      "description": "The Prince favours whoever is wearing this, right now -- a flat, passive bonus to Prince's Favor for as long as it stays equipped, nothing stored and nothing that outlives taking it off. Base 3 at Ordinary/tier-0 sits alongside Shawn's own authored favour of 4: a meaningful nudge toward better drops, not a second currency to bank.",
+      "description": "The Prince favours whoever is wearing this, right now -- a flat, passive bonus to Prince's Favor for as long as it stays equipped, nothing stored and nothing that outlives taking it off. Base 2 at Ordinary/tier-0 sits alongside Shawn's own authored favour of 4: a meaningful nudge toward better drops, not a second currency to bank.",
       "effects": [
         { "type": "FortunateFavorBonusFlat", "magnitude": 2 }
       ]
@@ -196,7 +196,7 @@
     {
       "id": "swift",
       "displayName": "Swift",
-      "description": "Phase D1's dodge family. A step too quick for a swing or a cast to reliably land -- Magnitude is a dodge RATING, not a direct percent, run through CombatMath.DodgePercentFrom's curve (100 * R / (R + 100), the same R/(R+100) shape as armour mitigation -- '100 dodge = 50% chance to dodge') before DamagePipeline.RollDodge rolls against it (see ModifierEffectType.DodgeRating for the full mechanics: zero damage, and every on-hit rider skipped with it). RENAMED from DodgeChancePercent, and the curve inserted, 2026-08-26: at a direct-percent reading, a maxed Swift item (base 12 x up to ~18.6x combined tier/rift scaling, ~223 raw) would have exceeded 100 outright -- a guaranteed, unavoidable dodge, which is exactly what the curve now prevents (that same ~223 rating instead reads as ~69%, per DamagePipeline's own hand-computed table). Base 12 at Ordinary/tier-0 curves to ~10.7%, close enough to the old flat 12% that it was left as-is rather than retuned. Already single-effect since Phase C; untouched by the affix split.",
+      "description": "Phase D1's dodge family. A step too quick for a swing or a cast to reliably land -- Magnitude is a dodge RATING, not a direct percent, run through CombatMath.DodgePercentFrom's curve (100 * R / (R + 100), the same R/(R+100) shape as armour mitigation -- '100 dodge = 50% chance to dodge') before DamagePipeline.RollDodge rolls against it (see ModifierEffectType.DodgeRating for the full mechanics: zero damage, and every on-hit rider skipped with it). RENAMED from DodgeChancePercent, and the curve inserted, 2026-08-26: at a direct-percent reading, a maxed Swift item (base 12 x up to ~18.6x combined tier/rift scaling, ~223 raw) would have exceeded 100 outright -- a guaranteed, unavoidable dodge, which is exactly what the curve now prevents (that same ~223 rating instead reads as ~69%, per DamagePipeline's own hand-computed table). Base 6 at Ordinary/tier-0 curves to ~5.7%, close enough to the old flat 12% that it was left as-is rather than retuned. Already single-effect since Phase C; untouched by the affix split.",
       "effects": [
         { "type": "DodgeRating", "magnitude": 6 }
       ]
