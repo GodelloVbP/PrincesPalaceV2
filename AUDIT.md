@@ -1539,6 +1539,13 @@ NOT MEASURED: the line is 36 characters against `DossierNoSpellBooks`' 33-charac
 14pt band at the same 381px width, so it fits with room — but `UiTextFitAudit` runs at scene build and this
 change deliberately triggers none.
 
+**The node it borrows is in the wrong place for this second reading, and that is filed as #146.** The
+no-books line is centred in the three-slot band (`CharacterDossierScreen.cs:726`,
+`slotTop - slotBandHeight * 0.5f`), which is correct for the case it was built for -- the slots are hidden
+then, so the line stands in the empty band. For AlreadyKnown the slots are UP, so the refusal draws across
+slot 1's name. `UiAudit` cannot see it: the line is `.AsDecor()`, and `CheckSiblingOverlap` skips any pair
+with a decor side. The text-fit reasoning above is unaffected -- it fits; it is sitting on something.
+
 The original finding follows.
 
 Found 2026-09-11 by the `RunOrchestrator` seam finder (F3), confirmed by
@@ -2167,10 +2174,13 @@ a folder with a provenance that no skill plays.
 `gift_mana` now read he/him/himself. Odette's pronouns were not touched — `characters.json` still says owl wears
 Shawn's face "until her own portrait is drawn", which is about her.
 
-**Still outstanding, deliberately.** `FightSession.Talents.cs:325-326` and `:343` carry the same "her" in code
-comments ("Each one throws a share of her Attack", "Her OWN ward is worth triple"). `Domain/Combat` belonged to
-another fixer in the pass that made this change, so those two lines were reported rather than edited. Until they
-land, a grep for Shawn's pronoun still finds a disagreement — just not one a player can read.
+**The code comments landed afterwards, and there were six of them, not two.** Swept in `b7ee8a40`. The two
+this entry names were there -- `:325` ("a share of her Attack") and `:343` ("Her OWN ward") -- but a
+whole-file `grep -w` for her/she/hers found four more the finding never censused: `:81` ("a round of hers"),
+`:98-99` ("ending her income the moment she finishes her tree"), `:211` ("the thing she was already doing")
+and `:455` ("her per-turn payout cap"). All six are the Lamb strand's caster, i.e. Shawn, and all six now
+read he/his. The lesson is the census, not the sweep: the finding read the two lines its repro walked
+through and stated a count, and the count was wrong by four.
 
 The original finding follows.
 
@@ -2638,3 +2648,46 @@ is not warranted).**
 2. Leave them open and rely on the content pass's own measurement/replay evidence (recorded in
    `scratchpad/hunt2/stage4/content/notes.md`'s clearance ledger) as the standing check until a
    resolver-hardening pass is scheduled.
+
+## Findings from the integration pass, 2026-09-11
+
+### 146. The dossier's AlreadyKnown refusal draws on top of the slot it is refusing
+
+Found 2026-09-11 by the #116 fixer and confirmed by the integrator against the screen tree.
+
+#116's fix (`ed24933b`) puts "You already have this spell prepared" into
+`DossierSpellsNoBooksLine`, the label the panel already owns. That node was placed for a
+different reading: `CharacterDossierScreen.cs:723-727` centres it in the three-slot band
+(`Place.At(cx, slotTop - slotBandHeight * 0.5f)`), which is exactly slot 1's row, because in
+its original case -- a character whose primary pool refuses books -- the three slot buttons are
+not drawn at all and the line stands alone in the space they would occupy. Its own comment says
+so: *"WHAT REPLACES THE THREE SLOTS"*.
+
+The AlreadyKnown reading is the opposite situation. The slots are up, the player is looking at
+them, and the refusal is about one of them -- so the line lands across `DossierSpellSlot1`'s
+name for as long as it shows.
+
+**Nothing catches this.** The node is `.AsDecor()` and `UiAudit`'s `CheckSiblingOverlap` skips
+any pair with a decor side, which is deliberate and correct for the case the node was built for
+(it overlaps all three slot buttons by construction there, with nothing drawn underneath). The
+exemption was earned by one reading and is now doing duty for two.
+
+Not redesigned here. #116's placement was the owner's call and this is a consequence of it, not
+a defect in it: option 3 was chosen precisely because it needed no screen-tree change, and every
+fix below reverses that.
+
+**Two options** (both named by the #116 fixer).
+1. **The slot chip's own label.** The refusal is written into the slot the press would hit,
+   which is where the player is already looking and which cannot collide with itself. Closest
+   to filed option 1 of #116, and it leaves `NoFreeSlot` -- the other reason the line covers --
+   without a home.
+2. **A dedicated line of its own**, under the slot band rather than inside it, so the two
+   readings stop sharing a node. Needs a screen-tree change and therefore `-BuildScenes`, and
+   it re-opens the layout question the shared node sidestepped: the panel's geometry below the
+   divider has to absorb the extra row, or the line has to be `Inactive()` decor in space the
+   divider already owns.
+
+Repro: `learnedSpells=[{shawn, mud_burst, 0}]`, `unassignedSpellBooks=["mud_burst"]`, select the
+row, press slot 1. `DossierSpellSlotsTests` already builds this state; the capture from
+`tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.DossierSpellSlotsTests` is where
+it is visible.
