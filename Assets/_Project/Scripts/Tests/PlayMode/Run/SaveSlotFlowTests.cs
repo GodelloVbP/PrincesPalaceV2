@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -474,6 +476,104 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(continueGo.activeSelf,
                 "the only save just got deleted, so Continue has nothing left to offer");
+        }
+
+        // ---- nothing may write a slot before the player has picked one ------
+
+        // AUDIT #117. Continue is "which slot did I play last", and SaveSystem
+        // answers it off the FILE'S OWN mtime -- so anything that writes a slot
+        // before the player has chosen one answers the question wrongly, and
+        // slot 0 is the only slot anything at boot can reach.
+        //
+        // Driven by REFLECTION over RunManager's own [RuntimeInitializeOnLoad
+        // Method] members rather than by naming the method that used to do it.
+        // The rule is "nothing RunManager runs at boot may write a save", not
+        // "SettleAnyRunAPreviousSessionLeftBehind in particular must go": a
+        // second boot hook added later under any name is caught here without
+        // this test being edited, and the day there are none the loop simply
+        // has nothing to invoke and the assertion still stands.
+        [Test]
+        public void SettlingARunLeftInSlotZeroDoesNotStealContinueFromTheSlotLastPlayed()
+        {
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            // Slot 0 carries a descent a previous session walked into and never
+            // came out of -- an alt-F4 mid-run, which is the only way a run
+            // reaches the disk at all (RunManager's own header).
+            RunManager.StartRun(20260911UL);
+            RunManager.Run.roomsCleared = 1;
+            SaveSlotManager.SaveCurrent();
+            Assert.IsTrue(RunManager.HasRun, "fixture: slot 0 should be holding a run");
+
+            // ...and slot 2 is the one the player actually played last.
+            SaveSystem.Save(SaveData.CreateNew(), 2);
+
+            // STATED, not waited for. Two writes inside one system-clock tick
+            // carry the SAME mtime on Windows (~15ms granularity), and
+            // MostRecentSlot breaks a tie toward the lower slot -- which would
+            // redden this test for a reason that has nothing to do with #117.
+            AgeSlotFile(0, TimeSpan.FromHours(1));
+            Assert.AreEqual(2, SaveSystem.MostRecentSlot(),
+                "fixture: slot 2 must be the newest file before the boot check runs");
+
+            SaveSlotManager.Forget();
+            SaveSlotManager.CurrentSlot = 0;
+            RunManager.ResetForTests();
+            InvokeRunManagersBootHooks();
+
+            Assert.AreEqual(2, SaveSystem.MostRecentSlot(),
+                "something RunManager runs at boot wrote slot 0, so the main menu now offers " +
+                "Continue on the slot the player never chose rather than on slot 2");
+        }
+
+        // The other half of #117's answer: dropping the boot check must not
+        // leave slot 0 as the one slot a run CAN survive into. Opening it is
+        // what settles it, exactly as opening any other slot does.
+        [Test]
+        public void OpeningSlotZeroStillSettlesTheRunAPreviousSessionLeftInIt()
+        {
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            RunManager.StartRun(20260911UL);
+            RunManager.Run.roomsCleared = 1;
+            RunManager.Run.bossesKilled.Add("boss_a");
+            SaveSlotManager.SaveCurrent();
+
+            // A fresh process: nothing cached, nothing opened yet.
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            SaveSlotManager.EnterSlot(0);
+
+            Assert.IsFalse(RunManager.HasRun,
+                "the run left in slot 0 survived being opened, so slot 0 is the one slot a descent " +
+                "outlives the process in");
+        }
+
+        // save_slot_<n>.json is SaveSystem.PathForSlot's own name and it is
+        // private, so this matches on the suffix rather than rebuilding the
+        // path -- and asserts it found exactly one file, which is what makes a
+        // renamed save file fail here loudly instead of silently skipping.
+        private void AgeSlotFile(int slot, TimeSpan by)
+        {
+            var matches = Directory.GetFiles(_root, $"*_{slot}.json");
+            Assert.AreEqual(1, matches.Length,
+                $"expected exactly one save file for slot {slot} under the throwaway root");
+            File.SetLastWriteTimeUtc(matches[0], DateTime.UtcNow - by);
+        }
+
+        private static void InvokeRunManagersBootHooks()
+        {
+            var hooks = typeof(RunManager)
+                .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(m => m.GetCustomAttributes(typeof(RuntimeInitializeOnLoadMethodAttribute), false).Length > 0)
+                .ToList();
+
+            foreach (var hook in hooks) hook.Invoke(null, null);
         }
 }
 }

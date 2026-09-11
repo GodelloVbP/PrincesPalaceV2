@@ -66,39 +66,43 @@ namespace PrincesPalace
         //
         // Deliberately not a resume. Resuming is the other reading of the same
         // rule and it is not the one the author asked for.
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void SettleAnyRunAPreviousSessionLeftBehind()
-        {
-            // Before any scene, so nothing can read a run that is about to be
-            // settled and act on it -- the same self-bootstrapping shape
-            // GameSettings uses.
-            //
-            // THIS ONLY EVER SEES SLOT 0, and that is not a fault in it -- it
-            // is what "before any scene" means. SaveSlotManager.CurrentSlot
-            // starts at 0 and the player has not chosen yet, so a run left in
-            // any other slot was invisible here and survived the process,
-            // flatly against the rule this method exists to enforce. Quitting
-            // mid-fight in slot 5 and coming back put you straight back into
-            // the same fight, every time.
-            //
-            // SettleOnOpening below is the other half: the moment a slot is
-            // actually opened is the moment its contents can be seen at all.
-            if (HasRun) EndRun();
-        }
+        //
+        // THERE IS NO BOOT CHECK ANY MORE, and that is the whole of the fix
+        // for AUDIT #117 (owner's call, 2026-09-11 -- option 3 of three).
+        //
+        // A [RuntimeInitializeOnLoadMethod(BeforeSceneLoad)] used to do this,
+        // and being before any scene meant it ran with SaveSlotManager.
+        // CurrentSlot still at its default 0. Two consequences, one of them
+        // harmless and one not. It could only ever SEE slot 0, so it never
+        // covered the slots it was written for -- SettleOnOpening below is
+        // what actually enforces the rule, for every slot including 0. And it
+        // WROTE slot 0: both of EndRun's live exits Persist(), so settling
+        // somebody else's leftover run made slot 0 the newest file on disk,
+        // and SaveSystem.MostRecentSlot -- which is deliberately keyed off the
+        // file's own mtime, because CurrentSlot cannot answer "which slot did
+        // I play last time" -- then pointed the main menu's Continue at a slot
+        // the player had never chosen.
+        //
+        // Removing it is smaller than preserving the mtime around the write or
+        // adding a lastPlayedAtTicks field, and it takes a mechanism away
+        // rather than adding one. Nothing is lost: the half that worked is
+        // still here.
 
         // Settles a run found in a slot the player has just opened.
         //
-        // Same rule as the boot check and the same reasoning -- a run in a save
-        // being opened for the first time this session belonged to a session
-        // that is over, so it is SETTLED rather than discarded and the embers
-        // its bosses paid for are kept. It is separate only because the boot
-        // check cannot know which slot the player will pick.
+        // THE ONE PLACE A LEFTOVER RUN IS SETTLED. A run in a save being
+        // opened for the first time this session belonged to a session that is
+        // over, so it is SETTLED rather than discarded and the embers its
+        // bosses paid for are kept.
         //
-        // Called by SaveSlotController, which is the one place a slot is
-        // chosen. Deliberately NOT hung off SaveSlotManager.CurrentSlot's
-        // setter: that is a plain accessor used freely by tests and by the
-        // label refresh, and a setter that silently ends runs and writes the
-        // disk is exactly the kind of surprise its own header warns about.
+        // Called by SaveSlotManager.EnterSlot, which is the one place a slot
+        // is chosen -- by the slot list and by the main menu's Continue alike,
+        // and AFTER CurrentSlot is set, which is what lets this reach every
+        // slot rather than only slot 0. Deliberately NOT hung off
+        // SaveSlotManager.CurrentSlot's setter: that is a plain accessor used
+        // freely by tests and by the label refresh, and a setter that silently
+        // ends runs and writes the disk is exactly the kind of surprise its
+        // own header warns about.
         public static void SettleOnOpening()
         {
             if (HasRun) EndRun();
@@ -232,8 +236,8 @@ namespace PrincesPalace
             // hasRun true and nothing walked. Every roster character's
             // equipment cleared, the whole stockpile cleared, and one more
             // lifetimeRunsEnded, for a descent that did not happen. Alt-F4 at
-            // the draft is the same thing on the next boot, through
-            // SettleAnyRunAPreviousSessionLeftBehind.
+            // the draft is the same thing the next time that slot is opened,
+            // through SettleOnOpening.
             //
             // DISCARDED RATHER THAN SETTLED, and that costs nothing: an
             // unwalked run has no rooms, no bosses, no ledger and no gold, so
