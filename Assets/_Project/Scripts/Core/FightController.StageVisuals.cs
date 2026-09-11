@@ -1033,9 +1033,48 @@ namespace PrincesPalace
             _idleClock.Clear();
             _hoverClock.Clear();
 
+            ResumeIdleBreathing();
+        }
+
+        // THE HANDLE IS NOT THE COROUTINE (hunt 2026-09-11, scenario B1).
+        //
+        // Unity stops every coroutine on a MonoBehaviour the moment it is
+        // disabled, and it does not resume them on the way back -- but the
+        // Coroutine object this held stayed non-null through all of it. So
+        // the guard below read "already breathing" about a coroutine that had
+        // been dead since the disable, and the stage stood perfectly still
+        // for the rest of the fight. The pair of Unity messages underneath is
+        // the other half: Bind was the only caller, so even with the handle
+        // nulled nothing would have asked for the breath back.
+        //
+        // Split from StartIdleBreathing rather than folded into it because
+        // the two clocks must be cleared per FIGHT and not per enable -- a
+        // re-enable rejoins the fight it left, and clearing them there would
+        // be a correct-looking line that quietly restarts every figure's
+        // breath from rest on a click that has nothing to do with the fight.
+        private void ResumeIdleBreathing()
+        {
             if (_idling != null || !isActiveAndEnabled) return;
 
             _idling = StartCoroutine(IdleBreathing());
+        }
+
+        // Fires before Start and before any Bind on the first enable, which
+        // costs nothing: IdleBreathing's loop skips every frame while there
+        // is no session, and Bind still clears the clocks when one arrives.
+        private void OnEnable()
+        {
+            ResumeIdleBreathing();
+        }
+
+        private void OnDisable()
+        {
+            // Unity has already stopped it; what is left to do is drop the
+            // handle, so the guard above can tell "running" from "was".
+            if (_idling == null) return;
+
+            StopCoroutine(_idling);
+            _idling = null;
         }
 
         // ONE COROUTINE FOR THE WHOLE STAGE, not one per figure.
