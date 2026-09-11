@@ -124,6 +124,37 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(8, Resolved["treant"].BreakShieldPoints, "treant: breakShieldPoints");
         }
 
+        // The bog witch's affinity pair, pinned because it is the one row on
+        // the roster that does NOT follow "resists what it attacks with" and
+        // the owner chose its four elements by hand (AUDIT #132). She used to
+        // be weak to her own Poison and resistant to Nature -- seven other
+        // elementally-typed rows resist their own attackType, so that reading
+        // as a transposed pair is exactly why it was filed. The answer taken
+        // was neither of the finding's two options: Wind and Arcane cut
+        // through a bog, Water and Earth are the bog itself. Two elements a
+        // side is also the only multi-element affinity in the file, so this
+        // pin is what proves the comma-list parse in RawEnemyEntry.weakness
+        // survives on shipped content and not only in the resolver's own
+        // synthetic tests.
+        [Test]
+        public void BogWitch_IsWeakToWindAndArcaneAndResistsWaterAndEarth()
+        {
+            var witch = Resolved["bog_witch"];
+
+            CollectionAssert.AreEquivalent(
+                new[] { DamageType.Wind, DamageType.Arcane }, witch.Weaknesses,
+                "bog_witch: weakness");
+            CollectionAssert.AreEquivalent(
+                new[] { DamageType.Water, DamageType.Earth }, witch.Resistances,
+                "bog_witch: resistance");
+
+            // Her own attackType is no longer among her weaknesses, which is
+            // the roster pattern the row used to invert.
+            Assert.AreEqual(DamageType.Poison, witch.AttackType, "bog_witch: attackType");
+            Assert.IsFalse(witch.Affinity.IsWeakTo(DamageType.Poison),
+                "bog_witch: a monster weak to the element it attacks with is the shape #132 was filed about.");
+        }
+
         // minFloor callouts from the phase brief, checked directly against
         // the resolved content rather than assumed unchanged.
         [Test]

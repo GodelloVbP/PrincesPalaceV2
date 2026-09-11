@@ -103,8 +103,8 @@
       "attackType": "Poison",
       "expReward": 22,
       "currencyReward": 14,
-      "weakness": "Poison",
-      "resistance": "Nature",
+      "weakness": "Wind, Arcane",
+      "resistance": "Water, Earth",
       "spritePath": "Enemies/bog_witch",
       "active": true,
       "abilities": [
