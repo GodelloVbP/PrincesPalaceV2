@@ -364,5 +364,96 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, session.DrainBeats().Count, "no beat is invented for a rider");
             CollectionAssert.IsEmpty(session.DrainImmediateMessages());
         }
+
+        // ---- WHAT AN EXTRA TURN RE-PAYS: an owner decision, parked here ------
+        //
+        // GrantTurnStart treats "a fresh actor's turn" and "the same actor's
+        // extra turn" identically. AdvanceAfterAction calls GrantExtraTurn
+        // BEFORE AdvanceTurn, so a Trample or a Bloodlust puts the same actor
+        // back on Current and the whole thirteen-step block runs for them a
+        // second time: the poison tick, every non-IsSpentByTheTurn duration
+        // countdown, the cooldown countdown, and both duration clocks
+        // (TickTransform, TickPhoenixEgg).
+        //
+        // The clearance ledger's row K8 cleared exactly two of those thirteen
+        // steps -- _locks.ResetTurn and TickPrimaryPool -- and argued they were
+        // intended. The other eleven were never examined.
+        //
+        // WHY THESE ARE [Ignore]d RATHER THAN FIXED. Every option here is a
+        // balance number and belongs to the owner: not paying poison twice is a
+        // straight buff to a Trample build, not refunding cooldowns is a
+        // straight nerf. The three cases below are the reproduction, kept in
+        // the tree rather than in a scratch project so the decision has
+        // something to be made against. They FAIL today, by design.
+        //
+        // The one part that is not a balance question is the third: talents.json
+        // ships sheep_ram_trample_3 ("A kill does not cost you the turn") as a
+        // PREREQUISITE of sheep_ram_converge (Black Ram Mode, "7 wool for three
+        // turns"), so nobody can own the form without owning the rider that
+        // eats it -- and the form's splash makes the kill that eats it more
+        // likely. A three-turn form that reliably lasts two is a content row
+        // lying about itself.
+
+        private const string ExtraTurnDecision = "AUDIT #113 pending: what an extra turn re-pays";
+
+        [Test]
+        [Ignore(ExtraTurnDecision)]
+        public void APoisonedTramplerIsPoisonedOncePerRoundNotOncePerKill()
+        {
+            var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
+            GiveTrample(hero, 3);
+            var (session, _, encounter) = Fight(hero, null,
+                Foe("A", 1), Foe("B", 1), Foe("C", 1), Foe("Tank", 100000));
+
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 10, 99);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+            session.ExecuteAttack(encounter.Enemies[1]);
+            session.ExecuteAttack(encounter.Enemies[2]);
+
+            int poisonLines = AllMessages(session).Count(m => m.Contains("poison damage"));
+
+            Assert.AreEqual(1, poisonLines,
+                "the trampler was poisoned once per extra action, not once per turn");
+        }
+
+        [Test]
+        [Ignore(ExtraTurnDecision)]
+        public void ATramplersStatusDurationsTickOncePerRound()
+        {
+            var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
+            GiveTrample(hero, 3);
+            var (session, _, encounter) = Fight(hero, null,
+                Foe("A", 1), Foe("B", 1), Foe("C", 1), Foe("Tank", 100000));
+
+            // Three turns of Shielded, applied before the hero's first action.
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Shielded, 50, 3);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+            session.ExecuteAttack(encounter.Enemies[1]);
+            session.ExecuteAttack(encounter.Enemies[2]);
+
+            Assert.IsTrue(hero.Statuses.Any(s => s.Type == StatusEffectType.Shielded),
+                "a 3-turn Shielded expired inside ONE of the hero's rounds");
+        }
+
+        [Test]
+        [Ignore(ExtraTurnDecision)]
+        public void ThreeTurnsOfBlackRamModeSurviveARoundInWhichHeTramples()
+        {
+            var hero = new CombatantState("Hero", true, 2000, 10, 20, HeroSpeed);
+            GiveTrample(hero, 1);
+            var (session, _, encounter) = Fight(hero, null, Foe("A", 1), Foe("Tank", 100000));
+
+            var form = Transformation.Enter(hero, "Black Ram Mode", 3, 0, 30, 20, 40);
+            Assert.AreEqual(3, form.TurnsRemaining, "fixture: the form opens on three turns");
+
+            // ONE round: kill A, trample, hit the tank.
+            session.ExecuteAttack(encounter.Enemies[0]);
+            session.ExecuteAttack(encounter.Enemies[1]);
+
+            Assert.AreEqual(2, form.TurnsRemaining,
+                "one round of Black Ram Mode cost two of its three turns because the trample re-opened the turn");
+        }
     }
 }
