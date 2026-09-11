@@ -27,16 +27,31 @@ namespace PrincesPalace
         public static int MaxTier =>
             ContentDatabase.Items.Count == 0 ? 0 : ContentDatabase.Items.Max(i => i.tier);
 
-        // EQUIPPABLES ONLY.
+        // WHAT THE GAME OFFERS AS A REWARD, and that is not the same set as
+        // "everything wearable" (AUDIT #114, owner's call 2026-09-11).
         //
         // A "choose one of three" that can offer a health potion is not a
         // choice, it is a tax on the one player who reads carefully. Potions
         // come from the shop and from drops; the fight-reward slot is where
-        // gear comes from.
+        // gear comes from. That much was always here -- what was missing is
+        // the other half of the same argument, which ContentDatabase.Offerable
+        // has stated for months: the hand-authored one-offs in items.json
+        // "have their own routes in and would otherwise turn up as a 'reward'
+        // the player already owns six of". The filter here read IsEquippable,
+        // so all six starting-kit items sat in the floor-1 band and the first
+        // fight of a run could hand you the helm on your own head.
+        //
+        // Offerable's predicate is "was this generated with a tier", not the
+        // kind, because the offer screen ranks what it shows by run depth and
+        // an item with no tier cannot be placed on that axis at all. ASKED
+        // RATHER THAN RESTATED: this is the only reward-side caller, the
+        // shop's gear shelf and the Reckoning both come through here, and a
+        // second copy of the predicate is how the two drifted apart in the
+        // first place.
         public static IReadOnlyList<ItemOffer> Candidates()
         {
-            return ContentDatabase.Items
-                .Where(i => i != null && i.IsEquippable && !string.IsNullOrEmpty(i.id))
+            return ContentDatabase.Offerable
+                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
                 .Select(i => new ItemOffer(i.id, i.tier))
                 .ToList();
         }
