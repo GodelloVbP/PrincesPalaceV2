@@ -56,7 +56,12 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"effect\": \"DamageAll\"", entry);
             StringAssert.Contains($"\"manaCost\": {ManaCost}", entry);
             StringAssert.Contains($"\"cooldownTurns\": {Cooldown}", entry);
-            StringAssert.Contains("\"scalingAxis\": \"Spell\"", entry);
+
+            // No scalingAxis: damageInstances replace the Attack-scaled
+            // formula entirely (skills.json's own _readme, and
+            // SkillEntryResolver's refusal if both are authored together --
+            // AUDIT hunt 2026-09-11, d6a7ed0c).
+            StringAssert.DoesNotContain("scalingAxis", entry);
 
             // No aftereffects at all: no burn, no stun, no status, no DoT. The
             // absence is the contract, so it is asserted rather than assumed --
@@ -222,7 +227,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, resolved.ResourceCost,
                 "a global spell must never cost a signature resource -- see docs/SPELL_DESIGN_STANDARD.md");
             Assert.AreEqual(Cooldown, resolved.CooldownTurns);
-            Assert.AreEqual(ScalingAxis.Spell, resolved.ScalingAxis);
+
+            // No ScalingAxis assertion: unauthored (defaults to Auto) and
+            // unread on a HasFixedDamage skill either way -- see the
+            // scalingAxis omission above.
 
             // OFF THE LEVEL LADDER. A book spell that resolved to a real unlock
             // level would be handed to a level-1 character by the ordinary
@@ -440,7 +448,6 @@ namespace PrincesPalace.Domain.Tests
                 effect = "DamageAll",
                 manaCost = ManaCost,
                 cooldownTurns = Cooldown,
-                scalingAxis = "Spell",
                 damageInstances = new[]
                 {
                     new RawDamageInstance { type = "Fire", amount = FirePacket },

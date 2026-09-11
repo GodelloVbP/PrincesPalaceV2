@@ -89,10 +89,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             LogAssert.ignoreFailingMessages = false;
 
-            FightBeatPlayer.BeatSpeedMultiplier = 1f;
-            FightBeatPlayer.PlayerSpeedSource = () => 1f;
-            FightBeatPlayer.AdoptPlayerSpeed();
-            FightController.BreathSpeedMultiplier = 1f;
+            // TestGlobals.ResetAll(), not a hand-rolled restore: this fixture
+            // pins BeatSpeedMultiplier, PlayerSpeedSource/AdoptPlayerSpeed and
+            // BreathSpeedMultiplier in [SetUp], and the sanctioned restore for
+            // the adopted factor is ResetAll (GlobalStateLintTests' table --
+            // AdoptPlayerSpeed has no direct assignment a teardown can pin
+            // back to 1 on its own).
+            TestGlobals.ResetAll();
         }
 
         // ---- the stand-up ----------------------------------------------------
