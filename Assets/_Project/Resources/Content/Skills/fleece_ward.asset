@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: fleece_ward
     DisplayName: Ward
     Description: A turn of the fleece, wrapped tight. The next blow finds wool before
-      it finds her.
+      it finds him.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7

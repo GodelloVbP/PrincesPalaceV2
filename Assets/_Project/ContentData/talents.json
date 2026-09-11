@@ -415,7 +415,7 @@
       "displayName": "Second Nature",
       "column": 1,
       "row": 7,
-      "description": "Warding stops costing the turn. She can cover herself AND do something with the day.",
+      "description": "Warding stops costing the turn. He can cover himself AND do something with the day.",
       "prerequisites": [
         "sheep_lamb_ward_2"
       ],

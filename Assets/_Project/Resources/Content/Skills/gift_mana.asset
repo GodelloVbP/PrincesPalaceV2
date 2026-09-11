@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: gift_mana
     DisplayName: 'Gift: Mana'
-    Description: She has more wool than she has turns. Somebody else can have the
-      difference.
+    Description: He has more wool than he has turns. Somebody else can have the difference.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 10

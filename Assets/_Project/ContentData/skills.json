@@ -272,7 +272,7 @@
     {
       "id": "fleece_ward",
       "displayName": "Ward",
-      "description": "A turn of the fleece, wrapped tight. The next blow finds wool before it finds her.",
+      "description": "A turn of the fleece, wrapped tight. The next blow finds wool before it finds him.",
       "characterId": "sheep",
       "unlockLevel": 999,
       "effect": "Ward",
@@ -284,7 +284,7 @@
     {
       "id": "shatter",
       "displayName": "Shatter",
-      "description": "Every ward she has out, broken at once, and every splinter goes somewhere.",
+      "description": "Every ward he has out, broken at once, and every splinter goes somewhere.",
       "characterId": "sheep",
       "unlockLevel": 999,
       "effect": "Shatter",
@@ -309,7 +309,7 @@
     {
       "id": "gift_mana",
       "displayName": "Gift: Mana",
-      "description": "She has more wool than she has turns. Somebody else can have the difference.",
+      "description": "He has more wool than he has turns. Somebody else can have the difference.",
       "characterId": "sheep",
       "unlockLevel": 999,
       "effect": "GiftMana",

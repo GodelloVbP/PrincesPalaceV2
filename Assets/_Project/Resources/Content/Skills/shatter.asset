@@ -15,8 +15,7 @@ MonoBehaviour:
   data:
     Id: shatter
     DisplayName: Shatter
-    Description: Every ward she has out, broken at once, and every splinter goes
-      somewhere.
+    Description: Every ward he has out, broken at once, and every splinter goes somewhere.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 8

@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_3
     DisplayName: Second Nature
-    Description: Warding stops costing the turn. She can cover herself AND do something
+    Description: Warding stops costing the turn. He can cover himself AND do something
       with the day.
     CharacterId: sheep
     Column: 1
