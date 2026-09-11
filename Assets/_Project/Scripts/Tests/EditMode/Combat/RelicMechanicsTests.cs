@@ -82,6 +82,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(60, hero.CurrentMana, "50 missing x 20% = 10 restored, 50 + 10 = 60");
         }
 
+        // relics.json: "restores 20% of your missing mana (or signature
+        // resource)" -- MANA FIRST, the resource in the main clause. The code
+        // read signature first on the premise that "every combatant has at
+        // most one of the two", which characters.json contradicts: the sheep
+        // authors a wool signature and no primaryPoolId, so he gets the
+        // default mana pool and spends BOTH to act (static_fleece costs 6 mana
+        // + 3 wool). For the one character who has both, the relic therefore
+        // always refilled the pool that already regenerates every turn and
+        // never the one gating his two most expensive skills.
+        //
+        // Literal: 20 missing mana x 20% = 4.
+        [Test]
+        public void TheMarkRefundsShawnsManaBeforeHisWool()
+        {
+            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
+                skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
+            hero.PrimaryPool.Current = 80;                             // 20 missing
+            hero.SignaturePool = new ResourcePool("wool", "Wool", 16, 0, 0, 0);
+            hero.SignaturePool.Gain(6);                                // 10 missing
+
+            session.CastSkill(0, foe1);   // marks foe1
+            session.ExecuteAttack(foe1);  // consumes the mark
+
+            Assert.AreEqual(84, hero.CurrentMana, "20 missing mana x 20% = 4 restored");
+            Assert.AreEqual(6, hero.SignaturePool.Current, "and the fleece is left alone");
+        }
+
         [Test]
         public void AnAttackWithNoMarkRestoresNothing()
         {

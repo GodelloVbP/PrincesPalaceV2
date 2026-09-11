@@ -92,37 +92,55 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // RESOURCE-AGNOSTIC: Shawn's Wool (Signature) if he has one, mana
-        // otherwise -- "primary resource" reads as whichever pool the
-        // actor's own kit actually spends to act, and every combatant has
-        // at most one of the two. Returns how much was actually restored,
-        // so a caller with nothing missing can skip its own message rather
-        // than announcing a zero.
+        // RESOURCE-AGNOSTIC, and MANA FIRST: relics.json reads "restores 20% of
+        // your missing mana (or signature resource)", so mana is the main
+        // clause and the signature pool is the parenthesis it falls back to.
+        // Returns how much was actually restored, so a caller with nothing
+        // missing can skip its own message rather than announcing a zero.
+        //
+        // THE ORDER WAS SIGNATURE-FIRST until 2026-09-11, on a premise the
+        // content contradicts: "every combatant has at most one of the two".
+        // characters.json's sheep authors `signatureId: wool` and NO
+        // `primaryPoolId`, so he takes the default mana pool and has BOTH --
+        // and skills.json prices static_fleece at 6 mana PLUS 3 wool, with
+        // FightHudModel.CostLabel carrying a dedicated "{mana} MP + {res}
+        // WOOL" branch to print it. For the one character who has both, the
+        // relic therefore always refilled the pool that already regenerates
+        // every turn and on attack, and never the one gating his two most
+        // expensive skills.
+        //
+        // WHAT A FURY HOLDER GETS: nothing, and that is correct rather than an
+        // oversight. RestoreMana refuses a pool whose row says
+        // restoredByManaEffects is false, which Fury's does, so Bjorn falls
+        // through to the signature branch -- and he has no signature pool.
+        // A pool the satchel cannot fill must not be fillable by a trinket
+        // either; the fallback is for a resource the relic's own text names,
+        // not a licence to top up whatever is nearest.
         private int RestorePrimaryResource(CombatantState actor, int percentOfMissing)
         {
             if (actor == null || percentOfMissing <= 0) return 0;
-
-            if (actor.SignaturePool != null)
-            {
-                int missing = actor.SignaturePool.Max - actor.SignaturePool.Current;
-                int restore = missing * percentOfMissing / 100;
-                return restore > 0 ? actor.SignaturePool.Gain(restore) : 0;
-            }
 
             var primary = actor.PrimaryPool;
             if (primary != null && primary.Max > 0)
             {
                 int missing = primary.Max - primary.Current;
                 int restore = missing * percentOfMissing / 100;
-                if (restore <= 0) return 0;
 
                 // Through RestoreMana rather than Gain, so a pool that
-                // refuses mana effects refuses this too: the relic's own
-                // wording is "restores mana", and a pool the satchel cannot
-                // fill must not be fillable by a trinket either. Returns what
-                // actually landed, which is 0 for such a pool -- and the
-                // caller then says nothing rather than announcing a zero.
-                return CombatMath.RestoreMana(actor, restore);
+                // refuses mana effects refuses this too. Returns what actually
+                // landed, which is 0 for such a pool -- and a 0 here falls to
+                // the signature pool below rather than ending the question,
+                // which is what makes "(or signature resource)" a fallback
+                // instead of a second unreachable branch.
+                int landed = restore > 0 ? CombatMath.RestoreMana(actor, restore) : 0;
+                if (landed > 0) return landed;
+            }
+
+            if (actor.SignaturePool != null)
+            {
+                int missing = actor.SignaturePool.Max - actor.SignaturePool.Current;
+                int restore = missing * percentOfMissing / 100;
+                return restore > 0 ? actor.SignaturePool.Gain(restore) : 0;
             }
 
             return 0;
