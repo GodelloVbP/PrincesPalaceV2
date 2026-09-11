@@ -7,6 +7,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -406,7 +407,12 @@ namespace PrincesPalace
         {
             spellsPanel.SetShown(open);
             if (spellsChevron != null) spellsChevron.SetContent(open ? "<" : ">");
-            if (!open) _selectedUnassignedRow = -1;
+            if (!open)
+            {
+                _selectedUnassignedRow = -1;
+                _alreadyKnownRefusal = false;
+            }
+
             RefreshSpells();
         }
 
@@ -420,7 +426,29 @@ namespace PrincesPalace
             // draft's own card press follows -- a screen whose whole job is
             // comparing things should let a choice be reconsidered.
             _selectedUnassignedRow = _selectedUnassignedRow == row ? -1 : row;
+            _alreadyKnownRefusal = false;
             RefreshSpells();
+        }
+
+        // WHY THE LAST SLOT PRESS DID NOTHING (AUDIT #116), for exactly as
+        // long as the player is still looking at the press that caused it: a
+        // different row, a different character, or a successful placement all
+        // clear it.
+        private bool _alreadyKnownRefusal;
+
+        // Does the selected unassigned book already sit in one of THIS
+        // character's slots? Asked once per refresh rather than per slot --
+        // the answer is about the book and the character, and the slot the
+        // press lands on cannot change it.
+        private bool SelectedBookIsAlreadyKnown(Character character, List<LearnedSpellEntry> learned)
+        {
+            if (character == null) return false;
+            if (_selectedUnassignedRow < 0 || _selectedUnassignedRow >= _unassignedSnapshot.Count) return false;
+
+            string skillId = _unassignedSnapshot[_selectedUnassignedRow];
+            return learned.Exists(e => e != null
+                && e.characterId == character.definitionId
+                && e.skillId == skillId);
         }
 
         // A press on a slot COMMITS the currently selected unassigned book
@@ -448,7 +476,19 @@ namespace PrincesPalace
                 ? RunOrchestrator.ReplaceSpell(character.definitionId, skillId, slot)
                 : RunOrchestrator.LearnSpell(character.definitionId, skillId, slot);
 
-            if (result.Applied) _selectedUnassignedRow = -1;
+            // THE RESULT IS READ NOW (AUDIT #116). It used to be consulted for
+            // `.Applied` alone, so AlreadyKnown -- the refusal docs/PLAN_SHOP
+            // 2d names as the moment the player finds out they bought a
+            // duplicate -- happened and the screen did not move.
+            if (result.Applied)
+            {
+                _selectedUnassignedRow = -1;
+                _alreadyKnownRefusal = false;
+            }
+            else
+            {
+                _alreadyKnownRefusal = result.Reason == ShopRefusal.AlreadyKnown;
+            }
 
             Refresh();
         }
@@ -491,14 +531,34 @@ namespace PrincesPalace
             // (_canHoldSpellBooks) rather than per slot -- this method is also
             // reached from a row press, which is why it is a field and not a
             // local.
+            //
+            // IT CARRIES THE DUPLICATE REFUSAL TOO (AUDIT #116). The two can
+            // never be up at once -- a character who cannot hold a book cannot
+            // have one already -- so this is one line with two things to say
+            // rather than a second node and a second scene rebuild. The
+            // refusal is transient; the pool sentence is permanent for that
+            // character, which is why it wins the branch.
+            bool alreadyKnown = _alreadyKnownRefusal && _canHoldSpellBooks && character != null;
             if (spellsNoBooksLine != null)
             {
-                spellsNoBooksLine.gameObject.SetActive(!_canHoldSpellBooks && character != null);
-                if (!_canHoldSpellBooks && character != null)
+                bool noBooks = !_canHoldSpellBooks && character != null;
+                spellsNoBooksLine.gameObject.SetActive(noBooks || alreadyKnown);
+                if (noBooks)
                 {
                     spellsNoBooksLine.Set(UiStrings.DossierNoSpellBooks, DisplayNameOf(character));
                 }
+                else if (alreadyKnown)
+                {
+                    spellsNoBooksLine.Set(UiStrings.DossierSpellAlreadyKnown);
+                }
             }
+
+            // THE GREEN PREVIEW IS A PROMISE. It lit for ANY empty slot while
+            // a row was selected, including every slot a book this character
+            // already carries can never fill -- so the screen offered a
+            // placement and then refused it. Asked once, here, because the
+            // answer is about the book and the character.
+            bool selectedBookAlreadyKnown = SelectedBookIsAlreadyKnown(character, learned);
 
             if (spellSlots != null)
             {
@@ -532,7 +592,9 @@ namespace PrincesPalace
                     // does, before the second click commits either.
                     if (spellSlotSelections != null && i < spellSlotSelections.Length && spellSlotSelections[i] != null)
                     {
-                        bool previewFill = _selectedUnassignedRow >= 0 && string.IsNullOrEmpty(skillId);
+                        bool previewFill = _selectedUnassignedRow >= 0
+                            && string.IsNullOrEmpty(skillId)
+                            && !selectedBookAlreadyKnown;
                         spellSlotSelections[i].gameObject.SetActive(previewFill);
                     }
                 }
@@ -570,6 +632,9 @@ namespace PrincesPalace
             if (squad.Count == 0) return;
 
             _index = (_index + by + squad.Count) % squad.Count;
+
+            // The refusal named a character. Paging is leaving them.
+            _alreadyKnownRefusal = false;
             Refresh();
         }
 

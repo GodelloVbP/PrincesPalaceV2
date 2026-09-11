@@ -46,6 +46,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = _root;
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             Navigation.LoadOverride = _ => { };
         }
 
@@ -55,6 +56,7 @@ namespace PrincesPalace.PlayModeTests
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
+            RunManager.ResetForTests();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
@@ -201,6 +203,92 @@ namespace PrincesPalace.PlayModeTests
             string path = Path.Combine(OutputDir, "spell_slots_refused.png");
             CanvasCapture.RenderToFile(canvas, path);
             Debug.Log($"[DossierSpells] wrote {path}");
+        }
+
+        // ---- a book this character already has (AUDIT #116) ----------------
+        //
+        // docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a silent success
+        // either", and 2d (revision 2026-09-03) says the player "only finds
+        // out at assignment time, via 1d's duplicate refusal". PressSlot
+        // discarded `result.Reason`, so the refusal happened and nothing on
+        // the screen moved -- and worse, the green would-fill preview lit on
+        // every empty slot including the one this press could never fill.
+        //
+        // Reachable by design, not hypothetically: AvailableBookOptions
+        // excludes a book only when EVERY squad member has learned it, so
+        // buying a second copy of a book one character already carries is an
+        // ordinary purchase.
+        [UnityTest]
+        public IEnumerator PressingAnEmptySlotWithABookThisCharacterAlreadyKnowsSaysSo()
+        {
+            const string Book = "mud_burst";
+
+            // The run has to exist before the scene loads: the panel's
+            // unassigned rows are painted from run.unassignedSpellBooks.
+            RunManager.StartRun(20260911UL);
+
+            var owner = SaveSlotManager.CurrentSave?.ActiveSquad()?.FirstOrDefault(c => c != null);
+            Assert.IsNotNull(owner, "no squad member for the dossier to open on");
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks(owner.definitionId),
+                $"'{owner.definitionId}' refuses spell books, so this fixture cannot reach the refusal");
+
+            var run = RunManager.Run;
+            run.learnedSpells.Clear();
+            run.learnedSpells.Add(new LearnedSpellEntry
+            {
+                characterId = owner.definitionId,
+                skillId = Book,
+                slot = 0,
+            });
+            run.unassignedSpellBooks.Clear();
+            run.unassignedSpellBooks.Add(Book);
+            SaveSlotManager.SaveCurrent();
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            menu.Open();
+            menu.Select(0);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
+
+            dossier.ShowSpells(true);
+            dossier.Refresh();
+            yield return null;
+
+            var row = Named(dossier, "DossierUnassigned0");
+            Assert.IsNotNull(row, "DossierUnassigned0 is missing from the built scene");
+            Assert.IsTrue(row.activeInHierarchy, "the unassigned copy is not offered, so nothing can be selected");
+            row.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            // BEFORE THE PRESS. The green preview is the screen promising a
+            // slot this book can go into, and slot 1 is not one.
+            var preview = Named(dossier, "DossierSpellSlot1Selection");
+            Assert.IsNotNull(preview, "DossierSpellSlot1Selection is missing from the built scene");
+            Assert.IsFalse(preview.activeInHierarchy,
+                "the would-fill preview lit on a slot this book cannot fill, so the screen promised a " +
+                "placement it then refused");
+
+            var slot = Named(dossier, "DossierSpellSlot1");
+            Assert.IsNotNull(slot, "DossierSpellSlot1 is missing from the built scene");
+            slot.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.learnedSpells.Count,
+                "the duplicate was learned into a second slot");
+
+            var line = Named(dossier, "DossierSpellsNoBooksLine");
+            Assert.IsNotNull(line, "DossierSpellsNoBooksLine is not in the built scene");
+            Assert.IsTrue(line.activeInHierarchy,
+                "the press was refused and the panel said nothing, which reads as a dead slot");
+            Assert.AreEqual("You already have this spell prepared",
+                line.GetComponent<TMPro.TMP_Text>()?.text);
         }
 
         private static GameObject Named(Component root, string name) =>

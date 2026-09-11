@@ -607,6 +607,18 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DossierSlotFilled =
             UiString.Define("dossier.slot_filled", "{0}", "LIGHTNING BOLT");
 
+        // WHAT THE PANEL SAYS WHEN A SLOT PRESS IS REFUSED AS A DUPLICATE
+        // (AUDIT #116). docs/PLAN_SHOP.md 1d: "Refuse a duplicate ... not a
+        // silent success either", and 2d says assignment time is where the
+        // player finds out. The refusal existed; nothing on the screen moved.
+        //
+        // Owner's wording, 2026-09-11. Sentence case and the same 14pt band as
+        // DossierNoSpellBooks above, whose place it borrows -- one line, up
+        // only while the refusal stands, rather than a fourth state on the
+        // slot chips.
+        public static readonly UiString DossierSpellAlreadyKnown =
+            UiString.Define("dossier.spell_already_known", "You already have this spell prepared");
+
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
         public static readonly UiString GlossaryCount =
