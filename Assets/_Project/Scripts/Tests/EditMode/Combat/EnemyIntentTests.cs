@@ -278,6 +278,24 @@ namespace PrincesPalace.Domain.Tests
                 "the badge must not read as an ordinary threat when nothing is coming");
         }
 
+        // AND NOTHING IS PUT ON THE NAMEPLATE FOR IT. IntentForfeit is "a
+        // sentinel before it is a label", and TelegraphSuffix printed it raw:
+        // "Forfeits Turn!", in the slot its own header reserves for "something
+        // special is coming", styled exactly like "Roar!" and "Grapple!".
+        [Test]
+        public void AForfeitIsNotTelegraphedAsThoughItWereAThreat()
+        {
+            var (session, encounter) = Fight(skillChance: 0f);
+            var monster = encounter.Enemies[0];
+            StatusEffects.Apply(monster.Statuses, StatusEffectType.Rooted, 0, 5);
+
+            session.PrepareEnemyIntents();
+            Assert.AreEqual(FightSession.IntentForfeit, session.IntentFor(monster), "fixture: it is forfeiting");
+
+            Assert.AreEqual("", session.TelegraphSuffix(monster, isPlayerTurn: true),
+                "a monster that can do nothing threatens nothing, so the nameplate stays blank");
+        }
+
         [Test]
         public void AGenuinelyMisauthoredZeroWeightPool_StillSwingsAnyway()
         {

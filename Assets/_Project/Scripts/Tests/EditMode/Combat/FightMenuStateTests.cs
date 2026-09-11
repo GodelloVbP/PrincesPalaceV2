@@ -636,6 +636,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("20", FightHudModel.PowerLabel(session, hero, skill));
         }
 
+        // The "-" list is meant to be COMPLETE: every effect
+        // SkillResolution.Amount has no number for at all. Summon was missing
+        // from it, so a summon's card would have promised "0 POWER" -- which
+        // reads as "this does nothing" -- for an ability that makes the fight
+        // one monster bigger. Unreachable today (the one authored Summon
+        // belongs to an enemy), which is exactly why nothing caught it.
+        [Test]
+        public void ASummonHasNoPreviewableNumberEither()
+        {
+            var summon = Skill("roar", "Roar", effect: SkillEffect.Summon);
+            var (session, hero) = Fight(summon);
+
+            Assert.AreEqual("-", FightHudModel.PowerLabel(session, hero, summon));
+        }
+
         [Test]
         public void AnEmptySatchelProducesNoRows()
         {

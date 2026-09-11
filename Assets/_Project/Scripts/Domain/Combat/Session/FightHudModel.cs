@@ -131,8 +131,19 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var option in options)
             {
+                // NO SECOND REQUIREMENT TEST HERE, which is what the header
+                // above says and what this loop did anyway until 2026-09-11.
+                // The copy it kept was worse than the LOCKED prefix that
+                // header describes removing: it DROPPED the row. Row index is
+                // the index into the option list for the submenu, the detail
+                // card and the cast alike (FightSession's own comment: "row
+                // position and skill index disagreeing ... casts a different
+                // skill than the one that was pressed"), so a dropped row
+                // desyncs all three. Byte-identical to the Where clause that
+                // built the list, and fed the same actor, so it could never
+                // fire -- which made it purely a claim that the list can
+                // contain locked entries.
                 var skill = option.Skill;
-                if (!actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements))) continue;
 
                 rows.Add(new SubmenuRow(
                     skill.DisplayName,
@@ -391,18 +402,28 @@ namespace PrincesPalace.Domain.Combat.Session
         // is the actual pre-mitigation figure for every skill shape (fixed
         // packets, flat, or resource-scaled) with no target and no RNG spent.
         // "-" rather than a printed "0" for the effects SkillResolution.Amount
-        // has no number for at all (Provoke, Transform, BuffParty, the three
-        // Gifts) -- their preview is a real 0, but showing "0 POWER" on the
-        // card reads as "this does nothing" for an ability that redirects
-        // aggro, transforms the caster, or hands an ally a status/resource.
-        // Same idiom ScalingLabelForSkill below already uses for "no answer
-        // here". Ward and Shatter DO have a number (talent-authored; see
-        // SkillResolution.Amount) and print it like any other skill.
+        // has no number for at all (Provoke, Transform, BuffParty, Summon, the
+        // three Gifts) -- their preview is a real 0, but showing "0 POWER" on
+        // the card reads as "this does nothing" for an ability that redirects
+        // aggro, transforms the caster, adds a monster to the field, or hands
+        // an ally a status/resource. Same idiom ScalingLabelForSkill below
+        // already uses for "no answer here". Ward and Shatter DO have a number
+        // (talent-authored; see SkillResolution.Amount) and print it like any
+        // other skill.
+        //
+        // SUMMON WAS MISSING FROM THIS LIST and is unreachable today: the one
+        // authored Summon (roar) belongs to the forest_warden, and
+        // DetailForSkill is only ever built from a player's kit. It is on the
+        // list because the list is meant to be COMPLETE -- the header above
+        // states the rule it belongs under, and the day a player skill summons
+        // anything the card would otherwise promise "0 POWER" for a fight that
+        // is about to be one monster bigger.
         private static bool HasNoPreviewablePower(SkillEffect effect) => effect switch
         {
             SkillEffect.Provoke => true,
             SkillEffect.Transform => true,
             SkillEffect.BuffParty => true,
+            SkillEffect.Summon => true,
             SkillEffect.GiftMana => true,
             SkillEffect.GiftFury => true,
             SkillEffect.GiftHaste => true,

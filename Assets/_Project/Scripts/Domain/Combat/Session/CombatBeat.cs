@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -26,7 +27,6 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // This is v1's StageBeat, moved whole. It was already engine-free apart
     // from using Vector3Int as an (hp, mana, signature) tuple, which is now
-using PrincesPalace.Domain.Content;
     // Vitals -- so the recording half of the beat system needs no Unity at all,
     // and the whole of it becomes testable in EditMode.
     public sealed class CombatBeat

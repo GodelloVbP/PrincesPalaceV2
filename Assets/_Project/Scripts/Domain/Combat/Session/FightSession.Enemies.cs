@@ -447,12 +447,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // `isPlayerTurn` is passed in rather than read off the encounter for
         // exactly that reason: the caller knows which turn is on SCREEN, and
         // this method must not answer for the one that has already resolved.
+        // AND THE FORFEIT SENTINEL IS NOT A THREAT. IntentForfeit is "a
+        // sentinel before it is a label" by its own declaration, and printing
+        // it raw put "Forfeits Turn!" on the nameplate styled exactly like
+        // "Roar!" and "Grapple!" -- in the slot this header reserves for
+        // "something special is coming", to announce that nothing is. Nothing
+        // rather than a muted line: a blank nameplate is what this method
+        // already means by "no threat", and a rooted monster is not a threat.
+        // FightHudModel.IntentTooltip special-cases the same sentinel and its
+        // comment names THIS method as the precedent for doing so, while this
+        // method compared against IntentAttack only.
         public string TelegraphSuffix(CombatantState enemy, bool isPlayerTurn)
         {
             if (!isPlayerTurn) return "";
 
             string intent = IntentFor(enemy);
-            return string.IsNullOrEmpty(intent) || intent == IntentAttack ? "" : "\n" + intent + "!";
+            if (string.IsNullOrEmpty(intent) || intent == IntentAttack || intent == IntentForfeit) return "";
+
+            return "\n" + intent + "!";
         }
 
         // Resolves every enemy turn between now and the player's next REAL one,
