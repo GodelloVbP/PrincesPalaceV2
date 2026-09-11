@@ -5,7 +5,6 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Economy;
 using PrincesPalace.Domain.Equipment;
-using PrincesPalace.Domain.Relics;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
@@ -212,14 +211,23 @@ namespace PrincesPalace
         // compared for equality or fed into a formula the way damage is.
         public float totalPlaySeconds;
 
-        // Which relic each character is carrying — RelicDefinition content
-        // (a run-long combat effect), NOT the `Relics` currency above. Named
-        // after its TYPE rather than the concept, unlike every other field
-        // here (compare `equipment` on Character) — the natural name
-        // `relics` would sit one line of intent away from `Relics` the
-        // currency, and that collision was worth avoiding rather than living
-        // with.
-        public RelicLoadout relicLoadout = new RelicLoadout();
+        // relicLoadout WAS HERE, and it is gone (AUDIT #119, owner's call
+        // 2026-09-11). A `(characterId, relicId)` map, serialized on every
+        // save, null-guarded and pruned on every Reconcile, and NEITHER
+        // WRITTEN NOR READ by anything in the tree -- stronger than #50, #87
+        // and #112, which are at least written.
+        //
+        // What actually carries a character's relic is RunSnapshot.relicIds
+        // plus FightEncounterAdapter.ResolveRelics, which is run-scoped rather
+        // than save-scoped; per-character assignment, which is the only thing
+        // this shape was for, exists nowhere and is not on the roadmap. It was
+        // written as `{}` on every save, so JsonUtility simply DROPS the
+        // unknown key on the next load and nothing is lost -- the same
+        // no-migration deletion grantedGold got in the pass that filed #112.
+        //
+        // Kept as a comment rather than removed outright because the hazard
+        // was never the field, it was a future reader seeing a relic loadout
+        // on the save and assuming relics were already handled.
 
         // Items bought in the Divine Principality store with permanent
         // currency. GameplayManager.StartRun() copies these into the fresh
@@ -677,8 +685,9 @@ namespace PrincesPalace
 
             // THE RUN'S OWN RELICS, which this method pruned everything BUT.
             //
-            // relicLoadout gets the same treatment further down and always
-            // has; the run's list did not, and it is the one that counts.
+            // save.relicLoadout got this treatment for as long as it existed
+            // and the run's list did not -- and the run's is the one that
+            // counts, which is most of why the other was deleted (#119).
             // FightEncounterAdapter.ResolveRelics skips an unresolvable id
             // harmlessly, but RunOrchestrator.DraftHasAnotherRound counts
             // relicIds.Count against RelicPool.StartingRelicsPerDescent -- so
@@ -807,17 +816,10 @@ namespace PrincesPalace
 
             purchasedUpgradeIds.RemoveAll(id => ContentDatabase.GetUpgrade(id) == null);
 
-            // Same tolerant posture as everything else in this method: drop
-            // an assignment pointing at a relic that got renamed/removed, or
-            // at a character no longer in the roster, rather than letting a
-            // stale reference sit there or fail loudly. No "give it back"
-            // step needed — an unassigned relic just becomes available
-            // again, unlike an orphaned equipped item, which is why this is
-            // one line rather than the stash-return block equipment needed.
-            relicLoadout ??= new RelicLoadout();
-            relicLoadout.RemoveWhere((characterId, relicId) =>
-                ContentDatabase.GetRelic(relicId) == null || roster.All(c => c.definitionId != characterId));
-
+            // relicLoadout's null-guard and prune stood here, tolerantly
+            // dropping assignments nothing could resolve. Both went with the
+            // field (#119): a prune that cannot be observed is upkeep on a
+            // fact nothing asks for.
 
             // AN EMPTY SEAT IS NOT A DANGLING REFERENCE. This drop is for ids
             // naming content that is gone -- a renamed character -- and those

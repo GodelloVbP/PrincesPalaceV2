@@ -196,12 +196,11 @@ namespace PrincesPalace.PlayModeTests
         // Reconcile prunes stockpiledItems, activeRun.inventory,
         // activeRun.currentHealth, learnedSpells, unassignedSpellBooks,
         // shopStock, unlockedTalentIds twice over, equipment,
-        // purchasedUpgradeIds, relicLoadout and selectedCharacterIds -- and
-        // then stopped short of activeRun.relicIds and Character.unlockedSkillIds.
+        // purchasedUpgradeIds and selectedCharacterIds -- and then stopped
+        // short of activeRun.relicIds and Character.unlockedSkillIds.
         //
-        // Its own posture, stated where relicLoadout is pruned: "Same tolerant
-        // posture as everything else in this method: drop the reference, keep
-        // the save loadable."
+        // Its own posture, stated where stockpiledItems is pruned: drop the
+        // reference, keep the save loadable.
         //
         // The relic half is not cosmetic. FightEncounterAdapter.ResolveRelics
         // skips an unresolvable id harmlessly, but

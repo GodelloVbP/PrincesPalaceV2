@@ -80,8 +80,10 @@ namespace PrincesPalace.Content
         }
 
         // Every relic in the game, authored order. There is no "unlocked"
-        // gate today — all of them are always available to assign; see
-        // RelicLoadout for what actually limits who can carry which.
+        // gate today — all of them are always available. Who is carrying what
+        // is RunSnapshot.relicIds, which is run-scoped; there is no
+        // per-character assignment (the save field that named one was deleted
+        // unwired, AUDIT #119).
         public static IReadOnlyList<RelicDefinition> Relics
         {
             get { EnsureLoaded(); return _relics; }

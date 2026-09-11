@@ -38,8 +38,8 @@ namespace PrincesPalace
         // `activeRun != null` cannot do this job: JsonUtility writes a null
         // object field as an empty object and instantiates missing fields on
         // read, so after one save/load cycle the reference is never null
-        // again. This is the same reason Wallet and RelicLoadout are always
-        // non-null with their emptiness expressed in their contents.
+        // again. This is the same reason Wallet is always non-null with its
+        // emptiness expressed in its contents.
         public bool hasRun;
 
         // WHETHER THE PARTY HAS ACTUALLY GONE DOWN, which is a different
