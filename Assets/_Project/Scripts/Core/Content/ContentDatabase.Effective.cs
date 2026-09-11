@@ -649,10 +649,32 @@ namespace PrincesPalace.Content
         // (CharacterDossierController, ItemDescription); stating it once is
         // what keeps a later change to the fallback from reaching some of
         // them and not others.
+        //
+        // NULL FOR AN ID THAT IS NOT A CHARACTER, which is a narrower contract
+        // than PrimaryPoolFor's above and deliberately so. That fallback is for
+        // a KNOWN character whose pool row went missing -- "a save whose pool
+        // went missing plays as mana instead of throwing" -- and inheriting it
+        // here answered "mana" for things that hold no pool at all. A skill's
+        // owner is allowed to be an enemy (Validation.cs:437-461 permits it,
+        // nine shipped monster skills use it), so the case is reachable rather
+        // than defensive, and while a rat answered "mana" the one consumer that
+        // asks -- GlossaryEntries.SpellCost, which prints "{cost} {tag}" --
+        // could never reach its own bare-number fallback. Its reason is worth
+        // repeating: "a number with no unit is incomplete, a number with the
+        // WRONG unit is a lie."
+        //
+        // Every caller already degrades on null (GlossaryEntries.cs:161 and
+        // Validation.cs:530 through ?., ItemDescription on a null viewer, the
+        // dossier defaulting to WisdomDerived), and CanHoldSpellBooks below
+        // still answers yes for a non-character because SpellBooks.CanHold
+        // reads null as yes -- the same answer mana's own row gave, by a
+        // shorter route.
         public static ResolvedPool PrimaryPoolOf(string characterId)
         {
             var definition = GetCharacter(characterId);
-            return PrimaryPoolFor(definition?.Data?.PrimaryPoolId)?.Data;
+            if (definition == null) return null;
+
+            return PrimaryPoolFor(definition.Data?.PrimaryPoolId)?.Data;
         }
 
         // WHETHER THIS CHARACTER CAN CARRY A SPELL BOOK AT ALL (plan P6), and
