@@ -223,7 +223,7 @@ never quietly reach into controller state to make itself pass.
   field-copy block in `ContentBuilder`). It's a problem when it's a
   *procedure* that branches and accumulates, where a different paragraph
   changes for a different reason each time
-  (`ContentDatabase.Validation.ValidateContent`, 360 lines, one arm per
+  (`ContentDatabase.Validation.ValidateContent`, 623 lines, one arm per
   content type — the project's own worst offender by this test). The
   question isn't length, it's: **when this changes next, will the whole
   thing change, or one paragraph of it?** Extract-as-reflex produces helpers

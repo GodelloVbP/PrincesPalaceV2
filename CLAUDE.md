@@ -126,8 +126,9 @@ Add `-BuildScenes` whenever a `[SerializeField]` or a screen tree under
 `Domain/UiKit/Screens/` changed, and again before you **commit** such a
 change: it builds the scenes, runs `UiAudit` against what was actually
 emitted, and syncs them back to main in one go (`-BuildContent` likewise for
-content). `-NoScenes` is gone — nothing built by default means nothing to opt
-out of.
+content). `-NoScenes` is no longer needed — nothing built by default means
+nothing to opt out of — but the switch is kept accepted as a no-op (see
+`run_tests_parallel.ps1`'s own header) so old muscle memory doesn't hard-fail.
 
 **Keep the PowerShell scripts pure ASCII.** No BOM means PowerShell 5.1 reads
 them as Windows-1252, and a UTF-8 em-dash inside a string produces a parse

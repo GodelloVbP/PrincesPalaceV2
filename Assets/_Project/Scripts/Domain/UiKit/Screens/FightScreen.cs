@@ -1819,9 +1819,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildContinueButton()
         {
             // GOLD, not one of the four verb colours: this is the recommended-
-            // next-action button (see CLAUDE.md's colour reservation) rather
-            // than a combat choice - it only ever appears once a beat has
-            // resolved and there is exactly one thing to do next.
+            // next-action button, reserved for that one role, rather than a
+            // combat choice - it only ever appears once a beat has resolved
+            // and there is exactly one thing to do next.
             //
             // 300x80 was 3.75:1 against the Legacy plate's true 3:1 --
             // ThemedButtonAspectLintTests. Height up to nominal, width kept;
