@@ -1,6 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -378,6 +382,68 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(target.Statuses.Exists(s => s.Type == StatusEffectType.Shielded),
                 "A non-hit should not spend the shield");
+        }
+
+        // ---- a poison tick a signature pool eats whole -----------------------
+
+        [Test]
+        public void APoisonTickAWoolPoolAbsorbsIsStillCountedAndStillSaid()
+        {
+            // StatusEffects.Tick measures poison as HEALTH LOST, and
+            // CombatMath.ApplyDamage spends the signature pool BEFORE health --
+            // so a tick the pool ate in full reported zero. TickStatuses is
+            // gated on report.PoisonDamage > 0, which meant no log line, no
+            // RecordUnattributedDamage, no Ledger.Took absorbed column, and no
+            // NoteDamageForPools: the exact bookkeeping d6814ce0 moved into one
+            // funnel precisely so it could not be forgotten.
+            //
+            // Two contracts say so. FightSession.Ledger.cs:219-225: "THE POOLS
+            // ARE TOLD HERE TOO, which is the whole reason this is not just a
+            // Ledger.Took call. A status tick is damage its victim took by
+            // every account that matters to a resource pool." And
+            // CombatMath.cs:508-513: "Absorption lives HERE, in the single
+            // funnel every damage source already goes through... one of them
+            // forgetting would make the resource silently stop being armour
+            // depending on who hit you."
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10)
+            {
+                SignaturePool = new ResourcePool("wool", "Wool", 20, 0, 0, 0,
+                    absorbPerPoint: 1, absorbsDamage: true),
+            };
+            hero.SignaturePool.Current = 20;
+
+            var encounter = new CombatEncounter(new[] { hero }, new[]
+            {
+                new CombatantState("Rat", false, 5000, 10, 8, 1),
+            });
+            var session = new FightSession(encounter,
+                new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, null, null) },
+                null, new SeededRandom(2)) { DamageVarianceRange = 0f };
+
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 5, 3);
+
+            int healthBefore = hero.CurrentHealth;
+            session.TickStatusesForTest(hero);
+
+            Assert.AreEqual(healthBefore, hero.CurrentHealth, "fixture: the pool ate the whole tick");
+            Assert.AreEqual(15, hero.SignaturePool.Current, "fixture: and paid five points for it");
+
+            Assert.AreEqual(5, session.Ledger.For("shawn").Shielded,
+                "the pool ate five points of poison and the ledger never heard about it");
+            Assert.AreEqual(0, session.Ledger.For("shawn").DamageTaken,
+                "and none of it reached health, so none of it is damage taken");
+
+            // Immediate messages as well as beat ones: nothing has opened a
+            // beat in this fixture (TickStatusesForTest is called directly, by
+            // design -- see its own header), so AppendMessage files the lines
+            // under _immediateMessages rather than onto a beat.
+            var lines = session.DrainBeats().SelectMany(b => b.Messages)
+                .Concat(session.DrainImmediateMessages())
+                .ToList();
+            Assert.IsTrue(lines.Any(l => l.Contains("poison damage")),
+                "a tick the player's armour absorbed was never mentioned at all");
+            Assert.IsTrue(lines.Any(l => l.Contains("Wool soaks 5 of it")),
+                "and the armour doing its job is the half worth saying");
         }
     }
 }

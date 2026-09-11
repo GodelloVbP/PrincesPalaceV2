@@ -365,15 +365,38 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (report.IsEmpty) return;
 
-            if (report.PoisonDamage > 0)
+            // GATED ON THE WHOLE TICK, not on the part that reached health. A
+            // signature pool spends itself before health does, so a tick a full
+            // Wool pool eats outright leaves PoisonDamage at zero -- and
+            // reading that as "nothing happened" is how five points of armour
+            // got spent with no line, no ledger row and no word to the pools.
+            if (report.PoisonDamage > 0 || report.PoisonAbsorbed > 0)
             {
-                AppendMessage($"{actor.Name} suffers {report.PoisonDamage} poison damage!");
+                // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
+                // already uses ("attacks X for N damage!" followed by "X's Wool
+                // soaks M of it."). Printing the health figure instead would
+                // announce "suffers 0 poison damage!" for a tick the armour
+                // stopped, and leave the soak line with no antecedent for
+                // "it".
+                AppendMessage(
+                    $"{actor.Name} suffers {report.PoisonDamage + report.PoisonAbsorbed} poison damage!");
+
+                if (report.PoisonAbsorbed > 0 && actor.SignaturePool != null)
+                {
+                    AppendMessage(
+                        $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {report.PoisonAbsorbed} of it.");
+                }
 
                 // Counted as TAKEN and credited to nobody. The poison was
                 // applied turns ago by someone who may now be dead, and
                 // back-crediting it would put points in a column the player
                 // cannot account for against any blow they watched land.
-                RecordUnattributedDamage(actor, report.PoisonDamage);
+                //
+                // Both halves handed over separately, exactly as the funnel's
+                // own Ledger.Took call does: what a pool ate was never taken by
+                // health, and folding the two into one number would double-count
+                // every absorbed point.
+                RecordUnattributedDamage(actor, report.PoisonDamage, report.PoisonAbsorbed);
 
                 // And if the tick killed, that death is settled with the same
                 // KillCredit.Nobody the comment above argues for -- WRITTEN

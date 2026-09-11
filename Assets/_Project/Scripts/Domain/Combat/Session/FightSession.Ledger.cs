@@ -223,10 +223,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // one. Credit is the only thing missing from it, and credit is a
         // question about the ATTACKER -- passing null says there isn't one
         // rather than skipping the bookkeeping the victim is owed.
-        private void RecordUnattributedDamage(CombatantState target, int amount)
+        // `absorbed` is the part a signature pool ate before health, kept apart
+        // from `amount` for the same reason the funnel's own Ledger.Took call
+        // keeps them apart: a point a pool ate was never taken by health, and
+        // one number for both would double-count every absorbed point. The
+        // pools are told the RAW total, which is what the funnel does too --
+        // whether the turn was idle is a fact about the blow, not about how
+        // much of it got through.
+        private void RecordUnattributedDamage(CombatantState target, int amount, int absorbed = 0)
         {
-            Ledger.Took(LedgerIdOf(target), amount);
-            NoteDamageForPools(null, target, amount);
+            Ledger.Took(LedgerIdOf(target), amount, absorbed);
+            NoteDamageForPools(null, target, amount + absorbed);
         }
 
         // Heals report nothing, so the amount is measured rather than trusted:

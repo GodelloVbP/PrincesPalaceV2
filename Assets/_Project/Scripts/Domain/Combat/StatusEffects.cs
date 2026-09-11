@@ -391,18 +391,33 @@ namespace PrincesPalace.Domain.Combat
 
         public readonly struct TickReport
         {
+            // What reached HEALTH.
             public readonly int PoisonDamage;
+
+            // And what the victim's signature pool ate before health was
+            // touched. Reported SEPARATELY, and reported at all, because
+            // PoisonDamage is measured as health lost: a tick a full Wool pool
+            // absorbs outright reduces it to zero, and a zero reads as "the
+            // poison did nothing" to every consumer. It did something -- it
+            // cost the holder five points of armour -- and the fight's
+            // bookkeeping (the absorbed ledger column, the pools' own
+            // "this turn was not idle" flag) is owed all of it.
+            public readonly int PoisonAbsorbed;
+
             public readonly int RegenHealed;
             public readonly IReadOnlyList<StatusEffectType> Expired;
 
-            public TickReport(int poisonDamage, int regenHealed, IReadOnlyList<StatusEffectType> expired)
+            public TickReport(int poisonDamage, int poisonAbsorbed, int regenHealed,
+                              IReadOnlyList<StatusEffectType> expired)
             {
                 PoisonDamage = poisonDamage;
+                PoisonAbsorbed = poisonAbsorbed;
                 RegenHealed = regenHealed;
                 Expired = expired;
             }
 
-            public bool IsEmpty => PoisonDamage == 0 && RegenHealed == 0 && Expired.Count == 0;
+            public bool IsEmpty =>
+                PoisonDamage == 0 && PoisonAbsorbed == 0 && RegenHealed == 0 && Expired.Count == 0;
         }
 
         // The statuses whose whole effect IS the turn they land on, and which
@@ -422,6 +437,7 @@ namespace PrincesPalace.Domain.Combat
         public static TickReport Tick(CombatantState combatant)
         {
             int poisonDamage = 0;
+            int poisonAbsorbed = 0;
             int regenHealed = 0;
 
             foreach (var status in combatant.Statuses)
@@ -429,7 +445,15 @@ namespace PrincesPalace.Domain.Combat
                 if (status.Type == StatusEffectType.Poison && status.Magnitude > 0)
                 {
                     int before = combatant.CurrentHealth;
-                    CombatMath.ApplyDamage(combatant, status.Magnitude);
+
+                    // ApplyDamage's return IS the absorbed figure (see its own
+                    // header -- "Returns how much a signature resource soaked
+                    // before health was touched"), so the split costs a local
+                    // and nothing else. Taken from the funnel rather than
+                    // measured off SignaturePool.Current, which counts POOL
+                    // POINTS and is not the same number whenever AbsorbPerPoint
+                    // is anything but one.
+                    poisonAbsorbed += CombatMath.ApplyDamage(combatant, status.Magnitude);
                     poisonDamage += before - combatant.CurrentHealth;
                 }
                 else if (status.Type == StatusEffectType.Regen && status.Magnitude > 0)
@@ -471,7 +495,7 @@ namespace PrincesPalace.Domain.Combat
             var expired = combatant.Statuses.Where(s => s.TurnsRemaining <= 0).Select(s => s.Type).ToList();
             combatant.Statuses.RemoveAll(s => s.TurnsRemaining <= 0);
 
-            return new TickReport(poisonDamage, regenHealed, expired);
+            return new TickReport(poisonDamage, poisonAbsorbed, regenHealed, expired);
         }
     }
 }
