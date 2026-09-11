@@ -1920,3 +1920,543 @@ The victim's-row half of this same guard WAS a restore with two agreeing
 sources and shipped at `f096823e` (`Ledger.WentDown` moved above the credit
 gate, so "times downed" can report a party member going down). What is left
 here is the relic payout, which is a balance question.
+
+
+## Findings from the total bug hunt, 2026-09-11 (stage 4)
+
+### 125. `itemsets.json`'s `styleWeights` has no sum rule; ten of eleven sets overspend the ability-score budget
+
+`Assets/_Project/ContentData/itemsets.json`, every set but `bulwark`. `statProfile` is
+enforced to sum to exactly 100 (`ItemSetEntryResolver.TryParseStatProfile`); its sibling
+`styleWeights` is checked against no total at all (`ItemSetEntryResolver.DeriveScores:392-399`
+divides each line by 100 and hands it straight to `GearScaling.AtBaseTier`/`AtTopTier`, which
+apply no normalisation or cap). Total ability score granted is therefore linear in the **sum**
+of the weights, and the sums shipped are not equal: `bulwark` 100, `court`/`harness`/`silk`/
+`steel` 108-110, `wool`/`regalia`/`vellum` 110-120, `leather` 115, `brigandine`/`runeplate`
+130-135.
+
+**Measured** (PIL-equivalent arithmetic over the resolver's own formula, `Base 0.4`, slot
+weights 1.25/1.05/0.95/0.90/0.85, `TopMultiplier(10) = 1.25^10`, away-from-zero rounding) — a
+full five-piece set's tier-10 ability-score points, summed over the six scores:
+
+| set | weights sum | tier-10 score points |
+|---|---:|---:|
+| `bulwark` | 100 | 19 |
+| `court`, `harness`, `silk`, `steel` | 108-110 | 19 |
+| `wool`, `regalia`, `vellum` | 110-120 | 21 |
+| `leather` | 115 | 23 |
+| `brigandine`, `runeplate` | 130-135 | 26 |
+
+A full `runeplate` set is worth 7 more ability-score points than a full `bulwark` set at the
+same tier, in the same slots — 37% more, against Shawn's whole authored spread of 66. At tier 0
+every value rounds to 0-1, so the divergence is invisible in early play and opens with tier.
+
+**Intent evidence, four agreeing.** `itemsets.json`'s own `_readme` ("a BUDGET the whole set
+spends"; "that is exactly how same-tier sets drifted to unequal budgets", the stated reason
+`baseStats`/`topStats` were removed; "a piece's own budget differs only by its slot's weight …
+never by a different split"); `docs/CONTENT_SCHEMA.md`'s `styleWeights` entry ("this material's
+per-score SHARE of the ability-score half of the budget"); the enforced sibling rule on
+`statProfile` in the same resolver; `GearScaling.cs:243-245`'s own comment ("a pure style asks
+10 of its one stat, and a dual asks 4 and 7 rather than 10 and 10" — written expecting the
+weights to sum to ~1.0).
+
+**Two options.**
+1. Add a `styleWeights`-sums-to-100 check mirroring `TryParseStatProfile`'s, and re-author the
+   ten sets onto 100. The rule itself restores established intent; *which* score each set gives
+   up to get back to 100 is a balance number.
+2. Leave the sets as shipped and correct the `_readme`/schema language to say the budget is a
+   per-score share of a variable pool rather than a fixed one, accepting the current spread as
+   intended variety between materials.
+
+### 126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable
+
+`Assets/_Project/ContentData/enemies.json`, row `golem`: `"attackHoldsPosition": true` beside
+`"attackWeight": 0` and one ability (`boulder_slam`, weight 1).
+`FightEncounterAdapter.cs:573` adds the plain swing to the draw pool only
+`if (source.AttackWeight > 0f)`, so the golem never takes a plain attack.
+`FightSession.Enemies.cs:853` reads the flag as
+`if (!usingSkill && hasSource && source.AttackHoldsPosition)` — `usingSkill` is true on every
+golem turn, so the branch is unreachable for this enemy. The contradiction sits in the code's
+own comment four lines above the branch (`FightSession.Enemies.cs:849-852`): "The golem is the
+case this exists for: its 'attack' stance is a byte-for-byte alias of its 'cast' stance" — the
+one enemy the flag was written for is the one enemy that cannot reach it. No visible symptom
+today: `boulder_slam` authors no `approach`, so it holds by the cast route instead.
+
+**Intent evidence.** The `FightSession.Enemies.cs:849-852` comment, plus `RawEnemyEntry
+.attackWeight`'s own doc ("0 removes plain attacks entirely") — the two agree on the facts and
+disagree on the row.
+
+**Two options.**
+1. Drop `attackHoldsPosition` from the golem row and move the comment's worked example to an
+   enemy that still plain-attacks.
+2. Give the golem a non-zero `attackWeight` so the plain slam it has art for is drawn again (a
+   balance change). Either way, `EnemyEntryResolver` could refuse `attackHoldsPosition`/
+   `attackApproach` on a row with `attackWeight: 0`, the same "no meaning on that effect" rule
+   `SkillEntryResolver` already applies five times (see #145).
+
+### 127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only
+
+`Assets/_Project/ContentData/characters.json`, row `sheep`: `signatureGainPerTurn: 1`,
+`signatureGainOnAttack: 0`, `signatureGainOnDamageTaken: 0`. The file's own `_readme` says of
+the same resource: "Wool (Shawn) is the balanced template: **attack-led** with a real per-turn
+and damage-taken floor" … "His plain Attack pays the most because his Attack is 5 against enemy
+Defense of up to 9, i.e. nearly worthless as damage; giving it the best Wool yield turns his
+weakest action into a deliberate choice." Both halves are false of the shipped row: on-attack
+yield is 0 and the damage-taken floor is 0. What Shawn actually has is per-turn-only — the shape
+the same paragraph assigns to a *different* resource ("Insight (Owl) is per-turn-led and almost
+nothing else"). Not #121 (`signatureAbsorbsDamage: false`, a different pair of fields).
+
+`signatureGainOnAttack` has no source anywhere in shipped content: authored 0 on the only
+character with a signature; `TrackReward` has `SignatureCapacity`/`SignatureGainPerTurn`/
+`SignatureGainOnDamageTaken`/`SignatureAbsorbs` but no gain-on-attack member
+(`Domain/Progression/RewardTrack.cs`); `RawTalentEntry` offers only `signatureCapacityBonus`/
+`signaturePerTurnBonus`. The row has read `1 / 0 / 0 / false` unchanged since `1bd59995`, the
+first commit of this tree — the prose was written against an intent the data never carried.
+
+**Intent evidence.** The `_readme` paragraph is the only source (a comment alone is a lead, not
+two agreeing sources) — filed as the owner's call on which side is wrong.
+
+**Two options.**
+1. Make Wool attack-led as written: author `signatureGainOnAttack` on the row and add a
+   `SignatureGainOnAttack` track-reward member so it can grow.
+2. Rewrite the `_readme` paragraph to describe Wool as per-turn-led, matching the shipped row.
+
+### 128. `achievements.json:three_bosses` cannot be earned by the shipped roster
+
+`{"id": "three_bosses", "condition": "DefeatDistinctBosses", "threshold": 3}`. `enemies.json`
+carries two `isBoss` rows: `forest_warden` (`active: true`) and `hollow_choir`
+(`active: false`). `ContentBuilder.cs:447` filters to `Active` when generating the assets
+`ContentDatabase.Enemies` reads, so exactly **one** distinct boss can ever be defeated. Three
+distinct is unreachable at any depth, on any save, for any number of runs. Nothing gates on it
+today (no relic names `three_bosses` in `unlockedBy`).
+
+**Blind spot.** `Tests/PlayMode/Content/AchievementBossValidationTests.cs` already asserts the
+`DefeatSpecificBoss` half (that `first_forest_boss`'s `parameter` names an existing `isBoss`
+row); there is no companion rule tying a `DefeatDistinctBosses` threshold to the count of
+*active* boss rows — the identical question one step up.
+
+**Two options.**
+1. Lower `threshold` to 1 (matches what is currently earnable).
+2. Leave it as a forward marker for bosses not yet shipped (the way `forest_wardens_tooth` is
+   accepted as furniture) and add the companion resolver check so it fails loudly until a second
+   and third boss ship, rather than silently sitting unearnable.
+
+### 129. `Resources/Spells/prismatic_orb_water` is 15 frames of committed art nothing plays
+
+All 31 folder/file references out of every `vfx` block in `skills.json` and `enemies.json` were
+walked (top-level `path`/`groundPath`, `layers[].path`, `layers[].emitter.path`, each element's
+own block, `transform.hit.vfx`) — every one resolves. In the reverse direction, one committed
+folder is named by nothing: `Resources/Spells/prismatic_orb_water/` (15 PNGs + metas), with its
+own recipe at `Art/Sheets/recipes/prismatic_orb_water.json`. The orb's Water element plays the
+five-layer form (`prismatic_orb_water_{charge,core,wake,drops,contact}`) instead. Superseded art
+still shipping in the build.
+
+**Blind spot.** `SpellVfxRecipeDriftTests` checks "every folder a skill plays has a recorded
+provenance" and "no skill times a beat to a frame its folder does not have," never the reverse —
+a folder with a provenance that no skill plays.
+
+**Two options.**
+1. Delete the folder and its recipe.
+2. Keep it as the single-sheet fallback and say so in the recipe's `_notes`.
+
+### 130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand
+
+`characters.json`'s `_readme` is consistent ("his abilities shear it off", "He starts every
+fight at zero"), and the Black Ram talent strand agrees (`sheep_ram_trample_3` "he is heavy, not
+infinite", `sheep_ram_stand_3` "leaves him standing on 1"). The Fragile Lamb strand does not,
+across five player-facing strings for the same character: `talents.json:sheep_lamb_ward_3`
+("**She** can cover **herself** AND do something with the day"), `skills.json:fleece_ward`
+("finds wool before it finds **her**"), `skills.json:shatter` ("Every ward **she** has out…"),
+`skills.json:gift_mana` ("**She** has more wool than **she** has turns"), and the code follows
+it — `FightSession.Talents.cs:325-326,343` ("throws a share of **her** Attack", "**Her** OWN
+ward is worth triple"). The strand boundary is too clean to be a typo — it reads as a design
+where the Lamb strand was written for someone else.
+
+**Intent evidence.** Single source (the pronoun split itself); the strand boundary's cleanliness
+argues design rather than typo, but does not settle which pronoun is correct.
+
+**Two options.**
+1. Sweep the Fragile Lamb strand's five strings (and the two code comments) to "he"/"his"/
+   "himself", matching the rest of the character.
+2. Confirm the Lamb strand was deliberately written for a different character's voice and
+   reassign it, leaving Shawn's own strand as Black Ram only.
+
+### 131. `amulet_of_wisdom` is the one starting-kit item with no icon
+
+`items.json` has six `startingStock: true` rows. Five carry an `iconPath` into
+`Art/Items/<sheet>/level_1.png`; `amulet_of_wisdom` (Equipment, Necklace) has none. Graceful
+degradation is the house style, so this renders, but five-of-six reads as an oversight rather
+than a decision. The other two icon-less rows (`health_potion`, `mana_potion`) are consumables,
+consistent with each other and not part of this finding.
+
+**Two options.**
+1. Commission icon art for `amulet_of_wisdom` to match its five siblings.
+2. Leave it on the graceful-degradation path and note in the row why (a stated placeholder,
+   rather than an unnoticed gap).
+
+### 132. The bog witch is the only monster weak to the element it attacks with
+
+`enemies.json:bog_witch`: `"attackType": "Poison"`, `"weakness": "Poison"`,
+`"resistance": "Nature"`. Every other elementally-typed row resists its own attack type: `imp`
+Fire/resists Fire, `ember_hound` Fire/Fire, `gloom_moth` Ice/Ice, `mire_lurker` Poison/Poison,
+`crystal_bat` Arcane/Arcane, `sable_wisp` Arcane/Arcane, `hollow_choir` Arcane/Arcane — seven for
+seven; the bog witch inverts it. Validates clean: `EnemyEntryResolver` only refuses an element
+appearing in *both* `weakness` and `resistance`, which this row does not do. Fielded 81,183
+times across stage 2's bot batches.
+
+**Two options.**
+1. Give the bog witch a resistance to Poison (or a different weakness) to match the roster's own
+   pattern, if the inversion was a transposed pair.
+2. Leave it as a deliberate glass-cannon caster and add a resolver rule that requires an explicit
+   justification comment for a self-weak row, so the next one is a choice rather than a silent
+   pass.
+
+### 133. Four enemy stance PNGs nothing can play
+
+Driven stances are the six on `FightSession.Beats.cs:423-430` (`idle`, `attack`, `cast`, `hurt`,
+`defeated`, `victory`) plus whatever a skill names in `stance`/`approachStance`/`windupStance`.
+Every stance string in `skills.json` resolves against its folder. The reverse sweep leaves four
+files no name reaches: `Enemies/golem/guard.png`, `Enemies/rat/guard.png`,
+`Enemies/rat/extra.png`, `Enemies/bog_witch/taunt.png`. Harmless (shared canvas, ground lines
+agree with their actors'), but art shipping in the build with no route to the screen.
+
+**Two options.**
+1. Wire each into a skill's `stance`/`approachStance`/`windupStance` where one fits.
+2. Prune the four files and their metas.
+
+### 134. The roster's per-character content is uneven, and Bjorn cannot be given a reward track under the current `TrackReward` model
+
+| character | skills | talents | reward track |
+|---|---|---|---|
+| Shawn (`sheep`) | 9 own + 6 book | 43, columns 0 and 1 | authored |
+| Bjorn (`bear`) | 3, all `placeholder_brawler_*` | 1, `placeholder_brawler_ward_root` | none — `RewardTrackDefinition.Default` |
+| Odette (`owl`) | 1 (`prismatic_orb`) | 0 | authored |
+
+Bjorn's three skills are honest placeholders (`Art/Characters/bear/README.md` records the
+decision to keep the ids: "Renaming them would touch saves and tests for no visible gain
+today"), all free (`manaCost 0`, `resourceCost 0`), reaching the resolver only through the
+zero-start carve-out (`SkillEntryResolver.cs:230-237`) — so nothing in the game spends Fury,
+which `pools.json`'s own `_comment` already documents as an interim, not a defect.
+
+**The model gap, not an authoring one.** Bjorn's resource is a pool (`fury`, `capacityRule:
+"Fixed"`), not a signature. `TrackReward` has four `Signature*` members and `MaxMana`/
+`ManaRegen`, and nothing that pays into a primary pool other than mana — a `SignatureCapacity`
+row would be refused by rule (5) on a character with no signature, and `MaxMana` is inert
+against a `Fixed`-capacity pool. A Bjorn track cannot be authored today without a new
+`TrackReward` member. Odette has zero talents, and column 2 is unauthored for every character
+against a skeleton the `_readme` calls "three paths" — recorded here as the same shape of gap,
+not separately numbered.
+
+**Two options.**
+1. Add a `TrackReward` member that pays into a non-mana primary pool (e.g. `PrimaryPoolCapacity`
+   keyed by pool id, or a `Fury`-specific reward), then author Bjorn's track.
+2. Treat Bjorn's whole kit (skills, talents, track) as still pre-balance-pass and leave the model
+   gap open until that pass, tracking it here rather than plumbing a track reward for a kit not
+   yet designed.
+
+### 135. `spells.json` ends at level 9; characters level to 100
+
+`spells.json`'s `_readme` says "one row per character level" and "this is what makes Skill get
+stronger and costlier as a character levels 1-9." Nine tiers ship; reward tracks run to level
+100, and stage 2's bot observed `levelAtDeath` up to 87. Per the resolver's own rule ("the
+highest tier not exceeding the caster's level is used"), the Skill action stops improving at
+level 9 and is flat for the remaining 91 levels. Possibly deliberate — the `_readme`'s own
+framing ("the curve deepens with level on purpose") reads as though 9 was the ceiling when it
+was written, but nothing establishes what the intended top of the curve is.
+
+**Two options.**
+1. Author `spells.json` tiers past 9, deciding where the Skill curve should actually stop
+   relative to the 100-level track.
+2. Confirm 9 is the intended ceiling (Skill deliberately flattens for the rest of a run) and say
+   so explicitly in the `_readme`, replacing the "curve deepens with level" framing.
+
+### 136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist
+
+`tools/run_tests.ps1:12-13`:
+```
+$SourceProject = "C:\Games\Prince's Palace"
+$TestProject = "C:\Games\Prince's Palace-TestRunner"
+```
+Every sibling script (`test.ps1`, `run_tests_parallel.ps1`, `bot.ps1`, `preview.ps1`,
+`build_content.ps1`, `screenshot.ps1`) derives its project root dynamically via
+`Split-Path $PSScriptRoot -Parent`; this is the only one that hardcodes an absolute v1 path.
+Verified on disk: neither `C:\Games\Prince's Palace` nor `C:\Games\Prince's Palace-TestRunner`
+exists. `git log` shows this file's only commit in this tree is `1bd59995` ("Start keeping the
+rebuild's history") — carried into the v2 rebuild verbatim, paths untouched. As written it fails
+loudly today (robocopy errors against a missing source, Unity fails to open a missing
+`-projectPath`, "No results file produced", non-zero exit) — dead-but-noisy, not silent. But
+robocopy's own exit code is never checked (line 19-21, piped to `Out-Null`), so if either path
+were ever resurrected on disk (a stray v1 checkout, a restored backup, a second clone) this
+script would silently sync from/to that tree and report results with zero indication they are
+not about this project — the "tests the wrong tree and reports green" shape this hunt was
+looking for. `docs/CODE_MAP.md:266` claimed this script "still works"; corrected in the stage 4
+docs commit (see the entry above this section for the sha).
+
+**Two options.**
+1. Delete `tools/run_tests.ps1` as superseded by `test.ps1` + `run_tests_parallel.ps1`.
+2. Repoint it to derive its project root dynamically like every sibling script, and add a
+   robocopy exit-code gate, if it should stay as a documented fallback.
+
+### 137. A balance-bot shard killed after `runs.jsonl` starts writing silently drops its requested-count share from the batch total
+
+A shard that crashes or is killed **after** writing at least one run to `runs.jsonl` but
+**before** `RunBatchCore`'s final `File.WriteAllText(... "batch.json" ...)`
+(`Assets/_Project/Scripts/Editor/Bot/BalanceBotRunner.cs:339-340`) is merged as if it were a
+normal shard, with its declared `runsPerCell` contribution missing from the batch total and no
+warning anywhere in the chain.
+- `BalanceBotRunner.cs:302-316`: each run's row is written and flushed incrementally as it
+  completes, by design — `runs.jsonl` can legitimately be non-empty after a crash.
+- `BalanceBotRunner.cs:339-340`: `content.json`/`batch.json` are written only after the whole
+  nested loop finishes, after `runs.jsonl`/`traces.jsonl` are already closed — a crash in that
+  window leaves `runs.jsonl` populated but `batch.json` entirely absent.
+- `tools/bot.ps1:330-345` ("collect") judges a shard failed/succeeded solely on whether
+  `runs.jsonl` exists; `batch.json`'s absence is never checked, so the shard is copied into the
+  batch dir as a normal, successful shard.
+- `tools/bot_merge.py:88-103` (`load_batch`): a missing `batch.json` becomes `{}`, and
+  `if head: headers.append(head)` means the empty dict is never appended to `headers` — but the
+  shard's runs ARE still appended to `runs` unconditionally, so `merge_headers`' `runsPerCell`
+  sum (`bot_merge.py:909`) understates what was actually asked for, silently, by exactly the
+  crashed shard's share.
+- `docs/BOT_SUMMARY_SCHEMA.md`'s own "Partial batches" section (line 743-750) describes a
+  different, pre-sharding mechanism (the runner itself flushing a partial `summary.json`,
+  reading as e.g. "143/200") that predates `bot_merge.py` computing the summary — the doc was
+  not updated for the sharded case, where a crash can drop a shard's contribution entirely
+  rather than degrade it to a visible partial count.
+
+Impact is low-to-moderate: every other `summary.json` number (medians, shares, `bugs[]`) is
+computed directly from the runs that did arrive; only the batch's own self-description of how
+much work it did (`batch.runsPerCell`, used in the report's subtitle and seed-range label) is
+wrong.
+
+**Two options.**
+1. Have `bot.ps1`'s collect step warn by name when a shard's `batch.json` is missing (mirroring
+   how it already prints a log tail when `runs.jsonl` itself is absent), and have
+   `merge_headers` compute `runsPerCell` from each shard's own actual row count when its header
+   is absent, so the aggregate self-corrects rather than silently understating.
+2. Leave `bot.ps1`'s collect step as pass/fail on `runs.jsonl` alone (a genuinely partial shard's
+   real numbers are not corrupted, only its self-description), and instead update
+   `docs/BOT_SUMMARY_SCHEMA.md`'s "Partial batches" section to describe the sharded reality
+   rather than the pre-sharding mechanism it currently documents.
+
+### 138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way
+
+`Assets/_Project/Scripts/Domain/Combat/CombatAction.cs` (whole file, 17 lines):
+`public enum CombatAction { Attack, Skill, Item, Run, Default }`.
+`grep -rn "CombatAction" --include=*.cs --include=*.json Assets/_Project` returns exactly one
+line, the enum's own declaration — no caller, past or present, anywhere in the tree, including
+Tests. The combat menu's actual action-kind type today is `FightActionKind`
+(`Domain/Bot/FightAction.cs:16-25`: `Attack, Skill, Item, Move`), a differently-shaped enum (no
+`Run`, no `Default`, has `Move` instead) used throughout the bot/FightSession seam. No comment,
+doc, or commit references `CombatAction` outside its own file (repo history is squashed to one
+commit, so no earlier trail is recoverable) — the single-source/none case the hunt's own
+definitions call out: the file's header is the only description of intent, and nothing
+corroborates or contradicts it.
+
+**Two options.**
+1. Delete the file — nothing in the tree references it and its own header gives no reason to
+   keep it around.
+2. Confirm it is scaffolding for a menu-level action distinct from `FightActionKind` (a `Run`/
+   `Default` choice the bot-facing enum does not need) and give it a first caller.
+
+### 139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix
+
+`Assets/_Project/Scripts/Domain/UiKit/OverlayAnchors.cs` (194 lines) vs.
+`Assets/_Project/Scripts/Domain/UiKit/DossierLayout.cs` (753 lines, live) and its caller
+`Assets/_Project/Scripts/Domain/UiKit/Screens/CharacterDossierScreen.cs:833`
+(`DossierLayout.SlotAt(slot)`) and `:883`
+(`.AllowOverlap("a slot stands on the mannequin and its own leader line")`).
+
+`OverlayAnchors.cs:44-59` describes a PRIOR arrangement that put slot cells directly on the
+silhouette's centre line as a defect: "the paperdoll reads as a stack of boxes with a purple
+shape behind it rather than as a body wearing things… This is the same defect the armour-stand
+art brief already named — 'no internal detail competing with the slot cells' — arriving from the
+other side" — the exact phrase MEMORY.md's recorded 2026-08-11 incident names (an armour-stand
+generation that put pauldrons, tassets and joint seams where the slot cells land, praised as
+"exactly it" before the reservation was walked back). `OverlayAnchors`'s fix: two columns
+flanking the figure with 32px gutters, clearing the overlap "by construction rather than by
+exemption."
+
+`grep -rn "OverlayAnchors" --include=*.cs Assets/_Project/Scripts` returns exactly two lines: the
+class's own declaration, and one illustrative comment in
+`Domain/UiKit/Screens/DebugMenuScreen.cs:10` that is prose, not a call site.
+`OverlayAnchors.PositionFor` — the method carrying the whole flanking-columns fix — has zero
+callers. What is live instead: `CharacterDossierScreen.cs:833` positions each equipment slot via
+`DossierLayout.SlotAt(slot)`, whose own header (line 20-24) states plainly that "the mannequin
+slots and their leader hairlines are still the handover's own numbers, still positioned against
+each other" — i.e. `DossierLayout` deliberately kept the older slot-against-mannequin numbers
+`OverlayAnchors.cs`'s header describes replacing — and `CharacterDossierScreen.cs:883` carries a
+live `AllowOverlap` exemption for the full slot cell (not just a hairline) on the mannequin,
+exactly the category of overlap `OverlayAnchors.cs`'s header treats as the thing to eliminate.
+
+Provenance: `OverlayAnchors.cs` was authored first (`40af5d16`), `DossierLayout.cs` second
+(`c85af675`, the newer class) — `OverlayAnchors` kept receiving commits for a while, including
+one titled `4be7ce55` ("Get the slot cells off the figure they are meant to describe" — the
+exact fix its header narrates), before the screen's real wiring moved fully onto `DossierLayout`
+and `OverlayAnchors` stopped being called at all.
+
+**Two options, both requiring eyes on the rendered screen rather than a unilateral change.**
+1. `OverlayAnchors.cs` is superseded and safe to delete outright — `DossierLayout`'s
+   mannequin-hugging slot placement, with its `AllowOverlap` exemption, is an accepted design
+   (low mannequin alpha and the item icon itself may not actually compete with painted detail in
+   practice).
+2. `OverlayAnchors.cs`'s flanking-column geometry is the better-considered design for exactly the
+   reason its own header gives, and `DossierLayout`'s mannequin-hugging placement is a regression
+   worth revisiting — check the actual screen with real equipped-item icons over the mannequin
+   before deciding.
+
+### 140. AUDIT.md's own archival rule was not followed for thirteen struck findings
+
+This register's own header states: "A struck finding's full write-up does not stay here: it
+moves, verbatim, to `docs/AUDIT_STRUCK_ARCHIVE.md`, and this file keeps only the one-line struck
+heading pointing at it." Cross-checked every struck (`~~N.~~`) finding number in this file
+against every struck finding number in `docs/AUDIT_STRUCK_ARCHIVE.md`: this file has struck
+findings {24, 38, 39, 40, 42, 43, 48, 49, 52, 53, 55, 56, 59, 61, 62, 64, 66, 67, 68, 69, 70, 71,
+72, 73, 74, 75, 76, 107, 108} (29 total); the archive only contains {24, 38, 39, 40, 42, 43, 48,
+49, 52, 53, 55, 56, 59, 61, 107, 108} (16 total). The 13 missing from the archive — #62, #64,
+#66-76 — were spot-checked directly in this file (e.g. #62 at line 488, #64 at 566, #66 at 610,
+#76 at 630 as of the revision this was found): several (#62) still carry a full multi-paragraph
+write-up inline here, not just a one-line heading, directly contradicting the register's own
+stated process. This is a process claim about the register itself, not a behavioural bug, and it
+costs nothing to fix either way.
+
+**Two options.**
+1. Move #62, #64, #66-76's full write-ups to `docs/AUDIT_STRUCK_ARCHIVE.md` the same way #24 etc.
+   already were, leaving one-line struck headings here.
+2. Amend the header's stated process to describe what actually happens for this later range (if
+   keeping some struck write-ups inline is now the intended behaviour).
+
+### 141. A kindled Talent stone's interrupted settle rests on GameObject Update order between two components, not on TalentController
+
+`TalentLifecycleTests.ASecondStoneKindledMidBeatStillSettlesTheFirst` (stage 3b lifecycle
+scenario A18) passes, but for a reason nobody designed. `DriveKindling` writes
+`orbs[index].localScale` every frame and writes it back to 1 in exactly one place: the branch
+that fires when the beat reaches its end, for whichever stone the controller still owns —
+nothing in `TalentController` settles the stone a second kindle abandons. What puts it back is
+the orb's own `ButtonPressAnimator`: every orb is a `Ui.Button` (`TalentScreen` says so in
+capitals), `UiEmitter.EmitButton` attaches a press animator to every non-hover button, and it
+lerps `localScale` toward its base forever. So the property has three writers, and the one that
+rescues the abandoned stone is the one `EmitButton`'s own comment two lines away is arguing
+about when it refuses to attach two animators at once: "both drive localScale, and a node
+carrying both would have them fight every frame." The outcome is correct today and rests on
+Update order between two components on one GameObject — the shape `EscapeKey.cs`'s own header
+calls "not a thing to build behaviour on." Settling the outgoing stone explicitly in
+`BeginKindling` is a one-line fix, but the test is green today, so there is no red output to fix
+against.
+
+**Two options.**
+1. Accept the current arrangement (it works, and rewriting a passing mechanism with no failing
+   test is not itself a fix) and record it here as a known fragility if `ButtonPressAnimator`'s
+   attach rule ever changes.
+2. Settle the outgoing stone explicitly inside `BeginKindling` so the outcome no longer depends
+   on which component's Update runs second, and add a test that would fail if that Update order
+   ever inverted.
+
+### 142. Whether time spent in the system menu counts toward playtime is undecided
+
+`PlaytimeTracker` ticks `Time.unscaledDeltaTime`, so opening the system menu (which pauses
+`Time.timeScale` but not unscaled time) currently counts as playtime. Nothing in the code, docs,
+or git log decides this either way, and the tracker's own header — which explains at length what
+it deliberately does NOT count — is silent about pauses specifically.
+`GlobalStateLifecycleTests.TimeSpentInTheSystemMenuCountsAsPlaytime` (stage 3b lifecycle scenario
+E9) is committed `[Ignore]`d, pinning current behaviour without asserting it is correct.
+
+**Two options.**
+1. Keep paused time as playtime (matches "time with the app open," which is the simpler
+   definition) and un-ignore the test asserting exactly that.
+2. Stop the tracker while the system menu (or any full pause) is open, and write the test the
+   other way.
+
+### 143. Fight HUD's tail-survives design contradicts one lifecycle scenario's expectation for a live spell effect
+
+`docs/hunt/SCENARIOS.md` row A10 (`SpellVfxPlayer`, "`Play` while a previous effect is still
+drawing" → "the previous effect is cleared, not layered") cannot be honestly asserted against the
+shipped design: a `SpellVfxPlayer` draws one thing by construction, and "the previous effect is
+cleared, not layered" is exactly the claim
+`SpellRendererAndClockTests.ACinderfaultOverALiveTailSharesNoRendererWithIt` and the tail-survives
+rule it protects refuse — a live tail is deliberately left to finish on its own renderer rather
+than being cleared by the next cast. The scenario's expected-state column describes the opposite
+of the shipped behaviour.
+
+**Two options.**
+1. Correct `SCENARIOS.md` row A10 to describe the tail-survives rule (a second `Play` gets its
+   own renderer; the previous tail is not cleared), matching `SpellRendererAndClockTests`.
+2. If "cleared, not layered" is actually the intended design for this specific interrupt case
+   (as opposed to the general tail-survives rule), write the PlayMode test for it and reconcile
+   it against `ACinderfaultOverALiveTailSharesNoRendererWithIt`, which currently asserts the
+   opposite for a different case.
+
+### 144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move
+
+`4c4bddc3` fixed two real defects in `FightController.Hud.cs`'s `PaintVitals` (a beat painting a
+stale maximum, and a Move-reordered party list landing two members' numbers on each other's
+cards) by addressing both plates by slot rather than by list index — matching
+`RefreshPcPlates`'s own header claim ("a plate belongs to a character for the whole fight") and
+`DrawSide`'s stated convention (position walked by rank; drawing/nameplate/flash/fade by slot,
+"which belongs to one combatant for the whole fight"). The commit's own message names the
+consequence directly: "the HUD column no longer reorders itself when a Move reorders the field"
+— a visible behaviour change that was a side effect of the correctness fix, not something the
+fix's brief asked for. The commit's own reasoning for taking it anyway is sound (indexing one
+half and not the other would fix the round containing the Move and break every round after it),
+but whether the column should visually reorder to track live field position at all is a design
+question the fix did not settle, it just answered which BROKEN option to pick between (slot for
+both, or index for both — never a mix).
+
+**Two options.**
+1. Accept identity-stable plates (the shipped fix): the column never reorders after the first
+   repaint of a round, and a Move is only visible as the two swapped plates' own content, not
+   their position. Matches `DrawSide`'s existing slot-vs-rank convention.
+2. Build a painted-occupancy record (a third piece of state recording which VISUAL slot is
+   occupied by which combatant at each point in the beat sequence, independent of both rank and
+   fight-long slot) so the column can re-order live to track field position while still painting
+   the right numbers on the right card. Larger: a new record to keep synchronized against Move,
+   death, and revive.
+
+### 145. Eleven content-resolver blind spots found across the shipped `.json` files (B3-B11 plus two prior)
+
+One entry for the resolver gaps the content pass found that let an authored value validate clean
+while meaning nothing (or the wrong thing) downstream — recorded together since each is small on
+its own and the pattern (a sibling field enforced, a related one not) repeats across resolvers:
+
+- **B3.** `SkillEntryResolver` refuses `bookTier` only when negative; the schema's stated band is
+  1-4, so `bookTier: 9` validates and lands in no price band.
+- **B4.** `SkillEntryResolver` trims and stores `stance`/`approachStance`/`windupStance` with no
+  existence check — only `vfx` paths go through `SpellPresentationPaths`. A typo costs the pose
+  silently. (All twelve shipped strings do resolve today — measured.)
+- **B5.** `EnemyEntryResolver` accepts `attackHoldsPosition`/`attackApproach` on a row with
+  `attackWeight: 0`, where neither can be read (see #126, the golem).
+- **B6.** `EnemyEntryResolver`'s `weakness` may name the row's own `attackType`; only
+  weakness-intersect-resistance is refused (see #132, the bog witch).
+- **B7.** Achievement validation checks `DefeatSpecificBoss`'s parameter against the enemy table
+  but has no companion rule checking a `DefeatDistinctBosses` threshold against the count of
+  active bosses (see #128, `three_bosses`).
+- **B8.** `CharacterEntryResolver` leaves `attack`/`physicalDefense`/`magicalDefense`
+  unvalidated (`maxHealth`/`speed` are refused at <= 0; these three are not, so a negative
+  defense validates); `princesFavor < 0` is silently clamped to 0 rather than refused;
+  `plateTheme` uniqueness is unchecked though the resolver's own comment argues every value is
+  some other character's colour.
+- **B9.** `RewardTrackEntryResolver` does not stop `MaxMana`/`ManaRegen` on a character whose
+  pool is `capacityRule: "Fixed"` (where max-mana sources do not add) or
+  `restoredByManaEffects: false`. Not live today (Bjorn has no track — see #134), but it is the
+  same shape rule (5) already guards for signatures.
+- **B10.** `SpellVfxRecipeDriftTests` (a) has no reverse sweep, so a committed folder no skill
+  plays passes clean (see #129); (b) has no byte-identity replay, so a recipe's own `_notes`
+  prose is the only record of a known pixel-level drift; (c) `groundImpactFrame` is not walked
+  alongside `impactFrame`/`departFrame`/`startFrame` (inert today — nothing authors
+  `groundPath`).
+- **B11.** `StanceManifestValidationTests`' per-actor median check means a single-stance outlier
+  is invisible by construction (benign today — the two outliers found are the documented staff/
+  spike/hammer-head cases); nothing anywhere checks `castPoint` against the art at all (verified
+  by hand this pass instead).
+- **B1** (`ItemSetEntryResolver` not summing `styleWeights`) is filed separately as #125 — cross-
+  referenced here, not double-counted. **B2** (`SkillEntryResolver` not checking `scalingAxis`
+  against `damageInstances`) was already closed in this same hunt by the resolver refusal
+  `d6a7ed0c` adds — cross-referenced here for completeness, not a remaining gap.
+
+**Two options (applies to the group; each individual gap is small enough that a per-row decision
+is not warranted).**
+1. Work through B3-B11 as a batch of small resolver-hardening changes (each one mirrors an
+   existing enforced sibling rule in the same resolver, so the shape of the fix is already
+   established per row).
+2. Leave them open and rely on the content pass's own measurement/replay evidence (recorded in
+   `scratchpad/hunt2/stage4/content/notes.md`'s clearance ledger) as the standing check until a
+   resolver-hardening pass is scheduled.
