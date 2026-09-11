@@ -176,6 +176,42 @@ namespace PrincesPalace.Domain.Rewards
         public const int RelicSection = 2;
         public const int SectionCount = 3;
 
+        // ---- how many decisions one visit can want ---------------------------
+        //
+        // DERIVED, NOT TYPED. A headless caller has to bound a shop visit --
+        // a policy that never says leave is a hang and nothing times it out
+        // (docs/PLAN_SHOP.md 2g) -- and the bound was a hand-written 12
+        // justified against a six-card shelf. The shelf became ten cards on
+        // 2026-09-03 and the justification did not follow: buying every card
+        // (10), rerolling every section once (3) and the Leave that ends the
+        // visit (1) is already 14, so a policy doing nothing unusual was
+        // being cut off and the cut recorded as a finding. It sits here
+        // rather than in the caller precisely so the shelf and its bound
+        // cannot drift apart again: change a count above and this moves with
+        // it.
+        //
+        // SELL HEADROOM IS THE ONE JUDGEMENT IN IT, and it is PROVISIONAL.
+        // Selling is unbounded in principle -- a bag can hold more rows than a
+        // shelf has cards -- so no arithmetic derives it and a number has to
+        // be chosen. MEASURED rather than guessed: with the ceiling lifted far
+        // out of the way, 2,050 shop visits across two archetypes over a
+        // 200-run batch peaked at 24 decisions in one visit, so 10 would be
+        // exactly the observed maximum and this leaves two above it -- the
+        // tail is thin (three visits past 18 for the seller) and a different
+        // seed moves it. Cheap to be generous: the loop exits on Leave, so a
+        // higher ceiling costs nothing on a visit that does not need it.
+        //
+        // The real question behind the number -- how many sales one visit
+        // SHOULD be allowed -- is the owner's, and this is a bound, not an
+        // answer to it.
+        public const int SellHeadroom = 12;
+
+        public const int MaxChoicesPerVisit =
+            GearCount + BookCount + RelicCount   // buy every card on the shelf
+            + SectionCount                       // reroll every section once
+            + 1                                  // the Leave that ends the visit
+            + SellHeadroom;
+
         public static int CountFor(int section)
         {
             switch (section)

@@ -455,12 +455,20 @@ namespace PrincesPalace
         // HOW MANY DECISIONS ONE VISIT MAY MAKE.
         //
         // A policy that never says leave is a hang, and there is no timeout
-        // under BotRunDriver to catch one (docs/PLAN_SHOP.md 2g). Twelve is
-        // comfortably above what any archetype here can legitimately want --
-        // six cards plus three rerolls is nine, and only GreedyDefensive
-        // sells -- so hitting it is a finding rather than a truncation, and
-        // it is recorded as one on the trace.
-        private const int MaxShopChoices = 12;
+        // under BotRunDriver to catch one (docs/PLAN_SHOP.md 2g). The bound
+        // itself is DERIVED from the shelf it bounds -- see
+        // ShopStock.MaxChoicesPerVisit, which is where the arithmetic and the
+        // one judgement in it (sell headroom) are written down.
+        //
+        // It used to be a hand-typed 12, justified against a six-card shelf:
+        // "six cards plus three rerolls is nine, so hitting it is a finding
+        // rather than a truncation". The shelf became ten cards on 2026-09-03
+        // and the justification did not follow it, so ten buys plus three
+        // rerolls plus the Leave -- fourteen, nothing unusual about it -- was
+        // being truncated and the truncation recorded as a finding. Measured
+        // over a 200-run batch that was 20.4% of GreedyDefensive's visits and
+        // 31.4% of Lookahead2's.
+        private const int MaxShopChoices = ShopStock.MaxChoicesPerVisit;
 
         // WHAT THE BOT DOES IN A SHOP: ASK THE POLICY UNTIL IT LEAVES.
         //
@@ -542,9 +550,22 @@ namespace PrincesPalace
                 // budget was cut off mid-decision, and a report that could
                 // not tell that from a policy choosing to leave would count
                 // the cut-off visit as a completed one.
+                //
+                // ASKED, NOT ASSUMED. This used to fire on the last allowed
+                // choice, which marks Capped whenever the budget ran out --
+                // including the case where the policy was about to say Leave
+                // anyway and the visit was over. That made the rate an upper
+                // bound with no way to read the true one off the trace. One
+                // extra ChooseShop settles it: the answer is thrown away, the
+                // stream it draws from is keyed by (seed, step, choiceIndex)
+                // like every other, and it only happens on a visit that
+                // reached the ceiling -- which, with the ceiling now derived
+                // from the shelf, is close to never.
                 if (choiceIndex == MaxShopChoices - 1)
                 {
-                    roomTrace.ShopChoices.Add(new ShopChoiceTrace { Kind = "Capped", Outcome = "Capped" });
+                    roomTrace.ShopChoices.Add(WouldHaveLeftAnyway(seed, save, runPolicy, scoreCache, step)
+                        ? new ShopChoiceTrace { Kind = "Leave", Outcome = "Leave" }
+                        : new ShopChoiceTrace { Kind = "Capped", Outcome = "Capped" });
                 }
             }
 
@@ -571,6 +592,28 @@ namespace PrincesPalace
 
             roomTrace.GoldOnLeave = run.gold;
             roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
+        }
+
+        // WAS THE VISIT OVER, OR ONLY CUT OFF? The difference is the whole
+        // value of the Capped marker, and the loop above cannot see it: a
+        // budget that runs out on the same choice the policy would have
+        // followed with Leave is not a truncation of anything.
+        //
+        // The answer is thrown away. Nothing here mutates the run -- the view
+        // is rebuilt read-only and no choice is applied -- so a visit that
+        // ends here ends exactly as it would have, and the only thing the
+        // extra call buys is an honest label on the trace.
+        private static bool WouldHaveLeftAnyway(
+            ulong seed, SaveData save, IRunPolicy runPolicy,
+            Dictionary<(string, int), float> scoreCache, int step)
+        {
+            var shopView = ShopViewOf(save, runPolicy, scoreCache);
+            if (shopView.Cards.Count == 0) return true;
+
+            var choice = runPolicy.ChooseShop(
+                shopView, ViewOf(save), StreamFor(seed, ShopStream, step, MaxShopChoices));
+
+            return choice.Kind == ShopChoiceKind.Leave;
         }
 
         // EVERY PENDING BOOK, RESOLVED THE SAME TURN (docs/PLAN_SHOP.md
