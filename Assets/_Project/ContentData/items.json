@@ -1,5 +1,5 @@
 {
-  "_readme": "Every ONE-OFF item in the game — potions and the six starting-kit pieces. Two sister files generate the rest and both are preferred to authoring by hand here: itemsets.json expands an armour material into one item per plus level, and weapons.json expands a weapon family into one item per tier (a Sturdy sword that rewards Strength and a Nimble one that rewards Dexterity, from the same authored steel). Weapons in particular belong there rather than here, because a weapon authored here carries no scaling grades and is therefore strictly worse than a generated one at the same Attack — see each file's own _readme. Edit this file, then run Prince's Palace > Build Default Content. Mixing field sets — a Weapon with an amount, a Consumable with an attackBonus, Equipment using attackBonus instead of statBonus.attack — is rejected rather than silently ignored. A Weapon1 item also fits Weapon2, so dual-wielding needs no second entry. Weapon drops are tiered automatically by attackBonus: see FightController.RollWeaponDrop — Elite rooms drop from the weaker half of the list, Boss rooms from the stronger half, so no dropTier field is needed here. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Every ONE-OFF item in the game — today that is the two potions and nothing else. Two sister files generate the rest and both are preferred to authoring by hand here: itemsets.json expands an armour material into one item per plus level, and weapons.json expands a weapon family into one item per tier (a Sturdy sword that rewards Strength and a Nimble one that rewards Dexterity, from the same authored steel). Weapons in particular belong there rather than here, because a weapon authored here carries no scaling grades and is therefore strictly worse than a generated one at the same Attack — see each file's own _readme. THE STARTING KIT IS GONE (AUDIT #114): six startingStock Equipment rows — gloves_of_strength, iron_helm, amulet_of_wisdom, leather_cuirass, padded_greaves, swift_boots — used to live here, and because the reward roll draws from Equippables rather than from ContentDatabase.Offerable, all six turned up as floor-1 rewards for gear the player already owned. The owner's call was to delete them rather than to narrow the roll around them, so a new profile now starts with an empty stash. The startingStock field itself still resolves and still means what docs/CONTENT_SCHEMA.md says; no row authors it today. Edit this file, then run Prince's Palace > Build Default Content. Mixing field sets — a Weapon with an amount, a Consumable with an attackBonus, Equipment using attackBonus instead of statBonus.attack — is rejected rather than silently ignored. A Weapon1 item also fits Weapon2, so dual-wielding needs no second entry. Weapon drops are tiered automatically by attackBonus: see FightController.RollWeaponDrop — Elite rooms drop from the weaker half of the list, Boss rooms from the stronger half, so no dropTier field is needed here. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "items": [
     {
       "id": "health_potion",
@@ -16,81 +16,6 @@
       "effect": "RestoreMana",
       "amount": 15,
       "cost": 15
-    },
-    {
-      "id": "gloves_of_strength",
-      "displayName": "Gloves of Strength",
-      "description": "Stiff leather gauntlets that make your own grip feel like someone else's.",
-      "kind": "Equipment",
-      "slot": "Gloves",
-      "abilityScoreBonus": {
-        "strength": 1
-      },
-      "startingStock": true,
-      "iconPath": "Assets/_Project/Art/Items/gloves_leather_sheet/level_1.png"
-    },
-    {
-      "id": "iron_helm",
-      "displayName": "Iron Helm",
-      "description": "Dented in three places, all of them on the outside.",
-      "kind": "Equipment",
-      "slot": "Head",
-      "statBonus": {
-        "maxHealth": 30,
-        "physicalDefense": 8
-      },
-      "startingStock": true,
-      "iconPath": "Assets/_Project/Art/Items/helmets_str/level_1.png"
-    },
-    {
-      "id": "amulet_of_wisdom",
-      "displayName": "Amulet of Wisdom",
-      "description": "Cool against the skin, and it hums faintly just before you are about to be wrong.",
-      "kind": "Equipment",
-      "slot": "Necklace",
-      "abilityScoreBonus": {
-        "wisdom": 1
-      },
-      "startingStock": true
-    },
-    {
-      "id": "leather_cuirass",
-      "displayName": "Leather Cuirass",
-      "description": "Boiled, moulded, and worn by someone who did not need it a second time.",
-      "kind": "Equipment",
-      "slot": "Torso",
-      "statBonus": {
-        "physicalDefense": 14
-      },
-      "startingStock": true,
-      "iconPath": "Assets/_Project/Art/Items/armor_leather_sheet/level_1.png"
-    },
-    {
-      "id": "padded_greaves",
-      "displayName": "Padded Greaves",
-      "description": "Quilted shin guards. Unglamorous, and the reason you still have shins.",
-      "kind": "Equipment",
-      "slot": "Legs",
-      "statBonus": {
-        "physicalDefense": 10
-      },
-      "startingStock": true,
-      "iconPath": "Assets/_Project/Art/Items/leggings_leather_sheet/level_1.png"
-    },
-    {
-      "id": "swift_boots",
-      "displayName": "Swift Boots",
-      "description": "Worn thin at the heel by whoever got out of here first.",
-      "kind": "Equipment",
-      "slot": "Shoes",
-      "statBonus": {
-        "speed": 2
-      },
-      "abilityScoreBonus": {
-        "dexterity": 1
-      },
-      "startingStock": true,
-      "iconPath": "Assets/_Project/Art/Items/boots_silk_sheet/level_1.png"
     }
   ]
 }
