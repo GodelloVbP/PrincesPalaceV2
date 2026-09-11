@@ -62,9 +62,26 @@ namespace PrincesPalace
         // "There is a shop here and it belongs to this node." shopNodeId is
         // the guard rather than an optimisation: without it a stale list from
         // a previous shop paints the next one.
+        //
+        // THE REROLL ARRAY IS PART OF "OPEN", added after RerollSection was
+        // found indexing it unguarded in step 2 -- after the gold had already
+        // left the purse. Every mutation here is validate / apply / persist
+        // precisely so that step 2 CANNOT fail; an IndexOutOfRange thrown out
+        // of step 2 leaves the run holding a charge for a shelf it never got.
+        //
+        // Stated in the predicate rather than patched at the one index: the
+        // invariant is "an open shop has a reroll counter per section", and
+        // saying it here makes it true for every mutator and for the shelf the
+        // screen paints, in one place. The read side (RerollsUsed below) has
+        // always been guarded; this is what stops the two halves from
+        // disagreeing about whether the array can be trusted. The state itself
+        // is not reachable today -- Reconcile resizes the array on load,
+        // carrying what was there -- so this is the invariant written down,
+        // not a live repro.
         private static bool ShopIsOpen(RunSnapshot run) =>
             run != null && run.shopNodeId >= 0 && run.shopNodeId == run.currentNodeId
-            && run.shopStock != null && run.shopStock.Count > 0;
+            && run.shopStock != null && run.shopStock.Count > 0
+            && run.shopRerollsUsed != null && run.shopRerollsUsed.Length == ShopStock.SectionCount;
 
         public static int RerollPriceFor(int section)
         {

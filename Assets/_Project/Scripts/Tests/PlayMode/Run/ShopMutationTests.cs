@@ -590,6 +590,29 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ShopStock.SectionCount, save.activeRun.shopRerollsUsed.Length);
         }
 
+        // The same array, reached WITHOUT the load that normalises it. Every
+        // mutation here is validate / apply / persist so that step 2 cannot
+        // fail; rerolling indexed the array in step 2, after the gold had
+        // already left, so a short array threw with the purse already lighter
+        // and the shelf unchanged. Reconcile makes the state unreachable from
+        // disk -- this reaches it in memory, which is what a test is for.
+        [Test]
+        public void ARerollAgainstAShortRerollArrayIsRefusedRatherThanThrowingWithTheGoldGone()
+        {
+            OpenAShop();
+            var run = RunManager.Run;
+            int goldBefore = run.gold;
+            run.shopRerollsUsed = new[] { 0 };
+
+            // The BOOK section, not gear: a one-long array still answers index
+            // 0, so rerolling gear would prove nothing about the guard.
+            var result = RunOrchestrator.RerollSection(ShopStock.BookSection);
+
+            Assert.IsFalse(result.Applied);
+            Assert.AreEqual(ShopRefusal.NoShop, result.Reason);
+            Assert.AreEqual(goldBefore, run.gold, "the reroll was charged for and then thrown out of");
+        }
+
         // A save written before the shop existed has no shop fields at all,
         // and "no shop" is the correct reading of it -- not a crash, and not
         // a phantom shelf.
