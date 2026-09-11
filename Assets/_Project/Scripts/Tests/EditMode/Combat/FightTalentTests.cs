@@ -675,6 +675,32 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(3, ram.SignaturePool.Current, "3, not 1 + 3");
         }
 
+        // "He gains wool from being hit" (talents.json, Black Ram row 0) is
+        // unqualified, and the grant used to sit at the enemy's plain-swing
+        // verb -- which the enemy SKILL branch returns several lines before
+        // reaching, and which no other damage path in the game touches at all.
+        // So the Bog Witch's Mud Burst, the Golem's Boulder Slam, an AOE, a
+        // poison tick, a splash and a relic's free swing all paid nothing.
+        // The primary pool's identical half was moved to the damage funnel
+        // for exactly this reason; the fleece followed it.
+        [Test]
+        public void WoolIsGainedFromAnyHitTaken()
+        {
+            var ram = Hero("Ram");
+            ram.SignaturePool = Wool();
+            Talents(ram, new TalentEffect(TalentEffectType.WoolOnHitTaken, 1));
+
+            var foe = Foe("Bog Witch");
+            var (session, _) = Fight(new[] { ram }, new[] { foe }, Kit());
+
+            // Straight through the funnel, which is what a monster's SKILL,
+            // an AOE and a rider all reach and the plain-swing verb is not.
+            session.DealDamageForTest(foe, ram, 20, DamageType.Physical);
+
+            Assert.AreEqual(1, ram.SignaturePool.Current,
+                "one hit taken, one point of wool, whatever delivered it");
+        }
+
         [Test]
         public void ProvokeT3PaysForBeingTheOneEverythingIsAimedAt()
         {

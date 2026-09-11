@@ -234,6 +234,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // GrantPrimaryOnDamageTaken for why this one carries no per-turn
             // lock where its gainOnAttack twin does.
             GrantPrimaryOnDamageTaken(target);
+
+            // AND THE SIGNATURE POOL'S, which was left behind at that same verb
+            // when the primary pool's half moved here. It had the identical
+            // problem for the identical reason -- "He gains wool from being
+            // hit" heard a monster's fist and nothing else -- and the ATTACK
+            // side of Wool's deliberately narrow rule is untouched by moving
+            // it: that one is gainOnAttack, and it still lives at the verb.
+            GrantSignatureForHitTaken(target);
         }
 
         // Damage with no one to blame: a poison tick, a detonation resolving

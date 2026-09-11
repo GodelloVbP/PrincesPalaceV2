@@ -942,12 +942,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // next action and hand them a Trample the enemy earned. Crediting
             // the ledger without the flag is a real question and a balance
             // one; it is not a refactor's to answer. See AUDIT.md #63.
+            // The signature pool's "hit taken" grant is NOT here any more --
+            // DealDamage above reaches the funnel, and the funnel pays it. See
+            // GrantSignatureForHitTaken.
             var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy), KillCredit.Nobody);
-
-            // A fleece thickens in a hard winter: being ground down is itself a
-            // way to build. Granted per HIT rather than per point, so a swarm of
-            // weak attackers is not a better generator than one real threat.
-            GrantSignatureForHitTaken(target);
 
             if (landed.Absorbed > 0)
             {
@@ -1037,6 +1035,34 @@ namespace PrincesPalace.Domain.Combat.Session
         // landed the ward has usually been spent, so the evidence is gone, and a
         // poison tick is not "a hit", does not consume a ward, and must not pay
         // for one.
+        // A fleece thickens in a hard winter: being ground down is itself a way
+        // to build. Granted per HIT rather than per point, so a swarm of weak
+        // attackers is not a better generator than one real threat.
+        //
+        // CALLED FROM THE DAMAGE FUNNEL, not from the enemy's plain-swing verb
+        // where it sat until 2026-09-11. At the verb it heard exactly one kind
+        // of blow -- a monster's fist -- because ResolveEnemyAction's real-skill
+        // branch returns several lines above it, and nothing else in the game
+        // called it at all. So "He gains wool from being hit" (talents.json,
+        // Black Ram row 0, unqualified) paid nothing for the Bog Witch's Mud
+        // Burst, the Golem's Boulder Slam, the Warden's Overhead Slam or
+        // Grapple, nothing for an AOE, a poison tick, a splash or a relic's
+        // free swing, and nothing at all for damage taken from anything but a
+        // monster's swing. The primary pool's identical half was moved to the
+        // funnel in d6814ce0 for precisely these reasons, and the reasoning
+        // there enumerates the same missed cases by name.
+        //
+        // WOOL'S NARROW RULE IS UNTOUCHED BY THIS, because the narrow rule is
+        // about ATTACKING: "ONLY a basic swing builds it, which is what makes
+        // swinging anyway a real choice" (GrantPrimaryOnDamagingAction's
+        // header) applies to gainOnAttack, which still lives at the verb.
+        // Nothing ever stated a narrow rule for being hit, and the talent's
+        // own text states a broad one.
+        //
+        // NO LOCK, for the same reason its primary-pool twin carries none:
+        // being hit is not one event that reached several people, it is
+        // several events that each reached one, and the funnel runs once per
+        // blow however large it was.
         private void GrantSignatureForHitTaken(CombatantState victim)
         {
             if (victim == null) return;
@@ -1044,12 +1070,6 @@ namespace PrincesPalace.Domain.Combat.Session
             GrantSignature(victim,
                 (victim.SignaturePool?.GainOnDamageTaken ?? 0)
                 + victim.Talents.Best(TalentEffectType.WoolOnHitTaken));
-
-            // THE PRIMARY POOL'S HALF IS NOT HERE ANY MORE. It sat beside the
-            // wool grant, which put it at the enemy's plain-swing VERB -- the
-            // one place Wool's deliberately narrow rule belongs and the wrong
-            // place for a rage bar. See GrantPrimaryOnDamageTaken, called from
-            // the damage funnel, for where it went and what it now hears.
         }
 
         // Adds to a combatant's signature resource if it has one. A no-op for
@@ -1126,8 +1146,9 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // The TALENT term is deliberately NOT summed in here: WoolOnHitTaken
         // is Shawn's tree feeding Shawn's fleece, and a talent that says
-        // "wool" must not quietly pay a different resource. It stays at the
-        // verb with the wool grant.
+        // "wool" must not quietly pay a different resource. It is paid by
+        // GrantSignatureForHitTaken, which the funnel now calls on the very
+        // next line -- two grants, two pools, one seam.
         private static void GrantPrimaryOnDamageTaken(CombatantState victim)
         {
             GrantPrimary(victim, victim?.PrimaryPool?.GainOnDamageTaken ?? 0);
