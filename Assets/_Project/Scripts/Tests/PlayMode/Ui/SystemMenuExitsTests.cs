@@ -73,7 +73,7 @@ namespace PrincesPalace.PlayModeTests
             // for the leftover hold to finish inside the very next test, every
             // time. The extra nodes did not cause it; they made it reproducible
             // enough to find the stack trace.
-            foreach (var hold in Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var hold in Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Include))
             {
                 hold.Cancel();
             }

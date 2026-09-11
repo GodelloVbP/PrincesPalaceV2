@@ -98,7 +98,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static Button Find(string name) =>
-            Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            Object.FindObjectsByType<Button>(FindObjectsInactive.Include)
                 .FirstOrDefault(b => b.name == name);
 
         // CLOSING THE PANEL WHILE A NODE IS HOVERED, which threw every time.
@@ -126,7 +126,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheTrack(level: 5, claimed: 5);
 
-            var panel = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var panel = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
                 .FirstOrDefault(t => t.name == "RewardTrackPanel");
             Assert.IsNotNull(panel, "the hub has no RewardTrackPanel");
             Assert.IsTrue(panel.gameObject.activeInHierarchy, "fixture: the track should be open");
@@ -251,8 +251,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheTrack(level: 30, claimed: 30);
 
-            var content = Object.FindObjectsByType<RectTransform>(
-                    FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var content = Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include)
                 .FirstOrDefault(r => r.name == "TrackContent");
             Assert.IsNotNull(content, "the reward track has no content rect");
 

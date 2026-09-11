@@ -217,7 +217,12 @@ public static class UiEmitter
         // second the box has no height for.
         if (node.Truncates)
         {
-            text.enableWordWrapping = false;
+            // textWrappingMode rather than the obsolete enableWordWrapping:
+            // TMP_Text's shim setter is literally `(TextWrappingModes)(value
+            // ? 1 : 0)` onto the SAME serialized field, so false and NoWrap
+            // are the same write, and the scenes already serialize it under
+            // its new name (m_TextWrappingMode, [FormerlySerializedAs]).
+            text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Ellipsis;
         }
     }

@@ -231,7 +231,7 @@ namespace PrincesPalace.PlayModeTests
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
 
-            var label = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var label = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include)
                 .FirstOrDefault(t => t.font != null);
             Assert.IsNotNull(label, "the fight scene has no TMP_Text carrying a font");
 

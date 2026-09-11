@@ -167,7 +167,7 @@ namespace PrincesPalace.PlayModeTests
             // Widening them so a screenshot could reach them would be the tail
             // wagging the dog; the emitted name is already a stable contract,
             // because UiAudit fails the build on a duplicate one.
-            var firstCell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            var firstCell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(b => b.name == "DossierPackCell0");
             Assert.IsNotNull(firstCell, "the pack drew no cell named DossierPackCell0");
 
@@ -377,7 +377,7 @@ namespace PrincesPalace.PlayModeTests
                 // Half way through the hold, which is the state the design actually
                 // specified -- a fill drawn in the button -- and the one thing about
                 // this pane that a still of it at rest does not show.
-                var hold = Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                var hold = Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Exclude)
                     .FirstOrDefault();
                 Assert.IsNotNull(hold, "the abandon button has no hold behaviour attached");
 

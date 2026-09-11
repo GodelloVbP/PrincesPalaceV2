@@ -123,7 +123,7 @@ namespace PrincesPalace.PlayModeTests
 
             // The PACK modal, driven through its own button rather than a
             // private method -- the same thing a player's click reaches.
-            var pack = Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            var pack = Object.FindObjectsByType<Button>(FindObjectsInactive.Include)
                 .FirstOrDefault(b => b.name == "ShopPackButton");
             Assert.IsNotNull(pack, "the shop drew no button named ShopPackButton");
             pack.onClick.Invoke();

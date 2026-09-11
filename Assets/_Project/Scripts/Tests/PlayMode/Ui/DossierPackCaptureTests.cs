@@ -116,7 +116,7 @@ namespace PrincesPalace.PlayModeTests
             dossier.Refresh();
             yield return null;
 
-            var cell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            var cell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(b => b.name == "DossierPackCell0");
             Assert.IsNotNull(cell, "the pack drew no cell named DossierPackCell0");
 

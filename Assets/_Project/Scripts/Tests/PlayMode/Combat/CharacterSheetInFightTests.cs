@@ -53,8 +53,7 @@ namespace PrincesPalace.PlayModeTests
         // must exist and must be inert.
         private static CharacterDossierController Sheet()
         {
-            return Object.FindObjectsByType<CharacterDossierController>(
-                    FindObjectsInactive.Include, FindObjectsSortMode.None)
+            return Object.FindObjectsByType<CharacterDossierController>(FindObjectsInactive.Include)
                 .FirstOrDefault();
         }
 

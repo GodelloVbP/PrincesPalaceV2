@@ -74,7 +74,7 @@ namespace PrincesPalace.Tests.PlayMode
 
             // The first cell is whatever BagView sorted to the front, which is a
             // wearable item by construction -- IsEquippable is its first sort key.
-            var cell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+            var cell = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(b => b.name == "DossierPackCell0");
             Assert.IsNotNull(cell, "the pack drew no cell named DossierPackCell0");
 
