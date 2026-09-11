@@ -1,7 +1,8 @@
 # tools/unity_path.ps1 -- resolves the Unity editor THIS project is pinned to.
 #
-# Dot-sourced by run_tests.ps1, run_tests_parallel.ps1, test.ps1 and
-# screenshot.ps1. Never invoked directly.
+# Dot-sourced by every script in tools/ that launches Unity --
+# run_tests_parallel.ps1, test.ps1, screenshot.ps1, preview.ps1,
+# build_content.ps1, graphics_tests.ps1 and bot.ps1. Never invoked directly.
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here same as
 # everywhere else in tools/ -- an em-dash inside a string breaks PS 5.1's parser

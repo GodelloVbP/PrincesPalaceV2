@@ -1,6 +1,6 @@
 # PlayMode tests WITH a real graphics device.
 #
-# The commit gate (run_tests.ps1, run_tests_parallel.ps1, test.ps1) all pass
+# The commit gate (run_tests_parallel.ps1) and test.ps1 both pass
 # -nographics, where camera.Render() is a silent no-op and ReadPixels returns
 # garbage -- so every test that reads back a rendered pixel self-skips there.
 # This omits the flag, which is exactly what screenshot.ps1 already does and for
@@ -73,7 +73,7 @@ $unityArgs = @(
     "-logFile", "`"$log`""
 )
 
-# Start-Process + WaitForExit, the same shape run_tests.ps1 and screenshot.ps1
+# Start-Process + WaitForExit, the same shape run_tests_parallel.ps1 and screenshot.ps1
 # use, and NOT the call operator this used to be. "& Unity.exe" came back
 # while the run was still writing: a capture copied straight after it had 37
 # of its 42 frames and no timing.json, and the results XML was read while it

@@ -78,7 +78,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // backwards. The other belt is that a ward pops on the first hit at all.
         //
         // Cleared when the WARDER's turn begins, which is what makes "per turn"
-        // mean a round of hers rather than a round of anyone's.
+        // mean a round of his rather than a round of anyone's.
         private readonly HashSet<CombatantState> _wardPayoutsThisTurn = new HashSet<CombatantState>();
 
         // What a Ward does to one incoming hit: reduce it, pay its caster, heal
@@ -95,8 +95,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // The engine. Paid for CARRYING a ward when struck, not for the ward
             // breaking -- which is what lets the capstone's never-expiring wards
-            // keep earning instead of silently ending her income the moment she
-            // finishes her tree.
+            // keep earning instead of silently ending his income the moment he
+            // finishes his tree.
             int reward = caster.Talents.Best(TalentEffectType.WoolWhenWardedAllyHit);
             if (reward > 0 && caster.IsAlive && _wardPayoutsThisTurn.Add(target))
             {
@@ -208,7 +208,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Mending Fleece. Rides along with the ward rather than being its own
             // cast, so the sustain strand costs no extra action and no extra
-            // wool -- it makes the thing she was already doing worth more.
+            // wool -- it makes the thing he was already doing worth more.
             int regenPercent = caster.Talents.Best(TalentEffectType.WardAlsoAppliesRegen);
             if (regenPercent <= 0 || wearer.MaxHealth <= 0) return;
 
@@ -322,7 +322,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 .FirstOrDefault();
         }
 
-        // Detonates every ward the caster has out. Each one throws a share of her
+        // Detonates every ward the caster has out. Each one throws a share of his
         // Attack at a random enemy.
         private void ResolveShatter(CombatantState caster)
         {
@@ -340,7 +340,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 int share = percent;
 
-                // Her OWN ward is worth triple, and detonating it leaves a
+                // His OWN ward is worth triple, and detonating it leaves a
                 // character with no defensive stats completely open. That trade
                 // is the best decision in the path and is deliberately
                 // uncushioned -- no smaller ward handed back, no rider.
@@ -452,7 +452,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // Turn-start bookkeeping the Lamb needs: her per-turn payout cap resets,
+        // Turn-start bookkeeping the Lamb needs: his per-turn payout cap resets,
         // and Weight of Wool T3's grace period counts down.
         //
         // Called beside every other duration, so "a turn" means the same thing

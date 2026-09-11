@@ -20,7 +20,7 @@ param(
 
 # Runs a balance-bot batch headlessly, across one or several Unity instances.
 #
-# Mirrors run_tests.ps1's shape (sync -> divergent productName -> batchmode
+# Mirrors run_tests_parallel.ps1's shape (sync -> divergent productName -> batchmode
 # launch), swapping -runTests for -executeMethod against
 # PrincesPalace.Editor.Bot.BalanceBotRunner.RunFromCommandLine. That method
 # lives in Assets/_Project/Scripts/Editor/Bot/BalanceBotRunner.cs.
@@ -158,7 +158,7 @@ else {
 
 # ---- locks ------------------------------------------------------------------
 
-# A concurrent run_tests.ps1/run_tests_parallel.ps1 (or another bot.ps1)
+# A concurrent run_tests_parallel.ps1 or test.ps1 (or another bot.ps1)
 # against the SAME copy would clobber this batch mid-flight -- WORKFLOW.md SS4
 # says check the lock, not clear it, because -TestRunner2 is shared with the
 # PlayMode leg of the commit-gate script and a second live session. A lock

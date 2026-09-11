@@ -159,7 +159,7 @@ Rules, non-negotiable:
   branch costs nothing, and it is the only reason the incident above was
   recoverable at all. Long-lived uncommitted work is what a broad add eats.
 - **Check the TestRunner lock before test runs** (see §1). A concurrent
-  `run_tests.ps1`/`run_tests_parallel.ps1` from another session clobbers your
+  `run_tests_parallel.ps1` or `test.ps1` from another session clobbers your
   in-flight run, and Unity itself refuses a second batchmode instance against
   a project already open.
 - **Freeze protocol for shared-file refactors.** Before starting a

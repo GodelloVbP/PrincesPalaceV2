@@ -111,7 +111,11 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Noob@F1: staff T0 +0 -> WP 9, WIS 14 (d4, grade C: 1.12), gear
-        // 30/22/0 on starting kit -> total 350/34/8.
+        // 30/22/0 -> total 350/34/8. The gear numbers came off the starting
+        // kit, which 0ec7d8fc deleted; they stay as literals here because a
+        // balance SHEET is a fixed yardstick -- re-deriving it from whatever
+        // the game currently hands a new profile would make every drift in
+        // the economy invisible to it.
         private static CombatantState NoobF1() =>
             Player("Noob@F1", WeaponPower.Compute(9, 0), wisdomScore: 14, ScalingGrade.C,
                 maxHealth: 350, physicalDefense: 34, magicalDefense: 8);

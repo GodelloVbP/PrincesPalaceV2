@@ -161,7 +161,7 @@ Three layers, matching the existing split.
 - `Editor/Bot/BalanceBotRunner.cs` — an `-executeMethod` entry reading
   `-botRuns N -botSeed S -botArchetypes a,b -botProfiles p,q -botOut dir`.
   Runs seeds × archetypes × profiles, writes `traces.jsonl` and `summary.json`.
-- `tools/bot.ps1` — mirrors `run_tests.ps1`: robocopy main → `-TestRunner2`,
+- `tools/bot.ps1` — mirrors `run_tests_parallel.ps1`: robocopy main → `-TestRunner2`,
   launch batchmode with the flags above, copy the output back to
   `reports/bot/<timestamp>/`. Pure ASCII, no BOM.
 - `tools/bot_report.py` — turns a batch's `summary.json` into one HTML page,

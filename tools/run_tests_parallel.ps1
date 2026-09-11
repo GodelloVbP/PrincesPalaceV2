@@ -35,7 +35,8 @@ $SyncScenesToMain = $BuildScenes
 # Runs EditMode and PlayMode CONCURRENTLY against two separate isolated copies
 # of the project.
 #
-# run_tests.ps1 runs them one after the other, and each pays a full Unity
+# The serial predecessor (tools/run_tests.ps1, deleted at 5d46970d as part
+# of AUDIT #136) ran them one after the other, and each paid a full Unity
 # startup. They cannot share a project directory — Unity takes an exclusive
 # lock on Library/ — so parallelism needs a second copy rather than a second
 # process. Wall clock drops to roughly the slower of the two platforms.
