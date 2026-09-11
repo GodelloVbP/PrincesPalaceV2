@@ -1360,7 +1360,7 @@ counter-evidence and what is still awaiting reproduction:
 `docs/BUG_HUNT_2026-09-11.md`. The manifest row for each is in
 `docs/hunt/MANIFEST.md`.
 
-### 113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round
+### ~~113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round~~ -- fixed in `c477205f`: the owner took option 1 -- a bonus action is the SAME turn and re-pays nothing, so `GrantTurnStart` split into `OpenTurnFor` (unchanged) and `ReopenTurnFor` (`_locks.ResetTurn`, `TickPrimaryPool`, and the two recomputes that read them), and the three `[Ignore]`d repro tests are green with a control beside them; full reasoning in the commit message
 
 Found 2026-09-11 by the `FightSession` seam finder (F2) and confirmed by a run.
 This is the lead `L1` (rider ordering) that two previous hunts deferred; the
@@ -1892,6 +1892,17 @@ both still fire for a corpse. One-line fix if wanted:
 player-facing number arguably SHOULD count the whole swing. It compounds
 `1139107d`'s territory -- these totals bank into `lifetimeDamageDealt` and the
 `million_damage` achievement.
+
+**(a) fixed in `25a0333c`**: the owner's call was no overkill in damage taken.
+`healthBefore` is read immediately above `CombatMath.ApplyDamageDetailed` --
+the only moment the answer exists -- and `Ledger.Took` is handed
+`min(toHealth, healthBefore)`. `Ledger.Dealt` is untouched and still books the
+whole swing, because "damage dealt" is a claim about the blow that was thrown.
+Pinned by `CombatLedgerTests.OverkillIsNotCountedAsDamageTaken` (literal 10).
+What that does NOT settle, and what stays open here beside (b) and (c): the
+clamp is placed below Berserker's Vest's gate, so whether a rider arriving
+after the body fell should fire at all -- the second half of (a)'s own
+paragraph -- is still nobody's decision. Only the column moved.
 
 **(b) The "Shielded" column counts signature-pool absorption, not the
 `Shielded` status.** `Ledger.cs:159` passes `result.Absorbed`, which
