@@ -1347,3 +1347,576 @@ changes. Kept, unchanged in behaviour, pending that call.
 
 Test: `ShopMutationTests.AShelfRolledByAnOlderGeneratorIsLeftAsItWasRolled`
 (passes today, and pins the rule to something other than an unread field).
+## Findings from the total bug hunt, 2026-09-11 (stage 3a, the four seams)
+
+Four Opus finders read every call site of the four seams the plan named
+(`ContentDatabase`, `RunManager`/`SaveData`/`RunSnapshot`, `RunOrchestrator`,
+`FightSession`) against the callee's stated intent, then three fixers worked
+only the findings whose intent evidence was two agreeing sources or better.
+The twelve below are the ones a fixer could not take: each either picks a
+behaviour the evidence does not settle, or changes a number that is a balance
+decision. Full write-up, including what was fixed, what was disproven with
+counter-evidence and what is still awaiting reproduction:
+`docs/BUG_HUNT_2026-09-11.md`. The manifest row for each is in
+`docs/hunt/MANIFEST.md`.
+
+### 113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round
+
+Found 2026-09-11 by the `FightSession` seam finder (F2) and confirmed by a run.
+This is the lead `L1` (rider ordering) that two previous hunts deferred; the
+ordering is now written out in full in `docs/BUG_HUNT_2026-09-11.md`, and this
+is what it was hiding.
+
+`FightSession.Riders.cs:79-80` runs `_encounter.AdvanceTurn(); GrantTurnStart();`
+after `TryGrantTrample`/`TryGrantBloodlust` have already called
+`_encounter.GrantExtraTurn(actor)`, so the SAME actor is `Current` again and
+`GrantTurnStart` (`:218-261`) runs its whole thirteen-step block for them a
+second time. Four of those steps are destructive rather than idempotent:
+`TickStatuses` (`:233` -- the poison tick AND every non-`IsSpentByTheTurn`
+duration countdown), `TickCooldowns` (`:234`), `TickTransform` (`:246`) and
+`TickPhoenixEgg` (`:249`).
+
+Clearance ledger row `K8` cleared exactly two of the thirteen (`_locks.ResetTurn`
+`:229` and `TickPrimaryPool` `:231`) and argued they were intended. The other
+eleven were never examined. `K8` has been narrowed in the manifest to say so.
+
+**Contract, quoted.** `talents.json:169` (`sheep_ram_trample_3`, "Momentum"):
+*"A kill does not cost you the turn. Once per turn -- he is heavy, not
+infinite."* `Riders.cs:147-152`: *"Trample T3: a kill does not consume the
+action."* And `Riders.cs:216-217`, which is the sentence the code breaks:
+*"The next actor's turn opens: mana regenerates, statuses tick..."* -- on an
+extra turn there is no next actor.
+
+**Reachable on shipped content, and the pairing is forced.** `talents.json`
+puts `sheep_ram_trample_3` (`ExtraAttackOnKill`) in the SAME path as
+`sheep_ram_converge` (Black Ram Mode, *"7 wool for three turns of splash,
+weight and speed"*) and lists it as a PREREQUISITE of it. Nobody can own Black
+Ram Mode without owning Trample, and Black Ram Mode's splash makes a kill more
+likely.
+
+**The repro lives in the tree.** `Tests/EditMode/Combat/TurnRiderTests.cs`
+carries three `[Ignore]`d tests (`:400`, `:421`, `:441`, all citing the same
+`ExtraTurnDecision` reason string) added by `2c84a7a9` precisely so this is not
+re-derived when the call is made. Their output today:
+
+```
+APoisonedTramplerIsPoisonedOncePerRoundNotOncePerKill
+  Expected: 1   But was:  3
+ATramplersStatusDurationsTickOncePerRound
+  a 3-turn Shielded expired inside ONE of the hero's rounds
+  Expected: True   But was:  False
+ThreeTurnsOfBlackRamModeSurviveARoundInWhichHeTramples
+  Expected: 2   But was:  1
+```
+
+**Two honest options.**
+
+1. **Split the method.** `GrantTurnStart()` becomes `OpenTurnFor(actor)` (all
+   thirteen steps, a genuinely new turn) and `ReopenTurnFor(actor)` (an extra
+   action by the same actor). `K8`'s two steps stay in both. What else stays is
+   the owner's line to draw, and each side of it is a balance number: not
+   paying poison twice is a straight buff to a Trample build, not refunding
+   cooldowns is a straight nerf. The call-site change is one line at
+   `Riders.cs:79-80`, or a `_grantedExtraTurnTo` field the grant methods set
+   and `GrantTurnStart` reads and clears.
+2. **Leave it and fix the content row instead.** Say Black Ram Mode lasts
+   "three actions" rather than three turns, and accept that a Trample build
+   ages its own statuses faster as the cost of the extra swing.
+
+The one part that is not a balance question either way is Black Ram Mode: a
+three-turn form that reliably lasts two turns is a content row lying about
+itself. Option 2 is the cheap way to stop it lying; option 1 is the one that
+makes `Riders.cs:216-217` true again.
+
+Callers a fix touches: `FightSession.Riders.cs` (both grant methods),
+`FightSession.Enemies.cs:526` and `FightSession.cs:290` (both must keep the
+full version). Tests: `TurnRiderTests` (un-`[Ignore]` the three),
+`KillCreditTests`, `ChilledStatusTests`, `RelicMechanicsTests`,
+`StatusEffectsTests`.
+
+### 114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards
+
+Found 2026-09-11 by the `ContentDatabase` seam finder (F3). Filed rather than
+fixed because the intent evidence CONFLICTS -- one of the two sources is a
+green test asserting today's behaviour.
+
+`Core/ItemOfferRoll.cs:36-42` (`Candidates()`) filters on `IsEquippable` alone
+(`:39`).
+`ContentDatabase.cs:199-208` (`Offerable`) filters on "was this generated with
+a tier" and its header says why:
+
+> That leaves out the hand-authored one-offs in items.json -- potions and the
+> starting kit -- which have their own routes in and would otherwise turn up
+> as a "reward" the player already owns six of.
+
+`Offerable`'s only production caller is `Editor/Bot/BalanceBotRunner.cs:817`.
+The reward screen, the shop's gear shelf (`RunOrchestrator.Shop.cs:396`) and
+the Reckoning all draw from `Candidates()`.
+
+**Repro (static).** Six `startingStock` items, all Equipment, tier 0;
+`RarityTable.FloorTier(step) = step/16` is 0 on floors 1-2 and
+`ItemOfferTable.Choose` opens at `TierSpread` 1, so all six sit in the early
+band. Win the first fight of a run and be offered the `iron_helm` you are
+wearing.
+
+**Intent evidence, both directions.** FOR `Offerable`: the header above,
+`docs/BOT_SUMMARY_SCHEMA.md:144`, `docs/PLAN_SHOP.md:962`. AGAINST:
+`ItemOfferRoll.cs:30-35` reasons only about potions, and
+`Tests/PlayMode/Content/ItemOfferRollTests.cs:37` `OnlyEquippablesAreOffered`
+asserts the current behaviour by name. A fixer cannot break a named green test
+to satisfy a header.
+
+**Two options.**
+
+1. **`Candidates()` reads `ContentDatabase.Offerable`.** The starting kit stops
+   being a reward and stops stocking the shop's gear shelf. Touches
+   `ItemOfferRoll.Roll`, `RunOrchestrator.Shop.cs:396`, `ReckoningController`,
+   `ShopStock.RollGear`; `OnlyEquippablesAreOffered` is rewritten in the same
+   commit to say what it now means. Failing test:
+   `ItemOfferRollTests.TheStartingKitIsNeverOfferedAsAReward` -- `Candidates()`
+   ids exclude every `StartingStock` id.
+2. **Keep the kit offerable and correct the header.** The argument for it: six
+   tier-0 items in the floor-1 band are the cheapest possible early reward, and
+   a duplicate `iron_helm` is a sell, not a dead offer.
+
+Side effect worth recording either way: stage 2's bot coverage denominator
+("Offerable items offered, 491/638") and the roll's actual universe differ by
+exactly these six ids, so the coverage figure is measured against a list the
+roll does not use.
+
+### 115. The shop screen produces refusals it may not guess at, and displays none of them
+
+Found 2026-09-11 by the `RunOrchestrator` seam finder (F4). Confirmed for
+`NotEnoughGold`; candidate for `AppliedNotPersisted`.
+
+`ShopController.cs:21-25` states the design:
+
+> only BUY can refuse, and it refuses through RunOrchestrator's own ShopResult
+> rather than a client-side guess
+
+and `ShopResult.cs:59-65` says *"The screen can say so."* It does not.
+`Commit` (`ShopController.cs:176-200`) reads only `result.Applied` (`:192`);
+`Reroll` (`:202-216`) and `SellRow` (`:269-289`) discard the `ShopResult`
+entirely. The only production reader of `.Reason` anywhere in the tree is
+`BotRunDriver.cs:530`, which writes it to a trace file.
+
+So the UI CAN produce `NotEnoughGold` (there is no pre-check, by design),
+`NotInBag`, and `AlreadyKnown`/`NotOwned`/`NoFreeSlot` from the dossier
+(#116) -- and shows the player nothing at all. Combined with stage 2's finding
+that no bot archetype can construct an illegal shop choice, seven of the ten
+`ShopRefusal` values have no path from produced to seen except a test and the
+bot's trace.
+
+**Repro.** Gold one below a card's price, press Buy: nothing happens, no
+message, gold unchanged.
+
+**Failing test** (PlayMode):
+`ShopScreenRefusalTests.BuyingACardYouCannotAffordSaysWhy` -- invoke
+`buyButton.onClick`, assert the detail label carries the refusal string and
+gold is unchanged. Red today.
+
+**The mechanism is not in question; the wording and the placement are.** One
+`PaintRefusal(ShopResult)` mapping `Reason` to a `UiStrings` line, called from
+the three sites that currently discard the result.
+
+**Two options.**
+
+1. **Reuse `detailLabel`** (`ShopController.cs:31`), the line that already
+   carries the selected card's description. Zero new UI, no scene change; the
+   cost is that a refusal replaces the description and has to be cleared on the
+   next selection.
+2. **A dedicated refusal line** in the shop screen tree. Clearer, survives a
+   re-selection, and costs a `Domain/UiKit/Screens/` change plus a
+   `-BuildScenes` run and a `UiTextFitAudit` sample.
+
+`AppliedNotPersisted` wants its own line under either option -- it means the
+purchase happened and the save did not, which is not the same news as "you
+cannot afford this".
+
+### 116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out
+
+Found 2026-09-11 by the `RunOrchestrator` seam finder (F3), confirmed by
+inspection of both paths.
+
+`CharacterDossierController.PressSlot` (`:434-452`) picks `ReplaceSpell`
+(`:448`) or `LearnSpell` (`:449`) by slot occupancy, then:
+
+```
+if (result.Applied) _selectedUnassignedRow = -1;
+Refresh();
+```
+
+`result.Reason` is never read. `RefreshSpells` paints no OWNED marker, and the
+green "would fill" preview lights for ANY empty slot while a row is selected --
+including one this press cannot fill.
+
+**Contract.** `docs/PLAN_SHOP.md` 1d: *"Refuse a duplicate ... the assignment
+panel reads OWNED for that character ... not a silent success either"*; 2d
+(revision 2026-09-03): the player *"only finds out at assignment time, via 1d's
+duplicate refusal"*. `Domain/Rewards/ShopResult.cs:5-9` exists as a reason enum
+because *"the screen ... need[s]"* it.
+
+**Reachability is anticipated, not hypothetical.** `AvailableBookOptions`
+(`RunOrchestrator.Shop.cs:452-455`) excludes a book only when EVERY squad
+member has learned it, `ShopController.BookFactLine` (`:540-546`) prints "N
+unassigned copies", and `ReplaceSpell`'s own comment
+(`RunOrchestrator.Spells.cs:137-140`) discusses buy-two-learn-one-replace.
+Repro: buy X, assign to Shawn slot 0; buy X again; select it, press Shawn slot
+1. Nothing happens and nothing is said.
+
+**Restore in substance; the placement is the choice.** The refusal must become
+visible -- that part has three agreeing sources and is not in doubt. Where:
+
+1. **On the slot chip.** The slot the press would hit reads OWNED and the green
+   fill preview is suppressed for it. Most local, tells the player before the
+   press.
+2. **On the row.** The unassigned-book row itself reads OWNED per character.
+   Survives a slot-less glance; costs a per-character recompute on every
+   refresh.
+3. **A message line.** The refusal is said after the press, like #115's shop.
+   Cheapest, and the only one that also covers `NoFreeSlot`.
+
+Failing test (PlayMode, extending `DossierSpellSlotsTests`):
+`PressingAnEmptySlotWithABookThisCharacterAlreadyKnowsSaysSo` --
+`learnedSpells=[{shawn, mud_burst, 0}]`, `unassignedSpellBooks=["mud_burst"]`,
+select the row, press slot 1; assert `learnedSpells.Count == 1` (passes today)
+and the OWNED marker visible (red today). Touches
+`CharacterDossierController` plus one `UiStrings` addition, so `-BuildScenes`.
+
+### 117. The boot settle rewrites slot 0, so Continue points at the wrong slot
+
+Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F4).
+
+`RunManager.cs:69` is a `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]` boot
+check that runs with `CurrentSlot` still 0. When slot 0 holds a leftover run it
+calls `EndRun`, and BOTH of `EndRun`'s live exits call `Persist()` --
+`File.Replace` onto slot 0, whose mtime is then the newest on disk. `45be6e6a`
+widened this: the discard arm persists too.
+
+`SaveSystem.cs:224` states the rule the write breaks:
+
+> KEYED OFF THE FILE'S OWN LAST-WRITE TIME, not a field on SaveData.
+> CurrentSlot ... cannot answer "which slot did I play last time".
+
+`MainMenuController.RefreshContinue` (`:72-74`) reads
+`SaveSystem.MostRecentSlot()` (`:234`), which now returns 0.
+
+**Repro.** Play slot 3. Leave a run in slot 1 (alt-F4 mid-descent). Relaunch:
+the main menu offers "Continue (Slot 1)".
+
+**Failing test.**
+`SaveSlotFlowTests.SettlingARunLeftInSlotZeroDoesNotStealContinueFromTheSlotLastPlayed`
+-- throwaway root, write slot 2 (newest), then slot 0 carrying a run under way,
+invoke the boot settle, assert `MostRecentSlot() == 2`. Red today: 0.
+
+**Three options; the third is recommended.**
+
+1. **Preserve slot 0's mtime around the settle write.** Smallest diff, but it
+   makes one write a special case and the next writer will not know.
+2. **`MostRecentSlot` reads a `lastPlayedAtTicks` written only by `EnterSlot`.**
+   Honest -- the question is "which slot did I play", and a field can answer it
+   where a file timestamp only approximates it. Costs a save field and a
+   migration.
+3. **Drop the boot settle entirely** and rely on `SettleOnOpening`
+   (`RunManager.cs:102`), which `SaveSlotManager.EnterSlot` already calls for
+   every slot including slot 0, AFTER `CurrentSlot` is set (ledger row `R14`).
+   Recommended: it removes a mechanism rather than adding one, and the boot
+   check's stated job is already done by the other half.
+
+Related: #123 below turns on the same invariant (a run never survives into
+gameplay) and its answer should be decided with this one.
+
+### 118. Benching a character is undone by the next load
+
+Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F7). Filed because
+the fix CHOOSES between two readings of one field, and a green test asserts the
+other one.
+
+`SaveData.Reconcile`'s squad top-up (`:774-800`) tops `selectedCharacterIds` up
+to `EffectiveMaxSquadSize()` from `TopUpOrder()` (`:809`). Its header says:
+
+> EXISTING SAVES KEEP THEIR SQUAD, and this loop is why: it only ever ADDS,
+> never reorders and never removes anything the player chose.
+
+Adding back the character the player deliberately removed IS undoing what they
+chose. `PartyController.SendToBench` (`:390-397`) is Camp-only and refuses only
+at `FilledCount == 1`; the player benches one of three, `Persist` writes two
+ids, `EffectiveMaxSquadSize()` is still 3, and the next `Reconcile` puts the
+benched character back -- in the REAR seat, because that is where `TopUpOrder`
+lands.
+
+**Repro.** Hub -> Party -> pick a front-ranker -> Bench (squad shows 2). Quit.
+Relaunch. Squad is 3, with the benched member in the rear.
+
+**Failing test.**
+`SaveDataSquadOfThreeTests.ADeliberatelyShortSquadIsNotToppedBackUp` -- set two
+of three starters, `Reconcile`, assert `ActiveSquadIds().Count == 2`. Red
+today: 3. It directly contradicts the green
+`ReconcileTopsUpAShortSquadFromTheContentDefault`, which is why this is a
+choose and not a restore.
+
+**The question is whether `selectedCharacterIds.Count < effectiveMax` means
+"the cap grew" or "the player benched somebody".** Today the code can only read
+it the first way.
+
+1. **Store the fact.** The save records that a seat is empty by choice (a
+   `benchedCharacterIds` list, or a hole-carrying `selectedCharacterIds`), and
+   the top-up fills only seats the cap opened. This also answers #93 -- and
+   note that a hole-carrying fix for #93 alone will NOT fix this, because the
+   top-up counts ENTRIES against `effectiveMax`, not seats.
+2. **Benching is within-session and the screen says so.** The Bench affordance
+   keeps working for the current session and the toast says the squad returns
+   on next load. Cheapest, and it stops the save lying, but it makes a visible
+   affordance weaker than it looks.
+
+Answer this together with #93; they are the same field read two ways.
+
+### 119. `SaveData.relicLoadout` is a serialized field with no writer and no reader
+
+Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F8). Same family
+as #50, #87 and #112, and stronger than all of them: those are written and
+never read, this one is NEITHER written nor read.
+
+`Data/SaveData.cs:187` declares it with a nine-line header explaining its
+NAME. `:760-762` null-guards and prunes it on every `Reconcile`. Those are the
+only two mentions in the tree outside its own type: zero hits for
+`relicLoadout` anywhere else in `Assets/_Project/Scripts/`, and the
+`RelicLoadout` type is referenced only by its own unit tests and two comments.
+
+What actually carries a character's relic is `RunSnapshot.relicIds` plus
+`FightEncounterAdapter.ResolveRelics`, which is run-scoped rather than
+save-scoped -- and per-character assignment, which is what `RelicLoadout`'s
+`(characterId, relicId)` shape is for, exists nowhere.
+
+It is written as `{}` on every save, so dropping it is harmless: `JsonUtility`
+keeps the initialiser for a missing key.
+
+**Two options.**
+
+1. **Delete it**, its prune and its type, the way `grantedGold` was deleted in
+   the same pass that filed #112. One less field to read as "already handled".
+2. **Wire it**: per-character relic assignment becomes a real feature and this
+   is its storage. That is a design decision with a screen behind it, not a
+   cleanup.
+
+Deleting is recommended only if option 2 is not on the roadmap; the field is
+inert either way, and the hazard is a future reader assuming it holds something.
+
+### 120. The `Effective*` family has two different null contracts, and `EffectiveStats` has a dead guard
+
+Found 2026-09-11 by the `ContentDatabase` seam finder (F11). No behaviour
+changes under either option -- this is about which of two contracts the family
+states, and the current state states both.
+
+Fourteen members of the family are null-TOLERANT (`TalentsFor`,
+`AvailableSkillsFor`, `TalentGrantedSkillsFor`, `TalentEffects`,
+`ModifierEffects`, `ActiveLoadout`, `EffectiveAbilityScores`, `EquippedWeapon`,
+`EquippedWeaponPower`, `OrbCost`, `SpentBy`, `EmbersLeftFor`,
+`AllegianceRootOf`, `MeetsGates`). Nine THROW on null: `EffectiveStats`
+(`.Effective.cs:158`), `BuildSignatureResource` (`:248`), `EffectiveMaxMana`
+(`:709`), `MaxManaBonuses`, `EffectiveSkillManaCost` (`:818`),
+`EffectiveSkillPowerMultiplier` (`:851`), `EffectiveSkillDisplayName` (`:935`),
+`PrerequisitesMet` and `MinSpentMet`. Nothing says which family a member
+belongs to; a caller has to read the body.
+
+The dead guard is the sharp end: `EffectiveStats` dereferences
+`character.definitionId` unguarded at `:162`, and then at `:220` asks
+`if (character != null)` before folding in the reward track. The second test
+can never be false. It reads as a null-tolerant method to anybody who scrolls
+to it.
+
+All 13 production call sites of `EffectiveStats` and all 3 of `ActiveLoadout`
+null-guard before calling (`RunEncounter.cs:176,:214`; `EquipmentOps.cs:54,:79`;
+`RewardTrackController.Input.cs:130`; `TalentOps.cs:75,:109`;
+`BotRunDriver.cs:1243` and the rest), so nothing is broken today -- this is
+recorded as clearance ledger row `C5`.
+
+**Two options.**
+
+1. **Make the nine null-tolerant** like their fourteen neighbours: an early
+   return of `StatBlock.Zero` / the mana row / the empty answer, matching the
+   house's graceful-degradation posture. Deletes the ambiguity and the dead
+   guard together.
+2. **Delete the dead guard and state the throw** in each of the nine headers.
+   Keeps the throw as the contract -- defensible, because a null `Character`
+   reaching `EffectiveStats` is a caller bug and a silent `Zero` hides it.
+
+Whichever is picked, the nine and the fourteen should be labelled, because the
+next caller will otherwise read the wrong one.
+
+### 121. Shawn's Wool authors `signatureAbsorbsDamage: false`, and `characters.json`'s own `_readme` says wool eats damage first
+
+Found 2026-09-11 by the `FightSession` seam finder, as a note beside F5. It is
+a content/doc disagreement in one file, which is why it is the owner's and not
+a fixer's.
+
+`characters.json:34` authors `"signatureAbsorbsDamage": false` on Shawn -- the
+only signature pool on a real character today. The same file's `_readme`
+(line 2) describes Wool as the balanced template and says:
+
+> it is armour and ammunition out of one pool -- incoming damage eats it
+> before his health and his abilities shear it off, so every turn is
+> bank-or-spend and both answers are real
+
+With the flag false, `ResourcePool.Absorb` returns 0 at `ResourcePool.cs:266-273`
+and nothing is ever soaked: the "armour" half of "armour and ammunition" does
+not happen. Every consequence the `_readme` draws from it -- the bank-or-spend
+tension, both answers being real -- rests on the half that is switched off.
+
+This is NOT #111. #111 is a PRIMARY pool authoring `absorbsDamage` and being
+read by nothing (a code gap). This is a SIGNATURE pool, whose absorb path works
+end to end, authoring `false` against its own documentation (a content/doc
+disagreement).
+
+**Two options.**
+
+1. **Flip the row to `true`.** Wool becomes armour as written. This is a live
+   balance change and it interacts with #124's third lead and with the F5 fix
+   already committed at `165c5746` (a poison tick the pool absorbs in full is
+   now counted and said -- which is dead code until this flag is true).
+2. **Correct the `_readme`.** Wool is ammunition only; the armour sentence
+   comes out, and with it the bank-or-spend framing that depends on it.
+
+Whichever way, the two should agree: today the file's prose describes a
+character the file's data does not author.
+
+### 122. `ShopStock.SellHeadroom = 12` is provisional, and how many sales one visit should allow is the owner's number
+
+Found 2026-09-11 by the `RunOrchestrator` seam finder (F1). The ARITHMETIC half
+of F1 was a restore and shipped at `13b67842`; this is the half no arithmetic
+can supply.
+
+`ShopStock.cs:207-213` now derives a shop visit's decision bound from the shelf
+itself -- `GearCount 4 + BookCount 3 + RelicCount 3` buys, `SectionCount 3`
+rerolls, one Leave -- so the bound cannot drift from the shelf again the way
+the old hand-written 12 did. `SellHeadroom` is the one term with no derivation
+behind it, because selling is unbounded in principle: a bag can hold more rows
+than a shelf has cards.
+
+It was MEASURED rather than guessed. With the ceiling lifted out of the way,
+2,050 shop visits across two archetypes over a 200-run batch peaked at 24
+decisions in one visit, so 10 would be exactly the observed maximum and 12
+leaves two above it. The tail is thin (three visits past 18 for the seller) and
+a different seed moves it.
+
+What the change bought, measured before and after at seed 20260911, 200 runs,
+`-Shards 2`, GreedyDefensive + Lookahead2:
+
+```
+BEFORE   GreedyDefensive   994 visits, 202 capped, 20.4%
+         Lookahead2       1054 visits, 331 capped, 31.4%
+AFTER    GreedyDefensive   994 visits,   0 capped,  0.0%
+         Lookahead2       1056 visits,   0 capped,  0.0%
+```
+
+**Two options.**
+
+1. **Keep 12 and stop calling it provisional.** The loop exits on Leave, so a
+   generous bound costs nothing on a visit that does not need it, and every
+   measured visit fits inside it. The constant's header loses its "PROVISIONAL"
+   paragraph.
+2. **Set a deliberate sales-per-visit rule** and derive the headroom from it
+   ("a visit may sell as many rows as the bag can hold", or "six"), which makes
+   the number an answer rather than a bound. Costs one more constant and a line
+   of design.
+
+The source says which it is today (`ShopStock.cs:193-206`), so nothing is
+hiding; this entry exists so the label comes off deliberately rather than by
+being forgotten.
+
+### 123. `Reconcile`'s run-scoped prunes are all unreachable, because a run never survives the process
+
+Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F5). The intent
+evidence CONFLICTS between two comments in the same subsystem, which is what
+makes it the owner's.
+
+`SaveData.cs:586-613` prunes run-scoped lists on every load and explains
+itself: *"a run is not worth discarding over one dangling id"*.
+`RunSnapshot.cs:119-122` says *"a run survives quitting to the main menu and
+coming back"*. And `RunManager.cs:54` says the opposite, in capitals:
+
+> A RUN DOES NOT SURVIVE THE PROCESS ... Deliberately not a resume.
+
+The second is the one the code implements. `SaveSlotManager.EnterSlot` calls
+`SettleOnOpening` (`RunManager.cs:102`) before the slot's first scene; the boot
+check (`:69`) does the same for slot 0; every in-process route back to the main
+menu calls `EndRun`. So the load order is Migrate -> Reconcile -> EndRun, and
+`EndRun` destroys the run that was just reconciled. No run-scoped value
+`Reconcile` prunes is ever read by gameplay.
+
+**The one sharp edge has already been fixed.** `RunSettlement.Settle` reads
+`run.bossesKilled` and `run.ledger` on its way to paying for them, and those
+were the only two run lists `Reconcile` neither null-guarded nor pruned -- so a
+boss id renamed between a crash and the next boot would pay an ember for a dead
+id and append it permanently to `defeatedBossIds`. That landed as `adb2acb4`
+(the guard and the prune, plus `RunSettlementTests` cover). This entry is about
+the other nine prunes and the two comments.
+
+**Two options.**
+
+1. **Build resume.** `Reconcile`'s prunes become live, `RunSnapshot.cs:119-122`
+   becomes true, and `RunManager.cs:54` is rewritten. This is a feature, with a
+   descent-mid-flight save/restore behind it, and the prune plumbing is already
+   in place for it -- `29908245` (the `relicIds` prune) is correct code whose
+   stated repro simply cannot occur yet.
+2. **Correct both comments** to say the prunes are plumbing kept ready rather
+   than a live guard, and leave the code alone. Costs two comment edits, and
+   the reachability guard test below goes in with them so the day resume is
+   built, the comments are forced back into agreement.
+
+Reachability guard, worth adding under either option:
+`RunEndingTests.AnyRunFoundInASlotIsSettledBeforeAnythingCanReadIt` -- a slot
+with a run at `step > 0`, `EnterSlot`, assert `HasRun` false. Green today; red
+the day resume is built, which is exactly when somebody needs to be told.
+
+Decide with #117: both turn on the same invariant.
+
+### 124. Three questions about what the combat ledger's columns actually count
+
+Found 2026-09-11 by the `FightSession` seam finder (F8, F9, F10). Filed as one
+entry because all three are the same shape -- a column or a payout whose name
+and whose contents disagree, each with a SINGLE source and an internal
+counter-argument, which per the hunt's own rules makes them leads rather than
+findings. None has a repro.
+
+**(a) `Ledger.Took` counts overkill, and counts it against a corpse.**
+`FightSession.Ledger.cs:135-136` computes `toHealth = amount - result.Absorbed`
+BEFORE `CombatMath` clamps at zero health, so a 500-point blow on a 10-HP
+target books `DamageTaken += 500`. `CombatLedger.cs:32-36` says the column is
+*"What reached this combatant's HEALTH"*, and 490 of it reached nothing.
+Separately, `DealDamage` does not refuse an already-dead target; its own
+comment (`Ledger.cs:54-58`) accepts that riders can arrive after the body fell
+but reasons only about the KILL row, while the ledger row and the pool grant
+both still fire for a corpse. One-line fix if wanted:
+`toHealth = Math.Min(toHealth, healthBefore)`. Against it: "damage dealt" as a
+player-facing number arguably SHOULD count the whole swing. It compounds
+`1139107d`'s territory -- these totals bank into `lifetimeDamageDealt` and the
+`million_damage` achievement.
+
+**(b) The "Shielded" column counts signature-pool absorption, not the
+`Shielded` status.** `Ledger.cs:159` passes `result.Absorbed`, which
+`CombatMath.cs:555` sourced from `SignaturePool.Absorb`. The `Shielded` STATUS
+is consumed earlier, inside `DamagePipeline`, and arrives here only as a
+smaller `amount` -- so it is never counted in the column named after it.
+`CombatLedger.Line.Shielded`'s header (*"What a ward ate"*) and
+`RunStatsController`'s "Shielded" row therefore name a different mechanic from
+the one they count. Two options: rename the column `Absorbed` (honest, and a
+visible string change), or add the status's contribution to it (a second
+measurement point inside the pipeline). Note that the one thing this column
+SHOULD be able to see -- poison absorbed by the pool -- only became visible at
+`165c5746`, and is dead until #121 is decided.
+
+**(c) A kill with no credit pays no per-corpse relic.** `Ledger.cs:305`'s
+`if (credit == KillCredit.Nobody) return;` sits ABOVE `RelicsOnEachKill`
+(`:309`), so an enemy killed by a poison tick pays no Bounty Hunter Contract,
+drops no Inconspicuous Key, and feeds no Amassing Star or Essence Siphon.
+`Relics.cs:542-548` argues the opposite for the pairing: *"ONCE PER BODY, which
+is a different moment... A bounty is paid for a corpse, so a splash that fells
+two pays twice."* Against it: all four take the ACTOR as the holder, and a
+poison tick has no actor, so three of the four would no-op anyway. The one that
+genuinely differs is the Contract, whose payout is measured off the victim.
+
+The victim's-row half of this same guard WAS a restore with two agreeing
+sources and shipped at `f096823e` (`Ledger.WentDown` moved above the credit
+gate, so "times downed" can report a party member going down). What is left
+here is the relic payout, which is a balance question.
