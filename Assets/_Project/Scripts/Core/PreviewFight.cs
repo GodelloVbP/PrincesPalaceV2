@@ -454,19 +454,31 @@ namespace PrincesPalace
         // THEIR FIRST ROW, through the one function that already knows what
         // "this character can press this" means.
         //
-        // ContentDatabase.AvailableSkillsFor rather than a fourth hand-rolled
-        // union of PlayerSelectable/CharacterId/UnlockLevel: the in-run kit
-        // asks exactly this question through exactly this door, and the last
-        // time somebody wrote their own copy of it the level filter went
+        // ContentDatabase.SkillsUnlockedByLevel rather than a fourth
+        // hand-rolled union of PlayerSelectable/CharacterId/UnlockLevel: the
+        // last time somebody wrote their own copy of that the level filter went
         // missing and a level-1 Shawn walked in holding the whole talent tree
-        // (see FightEncounterAdapter.KitFor's own header). A bare level-1
-        // Character with no talents is what the preview's placeholder kit is
-        // built at, so the answers agree.
+        // (see FightEncounterAdapter.KitFor's own header).
+        //
+        // THE DEFINITION-ONLY DOOR, WHICH IS THE ONE THE PREVIEW'S KIT USES.
+        // This asked AvailableSkillsFor(new Character(id)) and the comment said
+        // the two agree because the Character handed in is bare -- true of the
+        // record, false of the answer. AvailableSkillsFor reads RunManager.Run
+        // ambiently (its own header says so, and the shop's book route is why),
+        // so with a run in progress a book that character learned joined the
+        // opener while the stage was still fielding KitFor(definition, level 1)
+        // -- a preview naming a skill the previewed kit does not hold. The
+        // preview has no run and is not supposed to notice one.
+        //
+        // Same ordering (UnlockLevel then SortOrder) and the same first row for
+        // a fresh level-1 character with no run, which SkillUnlockFilterTests.
+        // TheSharedFunctionAgreesWithAvailableSkillsForAFreshLevelOneCharacter
+        // already pins -- so nothing moves except the ambient read.
         public static string FirstSelectableSkillFor(string characterId)
         {
             if (string.IsNullOrWhiteSpace(characterId)) return null;
 
-            var available = ContentDatabase.AvailableSkillsFor(new Character(characterId));
+            var available = ContentDatabase.SkillsUnlockedByLevel(characterId, 1);
             return available.Count > 0 ? available[0].id : null;
         }
 
