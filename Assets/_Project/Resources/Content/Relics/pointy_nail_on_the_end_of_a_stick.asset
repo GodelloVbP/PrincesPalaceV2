@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: pointy_nail_on_the_end_of_a_stick
     DisplayName: Pointy Nail on the End of a Stick
-    Description: Melee attacks gain 35 flat armour penetration.
+    Description: Physical damage gains 35 flat armour penetration.
     Effect: 0
     SortOrder: 23
     IconPath: Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png

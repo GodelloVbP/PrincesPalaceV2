@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: stalwart
     DisplayName: Stalwart
     Description: Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's
-      base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction,
+      base (2) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction,
       so it matters far more against the many small hits of a swarm than against
       one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs
       off chip damage, not a haymaker). Bulwark is this affix's split-off sibling

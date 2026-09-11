@@ -157,7 +157,7 @@ MonoBehaviour:
       wisdom: 0
       intelligence: 0
       charisma: 0
-    ScalingAxis: 2
+    ScalingAxis: 0
     QueuePushSlots: 0
     Transform:
       displayName: 

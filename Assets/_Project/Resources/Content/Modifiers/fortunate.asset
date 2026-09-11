@@ -17,7 +17,7 @@ MonoBehaviour:
     DisplayName: Fortunate
     Description: 'The Prince favours whoever is wearing this, right now -- a flat,
       passive bonus to Prince''s Favor for as long as it stays equipped, nothing
-      stored and nothing that outlives taking it off. Base 3 at Ordinary/tier-0 sits
+      stored and nothing that outlives taking it off. Base 2 at Ordinary/tier-0 sits
       alongside Shawn''s own authored favour of 4: a meaningful nudge toward better
       drops, not a second currency to bank.'
     SortOrder: 19

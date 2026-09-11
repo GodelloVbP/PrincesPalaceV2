@@ -16,10 +16,9 @@ MonoBehaviour:
     Id: vampiric
     DisplayName: Vampiric
     Description: Every hit landed feeds the wearer a little of what it took. Base
-      15% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the
-      healer role rather than replacing it, and the tier/rift curve is where a build
-      actually gets scary. Already single-effect since Phase C; untouched by the
-      affix split.
+      8% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer
+      role rather than replacing it, and the tier/rift curve is where a build actually
+      gets scary. Already single-effect since Phase C; untouched by the affix split.
     SortOrder: 15
     Effects:
     - Type: 5

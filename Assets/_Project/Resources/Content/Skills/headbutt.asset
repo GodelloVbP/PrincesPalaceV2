@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: headbutt
     DisplayName: Headbutt
-    Description: Not elegant. Puts them at the back of the line thinking about it.
+    Description: Not elegant. Knocks the target a place down the order.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 0

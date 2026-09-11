@@ -25,8 +25,8 @@ MonoBehaviour:
       reading, a maxed Swift item (base 12 x up to ~18.6x combined tier/rift scaling,
       ~223 raw) would have exceeded 100 outright -- a guaranteed, unavoidable dodge,
       which is exactly what the curve now prevents (that same ~223 rating instead
-      reads as ~69%, per DamagePipeline''s own hand-computed table). Base 12 at Ordinary/tier-0
-      curves to ~10.7%, close enough to the old flat 12% that it was left as-is rather
+      reads as ~69%, per DamagePipeline''s own hand-computed table). Base 6 at Ordinary/tier-0
+      curves to ~5.7%, close enough to the old flat 12% that it was left as-is rather
       than retuned. Already single-effect since Phase C; untouched by the affix split.'
     SortOrder: 24
     Effects:

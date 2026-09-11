@@ -16,7 +16,7 @@ MonoBehaviour:
     Id: bulwark
     DisplayName: Bulwark
     Description: A guard that gives less ground under pressure. BreakShieldDepletionResistPercent
-      (30) is forward-looking infrastructure -- no player combatant carries a BreakShield
+      (15) is forward-looking infrastructure -- no player combatant carries a BreakShield
       today, only some bosses/elites do, so this is inert on the wearer until a future
       fight puts one on the player's own side. Split off Stalwart's old bundle so
       a roll grants the flat mitigation or the shield-resist, never both.
