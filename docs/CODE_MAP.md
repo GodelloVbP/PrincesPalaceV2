@@ -263,9 +263,6 @@ which):
   `Raw*Entry` types themselves, so the per-field reference cannot drift from
   the fields. Run it whenever a content field is added or its `[ContentDoc]`
   changes
-- `run_tests.ps1` — original serial full-suite runner; hardcodes v1's paths
-  (`C:\Games\Prince's Palace[-TestRunner]`), which do not exist in this tree,
-  so it does not run against this project (AUDIT.md, tooling finding)
 - `run_tests_parallel.ps1` — the "before committing" runner (~90-100s), two
   isolated copies in parallel, `-BuildContent`/`-BuildScenes`/`-SkipSync`,
   the `Assert-GuidsMatch` hardening (see `AUDIT.md` #24), and a structural

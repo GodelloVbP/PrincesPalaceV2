@@ -7,11 +7,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // The debug menu: currency grants and an item picker.
     //
     // Coordinates live INLINE here rather than in a DebugMenuAnchors sibling,
-    // unlike HubAnchors and OverlayAnchors. Those exist because their layouts
+    // unlike HubAnchors and DossierLayout. Those exist because their layouts
     // are irregular -- eight slots placed against a painted body, buildings
     // staged in depth -- and every number needed one home two files could
     // read. This is a title, three buttons, a filter row and a list. Splitting
-    // it would be ceremony.
+    // it would be ceremony. (The second example used to be OverlayAnchors,
+    // deleted 2026-09-11 as dead code per AUDIT #139; DossierLayout is the
+    // class that actually holds the dossier's slot geometry today.)
     //
     // It is deliberately plain. A debug tool that takes design effort is a
     // debug tool that stops getting extended.

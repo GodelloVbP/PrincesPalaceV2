@@ -485,61 +485,7 @@ validated but unwritten. Items, weapons and item sets stay bespoke for the reaso
 One finding, fixed in the same pass that found it, and one question it surfaced
 and deliberately did not answer.
 
-### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default
-
-When a combatant died, two things had to happen together: `_killedThisAction`
-(`FightSession.Riders.cs:17`, read and reset once in `AdvanceAfterAction`, and
-the sole gate on whether Trample or Bloodlust fire) and `RecordKill`. Both were
-typed out by hand at five places -- `FightSession.cs:436`,
-`FightSession.RelicMechanics.cs:419` and `:461`, `FightSession.Relics.cs:322`,
-`FightSession.Talents.cs:332` -- each a copy of
-`if (!x.IsAlive) { _killedThisAction = true; RecordKill(...); }` after its own
-`DealDamage` call. **Nothing enforced the pairing.**
-
-**It had already drifted twice, in both directions.** `FightSession.Skills.cs:578`
-carried a comment recording that the pair had once been moved *into*
-`ApplyFinalDamage` -- a note about where the truth currently lives is a note
-that it has lived somewhere else. And `SplashOntoNeighbours`
-(`FightSession.Talents.cs:543`) was a sixth kill path with only the `RecordKill`
-half: a Black Ram transform splash that felled a bystander scored the kill in
-the ledger and silently forfeited the rider. That is exactly the failure the
-shape invites -- the kill is still a kill, the log still reads right, and no
-test fails.
-
-`FightSession.Relics.cs:300` had even seen the pattern and priced it: "worth
-collapsing the day a fifth shows up and actually causes a gap the way the
-damage-bonus duplication did, not before." The fifth had shown up and the gap
-was already open.
-
-**The shape chosen.** `DealDamage` -- the one funnel every damage figure in the
-session already went through -- now settles the death itself via `SettleDeath`
-(`FightSession.Ledger.cs`), which absorbed `RecordKill` outright. It measures
-alive-before against dead-after, so one body settles exactly once even though
-`ApplyFinalDamage`'s elemental and matching-type riders re-enter the funnel
-after the main hit may already have felled the target. The five manual pairs
-are deleted and `SettleDeath` is the only writer of `_killedThisAction` left.
-**T2 in `docs/CODE_STANDARDS.md` §9's ladder**: one code path owns the concern,
-so there is nowhere else to get it wrong. Not T1 -- the type system cannot make
-"deal damage without settling the death" unrepresentable while `DealDamage`
-returns a `DamageResult` a caller may ignore -- but the argument is the T1-shaped
-part: `KillCredit` has **no default value**, so a sixth kill path does not
-forget to decide, it fails to compile.
-
-**The poison exception is now written down rather than omitted.** `TickStatuses`
-(`FightSession.Riders.cs:355-363`) kills without crediting, on purpose: the
-poison was applied turns ago by someone who may now be dead, and back-crediting
-it would put points in a column the player cannot account for against any blow
-they watched land. Left as a *missing* call that would be indistinguishable
-from the bug above -- so the poison block calls `SettleDeath` with
-`KillCredit.Nobody`, a no-op on that branch by design. What it buys is that one
-grep finds every death decision in the file family, the exception included.
-This is the half worth getting right: a deepening that only stopped silent
-missed credits, while opening the door to a silent over-credit, would not be a
-net gain.
-
-`KillCreditTests` pins one test per former site, plus the transform splash whose
-regression is the evidence above, plus the poison exception -- so a future
-regression in any single path is named rather than merely counted.
+### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 63. A monster felling a party member records no kill row
 
@@ -563,23 +509,7 @@ test that pins the flag staying down.
 Left open because it is a balance and presentation decision, not a refactor's
 to make.
 
-### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted
-
-Same shape as #41/#50/#54: a member declared for a purpose that never grew a
-caller. `ContentDatabase.Initialize` (`Core/Content/ContentDatabase.cs`) was a
-seam meant to let tests inject content directly, skipping Resources — its own
-comment said as much — but no test ever grew the adapter that would have
-called it. Zero call sites in the tree. Tests substitute content one layer
-down instead, where it is cheaper and engine-free: `ContentBuilder` writes
-real assets and `Reset()` drops the cache (`CharacterPortraitTests`,
-`ContentIsolationTests`, `TestGlobals`), or a test bypasses `ContentDatabase`
-altogether and resolves straight from the source JSON (`EnemyContentPinTests`).
-A seam with zero adapters is not a seam, it is dead code with a comment
-explaining what it was for.
-
-`FightSession.IsOnCooldown` (`FightSession.Cooldowns.cs`) was smaller but the
-same story: a public one-line wrapper over `CooldownRemaining` that nothing
-ever called. `CooldownRemaining` stays — it has the real callers.
+### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 65. A poison death records no `Ledger.WentDown`
 

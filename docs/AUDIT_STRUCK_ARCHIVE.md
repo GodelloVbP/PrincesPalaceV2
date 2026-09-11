@@ -510,6 +510,102 @@ assertable for the first time, and
 `EveryLayerIsDrawnAtTheImpactInstantAndNoneSurvivesTheBeat` is the only test in the
 suite that fails when `PlayRoutine`'s `image.enabled = false` is deleted.
 
+### ~~62. A kill's two halves were typed by hand at five call sites, and one site had already lost one of them~~ -- fixed in `84eb5ed5`: `DealDamage` settles the death itself, behind a `KillCredit` argument with no default
+
+When a combatant died, two things had to happen together: `_killedThisAction`
+(`FightSession.Riders.cs:17`, read and reset once in `AdvanceAfterAction`, and
+the sole gate on whether Trample or Bloodlust fire) and `RecordKill`. Both were
+typed out by hand at five places -- `FightSession.cs:436`,
+`FightSession.RelicMechanics.cs:419` and `:461`, `FightSession.Relics.cs:322`,
+`FightSession.Talents.cs:332` -- each a copy of
+`if (!x.IsAlive) { _killedThisAction = true; RecordKill(...); }` after its own
+`DealDamage` call. **Nothing enforced the pairing.**
+
+**It had already drifted twice, in both directions.** `FightSession.Skills.cs:578`
+carried a comment recording that the pair had once been moved *into*
+`ApplyFinalDamage` -- a note about where the truth currently lives is a note
+that it has lived somewhere else. And `SplashOntoNeighbours`
+(`FightSession.Talents.cs:543`) was a sixth kill path with only the `RecordKill`
+half: a Black Ram transform splash that felled a bystander scored the kill in
+the ledger and silently forfeited the rider. That is exactly the failure the
+shape invites -- the kill is still a kill, the log still reads right, and no
+test fails.
+
+`FightSession.Relics.cs:300` had even seen the pattern and priced it: "worth
+collapsing the day a fifth shows up and actually causes a gap the way the
+damage-bonus duplication did, not before." The fifth had shown up and the gap
+was already open.
+
+**The shape chosen.** `DealDamage` -- the one funnel every damage figure in the
+session already went through -- now settles the death itself via `SettleDeath`
+(`FightSession.Ledger.cs`), which absorbed `RecordKill` outright. It measures
+alive-before against dead-after, so one body settles exactly once even though
+`ApplyFinalDamage`'s elemental and matching-type riders re-enter the funnel
+after the main hit may already have felled the target. The five manual pairs
+are deleted and `SettleDeath` is the only writer of `_killedThisAction` left.
+**T2 in `docs/CODE_STANDARDS.md` §9's ladder**: one code path owns the concern,
+so there is nowhere else to get it wrong. Not T1 -- the type system cannot make
+"deal damage without settling the death" unrepresentable while `DealDamage`
+returns a `DamageResult` a caller may ignore -- but the argument is the T1-shaped
+part: `KillCredit` has **no default value**, so a sixth kill path does not
+forget to decide, it fails to compile.
+
+**The poison exception is now written down rather than omitted.** `TickStatuses`
+(`FightSession.Riders.cs:355-363`) kills without crediting, on purpose: the
+poison was applied turns ago by someone who may now be dead, and back-crediting
+it would put points in a column the player cannot account for against any blow
+they watched land. Left as a *missing* call that would be indistinguishable
+from the bug above -- so the poison block calls `SettleDeath` with
+`KillCredit.Nobody`, a no-op on that branch by design. What it buys is that one
+grep finds every death decision in the file family, the exception included.
+This is the half worth getting right: a deepening that only stopped silent
+missed credits, while opening the door to a silent over-credit, would not be a
+net gain.
+
+`KillCreditTests` pins one test per former site, plus the transform splash whose
+regression is the evidence above, plus the poison exception -- so a future
+regression in any single path is named rather than merely counted.
+
+### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted
+
+Same shape as #41/#50/#54: a member declared for a purpose that never grew a
+caller. `ContentDatabase.Initialize` (`Core/Content/ContentDatabase.cs`) was a
+seam meant to let tests inject content directly, skipping Resources — its own
+comment said as much — but no test ever grew the adapter that would have
+called it. Zero call sites in the tree. Tests substitute content one layer
+down instead, where it is cheaper and engine-free: `ContentBuilder` writes
+real assets and `Reset()` drops the cache (`CharacterPortraitTests`,
+`ContentIsolationTests`, `TestGlobals`), or a test bypasses `ContentDatabase`
+altogether and resolves straight from the source JSON (`EnemyContentPinTests`).
+A seam with zero adapters is not a seam, it is dead code with a comment
+explaining what it was for.
+
+`FightSession.IsOnCooldown` (`FightSession.Cooldowns.cs`) was smaller but the
+same story: a public one-line wrapper over `CooldownRemaining` that nothing
+ever called. `CooldownRemaining` stays — it has the real callers.
+
+### ~~66-76 (eleven findings from the restatement sweep, 2026-09-06)~~ — no write-up ever lived in `AUDIT.md`
+
+These eleven were struck the day they were found, and their one-line headings in
+`AUDIT.md` each end "full reasoning in the commit message" rather than pointing here.
+So there is no verbatim write-up to move: the reasoning is in the eleven commits named
+below, and copying a paraphrase of it into this file would create a second, worse copy
+of something git already holds. They are listed here anyway so this archive's set of
+struck numbers matches `AUDIT.md`'s — which is the cross-check that found #140 in the
+first place, and which would otherwise keep reporting these eleven as missing forever.
+
+- ~~66. A `DefeatSpecificBoss` achievement's target enemy was checked by nothing~~ — fixed in `24797a93`: `AchievementProgress.ValidateDefeatSpecificBossParameter` checks the parameter against the enemy catalogue, wired in from `ContentDatabase.ValidateContent`; full reasoning in the commit message
+- ~~67. `KitFor(CharacterDefinition)` hand-rolled the skill-unlock filter `AvailableSkillsFor` owns~~ — fixed in `3d2a1de4`: the shared predicate moved into `ContentDatabase.SkillsUnlockedByLevel`, and both call sites go through it; full reasoning in the commit message
+- ~~68. `ResistanceByType.WithMagical`/`IsEmpty` hand-listed the `DamageType` members with no completeness test~~ — fixed in `8ae0ee8f`: both now derive from `Enum.GetValues`, pinned by two new completeness tests; full reasoning in the commit message
+- ~~69. `TryResolveStatus` was duplicated byte-for-byte across two content resolvers~~ — fixed in `1fcc621e`: moved into `StatusAuthoring.TryResolve`, shared by `SkillEntryResolver` and `EnemyEntryResolver`; full reasoning in the commit message
+- ~~70. `tools/bot.ps1` retyped the archetype list `Archetypes.Names` owns~~ — fixed in `a846a972`: the script's `-Archetypes` default is empty and `-botArchetypes` is omitted from argv when empty, so `BalanceBotRunner`'s registry-derived default governs; full reasoning in the commit message
+- ~~71. The spell-acquisition metric was computed, rendered nowhere, and absent from the schema doc that claims to be the contract~~ — fixed in `b03fa207` and, for the room-row half, `7975c5a1`: `docs/BOT_SUMMARY_SCHEMA.md` now documents both the `cells[].spellAcquisition` fields and the `RoomTrace` fields, `tools/bot_report.py` renders the metric, and `tools/bot_schema_test.py` checks doc against emitter for both halves; full reasoning in the commit messages
+- ~~72. The dossier leader line's vertical anchor was its slot's plus 37, typed seven times~~ — fixed in `f40577dd`: `DossierLayout.SlotGeometry` is the one top/file table now, and `LeaderTop` derives from `SlotTop` plus a named `LeaderVerticalOffset`; full reasoning in the commit message
+- ~~73. The stage capacity `3` was typed twice in `FightBootstrap` with comments naming `FightHudSpec.StageSlotsPerSide`, and `"lone"`/`"full"` were literals at six sites~~ — fixed in `cd4c4c2c`: both `FightBootstrap` literals now read `FightHudSpec.StageSlotsPerSide` directly, and `PreviewFight.FormationLone`/`FormationFull` are the one spelling referenced at all six sites; full reasoning in the commit message
+- ~~74. `BotPhaseTimers.PhaseCount = 18` hand-counted the `BotPhase` enum~~ — fixed in `3262cc2d`: `PhaseCount` now derives from `Enum.GetValues(typeof(BotPhase)).Length`; full reasoning in the commit message
+- ~~75. `CharacterVoice` keyed Shawn's lines on the literal `"sheep"` with no check against `characters.json`~~ — fixed in `8156a4ca`: a PlayMode test asserts every `CharacterVoice` key is a live id `ContentDatabase.GetCharacter` recognises; full reasoning in the commit message
+- ~~76. `architecture_audit.md` §7 stated two partial-class line counts as precise numbers, both stale~~ — fixed in `1656372a`: the `FightController` and `ContentDatabase` rows now read approximate, sha-stamped counts, same phrasing as the `FightSession` row fixed the same morning; full reasoning in the commit message
+
 ### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `PLACEHOLDER_SHA`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`
 
 Found delivering Fire, Wind and Earth for `prismatic_orb`. `PreviewFight.PreviewElementOf`
