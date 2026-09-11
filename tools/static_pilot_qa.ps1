@@ -42,18 +42,32 @@ if (-not (Test-Path $runnerDir)) {
     exit $code
 }
 
-# Stale-frame guard: this label's previous run must never be mistaken for this
-# one. Only THIS label is cleared -- the other half of the comparison is the
-# whole point and must survive.
-if (Test-Path $mainDir) { Remove-Item $mainDir -Recurse -Force }
+# Staged into a TEMP label first, promoted over $mainDir only once the run is
+# known to have succeeded. A re-run of the same label that FAILS after
+# writing some or all frames used to clobber the previous GOOD capture with
+# this incomplete one before the failure was even checked -- the "failed"
+# message printed after the damage, not before it. Iterating on one label at
+# a time (make a change, re-run "after") is this tool's whole documented
+# workflow, which is exactly the shape where that mattered most.
+$stagingDir = "$mainDir.incoming"
+if (Test-Path $stagingDir) { Remove-Item $stagingDir -Recurse -Force }
 New-Item -ItemType Directory -Force $mainRoot | Out-Null
-Copy-Item $runnerDir $mainDir -Recurse -Force
-Write-Host "Frames copied to: $mainDir"
+Copy-Item $runnerDir $stagingDir -Recurse -Force
 
 if ($code -ne 0) {
-    Write-Host "StaticPilotStageCaptureTests failed -- skipping assembly over a possibly-incomplete capture."
+    Remove-Item $stagingDir -Recurse -Force
+    if (Test-Path $mainDir) {
+        Write-Host "StaticPilotStageCaptureTests failed -- skipping assembly over a possibly-incomplete capture. Keeping the previous $Label capture at $mainDir; this run's frames were not copied over it."
+    } else {
+        Write-Host "StaticPilotStageCaptureTests failed -- skipping assembly over a possibly-incomplete capture. No previous $Label capture existed to keep."
+    }
     exit $code
 }
+
+# Success: NOW it is safe to replace the label directory.
+if (Test-Path $mainDir) { Remove-Item $mainDir -Recurse -Force }
+Move-Item $stagingDir $mainDir
+Write-Host "Frames copied to: $mainDir"
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) {
