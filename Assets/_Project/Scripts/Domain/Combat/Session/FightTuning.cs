@@ -154,10 +154,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // per non-summon kill.
         public const int AmassingStarPercentPerKill = 2;
 
-        // Pointy Nail on the End of a Stick: flat armour penetration on
-        // every melee (Physical-typed) swing the wearer makes.
-        public const int PointyNailArmorPenetration = 35;
-
         // Rampaging Bull's Horn: damage reduction after casting a
         // convergence/ultimate ability, and how long it lasts.
         public const int BullsHornReductionPercent = 50;
