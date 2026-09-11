@@ -1487,6 +1487,41 @@ namespace PrincesPalace
             if (root == null || flat < 0 || flat >= _statusBadgePopRoutines.Length) return;
 
             if (_statusBadgePopRoutines[flat] != null) StopCoroutine(_statusBadgePopRoutines[flat]);
+
+            // AUDIT #106, and the fix shape is the one that finding names.
+            //
+            // A screen being torn down repaints ONCE more on its way out --
+            // the engine deactivates the outgoing scene, FightBeatPlayer.
+            // OnDisable ends the fight, its Flush fires OnPlaybackFinished,
+            // and that calls RefreshUi on a panel that is already inactive.
+            // StartCoroutine on an inactive GameObject is a hard engine error
+            // rather than a no-op, so a status badge that happened to be new
+            // on that last repaint logged "Coroutine couldn't be started
+            // because the game object 'FightPanel' is inactive!" -- cosmetic
+            // in the game (nothing pops on a screen nobody will see again)
+            // and not cosmetic in a test host, where an unexpected error
+            // fails whichever unrelated fixture loaded the second scene.
+            //
+            // THE SCENE'S OWN FLAG, not just isActiveAndEnabled, and that is
+            // a correction to the fix shape #106 proposed. Measured: at the
+            // moment of that teardown repaint isActiveAndEnabled still reads
+            // TRUE -- nothing called SetActive, the whole SCENE is being
+            // unloaded -- and StartCoroutine refuses anyway, because the
+            // scheduler will not take an object whose scene is on its way
+            // out. Scene.isLoaded is the flag that has already flipped, and
+            // it is the one Unity's own "was this destroyed by a scene
+            // unload" idiom uses.
+            //
+            // The final scale directly, which is the same graceful-
+            // degradation rule the rest of this file follows: the badge ends
+            // where the pop would have left it.
+            if (!isActiveAndEnabled || !gameObject.scene.isLoaded)
+            {
+                _statusBadgePopRoutines[flat] = null;
+                ((RectTransform)root.transform).localScale = Vector3.one;
+                return;
+            }
+
             _statusBadgePopRoutines[flat] = StartCoroutine(AppearancePopRoutine((RectTransform)root.transform));
         }
 
