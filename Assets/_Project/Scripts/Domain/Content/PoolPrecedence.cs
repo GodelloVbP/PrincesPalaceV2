@@ -11,8 +11,10 @@ namespace PrincesPalace.Domain.Content
     // track and a character's live loadout are Core's to read. What lives
     // here is the RULE those sums are fed into, for one reason: a rule that
     // can only be exercised through a content catalogue can only be tested
-    // against the one row that catalogue ships, and the whole promise of
-    // PoolCapacityRule.Fixed is about a row nobody has authored yet.
+    // against the rows that catalogue ships, and PoolCapacityRule.Fixed's
+    // promise is now exercised for real -- pools.json's `fury` row is
+    // authored Fixed, and this is what stops every Max Mana source from
+    // adding to it.
     //
     //   WisdomDerived: the authored number is a BASE. Every Max Mana source
     //   in the game adds to it -- the Wisdom bonus, talents, relics, the

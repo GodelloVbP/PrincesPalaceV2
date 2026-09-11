@@ -4,10 +4,10 @@ using UnityEngine;
 using PrincesPalace.Domain.UiKit;
 
 // Resolves a TypographyRole (Domain/UiKit/Typography.cs, engine-free) to the
-// generated font/material assets TmpBootstrap.Typography.cs writes. Not
-// wired into any emit call yet -- ScreenRegistry/UiEmitter still drive today
-// with SceneBuilder.UiFont, and adopting these per-role is a separate change
-// with its own screen-by-screen sweep.
+// generated font/material assets TmpBootstrap.Typography.cs writes. Wired
+// into UiEmitter.ApplyTypography: every Role-bearing node reads FontFor and
+// MaterialFor here, falling back to SceneBuilder.UiFont only when a node
+// declares no Role, or when the generated asset is missing.
 public static partial class SceneBuilder
 {
     // Null on a miss (asset not yet generated) rather than throwing --

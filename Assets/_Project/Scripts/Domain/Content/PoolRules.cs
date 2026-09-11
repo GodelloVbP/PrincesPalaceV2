@@ -24,8 +24,9 @@ namespace PrincesPalace.Domain.Content
     // authored capacity from every source, which is what lets a resource say
     // "this bar is 0..100, always" and have that be literally true rather
     // than true until somebody equips a relic. See the plan's P3 and attack
-    // point 3. Nothing consumes this yet -- phase B is what teaches
-    // ContentDatabase's capacity chain to respect it.
+    // point 3. Wired: pools.json's `fury` row ships as Fixed, and
+    // PoolPrecedence.Capacity is what ContentDatabase's capacity chain reads
+    // to respect it.
     public enum PoolCapacityRule
     {
         WisdomDerived,

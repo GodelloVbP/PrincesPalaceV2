@@ -60,8 +60,8 @@ public static class ProceduralSpriteBaker
         // its sides instead of ending on a hard 10px band -- which is what
         // makes an edge read as a lit crack rather than as a drawn rectangle.
         //
-        // Baked rather than built at runtime like ProceduralSprites.RadialGlow,
-        // because the emitter needs a real asset with a GUID.
+        // Baked rather than built at runtime, because the emitter needs a
+        // real asset with a GUID.
         BakeGradient("soft_edge_stripe", 64,
             ny => (1f, 1f - Smoothstep(Mathf.Abs(ny * 2f - 1f))));
 
