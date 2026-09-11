@@ -396,6 +396,10 @@ namespace PrincesPalace.Content
         // Drops the cache so the next access reloads from Resources.
         public static void Reset()
         {
+            // FIRST, so a load that somehow ran during this Reset would refill
+            // rather than answer off half-dropped catalogues.
+            _loaded = false;
+
             _characters = null;
             _talents = null;
             _upgrades = null;
@@ -801,9 +805,30 @@ namespace PrincesPalace.Content
                    && OrbCost(talent) <= EmbersLeftFor(character);
         }
 
+        // GUARDED ON A FLAG SET LAST, not on the second field assigned.
+        //
+        // The guard used to read `_characters != null`, and _characters is the
+        // SECOND of twelve catalogues this method fills. A re-entrant call made
+        // anywhere in the window between that assignment and the last one would
+        // find the guard satisfied and return with _talents.._rewardTracks
+        // still null -- and RewardTracks.Build would then dereference one.
+        //
+        // The comment on _rewardTracks below already describes this shape
+        // exactly (a lazy load "re-entered from a future per-character read ...
+        // would find _characters already non-null at the guard on this method's
+        // first line") and answers it by loading that one field here rather
+        // than lazily. That closes the one re-entry anybody had found; a flag
+        // set after every assignment closes the window itself, for the eleven
+        // other fields and for the next reader who adds a thirteenth.
+        //
+        // Nothing re-enters today, so there is no failing test to point at --
+        // an honest "latent" rather than a fixed crash. Reset() clears the flag
+        // with the fields, or the next load would be skipped entirely.
+        private static bool _loaded;
+
         private static void EnsureLoaded()
         {
-            if (_characters != null)
+            if (_loaded)
             {
                 return;
             }
@@ -830,6 +855,10 @@ namespace PrincesPalace.Content
             // this field. See docs/PLAN_REWARD_TRACKS.md §4's touch-point
             // table for the citation this mirrors.
             _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
+
+            // LAST, and that is the whole of the guard above: everything this
+            // method promises is in place before anything can skip it.
+            _loaded = true;
         }
 
         // THE ONLY PLACE CONTENT IS LOADED, and the constraint is what makes
