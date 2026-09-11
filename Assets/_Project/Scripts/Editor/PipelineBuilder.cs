@@ -33,9 +33,19 @@ public static class PipelineBuilder
 
         // Idempotent, so the test harness can run it on every -BuildScenes
         // without churning the pipeline asset's GUID (which every quality level
-        // and GraphicsSettings references) on each pass.
-        if (AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath) != null)
+        // and GraphicsSettings references) on each pass. The ASSET is reused,
+        // but its VALUES are re-applied from here every run, same discipline
+        // as BuildVolumeProfile below: the numbers live in code, so code has
+        // to win. An early-return that skipped ApplyPipelineSettings/
+        // AssignToGraphicsAndQuality on this branch used to mean editing
+        // msaaSampleCount or one of its siblings in this file and having
+        // nothing happen against an already-committed UrpPipeline.asset.
+        var existingPipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath);
+        if (existingPipeline != null)
         {
+            ApplyPipelineSettings(existingPipeline);
+            AssignToGraphicsAndQuality(existingPipeline);
+
             BuildVolumeProfile();
             BuildHitFlashMaterial();
 
@@ -55,7 +65,29 @@ public static class PipelineBuilder
 
         var pipeline = UniversalRenderPipelineAsset.Create(rendererData);
         pipeline.name = "UrpPipeline";
+        ApplyPipelineSettings(pipeline);
 
+        AssetDatabase.CreateAsset(pipeline, PipelinePath);
+        AssetDatabase.SaveAssets();
+
+        AssignToGraphicsAndQuality(pipeline);
+
+        BuildVolumeProfile();
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log($"Render pipeline built: {PipelinePath} (Renderer2D, HDR on) and assigned to " +
+                  $"GraphicsSettings + all {QualitySettings.names.Length} quality levels.");
+        Debug.Log("BUILD-COMPLETE: PipelineBuilder");
+    }
+
+    // The pipeline-asset-level settings this project tunes away from URP's
+    // defaults. Shared by both branches above so a value changed here takes
+    // effect against an already-committed asset, not only a from-scratch one
+    // -- see the idempotent branch's own comment for the incident this fixes.
+    private static void ApplyPipelineSettings(UniversalRenderPipelineAsset pipeline)
+    {
         // A 2D game with no realtime lights has nothing to cast shadows and
         // nothing to receive them. Every one of these is pure frame cost here.
         pipeline.shadowCascadeCount = 1;
@@ -70,11 +102,18 @@ public static class PipelineBuilder
         pipeline.supportsHDR = true;
         pipeline.msaaSampleCount = 4;
 
-        AssetDatabase.CreateAsset(pipeline, PipelinePath);
-        AssetDatabase.SaveAssets();
+        EditorUtility.SetDirty(pipeline);
+    }
 
+    // Points GraphicsSettings and every quality level's render pipeline
+    // reference at `pipeline`. Also shared by both branches above: a quality
+    // level added after the pipeline asset already existed, or a settings
+    // asset that lost the reference some other way, is repaired the same way
+    // on the very next build rather than only on the one build that runs
+    // before any pipeline asset exists.
+    private static void AssignToGraphicsAndQuality(UniversalRenderPipelineAsset pipeline)
+    {
         GraphicsSettings.defaultRenderPipeline = pipeline;
-        QualitySettings.renderPipeline = pipeline;
 
         // Every quality level, not just whichever one happens to be active in
         // this process -- a level left on Built-in renders the whole game
@@ -86,15 +125,6 @@ public static class PipelineBuilder
             QualitySettings.renderPipeline = pipeline;
         }
         QualitySettings.SetQualityLevel(previous, applyExpensiveChanges: false);
-
-        BuildVolumeProfile();
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        Debug.Log($"Render pipeline built: {PipelinePath} (Renderer2D, HDR on) and assigned to " +
-                  $"GraphicsSettings + all {QualitySettings.names.Length} quality levels.");
-        Debug.Log("BUILD-COMPLETE: PipelineBuilder");
     }
 
     // The post-processing stack, generated for the same reason the pipeline
