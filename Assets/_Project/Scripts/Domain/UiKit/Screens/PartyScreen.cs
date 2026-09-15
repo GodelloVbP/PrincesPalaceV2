@@ -132,6 +132,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> CardMonogramPlates = new List<NodeRef>();
         public List<NodeRef> CardMonogramLetters = new List<NodeRef>();
         public List<NodeRef> CardNames = new List<NodeRef>();
+
+        // THE TITLE ROW, which is also the picker -- one Button per card, its
+        // own baked label carrying whichever collected Title is selected. See
+        // PartyLayout.CardTitleCentreY for why the line and the control are one
+        // rect, and PartyController.CycleTitle for what a click does.
+        public List<NodeRef> CardTitles = new List<NodeRef>();
         public List<NodeRef> CardRoles = new List<NodeRef>();
         public List<NodeRef> CardTags = new List<NodeRef>();
         public List<NodeRef> CardRings = new List<NodeRef>();
@@ -518,6 +524,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.Body);
             button.Children.Add(name);
             screen.CardNames.Add(name);
+
+            // THE TITLE, AND THE PICKER FOR IT, as one chromeless button.
+            //
+            // Hidden outright for a character with no collected Title -- which
+            // is every character below level 31, so for most of a career this
+            // row is 14px of air under the name. A disabled control there would
+            // advertise a feature the player has no way to reach yet.
+            //
+            // A BUTTON RATHER THAN A LABEL even when only one title is
+            // collected: the controller refuses the cycle in that case (there
+            // is nothing to cycle to) rather than the tree emitting two
+            // different things depending on how far a save has got.
+            var title = Ui.Button(stem + "Title", UiString.Runtime,
+                    new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardTitleHeight), 11,
+                    Place.At(0f, PartyLayout.CardTitleCentreY))
+                .NoChrome()
+                .Inactive();
+            button.Children.Add(title);
+            screen.CardTitles.Add(title);
 
             var role = Ui.Label(stem + "Role", UiString.Runtime,
                     new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardRoleHeight), 11, RoleText,

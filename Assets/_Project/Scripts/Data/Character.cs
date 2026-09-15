@@ -233,6 +233,22 @@ namespace PrincesPalace
             return LevelCurve.ExpToNextLevel(Content.ContentDatabase.LevelCosts, level);
         }
 
+        // The same question in fights rather than in experience, which is
+        // what the reward track's focus card says out loud. Same seam as
+        // ExpToNextLevel above and for the same reason: LevelCurve is
+        // engine-free and cannot fetch the table itself.
+        //
+        // DEPTH IS PASSED IN rather than read off RunManager here. This is
+        // the save-shaped Data layer; RunManager is Core, and a save object
+        // reaching for the live run to answer a question about itself is the
+        // dependency CODE_STANDARDS §1 exists to keep out. The caller holds
+        // the answer already -- in a run it is the run's step, in the hub it
+        // is 0.
+        public int FightsToNextLevel(int depthStep)
+        {
+            return LevelCurve.FightsToNextLevel(Content.ContentDatabase.LevelCosts, level, exp, depthStep);
+        }
+
         // Adds exp and applies every level-up it earns (a big enough gain
         // can cross more than one threshold at once). Returns how many
         // levels were gained, purely so callers can show a "Level Up!".

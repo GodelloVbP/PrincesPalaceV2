@@ -923,6 +923,27 @@ public static class ScreenRegistry
         controller.lockedForFight = lockedForFight;
         controller.seatBadgeTexts = party.SeatBadges.Select(badge => result.Tmp(badge, searchChildren: true)).ToArray();
 
+        // The roster card's title row is a BUTTON, so UiAutoBind fills
+        // `cardTitles` with the Buttons and cannot also reach the label
+        // EmitButton bakes underneath each one. Same `searchChildren: true`
+        // route as seatBadgeTexts above, and for the same reason: the text
+        // lives on a GameObject the tree never declared.
+        controller.cardTitleTexts = party.CardTitles
+            .Select(title => result.Tmp(title, searchChildren: true))
+            .ToArray();
+
+        // NO CountBindings for this pane, and the reason is the same one the
+        // reward track's own block gives: E4 exists to catch a strip SIZED
+        // from one collection and FILLED from another, and every array here is
+        // built by `.Select` over the very NodeRef list the nodes were
+        // appended to (party.SeatBadges, party.CardTitles). The binding it
+        // would check is that list's count compared with itself.
+        //
+        // THIS ALSO RETIRES seatBadgeTexts FROM UiCountAuditCoverageLintTests'
+        // KnownOffenders, where it sat as "a real gap the bug-hunt found". It
+        // was never a gap of that shape -- the allowlist was catching every
+        // unmarked site and this one had simply never been explained.
+        //
         // P4: one drag surface per seat/card button. Attached here so
         // UiWiringSweep sees the arrays (the same shape as FightController.
         // partyActorAnimators); WHAT each one does is a per-index closure

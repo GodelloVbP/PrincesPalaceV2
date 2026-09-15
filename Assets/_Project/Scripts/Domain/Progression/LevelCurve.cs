@@ -143,6 +143,64 @@ namespace PrincesPalace.Domain.Progression
             return new LevelUp(newLevel, newExp, gained);
         }
 
+        // ---- HOW MANY FIGHTS THE NEXT LEVEL IS AWAY ------------------------
+        //
+        // The one number the reward track's focus card says that the rail
+        // itself cannot: "about 6 fights to go". A cost table answers "how
+        // much experience"; a player counts in fights.
+        //
+        // AN AVERAGE NORMAL FIGHT, not the fight they are about to have, and
+        // the difference is the whole honesty of the estimate. §2 of
+        // docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md measures a
+        // room-0 normal fight at 29 experience -- the floor-1 pool's mean raw
+        // 19.5 times the 1.5 enemies EncounterRoll fields -- against an elite
+        // at 61 and a boss at 100. Counting in elites would flatter the
+        // number and counting in the cheapest possible draw (a lone rat, 15)
+        // would double it. The word the card says is "ABOUT".
+        //
+        // DEPTH IS THE CALLER'S, and it has exactly two answers: in a run,
+        // the run's own step, because that is what the next fight will pay;
+        // in the hub, 0, because the next fight is the first room of the next
+        // descent. Nothing here guesses it -- a Domain function that reached
+        // for RunManager would be reaching across two layers to save a
+        // caller one argument.
+        public const int AverageNormalFightExperience = 29;
+
+        // ROUNDED UP, and clamped at 1 whenever anything at all is owed: a
+        // remainder of 3 against a fight worth 29 is "one more fight", not
+        // "zero fights" -- and zero is the answer reserved for a level that
+        // is already paid for.
+        public static int FightsToGo(int remainingExperience, int depthStep)
+        {
+            if (remainingExperience <= 0) return 0;
+
+            int pay = Dungeon.DifficultyCurve.ScaleExperience(AverageNormalFightExperience, depthStep);
+
+            // A pay of zero cannot happen through ScaleExperience (the curve
+            // multiplies a positive constant by at least 1) but would divide
+            // by zero if it ever did, so it is answered rather than trusted.
+            if (pay <= 0) return 0;
+
+            int fights = remainingExperience / pay;
+            if (remainingExperience % pay != 0) fights++;
+
+            return fights < 1 ? 1 : fights;
+        }
+
+        // The same question asked of a level/exp pair rather than of a
+        // remainder, which is the form every caller actually holds. AT THE
+        // CAP it answers 0: there is no next level to count toward, and a
+        // number there would be counting fights toward nothing.
+        public static int FightsToNextLevel(IReadOnlyList<int> costs, int level, int exp, int depthStep)
+        {
+            if (level >= MaxLevel(costs)) return 0;
+
+            int cost = ExpToNextLevel(costs, level);
+            if (cost == NoTableCost) return 0;
+
+            return FightsToGo(cost - exp, depthStep);
+        }
+
         // Where a gain left a character. A struct rather than three out
         // parameters because the three only ever travel together, and
         // Character copies all three back in one place.

@@ -197,5 +197,72 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(tableStep, incomeStep,
                 "a level costs less more than a step of depth pays more, so the track speeds up with depth");
         }
+
+        // ---- "about N fights to go" -----------------------------------------
+        //
+        // The reward track's focus card counts the next level in FIGHTS, not
+        // in experience, because that is the unit a player spends. Every
+        // expected value below is a literal (CLAUDE.md gotcha 5): the pay of
+        // one average normal fight at each depth is ExperienceRateTests' own
+        // pinned row for raw 29, and the division is typed out here rather
+        // than recomputed.
+        //
+        //   step 0  -> 29 a fight     step 8  -> 35
+        //   step 40 -> 77             step 80 -> 209
+        [TestCase(150, 0, 6)]     // 150 / 29 = 5.17, up to 6 -- the plan's own worked example
+        [TestCase(29, 0, 1)]      // exactly one fight
+        [TestCase(58, 0, 2)]      // exactly two, and not three
+        [TestCase(3, 0, 1)]       // a remainder smaller than a fight is still a fight
+        [TestCase(3000, 40, 39)]  // 3,000 / 77 = 38.96
+        [TestCase(3000, 0, 104)]  // 3,000 / 29 = 103.4 -- depth is what makes the same debt cheaper
+        [TestCase(10000, 80, 48)] // a level-31 rung at the bottom of a deep run: 10,000 / 209 = 47.8
+        public void FightsToGoCountsAverageNormalFightsAtThatDepth(int remaining, int step, int expected)
+        {
+            Assert.AreEqual(expected, LevelCurve.FightsToGo(remaining, step));
+        }
+
+        // NOTHING OWED IS ZERO FIGHTS, which is a different answer from "one
+        // more" and has to be, because the card draws no line at all for it.
+        [TestCase(0)]
+        [TestCase(-1)]
+        [TestCase(-5000)]
+        public void NothingOwedIsNoFightsAtAll(int remaining)
+        {
+            Assert.AreEqual(0, LevelCurve.FightsToGo(remaining, 0));
+        }
+
+        // The card holds a level and an experience figure, not a remainder.
+        // Table: level 2 costs 10, 3 costs 20, 4 costs 20, 5 costs 40, and 5
+        // is the cap.
+        [TestCase(1, 0, 0, 1)]    // 10 owed at 29 a fight -- one fight
+        [TestCase(1, 9, 0, 1)]    // 1 owed -- still one fight
+        [TestCase(4, 0, 0, 2)]    // 40 owed at 29 -- 1.38, up to 2
+        [TestCase(4, 0, 40, 1)]   // the same 40 owed at step 40's 77 a fight
+        public void FightsToNextLevelReadsALevelAndItsBankedExperience(
+            int level, int exp, int step, int expected)
+        {
+            Assert.AreEqual(expected, LevelCurve.FightsToNextLevel(Table, level, exp, step));
+        }
+
+        // AT THE CAP THERE IS NO NEXT LEVEL, so there is nothing to count
+        // toward -- and this is not the same as "zero fights away", which is
+        // why the card must not draw the line at all here.
+        [Test]
+        public void AtTheCapThereAreNoFightsToCount()
+        {
+            Assert.AreEqual(5, LevelCurve.MaxLevel(Table), "fixture: the table's cap moved");
+            Assert.AreEqual(0, LevelCurve.FightsToNextLevel(Table, 5, 0, 0));
+            Assert.AreEqual(0, LevelCurve.FightsToNextLevel(Table, 9, 0, 0), "past the cap counts nothing either");
+        }
+
+        // An absent table stops levelling rather than guessing (NoTableCost),
+        // and the fight count has to follow it rather than reporting
+        // int.MaxValue / 29 fights.
+        [Test]
+        public void AnAbsentTableCountsNoFightsRatherThanSeventyFourMillion()
+        {
+            Assert.AreEqual(0, LevelCurve.FightsToNextLevel(null, 1, 0, 0));
+            Assert.AreEqual(0, LevelCurve.FightsToNextLevel(new int[0], 1, 0, 0));
+        }
     }
 }

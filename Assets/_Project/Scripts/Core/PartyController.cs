@@ -8,6 +8,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Party;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -73,6 +74,14 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] cardMonogramPlates;
         [SerializeField] internal TMP_Text[] cardMonogramLetters;
         [SerializeField] internal TMP_Text[] cardNames;
+
+        // THE TITLE ROW: the Button that takes the click, and the label
+        // EmitButton bakes under it. Two arrays over one GameObject each --
+        // the same one-object-two-components shape the reward track's
+        // shimmer/shimmerRect pair carries, and for the same reason: the
+        // binder can only fill one component type per field name.
+        [SerializeField] internal Button[] cardTitles;
+        [SerializeField] internal TMP_Text[] cardTitleTexts;
         [SerializeField] internal TMP_Text[] cardRoles;
         [SerializeField] internal TMP_Text[] cardTags;
         [SerializeField] internal GameObject[] cardRings;
@@ -202,6 +211,20 @@ namespace PrincesPalace
                     {
                         if (Time.frameCount == _dragResolvedFrame) return;
                         ClickCardAt(index);
+                    });
+                }
+            }
+
+            if (cardTitles != null)
+            {
+                for (int i = 0; i < cardTitles.Length; i++)
+                {
+                    if (cardTitles[i] == null) continue;
+                    int index = i;
+                    cardTitles[i].onClick.AddListener(() =>
+                    {
+                        if (Time.frameCount == _dragResolvedFrame) return;
+                        CycleTitle(index);
                     });
                 }
             }
@@ -701,6 +724,7 @@ namespace PrincesPalace
             SetMonogram(cardMonogramLetters, index, !hasArt, id);
 
             SetContent(cardNames, index, DisplayNameOf(id));
+            PaintTitle(index, id);
             SetContent(cardRoles, index, RoleNameOf(id));
 
             var tag = At(cardTags, index);
@@ -746,6 +770,8 @@ namespace PrincesPalace
             SetShown(cardMonogramPlates, index, false);
             SetMonogram(cardMonogramLetters, index, false, null);
             SetContent(cardNames, index, "");
+            SetContent(cardTitleTexts, index, "");
+            At(cardTitles, index)?.gameObject.SetShown(false);
             SetContent(cardRoles, index, "");
 
             var tag = At(cardTags, index);
@@ -894,6 +920,91 @@ namespace PrincesPalace
 
             if (toastFader != null) toastFader.Show();
             else toast?.SetShown(true);
+        }
+
+        // ---- the title, and the picker that chooses it ------------------------------
+        //
+        // Progression v2 §4: "Titles share one display slot: the newest is
+        // shown, earlier ones selectable in the hub roster". This is that
+        // roster, and the picker is the line itself.
+        //
+        // HIDDEN, NOT EMPTY, when nothing is collected. Every character is
+        // below level 31 for most of a career and has no title at all; a blank
+        // row that could be clicked would advertise a control with nothing
+        // behind it.
+        //
+        // A CHEVRON ONLY WHEN THERE IS SOMEWHERE TO GO. One collected title is
+        // a label; two or more is a choice, and the mark is what says which
+        // this card is without the player having to click and find out.
+        private void PaintTitle(int index, string id)
+        {
+            var button = At(cardTitles, index);
+            var label = At(cardTitleTexts, index);
+
+            var character = CharacterFor(id);
+            var selected = CharacterIdentity.SelectedTitleFor(character);
+
+            if (selected == null)
+            {
+                if (label != null) label.SetContent("");
+                button?.gameObject.SetShown(false);
+                return;
+            }
+
+            button?.gameObject.SetShown(true);
+
+            if (label == null) return;
+
+            int collected = TitlesFor(character).Count;
+            label.SetContent(collected > 1
+                ? selected.Value.Value + "  >"
+                : selected.Value.Value);
+        }
+
+        // WRAPS ROUND, oldest after newest. A picker over three items with no
+        // wrap is a picker the player can get stuck at the end of, and there is
+        // no second control to go back with.
+        //
+        // WRITES THROUGH Persist, like every other change this pane makes --
+        // the pane is leavable by Escape, a tab switch or a scene change, none
+        // of which runs a save-on-exit hook (see Persist's own header).
+        private void CycleTitle(int index)
+        {
+            if (_rosterIds == null || index < 0 || index >= _rosterIds.Count) return;
+
+            var character = CharacterFor(_rosterIds[index]);
+            if (character == null) return;
+
+            var titles = TitlesFor(character);
+            if (titles.Count < 2) return;
+
+            var selected = CharacterIdentity.SelectedTitleFor(character);
+            int at = selected == null
+                ? titles.Count - 1
+                : titles.FindIndex(t => t.Level == selected.Value.Level);
+
+            character.SelectTitle(titles[(at + 1) % titles.Count].Level);
+
+            Persist();
+            PaintTitle(index, _rosterIds[index]);
+        }
+
+        private static List<CharacterIdentityItem> TitlesFor(Character character) =>
+            CharacterIdentity.CollectedFor(character)
+                .Where(item => item.Kind == TrackIdentityKind.Title)
+                .ToList();
+
+        // THE SAVE'S OWN CHARACTER, not a content definition -- a title is
+        // collected progress and lives on the roster entry. Resolved fresh
+        // rather than held, the same posture RewardTrackController.
+        // ResolveCharacter takes and for the same reason: a slot load can
+        // replace the save while this pane is open.
+        private static Character CharacterFor(string id)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null || id == null) return null;
+
+            return save.roster.FirstOrDefault(c => c != null && c.definitionId == id);
         }
 
         // ---- content lookups --------------------------------------------------------

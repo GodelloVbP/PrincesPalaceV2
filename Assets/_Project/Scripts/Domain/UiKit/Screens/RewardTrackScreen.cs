@@ -77,6 +77,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // It was measured at 6B, then raised to BF when the band wash lifted
         // the ground behind it; both of those were the same tint applied
         // evenly, and neither could brighten toward anything.
+        // THE PRESTIGE STRETCH'S OWN GROUND, and the divider that opens it.
+        //
+        // A wash rather than a dimmer rail: the ten identity levels are not
+        // LESS than the thirty below them, they are a different kind of thing,
+        // and draining their colour would say the first. Laid behind
+        // everything on the rail, so what it changes is the ground the last
+        // ten nodes stand on rather than the nodes themselves.
+        public const string PrestigeGround = "#2E22444D";
+        public const string PrestigeDivider = "#F2DB9E7A";
+        public const string CompletionWord = "#F2DB9EC4";
+        public const string PrestigeWord = "#C8B4DEA8";
+
         public const string Rail = "#C8B4DE29";
         public const string RailDone = "#F2DB9E";
         public const string RailGlow = "#F2DB9E52";
@@ -297,6 +309,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef CardCaption;
         public NodeRef CardState;
         public NodeRef CardStateDot;
+        public NodeRef CardFights;
 
         public NodeRef Ribbon;
         public NodeRef RibbonFill;
@@ -455,6 +468,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var railChildren = new List<UiNode>();
 
+            // THE PRESTIGE GROUND, first of everything so it sits behind the
+            // rail as well as behind the nodes. Levels 31 to 40 stand on it;
+            // 2 to 30 do not. See RewardTrackLayout's own block on why the
+            // track needed to be able to say this at all.
+            railChildren.Add(Ui.Solid("TrackPrestigeGround", PrestigeGround,
+                    new UiVec(RewardTrackLayout.PrestigeWashWidth,
+                              RewardTrackLayout.ScrollContentHeight),
+                    Place.At(RewardTrackLayout.PrestigeWashOffsetX, 0f))
+                .AsDecor());
+
             // THE RAIL, in two layers: the whole line dim, and a second bar over
             // it that the controller stretches to however far the player has
             // got. Two nodes rather than one tinted per-segment, because
@@ -526,6 +549,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 railChildren.AddRange(screen.BuildNode(level));
             }
+
+            // The boundary itself, and the two words either side of it. After
+            // the nodes so the hairline reads as drawn ON the rail rather than
+            // under it -- it sits in the 20px of clear air every midpoint has
+            // (RewardTrackLayout.PrestigeDividerWidth's own note), so it covers
+            // nothing.
+            railChildren.Add(Ui.Solid("TrackPrestigeDivider", PrestigeDivider,
+                    new UiVec(RewardTrackLayout.PrestigeDividerWidth,
+                              RewardTrackLayout.PrestigeDividerHeight),
+                    Place.At(RewardTrackLayout.PrestigeBoundaryOffsetX, 0f))
+                .AsDecor());
+
+            railChildren.Add(Ui.Label("TrackCompletionWord", UiStrings.TrackCompletion,
+                    new UiVec(RewardTrackLayout.CompletionLabelWidth,
+                              RewardTrackLayout.StretchLabelHeight),
+                    RewardTrackLayout.StretchLabelFont, CompletionWord,
+                    Place.At(RewardTrackLayout.CompletionLabelOffsetX,
+                             RewardTrackLayout.StretchLabelY))
+                .Tracked(26f)
+                .AsDecor());
+
+            railChildren.Add(Ui.Label("TrackPrestigeWord", UiStrings.TrackPrestige,
+                    new UiVec(RewardTrackLayout.PrestigeLabelWidth,
+                              RewardTrackLayout.StretchLabelHeight),
+                    RewardTrackLayout.StretchLabelFont, PrestigeWord,
+                    Place.At(RewardTrackLayout.PrestigeLabelOffsetX,
+                             RewardTrackLayout.StretchLabelY))
+                .Tracked(26f)
+                .AsDecor());
 
             // NOTHING MARKED THE NEXT REWARD, which was one of the brief's six
             // open questions. Drawn last so it sits over everything in the
@@ -974,7 +1026,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(dot);
 
             var state = Ui.Label("TrackCardState", UiString.Runtime,
-                    new UiVec(RewardTrackLayout.CardStateTextWidth,
+                    new UiVec(RewardTrackLayout.CardStateWordsWidth,
                               RewardTrackLayout.CardStateHeight),
                     RewardTrackLayout.CardStateFont, TextQuiet,
                     Place.At(RewardTrackLayout.CardStateCentreX, RewardTrackLayout.CardStateY))
@@ -983,6 +1035,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             screen.CardState = state;
             parts.Add(state);
+
+            // HOW FAR THE NEXT LEVEL IS, in fights -- the right end of the
+            // same footer line.
+            //
+            // ON THE CARD RATHER THAN THE SUMMARY ROW, because it is an answer
+            // about the NEXT LEVEL and the card is already resting on the next
+            // reward. Right-aligned against the card's own text column, so it
+            // reads as the far end of a line rather than as a fourth
+            // left-aligned sentence.
+            //
+            // BLANK, NOT ZERO, at the cap and whenever the card is pointing at
+            // something already collected -- the controller clears it. A "0"
+            // there would be counting fights toward a level that is already
+            // paid for.
+            var fights = Ui.Label("TrackCardFights", UiString.Runtime,
+                    new UiVec(RewardTrackLayout.CardFightsWidth,
+                              RewardTrackLayout.CardStateHeight),
+                    RewardTrackLayout.CardStateFont, Gold,
+                    Place.At(RewardTrackLayout.CardFightsCentreX, RewardTrackLayout.CardStateY))
+                .Tracked(16f)
+                .TextAligned(UiTextAlign.Right)
+                .AsDecor();
+            screen.CardFights = fights;
+            parts.Add(fights);
 
             var card = Ui.Panel("TrackCard", Place.At(0f, RewardTrackLayout.CardCentreY),
                 UiSize.Fixed(RewardTrackLayout.CardWidth, RewardTrackLayout.CardHeight),

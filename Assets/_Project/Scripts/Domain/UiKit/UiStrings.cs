@@ -220,6 +220,37 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackStateNextLevel =
             UiString.Define("track.state_next_level", "THE VERY NEXT LEVEL");
 
+        // A COLLECTED ABILITY OR CAPABILITY IS NOT YET IN THE KIT, and the
+        // card is the only place that can say so. The kit is built once per
+        // fight (FightEncounterAdapter.KitFor), so a skill collected in the
+        // fight's own system menu arrives for the NEXT one -- progression v2
+        // §6's three moments, of which this is the third. Said only for the
+        // two kinds it is true of: a bump's max health is on the character the
+        // moment it is paid.
+        public static readonly UiString TrackStateNextFight =
+            UiString.Define("track.state_next_fight", "YOURS FROM YOUR NEXT FIGHT");
+
+        // HOW FAR THE NEXT LEVEL IS, in the unit a player spends. "ABOUT",
+        // because it counts average NORMAL fights (LevelCurve.FightsToGo) and
+        // an elite pays twice one -- a figure stated exactly would be wrong
+        // twice a leg.
+        public static readonly UiString TrackFightsToGo =
+            UiString.Define("track.fights_to_go", "ABOUT {0} FIGHTS TO GO", "ABOUT 104 FIGHTS TO GO");
+
+        public static readonly UiString TrackFightsToGoOne =
+            UiString.Define("track.fights_to_go_one", "ABOUT ONE FIGHT TO GO");
+
+        // ---- completion, and the ten levels past it -------------------------
+        //
+        // Two words under the rail, one at level 30 and one under the stretch
+        // beyond it. They are the only thing on the screen that says the track
+        // has an end before its last node.
+        public static readonly UiString TrackCompletion =
+            UiString.Define("track.completion", "COMPLETION");
+
+        public static readonly UiString TrackPrestige =
+            UiString.Define("track.prestige", "PRESTIGE   .   NOTHING BUT WHO YOU ARE");
+
         // ---- the ascent ribbon ---------------------------------------------
 
         // A HEAD AND AN INSTRUCTION AT OPPOSITE ENDS of the ribbon's own width,
@@ -230,7 +261,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("track.ribbon_title", "THE WHOLE ASCENT");
 
         public static readonly UiString TrackRibbonHint =
-            UiString.Define("track.ribbon_hint", "DRAG TO TRAVEL   .   LEVELS 2 TO 100");
+            UiString.Define("track.ribbon_hint", "DRAG TO TRAVEL   .   LEVELS 2 TO 40");
 
         // Above the node the caret hangs over. Nine pixels of it, which is why
         // it is one word.

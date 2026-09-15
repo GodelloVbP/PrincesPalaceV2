@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -47,6 +49,102 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(kindCount, cardKeys.Count,
                 "the twelve reward kinds should resolve to twelve distinct card sprites");
+        }
+
+        // ---- the tree itself -------------------------------------------------
+        //
+        // THIS SCREEN HAD NO EDITMODE AUDIT, alone among the panes, and the
+        // absence cost a full six-minute scene build to find every overlap.
+        // Every other screen's own *ScreenTests carries one line of this;
+        // RewardTrackScreen was reachable only through SystemMenuScreen.Build,
+        // which no EditMode test solves. UiAudit.RunAllFrames is the same four
+        // canvas aspects UiEmitter runs at scene-build time, so a failure here
+        // is the failure the build would have reported, four seconds sooner.
+        [Test]
+        public void TheTreeAuditsCleanAtEveryAspect()
+        {
+            var errors = UiAudit.RunAllFrames(RewardTrackScreen.Build().Root);
+
+            Assert.IsEmpty(errors,
+                "first 8 of " + errors.Count + ": " +
+                string.Join(" | ", errors.Take(8).Select(e => e.ToString())));
+        }
+
+        // ---- completion, and the ten levels past it ---------------------------
+
+        // THE DIVIDER SITS IN THE GAP BETWEEN TWO CAPTIONS, which is the whole
+        // reason it needs no overlap allowance. A caption box is 170 on a 190
+        // pitch, so every midpoint has 20px of clear air; this asserts the
+        // divider is inside that and not merely thin.
+        [Test]
+        public void ThePrestigeDividerFitsInTheGapBetweenTwoCaptions()
+        {
+            float gap = RewardTrackLayout.NodePitch - RewardTrackLayout.CaptionWidth;
+            Assert.AreEqual(20f, gap, 0.01f, "the caption/pitch relationship moved -- repin the divider");
+            Assert.Less(RewardTrackLayout.PrestigeDividerWidth, gap,
+                "the divider is wider than the clear air between two captions");
+
+            // Halfway between the last combat node and the first identity one,
+            // not on either of them.
+            float thirty = RewardTrackLayout.NodeOffsetX(RewardTrack.CompletionLevel);
+            float thirtyOne = RewardTrackLayout.NodeOffsetX(RewardTrack.CompletionLevel + 1);
+            Assert.AreEqual((thirty + thirtyOne) * 0.5f, RewardTrackLayout.PrestigeBoundaryOffsetX, 0.01f);
+        }
+
+        // THE WASH COVERS THE TEN AND NOTHING ELSE. Its left edge is the
+        // boundary and its right edge is the content's own, so level 30 stands
+        // off it and level 31 stands on it.
+        [Test]
+        public void ThePrestigeGroundStartsAtTheBoundaryAndRunsToTheEnd()
+        {
+            float left = RewardTrackLayout.PrestigeWashOffsetX - RewardTrackLayout.PrestigeWashWidth * 0.5f;
+            float right = RewardTrackLayout.PrestigeWashOffsetX + RewardTrackLayout.PrestigeWashWidth * 0.5f;
+
+            Assert.AreEqual(RewardTrackLayout.PrestigeBoundaryOffsetX, left, 0.01f,
+                "the wash does not start at the boundary");
+            Assert.AreEqual(RewardTrackLayout.ContentWidth * 0.5f, right, 0.01f,
+                "the wash stops short of the content's own right edge");
+
+            Assert.Less(RewardTrackLayout.NodeOffsetX(RewardTrack.CompletionLevel), left,
+                "level 30 stands on the prestige ground");
+            Assert.Greater(RewardTrackLayout.NodeOffsetX(RewardTrack.CompletionLevel + 1), left,
+                "level 31 does not stand on the prestige ground");
+        }
+
+        // THE WORD SITS BELOW THE LEVEL NUMBER AND ABOVE THE BAND'S FLOOR,
+        // which is the only clear strip a node's column has left.
+        [Test]
+        public void TheStretchWordsSitInTheStripUnderTheLevelNumbers()
+        {
+            float wordTop = RewardTrackLayout.StretchLabelY + RewardTrackLayout.StretchLabelHeight * 0.5f;
+            float wordBottom = RewardTrackLayout.StretchLabelY - RewardTrackLayout.StretchLabelHeight * 0.5f;
+
+            float numberBottom = RewardTrackLayout.LevelNumberY - RewardTrackLayout.LevelNumberHeight * 0.5f;
+            Assert.Less(wordTop, numberBottom, "the word runs into the level number above it");
+
+            float contentFloor = -RewardTrackLayout.ScrollContentHeight * 0.5f;
+            Assert.Greater(wordBottom, contentFloor, "the word escapes the scrolled content");
+        }
+
+        // ---- the card's footer, now two facts wide ----------------------------
+
+        [Test]
+        public void TheCardsStateAndFightsLinesShareTheFooterWithoutTouching()
+        {
+            float stateRight = RewardTrackLayout.CardStateCentreX
+                               + RewardTrackLayout.CardStateWordsWidth * 0.5f;
+            float fightsLeft = RewardTrackLayout.CardFightsCentreX
+                               - RewardTrackLayout.CardFightsWidth * 0.5f;
+
+            Assert.AreEqual(RewardTrackLayout.CardFightsGap, fightsLeft - stateRight, 0.01f,
+                "the two halves of the footer do not leave exactly the authored gap between them");
+
+            Assert.AreEqual(RewardTrackLayout.CardTextRight,
+                RewardTrackLayout.CardFightsCentreX + RewardTrackLayout.CardFightsWidth * 0.5f, 0.01f,
+                "the fights line is not flush with the card's own text column");
+
+            Assert.Greater(RewardTrackLayout.CardFightsWidth, 0f,
+                "the state's box has eaten the whole footer");
         }
     }
 }

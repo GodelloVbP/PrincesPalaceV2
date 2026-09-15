@@ -638,10 +638,33 @@ namespace PrincesPalace.Domain.UiKit
         public static float CardStateTextLeft =>
             CardTextLeft + CardStateDotSize + CardStateDotGap;
 
+        // THE FOOTER ROW CARRIES TWO FACTS, not one, since progression v2
+        // phase 5: what the player's standing with this node is (left, after
+        // the dot) and how many fights the next level is (right).
+        //
+        // THE SAME LINE RATHER THAN A NEW ONE, and the card's own geometry is
+        // why. Its content occupies 106 of 150 with 22 of padding above and
+        // below -- the art plate beside it is what sets that -- so a fifth row
+        // would have to eat the padding the plate defines. The footer had 455px
+        // for a line whose longest string measures under 200, which is where
+        // the room actually was.
+        public const float CardStateWordsWidth = 224f;
+        public const float CardFightsGap = 12f;
+
         public static float CardStateTextWidth => CardTextRight - CardStateTextLeft;
 
         public static float CardStateCentreX =>
-            CardStateTextLeft + CardStateTextWidth * 0.5f;
+            CardStateTextLeft + CardStateWordsWidth * 0.5f;
+
+        // What is left of the footer once the state has taken its share, less
+        // the gap between them. Derived rather than authored for the reason
+        // every other column here is: widening the state's box has to narrow
+        // this one, not overlap it.
+        public static float CardFightsWidth =>
+            CardTextRight - CardStateTextLeft - CardStateWordsWidth - CardFightsGap;
+
+        public static float CardFightsCentreX =>
+            CardTextRight - CardFightsWidth * 0.5f;
 
         // The rail band. Asymmetric about the rail on purpose: 112px above the
         // line and 100 below, because the caption stack is taller than the
@@ -1062,6 +1085,64 @@ namespace PrincesPalace.Domain.UiKit
                 if (IsMilestone(level)) yield return level;
             }
         }
+
+        // ---- completion, and the prestige stretch beyond it ---------------------
+        //
+        // THE TRACK HAS AN END AND THEN TEN MORE LEVELS, which is a shape the
+        // rail could not say at all. Progression v2 §0 D3 names level 30 as the
+        // completion point and 31-40 as an optional prestige stretch that
+        // changes no combat number; drawn as forty identical nodes, the two
+        // halves are indistinguishable and a player has no way to know the
+        // thing they are working toward arrives ten rungs before the top.
+        //
+        // THREE MARKS, ALL FROM THE KIT'S EXISTING RECIPES and none of them a
+        // new commission: a hairline dropped between the two nodes either side
+        // of the boundary, a violet wash laid behind the ten levels past it,
+        // and a word under each half saying which is which.
+        //
+        // IN THE GAP, NOT ON A NODE. A caption box is 170 wide on a 190 pitch,
+        // so there is exactly 20px of clear air at every midpoint between two
+        // nodes -- the divider is 1px of that, which is why it needs no
+        // overlap allowance and why widening it past about 18 would.
+        public const float PrestigeDividerWidth = 1f;
+        public const float PrestigeDividerHeight = 200f;
+
+        // The strip below the level numbers (-55) and above the band's own
+        // floor (-100), which is the only clear band left on a node's column.
+        // 14px of label centred at -74 sits inside both.
+        public const float StretchLabelY = -74f;
+        public const float StretchLabelHeight = 14f;
+        public const int StretchLabelFont = 10;
+
+        public const float CompletionLabelWidth = CaptionWidth;
+        public const float PrestigeLabelWidth = 420f;
+
+        // The boundary itself, in the content rect's own left-edge
+        // coordinates: halfway between the last combat node and the first
+        // identity one.
+        public static float PrestigeBoundaryX =>
+            NodeX(RewardTrack.CompletionLevel) + NodePitch * 0.5f;
+
+        public static float PrestigeBoundaryOffsetX =>
+            PrestigeBoundaryX - ContentWidth * 0.5f;
+
+        // Everything right of the boundary, out to the content's own edge --
+        // so the wash covers the ten prestige nodes AND the half-pitch of end
+        // padding past the last of them, which is what stops it reading as a
+        // box drawn around ten things rather than as the end of the rail
+        // being different ground.
+        public static float PrestigeWashWidth => ContentWidth - PrestigeBoundaryX;
+
+        public static float PrestigeWashOffsetX =>
+            PrestigeBoundaryX + PrestigeWashWidth * 0.5f - ContentWidth * 0.5f;
+
+        public static float CompletionLabelOffsetX => NodeOffsetX(RewardTrack.CompletionLevel);
+
+        // Centred on the prestige stretch rather than on any node in it: the
+        // word describes the run of ten, and hanging it under one of them would
+        // read as that level's own caption.
+        public static float PrestigeLabelOffsetX =>
+            (PrestigeBoundaryOffsetX + NodeOffsetX(RewardTrack.MaxLevel) + NodePitch * 0.5f) * 0.5f;
 
         // Milestones are drawn larger, because a rail of a hundred identical
         // dots has no landmarks and nothing for the eye to count from.

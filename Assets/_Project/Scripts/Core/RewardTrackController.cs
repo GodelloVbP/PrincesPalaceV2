@@ -58,6 +58,7 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text cardCaption;
         [SerializeField] internal TMP_Text cardState;
         [SerializeField] internal Image cardStateDot;
+        [SerializeField] internal TMP_Text cardFights;
 
         // The painted medallion the card shows, and the rail's own mark --
         // ONE ENTRY PER REWARD KIND now, not per level (docs/PLAN_REWARD_
@@ -131,6 +132,13 @@ namespace PrincesPalace
         // saying that with a sentinel rather than by writing level+1 in here
         // keeps the fallback in one place.
         private int _hovered = -1;
+
+        // HOW MANY FIGHTS THE NEXT LEVEL IS, resolved once per Refresh
+        // alongside the level and the watermark rather than per repaint --
+        // PaintCard runs on every hover, and this asks ContentDatabase for the
+        // cost table. 0 means "do not say" (at the cap, or with no character
+        // and no table), which is not the same as "no fights left".
+        private int _fightsToNext;
 
         private static readonly Color DiscToCome = Hex(RewardTrackScreen.DiscToCome);
         private static readonly Color DiscLit = Hex(RewardTrackScreen.DiscLit);
@@ -219,6 +227,7 @@ namespace PrincesPalace
             _track = RewardTracks.For(character);
             _level = character?.level ?? RewardTrack.StartingLevel;
             _claimed = character?.claimedTrackLevel ?? 0;
+            _fightsToNext = character?.FightsToNextLevel(DepthStep()) ?? 0;
 
             // The fade cache is filled BEFORE the nodes are painted, because
             // PaintNode multiplies by it. PaintDepthOfField is the scroll-time
@@ -251,6 +260,17 @@ namespace PrincesPalace
         // no dossier in between to call ShowFor, still gets a character
         // rather than a blank screen -- graceful degradation, and the reason
         // SystemMenuCaptureTests needs no fixture change (plan §8).
+        // WHAT DEPTH THE NEXT FIGHT WILL BE FOUGHT AT, which is the whole of
+        // what the fights-to-go estimate needs from outside Domain.
+        //
+        // Two answers and no third: in a run it is the run's own step, because
+        // that is the pay the next victory will actually carry; in the hub it
+        // is 0, because the next fight is the first room of the next descent.
+        // The same pair FightBootstrap already writes into the session's own
+        // DepthStep, read the same way, so the screen's estimate and the fight
+        // that settles it cannot disagree about where the party is.
+        private static int DepthStep() => RunManager.HasRun ? RunManager.Run.step : 0;
+
         private Character ResolveCharacter()
         {
             var save = SaveSlotManager.CurrentSave;
@@ -606,6 +626,8 @@ namespace PrincesPalace
                 cardCaption.color = CardName;
             }
 
+            PaintCardFights(level);
+
             if (cardState == null) return;
 
             if (waiting)
@@ -619,13 +641,63 @@ namespace PrincesPalace
 
             if (state == TrackNodeState.Collected || state == TrackNodeState.Here)
             {
-                cardState.Set(UiStrings.TrackStateCollected);
+                // A COLLECTED SKILL IS NOT IN THE KIT YET, and this is the
+                // only place the game says so.
+                //
+                // FightEncounterAdapter builds a character's kit ONCE, when
+                // the encounter is built -- so an ability collected from
+                // inside a fight's own system menu is not castable in that
+                // fight, however plainly the track has just paid for it. Said
+                // for Ability and Capability nodes only: a Bump's max health
+                // or a Choice's stat points are on the character the moment
+                // the watermark moves, and telling a player to wait for those
+                // would be false in the other direction.
+                //
+                // ASKED OF THE NODE KIND rather than of the reward, so a
+                // reward added to either kind inherits the sentence instead of
+                // needing a case here (RewardTrack.KindOf is the one mapping).
+                var kind = RewardTrack.KindOf(entry.Reward);
+                bool fromNextFight = kind == TrackNodeKind.Ability
+                                     || kind == TrackNodeKind.Capability;
+
+                cardState.Set(fromNextFight
+                    ? UiStrings.TrackStateNextFight
+                    : UiStrings.TrackStateCollected);
                 return;
             }
 
             int away = level - _level;
             if (away <= 1) cardState.Set(UiStrings.TrackStateNextLevel);
             else cardState.Set(UiStrings.TrackStateLocked, away);
+        }
+
+        // "ABOUT 6 FIGHTS TO GO", at the right end of the card's footer.
+        //
+        // ONLY FOR THE VERY NEXT LEVEL, and that restriction is the honest
+        // scope of the number rather than a shortcut. LevelCurve.FightsToGo
+        // divides ONE level's remaining cost by one average fight's pay; a
+        // card resting on level 38 would need the sum of every cost between
+        // here and there, which is a different question with a much worse
+        // error bar. Everywhere else the line is simply blank -- the card
+        // already says how many levels away that node is.
+        //
+        // AND BLANK AT THE CAP, where _fightsToNext is 0: there is no next
+        // level, and "ABOUT 0 FIGHTS TO GO" would be counting toward nothing.
+        private void PaintCardFights(int level)
+        {
+            if (cardFights == null) return;
+
+            if (level != _level + 1 || _fightsToNext <= 0)
+            {
+                cardFights.SetContent(string.Empty);
+                return;
+            }
+
+            // "ABOUT ONE FIGHT TO GO" rather than "ABOUT 1 FIGHTS TO GO",
+            // the same two-entries-no-plural-machinery answer the collect
+            // button already gives (UiStrings.TrackCollectOne).
+            if (_fightsToNext == 1) cardFights.Set(UiStrings.TrackFightsToGoOne);
+            else cardFights.Set(UiStrings.TrackFightsToGo, _fightsToNext);
         }
 
         private UiString KickerFor(int level, TrackNodeState state, bool waiting)

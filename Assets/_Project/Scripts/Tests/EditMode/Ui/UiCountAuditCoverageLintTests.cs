@@ -116,7 +116,6 @@ namespace PrincesPalace.Domain.Tests
             "TalentPanel:talents.dustImages",
             "TalentPanel:talents.shootingStarImages",
             "WireSystemMenu:controller.escapeConsumers",
-            "WireParty:controller.seatBadgeTexts",
             "WireParty:controller.seatDragSources",
             "WireParty:controller.cardDragSources",
             "WireExits:controller.exitLabels",

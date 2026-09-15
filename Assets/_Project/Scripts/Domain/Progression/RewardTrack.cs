@@ -294,6 +294,21 @@ namespace PrincesPalace.Domain.Progression
         // authored node.
         public const int MaxLevel = 40;
 
+        // WHERE THE TRACK IS FINISHED, ten levels before it ends.
+        //
+        // Progression v2 §0 D3: "the track screen names level 30 as
+        // completion. Levels 31 to 40 are an optional prestige stretch". 30 is
+        // the last node that changes a combat number -- everything above it is
+        // Identity and is validated as such (RewardTrackNodeValidation) -- so
+        // this is not a screen preference but the seam the content rules
+        // already divide on, named once so the rail and the validator cannot
+        // disagree about where it falls.
+        //
+        // If the prestige stretch does not hold interest, §0 D3's own fallback
+        // is "the cap is 30 and nothing else changes", which is MaxLevel coming
+        // down to meet this rather than this moving.
+        public const int CompletionLevel = 30;
+
         // THE SHARED CADENCE. Ten levels, the same on every track whatever it
         // pays at them -- docs/PLAN_REWARD_TRACKS.md §1 explains why this
         // stays fixed while the CONTENT at each one does not.

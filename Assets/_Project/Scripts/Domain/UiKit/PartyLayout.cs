@@ -214,18 +214,40 @@ namespace PrincesPalace.Domain.UiKit
         // with the wider card this kit's own button/plate widths call for.
         public const float CardGap = 14f;
 
-        public const float CardTopPad = 10f;
-        public const float CardArtHeight = 76f;
+        // A TITLE ROW UNDER THE NAME, and the card is exactly as tall as it was
+        // before it (progression v2 phase 5). The 16px it needs come out of the
+        // two pads (4 each) and the art slot (8) rather than out of the card's
+        // height, and that is not tidiness -- the roster row has 5.56px of
+        // clearance over the pane's own floor, so growing the card by anything
+        // at all would have run it off the bottom of the panel. The art slot
+        // gives up 8 of 76; the monogram standee that stands in it when a
+        // character has no stance art is sized off that height and comes down
+        // with it, from 47 to 42.
+        public const float CardTopPad = 6f;
+        public const float CardArtHeight = 68f;
         public const float CardArtToNameGap = 6f;
         public const float CardNameHeight = 20f;
-        public const float CardNameToRoleGap = 2f;
+        public const float CardNameToTitleGap = 2f;
+
+        // 14, for a title set at 11 against the name's 14 -- the title is
+        // subordinate to the name and has to read as belonging to it rather
+        // than as a second name.
+        public const float CardTitleHeight = 14f;
+        public const float CardTitleToRoleGap = 2f;
         public const float CardRoleHeight = 16f;
         public const float CardRoleToTagGap = 4f;
         public const float CardTagHeight = 16f;
-        public const float CardBottomPad = 10f;
+        public const float CardBottomPad = 6f;
+
+        // CardNameToRoleGap is kept as the name it had, now spelled as the two
+        // gaps either side of the title -- the constant was the distance from
+        // the name to the line under it, and that is still what
+        // CardNameToTitleGap is.
+        public const float CardNameToRoleGap = CardNameToTitleGap;
 
         public static float CardHeight =>
-            CardTopPad + CardArtHeight + CardArtToNameGap + CardNameHeight + CardNameToRoleGap
+            CardTopPad + CardArtHeight + CardArtToNameGap + CardNameHeight + CardNameToTitleGap
+            + CardTitleHeight + CardTitleToRoleGap
             + CardRoleHeight + CardRoleToTagGap + CardTagHeight + CardBottomPad;
 
         public static float RosterRowCentreY =>
@@ -249,8 +271,16 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float CardNameCentreY => CardArtBottom - CardArtToNameGap - CardNameHeight * 0.5f;
 
+        // THE TITLE, AND THE PICKER THAT CHOOSES IT, are the same rect: the
+        // line the player reads is the thing they click to change it. A
+        // separate chevron beside it would be a second target 14px tall on a
+        // 150px card, and a title the player cannot change is not worth a
+        // control at all.
+        public static float CardTitleCentreY =>
+            CardNameCentreY - CardNameHeight * 0.5f - CardNameToTitleGap - CardTitleHeight * 0.5f;
+
         public static float CardRoleCentreY =>
-            CardNameCentreY - CardNameHeight * 0.5f - CardNameToRoleGap - CardRoleHeight * 0.5f;
+            CardTitleCentreY - CardTitleHeight * 0.5f - CardTitleToRoleGap - CardRoleHeight * 0.5f;
 
         public static float CardTagCentreY =>
             CardRoleCentreY - CardRoleHeight * 0.5f - CardRoleToTagGap - CardTagHeight * 0.5f;
