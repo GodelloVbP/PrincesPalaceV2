@@ -152,6 +152,52 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(weaponId, after.equipment.Get(EquipmentSlot.Weapon1));
         }
 
+        // WHAT THE RESET LOOKS LIKE ON THE SCREEN THAT DRAWS IT (phase 5).
+        //
+        // The fixture's version-5 save is a character with the whole track
+        // collected: claimedTrackLevel 40 means every Identity node above 30
+        // has been paid, so the plate would be wearing a gold rim, a frame and
+        // the title "Legend" before the migration runs. Reading that back
+        // through CharacterIdentity is what proves the reset reached the half
+        // of the save that has no field of its own -- identity is not stored
+        // anywhere, it is read live off the watermark, so a migration that
+        // moved `level` and forgot `claimedTrackLevel` would leave a level-1
+        // character still wearing MASTER with nothing in these asserts saying
+        // so.
+        //
+        // AN EXTENSION, NOT A SECOND SUITE: everything above already covers
+        // the load, the reset and the idempotence, and this is the one thing
+        // phase 5 added a way to observe.
+        [Test]
+        public void TheResetTakesTheIdentityStretchWithIt()
+        {
+            var (save, _, _) = VersionFiveSave();
+            var before = save.roster[0];
+
+            // The track is fully collected in the fixture, so there is
+            // something to lose. If this ever goes quiet, the assertions below
+            // are asserting nothing.
+            Assert.IsTrue(CharacterIdentity.LookFor(before).IsAnything,
+                "fixture: a claimedTrackLevel of 40 no longer resolves any identity at all");
+
+            save.Migrate();
+
+            var after = save.roster[0];
+            var look = CharacterIdentity.LookFor(after);
+
+            Assert.IsFalse(look.IsAnything,
+                "the reset left the character wearing rewards from a track they no longer have");
+            Assert.IsEmpty(look.Line, "a title survived the reset");
+            Assert.IsNull(look.RimMetal, "a plate rim survived the reset");
+            Assert.IsNull(look.EmbossMetal, "a plate emboss survived the reset");
+            Assert.IsFalse(look.HasPortraitFrame, "a portrait frame survived the reset");
+
+            // AND LOADING AGAIN CHANGES NOTHING, which is the half this file
+            // exists for, asked of the same surface.
+            Assert.IsTrue(save.Migrate(), "a current-version save was refused on the second load");
+            Assert.IsFalse(CharacterIdentity.LookFor(save.roster[0]).IsAnything);
+        }
+
         // A save from a version this build does not know is refused rather
         // than read with fields it cannot interpret -- unchanged by this bump,
         // restated because the bump moves what "newer" means.

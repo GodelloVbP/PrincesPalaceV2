@@ -28,19 +28,32 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
 
-        // The reward track, in both of the states it can be found in.
+        // The reward track, at the four points on it worth photographing plus
+        // the one state that is invisible in all four.
         //
         // A capture rather than an assertion, because what can be wrong here is
-        // not a value: a hundred captions at 190px pitch either read or they
+        // not a value: forty captions at 190px pitch either read or they
         // collide, and UiAudit can only tell you they are contained. The first
         // capture of the redesign is what caught a seal pip covering the very
         // mark it sat beside, on eighty-seven of ninety-nine nodes.
         //
-        // TWO PICTURES, because the screen has two halves and one of them is
-        // invisible in the other. A squad collecting as it goes has no waiting
+        // THE FOUR ARE 1, 15, 31 AND 40 (progression v2 phase 5's own gate),
+        // and each is a different screen rather than the same one scrolled:
+        // level 1 is the whole track ahead of you with nothing collected; 15 is
+        // the middle, where the rail is half lit; 31 is the first level past
+        // completion, so the divider, the prestige ground and both words are in
+        // frame at once; 40 is finished, which is the only state in which the
+        // summary row says REWARD TRACK COMPLETE and the card has no next
+        // reward to rest on.
+        //
+        // These said 47/47 and 47/12 until phase 5, which is past a cap that
+        // came down to 40 two phases earlier -- the panel was photographing a
+        // clamped rail and nobody had looked.
+        //
+        // AND A FIFTH FOR WAITING: a squad collecting as it goes has no waiting
         // nodes at all -- no pulse rings, no gold ticks on the ribbon, no
-        // collect button -- so a single capture of that state photographs
-        // roughly half of what was built.
+        // collect button -- so the four above photograph roughly half of what
+        // was built.
         [UnityTest]
         public IEnumerator CaptureTheRewardTrack()
         {
@@ -49,19 +62,70 @@ namespace PrincesPalace.PlayModeTests
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
             }
 
-            // COLLECTED: level and watermark in lockstep, which is what a
-            // player who opens the track regularly sees. Seal pips on every
-            // node behind them, and no collect button.
-            yield return OpenTheTrack(level: 47, claimed: 47);
-            yield return Capture("SystemMenu_reward_track.png");
+            foreach (int level in new[] { 1, 15, 31, 40 })
+            {
+                yield return OpenTheTrack(level: level, claimed: level);
+                yield return Capture($"SystemMenu_reward_track_{level:00}.png");
+            }
 
-            // WAITING: thirty-five levels reached and unpaid, which is what a
+            // WAITING: twenty-eight levels reached and unpaid, which is what a
             // character levelled by a migration or a debug grant arrives with.
-            // Handoff section 4 calls this the expected path rather than an
-            // edge case, and it is the state the ribbon's comb of gold ticks
-            // and the collect-all button exist for.
-            yield return OpenTheTrack(level: 47, claimed: 12);
+            yield return OpenTheTrack(level: 40, claimed: 12);
             yield return Capture("SystemMenu_reward_track_waiting.png");
+        }
+
+        // THE HUB ROSTER WITH THE TITLE PICKER SHOWING (phase 5).
+        //
+        // Every roster card carries the chosen title under the name, and that
+        // line IS the picker -- clicking it cycles. So "open" is as open as
+        // this control gets: the row is hidden outright below level 31 and
+        // visible with a chevron the moment there is more than one title to
+        // choose between, which is the state photographed here.
+        //
+        // The same squad also has the portrait frame collected (level 34), so
+        // this one picture carries both of the roster's identity surfaces.
+        [UnityTest]
+        public IEnumerator CaptureTheRosterTitlePicker()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = 40;
+                character.claimedTrackLevel = 40;
+            }
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+
+            menu.Open();
+
+            // The Party tab, found by the pane it opens rather than by an
+            // index -- SystemMenuTabs.Visible returns a different list in and
+            // out of a run, so a literal 1 here would photograph whatever
+            // happened to be second.
+            var party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(party, "the hub's system menu has no PartyController");
+
+            for (int tab = 0; tab < 6; tab++)
+            {
+                menu.Select(tab);
+                yield return null;
+                if (party.gameObject.activeInHierarchy) break;
+            }
+
+            Assert.IsTrue(party.gameObject.activeInHierarchy, "no tab opened the Party pane");
+            party.Refresh();
+
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return Capture("SystemMenu_roster_titles.png");
         }
 
         private static IEnumerator OpenTheTrack(int level, int claimed)
