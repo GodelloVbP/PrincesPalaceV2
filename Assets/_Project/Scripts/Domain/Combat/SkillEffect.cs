@@ -95,5 +95,19 @@ namespace PrincesPalace.Domain.Combat
         AllEnemies,
         Self,
         Party,
+
+        // ONE ALLY THE PLAYER PICKS. Appended rather than slotted in beside
+        // Self, because the generated content assets carry this as its
+        // ordinal -- inserting a member renumbers every row below it, and a
+        // rebuilt Resources/Content would disagree with an unrebuilt one
+        // about what "2" means.
+        //
+        // The side is the only thing that differs from SingleEnemy: same
+        // Target depth, same plate click, same cancel. What does NOT carry
+        // across is reach -- rank masks and the front-rank rule are about
+        // fighting past a bodyguard, and nothing stands between a caster and
+        // his own squad (docs/handoffs/archive/battle_ui/README.md:230). See
+        // FightSession.CanReachAlly.
+        SingleAlly,
     }
 }

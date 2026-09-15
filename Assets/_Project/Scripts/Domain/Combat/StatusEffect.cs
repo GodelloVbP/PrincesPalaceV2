@@ -112,7 +112,7 @@ namespace PrincesPalace.Domain.Combat
         //
         // THE TENTH, item-modifier plan Phase D3, and the one enemy-only by
         // construction rather than by convention: it builds on
-        // FightSession.CanReach/FightController.Input's existing
+        // FightSession.CanReachEnemy/FightController.Input's existing
         // front-rank rule, which is itself one-directional (it only ever
         // gated a PLAYER's plain attack against an enemy target; an enemy's
         // swing at the party was never reach-checked). Nothing in the game

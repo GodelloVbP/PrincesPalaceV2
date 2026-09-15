@@ -59,6 +59,37 @@ namespace PrincesPalace
                 }
             }
 
+            // ---- and the same three ways on the party side -----------------
+            //
+            // FOUR SURFACES, ONE CONFIRM. Both plate racks and both figure
+            // racks end in ConfirmTarget; what differs between them is only
+            // how an index names a combatant, which is what the three tiny
+            // resolvers below exist for. Duplicating the handler per side was
+            // the alternative, and a second copy of "is it alive, is it
+            // eligible, which row is selected, which element was chosen" is
+            // four more rules that can drift.
+            if (pcPlates != null)
+            {
+                for (int i = 0; i < pcPlates.Length; i++)
+                {
+                    if (pcPlates[i] == null) continue;
+
+                    int index = i;
+                    pcPlates[i].onClick.AddListener(() => OnAllyPlatePressed(index));
+                }
+            }
+
+            if (partyHitAreas != null)
+            {
+                for (int i = 0; i < partyHitAreas.Length; i++)
+                {
+                    if (partyHitAreas[i] == null) continue;
+
+                    int slot = i;
+                    partyHitAreas[i].onClick.AddListener(() => OnAllyFigurePressed(slot));
+                }
+            }
+
             submenuBackButton.onClick.AddListener(OnBackPressed);
             if (targetCancelButton != null) targetCancelButton.onClick.AddListener(OnBackPressed);
             continueButton.onClick.AddListener(OnContinuePressed);
@@ -104,6 +135,27 @@ namespace PrincesPalace
         // Read-only window for GamepadNavigationTests, same reason and same
         // shape as FocusedVerbForTest.
         public int HoveredEnemyIndexForTest => _hoveredEnemyIndex;
+
+        // Which party PLATE the stick has walked to during an ally pick, -1
+        // for none.
+        //
+        // A SECOND FIELD RATHER THAN ONE CURSOR AND A SIDE, and the reason is
+        // that these are two different facts, not one fact with a flag: the
+        // enemy cursor is also the turn-order ghost preview's input
+        // (RefreshInitiative reads it for a push skill's projected
+        // destination) and is meaningful outside an ally pick, while this one
+        // exists only while one is open. Sharing a field would make the ghost
+        // preview read a party plate index as an enemy's.
+        private int _hoveredAllyIndex = -1;
+
+        public int HoveredAllyIndexForTest => _hoveredAllyIndex;
+
+        private void OnAllyHovered(int plate)
+        {
+            if (_hoveredAllyIndex == plate) return;
+            _hoveredAllyIndex = plate;
+            RefreshUi();
+        }
 
         private void AddEnemyHover(GameObject plate, int index)
         {
@@ -242,7 +294,24 @@ namespace PrincesPalace
             // waiting on a plate. Any living enemy will do -- ResolveDamageAll
             // ignores which one confirmed it, and a single-target cast against
             // the front rank is the encounter the preview built for it.
-            if (_menu.IsTargeting) OnEnemyPressed(FirstLivingEnemyIndex());
+            //
+            // AN ALLY PICK CONFIRMS ON THE CASTER'S OWN RACK, whichever
+            // squadmate the cast will accept first. tools/preview.ps1 refuses
+            // Ward and the three Gifts outright today (they need a talent
+            // tree or a drained party first, see WORKFLOW section 8), so this
+            // arm is for whatever single-ally skill is authored next rather
+            // than for anything currently photographable.
+            if (!_menu.IsTargeting) return;
+
+            if (_menu.Side == TargetSide.Allies) ConfirmTarget(TargetSide.Allies, FirstEligibleAlly());
+            else OnEnemyPressed(FirstLivingEnemyIndex());
+        }
+
+        private CombatantState FirstEligibleAlly()
+        {
+            var skill = SelectedSkill();
+            var eligible = _session.EligibleAllies(_session.Current, skill);
+            return eligible.Count > 0 ? eligible[0] : null;
         }
 
         private int FirstLivingEnemyIndex()
@@ -389,6 +458,17 @@ namespace PrincesPalace
                     return;
                 }
 
+                // AN ELEMENTAL SINGLE-ALLY SKILL points at the party rack
+                // instead. No such row is authored today; stated here anyway
+                // because the alternative is the element path silently
+                // sending one at the monsters, and this is one ternary rather
+                // than a second decision about targeting living somewhere
+                // else.
+                if (elementSkill.Targeting == Domain.Combat.SkillTargeting.SingleAlly)
+                {
+                    _menu.EnterTargeting(TargetSide.Allies);
+                }
+
                 RefreshUi();
                 return;
             }
@@ -483,6 +563,19 @@ namespace PrincesPalace
                         TryResolveInstant(options[index], null);
                         return;
                     }
+
+                    // SINGLE-ALLY ENTERS THE SAME DEPTH ON THE OTHER RACK
+                    // (AUDIT #147). A ward and the three gifts used to resolve
+                    // on this press, because the engine chose the recipient;
+                    // the player chooses now, so they stop here exactly the
+                    // way a SingleEnemy cast does -- one depth, one confirm,
+                    // one cancel, and BACK lands on the skill list either way.
+                    if (targeting == Domain.Combat.SkillTargeting.SingleAlly)
+                    {
+                        _menu.EnterTargeting(TargetSide.Allies);
+                        RefreshUi();
+                        return;
+                    }
                 }
             }
 
@@ -490,15 +583,69 @@ namespace PrincesPalace
             RefreshUi();
         }
 
+        // ---- confirming a target ---------------------------------------------
+        //
+        // THREE RESOLVERS AND ONE HANDLER. A click names a combatant, and the
+        // three surfaces name one differently: an enemy plate and an enemy
+        // figure share an index (nothing on that side ever moves, so a plate
+        // index and a stage slot are the same number), a party PLATE is
+        // indexed by RANK (RefreshPcPlates paints party[i] onto plate i, so
+        // the column follows a Move -- AUDIT #144), and a party FIGURE is
+        // indexed by fight-long SLOT (FightController.StageVisuals.DrawSide:
+        // "the two halves are indexed differently and that is the point").
+        //
+        // That is why the shared handler takes a COMBATANT rather than a side
+        // and an index: an int means three things here, and passing it down
+        // would push the disagreement into the one place that must not have
+        // it.
         private void OnEnemyPressed(int index)
         {
-            if (!CanAct || !_menu.IsTargeting) return;
-
             var enemies = Enemies;
-            if (index < 0 || index >= enemies.Count) return;
+            ConfirmTarget(TargetSide.Enemies, index >= 0 && index < enemies.Count ? enemies[index] : null);
+        }
 
-            var target = enemies[index];
-            if (!target.IsAlive) return;
+        private void OnAllyPlatePressed(int plate) => ConfirmTarget(TargetSide.Allies, PartyMemberOnPlate(plate));
+
+        private void OnAllyFigurePressed(int slot) => ConfirmTarget(TargetSide.Allies, PartyMemberInSlot(slot));
+
+        // WHAT THE PLAYER SAW ON THAT CARD, not what the live list holds now.
+        // _plateOccupants is the painted-occupancy record RefreshPcPlates
+        // writes (AUDIT #144); a click can only arrive while CanAct, which
+        // means not busy, which means the two agree -- so this is a guard
+        // against the class of bug rather than a live one, and it costs a
+        // bounds check.
+        private CombatantState PartyMemberOnPlate(int plate)
+        {
+            if (_plateOccupants != null && plate >= 0 && plate < _plateOccupants.Length)
+            {
+                return _plateOccupants[plate];
+            }
+
+            var party = _session?.Encounter.PlayerParty;
+            return party != null && plate >= 0 && plate < party.Count ? party[plate] : null;
+        }
+
+        // The party member standing in stage slot `slot` -- deliberately NOT
+        // party[slot]. SlotIndexOf is the same map DrawSide draws by, so the
+        // figure under the cursor and the combatant this returns cannot
+        // disagree about who was clicked.
+        private CombatantState PartyMemberInSlot(int slot)
+        {
+            var party = _session?.Encounter.PlayerParty;
+            if (party == null) return null;
+
+            for (int i = 0; i < party.Count; i++)
+            {
+                if (SlotIndexOf(party[i]) == slot) return party[i];
+            }
+
+            return null;
+        }
+
+        private void ConfirmTarget(TargetSide side, CombatantState target)
+        {
+            if (!CanAct || !_menu.IsTargeting || _menu.Side != side) return;
+            if (target == null || !target.IsAlive) return;
 
             // AGAINST THE OPTION LIST, not the kit, resolved ONCE and shared
             // by the reach check below and the cast below that -- row
@@ -517,6 +664,32 @@ namespace PrincesPalace
                 validSkillRow = row >= 0 && row < options.Count;
             }
 
+            // ---- the ally side, which has no reach question to ask ---------
+            //
+            // Rank masks and the front-rank rule are about fighting PAST
+            // somebody and nothing stands between a caster and his own squad
+            // (docs/handoffs/archive/battle_ui/README.md:230). What DOES gate
+            // the click is whether this effect accepts this squadmate, and
+            // that is EligibleAllies -- the same list the plates were lit
+            // from, asked again here for the same reason the enemy branch
+            // below re-asks CanReachEnemy: so a refusal reads as a message
+            // rather than as a click that did nothing.
+            if (side == TargetSide.Allies)
+            {
+                if (_menu.Branch != MenuBranch.Skill || !validSkillRow) return;
+
+                if (!_session.EligibleAllies(_session.Current, options[row].Skill).Contains(target))
+                {
+                    _session.AppendMessage($"{target.Name} cannot take {options[row].Skill.DisplayName}.");
+                    RefreshUi();
+                    return;
+                }
+
+                _session.CastSkill(options[row].Index, target, _menu.ChosenElement);
+                AfterResolution();
+                return;
+            }
+
             // THE REACH OF WHATEVER THIS CLICK WOULD ACTUALLY DO. Attack is
             // always the plain Strike (Reach.Melee); a skill carries its own,
             // which is Reach.Any for every ranged or magical one and was never
@@ -533,7 +706,7 @@ namespace PrincesPalace
             // refuses it a second time on its own (ExecuteAttack/CastSkill);
             // this exists so the refusal reads as a message rather than as a
             // click that did nothing.
-            if (!_session.CanReach(_session.Current, reach, target))
+            if (!_session.CanReachEnemy(_session.Current, reach, target))
             {
                 _session.AppendMessage($"{target.Name} is out of reach.");
                 RefreshUi();
@@ -563,7 +736,14 @@ namespace PrincesPalace
 
         private void OnBackPressed()
         {
-            if (_menu.Back()) RefreshUi();
+            if (!_menu.Back()) return;
+
+            // The stick's ally cursor belongs to one open pick and to nothing
+            // else. Left set, a later pick would open with the stick already
+            // resting on whoever it last walked to -- which is a hover the
+            // player never made.
+            _hoveredAllyIndex = -1;
+            RefreshUi();
         }
 
         private void OnContinuePressed()
@@ -713,6 +893,7 @@ namespace PrincesPalace
         private void AfterResolution()
         {
             _menu.Reset();
+            _hoveredAllyIndex = -1;
 
             // SET BEFORE THE REPAINT, not after. RefreshMenuChrome (below)
             // includes RefreshVerbs, which now hides ATTACK/SKILL/ITEM/HOLD
@@ -1077,6 +1258,21 @@ namespace PrincesPalace
                     break;
 
                 case MenuDepth.Target:
+                    // THE SIDE BEING PICKED, not always the monsters. The
+                    // cycle itself is identical on both racks -- the living
+                    // and legal candidates, in screen order, wrapping -- so
+                    // the only thing the side decides is which list is walked
+                    // and which cursor remembers where the stick got to.
+                    if (_menu.Side == TargetSide.Allies)
+                    {
+                        var allies = PickableAllyPlates();
+                        if (allies.Count == 0) return;
+
+                        int atAlly = allies.IndexOf(_hoveredAllyIndex);
+                        OnAllyHovered(allies[Wrap((atAlly < 0 ? 0 : atAlly) + delta, allies.Count)]);
+                        break;
+                    }
+
                     var enemies = Enemies;
                     var living = new List<int>();
                     for (int i = 0; i < enemies.Count; i++)
@@ -1090,6 +1286,25 @@ namespace PrincesPalace
                     OnEnemyHovered(living[next]);
                     break;
             }
+        }
+
+        // The PLATE indices an ally pick will actually accept, in column
+        // order. Built from EligibleAllies rather than from "alive", because
+        // a gift the caster cannot give himself must not be a stop on the
+        // stick's way round -- the same list the reticles are lit from.
+        private List<int> PickableAllyPlates()
+        {
+            var pickable = new List<int>();
+            var eligible = _session?.EligibleAllies(_session.Current, SelectedSkill());
+            if (eligible == null || pcPlates == null) return pickable;
+
+            for (int i = 0; i < pcPlates.Length; i++)
+            {
+                var member = PartyMemberOnPlate(i);
+                if (member != null && eligible.Contains(member)) pickable.Add(i);
+            }
+
+            return pickable;
         }
 
         public void ConfirmFocus()
@@ -1110,6 +1325,22 @@ namespace PrincesPalace
                     break;
 
                 case MenuDepth.Target:
+                    // SAME "the first press should work" rule on both racks:
+                    // nothing hovered yet confirms the first candidate rather
+                    // than doing nothing.
+                    if (_menu.Side == TargetSide.Allies)
+                    {
+                        if (_hoveredAllyIndex >= 0)
+                        {
+                            OnAllyPlatePressed(_hoveredAllyIndex);
+                            break;
+                        }
+
+                        var pickable = PickableAllyPlates();
+                        if (pickable.Count > 0) OnAllyPlatePressed(pickable[0]);
+                        break;
+                    }
+
                     if (_hoveredEnemyIndex >= 0)
                     {
                         OnEnemyPressed(_hoveredEnemyIndex);

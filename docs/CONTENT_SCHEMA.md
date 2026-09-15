@@ -188,7 +188,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
 | `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon |
-| `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party |
+| `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party, SingleAlly |
 | `manaCost` | int | `-1` | Mana spent to cast; a skill must cost this and/or resourceCost. |  |
 | `resourceCost` | int | `-1` | How much of the owner's signature resource a cast consumes. |  |
 | `spendsAllResource` | bool | `false` | Whether the cast takes the caster's entire signature resource instead of resourceCost. |  |

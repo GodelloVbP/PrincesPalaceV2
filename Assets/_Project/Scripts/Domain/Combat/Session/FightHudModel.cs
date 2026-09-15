@@ -302,6 +302,7 @@ namespace PrincesPalace.Domain.Combat.Session
         public static string MetaLine(ResolvedSkill skill)
         {
             string reach = skill.Targeting == SkillTargeting.SingleEnemy ? "SINGLE"
+                : skill.Targeting == SkillTargeting.SingleAlly ? "ALLY"
                 : skill.Targeting == SkillTargeting.Self ? "SELF"
                 : "GROUP";
             return VerbFor(skill.Effect) + "  ·  " + reach;
@@ -567,6 +568,11 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (targeting)
             {
                 case SkillTargeting.SingleEnemy: return "ONE ENEMY";
+                // The SIBLING CASE, and it has to be worded as distinctly as
+                // the enemy one: a card reading "ONE ENEMY" over a skill that
+                // lights up the party plates is the detail column and the
+                // picker disagreeing in front of the player.
+                case SkillTargeting.SingleAlly: return "ONE ALLY";
                 case SkillTargeting.Self: return "SELF";
                 default: return "GROUP";
             }

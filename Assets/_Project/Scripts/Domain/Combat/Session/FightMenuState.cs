@@ -21,6 +21,24 @@ namespace PrincesPalace.Domain.Combat.Session
         Target,
     }
 
+    // WHICH RACK IS BEING POINTED AT while the menu sits at Target depth.
+    //
+    // A SIDE, NOT A SET OF PLATES. The view owns which plates exist and how
+    // they are drawn; what it cannot work out for itself -- without re-reading
+    // the selected skill's targeting in four places and getting a different
+    // answer in one of them -- is which half of the screen this particular
+    // pick belongs to. That is one fact, so it is one field.
+    public enum TargetSide
+    {
+        // The default in every sense: it is what ATTACK and every
+        // SingleEnemy/AllEnemies cast enters, and it is what Reset returns
+        // to, so a state that never says otherwise behaves exactly as it did
+        // before allies could be picked at all.
+        Enemies,
+
+        Allies,
+    }
+
     // Which verb's branch is open.
     public enum MenuBranch
     {
@@ -118,11 +136,26 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool IsTargeting => Depth == MenuDepth.Target;
 
+        // WHICH RACK THE PICK IS ON. Meaningless outside Target depth and
+        // reset to Enemies whenever the menu leaves it, so a reader that
+        // forgets to check IsTargeting first gets the old answer rather than
+        // a stale ally pick.
+        public TargetSide Side { get; private set; } = TargetSide.Enemies;
+
+        // The two questions the view actually asks, named rather than spelled
+        // out at each of the half-dozen call sites that would otherwise write
+        // `IsTargeting && Side == ...` and eventually write one of them wrong.
+        // They are mutually exclusive by construction: exactly one rack is
+        // live at a time, which is the rule the plates are painted from.
+        public bool IsPickingEnemy => IsTargeting && Side == TargetSide.Enemies;
+        public bool IsPickingAlly => IsTargeting && Side == TargetSide.Allies;
+
         // ATTACK does not nest -- it jumps straight to picking a mark.
         public void OpenAttack()
         {
             Branch = MenuBranch.Attack;
             Depth = MenuDepth.Target;
+            Side = TargetSide.Enemies;
             Selection = -1;
             ForgetElement();
         }
@@ -162,10 +195,16 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // Committing a row: the submenu picks, and targeting is what confirms.
-        public void EnterTargeting()
+        //
+        // THE SIDE IS THE CALLER'S READ OF THE SKILL, the same way whether a
+        // skill asks for an element is (EnterElementChoice's own note): this
+        // type holds no content and asks no content question. Defaulted to
+        // Enemies so every existing call site keeps its meaning unchanged.
+        public void EnterTargeting(TargetSide side = TargetSide.Enemies)
         {
             if (!IsOpen) return;
             Depth = MenuDepth.Target;
+            Side = side;
         }
 
         // Committing a SKILL that asks which element it is. WHETHER a skill
@@ -181,11 +220,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Committing an element row, which is what carries the menu into
         // targeting.
-        public void ChooseElement(DamageType element)
+        public void ChooseElement(DamageType element, TargetSide side = TargetSide.Enemies)
         {
             if (!IsOpen) return;
             ChosenElement = element;
             Depth = MenuDepth.Target;
+            Side = side;
         }
 
         // One step back up the graph. Returns false at the root, where there is
@@ -196,6 +236,15 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (Depth)
             {
                 case MenuDepth.Target:
+                    // THE SIDE IS FORGOTTEN ON THE WAY OUT, unconditionally
+                    // and before the branching below -- every arm of it
+                    // leaves Target depth, and a Side left pointing at the
+                    // party would have the next repaint light the party
+                    // plates for a menu that is no longer asking anything.
+                    // Backing out of an ally pick is otherwise identical to
+                    // backing out of an enemy one, which is the contract.
+                    Side = TargetSide.Enemies;
+
                     // BACK RETRACES THE WAY IN, whichever way that was. An
                     // element skill came through Element depth, so that is
                     // where it lands -- with the choice cleared, because
@@ -244,6 +293,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             Depth = MenuDepth.Root;
             Branch = MenuBranch.None;
+            Side = TargetSide.Enemies;
             Selection = -1;
             ForgetElement();
         }

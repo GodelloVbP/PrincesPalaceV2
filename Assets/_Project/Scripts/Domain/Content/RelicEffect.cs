@@ -161,7 +161,7 @@ namespace PrincesPalace.Domain.Content
         LoadedDice,
 
         // The wearer's plain attacks reach any enemy regardless of the
-        // front-rank rule (FightSession.CanReach). Reach.Melee only -- an
+        // front-rank rule (FightSession.CanReachEnemy). Reach.Melee only -- an
         // authored rank restriction is never lifted; see Reach's own header.
         MonkeyKingsScepter,
 

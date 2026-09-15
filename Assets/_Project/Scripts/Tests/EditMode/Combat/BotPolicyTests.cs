@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Tests
             var encounter = new CombatEncounter(new[] { hero }, foes);
             // TestSkills.RangedPacket stands in for the old free basic spell
             // so a target behind the front rank is reachable at all -- Attack is
-            // front-rank-only (see FightSession.CanReach), and with
+            // front-rank-only (see FightSession.CanReachEnemy), and with
             // more than one foe that is the only way this fixture can show
             // GreedyAggressive choosing BETWEEN targets rather than being
             // handed just one.
@@ -75,7 +75,7 @@ namespace PrincesPalace.Domain.Tests
             // foes[0] (200 HP) is the front rank, reachable by Attack or the
             // ranged skill; foes[1] (40 HP) sits behind it and is reachable
             // only by the ranged skill (Attack is front-rank-only -- see
-            // FightSession.CanReach). GreedyAggressive must still
+            // FightSession.CanReachEnemy). GreedyAggressive must still
             // pick the lower-HP one across both kinds of reach.
             var (session, hero, foes) = HeroVsMany(200, 40);
             var policy = new GreedyAggressivePolicy();
@@ -321,7 +321,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- NonDamagingSkillGuard wiring -----------------------------------
         //
         // `legal` is built by hand rather than through FightAction.LegalActions
-        // for these two: whenever ANY enemy is alive, FightSession.CanReach
+        // for these two: whenever ANY enemy is alive, FightSession.CanReachEnemy
         // always allows Attack against the front rank (Max(1, ...)
         // in CombatMath.ComputeAttackDamage means it is never a 0-damage
         // candidate), so the guarded fallback below can never actually be

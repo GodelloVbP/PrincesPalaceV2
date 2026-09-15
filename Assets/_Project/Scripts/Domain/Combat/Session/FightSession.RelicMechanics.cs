@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // Egg (its relic check lives in FightSession.Ledger.cs, next to the
     // damage funnel it intercepts; the hatch/absorb/tick mechanics are
     // here). Monkey King's Scepter's one line lives in FightSession.cs's
-    // CanReach, next to the rule it bypasses. Pointy Nail on the End
+    // CanReachEnemy, next to the rule it bypasses. Pointy Nail on the End
     // of a Stick, Jo-Sun's Book of Anatomy, and Vampire Dentures have no
     // code here at all -- each is a pure RelicModifier relic, applied at
     // kit-build time exactly like every other numeric-only relic.

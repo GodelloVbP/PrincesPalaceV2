@@ -864,19 +864,23 @@ namespace PrincesPalace.Domain.Content
                 // time when the caster's tree says so (see SkillEffect.Provoke)
                 // rather than being authored twice.
                 case SkillEffect.Transform:
-                case SkillEffect.Ward:
                 // A summon happens to the caster's own side, not to
                 // whoever the player last clicked.
                 case SkillEffect.Summon: return SkillTargeting.Self;
                 // Shatter picks its own targets from the wards it detonates,
-                // and a Gift lands on an ally. Neither asks the player to
-                // click an enemy, so neither may default to SingleEnemy or
-                // the fight would stop and wait for a click that means
-                // nothing.
+                // so it asks the player to confirm rather than to aim.
                 case SkillEffect.Shatter: return SkillTargeting.AllEnemies;
+                // A WARD AND A GIFT BOTH LAND ON ONE ALLY THE PLAYER PICKS
+                // (AUDIT #147, owner 2026-09-15). The ward was Self and the
+                // gifts were Party, and neither was true: the ward always
+                // went to the caster and the gifts always went to whoever
+                // the engine chose, which is what the owner rejected. The
+                // Target depth they now enter is the party side's, so the
+                // fight stops for a click that means something.
+                case SkillEffect.Ward:
                 case SkillEffect.GiftMana:
                 case SkillEffect.GiftFury:
-                case SkillEffect.GiftHaste: return SkillTargeting.Party;
+                case SkillEffect.GiftHaste: return SkillTargeting.SingleAlly;
                 default: return SkillTargeting.SingleEnemy;
             }
         }

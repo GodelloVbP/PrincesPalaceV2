@@ -196,15 +196,20 @@ namespace PrincesPalace.Domain.Combat.Session
         private static bool WardedByThisActor(CombatantState wearer, CombatantState caster) =>
             ReferenceEquals(StatusEffects.WardedBy(wearer), caster);
 
-        // Applies a Ward to the caster, and to whoever The Flock has widened it
-        // to. Returns how many landed, so the caller can say so.
-        private int ApplyWard(CombatantState caster)
+        // Applies a Ward to the ally the player picked, and to whoever The
+        // Flock has widened it to. Returns how many landed, so the caller can
+        // say so.
+        //
+        // `wearer` IS THE PICK, never a default: the Ward is SingleAlly
+        // targeting now and CastSkill refuses one aimed at nobody, so this is
+        // reached with a living squadmate (possibly the caster) every time.
+        private int ApplyWard(CombatantState caster, CombatantState wearer)
         {
             int reduction = caster.Talents.Best(TalentEffectType.WardReductionPercent);
             if (reduction <= 0) return 0;
 
             int landed = 0;
-            WardOne(caster, caster, reduction);
+            WardOne(caster, wearer, reduction);
             landed++;
 
             // The Flock. The spread is a PERCENTAGE OF THE WARD'S OWN strength
@@ -214,18 +219,48 @@ namespace PrincesPalace.Domain.Combat.Session
             int spread = caster.Talents.Best(TalentEffectType.WardSpreadsToAllies);
             if (spread <= 0) return landed;
 
-            bool everyone = caster.Talents.Has(TalentEffectType.WardSpreadsToWholeParty);
-            foreach (var ally in _encounter.PlayerParty)
+            // APPLIED AFTER THE FULL WARD, never before: StatusEffects.Apply
+            // refreshes rather than stacks, so a share landing second on the
+            // same wearer would overwrite the full strength with the share.
+            // FlockSpread never yields the wearer, which is what keeps that
+            // from being a rule two call sites have to remember.
+            foreach (var other in FlockSpread(caster, wearer))
             {
-                if (ReferenceEquals(ally, caster) || !ally.IsAlive) continue;
-
-                WardOne(caster, ally, reduction * spread / 100);
+                WardOne(caster, other, reduction * spread / 100);
                 landed++;
-
-                if (!everyone) break;
             }
 
             return landed;
+        }
+
+        // WHO THE FLOCK'S SHARE REACHES, owner's call 2026-09-15 (AUDIT #147).
+        //
+        // THE RULE: warding HIMSELF spreads nowhere; warding SOMEBODY ELSE
+        // sends the share back to him. Nothing is auto-picked in either
+        // direction -- the choice the talent makes is a consequence of the
+        // choice the PLAYER made, which is the whole point of the picker this
+        // shipped with. The rule it replaced ("the first living non-caster in
+        // party order") was decided by the field formation, so a Move
+        // silently redirected the ward and nothing on screen said so.
+        //
+        // ONE SMALL FUNCTION ON PURPOSE. This is the strand of the design most
+        // likely to be retuned (most-hurt-first and lowest-fraction-first were
+        // both on the table), and a rule with one home is one edit rather than
+        // a hunt through the ward pipeline.
+        //
+        // WardSpreadsToWholeParty (the Flock's T2/T3 nodes) is NOT an
+        // auto-pick and keeps its promise unchanged: everybody else on the
+        // field, whoever the full ward went to.
+        private IEnumerable<CombatantState> FlockSpread(CombatantState caster, CombatantState wearer)
+        {
+            if (caster.Talents.Has(TalentEffectType.WardSpreadsToWholeParty))
+            {
+                return _encounter.PlayerParty.Where(a => a.IsAlive && !ReferenceEquals(a, wearer));
+            }
+
+            return ReferenceEquals(wearer, caster) || !caster.IsAlive
+                ? Enumerable.Empty<CombatantState>()
+                : new[] { caster };
         }
 
         private void WardOne(CombatantState caster, CombatantState wearer, int reduction)
@@ -270,27 +305,30 @@ namespace PrincesPalace.Domain.Combat.Session
                 return false;
             }
 
+            // NOBODY LEFT TO AIM AT, asked of the targeting rather than of
+            // the three Gift effects by name. EligibleAllies runs the same
+            // per-effect predicate the picker's plates and CastSkill's own
+            // refusal read (AllyTargeting), so "the menu offered a cast with
+            // no legal target" cannot happen for one reader and not another
+            // -- and the mana refusal stays free, because a squad whose only
+            // living allies carry a pool mana cannot touch produces an empty
+            // list without a second copy of that rule.
+            //
+            // THE WARD CANNOT REACH THIS: the caster is always a candidate
+            // for his own ward and it is his turn, so his list is never
+            // empty. That is why the wording can stay the gift's.
+            if (skill.Targeting == SkillTargeting.SingleAlly && EligibleAllies(actor, skill).Count == 0)
+            {
+                refusal = $"{actor.Name} has nobody to give it to.";
+                return false;
+            }
+
             switch (skill.Effect)
             {
                 case SkillEffect.Shatter:
                     if (WardsCastBy(actor).Count == 0)
                     {
                         refusal = $"{actor.Name} has no wards out to shatter.";
-                        return false;
-                    }
-
-                    return true;
-
-                case SkillEffect.GiftMana:
-                case SkillEffect.GiftFury:
-                case SkillEffect.GiftHaste:
-                    // ASKED PER EFFECT, which is what makes the mana refusal
-                    // free: GiftRecipient answers "nobody" for a squad whose
-                    // only living allies carry a pool mana cannot touch, and
-                    // this branch already knew what to do with "nobody".
-                    if (GiftRecipient(actor, skill.Effect) == null)
-                    {
-                        refusal = $"{actor.Name} has nobody to give it to.";
                         return false;
                     }
 
@@ -307,47 +345,22 @@ namespace PrincesPalace.Domain.Combat.Session
                 .Where(c => c.IsAlive && WardedByThisActor(c, caster))
                 .ToList();
 
-        // Who a Gift lands on, ASKED PER EFFECT.
+        // GiftRecipient IS GONE (AUDIT #147, owner 2026-09-15). It used to
+        // decide who a Gift landed on -- "the first living party member who
+        // is not the caster", narrowed for Gift: Mana to "the ally missing
+        // the most mana who can actually take it" -- and its own comment
+        // already said what it was waiting for: "It needs a real target
+        // picker the moment a third party slot exists."
         //
-        // It used to be "the first living party member who is not the caster"
-        // for all three gifts, and its own comment said why that was allowed:
-        // "the squad is one deep by default and two at most, so 'an ally' is
-        // unambiguous today... It needs a real target picker the moment a third
-        // party slot exists." That slot exists (FightHudSpec.StageSlotsPerSide
-        // is 3; the party formation landed 41b470d4), and the first ally in a
-        // three-deep squad is now routinely Bjorn -- whose pool refuses mana
-        // outright. Gift: Mana was spending two Wool and a turn pouring 24 mana
-        // into a Fury bar and announcing that it had.
-        //
-        // GIFT: FURY AND GIFT: HASTE KEEP THE OLD ANSWER, and that is not
-        // laziness. Neither says anything about a resource -- one applies
-        // Empowered, the other moves a turn up the order -- so every living
-        // ally is a valid recipient for both and the first one is as good a
-        // pick as any. Only the mana gift has something a pool can disagree
-        // with, which is why the effect is a parameter rather than this method
-        // growing one rule for everybody.
-        //
-        // THE MANA PICK IS "EMPTIEST FIRST", not "first that qualifies": a gift
-        // is a fixed percentage of the recipient's own maximum, so handing it
-        // to whoever is missing the most is the only reading under which the
-        // number the caster spent wool for is the number that lands. LINQ's
-        // OrderByDescending is stable, so a tie falls back to party order --
-        // the old answer, restricted to allies who can take it.
-        private CombatantState GiftRecipient(CombatantState caster, SkillEffect effect)
-        {
-            var allies = _encounter.PlayerParty.Where(a => !ReferenceEquals(a, caster) && a.IsAlive);
-
-            if (effect != SkillEffect.GiftMana) return allies.FirstOrDefault();
-
-            // CombatMath.CanRestoreMana is the SAME predicate the potion, the
-            // relic top-up, Lucky Deck and the bot's missing-mana accounting
-            // all read. A fifth copy of "does this pool take mana effects"
-            // would be a fifth thing to get wrong.
-            return allies
-                .Where(CombatMath.CanRestoreMana)
-                .OrderByDescending(a => a.MaxMana - a.CurrentMana)
-                .FirstOrDefault();
-        }
+        // That picker is what shipped instead, so the engine no longer picks
+        // at all: the player does, through the party plates, and the pick
+        // arrives as CastSkill's `target`. WHO a gift MAY go to is still a
+        // rule and still has one home -- AllyTargeting, read by the plates,
+        // by CastSkill's refusal and by the bot alike. WHICH of them it
+        // SHOULD go to is now a judgement rather than a rule, so the two
+        // orderings this method used to encode moved to the only caller that
+        // still has to choose without a hand on the mouse: Domain/Bot/
+        // AllyTargetSelection.
 
         // Detonates every ward the caster has out. Each one throws a share of his
         // Attack at a random enemy.
@@ -417,10 +430,14 @@ namespace PrincesPalace.Domain.Combat.Session
             return _rng == null ? living[0] : living[_rng.NextInt(0, living.Count)];
         }
 
-        // The three Wool Gifts, resolved against whoever GiftRecipient found.
-        private void ResolveGift(CombatantState caster, ResolvedSkill skill)
+        // The three Wool Gifts, resolved against the ally the player picked.
+        //
+        // The null guard stays even though CastSkill refuses a gift with no
+        // target before this is reached: Domain's rule is one guard at the
+        // seam plus graceful degradation, and this is the seam a future
+        // caller would arrive at wrong.
+        private void ResolveGift(CombatantState caster, ResolvedSkill skill, CombatantState ally)
         {
-            var ally = GiftRecipient(caster, skill.Effect);
             if (ally == null) return;
 
             switch (skill.Effect)

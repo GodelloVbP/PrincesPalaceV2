@@ -21,7 +21,7 @@ MonoBehaviour:
     CharacterId: bear
     UnlockLevel: 1
     Effect: 7
-    Targeting: 2
+    Targeting: 4
     ManaCost: 0
     ResourceCost: 0
     SpendsAllResource: 0

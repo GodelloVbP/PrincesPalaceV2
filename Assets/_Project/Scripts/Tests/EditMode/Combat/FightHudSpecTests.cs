@@ -41,7 +41,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE REACH RULE ITSELF LIVES ON THE SESSION now (FightSession.
-        // CanReach -- it has to see relics and taunts, which the encounter
+        // CanReachEnemy -- it has to see relics and taunts, which the encounter
         // cannot). What stayed here is the fact the rule is computed FROM:
         // the encounter's own living rank.
 

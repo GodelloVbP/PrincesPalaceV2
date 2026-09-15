@@ -114,6 +114,85 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(MenuBranch.None, menu.Branch);
         }
 
+        // ---- which rack is being pointed at (AUDIT #147) ----------------------
+
+        [Test]
+        public void TargetingPointsAtTheEnemiesUnlessItIsToldOtherwise()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting();
+
+            Assert.AreEqual(TargetSide.Enemies, menu.Side);
+            Assert.IsTrue(menu.IsPickingEnemy);
+            Assert.IsFalse(menu.IsPickingAlly);
+        }
+
+        [Test]
+        public void AnAllyPickEntersTheSameDepthOnThePartySide()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(0, 0);
+            menu.EnterTargeting(TargetSide.Allies);
+
+            Assert.AreEqual(MenuDepth.Target, menu.Depth, "the same depth, not a fifth one");
+            Assert.AreEqual(TargetSide.Allies, menu.Side);
+            Assert.IsTrue(menu.IsPickingAlly);
+            Assert.IsFalse(menu.IsPickingEnemy, "exactly one rack is live at a time");
+        }
+
+        [Test]
+        public void BackFromAnAllyPickLandsOnTheSkillListAndForgetsTheSide()
+        {
+            // "Back/cancel behaves identically to the enemy flow" is the
+            // contract, so this is BackFromTargetingLandsOnTheListItCameFrom
+            // with one more assertion: a Side left pointing at the party
+            // would light the party plates for a menu that is no longer
+            // asking anything.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(2, 0);
+            menu.EnterTargeting(TargetSide.Allies);
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Sub, menu.Depth);
+            Assert.AreEqual(MenuBranch.Skill, menu.Branch, "still in the skill branch");
+            Assert.AreEqual(2, menu.Selection, "and still on the row that was pressed");
+            Assert.AreEqual(TargetSide.Enemies, menu.Side);
+            Assert.IsFalse(menu.IsPickingAlly);
+        }
+
+        [Test]
+        public void ResolvingAnAllyPickForgetsTheSideToo()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting(TargetSide.Allies);
+
+            menu.Reset();
+
+            Assert.AreEqual(TargetSide.Enemies, menu.Side);
+            Assert.IsFalse(menu.IsPickingAlly);
+        }
+
+        [Test]
+        public void AttackAlwaysReturnsTheSideToTheEnemies()
+        {
+            // The one path back into targeting that takes no side argument.
+            // Opening ATTACK after an ally pick was cancelled must not
+            // inherit the party rack.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting(TargetSide.Allies);
+
+            menu.OpenAttack();
+
+            Assert.AreEqual(TargetSide.Enemies, menu.Side);
+            Assert.IsTrue(menu.IsPickingEnemy);
+        }
+
         [Test]
         public void BackFromAListClosesTheBranch()
         {

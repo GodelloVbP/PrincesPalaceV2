@@ -32,8 +32,16 @@ namespace PrincesPalace.Domain.Tests
         private static void Talents(CombatantState actor, params TalentEffect[] effects) =>
             actor.Talents = new TalentEffectSet(effects);
 
+        // THROUGH THE RESOLVER'S OWN DefaultTargetingFor rather than a
+        // hardcoded Self. A fixture that guesses targeting builds content
+        // skills.json could never produce, and this file guessed Self for
+        // every effect in it -- which meant every Ward and Gift test below
+        // was casting through a path the game stopped taking when the ally
+        // picker landed (AUDIT #147), and would have gone on passing while
+        // the real cast refused.
         private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null) =>
-            new ResolvedSkill("t", name, "", "hero", 1, effect, SkillTargeting.Self,
+            new ResolvedSkill("t", name, "", "hero", 1, effect,
+                SkillEntryResolver.DefaultTargetingFor(effect),
                 0, 0, false, 100, 0, false, null, SpellPresentation.None, 0, transform: transform);
 
         private static PlayerKit Kit(params ResolvedSkill[] skills) =>
@@ -74,7 +82,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb }, new[] { Foe(speed: 9) },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
             session.Begin();
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
             int warded = lamb.MaxHealth - lamb.CurrentHealth;
 
             Assert.Greater(unwarded, 0, "fixture: the control really was hit");
@@ -97,14 +105,23 @@ namespace PrincesPalace.Domain.Tests
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
             session.Begin();
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
             int afterOneTurn = lamb.SignaturePool.Current;
 
             Assert.LessOrEqual(afterOneTurn, 2, "at most one payout, however many blows landed");
         }
 
+        // ---- The Flock, owner's rule 2026-09-15 (AUDIT #147) ------------------
+        //
+        // WARD HIMSELF AND IT SPREADS NOWHERE; WARD SOMEBODY ELSE AND THE
+        // SHARE COMES BACK TO HIM. No auto-pick survives in either direction,
+        // which is what the finding was actually about: the old rule sent the
+        // share to "the first living non-caster in party order", and since
+        // the positions pass that order IS the field formation -- so a Move
+        // silently redirected the ward and nothing on screen said so.
+
         [Test]
-        public void TheFlockSpreadsTheWardToAnAlly()
+        public void WardingHimselfSpreadsToNobody()
         {
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
@@ -115,9 +132,30 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
+
+            Assert.IsTrue(StatusEffects.IsWarded(lamb), "the pick is warded");
+            Assert.IsFalse(StatusEffects.IsWarded(ally),
+                "warding himself spreads nowhere -- the flock is what he gives away, not what he keeps");
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("pulls the fleece close")));
+        }
+
+        [Test]
+        public void WardingAnAllySendsTheShareBackToTheCaster()
+        {
+            var lamb = Hero("Lamb");
+            var ally = Hero("Ally");
+            Talents(lamb,
+                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
+
+            var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
+                Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
+
+            session.CastSkill(0, ally);
 
             Assert.IsTrue(StatusEffects.IsWarded(ally));
+            Assert.IsTrue(StatusEffects.IsWarded(lamb), "the share comes back to him");
             Assert.IsTrue(Messages(session).Any(m => m.Contains("throws the fleece wide")));
         }
 
@@ -126,6 +164,9 @@ namespace PrincesPalace.Domain.Tests
         {
             // One strand tunes the construct, the other decides how far it
             // reaches -- so deepening the ward deepens what the flock gets.
+            // LITERALS, not a re-derivation: 60 is the authored reduction and
+            // 30 is half of it, written out rather than computed from the
+            // same expression the production code uses.
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             Talents(lamb,
@@ -135,12 +176,38 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, ally);
 
-            var onLamb = lamb.Statuses.First(s => s.Type == StatusEffectType.Shielded);
             var onAlly = ally.Statuses.First(s => s.Type == StatusEffectType.Shielded);
-            Assert.AreEqual(60, onLamb.Magnitude);
-            Assert.AreEqual(30, onAlly.Magnitude);
+            var onLamb = lamb.Statuses.First(s => s.Type == StatusEffectType.Shielded);
+            Assert.AreEqual(60, onAlly.Magnitude, "the pick gets the full ward");
+            Assert.AreEqual(30, onLamb.Magnitude, "and the caster gets the share");
+        }
+
+        [Test]
+        public void TheWholePartyNodeStillReachesEverybodyButThePick()
+        {
+            // T2/T3 of the Flock path are NOT an auto-pick -- they name
+            // everybody, so there is nothing for the owner's rule to choose
+            // between and the node keeps its promise unchanged. Pinned
+            // because the self-ward case above would otherwise read as "a
+            // self-ward never spreads", which is true only without this node.
+            var lamb = Hero("Lamb");
+            var one = Hero("One");
+            var two = Hero("Two");
+            Talents(lamb,
+                new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50),
+                new TalentEffect(TalentEffectType.WardSpreadsToWholeParty, 1));
+
+            var (session, _) = Fight(new[] { lamb, one, two }, new[] { Foe() },
+                Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
+
+            session.CastSkill(0, lamb);
+
+            Assert.AreEqual(50, lamb.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
+            Assert.AreEqual(25, one.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
+            Assert.AreEqual(25, two.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
         }
 
         [Test]
@@ -154,7 +221,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb }, new[] { Foe() },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
 
             Assert.IsTrue(lamb.Statuses.Any(s => s.Type == StatusEffectType.Regen),
                 "the sustain strand costs no extra action and no extra wool");
@@ -174,7 +241,7 @@ namespace PrincesPalace.Domain.Tests
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
             session.Begin();
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
 
             Assert.AreSame(lamb, encounter.Current, "the turn did not advance");
             Assert.AreEqual(1, session.DrainBeats().Count, "but the beat still plays");
@@ -192,7 +259,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb }, new[] { foe },
                 Kit(Skill(SkillEffect.Ward, "Fleece Ward"), Skill(SkillEffect.Shatter, "Shatter")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
             session.DrainBeats();
             Assert.IsTrue(StatusEffects.IsWarded(lamb), "fixture: there is a ward to shatter");
 
@@ -212,7 +279,7 @@ namespace PrincesPalace.Domain.Tests
             var plainFoe = Foe();
             var (control, _) = Fight(new[] { plain }, new[] { plainFoe },
                 Kit(Skill(SkillEffect.Ward), Skill(SkillEffect.Shatter)));
-            control.CastSkill(0, null);
+            control.CastSkill(0, plain);
             control.CastSkill(1, null);
             int ordinary = plainFoe.MaxHealth - plainFoe.CurrentHealth;
 
@@ -224,7 +291,7 @@ namespace PrincesPalace.Domain.Tests
             var boostedFoe = Foe();
             var (session, _) = Fight(new[] { boosted }, new[] { boostedFoe },
                 Kit(Skill(SkillEffect.Ward), Skill(SkillEffect.Shatter)));
-            session.CastSkill(0, null);
+            session.CastSkill(0, boosted);
             session.CastSkill(1, null);
 
             Assert.Greater(boostedFoe.MaxHealth - boostedFoe.CurrentHealth, ordinary);
@@ -241,23 +308,23 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, ally);
 
             Assert.Greater(ally.CurrentMana, 0);
             Assert.AreEqual(lamb.MaxMana, lamb.CurrentMana,
                 "the gift is wool, not the caster's own mana");
         }
 
-        // ---- who a Gift: Mana actually lands on -------------------------------
+        // ---- who a Gift: Mana may land on -------------------------------------
         //
-        // GiftRecipient was "the first living party member who is not the
-        // caster", and its own comment said why that was allowed to be a
-        // placeholder: "the squad is one deep by default and two at most, so
-        // 'an ally' is unambiguous today -- there is exactly one candidate or
-        // none. It needs a real target picker the moment a third party slot
-        // exists." That slot exists (41b470d4), and with a Fury holder standing
-        // in it the placeholder spent the wool and the turn pouring mana into a
-        // bar that refuses mana -- and announced a number that never landed.
+        // GiftRecipient is gone (AUDIT #147, owner 2026-09-15): the engine no
+        // longer picks a recipient at all, the player does. What survives as a
+        // RULE is who the cast will ACCEPT, and that is AllyTargeting --
+        // exercised here through the cast itself, since that is the path a
+        // click takes. The two ORDERINGS it used to encode ("the emptiest mana
+        // bar", "the first living ally") moved to the bot, where something
+        // still has to choose with no hand on the mouse; they are pinned in
+        // BotAllyTargetSelectionTests.
         private static ResourcePool Fury() =>
             new ResourcePool("fury", "Fury", 100, 0, gainOnAttack: 15, gainOnDamageTaken: 10)
             {
@@ -266,53 +333,112 @@ namespace PrincesPalace.Domain.Tests
             };
 
         [Test]
-        public void AGiftOfManaSkipsAnAllyWhosePoolRefusesIt()
+        public void AGiftOfManaGoesWhereItIsAimed_NotWhereTheEngineWouldHavePutIt()
         {
             var shawn = Hero("Shawn");
             var bjorn = Hero("Bjorn", speed: 8);
             bjorn.PrimaryPool = Fury();
 
-            // 60 max, 20 in the bar. 40% of 60 is 24, so the literal below is
-            // 44 and nothing here re-derives it.
+            // 60 max, 20 in the bar, and 40% of 60 is 24 -- so the old engine
+            // rule ("the emptiest bar that can take it") names Odette.
+            var odette = new CombatantState("Odette", true, 500, 60, 40, 8);
+            odette.PrimaryPool.Current = 20;
+
+            // A fourth seat, fuller than Odette, so what the ENGINE would have
+            // chosen and what the PLAYER clicked disagree. That disagreement
+            // is the whole test.
+            var full = new CombatantState("Nearly Full", true, 500, 60, 40, 8);
+            full.PrimaryPool.Current = 55;
+
+            Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+
+            var (session, _) = Fight(new[] { shawn, bjorn, odette, full }, new[] { Foe() },
+                Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
+
+            Assert.IsTrue(session.CastSkill(0, full));
+
+            // 55 + 24 clamps at the 60 maximum, so 5 is what actually landed
+            // and 5 is what the line says -- the return, not the request.
+            Assert.AreEqual(60, full.CurrentMana, "the gift went where it was aimed");
+            Assert.AreEqual(20, odette.CurrentMana, "the emptiest bar is not the engine's business any more");
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("Nearly Full") && m.Contains("5")),
+                "the line has to name who got it and how much actually landed");
+        }
+
+        [Test]
+        public void AGiftOfManaRefusesAnAllyWhosePoolCannotTakeIt()
+        {
+            var shawn = Hero("Shawn");
+            var bjorn = Hero("Bjorn", speed: 8);
+            bjorn.PrimaryPool = Fury();
             var odette = new CombatantState("Odette", true, 500, 60, 40, 8);
             odette.PrimaryPool.Current = 20;
 
             Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
 
-            // Party order puts Bjorn in front of Odette on purpose: he is what
-            // "the first living ally" used to find.
             var (session, _) = Fight(new[] { shawn, bjorn, odette }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
 
-            session.CastSkill(0, null);
+            bool cast = session.CastSkill(0, bjorn);
 
-            Assert.AreEqual(44, odette.CurrentMana, "the gift went to the ally who could not use it");
-            Assert.AreEqual(0, bjorn.PrimaryPool.Current, "a Fury bar is not a mana bar");
-            Assert.IsTrue(Messages(session).Any(m => m.Contains("Odette") && m.Contains("24")),
-                "the line has to name who got it and how much actually landed");
+            Assert.IsFalse(cast, "a Fury bar is not a mana bar, so his plate is not a candidate");
+            Assert.AreEqual(0, bjorn.PrimaryPool.Current);
+            Assert.IsTrue(session.DrainImmediateMessages().Any(m => m.Contains("cannot take")));
         }
 
         [Test]
-        public void AGiftOfManaPrefersTheAllyMissingTheMost()
+        public void AGiftIsRefusedWhenAimedAtTheCaster()
         {
+            // A gift is wool being handed over; giving it to himself would be
+            // a cast that spends the resource to return it. His own plate is
+            // a legitimate target for a WARD and never for a gift, which is
+            // the one asymmetry AllyTargeting carries.
             var shawn = Hero("Shawn");
-
-            // Both take mana; the first in party order is the fuller one, so
-            // "first living ally" and "emptiest ally" disagree.
-            var full = new CombatantState("Nearly Full", true, 500, 60, 40, 8);
-            full.PrimaryPool.Current = 55;
-            var drained = new CombatantState("Drained", true, 500, 60, 40, 8);
-            drained.PrimaryPool.Current = 10;
-
+            var ally = Hero("Ally", speed: 8);
             Talents(shawn, new TalentEffect(TalentEffectType.GiftManaPercent, 40));
+            shawn.PrimaryPool.Current = 0;
 
-            var (session, _) = Fight(new[] { shawn, full, drained }, new[] { Foe() },
+            var (session, _) = Fight(new[] { shawn, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
 
-            session.CastSkill(0, null);
+            Assert.IsFalse(session.CastSkill(0, shawn));
+            Assert.AreEqual(0, shawn.CurrentMana);
+        }
 
-            Assert.AreEqual(34, drained.CurrentMana, "10 + 24");
-            Assert.AreEqual(55, full.CurrentMana, "untouched");
+        [Test]
+        public void AWardMayBeAimedAtAnyLivingSquadmate_IncludingTheCaster()
+        {
+            var shawn = Hero("Shawn");
+            var ally = Hero("Ally", speed: 8);
+            var fallen = Hero("Fallen", speed: 7);
+            fallen.CurrentHealth = 0;
+            Talents(shawn, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
+
+            var (session, _) = Fight(new[] { shawn, ally, fallen }, new[] { Foe() },
+                Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
+
+            var eligible = session.EligibleAllies(shawn, session.KitFor(shawn).Skills[0]);
+
+            CollectionAssert.Contains(eligible, shawn, "his own plate is a legitimate ward target");
+            CollectionAssert.Contains(eligible, ally);
+            CollectionAssert.DoesNotContain(eligible, fallen, "the dead are not candidates");
+        }
+
+        [Test]
+        public void EligibleAlliesIsEmptyForEveryOtherTargeting()
+        {
+            // A Party or Self skill has no pick to make, and handing a caller
+            // a plausible list for one would invite a second ally picker
+            // pointed at a cast that would ignore it.
+            var shawn = Hero("Shawn");
+            var ally = Hero("Ally", speed: 8);
+
+            var (session, _) = Fight(new[] { shawn, ally }, new[] { Foe() },
+                Kit(Skill(SkillEffect.HealParty, "Mend"), Skill(SkillEffect.HealSelf, "Woolgather")));
+
+            var kit = session.KitFor(shawn);
+            CollectionAssert.IsEmpty(session.EligibleAllies(shawn, kit.Skills[0]));
+            CollectionAssert.IsEmpty(session.EligibleAllies(shawn, kit.Skills[1]));
         }
 
         [Test]
@@ -337,11 +463,11 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheOtherTwoGiftsStillTakeTheFirstLivingAlly()
+        public void TheOtherTwoGiftsAcceptAnyLivingAlly()
         {
             // The control. Gift: Fury and Gift: Haste say nothing about mana,
-            // so a Fury holder is a perfectly good recipient for both and the
-            // placeholder's answer is still the right one for them.
+            // so a Fury holder is a perfectly good recipient for both -- the
+            // one condition Gift: Mana carries does not apply to them.
             var shawn = Hero("Shawn");
             var bjorn = Hero("Bjorn", speed: 8);
             bjorn.PrimaryPool = Fury();
@@ -351,7 +477,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { shawn, bjorn }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, bjorn);
 
             Assert.IsTrue(bjorn.Statuses.Any(s => s.Type == StatusEffectType.Empowered),
                 "Gift: Fury has no opinion about what resource the ally carries");
@@ -367,7 +493,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
                 Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")), Kit());
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, ally);
 
             Assert.IsTrue(ally.Statuses.Any(s => s.Type == StatusEffectType.Empowered));
         }
@@ -649,7 +775,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { ram }, new[] { front, back },
                 Kit(Skill(SkillEffect.Provoke, "Bellow")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, front);
 
             Assert.AreSame(ram, StatusEffects.ProvokedBy(front));
             Assert.IsNull(StatusEffects.ProvokedBy(back));
@@ -669,15 +795,28 @@ namespace PrincesPalace.Domain.Tests
             var (session, _) = Fight(new[] { ram }, new[] { front, back },
                 Kit(Skill(SkillEffect.Provoke, "Bellow")));
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, front);
 
             Assert.AreSame(ram, StatusEffects.ProvokedBy(front));
             Assert.AreSame(ram, StatusEffects.ProvokedBy(back));
             Assert.IsTrue(Messages(session).Any(m => m.Contains("all 2 of them")));
         }
 
+        // WAS "BellowingAtAnEmptyRoomSaysSoHonestly", and it was green against
+        // content skills.json cannot produce: this file's Skill() fixture
+        // hardcoded SkillTargeting.Self for every effect, while the real
+        // Provoke row is SingleEnemy (SkillEntryResolver.DefaultTargetingFor
+        // falls through to it). Once the fixture started asking the resolver --
+        // 2026-09-15, with the ally picker -- the cast reached the reach gate
+        // it has always had in the game and was refused, because the only
+        // combatant it could have been aimed at is a corpse.
+        //
+        // So the refusal is what this pins now. ResolveCharacterSkillInner's
+        // "bellows at nothing in particular" line is unreachable through the
+        // menu and through the bot alike, which is a finding rather than
+        // something to fix here.
         [Test]
-        public void BellowingAtAnEmptyRoomSaysSoHonestly()
+        public void BellowingAtACorpseIsRefusedRatherThanResolved()
         {
             var ram = Hero("Ram");
             Talents(ram,
@@ -689,9 +828,9 @@ namespace PrincesPalace.Domain.Tests
                 Kit(Skill(SkillEffect.Provoke, "Bellow")));
             corpse.CurrentHealth = 0;
 
-            session.CastSkill(0, null);
-
-            Assert.IsTrue(Messages(session).Any(m => m.Contains("bellows at nothing in particular")));
+            Assert.IsFalse(session.CastSkill(0, corpse),
+                "a single-opponent cast aimed at a corpse is out of reach, and spends nothing");
+            Assert.IsTrue(session.DrainImmediateMessages().Any(m => m.Contains("out of reach")));
         }
 
         // ---- the wool engines --------------------------------------------------------
@@ -753,7 +892,7 @@ namespace PrincesPalace.Domain.Tests
             session.Begin();
             int atStart = ram.SignaturePool.Current;
 
-            session.CastSkill(0, null);
+            session.CastSkill(0, encounter.FrontEnemy);
 
             // Both enemies were provoked, so the next turn start is baseline
             // plus one per goaded enemy -- income he ARRANGED, on top of the
@@ -780,7 +919,7 @@ namespace PrincesPalace.Domain.Tests
             int atStart = lamb.SignaturePool.Current;
 
             // A turn that opens with a poison tick and nothing else.
-            session.CastSkill(0, null);
+            session.CastSkill(0, lamb);
             session.DrainBeats();
 
             Assert.Less(lamb.CurrentHealth, lamb.MaxHealth, "fixture: the poison really ticked");

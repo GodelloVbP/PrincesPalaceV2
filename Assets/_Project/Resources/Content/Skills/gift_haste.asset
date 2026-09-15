@@ -19,7 +19,7 @@ MonoBehaviour:
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 12
-    Targeting: 3
+    Targeting: 4
     ManaCost: 0
     ResourceCost: 5
     SpendsAllResource: 0

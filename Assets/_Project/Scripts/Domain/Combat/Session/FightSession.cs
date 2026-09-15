@@ -140,18 +140,60 @@ namespace PrincesPalace.Domain.Combat.Session
         // once per ability per AI draw; EligibleTargets below is the filter
         // for callers who genuinely want a list.
         //
+        // RENAMED FROM CanReach when single-ally targeting landed. The old
+        // name had been unambiguous only while nothing on the caster's own
+        // side could be pointed at; with an ally picker on the screen,
+        // "CanReach(ally)" answering false reads as a bug rather than as the
+        // category refusal it is. CanReachAlly below is the same question
+        // asked of the other side, and the two share ReachAllows.
+        //
         // Evaluation order is fixed and each step is load-bearing:
-        public bool CanReach(CombatantState actor, Reach reach, CombatantState target)
+        public bool CanReachEnemy(CombatantState actor, Reach reach, CombatantState target)
+        {
+            // CATEGORY, ahead of everything. A single-opponent question asked
+            // about an ally. Checked here rather than in ReachAllows because
+            // it is the one step the ally side inverts rather than shares.
+            if (actor == null || target == null) return false;
+            if (actor.IsPlayerSide == target.IsPlayerSide) return false;
+
+            return ReachAllows(actor, reach, target);
+        }
+
+        // CAN THIS ACTOR AIM A SINGLE-ALLY ACTION AT THIS COMBATANT?
+        //
+        // NO REACH ARGUMENT, and that is the rule rather than an omission:
+        // a rank mask and the front-rank rule are both about fighting PAST
+        // somebody, and nothing on the caster's own side is in the way of
+        // his own squad (docs/handoffs/archive/battle_ui/README.md:230 --
+        // "no unreachable state exists for allies"). A skill that authored
+        // reachSlots or meleeReach is refused at content-build time for any
+        // targeting but SingleEnemy, so there is no authored mask here for
+        // this to be quietly ignoring.
+        //
+        // WHAT the effect will accept is a separate question and belongs to
+        // AllyTargeting, asked by EligibleAllies below -- this one is only
+        // "is there a living squadmate there".
+        public bool CanReachAlly(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null) return false;
+            if (actor.IsPlayerSide != target.IsPlayerSide) return false;
+
+            // Same -1-for-dead-and-for-absent reading LivingRankOf gives on
+            // the enemy side; the rank itself is not used.
+            return _encounter.LivingRankOf(target) >= 0;
+        }
+
+        // The side-blind core: everything CanReachEnemy checks once the two
+        // combatants are known to be on opposite sides. Private because the
+        // side check is never optional -- a caller reaching this directly
+        // would be asking a question neither public method has a meaning for.
+        private bool ReachAllows(CombatantState actor, Reach reach, CombatantState target)
         {
             // 1. VALIDATE. LivingRankOf answers -1 for dead and for "not in
             //    this encounter" alike, which is the same "there is nothing
             //    there to hit" in both cases.
-            if (actor == null || target == null) return false;
             int rank = _encounter.LivingRankOf(target);
             if (rank < 0) return false;
-
-            // 2. CATEGORY. A single-opponent question asked about an ally.
-            if (actor.IsPlayerSide == target.IsPlayerSide) return false;
 
             // 3a. PROVOKE WINS, for every ReachKind. A taunt is the one thing
             //     allowed to override where an action can go, in both
@@ -176,10 +218,10 @@ namespace PrincesPalace.Domain.Combat.Session
             return reach.Allows(rank);
         }
 
-        // The filter over CanReach: every opponent this actor could aim a
-        // single-opponent action at right now, in list order. Same
-        // single-opponent-only contract as CanReach above -- an AllEnemies or
-        // Party skill has no business here.
+        // The filter over CanReachEnemy: every opponent this actor could aim
+        // a single-opponent action at right now, in list order. Same
+        // single-opponent-only contract as CanReachEnemy above -- an
+        // AllEnemies or Party skill has no business here.
         public IReadOnlyList<CombatantState> EligibleTargets(CombatantState actor, Reach reach)
         {
             var eligible = new List<CombatantState>();
@@ -187,7 +229,38 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var opponent in _encounter.OpponentsOf(actor))
             {
-                if (CanReach(actor, reach, opponent)) eligible.Add(opponent);
+                if (CanReachEnemy(actor, reach, opponent)) eligible.Add(opponent);
+            }
+
+            return eligible;
+        }
+
+        // THE ALLY-SIDE SIBLING of EligibleTargets: every combatant on this
+        // actor's side that this skill may be aimed at right now, in party
+        // order (which since the positions pass IS the field formation, so
+        // the list reads front to rear).
+        //
+        // TAKES THE SKILL, not a Reach, because the ally side's variation is
+        // the EFFECT rather than the geometry -- a ward may land on the
+        // caster and a gift may not, and AllyTargeting owns that rule for
+        // every reader. THE CASTER'S OWN SIDE INCLUDES THE CASTER, so the
+        // player's own plate is in this list whenever the effect accepts it.
+        //
+        // Answers an empty list for any targeting but SingleAlly: a Party or
+        // Self skill has no pick to make, and handing a caller a plausible
+        // list for one would invite a second, wrong ally picker.
+        public IReadOnlyList<CombatantState> EligibleAllies(CombatantState actor, ResolvedSkill skill)
+        {
+            var eligible = new List<CombatantState>();
+            if (actor == null || skill == null) return eligible;
+            if (skill.Targeting != SkillTargeting.SingleAlly) return eligible;
+
+            foreach (var ally in _encounter.AlliesOf(actor))
+            {
+                if (!CanReachAlly(actor, ally)) continue;
+                if (!AllyTargeting.Accepts(skill.Effect, actor, ally)) continue;
+
+                eligible.Add(ally);
             }
 
             return eligible;
@@ -313,7 +386,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // before a beat exists to be thrown away. A plain swing is
             // SingleEnemy with Reach.Melee, always -- the front-rank rule
             // stated as a value rather than as a special case.
-            if (!CanReach(actor, Reach.Melee, target))
+            if (!CanReachEnemy(actor, Reach.Melee, target))
             {
                 AppendMessage($"{target.Name} is out of reach.");
                 return false;

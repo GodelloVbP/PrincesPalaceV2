@@ -84,6 +84,14 @@ namespace PrincesPalace
         // node rather than the sprite.
         [SerializeField] internal Button[] enemyHitAreas;
 
+        // The same over each PARTY figure, live only while an ALLY is being
+        // picked (AUDIT #147). INDEXED BY STAGE SLOT, which on this side is
+        // not the party list's order -- a slot belongs to one character for
+        // the whole fight and the list reorders on every Move, so the handler
+        // resolves a slot to its occupant rather than indexing the party by
+        // it. See FightScreen.PartyHitAreas.
+        [SerializeField] internal Button[] partyHitAreas;
+
         // The way out of targeting. It lives on the target prompt because the
         // list BACK used to live in folds as soon as a skill is picked.
         [SerializeField] internal Button targetCancelButton;
@@ -110,7 +118,18 @@ namespace PrincesPalace
         // list called the same thing with no ScreenRegistry code, and
         // UiWiringSweep refuses the build outright if one comes back null or
         // empty.
-        [SerializeField] internal GameObject[] pcPlates;
+        // BUTTONS SINCE AUDIT #147, where these were GameObjects: a
+        // single-ally cast is confirmed by clicking the squadmate, on the
+        // plate that already IS that squadmate. Interactable ONLY while an
+        // ally pick is open -- outside one a live plate would be a button
+        // that silently does nothing, which is the state the enemy plates'
+        // own `blocked` handling exists to avoid.
+        [SerializeField] internal Button[] pcPlates;
+
+        // The ally-pick marker, one per plate. Shown only during an ally
+        // pick and greyed on a plate this cast will not accept -- the mirror
+        // of enemyPlateReticles, painted by the same rule.
+        [SerializeField] internal GameObject[] pcPlateReticles;
 
         // The leather itself. THE identity surface: swapped at runtime to the
         // occupant's own characters.json plateArt through PcPlateSprites,

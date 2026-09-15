@@ -146,7 +146,7 @@ namespace PrincesPalace.Domain.Content
         // beside it: two fields answering one question is exactly how a
         // caller ends up reading the one that has not been kept current.
         // Every reader (the click gate, plate dimming, the bot's legal menu,
-        // the enemy pool) now asks FightSession.CanReach with this.
+        // the enemy pool) now asks FightSession.CanReachEnemy with this.
         //
         // Reach.Any is also default(Reach), so a skill deserialised from an
         // older asset reads as unrestricted rather than as nothing.

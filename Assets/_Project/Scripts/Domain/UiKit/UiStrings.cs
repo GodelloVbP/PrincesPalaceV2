@@ -837,6 +837,14 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
                 "Boulder Slam — confirm on any enemy plate.");
 
+        // The ally picker's own prompt (AUDIT #147). Worded apart from the
+        // single-target one above for the same reason the group one is: the
+        // player has just been asked to point at the half of the screen they
+        // were NOT pointing at a moment ago, and "choose a target" is the
+        // sentence that does not say which half.
+        public static readonly UiString TargetPromptAlly =
+            UiString.Define("target_prompt_ally", "Choose an ally for {0}.", "Choose an ally for Ward.");
+
         // TransformStripTurns/TransformStripPermanent are GONE with the strip
         // itself (2026-09-09, the HUD-column pass). A transformation IS a
         // status on the character, so it reads out through the badge row on

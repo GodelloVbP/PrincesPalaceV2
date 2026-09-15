@@ -53,13 +53,43 @@ namespace PrincesPalace.Domain.Combat.Session
             // afford, and must spend nothing on the way to being refused.
             //
             // ONLY SingleEnemy. Self, Party and AllEnemies have no
-            // single-opponent question to ask (see CanReach's own header),
+            // single-opponent question to ask (see CanReachEnemy's own header),
             // and asking one about them would refuse every group cast the
             // moment a taunt was up.
-            if (skill.Targeting == SkillTargeting.SingleEnemy && !CanReach(actor, skill.Reach, target))
+            if (skill.Targeting == SkillTargeting.SingleEnemy && !CanReachEnemy(actor, skill.Reach, target))
             {
                 AppendMessage($"{(target == null ? "That target" : target.Name)} is out of reach.");
                 return false;
+            }
+
+            // THE ALLY-SIDE SIBLING, in the same position and for the same
+            // reason: a cast aimed at nobody, at a corpse, at the wrong side
+            // or at a squadmate this effect will not accept must refuse
+            // before a single point of mana, wool or cooldown is spent.
+            //
+            // A NULL TARGET IS A REFUSAL, NOT AN AUTO-PICK. Every ally-facing
+            // skill in the game used to choose its own recipient (the first
+            // living ally, the emptiest mana pool) and the owner's call on
+            // AUDIT #147 was that deciding for the player is "just stupid" --
+            // so a caller that hands this nothing has failed to ask, and gets
+            // told, exactly the way a SingleEnemy cast with no mark does.
+            //
+            // AN EMPTY CANDIDATE LIST IS SOMEBODY ELSE'S REFUSAL. "There is
+            // nobody to give this to" is a statement about the board, the
+            // same shape as Shatter with no wards out, and CanResolveSkill
+            // below is where those live -- underneath the cooldown check, so
+            // a gift that could not have been cast this turn anyway says so
+            // rather than complaining about the squad.
+            if (skill.Targeting == SkillTargeting.SingleAlly)
+            {
+                var candidates = EligibleAllies(actor, skill);
+                if (candidates.Count > 0 && !candidates.Contains(target))
+                {
+                    AppendMessage(target == null
+                        ? $"{skill.DisplayName} needs an ally to aim at."
+                        : $"{target.Name} cannot take {skill.DisplayName}.");
+                    return false;
+                }
             }
 
             // THE ELEMENT GATE SITS BETWEEN THE REACH CHECK AND THE COST CHECK,
@@ -348,12 +378,18 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.Ward:
                 {
-                    BeginBeat(actor, actor, isCast: true);
+                    // THE BEAT LANDS ON WHOEVER WAS PICKED, so the shield
+                    // pops over the bar that actually gained it. It was
+                    // always the caster's own beat because the ward was
+                    // always the caster's own ward.
+                    var wearer = target ?? actor;
+                    BeginBeat(actor, wearer, isCast: true);
                     RecordSpellPresentation(skill);
-                    int warded = ApplyWard(actor);
-                    AppendMessage(warded <= 1
-                        ? $"{actor.Name} pulls the fleece close."
-                        : $"{actor.Name} throws the fleece wide - {warded} of them are warded.");
+                    int warded = ApplyWard(actor, wearer);
+                    AppendMessage(
+                        warded > 1 ? $"{actor.Name} throws the fleece wide - {warded} of them are warded."
+                        : ReferenceEquals(wearer, actor) ? $"{actor.Name} pulls the fleece close."
+                        : $"{actor.Name} wraps {wearer.Name} in the fleece.");
                     break;
                 }
 
@@ -382,9 +418,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.GiftFury:
                 case SkillEffect.GiftHaste:
                 {
-                    BeginBeat(actor, actor, isCast: true);
+                    // On the RECIPIENT, for the same reason the ward above
+                    // is: the mana, the Empowered and the shove up the queue
+                    // all happen to them, so that is the bar the number
+                    // belongs over.
+                    BeginBeat(actor, target ?? actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    ResolveGift(actor, skill);
+                    ResolveGift(actor, skill, target);
                     break;
                 }
 

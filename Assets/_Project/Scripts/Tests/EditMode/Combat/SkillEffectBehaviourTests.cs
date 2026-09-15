@@ -213,14 +213,16 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual("Black Ram Mode", hero.Transformation.DisplayName);
             }),
 
-            new Row(SkillEffect.Ward, "the caster carries a ward she cast herself", () =>
+            new Row(SkillEffect.Ward, "the caster carries a ward he cast on himself", () =>
             {
                 var lamb = Hero("Lamb");
                 Talents(lamb, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
 
-                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+                // AIMED, since AUDIT #147: a ward is SingleAlly and his own
+                // plate is one of the squadmates it may be aimed at.
+                Assert.IsTrue(session.CastSkill(0, lamb), "the cast was refused");
                 Assert.IsTrue(StatusEffects.IsWarded(lamb));
                 Assert.AreSame(lamb, StatusEffects.WardedBy(lamb));
             }),
@@ -242,7 +244,7 @@ namespace PrincesPalace.Domain.Tests
                     Skill(SkillEffect.Ward, "Fleece Ward"),
                     Skill(SkillEffect.Shatter, "Shatter")));
 
-                Assert.IsTrue(session.CastSkill(0, null), "fixture: the ward did not go up");
+                Assert.IsTrue(session.CastSkill(0, lamb), "fixture: the ward did not go up");
                 Assert.IsTrue(StatusEffects.IsWarded(lamb), "fixture: the ward did not go up");
 
                 Assert.IsTrue(session.CastSkill(1, null), "the cast was refused");
@@ -272,7 +274,7 @@ namespace PrincesPalace.Domain.Tests
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.GiftMana, "Gift: Mana")));
 
-                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+                Assert.IsTrue(session.CastSkill(0, ally), "the cast was refused");
                 Assert.Greater(ally.CurrentMana, 0);
             }),
 
@@ -284,7 +286,7 @@ namespace PrincesPalace.Domain.Tests
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.GiftFury, "Gift: Fury")));
 
-                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+                Assert.IsTrue(session.CastSkill(0, ally), "the cast was refused");
                 Assert.IsTrue(ally.Statuses.Any(s => s.Type == StatusEffectType.Empowered));
             }),
 
@@ -306,7 +308,7 @@ namespace PrincesPalace.Domain.Tests
                 var encounter = new CombatEncounter(new[] { lamb, ally }, new[] { foe });
                 var session = Session(encounter, Kit(Skill(SkillEffect.GiftHaste, "Gift: Haste")));
 
-                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+                Assert.IsTrue(session.CastSkill(0, ally), "the cast was refused");
                 Assert.AreSame(ally, encounter.Current,
                     "the ally was not moved to the front -- the turn went to " + encounter.Current.Name);
             }),

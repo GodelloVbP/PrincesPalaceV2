@@ -115,7 +115,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // "capped this turn does not mean gone" treatment the summon cap
         // already gets. ONLY SingleEnemy: every other targeting category
         // keeps its existing rule, because none of them has a reach question
-        // to ask (see FightSession.CanReach's own header). And because
+        // to ask (see FightSession.CanReachEnemy's own header). And because
         // EligibleTargets applies the Provoke override, a taunt from the back
         // rank keeps a front-only ability perfectly legal -- forced onto the
         // provoker, wherever they are standing.
@@ -1019,7 +1019,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private bool CanReachWithAbility(CombatantState enemy, EnemyAbility? ability, CombatantState target)
         {
             var reach = SingleOpponentReachOf(ability);
-            return !reach.HasValue || CanReach(enemy, reach.Value, target);
+            return !reach.HasValue || CanReachEnemy(enemy, reach.Value, target);
         }
 
         // The re-pick: first in LIST ORDER, no draw. See ResolveEnemyAction's
@@ -1031,7 +1031,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var candidate in _encounter.LivingPlayerParty)
             {
-                if (CanReach(enemy, reach.Value, candidate)) return candidate;
+                if (CanReachEnemy(enemy, reach.Value, candidate)) return candidate;
             }
 
             return null;

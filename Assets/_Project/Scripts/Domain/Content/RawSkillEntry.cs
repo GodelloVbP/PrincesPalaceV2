@@ -282,7 +282,7 @@ namespace PrincesPalace.Domain.Content
 
         // DOES THE FRONT-RANK RULE APPLY TO THIS SKILL? False, the default,
         // is every skill authored before this existed and every ranged or
-        // magical one authored after — FightSession.CanReach only ever gets
+        // magical one authored after — FightSession.CanReachEnemy only ever gets
         // asked with Reach.Melee about a skill that says true here. A hand
         // striking through a monster's own bodyguard is a different claim
         // than a bolt of lightning doing it, and only the first one needed

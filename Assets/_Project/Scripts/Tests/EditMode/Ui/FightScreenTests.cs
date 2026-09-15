@@ -101,7 +101,7 @@ namespace PrincesPalace.Domain.Tests
             AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows);
             AssertSameLength("party stage", s.PartySlots, s.PartySprites, s.PartyHitFlashes,
-                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
+                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows, s.PartyHitAreas);
 
             // TEN PARALLEL LISTS OVER ONE COLUMN, and RefreshPcPlate indexes
             // every one of them off the same loop counter -- exactly the
@@ -109,7 +109,7 @@ namespace PrincesPalace.Domain.Tests
             // agree on, where the party plate and the roster cards used to
             // be two families that could drift apart independently.
             AssertSameLength("pc plates", s.PcPlates, s.PcPlateArts, s.PcPlateHighlights,
-                s.PcNames, s.PcSignatures, s.PcHpValues, s.PcHpFills,
+                s.PcPlateReticles, s.PcNames, s.PcSignatures, s.PcHpValues, s.PcHpFills,
                 s.PcMpValues, s.PcMpFills, s.PcMpShades);
 
             Assert.AreEqual(FightScreen.PcPlateCount, s.PcPlates.Count,
@@ -168,8 +168,10 @@ namespace PrincesPalace.Domain.Tests
                 { "SubmenuRows", s.SubmenuRows },
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
+                { "PartyHitAreas", s.PartyHitAreas },
                 { "PcPlates", s.PcPlates }, { "PcPlateArts", s.PcPlateArts },
                 { "PcPlateHighlights", s.PcPlateHighlights },
+                { "PcPlateReticles", s.PcPlateReticles },
                 { "PcNames", s.PcNames }, { "PcSignatures", s.PcSignatures },
                 { "PcHpValues", s.PcHpValues }, { "PcHpFills", s.PcHpFills },
                 { "PcMpValues", s.PcMpValues }, { "PcMpFills", s.PcMpFills },
@@ -288,6 +290,53 @@ namespace PrincesPalace.Domain.Tests
                 "the stack's top edge moved -- re-derive it and re-pin the literal, deliberately");
         }
 
+        // ---- the ally picker's own surfaces (AUDIT #147) ----------------------
+
+        [Test]
+        public void EveryPcPlateIsAButtonWithAMarkerInTheMargin()
+        {
+            // The two halves the enemy plates have carried all along, stated
+            // as a pin because neither is visible in a capture of an idle
+            // fight: the card takes a click, and the marker sits OUTSIDE the
+            // card so it reads as a target rather than as a badge.
+            var s = Screen();
+
+            for (int i = 0; i < FightScreen.PcPlateCount; i++)
+            {
+                var plate = Walk(s.Root).First(n => n.Name == $"PcPlate{i}");
+                Assert.AreEqual(UiNodeKind.Button, plate.Kind,
+                    $"PcPlate{i} has to take the click that confirms a single-ally cast");
+
+                var card = RectOf($"PcPlate{i}");
+                var marker = RectOf($"PcPlate{i}Reticle");
+                Assert.Less(marker.Centre.X + marker.Width * 0.5f, card.Centre.X - card.Width * 0.5f + 0.01f,
+                    "the marker belongs in the margin beside the plate, not on it");
+            }
+        }
+
+        [Test]
+        public void BothRacksGiveEveryFigureAClickTargetOfItsOwn()
+        {
+            // Clicking the character you mean to help is what a player tries
+            // first, exactly as clicking the monster is -- and neither may be
+            // the sprite, which raycasts against its RECT and would stand over
+            // whatever is behind it (see BuildStage's own header).
+            var s = Screen();
+
+            Assert.AreEqual(s.EnemySlots.Count, s.EnemyHitAreas.Count);
+            Assert.AreEqual(s.PartySlots.Count, s.PartyHitAreas.Count);
+
+            for (int slot = 0; slot < s.PartyHitAreas.Count; slot++)
+            {
+                var area = s.PartyHitAreas[slot].Node;
+                Assert.AreEqual($"PartyHitArea{slot}", area.Name);
+                Assert.AreEqual(UiNodeKind.Button, area.Kind);
+                Assert.IsTrue(area.StartInactive,
+                    "a live rectangle over the battlefield eats clicks meant for whatever is behind it");
+                Assert.IsTrue(area.Chromeless, "the figure is the button; this only hears the click");
+            }
+        }
+
         [Test]
         public void EveryPcPlateCarriesItsOwnArtAndItsOwnActingHighlight()
         {
@@ -299,6 +348,7 @@ namespace PrincesPalace.Domain.Tests
                 var names = Walk(plate).Select(n => n.Name).ToList();
 
                 CollectionAssert.Contains(names, $"PcPlate{i}Art");
+                CollectionAssert.Contains(names, $"PcPlate{i}Reticle");
                 CollectionAssert.Contains(names, $"PcPlate{i}Highlight");
                 CollectionAssert.Contains(names, $"PcPlate{i}HpBar");
                 CollectionAssert.Contains(names, $"PcPlate{i}MpBar");

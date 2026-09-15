@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Tests
     // Key, Dancer's Anklet and Phoenix Egg. Three don't, and are tested
     // here anyway because "needs a live fight to prove" is the organizing
     // question, not which file the mechanic's code happens to live in:
-    // Monkey King's Scepter is one line in FightSession.cs's CanReach,
+    // Monkey King's Scepter is one line in FightSession.cs's CanReachEnemy,
     // Berserker's Vest lives in FightSession.Ledger.cs, and Jo-Sun's Book
     // of Anatomy / Vampire Dentures are pure numeric RelicModifier stats
     // with no relic hook at all. Pointy Nail on the End of a Stick has no
@@ -386,7 +386,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
 
-            Assert.IsTrue(session.CanReach(hero, Reach.Melee, foe2),
+            Assert.IsTrue(session.CanReachEnemy(hero, Reach.Melee, foe2),
                 "foe2 stands behind the living front rank, foe1");
         }
 
@@ -395,7 +395,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.DualWield); // a relic irrelevant to reach
 
-            Assert.IsFalse(session.CanReach(hero, Reach.Melee, foe2),
+            Assert.IsFalse(session.CanReachEnemy(hero, Reach.Melee, foe2),
                 "foe1 is alive and blocks foe2 without the scepter");
         }
 
@@ -409,8 +409,8 @@ namespace PrincesPalace.Domain.Tests
             // bodyguard, not about ignoring where a spell may be aimed.
             var (session, hero, _, foe2) = FightWithSpeed(RelicEffect.MonkeyKingsScepter);
 
-            Assert.IsTrue(session.CanReach(hero, Reach.Melee, foe2));
-            Assert.IsFalse(session.CanReach(hero, Reach.FromContent(new[] { 1 }), foe2),
+            Assert.IsTrue(session.CanReachEnemy(hero, Reach.Melee, foe2));
+            Assert.IsFalse(session.CanReachEnemy(hero, Reach.FromContent(new[] { 1 }), foe2),
                 "an authored front-only reach is not the front-rank RULE, and nothing lifts it");
         }
 

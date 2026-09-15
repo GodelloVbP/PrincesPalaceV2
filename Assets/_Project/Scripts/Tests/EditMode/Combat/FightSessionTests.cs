@@ -315,8 +315,8 @@ namespace PrincesPalace.Domain.Tests
             var back = Fighter("Back", false);
             var session = Session(new CombatEncounter(new[] { hero }, new[] { front, back }));
 
-            Assert.IsTrue(session.CanReach(hero, Reach.Melee, front));
-            Assert.IsFalse(session.CanReach(hero, Reach.Melee, back));
+            Assert.IsTrue(session.CanReachEnemy(hero, Reach.Melee, front));
+            Assert.IsFalse(session.CanReachEnemy(hero, Reach.Melee, back));
         }
 
         [Test]

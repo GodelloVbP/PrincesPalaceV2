@@ -105,7 +105,7 @@ namespace PrincesPalace.Domain.Bot
         }
 
         // Every legal command for `actor` right now, read entirely off the
-        // session's own queries -- EligibleTargets/CanReach for who can be
+        // session's own queries -- EligibleTargets/CanReachEnemy for who can be
         // hit, SkillOptionsFor filtered to Ready for what can be cast,
         // CanMove for where the actor can step, and the satchel handed in for
         // what can be drunk.
@@ -130,7 +130,7 @@ namespace PrincesPalace.Domain.Bot
             // carries its own Reach and the session answers which targets it
             // can land on -- a plain swing with Reach.Melee, an authored skill
             // with whatever it declared. Getting this wrong would offer Attack
-            // on a target CanReach then refuses, or deny a ranged skill a
+            // on a target CanReachEnemy then refuses, or deny a ranged skill a
             // target the real menu allows. Same primitive
             // FightController.Input's own click handler gates on.
             foreach (var target in session.EligibleTargets(actor, Reach.Melee))
@@ -143,11 +143,12 @@ namespace PrincesPalace.Domain.Bot
                 if (!option.Ready) continue;
 
                 // ONE ACTION PER ENEMY ONLY FOR SkillTargeting.SingleEnemy --
-                // the only targeting the resolve path actually reads `target`
-                // for (FightSession.Skills.ResolveDamageSingle/Provoke/...).
-                // Self (HealSelf/Ward/Transform/Summon), AllEnemies
+                // one of the two targetings the resolve path actually reads
+                // `target` for (FightSession.Skills.ResolveDamageSingle/
+                // Provoke/...; SingleAlly is the other, handled below).
+                // Self (HealSelf/Transform/Summon), AllEnemies
                 // (DamageAll/Shatter) and Party (HealParty/BuffParty/
-                // RestorePartyMana/GiftHaste) all resolve off the actor and
+                // RestorePartyMana) all resolve off the actor and
                 // ignore the target parameter outright (ResolveCharacterSkillInner
                 // passes `actor` to BeginBeat/SkillResolution.Amount for every
                 // one of them) -- looping this over every enemy used to hand
@@ -167,6 +168,33 @@ namespace PrincesPalace.Domain.Bot
                 // would burn a turn on a refusal that spends nothing and never
                 // advances the fight.
                 var elements = ElementsOf(option.Skill);
+
+                // ONE ACTION PER ELIGIBLE ALLY for SkillTargeting.SingleAlly,
+                // exactly as SingleEnemy gets one per eligible enemy -- these
+                // ARE different commands now, not one command wearing three
+                // names: CastSkill reads `target` for a ward and for all
+                // three gifts, so warding Bjorn and warding Odette are two
+                // outcomes a policy can weigh. EligibleAllies is the same
+                // list the party plates light up, so the bot's menu and the
+                // player's cannot offer different squads.
+                //
+                // WHICH of them a thinking policy should choose is NOT
+                // decided here: LegalActions states what is legal, and
+                // AllyTargetSelection states what is preferred. That split is
+                // what keeps RandomLegal genuinely uniform over the real menu
+                // rather than over a menu somebody already narrowed for it.
+                if (option.Skill.Targeting == SkillTargeting.SingleAlly)
+                {
+                    foreach (var ally in session.EligibleAllies(actor, option.Skill))
+                    {
+                        foreach (var element in elements)
+                        {
+                            actions.Add(new FightAction(FightActionKind.Skill, ally, option.Index, element: element));
+                        }
+                    }
+
+                    continue;
+                }
 
                 if (option.Skill.Targeting != SkillTargeting.SingleEnemy)
                 {

@@ -35,6 +35,15 @@ namespace PrincesPalace.Domain.Bot
 
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
+            // ONE ALLY PER ALLY-FACING SKILL, before anything below ranks
+            // anything. LegalActions offers a ward or a gift once per eligible
+            // squadmate -- the player's own menu -- and this archetype has no
+            // opinion about which squadmate; AllyTargetSelection carries the
+            // rules that used to live in the engine. Narrowing here rather
+            // than teaching every score to break the tie keeps that judgement
+            // in one place.
+            legal = AllyTargetSelection.Narrow(session, actor, legal);
+
             if (actor != null && actor.MaxHealth > 0 &&
                 actor.CurrentHealth <= actor.MaxHealth * HealBelowHealthFraction)
             {

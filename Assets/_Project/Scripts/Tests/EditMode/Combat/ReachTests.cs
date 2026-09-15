@@ -9,7 +9,7 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // WHERE AN ACTION CAN LAND: the Reach value type, FightSession.CanReach /
+    // WHERE AN ACTION CAN LAND: the Reach value type, FightSession.CanReachEnemy /
     // EligibleTargets, and the two commands that enforce them.
     //
     // Sessions are built inline rather than from a shared fixture (the
@@ -178,7 +178,7 @@ namespace PrincesPalace.Domain.Tests
                 session.EligibleTargets(foe, Reach.Melee).ToList());
         }
 
-        // ---- CanReach's own evaluation order --------------------------------
+        // ---- CanReachEnemy's own evaluation order --------------------------------
 
         [Test]
         public void AnAllyIsNeverReachableBySingleOpponentReach()
@@ -187,9 +187,9 @@ namespace PrincesPalace.Domain.Tests
             var ally = Hero("Ally", speed: 1);
             var session = Fight(new[] { hero, ally }, new[] { Foe("Foe") });
 
-            Assert.IsFalse(session.CanReach(hero, Reach.Any, ally),
+            Assert.IsFalse(session.CanReachEnemy(hero, Reach.Any, ally),
                 "a single-opponent question asked about an ally is a caller bug, and false surfaces it");
-            Assert.IsFalse(session.CanReach(hero, Reach.Any, hero));
+            Assert.IsFalse(session.CanReachEnemy(hero, Reach.Any, hero));
         }
 
         [Test]
@@ -205,10 +205,10 @@ namespace PrincesPalace.Domain.Tests
 
             StatusEffects.Apply(foe.Statuses, StatusEffectType.Provoked, 0, 3, provoker);
 
-            Assert.IsTrue(session.CanReach(foe, Reach.Melee, provoker),
+            Assert.IsTrue(session.CanReachEnemy(foe, Reach.Melee, provoker),
                 "the provoker is reachable from anywhere");
-            Assert.IsTrue(session.CanReach(foe, Reach.Ranks(1, 2), provoker));
-            Assert.IsFalse(session.CanReach(foe, Reach.Melee, bystander),
+            Assert.IsTrue(session.CanReachEnemy(foe, Reach.Ranks(1, 2), provoker));
+            Assert.IsFalse(session.CanReachEnemy(foe, Reach.Melee, bystander),
                 "and everyone else stops being reachable, front rank included");
             CollectionAssert.AreEqual(new[] { provoker },
                 session.EligibleTargets(foe, Reach.Melee).ToList());
@@ -269,7 +269,7 @@ namespace PrincesPalace.Domain.Tests
             var session = Fight(new[] { hero }, new[] { only }, new List<ResolvedSkill> { skill });
 
             CollectionAssert.IsEmpty(session.EligibleTargets(hero, skill.Reach).ToList());
-            Assert.IsFalse(session.CanReach(hero, skill.Reach, only));
+            Assert.IsFalse(session.CanReachEnemy(hero, skill.Reach, only));
             Assert.IsFalse(session.CastSkill(0, only), "and the command refuses the click that would have cast it");
         }
 

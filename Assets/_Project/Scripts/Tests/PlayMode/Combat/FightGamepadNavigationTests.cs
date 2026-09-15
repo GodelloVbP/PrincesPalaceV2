@@ -106,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             // Only the front enemy is reachable by a melee ATTACK
-            // (FightSession.CanReach) -- cycling past it and
+            // (FightSession.CanReachEnemy) -- cycling past it and
             // confirming there is a SEPARATE, already-covered claim
             // (Phase 1's OnEnemyPressed reach gate). This test's own claim
             // is narrower and does not need reach at all: that MoveFocus

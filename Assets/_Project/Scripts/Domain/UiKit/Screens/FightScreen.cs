@@ -68,6 +68,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // One per enemy slot: a click target over the figure itself, live only
         // while the player is choosing a mark. See BuildStage.
         public List<NodeRef> EnemyHitAreas = new List<NodeRef>();
+
+        // The same thing over the PARTY figures, live only while an ALLY is
+        // being picked (AUDIT #147). Same node, same rule, built by the same
+        // loop -- clicking the character you mean to help is what a player
+        // tries first, exactly as clicking the monster is.
+        //
+        // INDEXED BY STAGE SLOT, which on this side is NOT the party list's
+        // order: a slot belongs to one character for the whole fight while
+        // the party list reorders on every Move (see
+        // FightController.StageVisuals.DrawSide -- "the two halves are
+        // indexed differently and that is the point"). The controller
+        // resolves a slot to its occupant rather than indexing the party by
+        // it; the enemy side gets away with treating the two as one number
+        // only because nothing on that side ever moves.
+        public List<NodeRef> PartyHitAreas = new List<NodeRef>();
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
@@ -149,7 +164,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // were two anatomies for one idea -- see BuildPcPlates' own header --
         // and the acting character is a highlight on their own plate now
         // rather than a promotion to a taller card.
+        // BUTTONS, not panels, since AUDIT #147: a ward, a gift and every
+        // single-ally skill authored after them are confirmed by clicking the
+        // squadmate, on the plate that already IS that squadmate. Nothing
+        // about the card's drawing changed -- the click target is the plate
+        // node itself, NoChrome so it paints none of its own -- which is the
+        // same shape the enemy plates have carried all along.
         public List<NodeRef> PcPlates = new List<NodeRef>();
+
+        // The ally-pick marker, one per plate: the enemy plates' own 12px
+        // rotated square, in the margin on the party column's outer edge.
+        // Shown only while an ally is being picked, and greyed on a plate
+        // this cast will not accept -- the mirror of EnemyPlateReticles.
+        public List<NodeRef> PcPlateReticles = new List<NodeRef>();
 
         // The leather itself, one Image per plate, swapped at runtime from
         // the occupant's characters.json plateArt. THE identity surface on
@@ -307,7 +334,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // vanishing point at centre.
             var partyStage = s.BuildStage("Party", mirrored: true,
                 FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes,
-                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows);
+                s.PartyNameplates, s.PartyFootShadows, s.PartyFootGlows,
+                intentIcons: null, hitAreas: s.PartyHitAreas);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows, s.EnemyIntentIcons, s.EnemyHitAreas);
@@ -592,8 +620,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // Sized to the figure's own footprint rather than the slot,
                 // which the runtime resizes to the real sprite: a wide box on a
                 // narrow monster is the same blocker in a smaller costume.
+                // BOTH RACKS NOW (AUDIT #147). It used to be `!mirrored`, i.e.
+                // enemies only, because allies were never targets; the guard
+                // is the CALLER's list now, so a stage side gets figure
+                // targets exactly when it was handed somewhere to record them.
                 UiNode hitArea = null;
-                if (!mirrored)
+                if (hitAreas != null)
                 {
                     // NoChrome, NOT AsDecor and not merely a null SpriteKey.
                     // The monster is the button and this is only the area that
@@ -603,7 +635,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     // put three gold slabs over the monsters the first time
                     // this ran. NoChrome keeps the Image, keeps the raycast,
                     // and paints nothing; see UiEmitter.EmitButton.
-                    hitArea = Ui.Button($"EnemyHitArea{slot}", UiString.Runtime,
+                    hitArea = Ui.Button($"{prefix}HitArea{slot}", UiString.Runtime,
                             Place.Frac(new UiVec(0.18f, 0f), new UiVec(0.82f, 0.92f)), UiSize.Fill, 1)
                         .NoChrome()
                         .Inactive();
@@ -1644,7 +1676,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(1f, PcBarH), Place.At(PcBarSplitX, PcBarRowY))
                     .AsDecor();
 
+                // THE ALLY RETICLE, the enemy plate's own marker mirrored to
+                // this column's OUTER edge. The enemy plates put it at
+                // -PlateW/2 - 9 because their column runs down the right of
+                // the screen and the margin is on their left; this column
+                // runs down the left, so its free margin is on the left too
+                // and the marker sits at the same offset for the same reason
+                // rather than at the mirrored one -- there is 40px of canvas
+                // outside the plate here and nothing else in it.
+                var reticle = Ui.Solid($"PcPlate{i}Reticle", FightHudPalette.TargetAmber,
+                        new UiVec(12f, 12f), Place.At(-w * 0.5f - 9f, 0f))
+                    .Rotated(45f)
+                    .Inactive()
+                    .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
+
                 PcPlateArts.Add(art);
+                PcPlateReticles.Add(reticle);
                 PcPlateHighlights.Add(highlight);
                 PcNames.Add(name);
                 PcSignatures.Add(signature);
@@ -1657,7 +1704,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 var children = new List<UiNode>
                 {
-                    highlight, art, name, signature, hp.Track, mp.Track, split,
+                    highlight, art, name, signature, hp.Track, mp.Track, split, reticle,
                 };
 
                 // RIGHT-ALIGNED, ending where the head zone begins. Laid out
@@ -1687,9 +1734,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     children.Add(secondLife);
                 }
 
-                var plate = Ui.Panel($"PcPlate{i}",
-                    Place.At(PcPlateCentreX, PcPlateFirstY + i * PcPlatePitchY),
-                    UiSize.Fixed(new UiVec(w, h)), children);
+                // A BUTTON WHERE THIS WAS A PANEL, and nothing else about the
+                // card moved: NoChrome so the button's own Image paints
+                // nothing over the leather, the same 1.03 hover the enemy
+                // plates take (four rows of text under a 1.05 press pop
+                // swing sideways -- v1 made the same call at the same
+                // number), and the children in the same order they were in.
+                // Live only while an ally is being picked; RefreshPcPlates
+                // owns that, exactly as RefreshEnemyPlates owns the mirror.
+                var plate = Ui.Button($"PcPlate{i}", UiString.Runtime, new UiVec(w, h), 1,
+                        Place.At(PcPlateCentreX, PcPlateFirstY + i * PcPlatePitchY))
+                    .Hovers(1.03f)
+                    .NoChrome();
+                plate.Children.AddRange(children);
 
                 PcPlates.Add(plate);
                 return plate;

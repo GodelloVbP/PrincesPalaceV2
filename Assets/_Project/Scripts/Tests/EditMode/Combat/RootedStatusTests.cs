@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // PHASE D3, the item-modifier plan: Rooted. Builds on the existing
     // melee(plain-attack)/ranged(skill) distinction confirmed at
-    // FightSession.CanReach/FightController.Input -- a rooted ENEMY
+    // FightSession.CanReachEnemy/FightController.Input -- a rooted ENEMY
     // loses its plain-attack option from its own action draw
     // (FightSession.Enemies.EffectivePoolFor) and must act through a skill,
     // or forfeit the turn via the exact mechanism ResolveSkippedTurn already

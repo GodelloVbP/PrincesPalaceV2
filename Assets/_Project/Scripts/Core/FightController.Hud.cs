@@ -374,15 +374,18 @@ namespace PrincesPalace
             if (!targeting) return;
 
             string name = CurrentDetail().Name;
-            if (TargetingIsGroup()) targetPromptLabel.Set(UiStrings.TargetPromptGroup, name);
+            if (_menu.IsPickingAlly) targetPromptLabel.Set(UiStrings.TargetPromptAlly, name);
+            else if (TargetingIsGroup()) targetPromptLabel.Set(UiStrings.TargetPromptGroup, name);
             else targetPromptLabel.Set(UiStrings.TargetPrompt, name);
         }
 
         // Whether the skill resolving at Target depth hits every enemy at
-        // once, for the prompt's wording. Party never reaches Target depth
-        // at all (see OnRowPressed), so "not SingleEnemy" here can only mean
-        // AllEnemies -- and the basic spell, which carries no authored
-        // Targeting of its own, is always single-target.
+        // once, for the prompt's wording. Asked only once the ally pick has
+        // been ruled out above, and reads AllEnemies by name rather than
+        // "not SingleEnemy" -- which was the same thing while SingleEnemy and
+        // AllEnemies were the only two targetings that reached Target depth,
+        // and stopped being once SingleAlly did. The basic spell, which
+        // carries no authored Targeting of its own, is always single-target.
         private bool TargetingIsGroup()
         {
             if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
@@ -448,6 +451,14 @@ namespace PrincesPalace
             // question asked of the same click for every plate in the loop.
             var targetingReach = TargetingReach();
 
+            // THE ENEMY RACK IS LIVE ONLY WHILE ENEMIES ARE BEING PICKED
+            // (AUDIT #147). It used to be _menu.IsTargeting, which was the
+            // same thing while there was only one rack to point at; with an
+            // ally pick open, a live enemy plate is a button offering a cast
+            // that would be refused, which is exactly the state `blocked`
+            // exists to keep off the screen.
+            bool picking = _menu.IsPickingEnemy;
+
             // An elite room fields a squad drawn entirely from the elite pool,
             // so every living plate reads it; a boss room fields exactly the
             // one declared boss, so only the front slot does -- see
@@ -473,8 +484,8 @@ namespace PrincesPalace
                 // interactable -- the plate stops being a button rather than
                 // staying one that silently refuses, which is the visual half
                 // of the fix Phase 1 already made to the click itself.
-                bool blocked = present && _menu.IsTargeting && _session != null
-                    && !_session.CanReach(_session.Current, targetingReach, enemies[i]);
+                bool blocked = present && picking && _session != null
+                    && !_session.CanReachEnemy(_session.Current, targetingReach, enemies[i]);
 
                 bool dressed = present && (
                     _encounterClass == EncounterClass.Elite
@@ -495,7 +506,7 @@ namespace PrincesPalace
                         colour.a = blocked ? OutOfReachAlpha : 1f;
                         enemyPlateFrames[i].color = colour;
                     }
-                    enemyPlates[i].interactable = !blocked;
+                    enemyPlates[i].interactable = picking && !blocked;
 
                     if (Has(enemyPlateNames, i))
                     {
@@ -503,7 +514,7 @@ namespace PrincesPalace
                     }
                 }
 
-                enemyPlateReticles[i].SetShown(present && _menu.IsTargeting);
+                enemyPlateReticles[i].SetShown(present && picking);
                 if (Has(enemyPlateReticles, i) && present)
                 {
                     var reticleImage = enemyPlateReticles[i].GetComponent<Image>();
@@ -520,7 +531,7 @@ namespace PrincesPalace
                 // meant for whatever is behind it.
                 if (Has(enemyHitAreas, i))
                 {
-                    enemyHitAreas[i].gameObject.SetShown(present && _menu.IsTargeting);
+                    enemyHitAreas[i].gameObject.SetShown(present && picking);
                 }
 
                 if (!present) continue;
@@ -623,12 +634,44 @@ namespace PrincesPalace
                 _plateOccupants = new CombatantState[pcPlates.Length];
             }
 
+            // THE ALLY PICK, resolved ONCE for the whole column rather than
+            // once per plate -- the same "same question asked of the same
+            // click for every plate" reasoning RefreshEnemyPlates' own
+            // targetingReach carries.
+            //
+            // EligibleAllies, not "alive": a gift the caster cannot give
+            // himself must read as unavailable on his own plate, and that
+            // rule belongs to Domain (AllyTargeting) rather than to a second
+            // copy of it here. An empty list is the answer for every state
+            // that is not an open ally pick, which is what leaves the whole
+            // column inert the rest of the time.
+            bool picking = _menu.IsPickingAlly;
+            var eligible = picking
+                ? _session.EligibleAllies(_session.Current, SelectedSkill())
+                : EmptyAllies;
+
+            // EVERY FIGURE TARGET DOWN FIRST, then the loop below raises the
+            // ones this pick accepts. The loop walks PLATES and the hit areas
+            // are indexed by SLOT, so a slot whose occupant has fallen (or
+            // who is on no plate at all) is never visited -- left to the
+            // loop alone it would keep the last pick's rectangle live over
+            // the battlefield, which is the blocker bug FightScreen.
+            // BuildStage's own header records on the enemy side.
+            if (partyHitAreas != null)
+            {
+                foreach (var area in partyHitAreas)
+                {
+                    if (area != null) area.gameObject.SetShown(false);
+                }
+            }
+
             for (int i = 0; i < pcPlates.Length; i++)
             {
                 var member = party != null && i < party.Count ? party[i] : null;
 
                 _plateOccupants[i] = member;
-                RefreshPcPlate(i, member, member != null && member == acting);
+                RefreshPcPlate(i, member, member != null && member == acting,
+                    picking, member != null && eligible.Contains(member));
             }
 
             RefreshSecondLifeBadge();
@@ -648,9 +691,63 @@ namespace PrincesPalace
         // occupant at all (a party of two) is hidden outright -- there is no
         // meaningful "empty plate" drawing, since the plate art IS a
         // character.
-        private void RefreshPcPlate(int i, CombatantState member, bool isActing)
+        private static readonly CombatantState[] EmptyAllies = new CombatantState[0];
+
+        private void RefreshPcPlate(int i, CombatantState member, bool isActing,
+            bool picking, bool pickable)
         {
             pcPlates[i].SetShown(member != null);
+
+            // ---- the ally-pick states, mirroring RefreshEnemyPlates --------
+            //
+            // INTERACTABLE ONLY WHILE A PICK IS OPEN, which is stricter than
+            // the enemy rack was before this pass and is now the rule on both
+            // (see `picking` there). A plate that takes clicks outside a pick
+            // is a button whose press does nothing.
+            //
+            // BLOCKED: on screen and in the pick, but not a candidate for
+            // THIS cast -- a downed squadmate, or the caster's own plate
+            // under a gift. Dimmed, reticle greyed and not interactable, the
+            // same three things an out-of-reach enemy plate gets, so the
+            // player learns one visual language rather than two.
+            bool blocked = picking && !pickable;
+            pcPlates[i].interactable = picking && pickable;
+
+            if (Has(pcPlateReticles, i))
+            {
+                pcPlateReticles[i].SetShown(member != null && picking);
+
+                var reticleImage = pcPlateReticles[i].GetComponent<Image>();
+                if (reticleImage != null)
+                {
+                    var colour = reticleImage.color;
+                    colour.a = blocked ? OutOfReachAlpha : 1f;
+                    reticleImage.color = colour;
+                }
+            }
+
+            // THE LEATHER IS WHAT DIMS, because the leather is the card: this
+            // column has no separate frame Image the way the enemy plates do
+            // (their own dim goes on enemyPlateFrames for exactly that
+            // reason). Alpha only, so a blocked plate is still readable --
+            // "dim, don't hide", the rule the unaffordable submenu rows and
+            // the out-of-reach enemy plates both already follow.
+            if (Has(pcPlateArts, i))
+            {
+                var art = pcPlateArts[i].color;
+                art.a = blocked ? OutOfReachAlpha : 1f;
+                pcPlateArts[i].color = art;
+            }
+
+            // THE FIGURE IS A TARGET ONLY WHILE ONE IS BEING CHOSEN -- and by
+            // STAGE SLOT, not by plate index. The two are the same number on
+            // the enemy side and are not here: a Move reorders the column
+            // without moving anybody's fight-long slot.
+            int slot = SlotIndexOf(member);
+            if (Has(partyHitAreas, slot))
+            {
+                partyHitAreas[slot].gameObject.SetShown(picking && pickable);
+            }
 
             // A MISSING MEMBER STILL GETS ITS BADGE ROW PAINTED, with an
             // empty list -- that is what deactivates all five rather than
@@ -2014,7 +2111,7 @@ namespace PrincesPalace
             // window.
             var previewed = upcoming;
             int pushSlots = SelectedSkillPushSlots();
-            if (pushSlots > 0 && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
+            if (pushSlots > 0 && _menu.IsPickingEnemy && _hoveredEnemyIndex >= 0)
             {
                 var enemies = Enemies;
                 if (_hoveredEnemyIndex < enemies.Count && enemies[_hoveredEnemyIndex].IsAlive)
