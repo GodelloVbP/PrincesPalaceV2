@@ -474,7 +474,19 @@ namespace PrincesPalace.Content
                                $"'{skill.Data.CharacterId}', so no character can ever be offered it. " +
                                "Set playerSelectable false, or give it a character owner.");
                 }
-                else if (!skill.Data.PlayerSelectable && ownedByCharacter)
+                // A PLACEHOLDER IS THE ONE LEGITIMATE CASE of a character's
+                // own skill that never reaches their strip, and it is that
+                // BY CONSTRUCTION: SkillEntryResolver FORCES PlayerSelectable
+                // false for one regardless of what the row says, because a
+                // stand-in with no effect authored would be a button that
+                // costs a turn and does nothing. Shawn's level-30 node names
+                // one (placeholder_shawn_capstone) so the shape of his track
+                // is real before the owner has designed its ability --
+                // collecting it hands over a skill that correctly does not
+                // appear. Refusing that here would mean the choice was
+                // between an undesigned button in the fight and no node on
+                // the rail.
+                else if (!skill.Data.PlayerSelectable && ownedByCharacter && !skill.Data.Placeholder)
                 {
                     errors.Add($"Skill '{skill.id}' belongs to character '{skill.Data.CharacterId}' but is " +
                                "not player-selectable, so it will never appear on their strip.");

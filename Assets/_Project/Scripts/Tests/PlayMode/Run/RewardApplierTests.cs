@@ -283,8 +283,9 @@ namespace PrincesPalace.PlayModeTests
 
             character.claimedTrackLevel = RewardTrack.MaxLevel;
 
-            Assert.AreEqual(before + 150, Content.ContentDatabase.EffectiveStats(character).maxHealth,
-                "a fully collected track's max health never reaches the stats the fight reads");
+            Assert.AreEqual(before + 120, Content.ContentDatabase.EffectiveStats(character).maxHealth,
+                "a fully collected track's max health never reaches the stats the fight reads -- 120 is " +
+                "Shawn's three authored MaxHealth nodes of 40 (progression v2 phase 4, levels 2/14/22)");
         }
 
         // The payout half of the same pair: a fight raises the LEVEL that owes

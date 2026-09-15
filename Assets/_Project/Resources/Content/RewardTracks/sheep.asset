@@ -14,8 +14,47 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RewardTrackDefinitionAsset
   data:
     CharacterId: sheep
-    Milestones:
-    - Level: 10
+    Levels:
+    - Level: 2
+      Reward: 2
+      Amount: 40
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 3
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: woolgathering
+      SkillDisplayName: Woolgathering
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 4
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 5
       Reward: 6
       Amount: 1
       AgainstType: 0
@@ -23,7 +62,38 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: Wool
-    - Level: 20
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 6
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 7
+      Reward: 9
+      Amount: 5
+      AgainstType: 3
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 8
       Reward: 3
       Amount: 0
       AgainstType: 0
@@ -31,23 +101,142 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 25
-      Reward: 5
-      Amount: 5
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: Wool
-    - Level: 30
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 9
       Reward: 1
-      Amount: 2
+      Amount: 4
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 40
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 10
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: battering_ram
+      SkillDisplayName: Battering Ram
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 11
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 12
+      Reward: 16
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: shear
+      SkillDisplayName: Shear
+      ResourceDisplayName: 
+      ResourceType: 1
+      HasResource: 1
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 13
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 14
+      Reward: 2
+      Amount: 40
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 15
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: tuck_in
+      SkillDisplayName: Tuck In
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 16
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 17
+      Reward: 9
+      Amount: 5
+      AgainstType: 3
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 18
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 19
       Reward: 7
       Amount: 2
       AgainstType: 0
@@ -55,31 +244,12 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: Wool
-    - Level: 45
-      Reward: 9
-      Amount: 10
-      AgainstType: 3
-      HasAgainst: 1
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 50
-      Reward: 6
-      Amount: 1
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: Wool
-    - Level: 60
-      Reward: 8
-      Amount: 0
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: Wool
-    - Level: 70
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 20
       Reward: 12
       Amount: 0
       AgainstType: 0
@@ -87,15 +257,64 @@ MonoBehaviour:
       SkillId: cinderfault
       SkillDisplayName: Cinderfault
       ResourceDisplayName: 
-    - Level: 80
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 21
       Reward: 1
-      Amount: 10
+      Amount: 4
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 90
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 22
+      Reward: 2
+      Amount: 40
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 23
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 24
+      Reward: 16
+      Amount: 2
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: battering_ram
+      SkillDisplayName: Battering Ram
+      ResourceDisplayName: 
+      ResourceType: 1
+      HasResource: 1
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 25
       Reward: 4
       Amount: 1
       AgainstType: 0
@@ -103,37 +322,204 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 100
-      Reward: 5
-      Amount: 10
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 26
+      Reward: 20
+      Amount: 1
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: tuck_in
+      SkillDisplayName: Tuck In
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 27
+      Reward: 1
+      Amount: 4
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
-      ResourceDisplayName: Wool
-    Filler:
-    - Reward: 1
-      Amount: 1
-      AgainstType: 0
-      HasAgainst: 0
-      Count: 40
       ResourceDisplayName: 
-    - Reward: 2
-      Amount: 10
-      AgainstType: 0
-      HasAgainst: 0
-      Count: 15
-      ResourceDisplayName: 
-    - Reward: 5
-      Amount: 1
-      AgainstType: 0
-      HasAgainst: 0
-      Count: 12
-      ResourceDisplayName: Wool
-    - Reward: 9
-      Amount: 1
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 28
+      Reward: 9
+      Amount: 5
       AgainstType: 3
       HasAgainst: 1
-      Count: 20
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 29
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 30
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: placeholder_shawn_capstone
+      SkillDisplayName: Shawn's Fourth Ability
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 31
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Contractor
+    - Level: 32
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 1
+      HasIdentityKind: 1
+      IdentityValue: silver
+    - Level: 33
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Reaver
+    - Level: 34
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 2
+      HasIdentityKind: 1
+      IdentityValue: 
+    - Level: 35
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 3
+      HasIdentityKind: 1
+      IdentityValue: silver
+    - Level: 36
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Veteran
+    - Level: 37
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 4
+      HasIdentityKind: 1
+      IdentityValue: 
+    - Level: 38
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 1
+      HasIdentityKind: 1
+      IdentityValue: gold
+    - Level: 39
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Legend
+    - Level: 40
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 5
+      HasIdentityKind: 1
+      IdentityValue: 
     SortOrder: 0

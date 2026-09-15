@@ -1016,12 +1016,12 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.SignatureAbsorbPerPoint: return Screens.RewardTrackScreen.SignatureAbsorbPerPointArtKey;
                 case TrackReward.Identity: return Screens.RewardTrackScreen.IdentityArtKey;
 
-                // PHASE 4's two. Both share a key with the kind they are a
-                // variant of rather than naming new art: a per-point skill
-                // delta is still a skill delta, and an all-spell percentage
-                // is still an elemental percentage.
-                case TrackReward.SkillPowerDelta: return Screens.RewardTrackScreen.SkillFlatDeltaArtKey;
-                case TrackReward.SpellDamagePercent: return Screens.RewardTrackScreen.ElementalArtKey;
+                // PHASE 4's two. A distinct key each, not a share with the
+                // kind they are a variant of -- see RewardTrackScreen's own
+                // block for why every kind needs its own sprite and where
+                // these seven came from.
+                case TrackReward.SkillPowerDelta: return Screens.RewardTrackScreen.SkillPowerDeltaArtKey;
+                case TrackReward.SpellDamagePercent: return Screens.RewardTrackScreen.SpellDamagePercentArtKey;
 
                 default: return null;
             }

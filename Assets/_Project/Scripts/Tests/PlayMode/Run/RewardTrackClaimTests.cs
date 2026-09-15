@@ -257,8 +257,8 @@ namespace PrincesPalace.PlayModeTests
 
             float before = content.anchoredPosition.x;
 
-            var node = Find("TrackDot90");
-            Assert.IsNotNull(node, "the rail has no node for level 90");
+            var node = Find("TrackDot38");
+            Assert.IsNotNull(node, "the rail has no node for level 38");
             node.onClick.Invoke();
 
             // A FIXED WAIT STILL, not a poll -- no exposed "still animating"
@@ -296,54 +296,72 @@ namespace PrincesPalace.PlayModeTests
         private static Character Roster(string definitionId) =>
             SaveSlotManager.CurrentSave.roster.First(c => c.definitionId == definitionId);
 
-        // 10 base capacity (characters.json), plus the three filler
-        // "+1 WOOL CAPACITY" nodes at levels 6, 14 and 21, plus the level-25
-        // milestone's +5. The uncollected reading is the same minus that
-        // milestone.
+        // WOOL PER TURN, NOT WOOL CAPACITY, since progression v2 phase 4.
+        // Shawn's capacity bumps are gone from the design entirely -- §4's
+        // own note, "Wool capacity bumps are gone: income never reaches the
+        // cap" -- so the signature reward his track actually pays is the
+        // level-5 income step and the level-19 when-hurt one. Same seam,
+        // same question: does a collected signature node reach the pool the
+        // fight builds.
+        //
+        // 1 per turn is authored on the sheep row (characters.json); the
+        // level-5 node adds 1, which is §4's "Wool per turn 1 to 2".
         [Test]
-        public void AWoolCapacityNodeCollectedRaisesTheFightsCapacityAndAnUncollectedOneDoesNot()
+        public void AWoolIncomeNodeCollectedRaisesTheFightsPoolAndAnUncollectedOneDoesNot()
         {
             var shawn = Roster("sheep");
-            shawn.level = 26;
+            shawn.level = 20;
 
-            shawn.claimedTrackLevel = 25;
-            Assert.AreEqual(18, ContentDatabase.BuildSignatureResource(shawn).Max,
-                "the level-25 wool capacity milestone never reaches the fight's resource");
+            shawn.claimedTrackLevel = 5;
+            Assert.AreEqual(2, ContentDatabase.BuildSignatureResource(shawn).GainPerTurn,
+                "the level-5 wool income node never reaches the fight's resource");
 
-            shawn.claimedTrackLevel = 24;
-            Assert.AreEqual(13, ContentDatabase.BuildSignatureResource(shawn).Max,
-                "an uncollected capacity node was paid anyway");
+            shawn.claimedTrackLevel = 4;
+            Assert.AreEqual(1, ContentDatabase.BuildSignatureResource(shawn).GainPerTurn,
+                "an uncollected income node was paid anyway");
+
+            // The when-hurt node at 19, the other half of his signature
+            // income: 0 authored on the row, +2 collected.
+            shawn.claimedTrackLevel = 19;
+            Assert.AreEqual(2, ContentDatabase.BuildSignatureResource(shawn).GainOnDamageTaken,
+                "the level-19 wool-when-hurt node never reaches the fight's resource");
+
+            shawn.claimedTrackLevel = 18;
+            Assert.AreEqual(0, ContentDatabase.BuildSignatureResource(shawn).GainOnDamageTaken,
+                "an uncollected when-hurt node was paid anyway");
         }
 
-        // LIGHTNING, and the choice of element is the whole test. It is the
-        // one element on Odette's track that is milestone-only (section 5: Ice
-        // and Lightning arrive with the spells that deal them, so validation
-        // rule 4 refuses them as filler), which is what makes "none, then
-        // exactly one" a true statement about it. Fire has filler nodes from
-        // level 6 and is already well above zero by 69.
+        // LIGHTNING, and the choice of element is still the whole test --
+        // but Odette's per-element nodes are gone (progression v2 phase 4:
+        // "+5% spell damage" three times, because a per-element bump is only
+        // worth anything to a build that already casts that element). What
+        // pays Lightning now is SpellDamagePercent, EXPANDED at the read site
+        // into the same per-element rows an ElementalDamagePercent entry
+        // produces -- which is the thing worth pinning, because the reward
+        // that reaches combat is not the reward that was authored.
         //
-        // ElementalDamagePercent, the packet hook P4b added, NOT the on-hit
-        // rider: Lightning is not her attackType.
+        // ElementalDamagePercent, the packet hook, NOT the on-hit rider:
+        // Lightning is not her attackType.
         [Test]
-        public void AnElementalNodeReachesTheCombatantAsAModifierEffect()
+        public void AnAllSpellNodeReachesTheCombatantAsAPerElementModifierEffect()
         {
             var odette = Roster("owl");
-            odette.level = 71;
+            odette.level = 20;
 
-            odette.claimedTrackLevel = 70;
+            odette.claimedTrackLevel = 7;
             var lightning = ContentDatabase.ModifierEffects(odette).All
                 .Where(e => e.Type == ModifierEffectType.ElementalDamagePercent
                             && e.Against == DamageType.Lightning)
                 .ToList();
 
             Assert.AreEqual(1, lightning.Count,
-                "the level-70 Lightning milestone did not reach the effect set as exactly one effect");
-            Assert.AreEqual(20, lightning[0].Magnitude);
+                "the level-7 spell-damage node did not reach the effect set as exactly one Lightning effect");
+            Assert.AreEqual(5, lightning[0].Magnitude);
 
-            odette.claimedTrackLevel = 69;
+            odette.claimedTrackLevel = 6;
             Assert.IsFalse(ContentDatabase.ModifierEffects(odette).All
                     .Any(e => e.Against == DamageType.Lightning),
-                "an uncollected elemental node was paid anyway");
+                "an uncollected spell-damage node was paid anyway");
         }
 
         // THE OTHER HALF OF THE ROUTING RULE (section 2), and the pin that
@@ -357,11 +375,11 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheCharactersOwnElementRidesTheOnHitRiderInstead()
         {
-            // Shawn's attackType is Nature: 9 filler "+1% NATURE DAMAGE" nodes
-            // through level 45, plus the level-45 milestone's 10.
+            // Shawn's attackType is Nature: three "+5% NATURE DAMAGE" nodes,
+            // at levels 7, 17 and 28.
             var shawn = Roster("sheep");
-            shawn.level = 46;
-            shawn.claimedTrackLevel = 45;
+            shawn.level = RewardTrack.MaxLevel;
+            shawn.claimedTrackLevel = 28;
 
             var shawnEffects = ContentDatabase.ModifierEffects(shawn).All;
             var nature = shawnEffects
@@ -370,17 +388,18 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(1, nature.Count, "Shawn's Nature line is not one on-hit effect");
             Assert.AreEqual(DamageType.Nature, nature[0].Against);
-            Assert.AreEqual(19, nature[0].Magnitude);
+            Assert.AreEqual(15, nature[0].Magnitude);
             Assert.IsFalse(shawnEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent),
-                "Shawn's own element was ALSO routed through the packet hook, which would pay it twice " +
-                "-- and pay it through the one hook 68 of his 100 levels cannot reach");
+                "Shawn's own element was ALSO routed through the packet hook, which would pay it twice");
 
-            // Odette's attackType is Arcane: 4 filler "+2% ARCANE DAMAGE"
-            // nodes through level 49, plus the level-50 milestone's 10. Her
-            // Fire line is the same track, the other branch.
+            // Odette's attackType is Arcane, and her three spell-damage nodes
+            // (7, 19, 28) pay EVERY non-Physical element -- so the routing
+            // rule has to split one authored reward two ways: Arcane onto the
+            // on-hit rider, everything else onto the packet hook. Fire is the
+            // other branch of the same node.
             var odette = Roster("owl");
-            odette.level = 51;
-            odette.claimedTrackLevel = 50;
+            odette.level = RewardTrack.MaxLevel;
+            odette.claimedTrackLevel = 28;
 
             var odetteEffects = ContentDatabase.ModifierEffects(odette).All;
             var arcane = odetteEffects
@@ -389,7 +408,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(1, arcane.Count, "Odette's Arcane line is not one on-hit effect");
             Assert.AreEqual(DamageType.Arcane, arcane[0].Against);
-            Assert.AreEqual(18, arcane[0].Magnitude);
+            Assert.AreEqual(15, arcane[0].Magnitude);
 
             Assert.IsTrue(odetteEffects.Any(e => e.Type == ModifierEffectType.ElementalDamagePercent
                                                  && e.Against == DamageType.Fire),
@@ -407,20 +426,24 @@ namespace PrincesPalace.PlayModeTests
             var odette = Roster("owl");
             odette.level = 11;
 
-            odette.claimedTrackLevel = 10;
+            odette.claimedTrackLevel = 3;
             Assert.IsTrue(ContentDatabase.AvailableSkillsFor(odette).Any(s => s.id == "frost_flare"),
-                "the level-10 spell the track paid for is not in the kit the fight builds");
+                "the level-3 spell the track paid for is not in the kit the fight builds");
 
-            odette.claimedTrackLevel = 9;
+            odette.claimedTrackLevel = 2;
             Assert.IsFalse(ContentDatabase.AvailableSkillsFor(odette).Any(s => s.id == "frost_flare"),
                 "a spell arrived before the player collected the node that grants it");
         }
 
         // Section 6: the SOURCE is per-character and the SPEND is squad-wide.
-        // Two members who have collected level 90 bring two charges; the
+        // Two members who have collected level 25 bring two charges; the
         // third, who has collected nothing, brings none -- and the pair is
         // spent out of one pot, because TrySecondLife only fires when the
         // party would otherwise be wiped and raises everyone who is down.
+        //
+        // 25, not 90: progression v2 moved Second Life into the combat
+        // stretch, which is what D2 decided ("it is combat power, which is
+        // why it sits at 25").
         [Test]
         public void ASecondLifeIsCountedPerCollectingCharacter()
         {
@@ -431,8 +454,8 @@ namespace PrincesPalace.PlayModeTests
 
             for (int i = 0; i < squad.Count; i++)
             {
-                squad[i].level = 90;
-                squad[i].claimedTrackLevel = i < 2 ? 90 : 0;
+                squad[i].level = 25;
+                squad[i].claimedTrackLevel = i < 2 ? 25 : 0;
             }
 
             Assert.AreEqual(2, SquadTrack.SecondLivesLeft(RunManager.Run),
@@ -496,10 +519,10 @@ namespace PrincesPalace.PlayModeTests
         {
             var track = RewardTracks.For("turtle");
 
-            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
-                "40 filler singles plus level 80's ten");
-            Assert.AreEqual(229, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
-                "9 milestone nodes at 15 plus 47 filler nodes at 2");
+            Assert.AreEqual(52, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
+                "13 Choice nodes at 4 each");
+            Assert.AreEqual(420, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
+                "14 Bump nodes at 30 each");
         }
     }
 }

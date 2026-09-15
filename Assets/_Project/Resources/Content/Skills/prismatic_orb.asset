@@ -24,6 +24,10 @@ MonoBehaviour:
     ManaCost: 8
     ResourceCost: 0
     SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
     Power: 0
     FlatAmount: 0
     IgnoresDefense: 0
@@ -49,7 +53,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 28
+    SortOrder: 33
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -1333,3 +1337,5 @@ MonoBehaviour:
         layerFormat: 1
         hitCueSeconds: 0.4167
     PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

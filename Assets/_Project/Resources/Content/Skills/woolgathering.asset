@@ -17,12 +17,16 @@ MonoBehaviour:
     DisplayName: Woolgathering
     Description: Chew, breathe, and let the fleece knit the day back together.
     CharacterId: sheep
-    UnlockLevel: 2
+    UnlockLevel: 999
     Effect: 2
     Targeting: 2
     ManaCost: 0
     ResourceCost: 4
     SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
     Power: 2
     FlatAmount: 40
     IgnoresDefense: 0
@@ -106,3 +110,5 @@ MonoBehaviour:
     BookTier: 0
     Elements: []
     PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

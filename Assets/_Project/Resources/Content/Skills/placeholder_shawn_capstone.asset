@@ -1,0 +1,120 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: placeholder_shawn_capstone
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  data:
+    Id: placeholder_shawn_capstone
+    DisplayName: Shawn's Fourth Ability
+    Description: Shawn's fourth ability is not designed yet.
+    CharacterId: sheep
+    UnlockLevel: 999
+    Effect: 0
+    Targeting: 0
+    ManaCost: 0
+    ResourceCost: 0
+    SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
+    Power: 0
+    FlatAmount: 0
+    IgnoresDefense: 0
+    DamageInstances: []
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers: []
+      layerFormat: 0
+      hitCueSeconds: 0
+    SortOrder: 16
+    Status: 0
+    HasStatus: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+      spritePath: 
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0
+        hitStopSeconds: 0
+    CooldownTurns: 0
+    PlayerSelectable: 0
+    Shake: 0
+    Approach: 0
+    Stance: 
+    ApproachStance: 
+    WindupStance: 
+    SummonEnemyId: 
+    SummonCap: 0
+    Reach:
+      Kind: 0
+      RankMask: 0
+    BookOnly: 0
+    BookTier: 0
+    Elements: []
+    PoolTiers: []
+    Placeholder: 1
+    PlaceholderNote: Reward track V4 (level 30) needs an owner-designed ability --
+      docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md phase 0 sign-off. PLACED
+      ON SHAWN's TRACK at level 30 by phase 4, so the node exists on the rail and
+      the shape of the track is real; what it grants is not designed yet, and playerSelectable
+      false means collecting it puts nothing on his command strip. Replace this entry
+      with the real ability rather than adding a second one beside it, or the track
+      will grant the stand-in forever.

@@ -17,12 +17,16 @@ MonoBehaviour:
     DisplayName: Battering Ram
     Description: Head down. Armour is a suggestion.
     CharacterId: sheep
-    UnlockLevel: 6
+    UnlockLevel: 999
     Effect: 0
     Targeting: 0
     ManaCost: 0
     ResourceCost: 6
     SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
     Power: 2
     FlatAmount: 0
     IgnoresDefense: 1
@@ -106,3 +110,5 @@ MonoBehaviour:
     BookTier: 0
     Elements: []
     PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

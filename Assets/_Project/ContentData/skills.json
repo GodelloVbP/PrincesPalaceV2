@@ -540,7 +540,8 @@
       ]
     },
     {
-      "id": "bulwark",
+      "_comment": "bear_bulwark, not bulwark: ids are unique ACROSS content types and 'bulwark' is already an item modifier and an armour set. Same collision bog_mud_burst was named around.",
+      "id": "bear_bulwark",
       "displayName": "Bulwark",
       "description": "Fifty Fury, spent standing in front of somebody. The next blow they take lands 30% softer.",
       "characterId": "bear",

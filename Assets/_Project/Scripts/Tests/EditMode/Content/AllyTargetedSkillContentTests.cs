@@ -64,7 +64,7 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (string id in new[]
                      {
-                         "fleece_ward", "placeholder_brawler_ward", "bulwark", "prism_ward",
+                         "fleece_ward", "placeholder_brawler_ward", "bear_bulwark", "prism_ward",
                          "gift_mana", "gift_fury", "gift_haste", "mend",
                      })
             {
@@ -91,7 +91,7 @@ namespace PrincesPalace.Domain.Tests
                 // target. Tuck In is deliberately NOT here -- it authors
                 // targeting Self, because a free action that stops for a
                 // pick is a free action that costs a click.
-                "bulwark", "prism_ward", "mend",
+                "bear_bulwark", "prism_ward", "mend",
             };
 
             var strays = ByIdFromContent()

@@ -164,7 +164,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BulwarkCostsFiftyFromThePrimaryPoolAndWardsForThirty()
         {
-            var bulwark = Authored("bulwark");
+            var bulwark = Authored("bear_bulwark");
 
             Assert.AreEqual(SkillEffect.Ward, bulwark.Effect);
             Assert.AreEqual(SkillTargeting.SingleAlly, bulwark.Targeting, "it is aimed through the ally picker");
@@ -181,7 +181,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BulwarkIsRefusedUnderFiftyFury()
         {
-            var bulwark = Authored("bulwark");
+            var bulwark = Authored("bear_bulwark");
             var bjorn = Hero(pool: 100);
             var (session, _) = Fight(new[] { bjorn }, new[] { Foe() }, Kit(bulwark));
 

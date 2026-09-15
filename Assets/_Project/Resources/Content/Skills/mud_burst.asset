@@ -24,6 +24,10 @@ MonoBehaviour:
     ManaCost: 8
     ResourceCost: 0
     SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
     Power: 0
     FlatAmount: 6
     IgnoresDefense: 0
@@ -107,3 +111,5 @@ MonoBehaviour:
     BookTier: 1
     Elements: []
     PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

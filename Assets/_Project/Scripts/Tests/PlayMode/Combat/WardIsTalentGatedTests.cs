@@ -117,21 +117,35 @@ namespace PrincesPalace.PlayModeTests
                 "buying the ward node did not put Ward on the strip");
         }
 
-        // THE LEVEL LADDER, the other half of the same filter. Golden Fleece
-        // is authored at unlockLevel 8; a level-1 character had it.
+        // THE LEVEL LADDER IS GONE, which is the other half of the same
+        // filter turned inside out. This test used to pick a skill authored
+        // between 1 and 999 -- Golden Fleece at 8, then Woolgathering at 2 --
+        // and prove a level-1 character did not carry it. Progression v2
+        // phase 4 removed the rungs outright (contract 6: one way to learn a
+        // skill, and unlockLevel is not it), so there is no such skill left
+        // to pick and the honest assertion is that there is none: 1 is the
+        // starting kit, 999 is granted elsewhere, and nothing sits between.
+        //
+        // ASKED OF THE LOADED CATALOGUE rather than of the resolver, because
+        // this is the half that a hand-edited asset could still break.
         [Test]
-        public void ASkillAboveTheCharactersLevel_IsNotOnTheStrip()
+        public void SheepHasNoSkillOnALevelLadderRung()
         {
-            var early = ContentDatabase.Skills.FirstOrDefault(s =>
-                s != null && s.Data.CharacterId == SheepId && s.Data.PlayerSelectable
-                && s.Data.UnlockLevel > 1 && s.Data.UnlockLevel < 999);
+            var rungs = ContentDatabase.Skills
+                .Where(s => s != null && s.Data.CharacterId == SheepId
+                            && s.Data.UnlockLevel > 1 && s.Data.UnlockLevel < 999)
+                .Select(s => s.id + " at " + s.Data.UnlockLevel)
+                .ToList();
 
-            Assert.IsNotNull(early, "fixture: sheep still has a skill unlocked above level 1");
+            CollectionAssert.IsEmpty(rungs,
+                "a skill is back on the unlockLevel ladder, so levelling and the reward track are " +
+                "both handing out skills again");
 
-            var fresh = new Character(SheepId) { level = 1 };
-            CollectionAssert.DoesNotContain(StripOf(fresh), early.id,
-                early.id + " is authored at level " + early.Data.UnlockLevel + " and a level 1 "
-                + "character is carrying it");
+            // Vacuity guard: the list above is empty either because the rule
+            // holds or because sheep has no skills at all.
+            CollectionAssert.IsNotEmpty(
+                ContentDatabase.Skills.Where(s => s != null && s.Data.CharacterId == SheepId).ToList(),
+                "fixture: content still authors skills for sheep");
         }
 
         // THE RULE, not the instance. Every skill the content marks as

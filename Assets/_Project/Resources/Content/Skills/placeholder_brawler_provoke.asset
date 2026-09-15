@@ -18,12 +18,16 @@ MonoBehaviour:
     Description: Placeholder kit. Reuses the Provoke effect Shawn's own kit already
       defines.
     CharacterId: bear
-    UnlockLevel: 1
+    UnlockLevel: 999
     Effect: 5
     Targeting: 0
     ManaCost: 0
     ResourceCost: 0
     SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
     Power: 0
     FlatAmount: 0
     IgnoresDefense: 0
@@ -47,7 +51,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 26
+    SortOrder: 28
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -107,3 +111,5 @@ MonoBehaviour:
     BookTier: 0
     Elements: []
     PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

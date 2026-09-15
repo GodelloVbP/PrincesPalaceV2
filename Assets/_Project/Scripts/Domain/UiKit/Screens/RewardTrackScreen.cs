@@ -213,24 +213,54 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // was SecondLifeRefreshArtKey (SecondLifeRefresh) -> UnlockSkill
         public const string UnlockSkillArtKey = IconRoot + "/skull_unused.png";
 
-        // PHASE 3's seven new reward kinds. Same "placement, not a decision"
-        // posture as the block above -- FuryGainOnAttack and
-        // FuryStartOfFight repoint the two Processed icons the original
-        // twelve left spare (attack.png, speed.png -- a Fury reward is
-        // physical and fast, which is at least not an arbitrary pairing);
-        // the other five have no spare Processed icon to repoint at all, so
-        // they name a file that does not exist yet rather than collide with
-        // an already-assigned one -- LoadSprite's existing graceful
-        // degradation (null + a warning, never a thrown exception) is what
-        // keeps that a placeholder instead of a build break. Phase 4/5 is
-        // where real art (or a real repoint) replaces every one of these.
+        // PHASE 3's seven new reward kinds, and PHASE 4's two. Same
+        // "placement, not a decision" posture as the block above --
+        // FuryGainOnAttack and FuryStartOfFight repoint the two Processed
+        // icons the original twelve left spare (attack.png, speed.png -- a
+        // Fury reward is physical and fast, which is at least not an
+        // arbitrary pairing).
+        //
+        // THE OTHER SEVEN BORROW FROM THE STATUS SET, and phase 4 is why.
+        // Phase 3 pointed five of them at files that do not exist -- named
+        // "*_unused.png" -- reasoning that LoadSprite degrades gracefully
+        // (null plus a warning, never a throw). It does. What does NOT
+        // degrade is UiWiringSweep, which refuses a half-wired
+        // [SerializeField] array outright: `cardArtByReward[15..20] is null`
+        // failed the scene build the first time anybody built one after
+        // phase 3, which was this phase.
+        //
+        // AND THEY CANNOT SHARE. RewardTrackScreenTests asserts every reward
+        // kind resolves a DISTINCT card key, because two kinds pointing at
+        // one sprite draws the wrong medallion for one of them with nothing
+        // in a diff to say so -- a rule worth more than the convenience of
+        // reusing a talent glyph. There are fourteen TalentTree icons and
+        // twenty-two reward kinds, so distinctness had to come from
+        // somewhere, and Art/UI/Status/Processed is a keyed, processed set
+        // of the same lineage that the reward track does not otherwise use.
+        //
+        // THE MAPPING IS ARBITRARY BEYOND DISTINCTNESS, and that is the
+        // thing to know rather than to discover. Three of the seven are
+        // nearly honest -- absorb-per-point wears the shield, a spell
+        // discount wears empowered, a skill cost coming down wears
+        // speed_down -- and the other four (a flat delta on vulnerable, a
+        // per-point delta on poison, all-spell damage on feared, IDENTITY on
+        // protect) are chosen because they are different from each other and
+        // for no other reason. A player cannot read this rail by glyph
+        // today. Phase 5 owns the screen and should commission seven marks
+        // or pick a mapping on purpose; this one exists so the build passes
+        // and the uniqueness rule stays at full strength.
         public const string FuryGainArtKey = IconRoot + "/attack.png";
         public const string FuryStartArtKey = IconRoot + "/speed.png";
-        public const string SpellCostDeltaArtKey = IconRoot + "/spell_cost_delta_unused.png";
-        public const string SkillCostDeltaArtKey = IconRoot + "/skill_cost_delta_unused.png";
-        public const string SkillFlatDeltaArtKey = IconRoot + "/skill_flat_delta_unused.png";
-        public const string SignatureAbsorbPerPointArtKey = IconRoot + "/absorb_per_point_unused.png";
-        public const string IdentityArtKey = IconRoot + "/identity_unused.png";
+
+        public const string StatusIconRoot = "UI/Status/Processed";
+
+        public const string SpellCostDeltaArtKey = StatusIconRoot + "/empowered.png";
+        public const string SkillCostDeltaArtKey = StatusIconRoot + "/speed_down.png";
+        public const string SkillFlatDeltaArtKey = StatusIconRoot + "/vulnerable.png";
+        public const string SkillPowerDeltaArtKey = StatusIconRoot + "/poison.png";
+        public const string SignatureAbsorbPerPointArtKey = StatusIconRoot + "/shielded.png";
+        public const string SpellDamagePercentArtKey = StatusIconRoot + "/feared.png";
+        public const string IdentityArtKey = StatusIconRoot + "/protect.png";
 
         public UiNode Root;
 

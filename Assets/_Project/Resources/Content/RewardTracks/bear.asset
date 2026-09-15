@@ -14,16 +14,86 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RewardTrackDefinitionAsset
   data:
     CharacterId: bear
-    Milestones:
-    - Level: 10
+    Levels:
+    - Level: 2
       Reward: 2
-      Amount: 15
+      Amount: 50
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 20
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 3
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: placeholder_brawler_provoke
+      SkillDisplayName: Bellow
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 4
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 5
+      Reward: 13
+      Amount: 20
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 6
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 7
+      Reward: 9
+      Amount: 5
+      AgainstType: 0
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 8
       Reward: 3
       Amount: 0
       AgainstType: 0
@@ -31,71 +101,220 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 25
-      Reward: 2
-      Amount: 15
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 30
-      Reward: 9
-      Amount: 10
-      AgainstType: 0
-      HasAgainst: 1
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 40
-      Reward: 2
-      Amount: 15
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 45
-      Reward: 9
-      Amount: 10
-      AgainstType: 0
-      HasAgainst: 1
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 50
-      Reward: 2
-      Amount: 15
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 60
-      Reward: 2
-      Amount: 15
-      AgainstType: 0
-      HasAgainst: 0
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 70
-      Reward: 9
-      Amount: 10
-      AgainstType: 0
-      HasAgainst: 1
-      SkillId: 
-      SkillDisplayName: 
-      ResourceDisplayName: 
-    - Level: 80
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 9
       Reward: 1
-      Amount: 10
+      Amount: 4
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 90
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 10
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: rampage
+      SkillDisplayName: Rampage
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 11
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 12
+      Reward: 17
+      Amount: 5
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: placeholder_brawler_slam
+      SkillDisplayName: Slam
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 13
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 14
+      Reward: 2
+      Amount: 50
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 15
+      Reward: 14
+      Amount: 25
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 16
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 17
+      Reward: 9
+      Amount: 5
+      AgainstType: 0
+      HasAgainst: 1
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 18
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 19
+      Reward: 13
+      Amount: 25
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 20
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: bear_bulwark
+      SkillDisplayName: Bulwark
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 21
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 22
+      Reward: 2
+      Amount: 50
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 23
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 24
+      Reward: 17
+      Amount: 5
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: placeholder_brawler_slam
+      SkillDisplayName: Slam
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 25
       Reward: 4
       Amount: 1
       AgainstType: 0
@@ -103,31 +322,204 @@ MonoBehaviour:
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    - Level: 100
-      Reward: 2
-      Amount: 15
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 26
+      Reward: 14
+      Amount: 50
       AgainstType: 0
       HasAgainst: 0
       SkillId: 
       SkillDisplayName: 
       ResourceDisplayName: 
-    Filler:
-    - Reward: 1
-      Amount: 1
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 27
+      Reward: 1
+      Amount: 4
       AgainstType: 0
       HasAgainst: 0
-      Count: 40
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
-    - Reward: 2
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 28
+      Reward: 9
       Amount: 5
       AgainstType: 0
-      HasAgainst: 0
-      Count: 27
-      ResourceDisplayName: 
-    - Reward: 9
-      Amount: 1
-      AgainstType: 0
       HasAgainst: 1
-      Count: 20
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 29
+      Reward: 1
+      Amount: 4
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 30
+      Reward: 12
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: second_wind
+      SkillDisplayName: Second Wind
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 0
+      IdentityValue: 
+    - Level: 31
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Bruiser
+    - Level: 32
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 1
+      HasIdentityKind: 1
+      IdentityValue: silver
+    - Level: 33
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Warden
+    - Level: 34
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 2
+      HasIdentityKind: 1
+      IdentityValue: 
+    - Level: 35
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 3
+      HasIdentityKind: 1
+      IdentityValue: silver
+    - Level: 36
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Veteran
+    - Level: 37
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 4
+      HasIdentityKind: 1
+      IdentityValue: 
+    - Level: 38
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 1
+      HasIdentityKind: 1
+      IdentityValue: gold
+    - Level: 39
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 0
+      HasIdentityKind: 1
+      IdentityValue: Legend
+    - Level: 40
+      Reward: 19
+      Amount: 0
+      AgainstType: 0
+      HasAgainst: 0
+      SkillId: 
+      SkillDisplayName: 
+      ResourceDisplayName: 
+      ResourceType: 0
+      HasResource: 0
+      IdentityKindType: 5
+      HasIdentityKind: 1
+      IdentityValue: 
     SortOrder: 1

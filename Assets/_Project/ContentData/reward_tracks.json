@@ -68,7 +68,7 @@
         { "level": 17, "reward": "ElementalDamagePercent", "amount": 5, "against": "Physical" },
         { "level": 18, "reward": "StatPoint", "amount": 4 },
         { "level": 19, "reward": "FuryGainOnAttack", "amount": 25 },
-        { "level": 20, "reward": "UnlockSkill", "skillId": "bulwark" },
+        { "level": 20, "reward": "UnlockSkill", "skillId": "bear_bulwark" },
         { "level": 21, "reward": "StatPoint", "amount": 4 },
         { "level": 22, "reward": "MaxHealth", "amount": 50 },
         { "level": 23, "reward": "StatPoint", "amount": 4 },

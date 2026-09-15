@@ -73,14 +73,15 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(BotRunDriver.ClaimTrackForTest(character), "nothing was claimed at all");
 
-            Assert.AreEqual(430, ContentDatabase.EffectiveStats(character).maxHealth,
-                "the maximum the whole track adds up to: 280 base plus the track's 150");
+            Assert.AreEqual(400, ContentDatabase.EffectiveStats(character).maxHealth,
+                "the maximum the whole track adds up to: 280 base plus the track's 120 (progression v2 " +
+                "phase 4 authored Shawn three MaxHealth nodes of 40, at levels 2, 14 and 22)");
 
-            // 50 of 280 is the same fraction as 77 of 430:
-            // (50 * 430 + 140) / 280 = 77 (CarriedHealth.Rescaled, rounded).
+            // 50 of 280 is the same fraction as 71 of 400:
+            // (50 * 400 + 140) / 280 = 71 (CarriedHealth.Rescaled, rounded).
             // Left at 50 the character would walk into the next room on 12% of
             // a bar they had half of.
-            Assert.AreEqual(77, run.currentHealth[0].hp,
+            Assert.AreEqual(71, run.currentHealth[0].hp,
                 "the run kept the old absolute against a maximum that moved under it");
         }
     }

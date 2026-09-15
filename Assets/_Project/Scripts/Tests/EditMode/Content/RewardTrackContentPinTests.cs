@@ -202,7 +202,7 @@ namespace PrincesPalace.Domain.Tests
             AssertEntry(t, 17, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
             AssertEntry(t, 18, TrackReward.StatPoint, 4);
             AssertEntry(t, 19, TrackReward.FuryGainOnAttack, 25);
-            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "bulwark");
+            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "bear_bulwark");
             AssertEntry(t, 21, TrackReward.StatPoint, 4);
             AssertEntry(t, 22, TrackReward.MaxHealth, 50);
             AssertEntry(t, 23, TrackReward.StatPoint, 4);
@@ -406,7 +406,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- what each track teaches, and when -----------------------------
 
         [TestCase("sheep", new[] { "woolgathering", "battering_ram", "tuck_in", "cinderfault", "placeholder_shawn_capstone" })]
-        [TestCase("bear", new[] { "placeholder_brawler_provoke", "rampage", "bulwark", "second_wind" })]
+        [TestCase("bear", new[] { "placeholder_brawler_provoke", "rampage", "bear_bulwark", "second_wind" })]
         [TestCase("owl", new[] { "frost_flare", "lightning_bolt", "mend", "prism_ward" })]
         public void ATrackTeachesExactlyTheseSkillsInThisOrder(string characterId, string[] expected)
         {

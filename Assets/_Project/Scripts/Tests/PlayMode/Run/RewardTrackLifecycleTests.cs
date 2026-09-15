@@ -71,15 +71,17 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(content, "the reward track has no content rect");
             Assert.IsNotNull(viewport, "the reward track has no viewport");
 
-            Press("TrackDot90");
+            // 38 and 10, far apart on a forty-level rail -- the pair used to
+            // be 90 and 50, which the progression v2 cap removed.
+            Press("TrackDot38");
             yield return null;
 
             float midGlide = content.anchoredPosition.x;
 
-            Press("TrackDot50");
+            Press("TrackDot10");
             yield return Settle(0.25f);
 
-            float expected = RewardTrackLayout.ScrollFor(50, viewport.rect.width);
+            float expected = RewardTrackLayout.ScrollFor(10, viewport.rect.width);
 
             Assert.AreEqual(expected, content.anchoredPosition.x, 1f,
                 "the rail did not end on the node pressed last - two glides were running against the " +
@@ -87,8 +89,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreNotEqual(midGlide, content.anchoredPosition.x,
                 "fixture: the rail never moved after the second press");
 
-            // NOTHING PAID. Both nodes are already collected at this level, so
-            // a glide that also claimed would be visible here.
+            // NOTHING PAID. Level 10 is already collected and level 38 has
+            // not been reached, so neither press has anything to claim and a
+            // glide that also claimed would be visible here.
             Assert.AreEqual(30, SquadFixture.FirstLiveMember().claimedTrackLevel,
                 "gliding to a node paid something out");
         }
@@ -110,7 +113,7 @@ namespace PrincesPalace.PlayModeTests
 
             // Pushed somewhere the fly-in would never leave it, then closed
             // while the glide toward that node is still live.
-            Press("TrackDot90");
+            Press("TrackDot38");
             yield return null;
             panel.SetActive(false);
             yield return null;

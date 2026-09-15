@@ -275,9 +275,9 @@ namespace PrincesPalace.PlayModeTests
         // THREE STATES, NOT TWO, since docs/PLAN_REWARD_TRACKS.md P4 made the
         // respec a COLLECTED reward rather than a function of `level`: not
         // reached, reached but not collected, collected. The middle one is the
-        // new state and the one worth pinning -- a level-20 character who has
-        // never opened the reward screen has not got their respec yet, and
-        // pressing collect is what hands it over.
+        // new state and the one worth pinning -- a character who has reached
+        // the respec node and never opened the reward screen has not got it
+        // yet, and pressing collect is what hands it over.
         [UnityTest]
         public IEnumerator TheRespecIsHiddenUntilTheTrackGrantsIt()
         {
@@ -285,27 +285,30 @@ namespace PrincesPalace.PlayModeTests
             var talents = Object.FindAnyObjectByType<TalentController>();
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
-            character.level = 19;
-            character.claimedTrackLevel = 19;
+            // LEVEL 8, not 20: progression v2 phase 4 authored the respec at
+            // 8 on all three tracks (PLAN_PROGRESSION_V2.md section 4's
+            // utility node).
+            character.level = 7;
+            character.claimedTrackLevel = 7;
             talents.Refresh();
             yield return null;
 
             Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
-                "a level-19 character is shown a respec they have not earned");
+                "a level-7 character is shown a respec they have not earned");
 
-            character.level = 20;
+            character.level = 8;
             talents.Refresh();
             yield return null;
 
             Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
-                "reaching level 20 handed over the respec without the player collecting it");
+                "reaching level 8 handed over the respec without the player collecting it");
 
-            character.claimedTrackLevel = 20;
+            character.claimedTrackLevel = 8;
             talents.Refresh();
             yield return null;
 
             Assert.IsTrue(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
-                "collecting level 20 granted the respec and the button is still hidden");
+                "collecting level 8 granted the respec and the button is still hidden");
         }
 
         [UnityTest]
