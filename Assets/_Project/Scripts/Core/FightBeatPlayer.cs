@@ -1197,19 +1197,30 @@ namespace PrincesPalace
         // set by the rush puts the hammer 31 canvas pixels inside the target
         // at the one instant the picture is about contact.
         //
+        // THE DRAWINGS IT ACTUALLY WEARS, AND ONLY THOSE. CombatBeat's own
+        // header says what the empty list means and what it cost to learn:
+        // asking SpanForStance about a phase this beat does not author
+        // answers with the IDLE, and a stand-off set by an idle the actor
+        // never wears is daylight nobody authored.
+        //
         // Costs at most three cached texture-rect lookups per crossing beat.
         private static OpaqueSpan ReachOf(StageActorAnimator animator, CombatBeat beat)
         {
             string strike = null;
             if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strike);
 
-            var span = animator.SpanForStance(
-                CombatBeat.OpenStanceFor(beat.Approach, strike, beat.ActorApproachStance, beat.ActorWindupStance));
+            var worn = CombatBeat.StandOffStancesFor(
+                beat.Approach, strike, beat.ActorApproachStance, beat.ActorWindupStance);
 
-            span = Widest(span, animator.SpanForStance(
-                CombatBeat.ArrivalStanceFor(beat.Approach, strike, beat.ActorApproachStance, beat.ActorWindupStance)));
+            // Nothing authored anywhere on this beat, so the figure crosses
+            // the stage in whatever it already has on -- which is what a null
+            // stance resolves to, and here that is the right answer rather
+            // than the wrong one.
+            if (worn.Count == 0) return animator.SpanForStance(null);
 
-            return Widest(span, animator.SpanForStance(strike));
+            var span = animator.SpanForStance(worn[0]);
+            for (int i = 1; i < worn.Count; i++) span = Widest(span, animator.SpanForStance(worn[i]));
+            return span;
         }
 
         private static OpaqueSpan Widest(OpaqueSpan a, OpaqueSpan b)

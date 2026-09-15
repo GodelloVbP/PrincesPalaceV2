@@ -1,4 +1,7 @@
+using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.UiKit;
 
@@ -16,6 +19,7 @@ namespace PrincesPalace.Domain.Tests
     //
     //   Characters/bear  idle  -157..155   slam  -209..237   rush -249..206
     //   Enemies/beetle   idle  -130..339,  drawn mirrored -> -339..130
+    //   Enemies/beetle   turtle_up  -46..212,  drawn mirrored -> -212..46
     //
     // The stage, at three slots (FightStageAnchors / StageLayout):
     //
@@ -34,6 +38,8 @@ namespace PrincesPalace.Domain.Tests
     {
         private static readonly OpaqueSpan BearSlam = new OpaqueSpan(-209f, 237f);
         private static readonly OpaqueSpan BeetleIdleDrawn = new OpaqueSpan(-339f, 130f);
+        private static readonly OpaqueSpan BeetleTurtleUpDrawn = new OpaqueSpan(-212f, 46f);
+        private static readonly OpaqueSpan BearIdle = new OpaqueSpan(-157f, 155f);
 
         // 300 + (-339 * 0.7144) - 12 - (237 * 0.7144)
         //   = 300 - 242.1816 - 12 - 169.3128
@@ -144,10 +150,90 @@ namespace PrincesPalace.Domain.Tests
         {
             var travel = StageStandOff.TravelTo(
                 new UiVec(300f, -218f), BeetleIdleDrawn, 0.7144f,
-                new UiVec(-320f, -218f), new OpaqueSpan(-157f, 155f), 0.7144f,
+                new UiVec(-320f, -218f), BearIdle, 0.7144f,
                 StageStandOff.Gap);
 
             Assert.AreEqual(-255.0864f, travel.X, 0.001f);
+        }
+
+        // THE BEETLE'S BARREL ROLL, AND THE DAYLIGHT THAT USED TO BE IN IT.
+        //
+        // A Charge is contract-bound to end AGAINST what it hit
+        // (StageStandOff.ChargeGap = 0), and the beetle's stopped 85.5px short
+        // -- photographed by MeleeStandOffCaptureTests, not inferred. The
+        // arithmetic below is the whole of the cause: the reach handed in was
+        // the beetle's IDLE, 127 canvas pixels wider than the "turtle_up" it
+        // is actually wearing when it arrives.
+        //
+        // Beetle at 300 rolling leftward into Bjorn at -320, both at 0.7144.
+        // Bjorn's near (screen-right) edge: -320 + 155*0.7144 = -209.2680.
+        // Wearing turtle_up, forward (screen-left) reach -212*0.7144 =
+        //   -151.4528, so it stands at -209.2680 + 151.4528 = -57.8152 and
+        //   travels -357.8152.
+        // Measured as the idle instead, -339*0.7144 = -242.1816, so it stops
+        //   at -209.2680 + 242.1816 = 32.9136 and travels -267.0864 -- and
+        //   then draws turtle_up there, whose forward edge lands at
+        //   32.9136 - 151.4528 = -118.5392, exactly 90.7288px short of Bjorn.
+        [Test]
+        public void AChargeMeasuredAgainstTheDrawingItWears_EndsAgainstItsTarget()
+        {
+            var worn = StageStandOff.TravelTo(
+                new UiVec(300f, -218f), BeetleTurtleUpDrawn, 0.7144f,
+                new UiVec(-320f, -218f), BearIdle, 0.7144f,
+                StageStandOff.ChargeGap);
+
+            Assert.AreEqual(-357.8152f, worn.X, 0.001f);
+
+            float forwardEdge = 300f + worn.X - 212f * 0.7144f;
+            Assert.AreEqual(-209.2680f, forwardEdge, 0.001f, "flush against Bjorn's near edge");
+
+            // The counterfactual, restated so the regression is legible --
+            // the same call with the drawing the actor does NOT wear.
+            var asIdle = StageStandOff.TravelTo(
+                new UiVec(300f, -218f), BeetleIdleDrawn, 0.7144f,
+                new UiVec(-320f, -218f), BearIdle, 0.7144f,
+                StageStandOff.ChargeGap);
+
+            Assert.AreEqual(-267.0864f, asIdle.X, 0.001f);
+            Assert.AreEqual(90.7288f, (300f + asIdle.X - 212f * 0.7144f) - (-209.2680f), 0.001f,
+                "daylight left by measuring a pose the beetle never wears");
+        }
+
+        // WHICH DRAWINGS THE STAND-OFF IS ENTITLED TO MEASURE, which is the
+        // half of the fix above that is not arithmetic. A Charge with a strike
+        // and no phase poses wears exactly one drawing; the list must not
+        // carry the null that OpenStanceFor/ArrivalStanceFor use for "keep
+        // wearing what you have", because the measurement seam answers a null
+        // stance with the idle.
+        [Test]
+        public void ACharge_WearsOnlyItsStrike_AndTheStandOffIsToldSo()
+        {
+            var worn = CombatBeat.StandOffStancesFor(StageApproach.Charge, "turtle_up", null, null);
+
+            CollectionAssert.AreEqual(new[] { "turtle_up" }, worn.ToArray());
+        }
+
+        // AND BJORN'S SLAM STILL GETS ALL THREE, which is the property the
+        // reach union was introduced for in the first place -- his rush
+        // reaches 206 past his canvas centre, his overhead 165, his slam 237,
+        // and a distance set by any one of them lets the other two clip.
+        [Test]
+        public void ACloseWearingThreePoses_HandsAllThreeToTheStandOff()
+        {
+            var worn = CombatBeat.StandOffStancesFor(StageApproach.Close, "slam", "rush", "overhead");
+
+            CollectionAssert.AreEqual(new[] { "rush", "overhead", "slam" }, worn.ToArray());
+        }
+
+        // A BEAT THAT AUTHORS NOTHING measures nothing by name: the actor
+        // crosses in whatever it already has on, and the empty list is how the
+        // caller is told to ask for that rather than being handed a null it
+        // would silently resolve to the idle.
+        [Test]
+        public void ABeatWithNoStrikeAtAll_NamesNoDrawingToMeasure()
+        {
+            CollectionAssert.IsEmpty(CombatBeat.StandOffStancesFor(StageApproach.Lunge, null, "rush", "overhead"));
+            CollectionAssert.IsEmpty(CombatBeat.StandOffStancesFor(StageApproach.Close, "  ", null, null));
         }
 
         // THE ONE CAP LEFT. Two figures already inside each other's reach do

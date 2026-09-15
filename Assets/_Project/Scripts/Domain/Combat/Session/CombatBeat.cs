@@ -220,6 +220,52 @@ namespace PrincesPalace.Domain.Combat.Session
             return windupStance == open ? null : windupStance;
         }
 
+        // EVERY DRAWING THE ACTOR WEARS WHILE IT IS STANDING AT THE STAND-OFF
+        // POINT, once each, in the order it wears them -- and an EMPTY list
+        // when it never changes out of whatever it already has on.
+        //
+        // The two functions above answer "which pose at which moment" for
+        // playback, and both use null to mean "nothing new here, keep wearing
+        // what you have". That is exactly right for a caller whose job is to
+        // SET a stance and who therefore does nothing on a null. It is a trap
+        // for the stand-off, whose job is to MEASURE the poses, because
+        // StageActorAnimator.SpanForStance answers a null stance with the
+        // IDLE drawing -- a deliberate, documented fallback for a kit missing
+        // a pose, and a silent wrong answer here.
+        //
+        // WHAT THAT COST, MEASURED. The beetle's Barrel Roll is a Charge
+        // wearing "turtle_up", which authors no approach or wind-up pose, so
+        // ArrivalStanceFor returns null and the reach folded in the beetle's
+        // IDLE. Idle reaches 338 canvas pixels past its own centre where
+        // turtle_up reaches 212, so the stand-off was set by a drawing 126
+        // canvas pixels wider than the one on screen: at enemy-slot depth
+        // that is ~84 stage pixels of daylight on a Charge whose whole
+        // contract (StageStandOff.ChargeGap) is to end AGAINST what it hit.
+        // Photographed at 85.5px by MeleeStandOffCaptureTests.
+        //
+        // Returning the list rather than three nullable strings is the point:
+        // there is no null left for a caller to hand to a measurement, so the
+        // mistake stops being expressible rather than being documented again.
+        public static IReadOnlyList<string> StandOffStancesFor(StageApproach approach, string strikeStance,
+                                                               string approachStance, string windupStance)
+        {
+            var worn = new List<string>(3);
+            Add(worn, OpenStanceFor(approach, strikeStance, approachStance, windupStance));
+            Add(worn, ArrivalStanceFor(approach, strikeStance, approachStance, windupStance));
+            Add(worn, strikeStance);
+            return worn;
+        }
+
+        // Blank is unauthored here too -- OpenStanceFor passes a whitespace
+        // strike straight back out (Normalise only ever cleans the two phase
+        // poses), and a whitespace stance resolves to the idle exactly like a
+        // null one does.
+        private static void Add(List<string> worn, string stance)
+        {
+            if (string.IsNullOrWhiteSpace(stance) || worn.Contains(stance)) return;
+            worn.Add(stance);
+        }
+
         // Blank is unauthored, and NO STRIKE MEANS NO PHASES.
         //
         // The second half is the load-bearing one: a phase pose is what is
