@@ -64,8 +64,8 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (string id in new[]
                      {
-                         "fleece_ward", "placeholder_brawler_ward",
-                         "gift_mana", "gift_fury", "gift_haste",
+                         "fleece_ward", "placeholder_brawler_ward", "bulwark", "prism_ward",
+                         "gift_mana", "gift_fury", "gift_haste", "mend",
                      })
             {
                 Assert.IsTrue(byId.ContainsKey(id), $"skills.json no longer has a row called '{id}'");
@@ -84,6 +84,14 @@ namespace PrincesPalace.Domain.Tests
             var allowed = new HashSet<string>
             {
                 "fleece_ward", "placeholder_brawler_ward", "gift_mana", "gift_fury", "gift_haste",
+
+                // Progression v2 phase 4. Bulwark and Prism Ward are wards
+                // like the two above; Mend is the first HealSingle, and
+                // ResolveCharacterSkillInner has an arm that reads its
+                // target. Tuck In is deliberately NOT here -- it authors
+                // targeting Self, because a free action that stops for a
+                // pick is a free action that costs a click.
+                "bulwark", "prism_ward", "mend",
             };
 
             var strays = ByIdFromContent()

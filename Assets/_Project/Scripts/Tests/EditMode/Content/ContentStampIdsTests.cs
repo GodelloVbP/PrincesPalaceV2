@@ -41,23 +41,13 @@ namespace PrincesPalace.Domain.Tests
     // assets and skipping it would leave the vacuity guard as the only thing
     // holding the check up.
     //
-    // TURNED OFF FOR ONE PHASE. All three tests here walk every content type
-    // through ResolvedByFolder, and reward_tracks.json no longer resolves:
-    // progression v2 phase 2 cut RewardTrack.MaxLevel to 40 and repointed the
-    // milestone cadence, while the authored tracks are still the hundred-level
-    // content phase 4 rewrites. The resolver refusing them is the check
-    // working, and there is no id list to compare while it does.
-    //
-    // A CLASS-LEVEL, DATED, GREPPABLE DISABLE with a named owner, not a skip
-    // keyed to content shape -- CODE_STANDARDS §8's distinction. It costs the
-    // stamp comparison for the other thirteen types until phase 4, which is
-    // the price of the cap moving before the content does; the alternative
-    // (quietly dropping the RewardTracks row from the map below) would leave a
-    // green test covering one fewer type with nothing saying so.
-    //
-    // The LevelCurve row added below is NOT covered while this is ignored.
-    [Ignore("progression v2 phase 4 replaces the track content; reward_tracks.json is still authored " +
-            "for the 100-level cadence and no longer resolves against RewardTrack.MaxLevel 40")]
+    // TURNED BACK ON. Phase 2 of progression v2 cut RewardTrack.MaxLevel to
+    // 40 while the authored tracks were still the hundred-level content, so
+    // reward_tracks.json stopped resolving and every test here -- all three
+    // walk every content type through ResolvedByFolder -- failed at the same
+    // first line. That was a class-level, dated, greppable disable rather
+    // than a skip keyed to content shape (CODE_STANDARDS §8's distinction),
+    // and phase 4, which rewrote the three tracks, is what removes it.
     public class ContentStampIdsTests
     {
         private const string Fix =

@@ -314,7 +314,7 @@
       "description": "Shawn's fourth ability is not designed yet.",
       "characterId": "sheep",
       "placeholder": true,
-      "placeholderNote": "Reward track V4 (level 30) needs an owner-designed ability -- docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md phase 0 sign-off, phase 4 gate. Not placed on the track yet (phase 4).",
+      "placeholderNote": "Reward track V4 (level 30) needs an owner-designed ability -- docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md phase 0 sign-off. PLACED ON SHAWN's TRACK at level 30 by phase 4, so the node exists on the rail and the shape of the track is real; what it grants is not designed yet, and playerSelectable false means collecting it puts nothing on his command strip. Replace this entry with the real ability rather than adding a second one beside it, or the track will grant the stand-in forever.",
       "playerSelectable": false
     },
     {

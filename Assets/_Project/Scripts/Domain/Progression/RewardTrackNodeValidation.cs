@@ -166,7 +166,12 @@ namespace PrincesPalace.Domain.Progression
             {
                 case TrackReward.MaxHealth: floor = MinMaxHealth; break;
                 case TrackReward.MaxMana: floor = MinMaxMana; break;
-                case TrackReward.ElementalDamagePercent: floor = MinElementalDamagePercent; break;
+                // SpellDamagePercent shares ElementalDamagePercent's floor
+                // because it IS an elemental percentage -- one applied to
+                // every non-Physical type at once. A separate constant would
+                // be two numbers nobody intended to be able to differ.
+                case TrackReward.ElementalDamagePercent:
+                case TrackReward.SpellDamagePercent: floor = MinElementalDamagePercent; break;
                 case TrackReward.FuryGainOnAttack: floor = MinFuryGainStep; break;
                 case TrackReward.SignatureGainPerTurn: floor = MinSignatureGainPerTurn; break;
                 default: return; // no authored floor for this Bump kind

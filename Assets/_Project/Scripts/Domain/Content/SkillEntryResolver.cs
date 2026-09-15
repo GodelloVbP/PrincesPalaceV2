@@ -372,8 +372,13 @@ namespace PrincesPalace.Domain.Content
 
             // Scaling per point spent, on a skill that never spends any, is
             // always zero — a silent no-op the author will not notice.
-            bool spendsSomethingPerPoint = resourceCost > 0 || raw.spendsAllResource
-                                           || manaCost > 0 || raw.spendsAllPrimary;
+            // WHAT power AND percentOfMaxHealthPerPoint ACTUALLY SCALE OFF:
+            // the pool the cast EMPTIES, which is the signature resource
+            // ordinarily and the primary pool only for a spendsAllPrimary
+            // skill (FightSession.PointsSpent). A plain manaCost does NOT
+            // count -- an ordinary mana cost is a price, not a hoard, and
+            // nothing feeds it into the per-point term.
+            bool spendsSomethingPerPoint = resourceCost > 0 || raw.spendsAllResource || raw.spendsAllPrimary;
             if (power > 0 && !spendsSomethingPerPoint)
             {
                 error = $"{label}: power scales per point of resource spent, but this skill spends none. " +

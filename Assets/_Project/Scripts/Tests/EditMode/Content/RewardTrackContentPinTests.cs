@@ -7,44 +7,31 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Reads Assets/_Project/ContentData/{characters,skills,reward_tracks}.json
-    // from disk through the REAL resolvers -- CharacterEntryResolver,
-    // SkillEntryResolver, RewardTrackEntryResolver -- and materialises the
-    // result with RewardTrackDefinition.From, the same shape a live save
-    // would read. Pins the literal numbers docs/PLAN_REWARD_TRACKS.md §5 and
-    // §10 P6 computed for Shawn's and Odette's shipped tracks -- and the
-    // rules Bjorn's later one had to be authored inside -- so a retune
-    // that silently changes what a level pays is caught here rather than
-    // only by eye on the screen.
+    // Reads Assets/_Project/ContentData/{pools,characters,skills,reward_tracks}.json
+    // from disk through the REAL resolvers and materialises the result with
+    // RewardTrackDefinition.From, the same shape a live save would read. Pins
+    // the literal numbers docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md
+    // §4 gives the three shipped tracks, so a retune that silently changes
+    // what a level pays is caught here rather than only by eye on the screen.
+    //
+    // REWRITTEN BY PROGRESSION V2 PHASE 4, and the ignore that stood at the
+    // top of this class through phases 2 and 3 is gone with it. Phase 2 cut
+    // RewardTrack.MaxLevel from 100 to 40 while reward_tracks.json still held
+    // the hundred-level milestone/filler content, so the resolver refused the
+    // whole file and all 22 assertions failed at the same first line; phase 4
+    // is what authored the 40-level tracks these read.
+    //
+    // EVERY LEVEL, NOT A SAMPLE. The old version pinned the four milestones
+    // that were content-specific and left the rest to a filler mix nobody
+    // authored by level. There is no filler any more, so LEVEL BY LEVEL below
+    // walks all 39 rows of each track against the plan's own table -- which is
+    // the only form in which "the shipped track is the designed track" can be
+    // asserted at all.
     //
     // TWO PARSERS, ONE ASSERTION, same pattern as ContentStampIdsTests: this
     // class has no UnityEngine dependency, so it is a [D] class and runs
     // under plain `dotnet test`, which has no JsonUtility. RepoRoot/DataPath/
-    // ParseFile live on Shared/ContentDataFiles -- ContentStampIdsTests uses
-    // the same trio.
-    //
-    // TURNED OFF FOR ONE PHASE, and this is the only thing in this file that
-    // is not about the tracks themselves.
-    //
-    // Progression v2 phase 2 cut RewardTrack.MaxLevel from 100 to 40 and
-    // repointed MilestoneLevels to 3, 5, 10, 15, 20, 25, 30, 35, 38, 40.
-    // reward_tracks.json is still the hundred-level content -- twelve
-    // milestones at 10/20/25/30/40/45/50/60/70/80/90/100 and a filler mix
-    // summing to 87 -- so RewardTrackEntryResolver now refuses the whole file
-    // and every assertion in this class fails at the same first line. That is
-    // the resolver working: the content and the cap disagree, and phase 4 of
-    // the plan is the step that rewrites the three tracks to the new shape.
-    //
-    // KEPT, NOT DELETED, and ignored at the CLASS rather than per test,
-    // because all 22 fail for the one reason and a per-test list would read
-    // as 22 separate decisions. This is a deliberate, dated, greppable
-    // disable with a named owner -- not a skip keyed to content shape, which
-    // CODE_STANDARDS §8 refuses because it can silently stop covering
-    // anything. Phase 4 deletes this attribute and retypes the literals for
-    // the new tracks; if that phase lands and these are still ignored,
-    // nothing is pinning what a level pays.
-    [Ignore("progression v2 phase 4 replaces the track content; reward_tracks.json is still authored " +
-            "for the 100-level cadence and no longer resolves against RewardTrack.MaxLevel 40")]
+    // ParseFile live on Shared/ContentDataFiles.
     public class RewardTrackContentPinTests
     {
         // The real pools.json through the real resolver, because this file
@@ -98,17 +85,11 @@ namespace PrincesPalace.Domain.Tests
         // this pin reads the tracks through the exact context a real build
         // resolves them against rather than a hand-rolled approximation of
         // it that could quietly drift.
-        private static Dictionary<string, RewardTrackCharacterContext> Contexts(
-            IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills) =>
-            RewardTrackCharacterContext.BuildAll(characters, skills);
-
-        // The two shipped tracks, materialised through
-        // RewardTrackDefinition.From -- what every assertion below reads.
         private static Dictionary<string, RewardTrackDefinition> Tracks()
         {
             var characters = Characters();
             var skills = Skills();
-            var contexts = Contexts(characters, skills);
+            var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
 
             var raw = ContentDataFiles.ParseFile<RawRewardTrackFile>(ContentDataFiles.DataPath("reward_tracks.json")).tracks;
             bool ok = RewardTrackEntryResolver.TryResolveAll(raw, contexts, out var resolved, out var errors);
@@ -121,99 +102,237 @@ namespace PrincesPalace.Domain.Tests
         private static RewardTrackDefinition Owl() => Tracks()["owl"];
         private static RewardTrackDefinition Bear() => Tracks()["bear"];
 
-        // ---- sheep's four content-specific milestones, §5 ----
-
-        [Test]
-        public void SheepLevel25IsFiveSignatureCapacity()
+        private static void AssertEntry(RewardTrackDefinition track, int level, TrackReward reward, int amount,
+            string skillId = null, DamageType? against = null)
         {
-            var entry = Sheep().At(25);
-            Assert.AreEqual(TrackReward.SignatureCapacity, entry.Reward);
-            Assert.AreEqual(5, entry.Amount);
+            var entry = track.At(level);
+            Assert.AreEqual(reward, entry.Reward, $"{track.CharacterId} level {level} reward");
+            Assert.AreEqual(amount, entry.Amount, $"{track.CharacterId} level {level} amount");
+            if (skillId != null) Assert.AreEqual(skillId, entry.SkillId, $"{track.CharacterId} level {level} skillId");
+            if (against.HasValue) Assert.AreEqual(against.Value, entry.Against, $"{track.CharacterId} level {level} element");
         }
 
-        // static_fleece was removed 2026-09-15 (AUDIT #150 -- it failed
-        // docs/SPELL_DESIGN_STANDARD.md's universality test, being a book
-        // spell that only ever worked for a Wool-holding owner). Level 30
-        // now carries a PLACEHOLDER, not a real milestone: StatPoint 2, just
-        // enough to keep the track's every-milestone-filled rule satisfied
-        // until the owner picks a real replacement. Pinned as a placeholder
-        // on purpose -- re-pin this the moment #150 is resolved, not before.
-        [Test]
-        public void SheepLevel30IsAPlaceholder_PendingAudit150()
-        {
-            var entry = Sheep().At(30);
-            Assert.AreEqual(TrackReward.StatPoint, entry.Reward);
-            Assert.AreEqual(2, entry.Amount);
-        }
-
-        // PHASE 3 ALIAS: reward_tracks.json still authors this node as
-        // "SignatureAbsorbs" (the old boolean), but RewardTrackEntryResolver
-        // now rewrites that to SignatureAbsorbPerPoint at amount 1 the
-        // moment it parses the entry -- see TrackReward.
-        // SignatureAbsorbPerPoint's own header. Re-pinned to the aliased
-        // kind rather than the authored string, since the authored string
-        // is no longer what a reader of the resolved track sees.
-        [Test]
-        public void SheepLevel60IsSignatureAbsorbs()
-        {
-            var entry = Sheep().At(60);
-            Assert.AreEqual(TrackReward.SignatureAbsorbPerPoint, entry.Reward);
-            Assert.AreEqual(1, entry.Amount);
-        }
+        // ---- Shawn, level by level -- §4's first column --------------------
 
         [Test]
-        public void SheepLevel100IsTenSignatureCapacity()
+        public void ShawnsTrackIsTheAuthoredTable()
         {
-            var entry = Sheep().At(100);
-            Assert.AreEqual(TrackReward.SignatureCapacity, entry.Reward);
-            Assert.AreEqual(10, entry.Amount);
+            var t = Sheep();
+
+            AssertEntry(t, 2, TrackReward.MaxHealth, 40);
+            AssertEntry(t, 3, TrackReward.UnlockSkill, 0, skillId: "woolgathering");
+            AssertEntry(t, 4, TrackReward.StatPoint, 4);
+            AssertEntry(t, 5, TrackReward.SignatureGainPerTurn, 1);
+            AssertEntry(t, 6, TrackReward.StatPoint, 4);
+            AssertEntry(t, 7, TrackReward.ElementalDamagePercent, 5, against: DamageType.Nature);
+            AssertEntry(t, 8, TrackReward.Respec, 0);
+            AssertEntry(t, 9, TrackReward.StatPoint, 4);
+            AssertEntry(t, 10, TrackReward.UnlockSkill, 0, skillId: "battering_ram");
+            AssertEntry(t, 11, TrackReward.StatPoint, 4);
+            AssertEntry(t, 12, TrackReward.SkillCostDelta, 1, skillId: "shear");
+            AssertEntry(t, 13, TrackReward.StatPoint, 4);
+            AssertEntry(t, 14, TrackReward.MaxHealth, 40);
+            AssertEntry(t, 15, TrackReward.UnlockSkill, 0, skillId: "tuck_in");
+            AssertEntry(t, 16, TrackReward.StatPoint, 4);
+            AssertEntry(t, 17, TrackReward.ElementalDamagePercent, 5, against: DamageType.Nature);
+            AssertEntry(t, 18, TrackReward.StatPoint, 4);
+            AssertEntry(t, 19, TrackReward.SignatureGainOnDamageTaken, 2);
+            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "cinderfault");
+            AssertEntry(t, 21, TrackReward.StatPoint, 4);
+            AssertEntry(t, 22, TrackReward.MaxHealth, 40);
+            AssertEntry(t, 23, TrackReward.StatPoint, 4);
+            AssertEntry(t, 24, TrackReward.SkillCostDelta, 2, skillId: "battering_ram");
+            AssertEntry(t, 25, TrackReward.SecondLife, 1);
+            AssertEntry(t, 26, TrackReward.SkillPowerDelta, 1, skillId: "tuck_in");
+            AssertEntry(t, 27, TrackReward.StatPoint, 4);
+            AssertEntry(t, 28, TrackReward.ElementalDamagePercent, 5, against: DamageType.Nature);
+            AssertEntry(t, 29, TrackReward.StatPoint, 4);
+            AssertEntry(t, 30, TrackReward.UnlockSkill, 0, skillId: "placeholder_shawn_capstone");
         }
 
-        // ---- owl's four content-specific milestones, §5 ----
+        // CINDERFAULT MOVED FROM 70 TO 20, which is the single biggest
+        // content change in this phase and is pinned on its own so the move
+        // reads as a decision rather than as a line in a 29-row table. It
+        // used to be Shawn's level-70 milestone on a hundred-level track; V3
+        // is level 20 now, and the whole cap is 40.
+        [Test]
+        public void ShawnLearnsCinderfaultAtTwentyRatherThanSeventy()
+        {
+            var track = Sheep();
+
+            Assert.AreEqual(20, LevelThatUnlocks(track, "cinderfault"),
+                "Cinderfault is no longer the level-20 ability");
+            CollectionAssert.DoesNotContain(track.SkillsCollected(19), "cinderfault",
+                "it was collectable before its own node");
+        }
+
+        private static int LevelThatUnlocks(RewardTrackDefinition track, string skillId)
+        {
+            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
+            {
+                var entry = track.At(level);
+                if (entry.Reward == TrackReward.UnlockSkill && entry.SkillId == skillId) return level;
+            }
+
+            return 0;
+        }
+
+        // ---- Bjorn, level by level -- §4's second column -------------------
 
         [Test]
-        public void OwlLevel10UnlocksFrostFlare()
+        public void BjornsTrackIsTheAuthoredTable()
         {
-            var entry = Owl().At(10);
-            Assert.AreEqual(TrackReward.UnlockSkill, entry.Reward);
-            Assert.AreEqual("frost_flare", entry.SkillId);
+            var t = Bear();
+
+            AssertEntry(t, 2, TrackReward.MaxHealth, 50);
+            AssertEntry(t, 3, TrackReward.UnlockSkill, 0, skillId: "placeholder_brawler_provoke");
+            AssertEntry(t, 4, TrackReward.StatPoint, 4);
+            AssertEntry(t, 5, TrackReward.FuryGainOnAttack, 20);
+            AssertEntry(t, 6, TrackReward.StatPoint, 4);
+            AssertEntry(t, 7, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
+            AssertEntry(t, 8, TrackReward.Respec, 0);
+            AssertEntry(t, 9, TrackReward.StatPoint, 4);
+            AssertEntry(t, 10, TrackReward.UnlockSkill, 0, skillId: "rampage");
+            AssertEntry(t, 11, TrackReward.StatPoint, 4);
+            AssertEntry(t, 12, TrackReward.SkillFlatDelta, 5, skillId: "placeholder_brawler_slam");
+            AssertEntry(t, 13, TrackReward.StatPoint, 4);
+            AssertEntry(t, 14, TrackReward.MaxHealth, 50);
+            AssertEntry(t, 15, TrackReward.FuryStartOfFight, 25);
+            AssertEntry(t, 16, TrackReward.StatPoint, 4);
+            AssertEntry(t, 17, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
+            AssertEntry(t, 18, TrackReward.StatPoint, 4);
+            AssertEntry(t, 19, TrackReward.FuryGainOnAttack, 25);
+            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "bulwark");
+            AssertEntry(t, 21, TrackReward.StatPoint, 4);
+            AssertEntry(t, 22, TrackReward.MaxHealth, 50);
+            AssertEntry(t, 23, TrackReward.StatPoint, 4);
+            AssertEntry(t, 24, TrackReward.SkillFlatDelta, 5, skillId: "placeholder_brawler_slam");
+            AssertEntry(t, 25, TrackReward.SecondLife, 1);
+            AssertEntry(t, 26, TrackReward.FuryStartOfFight, 50);
+            AssertEntry(t, 27, TrackReward.StatPoint, 4);
+            AssertEntry(t, 28, TrackReward.ElementalDamagePercent, 5, against: DamageType.Physical);
+            AssertEntry(t, 29, TrackReward.StatPoint, 4);
+            AssertEntry(t, 30, TrackReward.UnlockSkill, 0, skillId: "second_wind");
         }
+
+        // THE FURY NODES ARE SET, NOT SUMMED, and this is the only place the
+        // difference is visible as a number: two gain nodes of 20 and 25 read
+        // as 25, not 45. UnlockedAmount is the read site
+        // ContentDatabase.BuildPrimaryPool uses.
+        [TestCase(4, 0)]
+        [TestCase(5, 20)]
+        [TestCase(18, 20)]
+        [TestCase(19, 25)]
+        [TestCase(40, 25)]
+        public void BjornsFuryGainIsTheHighestCollectedNotTheSum(int claimedLevel, int expected)
+        {
+            Assert.AreEqual(expected, Bear().UnlockedAmount(TrackReward.FuryGainOnAttack, claimedLevel, fallback: 0));
+        }
+
+        [TestCase(14, 0)]
+        [TestCase(15, 25)]
+        [TestCase(25, 25)]
+        [TestCase(26, 50)]
+        public void BjornsFuryOpeningIsTheHighestCollectedNotTheSum(int claimedLevel, int expected)
+        {
+            Assert.AreEqual(expected, Bear().UnlockedAmount(TrackReward.FuryStartOfFight, claimedLevel, fallback: 0));
+        }
+
+        // SLAM'S TWO +5 NODES DO SUM, unlike the Fury pair above -- base 27
+        // to 32 at level 12 and to 37 at level 24, §5's own numbers.
+        [TestCase(11, 0)]
+        [TestCase(12, 5)]
+        [TestCase(24, 10)]
+        [TestCase(40, 10)]
+        public void BjornsSlamFlatDeltaSums(int claimedLevel, int expected)
+        {
+            Assert.AreEqual(expected, Bear().CollectedSkillFlatDelta("placeholder_brawler_slam", claimedLevel));
+        }
+
+        // ---- Odette, level by level -- §4's third column -------------------
 
         [Test]
-        public void OwlLevel40IsTenPercentFireDamage()
+        public void OdettesTrackIsTheAuthoredTable()
         {
-            var entry = Owl().At(40);
-            Assert.AreEqual(TrackReward.ElementalDamagePercent, entry.Reward);
-            Assert.AreEqual(DamageType.Fire, entry.Against);
-            Assert.AreEqual(10, entry.Amount);
+            var t = Owl();
+
+            AssertEntry(t, 2, TrackReward.MaxHealth, 30);
+            AssertEntry(t, 3, TrackReward.UnlockSkill, 0, skillId: "frost_flare");
+            AssertEntry(t, 4, TrackReward.StatPoint, 4);
+            AssertEntry(t, 5, TrackReward.MaxMana, 6);
+            AssertEntry(t, 6, TrackReward.StatPoint, 4);
+            AssertEntry(t, 7, TrackReward.SpellDamagePercent, 5);
+            AssertEntry(t, 8, TrackReward.Respec, 0);
+            AssertEntry(t, 9, TrackReward.StatPoint, 4);
+            AssertEntry(t, 10, TrackReward.UnlockSkill, 0, skillId: "lightning_bolt");
+            AssertEntry(t, 11, TrackReward.StatPoint, 4);
+            AssertEntry(t, 12, TrackReward.ManaRegen, 1);
+            AssertEntry(t, 13, TrackReward.StatPoint, 4);
+            AssertEntry(t, 14, TrackReward.MaxHealth, 30);
+            AssertEntry(t, 15, TrackReward.SpellCostDelta, 1);
+            AssertEntry(t, 16, TrackReward.StatPoint, 4);
+            AssertEntry(t, 17, TrackReward.MaxMana, 6);
+            AssertEntry(t, 18, TrackReward.StatPoint, 4);
+            AssertEntry(t, 19, TrackReward.SpellDamagePercent, 5);
+            AssertEntry(t, 20, TrackReward.UnlockSkill, 0, skillId: "mend");
+            AssertEntry(t, 21, TrackReward.StatPoint, 4);
+            AssertEntry(t, 22, TrackReward.MaxHealth, 30);
+            AssertEntry(t, 23, TrackReward.StatPoint, 4);
+            AssertEntry(t, 24, TrackReward.ManaRegen, 1);
+            AssertEntry(t, 25, TrackReward.SecondLife, 1);
+            AssertEntry(t, 26, TrackReward.SpellCostDelta, 2);
+            AssertEntry(t, 27, TrackReward.StatPoint, 4);
+            AssertEntry(t, 28, TrackReward.SpellDamagePercent, 5);
+            AssertEntry(t, 29, TrackReward.StatPoint, 4);
+            AssertEntry(t, 30, TrackReward.UnlockSkill, 0, skillId: "prism_ward");
         }
 
-        // The authoring hazard §5 names by name: frost_flare's own
-        // skills.json entry authors "Frost", an alias only
-        // SkillEntryResolver.TryParseDamageType accepts; reward_tracks.json's
-        // resolver does not, so the correct spelling here is "Ice", never
-        // "Frost". A copy-paste of the alias would fail to resolve at all
-        // (Enum.TryParse<DamageType> refuses "Frost"), which is what makes
-        // this pin meaningful rather than redundant with the two above.
-        [Test]
-        public void OwlLevel45IsFifteenPercentIceDamage()
+        [TestCase(14, 0)]
+        [TestCase(15, 1)]
+        [TestCase(25, 1)]
+        [TestCase(26, 2)]
+        public void OdettesSpellDiscountIsTheHighestCollectedNotTheSum(int claimedLevel, int expected)
         {
-            var entry = Owl().At(45);
-            Assert.AreEqual(TrackReward.ElementalDamagePercent, entry.Reward);
-            Assert.AreEqual(DamageType.Ice, entry.Against);
-            Assert.AreEqual(15, entry.Amount);
+            Assert.AreEqual(expected, Owl().UnlockedAmount(TrackReward.SpellCostDelta, claimedLevel, fallback: 0));
         }
 
-        [Test]
-        public void OwlLevel70IsTwentyPercentLightningDamage()
+        // ---- the identity stretch, 31 to 40 --------------------------------
+
+        // The same ten payloads on every track, differing only in the two
+        // titles §4 gives each character at 31 and 33. Walked rather than
+        // sampled, because "everything above 30 is Identity" is the rule
+        // RewardTrackNodeValidation enforces and this is what it is
+        // enforcing against.
+        [TestCase("sheep", "Contractor", "Reaver")]
+        [TestCase("bear", "Bruiser", "Warden")]
+        [TestCase("owl", "Scholar", "Adept")]
+        public void TheIdentityStretchIsTheAuthoredTable(string characterId, string firstTitle, string secondTitle)
         {
-            var entry = Owl().At(70);
-            Assert.AreEqual(TrackReward.ElementalDamagePercent, entry.Reward);
-            Assert.AreEqual(DamageType.Lightning, entry.Against);
-            Assert.AreEqual(20, entry.Amount);
+            var track = Tracks()[characterId];
+
+            AssertIdentity(track, 31, TrackIdentityKind.Title, firstTitle);
+            AssertIdentity(track, 32, TrackIdentityKind.PlateRim, "silver");
+            AssertIdentity(track, 33, TrackIdentityKind.Title, secondTitle);
+            AssertIdentity(track, 34, TrackIdentityKind.PortraitFrame, "");
+            AssertIdentity(track, 35, TrackIdentityKind.PlateEmboss, "silver");
+            AssertIdentity(track, 36, TrackIdentityKind.Title, "Veteran");
+            AssertIdentity(track, 37, TrackIdentityKind.VictoryPose, "");
+            AssertIdentity(track, 38, TrackIdentityKind.PlateRim, "gold");
+            AssertIdentity(track, 39, TrackIdentityKind.Title, "Legend");
+            AssertIdentity(track, 40, TrackIdentityKind.Mastery, "");
+
+            Assert.AreEqual(10, track.CollectedIdentity(RewardTrack.MaxLevel).Count);
         }
 
-        // ---- the spine, identical on every track, §5 "the spine stays identical" ----
+        private static void AssertIdentity(RewardTrackDefinition track, int level, TrackIdentityKind kind, string value)
+        {
+            var entry = track.At(level);
+            Assert.AreEqual(TrackReward.Identity, entry.Reward, $"{track.CharacterId} level {level}");
+            Assert.AreEqual(kind, entry.IdentityKind, $"{track.CharacterId} level {level} kind");
+            Assert.AreEqual(value, entry.IdentityValue, $"{track.CharacterId} level {level} value");
+        }
+
+        // ---- the spine, identical on every track ---------------------------
 
         [TestCase("sheep")]
         [TestCase("bear")]
@@ -222,146 +341,132 @@ namespace PrincesPalace.Domain.Tests
         {
             var track = Tracks()[characterId];
 
-            Assert.AreEqual(TrackReward.Respec, track.At(20).Reward, $"{characterId} level 20");
+            Assert.AreEqual(TrackReward.Respec, track.At(8).Reward, $"{characterId} level 8");
+            Assert.AreEqual(TrackReward.SecondLife, track.At(25).Reward, $"{characterId} level 25");
+            Assert.AreEqual(1, track.At(25).Amount, $"{characterId} level 25 charge count");
 
-            var eighty = track.At(80);
-            Assert.AreEqual(TrackReward.StatPoint, eighty.Reward, $"{characterId} level 80");
-            Assert.AreEqual(10, eighty.Amount, $"{characterId} level 80");
-
-            var ninety = track.At(90);
-            Assert.AreEqual(TrackReward.SecondLife, ninety.Reward, $"{characterId} level 90");
-            Assert.AreEqual(1, ninety.Amount, $"{characterId} level 90");
+            Assert.AreEqual(8, track.UnlockLevel(TrackReward.Respec), $"{characterId} respec level");
+            Assert.AreEqual(25, track.UnlockLevel(TrackReward.SecondLife), $"{characterId} second life level");
         }
 
-        // ---- fully-collected totals, §5 ----
+        // FORTY-FOUR STAT POINTS on every track -- eleven Choice nodes at 4,
+        // and §4's own "Stat points: 44 (today 52)". The count matters as
+        // much as the total: a track paying 44 across nine nodes would be a
+        // different pacing decision wearing the same number.
+        [TestCase("sheep")]
+        [TestCase("bear")]
+        [TestCase("owl")]
+        public void EveryTrackPaysFortyFourStatPointsAcrossElevenChoices(string characterId)
+        {
+            var track = Tracks()[characterId];
+
+            Assert.AreEqual(44, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel),
+                $"{characterId} total stat points");
+            Assert.AreEqual(11, track.AllLevels().Count(pair => pair.Entry.Reward == TrackReward.StatPoint),
+                $"{characterId} Choice nodes");
+        }
+
+        // ---- fully-collected totals ----------------------------------------
 
         [Test]
-        public void SheepsFullyCollectedTotals()
+        public void ShawnsFullyCollectedTotals()
         {
             var track = Sheep();
 
-            Assert.AreEqual(27, track.CollectedTotal(TrackReward.SignatureCapacity, RewardTrack.MaxLevel), "wool capacity");
-            Assert.AreEqual(2, track.CollectedTotal(TrackReward.SignatureGainPerTurn, RewardTrack.MaxLevel), "wool per turn");
+            Assert.AreEqual(120, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 40 at 2/14/22");
+            Assert.AreEqual(1, track.CollectedTotal(TrackReward.SignatureGainPerTurn, RewardTrack.MaxLevel), "wool per turn, 1 to 2");
             Assert.AreEqual(2, track.CollectedTotal(TrackReward.SignatureGainOnDamageTaken, RewardTrack.MaxLevel), "wool when hurt");
-            Assert.AreEqual(30, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Nature, RewardTrack.MaxLevel), "Nature damage");
-            Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health");
-            // 50 filler + 2 from level 30's placeholder (AUDIT #150, StatPoint
-            // 2 standing in for the removed static_fleece unlock) = 52. Re-pin
-            // this the moment #150 gets a real replacement.
-            Assert.AreEqual(52, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel), "stat points");
+            Assert.AreEqual(15, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Nature, RewardTrack.MaxLevel), "Nature damage, 5 at 7/17/28");
+            Assert.AreEqual(1, track.CollectedSkillCostDelta("shear", TrackResourceTarget.Signature, RewardTrack.MaxLevel), "Shear 3 to 2 Wool");
+            Assert.AreEqual(2, track.CollectedSkillCostDelta("battering_ram", TrackResourceTarget.Signature, RewardTrack.MaxLevel), "Battering Ram 6 to 4 Wool");
+            Assert.AreEqual(1, track.CollectedSkillPowerDelta("tuck_in", RewardTrack.MaxLevel), "Tuck In wards 3 per Wool rather than 2");
         }
 
         [Test]
-        public void OwlsFullyCollectedTotals()
+        public void BjornsFullyCollectedTotals()
+        {
+            var track = Bear();
+
+            Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 50 at 2/14/22");
+            Assert.AreEqual(15, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel), "Physical damage, 5 at 7/17/28");
+            Assert.AreEqual(10, track.CollectedSkillFlatDelta("placeholder_brawler_slam", RewardTrack.MaxLevel), "Slam base 27 to 37");
+        }
+
+        [Test]
+        public void OdettesFullyCollectedTotals()
         {
             var track = Owl();
 
-            Assert.AreEqual(28, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Fire, RewardTrack.MaxLevel), "Fire damage");
-            Assert.AreEqual(26, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Arcane, RewardTrack.MaxLevel), "Arcane damage");
-            Assert.AreEqual(20, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Lightning, RewardTrack.MaxLevel), "Lightning damage");
-            Assert.AreEqual(15, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Ice, RewardTrack.MaxLevel), "Ice damage");
-            Assert.AreEqual(50, track.CollectedTotal(TrackReward.MaxMana, RewardTrack.MaxLevel), "max mana");
-            Assert.AreEqual(3, track.CollectedTotal(TrackReward.ManaRegen, RewardTrack.MaxLevel), "mana regen");
-            Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health");
-            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel), "stat points");
+            Assert.AreEqual(90, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health, 30 at 2/14/22");
+            Assert.AreEqual(12, track.CollectedTotal(TrackReward.MaxMana, RewardTrack.MaxLevel), "max mana, 6 at 5 and 17 -- 30 base to 42");
+            Assert.AreEqual(2, track.CollectedTotal(TrackReward.ManaRegen, RewardTrack.MaxLevel), "mana regen, 1 at 12 and 24");
+            Assert.AreEqual(15, track.CollectedTotal(TrackReward.SpellDamagePercent, RewardTrack.MaxLevel), "spell damage, 5 at 7/19/28");
         }
 
-        // ---- level-by-level claims, §5 ----
+        // ---- what each track teaches, and when -----------------------------
 
-        // "Wool capacity first reaches 20 at level 39" -- the owner's own
-        // "wool capacity upgraded to 20" example. The DISPLAYED number is the
-        // character's base SignatureCapacity (characters.json) plus the
-        // track's own CollectedTotal, since the base is authored on the
-        // roster and is not itself a track entry. Walked level by level
-        // against the real resolved definition rather than hand-added, and
-        // pinned against the literal computed answer (39) -- not a formula
-        // this test recomputes, gotcha 5.
-        [Test]
-        public void SheepsWoolCapacityFirstReaches20AtLevel39()
+        [TestCase("sheep", new[] { "woolgathering", "battering_ram", "tuck_in", "cinderfault", "placeholder_shawn_capstone" })]
+        [TestCase("bear", new[] { "placeholder_brawler_provoke", "rampage", "bulwark", "second_wind" })]
+        [TestCase("owl", new[] { "frost_flare", "lightning_bolt", "mend", "prism_ward" })]
+        public void ATrackTeachesExactlyTheseSkillsInThisOrder(string characterId, string[] expected)
         {
-            int baseCapacity = Characters().Single(c => c.Id == "sheep").SignatureCapacity;
-            var track = Sheep();
-            int firstLevelAt20 = 0;
-
-            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
-            {
-                int total = baseCapacity + track.CollectedTotal(TrackReward.SignatureCapacity, level);
-                if (total >= 20)
-                {
-                    firstLevelAt20 = level;
-                    break;
-                }
-            }
-
-            Assert.AreEqual(39, firstLevelAt20,
-                "10 base + 10 collected (filler at 6/14/21, the level-25 milestone's 5, filler at 31/39)");
+            CollectionAssert.AreEqual(expected, Tracks()[characterId].SkillsCollected(RewardTrack.MaxLevel));
         }
 
-        [Test]
-        public void SheepsLevelThreeCaptionIsOnePercentNatureDamage()
+        // Nothing arrives before its own node -- the whole point of a
+        // COLLECTED unlock. Asserted at the level below each of the four
+        // ability nodes rather than only at the top, because a track read off
+        // `level` instead of `claimedTrackLevel` would still pass a
+        // fully-collected check.
+        [TestCase("sheep", 2)]
+        [TestCase("sheep", 9)]
+        [TestCase("bear", 9)]
+        [TestCase("owl", 2)]
+        public void NothingIsTaughtBeforeItsOwnNode(string characterId, int claimedLevel)
         {
-            Assert.AreEqual("+1% NATURE DAMAGE", RewardTrackNames.Of(Sheep().At(3)));
+            var track = Tracks()[characterId];
+            var collected = track.SkillsCollected(claimedLevel);
+            var all = track.SkillsCollected(RewardTrack.MaxLevel);
+
+            CollectionAssert.IsSubsetOf(collected, all);
+            Assert.Less(collected.Count, all.Count,
+                $"{characterId} at claimed level {claimedLevel} already knows everything the track teaches");
         }
 
-        // Shawn's first SignatureCapacity filler (level 6, the same one
-        // SheepsWoolCapacityFirstReaches20AtLevel39's comment names as the
-        // first of the 6/14/21 run) -- pins that RewardTrackDefinition.From
-        // forwards a filler's ResourceDisplayName the same way it forwards a
-        // milestone's, so the caption reads "WOOL" rather than falling back
-        // to the blank-name default "SIGNATURE".
-        [Test]
-        public void SheepsLevelSixCaptionIsOneWoolCapacity()
-        {
-            Assert.AreEqual("+1 WOOL CAPACITY", RewardTrackNames.Of(Sheep().At(6)));
-        }
-
-        [Test]
-        public void OwlsLevelFourCaptionIsTwoMaxMana()
-        {
-            Assert.AreEqual("+2 MAX MANA", RewardTrackNames.Of(Owl().At(4)));
-        }
-
-        [Test]
-        public void OwlsLevelSixCaptionIsTwoPercentFireDamage()
-        {
-            Assert.AreEqual("+2% FIRE DAMAGE", RewardTrackNames.Of(Owl().At(6)));
-        }
-
-        // ---- bear's track, authored 2026-09-11 on the owner's answer to
-        // AUDIT #134 ----
+        // ---- captions, one per new reward kind -----------------------------
         //
-        // Until then reward_tracks.json authored nothing for him and he
-        // levelled on RewardTrackDefinition.Default; the test that stood here
-        // asserted exactly that absence. What replaces it pins the three
-        // things about his track that are NOT free choices, because each one
-        // is a rule that would otherwise be rediscovered by a build failure
-        // months from now:
-        //
-        //  - no Signature* reward anywhere on it. He has no signatureId, so
-        //    rule 5 refuses one outright -- his resource is the `fury` POOL,
-        //    and TrackReward still has nothing that pays into a primary pool
-        //    other than mana. That model gap is what AUDIT #134 keeps open
-        //    after the authoring half of it was answered.
-        //  - no MaxMana and no ManaRegen. Both resolve CLEAN on him and then
-        //    pay nothing, because fury's capacityRule is Fixed and it is not
-        //    restoredByManaEffects (resolver blind spot B9, AUDIT #145) --
-        //    the one failure mode a green build would not have shown.
-        //  - no UnlockSkill milestone. All three of his skills author
-        //    unlockLevel 1, so there is no skill left for a level to grant.
-        //
-        // The AMOUNTS are deliberately not pinned beyond the spine and one
-        // total: they are first values awaiting the balance pass that also
-        // authors what Fury buys, and pinning each one would turn that pass
-        // into a test edit.
+        // A caption is the only thing the player ever reads off a node, and
+        // four of these kinds are new enough that nothing else has ever
+        // rendered one. Read through RewardTrackNames off the RESOLVED entry,
+        // so the baked SkillDisplayName/ResourceDisplayName the resolver
+        // attaches are exercised rather than the blank fallbacks.
         [Test]
-        public void BearHasAnAuthoredTrack()
+        public void TheNewRewardKindsCaptionThemselves()
         {
-            Assert.IsTrue(Tracks().ContainsKey("bear"),
-                "reward_tracks.json stopped authoring a track for bear -- he falls back to the generated default.");
+            Assert.AreEqual("+1 WOOL PER TURN", RewardTrackNames.Of(Sheep().At(5)));
+            Assert.AreEqual("+2 WOOL WHEN HURT", RewardTrackNames.Of(Sheep().At(19)));
+            Assert.AreEqual("SHEAR COSTS 1 LESS", RewardTrackNames.Of(Sheep().At(12)));
+            Assert.AreEqual("TUCK IN +1 PER POINT", RewardTrackNames.Of(Sheep().At(26)));
+            Assert.AreEqual("LEARN CINDERFAULT", RewardTrackNames.Of(Sheep().At(20)));
+            Assert.AreEqual("TITLE: CONTRACTOR", RewardTrackNames.Of(Sheep().At(31)));
+
+            Assert.AreEqual("+20 FURY PER ATTACK", RewardTrackNames.Of(Bear().At(5)));
+            Assert.AreEqual("OPENS AT 25 FURY", RewardTrackNames.Of(Bear().At(15)));
+            Assert.AreEqual("SLAM +5", RewardTrackNames.Of(Bear().At(12)));
+
+            Assert.AreEqual("+5% SPELL DAMAGE", RewardTrackNames.Of(Owl().At(7)));
+            Assert.AreEqual("SPELLS COST 1 LESS", RewardTrackNames.Of(Owl().At(15)));
+            Assert.AreEqual("+6 MAX MANA", RewardTrackNames.Of(Owl().At(5)));
+            Assert.AreEqual("PLATE RIM, GOLD", RewardTrackNames.Of(Owl().At(38)));
         }
 
+        // ---- the rules Bjorn's track has to be authored inside --------------
+        //
+        // Kept from the pre-phase-4 version of this file, because each one is
+        // a rule that would otherwise be rediscovered by a build failure
+        // months from now rather than read here.
         [Test]
-        public void BearsTrackPaysNothingHisResourceCannotReceive()
+        public void BjornsTrackPaysNothingHisResourceCannotReceive()
         {
             var track = Bear();
             var forbidden = new[]
@@ -370,45 +475,29 @@ namespace PrincesPalace.Domain.Tests
                 TrackReward.SignatureGainPerTurn,
                 TrackReward.SignatureGainOnDamageTaken,
                 TrackReward.SignatureAbsorbs,
+                TrackReward.SignatureAbsorbPerPoint,
                 TrackReward.MaxMana,
                 TrackReward.ManaRegen,
             };
 
-            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
+            foreach (var (level, entry) in track.AllLevels())
             {
-                var entry = track.At(level);
                 CollectionAssert.DoesNotContain(forbidden, entry.Reward,
                     $"bear level {level}: Bjorn has no signature and spends `fury`, not mana.");
             }
         }
 
-        [Test]
-        public void BearsTrackGrantsNoSkill()
+        // Every level pays something -- rule 1 of the resolver, asserted
+        // against the shipped content rather than only against a fixture.
+        [TestCase("sheep")]
+        [TestCase("bear")]
+        [TestCase("owl")]
+        public void NoLevelOfAShippedTrackPaysNothing(string characterId)
         {
-            var track = Bear();
-
-            for (int level = RewardTrack.StartingLevel; level <= RewardTrack.MaxLevel; level++)
+            foreach (var (level, entry) in Tracks()[characterId].AllLevels())
             {
-                Assert.AreNotEqual(TrackReward.UnlockSkill, track.At(level).Reward,
-                    $"bear level {level}: all three of his skills unlock at level 1, so a grant here pays nothing.");
+                Assert.IsTrue(entry.IsSomething, $"{characterId} level {level} pays nothing");
             }
-        }
-
-        // The one place a literal total earns its keep: moving him off the
-        // generated default was not meant to change what he is paid by an
-        // order of magnitude. The default pays 229 max health and 50 stat
-        // points (RewardTrackDefinitionTests pins both); this pays 225 and 50.
-        [Test]
-        public void BearsFullyCollectedTotals()
-        {
-            var track = Bear();
-
-            Assert.AreEqual(225, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
-                "max health -- 6 milestone nodes at 15 plus 27 filler nodes at 5");
-            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel),
-                "stat points -- 40 filler singles plus level 80's ten, the same 50 both other tracks pay");
-            Assert.AreEqual(50, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Physical, RewardTrack.MaxLevel),
-                "Physical damage -- three milestones at 10 plus 20 filler nodes at 1");
         }
     }
 }
