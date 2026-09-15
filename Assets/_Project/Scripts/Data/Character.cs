@@ -187,14 +187,21 @@ namespace PrincesPalace
             return true;
         }
 
-        // What the next level costs. The curve itself is
+        // What the next level costs. The arithmetic is
         // Domain.Progression.LevelCurve; this stays as the name every caller
-        // already asks, which is what the old comment here promised -- "tunable
-        // later without touching callers, since they only ever ask how much to
-        // next". Tuned, and no caller moved.
+        // already asks, which is what the old comment here promised --
+        // "tunable later without touching callers, since they only ever ask
+        // how much to next". Tuned twice now (a formula retune, then a whole
+        // authored table), and no caller has moved either time.
+        //
+        // THIS IS THE ONE PLACE THE TABLE IS FETCHED. LevelCurve is engine-
+        // free and cannot reach ContentDatabase, so somebody in Core has to
+        // hand it the costs, and this is the seam every caller already goes
+        // through -- three call sites outside this file, all asking exactly
+        // this question.
         public static int ExpToNextLevel(int level)
         {
-            return LevelCurve.ExpToNextLevel(level);
+            return LevelCurve.ExpToNextLevel(Content.ContentDatabase.LevelCosts, level);
         }
 
         // Adds exp and applies every level-up it earns (a big enough gain
@@ -207,24 +214,23 @@ namespace PrincesPalace
         // for levelling are two steps on purpose -- a level can be reached in
         // more than one way (a debug grant, a migration), and a grant that
         // rode inside the increment would fire for all of them or none.
+        //
+        // AND THE LOOP ITSELF IS NOW LevelCurve.AddExperience, in Domain.
+        // What is left here is the save-side wrapper: fetch the table, apply,
+        // copy the three fields back. The loop moved so a career's worth of
+        // level-ups can be pinned under `dotnet test` without a save, a scene
+        // or Unity -- CODE_STANDARDS §1's "arithmetic to Domain, wrapper
+        // stays" -- and so that the cap at RewardTrack.MaxLevel is enforced
+        // in exactly one place rather than wherever experience happens to be
+        // added.
         public int AddExperience(int amount)
         {
-            if (amount <= 0)
-            {
-                return 0;
-            }
+            var after = LevelCurve.AddExperience(Content.ContentDatabase.LevelCosts, level, exp, amount);
 
-            exp += amount;
-            int levelsGained = 0;
+            level = after.Level;
+            exp = after.Exp;
 
-            while (exp >= ExpToNextLevel(level))
-            {
-                exp -= ExpToNextLevel(level);
-                level++;
-                levelsGained++;
-            }
-
-            return levelsGained;
+            return after.LevelsGained;
         }
 
         // How many stat points are currently placed into ability scores.

@@ -35,6 +35,7 @@ namespace PrincesPalace.Content
         private const string ModifierResourcePath = "Content/Modifiers";
         private const string RewardTrackResourcePath = "Content/RewardTracks";
         private const string PoolResourcePath = "Content/Pools";
+        private const string LevelCurveResourcePath = "Content/LevelCurve";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -48,6 +49,12 @@ namespace PrincesPalace.Content
         private static List<ModifierDefinition> _modifiers;
         private static List<RewardTrackDefinitionAsset> _rewardTracks;
         private static List<PoolDefinition> _pools;
+        private static List<LevelCurveDefinition> _levelCurve;
+
+        // The flat projection Domain actually reads, built once beside the
+        // assets rather than per call: Character.ExpToNextLevel asks for it
+        // inside AddExperience's loop and twice more per reward row.
+        private static List<int> _levelCosts;
 
         // THE POOL EVERYTHING WITH NO OPINION GETS: every enemy, every
         // character who does not name another one, and the fallback when a
@@ -64,6 +71,30 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<PoolDefinition> Pools
         {
             get { EnsureLoaded(); return _pools; }
+        }
+
+        // The authored level cost table, ascending by level. One row per
+        // level from LevelCurve.FirstPaidLevel to RewardTrack.MaxLevel.
+        public static IReadOnlyList<LevelCurveDefinition> LevelCurveRows
+        {
+            get { EnsureLoaded(); return _levelCurve; }
+        }
+
+        // The same table as the flat list Domain.Progression.LevelCurve
+        // takes: index 0 is the cost to enter level 2.
+        //
+        // THE ONE ROUTE FROM CONTENT TO THE LEVEL CURVE. LevelCurve is
+        // engine-free and cannot reach this type, so somebody in Core has to
+        // hand it the numbers; Character.ExpToNextLevel and
+        // Character.AddExperience are the only two callers, and they are the
+        // seam every level question in the project already goes through.
+        //
+        // EMPTY BEFORE THE FIRST CONTENT BUILD, which LevelCurve answers with
+        // NoTableCost rather than a guess -- see its own comment for why a
+        // guessed default is the worse of the two failures.
+        public static IReadOnlyList<int> LevelCosts
+        {
+            get { EnsureLoaded(); return _levelCosts; }
         }
 
         // Characters in authored roster order.
@@ -414,6 +445,8 @@ namespace PrincesPalace.Content
             _modifiers = null;
             _rewardTracks = null;
             _pools = null;
+            _levelCurve = null;
+            _levelCosts = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test
@@ -904,6 +937,15 @@ namespace PrincesPalace.Content
             _achievements = LoadOrdered<AchievementDefinition>(AchievementResourcePath);
             _relics = LoadOrdered<RelicDefinition>(RelicResourcePath);
             _modifiers = LoadOrdered<ModifierDefinition>(ModifierResourcePath);
+
+            // ORDERED BY LEVEL (LevelCurveDefinition.SortOrder), which is what
+            // makes the flat projection below index-addressable at all: row 0
+            // is level 2's cost only because the list is sorted.
+            _levelCurve = LoadOrdered<LevelCurveDefinition>(LevelCurveResourcePath);
+            _levelCosts = _levelCurve
+                .Where(row => row != null && row.Data != null)
+                .Select(row => row.Data.Cost)
+                .ToList();
 
             // Loaded HERE, not lazily off the RewardTracks property: a lazy
             // load re-entered from a future per-character read (the way

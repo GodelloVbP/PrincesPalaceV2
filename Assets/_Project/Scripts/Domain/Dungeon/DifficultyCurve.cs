@@ -69,12 +69,42 @@ namespace PrincesPalace.Domain.Dungeon
         private const int HealthPermillePerStep = 75;
         private const int AttackPermillePerStep = 38;
 
+        // THREE RATES NOW, and the third is not a threat rate at all.
+        //
+        // EXPERIENCE was the health rate until progression v2 phase 2
+        // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §2), which is
+        // to say a step-80 fight paid 325x a step-0 one and a single deep run
+        // paid 195,369 -- more than a hundred-level track cost in total. A
+        // level curve cannot be priced against income that compounds that
+        // hard without either pricing the early levels out of reach or making
+        // the late ones a formality; the model (xp_model.md Part B) puts a
+        // deep run at 10,153 on this rate instead, and a leg-2 death at 710,
+        // which is the spread the authored cost table in level_curve.json is
+        // written against.
+        //
+        // 25 rather than 40 because levels should come from PLAYING, not
+        // only from depth: 40 permille pays a deep run 23,311 against a
+        // leg-5 death's 3,863 (ratio 6.0), 25 pays 10,153 against 2,642
+        // (ratio 3.8). Both were modelled; the owner's call is recorded in
+        // the plan's §8.
+        //
+        // GOLD DID NOT MOVE. It keeps the health rate through ScaleReward
+        // below, because the shop's prices are the thing gold is priced
+        // against and nothing about them changed.
+        private const int ExpPermillePerStep = 25;
+
         // What one step multiplies enemy health by. Exposed for the same
         // reason the old EnemyMultiplier was: "is this curve doing anything"
         // is a question worth being able to ask without an enemy to hand.
         public static float HealthMultiplier(int step) => Multiplier(step, HealthPermillePerStep);
 
         public static float AttackMultiplier(int step) => Multiplier(step, AttackPermillePerStep);
+
+        // What one step multiplies a fight's EXPERIENCE by. Exposed for the
+        // same reason the other two are, and read by LevelCurveTests to state
+        // the cost curve's relationship to the income it is racing without
+        // restating 1.025 in a second file.
+        public static float ExperienceMultiplier(int step) => Multiplier(step, ExpPermillePerStep);
 
         // Enemy health, and anything else that is a POOL to be chewed through.
         public static int ScaleHealth(int amount, int step) => Scale(amount, step, HealthPermillePerStep);
@@ -98,7 +128,7 @@ namespace PrincesPalace.Domain.Dungeon
         // A break shield is a pool, so it chews like health.
         public static int ScaleShield(int amount, int step) => Scale(amount, step, HealthPermillePerStep);
 
-        // Rewards ride the SAME curve as the threat.
+        // GOLD. Rides the SAME curve as the threat.
         //
         // Not a separate rate, on purpose: if pay lagged difficulty the deep
         // game would quietly become worse value per fight and a player's best
@@ -107,14 +137,30 @@ namespace PrincesPalace.Domain.Dungeon
         // anyway so that decoupling them later is a deliberate edit rather
         // than a silent one.
         //
-        // On the HEALTH rate, which is the bigger of the two now that there
-        // are two -- and worth saying out loud that this makes a step-80 fight
-        // pay roughly 325x a step-0 one, against a shop whose prices climb
-        // linearly with tier. That is AUDIT #2's economy, an order of
-        // magnitude further out. Left coupled rather than quietly rebased,
-        // because decoupling pay from threat is exactly the deliberate edit
-        // this method exists to make someone type.
+        // On the HEALTH rate -- and worth saying out loud that this makes a
+        // step-80 fight pay roughly 325x a step-0 one, against a shop whose
+        // prices climb linearly with tier. That is AUDIT #2's economy, an
+        // order of magnitude further out. Left coupled rather than quietly
+        // rebased, because decoupling pay from threat is exactly the
+        // deliberate edit this method exists to make someone type.
+        //
+        // EXPERIENCE USED TO COME THROUGH HERE TOO and no longer does -- see
+        // ScaleExperience below. The deliberate edit the paragraph above
+        // invited has been typed, for one of the two halves.
         public static int ScaleReward(int amount, int step) => ScaleHealth(amount, step);
+
+        // EXPERIENCE, on its own rate.
+        //
+        // Split out from ScaleReward for progression v2 phase 2. The argument
+        // above -- that pay must not lag threat or shallow farming wins --
+        // still holds for GOLD, which is spent inside the run it was earned
+        // in, at a shop whose prices climb with depth. It does not hold for
+        // experience, which is spent on a track that has to be priced ONCE
+        // for a career and cannot be priced against income that multiplies by
+        // 325 across a single descent. Levelling still rises with depth here
+        // (1.025 a step, 7.2x at step 80), just not fast enough to make the
+        // first nine legs of a deep run a rounding error against its last.
+        public static int ScaleExperience(int amount, int step) => Scale(amount, step, ExpPermillePerStep);
 
         // double all the way through, and Scale uses THIS rather than the float
         // the public accessors return. Rounding a multiplier to float and then

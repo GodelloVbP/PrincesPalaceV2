@@ -466,7 +466,13 @@ namespace PrincesPalace.PlayModeTests
                 "a v4 watermark was carried across and reinterpreted against the new table");
             Assert.AreEqual(0, character.unspentStatPoints,
                 "points paid by the old table survived the track that paid them");
-            Assert.AreEqual(41, character.level, "the migration took a level away");
+
+            // THE LEVEL USED TO SURVIVE THIS STEP and no longer does, because
+            // a v4 save now passes through the 5 -> 6 step too: progression v2
+            // resets the ladder outright (SaveVersionSixTests). What is still
+            // this test's own subject is the pair above -- the 4 -> 5 step
+            // unwinding a watermark that would otherwise be reinterpreted.
+            Assert.AreEqual(1, character.level, "the 5 -> 6 ladder reset did not run");
             Assert.AreEqual(SaveData.CurrentVersion, save.version);
         }
 

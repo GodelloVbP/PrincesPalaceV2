@@ -1,81 +1,163 @@
-using System;
+using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Progression
 {
-    // What a character level costs.
+    // What a character level costs, and what a gain of experience does to a
+    // level/exp pair.
     //
     // IN DOMAIN, NOT ON Character, for the reason TalentSkeleton's header
     // gives for the same move: the EditMode assembly references Domain and
     // nothing else, so arithmetic that lives in Core can only be pinned from
-    // PlayMode or duplicated into the test. `Character.ExpToNextLevel` still
-    // exists and is still what every caller asks -- it delegates here, so the
-    // seam callers depend on has not moved.
+    // PlayMode or duplicated into the test. `Character.ExpToNextLevel` and
+    // `Character.AddExperience` still exist and are still what every caller
+    // asks -- they delegate here, so the seam callers depend on has not
+    // moved.
     //
-    // GEOMETRIC, replacing `level * 100`, and the reason is that the thing it
-    // was racing is geometric too.
+    // AN AUTHORED TABLE, NOT A FORMULA, since progression v2 phase 2. The
+    // geometric curve that used to live here (BaseCost 100, 90 permille a
+    // level, cap 200) was fitted against an income that compounded at the
+    // health rate, and the whole point of that fit was to outrun it. Two
+    // things then changed at once: experience got its own, much flatter rate
+    // (DifficultyCurve.ScaleExperience, 25 permille) and the cap came down
+    // from 100 to 40. The model refitted the formula three ways against the
+    // new income and every fit priced level 40 at four to five deep runs
+    // while clearing a third of the track inside the first three short runs
+    // -- because one exponent cannot describe a ladder whose early rungs are
+    // meant to be minutes apart and whose late ones are meant to be runs
+    // apart. See docs/handoffs/progression_v2/xp_model.md Part C for the
+    // three fits and PLAN_PROGRESSION_V2.md §3 for the table that replaced
+    // them.
     //
-    // `DifficultyCurve.ScaleReward` is `ScaleHealth`: XP income compounds at 77
-    // permille per depth step, so a step-80 fight pays roughly 370x a step-0
-    // one. Against that, a linear-increment cost is not a slow curve, it is a
-    // curve running the wrong way -- levels ACCELERATE. Cumulative cost to
-    // level 100 under `level * 100` is 495,000, and a run reaching leg 10 pays
-    // about 134,000, so the whole hundred-level track was worth under four
-    // deep runs.
+    // THE TABLE IS PASSED IN, NOT HELD. Domain cannot reach ContentDatabase,
+    // and a static table installed once at load would be exactly the global
+    // mutable state GlobalStateLintTests exists to keep out. Every method
+    // here takes `costs`, the flat list the content resolver produces, and
+    // `Character` -- the one Core-side seam -- is what fetches it.
     //
-    // At 90 permille the cost outruns the income (1.09 a level against 1.077 a
-    // step) and level 100 lands near 6.7M -- about fifty deep runs, which is a
-    // track rather than a formality. The full working, including what happens
-    // if the real depth ceiling turns out to be leg 6-8, is in
-    // docs/archive/PLAN_PROGRESSION_TRACK.md.
-    //
-    // Worth knowing what this does to a save written before it: per-level cost
-    // is LOWER than the old curve between roughly levels 2 and 44 and higher
-    // after, so an existing character can be sitting on more exp than their
-    // current level now requires. Nothing is corrupted by that -- AddExperience
-    // loops, so they collect every level they are owed on their next gain, and
-    // both XP bars clamp to 0..1 in the meantime (CombatReward.BarFill01,
-    // CharacterDossierController's xpFill). No migration, which is why
-    // SaveData.CurrentVersion does not move.
+    // WHAT A SAVE WRITTEN BEFORE THIS SEES: nothing, because it is reset.
+    // SaveData's version-6 migration puts every roster character back to
+    // level 1 with 0 experience; the per-level costs moved far too much
+    // (level 10 was 236 and is now 500; level 40 was 30,199 and is now
+    // 10,000) for a carried level to mean the same thing on either side.
     public static class LevelCurve
     {
-        // What level 0 would cost, and the number every step compounds from.
-        public const int BaseCost = 100;
+        // The first level a player PAYS for. A character begins at level 1,
+        // so the table starts at 2 -- and `costs[0]` is that row.
+        public const int FirstPaidLevel = 2;
 
-        // The dial, in the same integer permille per step DifficultyCurve
-        // holds its two rates in -- deliberately the same idiom, because these
-        // two curves are in a race and comparing them should not mean
-        // converting between two notations first.
+        // WHAT AN ABSENT TABLE COSTS. Reached only with no built content --
+        // an Editor session before the first ContentBuilder run, a test
+        // holding ContentDatabase empty -- and it has to be a number, because
+        // every caller asks for one.
         //
-        // 90 against the reward curve's 77. The margin is small on purpose:
-        // much wider and the deep game stops paying for itself, much narrower
-        // and the track never slows.
-        public const int PermillePerLevel = 90;
+        // int.MaxValue rather than 0 or a guessed default, and the choice is
+        // between two failure shapes rather than between right and wrong. A 0
+        // makes `while (exp >= cost)` always true and spins forever. A guessed
+        // default makes a character level up on numbers nobody authored, which
+        // is this project's one forbidden answer: plausible and wrong. This
+        // makes them stick at level 1, which is visibly broken and harms
+        // nothing on the way.
+        public const int NoTableCost = int.MaxValue;
 
-        // Ceilings, the same defensive shape DifficultyCurve uses and for the
-        // same reason: `level` comes off a save and nothing bounds it. 9%
-        // compounding passes int at about level 190, and a wrapped cost reads
-        // as a NEGATIVE requirement -- which AddExperience's `while (exp >=
-        // ExpToNextLevel(level))` would treat as "always met" and spin.
-        public const int MaxCurvedLevel = 200;
-        private const int MaxCost = 1_000_000_000;
+        // The last level an authored table reaches. Derived from the table's
+        // own length rather than read off RewardTrack, so a table and the cap
+        // it was authored for cannot disagree here -- LevelCurveEntryResolver
+        // is where they are checked against each other, once, at build time.
+        public static int MaxLevel(IReadOnlyList<int> costs) =>
+            costs == null || costs.Count == 0 ? RewardTrack.StartingLevel : FirstPaidLevel + costs.Count - 1;
 
         // What it costs to get from `level` to `level + 1`.
         //
-        // Floored, like every other curve in the project -- Scale() in
-        // DifficultyCurve makes the same choice, and the alternative is a cost
-        // that rounds up to a suspiciously round number at exactly the levels
-        // worth checking.
-        public static int ExpToNextLevel(int level)
+        // AT AND PAST THE CAP this returns the LAST authored cost rather than
+        // a sentinel, and AddExperience refuses to cross it -- so a level-40
+        // character's experience bar reads against 10,000 and fills, instead
+        // of reading against int.MaxValue and looking permanently empty. The
+        // cap is enforced in one place (AddExperience), not two.
+        public static int ExpToNextLevel(IReadOnlyList<int> costs, int level)
         {
-            if (level <= 0)
+            if (costs == null || costs.Count == 0) return NoTableCost;
+
+            int index = level - FirstPaidLevel + 1;
+            if (index < 0) index = 0;
+            if (index >= costs.Count) index = costs.Count - 1;
+
+            return costs[index];
+        }
+
+        // What reaching `level` costs in total, from level 1.
+        //
+        // long, because the cumulative figure is what a track is actually
+        // priced against ("how long to 40", not "what does 23 cost") and a
+        // caller summing it in an int is one cap change away from wrapping.
+        public static long CumulativeCost(IReadOnlyList<int> costs, int level)
+        {
+            if (costs == null) return 0;
+
+            long total = 0;
+            for (int l = FirstPaidLevel; l <= level; l++)
             {
-                return BaseCost;
+                int index = l - FirstPaidLevel;
+                if (index < 0 || index >= costs.Count) break;
+                total += costs[index];
             }
 
-            int clamped = level > MaxCurvedLevel ? MaxCurvedLevel : level;
-            double cost = BaseCost * Math.Pow(1d + PermillePerLevel / 1000d, clamped);
+            return total;
+        }
 
-            return cost >= MaxCost ? MaxCost : (int)Math.Floor(cost);
+        // What `amount` more experience does to a level/exp pair.
+        //
+        // THE WHOLE LEVEL-UP LOOP, moved down from Character so it can be
+        // pinned without a save, a scene or Unity -- CODE_STANDARDS §1's
+        // "arithmetic to Domain, wrapper stays". Character.AddExperience is
+        // now that wrapper and does nothing else.
+        //
+        // STOPS AT THE CAP, which is new. Nothing used to bound `level` at
+        // all: a character could level past RewardTrack.MaxLevel purely
+        // through income, and the track simply returned TrackEntry.None
+        // forever after (RewardTrackDefinition.At). That was graceful with a
+        // cap of 100 nobody reached; with a cap of 40 that a career reaches
+        // on run 24 it would have every later run advertise levels that pay
+        // nothing. Excess experience is KEPT rather than discarded -- it
+        // costs nothing to carry, and throwing away a player's last fight
+        // because they happened to be at the cap is a worse answer than a
+        // number that stops mattering.
+        public static LevelUp AddExperience(IReadOnlyList<int> costs, int level, int exp, int amount)
+        {
+            if (amount <= 0) return new LevelUp(level, exp, 0);
+
+            int cap = MaxLevel(costs);
+            int newExp = exp + amount;
+            int newLevel = level;
+            int gained = 0;
+
+            while (newLevel < cap)
+            {
+                int cost = ExpToNextLevel(costs, newLevel);
+                if (cost <= 0 || newExp < cost) break;
+
+                newExp -= cost;
+                newLevel++;
+                gained++;
+            }
+
+            return new LevelUp(newLevel, newExp, gained);
+        }
+
+        // Where a gain left a character. A struct rather than three out
+        // parameters because the three only ever travel together, and
+        // Character copies all three back in one place.
+        public readonly struct LevelUp
+        {
+            public readonly int Level;
+            public readonly int Exp;
+            public readonly int LevelsGained;
+
+            public LevelUp(int level, int exp, int levelsGained)
+            {
+                Level = level;
+                Exp = exp;
+                LevelsGained = levelsGained;
+            }
         }
     }
 }

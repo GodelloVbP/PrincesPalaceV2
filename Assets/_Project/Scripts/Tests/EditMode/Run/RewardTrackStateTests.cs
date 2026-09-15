@@ -105,7 +105,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheCountIsCappedAtTheEndOfTheTrack()
         {
-            Assert.AreEqual(99, RewardTrack.UnclaimedCount(400, 1));
+            // 39: levels 2 through 40, the whole track, however absurd the
+            // level on the save is.
+            Assert.AreEqual(39, RewardTrack.UnclaimedCount(400, 1));
         }
 
         // ---- the whole rail agrees with itself ----------------------------------
@@ -117,7 +119,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WaitingIsOneUnbrokenRunAboveTheWatermark()
         {
-            const int Level = 47;
+            const int Level = 31;
             const int Claimed = 12;
 
             int waiting = 0;
@@ -138,7 +140,7 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            Assert.AreEqual(35, waiting, "13 through 47 is thirty-five levels");
+            Assert.AreEqual(19, waiting, "13 through 31 is nineteen levels");
         }
     }
 }

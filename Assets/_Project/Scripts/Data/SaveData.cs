@@ -46,7 +46,21 @@ namespace PrincesPalace
         // Nature that were never applied, while unspentStatPoints still holds
         // what the old table paid. See Migrate's own step for what it does
         // about it.
-        public const int CurrentVersion = 5;
+        // 5 -> 6: progression v2 reset the whole ladder. The level cap came
+        // down from 100 to 40, the cost of every level changed (10 was 236 and
+        // is now 500; 40 was 30,199 and is now 10,000), and the reward at each
+        // level is being reauthored in phase 4. A carried `level` therefore
+        // means something different on each side of this bump, and a carried
+        // `exp` was earned against income that paid 195,369 for a deep run
+        // where it now pays 10,153. There is no honest conversion: a
+        // level-preserving migration would have to reconcile old rewards
+        // against new nodes, which is more code than the feature. So the
+        // ladder is put back to the bottom and everything that is not the
+        // ladder is kept. The only saves in existence are developers'
+        // (PLAN_PROGRESSION_V2.md §6 says so and is the authority for this
+        // being acceptable at all); a shipped game would need the other
+        // answer.
+        public const int CurrentVersion = 6;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -471,6 +485,11 @@ namespace PrincesPalace
                 ResetTheRewardTrack();
             }
 
+            if (version < 6)
+            {
+                ResetTheLadder();
+            }
+
             version = CurrentVersion;
             Reconcile();
 
@@ -547,6 +566,46 @@ namespace PrincesPalace
             {
                 if (character == null) continue;
 
+                character.claimedTrackLevel = 0;
+                character.unspentStatPoints = 0;
+                character.investedAbilityScores = default;
+            }
+        }
+
+        // The one-time sweep for saves written before progression v2 reset the
+        // ladder, 5 -> 6.
+        //
+        // EVERYTHING THE LADDER TOUCHES, and nothing else. Level and
+        // experience go back to where a new character starts; the track's
+        // watermark, the points it paid and the scores those points were spent
+        // on go with them, because a point that came off the old table cannot
+        // stay spent once the level that paid it is unwound. `embers`,
+        // `unlockedTalentIds` and `equipment` are untouched -- none of them was
+        // ever priced in experience, and a player who spent an evening on a
+        // talent tree should not lose it to a curve retune.
+        //
+        // OVERLAPS ResetTheRewardTrack ON PURPOSE. A version-4 save runs both,
+        // and the three fields they share are set to the same values by each,
+        // so the order does not matter and neither does the duplication. The
+        // alternative -- a shared helper called from two version gates -- would
+        // couple two steps that are only alike by coincidence, and the 4 -> 5
+        // step must keep meaning what it meant when it was written even if
+        // this one changes.
+        //
+        // IDEMPOTENT BY THE VERSION STAMP rather than by the arithmetic:
+        // Migrate returns at its first line for a save already at
+        // CurrentVersion, so a version-6 save loaded twice is read, reconciled
+        // and left alone. That is what makes "loading again changes nothing"
+        // true, and it is why the stamp is written in the same pass as the
+        // reset rather than afterwards.
+        private void ResetTheLadder()
+        {
+            foreach (var character in roster ?? new List<Character>())
+            {
+                if (character == null) continue;
+
+                character.level = 1;
+                character.exp = 0;
                 character.claimedTrackLevel = 0;
                 character.unspentStatPoints = 0;
                 character.investedAbilityScores = default;

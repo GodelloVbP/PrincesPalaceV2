@@ -20,33 +20,34 @@ namespace PrincesPalace.Domain.Tests
             List<RawTrackFiller> filler) =>
             new RawRewardTrackEntry { characterId = characterId, milestones = milestones.ToArray(), filler = filler.ToArray() };
 
-        // The twelve fixed milestone levels, filled with the same interim
-        // kinds RewardTrack.cs's own Milestones table uses today (only
-        // StatPoint/MaxHealth/Respec/SecondLife exist on TrackReward until
-        // P3 lands the rest) -- a full, valid milestone set every refusal
-        // test below starts from and breaks exactly one rule against.
+        // The ten fixed milestone levels, filled with the same interim
+        // kinds RewardTrackDefinition's own DefaultMilestones table uses
+        // today -- a full, valid milestone set every refusal test below
+        // starts from and breaks exactly one rule against.
+        //
+        // TEN, NOT TWELVE, since progression v2 phase 2 cut the cap to 40 and
+        // repointed the cadence to 3, 5, 10, 15, 20, 25, 30, 35, 38, 40.
         private static List<RawTrackMilestone> FullMilestones() => new List<RawTrackMilestone>
         {
+            Milestone(3,  "MaxHealth", 15),
+            Milestone(5,  "MaxHealth", 15),
             Milestone(10, "MaxHealth", 15),
+            Milestone(15, "MaxHealth", 15),
             Milestone(20, "Respec"),
-            Milestone(25, "MaxHealth", 15),
-            Milestone(30, "MaxHealth", 15),
+            Milestone(25, "SecondLife", 1),
+            Milestone(30, "StatPoint", 10),
+            Milestone(35, "MaxHealth", 15),
+            Milestone(38, "MaxHealth", 15),
             Milestone(40, "MaxHealth", 15),
-            Milestone(45, "MaxHealth", 15),
-            Milestone(50, "MaxHealth", 15),
-            Milestone(60, "MaxHealth", 15),
-            Milestone(70, "MaxHealth", 15),
-            Milestone(80, "StatPoint", 10),
-            Milestone(90, "SecondLife", 1),
-            Milestone(100, "MaxHealth", 15),
         };
 
-        // 40 + 47 = 87, the track's filler-level count -- mirrors
-        // RewardTrack.cs's own FillerMix.
+        // 14 + 15 = 29, the track's filler-level count (39 levels from 2 to
+        // 40, less the ten milestones) -- mirrors RewardTrackDefinition's own
+        // DefaultFillerMix.
         private static List<RawTrackFiller> FullFiller() => new List<RawTrackFiller>
         {
-            Filler("StatPoint", 40, amount: 1),
-            Filler("MaxHealth", 47, amount: 2),
+            Filler("StatPoint", 14, amount: 1),
+            Filler("MaxHealth", 15, amount: 2),
         };
 
         // ---- rule 1: every milestone level, exactly once; no non-milestone level named ----
@@ -55,14 +56,14 @@ namespace PrincesPalace.Domain.Tests
         public void MissingMilestoneLevel_IsRejectedNamingTheLevel()
         {
             var milestones = FullMilestones();
-            milestones.RemoveAll(m => m.level == 45);
+            milestones.RemoveAll(m => m.level == 35);
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
                 new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
                 null, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("45", string.Join("; ", errors));
+            StringAssert.Contains("35", string.Join("; ", errors));
             StringAssert.Contains("no entry", string.Join("; ", errors));
         }
 
@@ -70,7 +71,7 @@ namespace PrincesPalace.Domain.Tests
         public void EntryAtANonMilestoneLevel_IsRejectedNamingItNotAMilestone()
         {
             var milestones = FullMilestones();
-            milestones.Add(Milestone(44, "MaxHealth", 15));
+            milestones.Add(Milestone(34, "MaxHealth", 15));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
                 new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
@@ -78,19 +79,19 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("44", joined);
+            StringAssert.Contains("34", joined);
             StringAssert.Contains("not a milestone level", joined);
         }
 
-        // ---- rule 2: filler counts sum to exactly 87 ----
+        // ---- rule 2: filler counts sum to exactly 29 ----
 
         [Test]
-        public void FillerSumOf86_IsRejectedNaming87()
+        public void FillerSumOf28_IsRejectedNaming29()
         {
             var filler = new List<RawTrackFiller>
             {
-                Filler("StatPoint", 40, amount: 1),
-                Filler("MaxHealth", 46, amount: 2),
+                Filler("StatPoint", 14, amount: 1),
+                Filler("MaxHealth", 14, amount: 2),
             };
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
@@ -99,17 +100,17 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("86", joined);
-            StringAssert.Contains("87", joined);
+            StringAssert.Contains("28", joined);
+            StringAssert.Contains("29", joined);
         }
 
         [Test]
-        public void FillerSumOf88_IsRejectedNaming87()
+        public void FillerSumOf30_IsRejectedNaming29()
         {
             var filler = new List<RawTrackFiller>
             {
-                Filler("StatPoint", 40, amount: 1),
-                Filler("MaxHealth", 48, amount: 2),
+                Filler("StatPoint", 14, amount: 1),
+                Filler("MaxHealth", 16, amount: 2),
             };
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
@@ -118,8 +119,8 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("88", joined);
-            StringAssert.Contains("87", joined);
+            StringAssert.Contains("30", joined);
+            StringAssert.Contains("29", joined);
         }
 
         // ---- rule 3: no one-shot capability as filler ----
@@ -172,8 +173,8 @@ namespace PrincesPalace.Domain.Tests
             var milestones = FullMilestones();
             milestones.RemoveAll(m => m.level == 20);
             milestones.Add(Milestone(20, "SecondLife", 1));
-            // FullMilestones already carries SecondLife at 90, so this
-            // fixture now names the same capability at 20 and 90.
+            // FullMilestones already carries SecondLife at 25, so this
+            // fixture now names the same capability at 20 and 25.
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
                 new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
@@ -183,7 +184,7 @@ namespace PrincesPalace.Domain.Tests
             string joined = string.Join("; ", errors);
             StringAssert.Contains("SecondLife", joined);
             StringAssert.Contains("20", joined);
-            StringAssert.Contains("90", joined);
+            StringAssert.Contains("25", joined);
         }
 
         // ---- rules 4 and 5: cross-catalogue ----
@@ -206,8 +207,8 @@ namespace PrincesPalace.Domain.Tests
 
             var filler = new List<RawTrackFiller>
             {
-                Filler("StatPoint", 39, amount: 1),
-                Filler("MaxHealth", 47, amount: 2),
+                Filler("StatPoint", 13, amount: 1),
+                Filler("MaxHealth", 15, amount: 2),
                 Filler("ElementalDamagePercent", 1, amount: 1, against: "Lightning"),
             };
 
@@ -228,8 +229,8 @@ namespace PrincesPalace.Domain.Tests
             };
 
             var milestones = FullMilestones();
-            milestones.RemoveAll(m => m.level == 25);
-            milestones.Add(Milestone(25, "SignatureCapacity", 5));
+            milestones.RemoveAll(m => m.level == 15);
+            milestones.Add(Milestone(15, "SignatureCapacity", 5));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
                 new List<RawRewardTrackEntry> { Track("owl", milestones, FullFiller()) },
@@ -242,7 +243,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- a valid two-track fixture ----
 
         [Test]
-        public void TwoValidTracks_ResolveToTwelveMilestonesEach()
+        public void TwoValidTracks_ResolveToTenMilestonesEach()
         {
             var entries = new List<RawRewardTrackEntry>
             {
@@ -256,8 +257,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, resolved.Count);
             foreach (var track in resolved)
             {
-                Assert.AreEqual(12, track.Milestones.Length, $"{track.CharacterId}'s track");
-                Assert.AreEqual(87, SumCounts(track), $"{track.CharacterId}'s filler");
+                Assert.AreEqual(10, track.Milestones.Length, $"{track.CharacterId}'s track");
+                Assert.AreEqual(29, SumCounts(track), $"{track.CharacterId}'s filler");
             }
         }
 
