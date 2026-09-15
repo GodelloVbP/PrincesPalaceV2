@@ -32,7 +32,14 @@ namespace PrincesPalace.Domain.Combat
             int resourceSpent,
             bool ignoresDefense,
             DamageType type = DamageType.Physical,
-            ScalingAxis axis = ScalingAxis.Auto)
+            ScalingAxis axis = ScalingAxis.Auto,
+            // APPENDED LAST, same convention as type/axis above: percent of
+            // the CASTER'S own max health per point of the pool actually
+            // spent, read only by the three heals. Bjorn's Second Wind is 1,
+            // so a hundred Fury is a full heal whatever his bar has grown to
+            // -- a flat `power` tracks that at exactly one point on the
+            // health curve and drifts everywhere else.
+            int percentOfMaxHealthPerPoint = 0)
         {
             switch (effect)
             {
@@ -48,6 +55,26 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.HealSelf:
                 case SkillEffect.HealParty:
                     return Math.Max(0, flatAmount + power * resourceSpent
+                                       + PercentOfMaxHealth(actor, percentOfMaxHealthPerPoint, resourceSpent)
+                                       + CombatMath.WisdomHealBonus(actor));
+
+                // THE ONE HEAL WITH AN ATTACK TERM. Mend is authored as "20
+                // plus her spell attack", so it adds the same
+                // CombatMath.ScaledAttack on the same axis that a spell's
+                // DAMAGE rides -- one function, one axis resolution, no
+                // second answer to "what is her spell attack". The other two
+                // heals are unchanged above: a heal that grew with Attack
+                // would be a silent buff to Woolgathering and to every
+                // monster's self-heal.
+                //
+                // AUTHORED AXIS ONLY. `Auto` derives the axis from the
+                // caster's own attackType, which is right for damage (a
+                // Nature caster's hit IS Nature) and meaningless for a heal
+                // -- a heal has no element. So a HealSingle that says
+                // nothing scales with nothing, and Mend says "Spell".
+                case SkillEffect.HealSingle:
+                    return Math.Max(0, AuthoredAttackTerm(actor, axis) + flatAmount + power * resourceSpent
+                                       + PercentOfMaxHealth(actor, percentOfMaxHealthPerPoint, resourceSpent)
                                        + CombatMath.WisdomHealBonus(actor));
 
                 case SkillEffect.RestorePartyMana:
@@ -76,8 +103,37 @@ namespace PrincesPalace.Domain.Combat
                 // gate, same floor of 1 once it lands.
                 case SkillEffect.Ward:
                 {
-                    int reduction = actor.Talents.Best(TalentEffectType.WardReductionPercent);
-                    return reduction <= 0 ? 0 : Math.Max(1, reduction);
+                    // WHAT A WARD IS WORTH, in ONE place, read by the
+                    // preview (this) and by the cast (FightSession's
+                    // ApplyWard, which calls straight through here).
+                    //
+                    // IT USED TO BE TALENT-ONLY. Every ward in the game was
+                    // the Fragile Lamb's, so "how strong is a ward" was a
+                    // question only her tree answered
+                    // (TalentEffectType.WardReductionPercent) and a skill
+                    // carried nothing but the cost. Progression v2 phase 4
+                    // adds three wards with no tree behind them -- Bjorn's
+                    // Bulwark, Odette's Prism Ward, Shawn's Tuck In -- so a
+                    // skill can now author its own strength through the same
+                    // flat/per-point/attack terms every other effect here
+                    // already uses. A skill that authors none of them is
+                    // exactly as talent-driven as it was.
+                    //
+                    // THE LARGER OF THE TWO WINS rather than the sum, and
+                    // that is the same rule StatusEffects.Apply already runs
+                    // when two wards land on one wearer ("takes the stronger
+                    // magnitude"). Adding them would make a Lamb casting an
+                    // authored ward strictly better than either source
+                    // intended, which is the silent compounding this
+                    // codebase's other systems go out of their way to avoid.
+                    //
+                    // THE MAGNITUDE IS A PERCENTAGE of the next hit taken,
+                    // NOT an absorb pool -- see StatusEffects.ConsumeWard.
+                    // Every authored number here is therefore a percent.
+                    int authored = AuthoredAttackTerm(actor, axis) + flatAmount + power * resourceSpent;
+                    int talent = actor.Talents.Best(TalentEffectType.WardReductionPercent);
+                    int strength = Math.Max(authored, talent);
+                    return strength <= 0 ? 0 : Math.Max(1, strength);
                 }
 
                 // Previews ONE ward's worth of detonation damage -- how many
@@ -120,6 +176,44 @@ namespace PrincesPalace.Domain.Combat
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }
+        }
+
+        // INTEGER DIVISION, ONCE, at the end -- 1% of 260 per point over 40
+        // points is 104, not 2 x 40. Rounding per point would throw away the
+        // fraction forty times over and make the authored "at 100 Fury, a
+        // full heal" quietly false. Same integers-only discipline Amount's
+        // own header states for `power`.
+        private static int PercentOfMaxHealth(CombatantState actor, int percentPerPoint, int pointsSpent)
+        {
+            if (actor == null || percentPerPoint <= 0 || pointsSpent <= 0) return 0;
+
+            return actor.MaxHealth * percentPerPoint * pointsSpent / 100;
+        }
+
+        // THE CASTER'S SCALED ATTACK, but only when the skill EXPLICITLY
+        // names an axis to ride.
+        //
+        // `Auto` (the default every skill that says nothing resolves to)
+        // means "derive the axis from the caster's own attackType", which
+        // only makes sense for damage -- a heal and a ward have no element
+        // for an attackType to agree with. So Auto and None both contribute
+        // nothing here, and a skill that wants Odette's spell attack in its
+        // figure says `"scalingAxis": "Spell"` and gets exactly the
+        // multiplier her spell damage gets.
+        private static int AuthoredAttackTerm(CombatantState actor, ScalingAxis axis)
+        {
+            if (actor == null) return 0;
+
+            var scalingSet = axis switch
+            {
+                ScalingAxis.Weapon => actor.WeaponScaling,
+                ScalingAxis.Spell => actor.SkillScaling,
+                _ => ScalingSet.None,
+            };
+
+            if (axis != ScalingAxis.Weapon && axis != ScalingAxis.Spell) return 0;
+
+            return CombatMath.ScaledAttack(actor, scalingSet, 1f);
         }
 
         // Armour no longer applies HERE at all, regardless of `ignoresDefense`
@@ -187,14 +281,25 @@ namespace PrincesPalace.Domain.Combat
         // flagged spendsAll takes everything the caster has, which is what
         // lets a capstone scale with a whole fight's hoarding instead of a
         // fixed cost.
-        public static int ResourceToSpend(ResourcePool resource, int cost, bool spendsAll)
+        //
+        // `cap` (progression v2 phase 4) puts a CEILING on that "everything"
+        // -- Shawn's Tuck In spends up to four banked Wool and no more, so
+        // holding twelve does not make it three times the ward. 0, the
+        // default, is no ceiling, which is every spendsAll skill authored
+        // before this existed. The stated cost is still the MINIMUM either
+        // way (see CanAfford), so a capped spendsAll skill has a floor and a
+        // ceiling and scales between them.
+        public static int ResourceToSpend(ResourcePool resource, int cost, bool spendsAll, int cap = 0)
         {
             if (resource == null)
             {
                 return 0;
             }
 
-            return spendsAll ? resource.Current : Math.Min(cost, resource.Current);
+            if (!spendsAll) return Math.Min(cost, resource.Current);
+
+            int available = resource.Current;
+            return cap > 0 ? Math.Min(cap, available) : available;
         }
 
         // Whether the caster can pay. A spendsAll skill still needs its

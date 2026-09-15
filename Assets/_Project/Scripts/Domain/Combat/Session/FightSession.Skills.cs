@@ -124,8 +124,29 @@ namespace PrincesPalace.Domain.Combat.Session
                 return false;
             }
 
-            int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
-            ChargeSkillMana(actor, skill.ManaCost);
+            // A FREE ACTION IS REFUSED BEFORE IT IS PAID FOR, like every
+            // other refusal above -- the second Tuck In of a turn must not
+            // eat the Wool and then silently end the turn instead.
+            bool wantsFreeAction = IsFreeAction(actor, skill);
+            if (wantsFreeAction && _freeActionTakenBy != null && ReferenceEquals(_freeActionTakenBy, actor))
+            {
+                AppendMessage($"{actor.Name} has already taken a free action this turn.");
+                return false;
+            }
+
+            int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost,
+                skill.SpendsAllResource, skill.ResourceSpendCap);
+
+            // WHAT THE PRIMARY POOL PAYS. Ordinarily the authored ManaCost;
+            // for a spendsAllPrimary skill (Bjorn's Second Wind) every point
+            // it holds, with ManaCost as the minimum CanAfford already
+            // checked. Read BEFORE the charge, because afterwards there is
+            // nothing left to read.
+            int primarySpent = skill.SpendsAllPrimary
+                ? (actor.PrimaryPool?.Current ?? 0)
+                : skill.ManaCost;
+
+            ChargeSkillMana(actor, primarySpent);
 
             // Spent alongside the mana, and for the same reason it is spent
             // here rather than at the end: the cast is committed at this point.
@@ -151,7 +172,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // never got to open.
             RefreshAttackBonus(actor, spendingGift: DealsDamage(skill));
 
-            ResolveCharacterSkill(actor, skill, target, resourceSpent, poolTier);
+            ResolveCharacterSkill(actor, skill, target, PointsSpent(skill, resourceSpent, primarySpent), poolTier);
 
             // SOURCED by the actor. The relic's shield and the Lamb's Ward are
             // the same status, and an unsourced one would be a ward whose
@@ -165,16 +186,28 @@ namespace PrincesPalace.Domain.Combat.Session
             // here as well, which was harmless only because Apply refreshes
             // rather than stacks.
 
-            // Fleece Ward T3: warding stops costing the turn. The single
-            // biggest quality-of-life node in the Lamb's path -- before it,
+            // A CAST THAT DOES NOT END THE TURN. Two sources say so and they
+            // are ONE flag (see IsFreeAction): a skill authored freeAction --
+            // Shawn's Tuck In -- and the Fragile Lamb's Fleece Ward T3, which
+            // is the node that made warding stop costing the turn and is the
+            // single biggest quality-of-life step in her path. Before it,
             // every ward is a turn not spent doing anything else, which on a
             // frail character with no damage output feels like being punished
             // for playing her correctly.
             //
-            // The beat is still committed and played, or the ward lands with no
-            // animation at all. Only the TURN does not advance.
-            if (skill.Effect == SkillEffect.Ward && actor.Talents.Has(TalentEffectType.WardIsFreeAction))
+            // ONCE PER TURN, which is new and is the whole reason this is a
+            // generalisation rather than a second talent check. A free action
+            // with no limit is an unbounded turn; the talent never reached
+            // that because Fleece Ward has a two-turn cooldown, but an
+            // authored flag with no lock would hand the next skill an
+            // infinite loop. The lock is cleared by AdvanceAfterAction, so it
+            // is per TURN and not per fight.
+            //
+            // The beat is still committed and played, or the ward lands with
+            // no animation at all. Only the TURN does not advance.
+            if (wantsFreeAction)
             {
+                _freeActionTakenBy = actor;
                 CommitBeat();
                 return true;
             }
@@ -183,6 +216,31 @@ namespace PrincesPalace.Domain.Combat.Session
             AdvanceAfterAction();
             return true;
         }
+
+        // WHO HAS ALREADY SPENT THIS TURN'S ONE FREE ACTION. Null between
+        // turns; cleared by AdvanceAfterAction rather than at turn START, so
+        // the actor reference cannot outlive the turn it belongs to.
+        private CombatantState _freeActionTakenBy;
+
+        // Whether this cast leaves the turn where it found it. ONE
+        // PREDICATE, two sources -- an authored skill field, and the talent
+        // that predates it -- rather than a talent special case beside a
+        // field: the two say exactly the same thing about the same cast, and
+        // a reader asking "does this end my turn" must not have to know
+        // which one answered.
+        private static bool IsFreeAction(CombatantState actor, ResolvedSkill skill) =>
+            skill.FreeAction
+            || (skill.Effect == SkillEffect.Ward && actor.Talents.Has(TalentEffectType.WardIsFreeAction));
+
+        // WHICH POOL'S SPEND `power` AND percentOfMaxHealthPerPoint SCALE
+        // OFF. A skill scales off the pool it actually empties: the signature
+        // resource ordinarily, the PRIMARY pool for a spendsAllPrimary skill
+        // (Bjorn has no signature resource at all, and Second Wind's whole
+        // figure is "per Fury spent"). Never both -- a cast has one number
+        // that means "how much did I hoard", and summing two pools would
+        // make it mean neither.
+        private static int PointsSpent(ResolvedSkill skill, int resourceSpent, int primarySpent) =>
+            skill.SpendsAllPrimary ? primarySpent : resourceSpent;
 
         // The three ways an element and a skill can fail to agree, and the copy
         // to cast when they do agree.
@@ -266,14 +324,14 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case SkillEffect.DamageAll:
-                    ResolveDamageAll(actor, skill, resourceSpent);
+                    ResolveDamageAll(actor, skill, resourceSpent, poolTier);
                     break;
 
                 case SkillEffect.HealSelf:
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
+                    int amount = HealAmountOf(skill, actor, resourceSpent);
 
                     // THE RETURN, NOT THE REQUEST. One recipient, so there is
                     // exactly one honest number and no excuse for printing the
@@ -290,11 +348,36 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
                 }
 
+                case SkillEffect.HealSingle:
+                {
+                    // THE CHOSEN ALLY, or the caster when a caller with no
+                    // pick in hand gets this far -- CastSkill has already
+                    // refused a null target against a non-empty candidate
+                    // list, so the fallback is only ever reached by a path
+                    // that never asked (a preview, a test fixture).
+                    var patient = target ?? actor;
+                    BeginBeat(actor, patient, isCast: true);
+                    RecordSpellPresentation(skill);
+                    int amount = HealAmountOf(skill, actor, resourceSpent);
+
+                    // THE RETURN, NOT THE REQUEST -- the same rule HealSelf
+                    // above states at length: HealAndCount clamps at max
+                    // health, so announcing the request would float a green
+                    // +26 over a bar that did not move.
+                    int landed = HealAndCount(patient, amount);
+                    RecordBeatAmount(landed, isHealing: true);
+                    AppendMessage(ReferenceEquals(patient, actor)
+                        ? $"{actor.Name} uses {skill.DisplayName} and recovers {landed} HP."
+                        : $"{actor.Name} mends {patient.Name} for {landed}.");
+                    ApplySkillStatus(skill, patient, actor);
+                    break;
+                }
+
                 case SkillEffect.HealParty:
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
+                    int amount = HealAmountOf(skill, actor, resourceSpent);
 
                     // SUMMED, NOT ASSUMED -- RestorePartyMana's rule, applied
                     // to the arm two cases up that was left alone when it
@@ -385,7 +468,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     var wearer = target ?? actor;
                     BeginBeat(actor, wearer, isCast: true);
                     RecordSpellPresentation(skill);
-                    int warded = ApplyWard(actor, wearer);
+                    int warded = ApplyWard(actor, wearer, skill, resourceSpent);
                     AppendMessage(
                         warded > 1 ? $"{actor.Name} throws the fleece wide - {warded} of them are warded."
                         : ReferenceEquals(wearer, actor) ? $"{actor.Name} pulls the fleece close."
@@ -449,6 +532,18 @@ namespace PrincesPalace.Domain.Combat.Session
                         "FightSession has no resolution branch for this skill effect.");
             }
         }
+
+        // WHAT A HEAL IS WORTH, in one place for all three heal effects --
+        // the arithmetic lives in SkillResolution, this only decides which
+        // of the skill's own authored fields are handed to it. Before this,
+        // each of the three arms typed the same six-argument call and the
+        // day one of them needed a seventh (percentOfMaxHealthPerPoint, for
+        // Second Wind) would have been the day two of them silently did not
+        // get it.
+        private static int HealAmountOf(ResolvedSkill skill, CombatantState actor, int pointsSpent) =>
+            SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, pointsSpent,
+                ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+                percentOfMaxHealthPerPoint: skill.PercentOfMaxHealthPerPoint);
 
         // Which of the CASTER'S OWN stance folders plays for this skill —
         // the authored override if there is one, "cast" otherwise. Every
@@ -609,10 +704,17 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        private void ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent)
+        private void ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
+            PoolTierResolution.Result poolTier = default)
         {
+            // THE SAME LABEL THE SINGLE-TARGET PATH USES -- "Rampage",
+            // "Rampage x2", "Rampage x4" -- off the tier already chosen and
+            // spent in CastSkill rather than re-picked against a pool the
+            // cast has since drained.
+            string castLabel = PoolTierResolution.Label(skill.DisplayName, poolTier);
+
             var summary = new StringBuilder();
-            summary.Append($"{actor.Name} unleashes {skill.DisplayName}!");
+            summary.Append($"{actor.Name} unleashes {castLabel}!");
 
             // EVERYONE ON THE OTHER SIDE, snapshotted before the loop resolves
             // any of them. The beat's Target is the first of them and always was; the
@@ -626,7 +728,14 @@ namespace PrincesPalace.Domain.Combat.Session
 
             BeginBeat(actor, struck.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
+            RecordPoolTier(poolTier);
             RecordSplashTargets(struck.Skip(1));
+
+            // THE SKILL'S OWN APPROACH, for the same reason
+            // ResolveDamageSingle takes it: a melee sweep is a swing that
+            // happens to hit everybody, and until Rampage every DamageAll in
+            // the game was a spell cast from where the caster stood.
+            ApproachAs(skill.Approach);
 
             // The caster's own type does not change per target, so this reads
             // once -- same reasoning as the single-target branch.
@@ -706,6 +815,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 // differs. The CHARGE was decided once for the whole cast.
                 int baseAmount = SkillResolution.Amount(skill.Effect, actor, enemy, skill.Power,
                     skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+
+                // THE FURY TIER'S MULTIPLIER, applied per enemy and BEFORE
+                // defences -- identical treatment to ResolveDamageSingle's,
+                // through the same function, so a x4 Rampage is a x4 RAW
+                // sweep rather than a x4 of what each target's armour left.
+                // The tier itself was chosen and PAID ONCE for the whole
+                // cast (CastSkill); this only multiplies.
+                baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
 
                 var outcome = DamagePipeline.AfterDefences(
                     baseAmount,
@@ -918,11 +1035,22 @@ namespace PrincesPalace.Domain.Combat.Session
                     return total;
                 }
 
-                int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost, skill.SpendsAllResource);
+                int resourceSpent = SkillResolution.ResourceToSpend(actor.SignaturePool, skill.ResourceCost,
+                    skill.SpendsAllResource, skill.ResourceSpendCap);
+
+                // THE SAME POOL THE CAST WOULD ACTUALLY EMPTY. A
+                // spendsAllPrimary skill scales off the primary pool, so a
+                // preview reading the signature pool would quote 0 for
+                // Second Wind at full Fury -- see CastSkill's PointsSpent.
+                int pointsSpent = skill.SpendsAllPrimary
+                    ? (actor.PrimaryPool?.Current ?? 0)
+                    : resourceSpent;
+
                 var castType = ActorAttackType(actor) ?? DamageType.Physical;
 
                 return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
-                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+                    skill.FlatAmount, pointsSpent, skill.IgnoresDefense, castType, skill.ScalingAxis,
+                    skill.PercentOfMaxHealthPerPoint);
             }
             finally
             {

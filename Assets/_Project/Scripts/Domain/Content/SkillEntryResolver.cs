@@ -192,7 +192,13 @@ namespace PrincesPalace.Domain.Content
                     || (raw.damageInstances != null && raw.damageInstances.Length > 0)
                     || !string.IsNullOrWhiteSpace(raw.appliesStatus) || raw.statusMagnitude >= 0 || raw.statusDuration >= 0
                     || (raw.elements != null && raw.elements.Length > 0)
-                    || (raw.poolTiers != null && raw.poolTiers.Length > 0);
+                    || (raw.poolTiers != null && raw.poolTiers.Length > 0)
+                    // PHASE 4's four. Listed here rather than left out
+                    // because the whole value of this check is that the list
+                    // is complete: a field missing from it is an effect a
+                    // stand-in can quietly author.
+                    || raw.resourceSpendCap != 0 || raw.spendsAllPrimary
+                    || raw.percentOfMaxHealthPerPoint != 0 || raw.freeAction;
 
                 if (authorsAnEffectField)
                 {
@@ -335,24 +341,113 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            var scalingAxis = ScalingAxis.Auto;
+            if (!string.IsNullOrWhiteSpace(raw.scalingAxis) && !Enum.TryParse(raw.scalingAxis, ignoreCase: true, out scalingAxis))
+            {
+                error = $"{label}: scalingAxis '{raw.scalingAxis}' isn't valid. Valid options: {string.Join(", ", Enum.GetNames(typeof(ScalingAxis)))}.";
+                return false;
+            }
+
             // A heal or a mana restore has no Attack to build on, so with
             // neither a flat amount nor any scaling it restores exactly
             // nothing and the button does visibly nothing when pressed.
+            //
+            // HealSingle joins the three, with two more ways to be worth
+            // casting: an authored scaling axis (Mend's "20 plus her spell
+            // attack" would still be worth casting at flatAmount 0) and a
+            // per-point percentage of max health (Second Wind's whole
+            // figure).
             bool isRestorative = effect == SkillEffect.HealSelf
                                  || effect == SkillEffect.HealParty
+                                 || effect == SkillEffect.HealSingle
                                  || effect == SkillEffect.RestorePartyMana;
-            if (isRestorative && flatAmount == 0 && power == 0)
+            bool ridesAnAuthoredAxis = scalingAxis == ScalingAxis.Weapon || scalingAxis == ScalingAxis.Spell;
+            if (isRestorative && flatAmount == 0 && power == 0 && raw.percentOfMaxHealthPerPoint == 0
+                && !ridesAnAuthoredAxis)
             {
-                error = $"{label}: a {effect} skill with no flatAmount and no power restores nothing.";
+                error = $"{label}: a {effect} skill with no flatAmount, no power, no percentOfMaxHealthPerPoint " +
+                        "and no authored scalingAxis restores nothing.";
                 return false;
             }
 
             // Scaling per point spent, on a skill that never spends any, is
             // always zero — a silent no-op the author will not notice.
-            if (power > 0 && resourceCost == 0 && !raw.spendsAllResource)
+            bool spendsSomethingPerPoint = resourceCost > 0 || raw.spendsAllResource
+                                           || manaCost > 0 || raw.spendsAllPrimary;
+            if (power > 0 && !spendsSomethingPerPoint)
             {
                 error = $"{label}: power scales per point of resource spent, but this skill spends none. " +
                         "Set resourceCost, or set spendsAllResource, or use flatAmount instead.";
+                return false;
+            }
+
+            // ---- phase 4's four authored fields --------------------------
+            //
+            // Each refusal is the same shape as the two above: a field that
+            // would resolve cleanly and then be read by nothing.
+
+            if (raw.resourceSpendCap != 0 && !raw.spendsAllResource)
+            {
+                error = $"{label}: resourceSpendCap caps how much a spendsAllResource cast takes, and this skill " +
+                        "does not spend all. Drop the cap, or set spendsAllResource.";
+                return false;
+            }
+
+            if (raw.resourceSpendCap < 0)
+            {
+                error = $"{label}: resourceSpendCap cannot be negative (got {raw.resourceSpendCap}). 0 means no cap.";
+                return false;
+            }
+
+            // The cap is a CEILING and resourceCost is the FLOOR, so a cap
+            // under the cost is a skill that can never pay for itself.
+            if (raw.resourceSpendCap > 0 && raw.resourceSpendCap < resourceCost)
+            {
+                error = $"{label}: resourceSpendCap {raw.resourceSpendCap} is below resourceCost {resourceCost}, " +
+                        "so the cast could never spend what it costs.";
+                return false;
+            }
+
+            // manaCost is the MINIMUM a spendsAllPrimary cast needs, the same
+            // way resourceCost is for spendsAllResource. At 0 there is no
+            // minimum, which makes "spends all" indistinguishable from "spend
+            // whatever happens to be there, including nothing".
+            if (raw.spendsAllPrimary && manaCost <= 0)
+            {
+                error = $"{label}: spendsAllPrimary needs a manaCost as its minimum -- a capstone that fires on an " +
+                        "empty pool for nothing is the case this flag exists to prevent.";
+                return false;
+            }
+
+            if (raw.percentOfMaxHealthPerPoint < 0)
+            {
+                error = $"{label}: percentOfMaxHealthPerPoint cannot be negative (got {raw.percentOfMaxHealthPerPoint}).";
+                return false;
+            }
+
+            if (raw.percentOfMaxHealthPerPoint > 0 && !spendsSomethingPerPoint)
+            {
+                error = $"{label}: percentOfMaxHealthPerPoint is paid per point of the pool spent, but this skill " +
+                        "spends none.";
+                return false;
+            }
+
+            bool healsSomebody = effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty
+                                 || effect == SkillEffect.HealSingle;
+            if (raw.percentOfMaxHealthPerPoint > 0 && !healsSomebody)
+            {
+                error = $"{label}: percentOfMaxHealthPerPoint is only read by a heal, not by {effect}.";
+                return false;
+            }
+
+            // A free action is a choice the PLAYER gets to make twice in one
+            // turn. A monster's abilities are drawn one per turn by a
+            // weighted pool that has no concept of acting again, so the flag
+            // would resolve and then be read by nothing.
+            if (raw.freeAction && !raw.playerSelectable)
+            {
+                error = $"{label}: freeAction only means anything for a skill a player presses -- a monster's " +
+                        "turn is one drawn ability, not a sequence it can extend.";
                 return false;
             }
 
@@ -391,13 +486,6 @@ namespace PrincesPalace.Domain.Content
             if (!AbilityScoreLineParser.TryParse(raw.requires, label, out var requirements, requirementErrors))
             {
                 error = string.Join(" ", requirementErrors);
-                return false;
-            }
-
-            var scalingAxis = ScalingAxis.Auto;
-            if (!string.IsNullOrWhiteSpace(raw.scalingAxis) && !Enum.TryParse(raw.scalingAxis, ignoreCase: true, out scalingAxis))
-            {
-                error = $"{label}: scalingAxis '{raw.scalingAxis}' isn't valid. Valid options: {string.Join(", ", Enum.GetNames(typeof(ScalingAxis)))}.";
                 return false;
             }
 
@@ -510,7 +598,8 @@ namespace PrincesPalace.Domain.Content
                 raw.bookOnly, raw.bookTier, elements,
                 raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "",
                 poolTiers,
-                raw.placeholder, raw.placeholderNote ?? "");
+                raw.placeholder, raw.placeholderNote ?? "",
+                raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction);
             error = null;
             return true;
         }
@@ -521,14 +610,22 @@ namespace PrincesPalace.Domain.Content
         //
         // SCOPED TO DamageSingle, same "this field has no meaning on that
         // effect" rule ignoresDefense/queuePushSlots/meleeReach already
-        // follow. Nothing stops a future DamageAll or fixed-packet tier skill
-        // architecturally -- PoolTierResolution.ApplyDamageMultiplier does
-        // not care what shape the base damage came from -- but nothing reads
-        // PoolTiers from either of those paths TODAY (FightSession.Skills.
-        // ResolveDamageAll, ResolveDamageInstances), so authoring one there
-        // would spend a real pool for a multiplier nobody applies. Refused
-        // rather than left to silently do nothing, and widened the same day
-        // a second poolTiers skill actually needs it.
+        // follow. The rule is still "a path that actually reads PoolTiers",
+        // and it now covers TWO: DamageSingle and DamageAll, both with no
+        // fixed packets.
+        //
+        // WIDENED THE DAY A SECOND SKILL NEEDED IT, which is what this
+        // comment said it would be. Bjorn's Rampage is a DamageAll with
+        // Slam's own tiers (PLAN_PROGRESSION_V2.md §5), so ResolveDamageAll
+        // now takes the fired tier and applies the same multiplier through
+        // the same PoolTierResolution call ResolveDamageSingle uses --
+        // one rule, two resolution paths, rather than a second tier
+        // mechanic for sweeps.
+        //
+        // A FIXED-PACKET SKILL IS STILL REFUSED. ResolveDamageInstances
+        // computes its own per-packet figure and never sees a tier, so
+        // authoring one there would still spend a real pool for a
+        // multiplier nobody applies.
         private static bool TryResolvePoolTiers(RawSkillEntry raw, string label, SkillEffect effect,
             out ResolvedPoolTier[] poolTiers, out string error)
         {
@@ -538,9 +635,10 @@ namespace PrincesPalace.Domain.Content
             var authored = raw.poolTiers;
             if (authored == null || authored.Length == 0) return true;
 
-            if (effect != SkillEffect.DamageSingle || (raw.damageInstances != null && raw.damageInstances.Length > 0))
+            bool tieredEffect = effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
+            if (!tieredEffect || (raw.damageInstances != null && raw.damageInstances.Length > 0))
             {
-                error = $"{label}: poolTiers only means anything on a DamageSingle skill with no fixed " +
+                error = $"{label}: poolTiers only means anything on a DamageSingle or DamageAll skill with no fixed " +
                         "damageInstances -- nothing multiplies a packet spell's or an AOE's damage by a tier today.";
                 return false;
             }
@@ -959,6 +1057,11 @@ namespace PrincesPalace.Domain.Content
                 // the engine chose, which is what the owner rejected. The
                 // Target depth they now enter is the party side's, so the
                 // fight stops for a click that means something.
+                // HealSingle is the case AllyTargeting's own header named in
+                // advance -- "a heal aimed at one squadmate is the obvious
+                // one, and 'anybody on my side, myself included' is the right
+                // default for it".
+                case SkillEffect.HealSingle:
                 case SkillEffect.Ward:
                 case SkillEffect.GiftMana:
                 case SkillEffect.GiftFury:

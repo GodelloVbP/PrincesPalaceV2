@@ -193,11 +193,15 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `description` | string | `""` | Flavor text shown to the player; read by no formula. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
-| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon |
+| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle |
 | `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party, SingleAlly |
 | `manaCost` | int | `-1` | Mana spent to cast; a skill must cost this and/or resourceCost. |  |
 | `resourceCost` | int | `-1` | How much of the owner's signature resource a cast consumes. |  |
 | `spendsAllResource` | bool | `false` | Whether the cast takes the caster's entire signature resource instead of resourceCost. |  |
+| `resourceSpendCap` | int | `0` | A ceiling on how much a spendsAllResource cast takes; 0 means no ceiling. Meaningless without spendsAllResource. |  |
+| `spendsAllPrimary` | bool | `false` | Whether the cast takes the caster's entire PRIMARY pool (Fury, mana) instead of manaCost, with manaCost as the minimum. |  |
+| `percentOfMaxHealthPerPoint` | int | `0` | Percent of the caster's own max health added to a heal per point of the pool actually spent; 0 means none. |  |
+| `freeAction` | bool | `false` | Whether casting this does not end the caster's turn; at most one free action per turn. |  |
 | `power` | int | `-1` | Added per point of resource actually spent when casting. |  |
 | `flatAmount` | int | `-1` | A flat contribution before scaling: the whole amount for a heal, an offset on top of Attack for damage. |  |
 | `ignoresDefense` | bool | `false` | Whether this skill's damage skips the target's Defense entirely. |  |

@@ -318,6 +318,21 @@
       "playerSelectable": false
     },
     {
+      "id": "tuck_in",
+      "displayName": "Tuck In",
+      "description": "He folds the fleece over himself and waits. Spends up to 4 banked Wool and softens the next blow by 2% a Wool. Costs no mana and does not end his turn -- once a turn.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "Ward",
+      "targeting": "Self",
+      "manaCost": 0,
+      "resourceCost": 1,
+      "spendsAllResource": true,
+      "resourceSpendCap": 4,
+      "power": 2,
+      "freeAction": true
+    },
+    {
       "id": "boulder_slam",
       "displayName": "Boulder Slam",
       "description": "The golem heaves a slab of the floor overhead and brings it down.",
@@ -496,6 +511,54 @@
       "effect": "Ward",
       "manaCost": 0,
       "resourceCost": 0
+    },
+    {
+      "id": "rampage",
+      "displayName": "Rampage",
+      "description": "He stops picking targets. Seventy percent of a Slam, thrown at everything standing. Below 50 Fury it lands as a normal sweep; at 50 or more it spends half his Fury for double damage; at 100 it spends it all for quadruple. He always throws the hardest sweep he can afford.",
+      "characterId": "bear",
+      "unlockLevel": 999,
+      "effect": "DamageAll",
+      "manaCost": 0,
+      "flatAmount": 9,
+      "approach": "close",
+      "approachStance": "rush",
+      "windupStance": "overhead",
+      "stance": "slam",
+      "poolTiers": [
+        {
+          "spend": 0.5,
+          "damageMultiplier": 2,
+          "shake": 0.6
+        },
+        {
+          "spend": 1.0,
+          "damageMultiplier": 4,
+          "shake": 1.0,
+          "hitStopSeconds": 0.18
+        }
+      ]
+    },
+    {
+      "id": "bulwark",
+      "displayName": "Bulwark",
+      "description": "Fifty Fury, spent standing in front of somebody. The next blow they take lands 30% softer.",
+      "characterId": "bear",
+      "unlockLevel": 999,
+      "effect": "Ward",
+      "manaCost": 50,
+      "flatAmount": 30
+    },
+    {
+      "id": "second_wind",
+      "displayName": "Second Wind",
+      "description": "He lets the whole rage go at once and breathes. Needs at least 25 Fury, spends every point of it, and heals 1% of his maximum health for each one -- a full bar is a full heal.",
+      "characterId": "bear",
+      "unlockLevel": 999,
+      "effect": "HealSelf",
+      "manaCost": 25,
+      "spendsAllPrimary": true,
+      "percentOfMaxHealthPerPoint": 1
     },
     {
       "id": "prismatic_orb",
@@ -999,6 +1062,28 @@
           }
         }
       ]
+    },
+    {
+      "id": "mend",
+      "displayName": "Mend",
+      "description": "A quiet word and a hand on the shoulder. Heals the chosen ally for 20 plus her spell attack.",
+      "characterId": "owl",
+      "unlockLevel": 999,
+      "effect": "HealSingle",
+      "manaCost": 6,
+      "flatAmount": 20,
+      "scalingAxis": "Spell"
+    },
+    {
+      "id": "prism_ward",
+      "displayName": "Prism Ward",
+      "description": "Light bent into a shell around somebody else. The next blow they take lands 20 plus her spell attack percent softer.",
+      "characterId": "owl",
+      "unlockLevel": 999,
+      "effect": "Ward",
+      "manaCost": 8,
+      "flatAmount": 20,
+      "scalingAxis": "Spell"
     }
   ]
 }

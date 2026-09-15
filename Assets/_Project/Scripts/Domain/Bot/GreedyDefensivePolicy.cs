@@ -131,7 +131,7 @@ namespace PrincesPalace.Domain.Bot
                 // DamageSingle/DamageAll off the effect rather than guessing
                 // from a display string.
                 var healSkill = FirstSkillWithEffect(session, actor, legal,
-                    SkillEffect.HealSelf, SkillEffect.HealParty);
+                    SkillEffect.HealSelf, SkillEffect.HealParty, SkillEffect.HealSingle);
                 if (healSkill.HasValue) return healSkill.Value;
             }
 

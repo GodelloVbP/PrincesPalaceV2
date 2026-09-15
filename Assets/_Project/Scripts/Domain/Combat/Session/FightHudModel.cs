@@ -345,7 +345,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.DamageSingle:
                 case SkillEffect.DamageAll: return "DAMAGE";
                 case SkillEffect.HealSelf:
-                case SkillEffect.HealParty: return "HEAL";
+                case SkillEffect.HealParty:
+                // Mend reads HEAL like the other two. The row already says
+                // WHO through its targeting (the player is sent to the party
+                // plates for a pick), so a third verb would be the same word
+                // twice.
+                case SkillEffect.HealSingle: return "HEAL";
                 case SkillEffect.RestorePartyMana: return "RESTORE";
                 case SkillEffect.Provoke: return "TAUNT";
                 case SkillEffect.Transform: return "TRANSFORM";

@@ -157,6 +157,24 @@ namespace PrincesPalace.Domain.Tests
                 Assert.Greater(hero.CurrentHealth, 100);
             }),
 
+            // ONE ALLY, AND NOT THE CASTER -- the row asserts both halves,
+            // because "the caster's own bar moved" is exactly what a
+            // HealSingle that ignored its target would look like.
+            new Row(SkillEffect.HealSingle, "the chosen ally's health rises and the caster's does not", () =>
+            {
+                var hero = Hero();
+                var ally = Hero("Ally");
+                var encounter = new CombatEncounter(new[] { hero, ally }, new[] { Foe() });
+                var session = Session(encounter, Kit(Skill(SkillEffect.HealSingle, flatAmount: 60)));
+
+                hero.CurrentHealth = 40;
+                ally.CurrentHealth = 40;
+                session.CastSkill(0, ally);
+
+                Assert.Greater(ally.CurrentHealth, 40, "the chosen ally was not healed");
+                Assert.AreEqual(40, hero.CurrentHealth, "the caster healed herself instead of the ally");
+            }),
+
             new Row(SkillEffect.HealParty, "every living ally's health rises from a lowered start", () =>
             {
                 var hero = Hero();
@@ -435,6 +453,7 @@ namespace PrincesPalace.Domain.Tests
             };
 
             if (effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty
+                || effect == SkillEffect.HealSingle
                 || effect == SkillEffect.RestorePartyMana)
             {
                 raw.flatAmount = 10;

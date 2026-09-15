@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -203,9 +204,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // `wearer` IS THE PICK, never a default: the Ward is SingleAlly
         // targeting now and CastSkill refuses one aimed at nobody, so this is
         // reached with a living squadmate (possibly the caster) every time.
-        private int ApplyWard(CombatantState caster, CombatantState wearer)
+        // `skill` and `resourceSpent` are how a ward says what it is worth
+        // on its own account -- SkillResolution.Amount's Ward case is the one
+        // place that decides, and it takes the larger of the skill's own
+        // authored figure and the caster's talent. Before progression v2
+        // phase 4 every ward in the game was the Fragile Lamb's and the
+        // talent was the only source; see that case's own header.
+        private int ApplyWard(CombatantState caster, CombatantState wearer, ResolvedSkill skill, int resourceSpent)
         {
-            int reduction = caster.Talents.Best(TalentEffectType.WardReductionPercent);
+            int reduction = SkillResolution.Amount(SkillEffect.Ward, caster, wearer, skill.Power, skill.FlatAmount,
+                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis);
             if (reduction <= 0) return 0;
 
             int landed = 0;

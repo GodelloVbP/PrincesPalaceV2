@@ -179,6 +179,7 @@ namespace PrincesPalace.Domain.Bot
                     // no action here removes that cost from the comparison).
                     bool isDamage = option.Skill.IsDamaging;
                     bool isHeal = effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty
+                                                                  || effect == SkillEffect.HealSingle
                                                                   || effect == SkillEffect.RestorePartyMana;
 
                     if (isDamage)
@@ -237,6 +238,20 @@ namespace PrincesPalace.Domain.Bot
                         {
                             missing = session.Encounter.LivingPlayerParty
                                 .Sum(c => System.Math.Max(0, c.MaxHealth - c.CurrentHealth));
+                        }
+                        else if (effect == SkillEffect.HealSingle)
+                        {
+                            // THE ALLY THIS ACTION IS AIMED AT, not the
+                            // caster -- LegalActions emits one action per
+                            // eligible ally, so "how much would this land"
+                            // is a question about action.Target and the
+                            // whole point of the per-ally split is that the
+                            // answers differ. Falling through to the caster
+                            // here would score every Mend on the field by
+                            // the caster's own hole and make the three
+                            // actions indistinguishable.
+                            var patient = action.Target ?? actor;
+                            missing = patient != null ? System.Math.Max(0, patient.MaxHealth - patient.CurrentHealth) : 0;
                         }
                         else
                         {

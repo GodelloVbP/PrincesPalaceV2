@@ -51,6 +51,53 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Whether the cast takes the caster's entire signature resource instead of resourceCost.")]
         public bool spendsAllResource;
 
+        // A CEILING ON "ALL" -- Shawn's Tuck In spends up to four banked
+        // Wool and no more, so holding twelve does not make it three times
+        // the ward. 0, the default, is no ceiling, which is every
+        // spendsAllResource skill authored before this existed.
+        // resourceCost is still the MINIMUM, so a capped skill has a floor
+        // and a ceiling and scales between them.
+        [ContentDoc("A ceiling on how much a spendsAllResource cast takes; 0 means no ceiling. Meaningless without spendsAllResource.")]
+        public int resourceSpendCap;
+
+        // THE PRIMARY-POOL TWIN OF spendsAllResource -- Bjorn's Second Wind
+        // spends every point of Fury he has, and Fury is his PRIMARY pool,
+        // not a signature resource. manaCost is the minimum the same way
+        // resourceCost is for the signature version ("requires at least 25
+        // Fury"), so a capstone still cannot be fired on an empty gauge.
+        //
+        // A SECOND FLAG RATHER THAN A WIDENING OF THE FIRST, because a skill
+        // may cost both pools and "spends all" would then be ambiguous about
+        // which one it emptied. Whichever flag is set also decides which
+        // pool's spend feeds `power` -- see FightSession.CastSkill.
+        [ContentDoc("Whether the cast takes the caster's entire PRIMARY pool (Fury, mana) instead of manaCost, with manaCost as the minimum.")]
+        public bool spendsAllPrimary;
+
+        // PER POINT OF THE POOL ACTUALLY SPENT, this many percent of the
+        // CASTER'S OWN max health, added to a heal. Bjorn's Second Wind is
+        // 1: a hundred Fury spent is a full heal, whatever his health bar
+        // has grown to.
+        //
+        // A PERCENTAGE RATHER THAN A BIGGER `power`, because `power` is a
+        // flat int and the authored promise is "at 100 Fury, a full heal" --
+        // a flat number tracks that at exactly one point on the health
+        // curve and drifts everywhere else. Read only by the three heal
+        // effects; 0, the default, is every skill that has ever existed.
+        [ContentDoc("Percent of the caster's own max health added to a heal per point of the pool actually spent; 0 means none.")]
+        public int percentOfMaxHealthPerPoint;
+
+        // A CAST THAT DOES NOT END THE TURN -- Shawn's Tuck In, and the
+        // Fragile Lamb's Fleece Ward T3 talent, which sets the same flag
+        // rather than being a second rule.
+        //
+        // ONCE PER TURN, enforced by FightSession rather than by an authored
+        // number: a free action that could be taken twice is an unbounded
+        // turn, and no skill has ever wanted a second one. The cast still
+        // pays its cost, still plays its beat and still starts its cooldown
+        // -- only the turn does not advance.
+        [ContentDoc("Whether casting this does not end the caster's turn; at most one free action per turn.")]
+        public bool freeAction;
+
         // Added per point of resource actually spent. Integer on purpose —
         // see SkillResolution.
         [ContentDoc("Added per point of resource actually spent when casting.")]

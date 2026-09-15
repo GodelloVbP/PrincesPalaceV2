@@ -48,6 +48,15 @@ namespace PrincesPalace.Domain.Combat.Session
             bool killedThisAction = _killedThisAction;
             _killedThisAction = false;
 
+            // AND THIS TURN'S FREE ACTION, released here for the same reason
+            // and on the same principle. A free action (Shawn's Tuck In, the
+            // Fragile Lamb's Fleece Ward T3) deliberately does NOT reach this
+            // method, so arriving here is exactly "the turn that held the
+            // lock is over" -- including the turn an extra action was granted
+            // for, which is a new turn and gets its own. See
+            // FightSession.Skills' _freeActionTakenBy.
+            _freeActionTakenBy = null;
+
             // The action that killed the last enemy ends the fight right here,
             // before any rider could matter -- but the celebration still has to
             // happen, and this is the only path that reaches it.

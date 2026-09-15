@@ -48,6 +48,14 @@ namespace PrincesPalace.Domain.Content
         public int ManaCost;
         public int ResourceCost;
         public bool SpendsAllResource;
+
+        // See RawSkillEntry's own headers for what each of these four
+        // means and why it is a field rather than a special case.
+        public int ResourceSpendCap;
+        public bool SpendsAllPrimary;
+        public int PercentOfMaxHealthPerPoint;
+        public bool FreeAction;
+
         public int Power;
         public int FlatAmount;
         public bool IgnoresDefense;
@@ -360,8 +368,16 @@ namespace PrincesPalace.Domain.Content
             ResolvedPoolTier[] poolTiers = null,
             // APPENDED LAST OF ALL (P3): placeholder/placeholderNote are the
             // newest fields on this type.
-            bool placeholder = false, string placeholderNote = "")
+            bool placeholder = false, string placeholderNote = "",
+            // APPENDED LAST OF ALL AGAIN (phase 4), same positional-argument
+            // reason every block above gives.
+            int resourceSpendCap = 0, bool spendsAllPrimary = false, int percentOfMaxHealthPerPoint = 0,
+            bool freeAction = false)
         {
+            ResourceSpendCap = resourceSpendCap;
+            SpendsAllPrimary = spendsAllPrimary;
+            PercentOfMaxHealthPerPoint = percentOfMaxHealthPerPoint;
+            FreeAction = freeAction;
             Placeholder = placeholder;
             PlaceholderNote = placeholderNote ?? "";
             Elements = elements ?? Array.Empty<ElementChoice>();

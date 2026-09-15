@@ -109,6 +109,19 @@ namespace PrincesPalace.Domain.Bot
                 case SkillEffect.Ward:
                     return candidates.FirstOrDefault(a => ReferenceEquals(a, actor)) ?? candidates[0];
 
+                // MOST HURT FIRST, which is the healing twin of Gift: Mana's
+                // "emptiest first" two cases up and rests on the same fact: a
+                // heal clamps at max health (HealAndCount), so the ally with
+                // the biggest hole is the only one guaranteed to receive the
+                // whole of what the cast paid for. Handing it to a full bar
+                // would be a cast that spends the mana and moves nothing,
+                // which is what the bot's own ledger would then score as a
+                // wasted turn. Stable, so a tie falls back to party order --
+                // the caster included, since he is a candidate for his own
+                // heal like anyone else.
+                case SkillEffect.HealSingle:
+                    return candidates.OrderByDescending(a => a.MaxHealth - a.CurrentHealth).First();
+
                 // Gift: Fury and Gift: Haste say nothing about a resource --
                 // one applies Empowered, the other moves a turn up the order
                 // -- so every living ally is a valid recipient and the first

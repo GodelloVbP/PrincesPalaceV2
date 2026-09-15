@@ -84,6 +84,33 @@ namespace PrincesPalace.Domain.Combat
         // rather than refusing outright, so the boss is never shown winding
         // up for a call that then visibly does nothing.
         Summon,
+
+        // ONE ALLY THE PLAYER PICKS, healed -- Odette's Mend (progression v2
+        // phase 4). APPENDED, never inserted: the generated content assets
+        // carry this enum as its ordinal, so slotting it beside HealSelf and
+        // HealParty where it belongs alphabetically would renumber Provoke
+        // and everything after it, and a rebuilt Resources/Content would
+        // disagree with an unrebuilt one about what "5" means. Same
+        // convention SkillTargeting.SingleAlly already follows and for the
+        // same reason.
+        //
+        // A THIRD MEMBER RATHER THAN HealParty WITH A TARGET. The three heals
+        // differ in who they land on, which is the one thing SkillTargeting
+        // already says -- but they also differ in what a caller must supply:
+        // HealSelf and HealParty need no pick and cannot be refused for
+        // aiming at nobody, while this one is refused exactly the way a
+        // Gift is. Folding it into HealParty would have meant a targeting
+        // field that changes an effect's arity, which is the shape
+        // FightSession's resolution switch exists to avoid.
+        //
+        // IT IS THE ONE HEAL THAT SCALES WITH ATTACK. "20 plus her spell
+        // attack" is the authored spec, and it rides the same
+        // CombatMath.ScaledAttack on the axis the skill names that spell
+        // DAMAGE does -- see SkillResolution.Amount. HealSelf and HealParty
+        // are deliberately left alone: giving them an attack term would be a
+        // balance change to Woolgathering and the beetle's Shell Up riding
+        // in on a new member.
+        HealSingle,
     }
 
     // Who a skill is aimed at. Kept separate from the effect because the

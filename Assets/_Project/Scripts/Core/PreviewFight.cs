@@ -60,6 +60,10 @@ namespace PrincesPalace
             SkillEffect.DamageAll,
             SkillEffect.HealSelf,
             SkillEffect.HealParty,
+            // Mend, and any other single-ally heal: a wounded party is a
+            // stage arrangement this already knows how to build, which is
+            // the whole test for membership here.
+            SkillEffect.HealSingle,
             SkillEffect.BuffParty,
             SkillEffect.Summon,
             SkillEffect.Transform,
@@ -288,7 +292,8 @@ namespace PrincesPalace
                 plan.Notes.Add("three enemies fielded, so an all-target cast has more than one thing to hit");
             }
 
-            if (skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty)
+            if (skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty
+                || skill.Effect == SkillEffect.HealSingle)
             {
                 plan.PartyStartsWounded = true;
                 plan.Notes.Add("the party opens at half health, so a heal has something to restore");
