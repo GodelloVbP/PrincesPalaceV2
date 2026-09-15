@@ -1223,9 +1223,16 @@ namespace PrincesPalace
             return span;
         }
 
+        // BOTH PAIRS, INDEPENDENTLY. The pose with the longest reach is not
+        // necessarily the pose with the widest body -- Bjorn's overhead is his
+        // thickest drawing and his slam his longest -- so taking one pair's
+        // winner and copying its other pair across would measure a body that
+        // no single drawing has.
         private static OpaqueSpan Widest(OpaqueSpan a, OpaqueSpan b)
         {
-            return new OpaqueSpan(Mathf.Min(a.Left, b.Left), Mathf.Max(a.Right, b.Right));
+            return new OpaqueSpan(
+                Mathf.Min(a.Left, b.Left), Mathf.Max(a.Right, b.Right),
+                Mathf.Min(a.MassLeft, b.MassLeft), Mathf.Max(a.MassRight, b.MassRight));
         }
 
         private static UiVec ToUiVec(Vector2 v) => new UiVec(v.x, v.y);

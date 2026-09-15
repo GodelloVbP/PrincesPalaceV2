@@ -443,9 +443,85 @@ namespace PrincesPalace
             }
 
             float left = offsetX - canvasWidth * 0.5f;
-            var span = new OpaqueSpan(left, left + width);
+            var span = MassEdged(sprite, left, left + width);
             SpanCache[sprite] = span;
             return span;
+        }
+
+        // Anything at or below this is transparent. The same floor
+        // FightController.StageVisuals' FootBandCentreFraction reads, and it
+        // has to be: the two are measuring the same silhouette off the same
+        // textures, and a second opinion about what counts as a pixel would
+        // put an actor's feet and its body edges on different drawings.
+        private const float AlphaFloor = 0.02f;
+
+        // THE BODY'S EDGES, added to the tight box the caller already has.
+        //
+        // Per column of the drawing, count the opaque rows; the mass edge on
+        // each side is the outermost column carrying at least
+        // OpaqueSpan.MassFraction of the tallest column's count. That constant
+        // carries the reasoning and the measured numbers; this is only the
+        // arithmetic.
+        //
+        // GetPixels, and every coordinate it hands back is LOCAL TO THE
+        // TRIMMED CROP -- the exact trap FootBandCentreFraction documents
+        // shipping once. Column 0 is `tightLeft` in canvas space by
+        // construction (the caller derived tightLeft from textureRectOffset,
+        // which is where the crop sits inside the authored canvas), so a
+        // column index maps back by addition and nothing here divides by the
+        // trimmed width.
+        //
+        // Costs one GetPixels per Sprite for the life of the process, folded
+        // into the caller's own SpanCache -- which is keyed by Sprite and
+        // never cleared, for the reason its own header gives: the art is on
+        // disk and does not change.
+        private static OpaqueSpan MassEdged(Sprite sprite, float tightLeft, float tightRight)
+        {
+            var tight = new OpaqueSpan(tightLeft, tightRight);
+
+            var texture = sprite.texture;
+            if (texture == null || !texture.isReadable) return tight;
+
+            var crop = sprite.textureRect;
+            int cropX = Mathf.RoundToInt(crop.x);
+            int cropY = Mathf.RoundToInt(crop.y);
+            int cropWidth = Mathf.RoundToInt(crop.width);
+            int cropHeight = Mathf.RoundToInt(crop.height);
+            if (cropWidth <= 0 || cropHeight <= 0) return tight;
+
+            var pixels = texture.GetPixels(cropX, cropY, cropWidth, cropHeight);
+            var rows = new int[cropWidth];
+            int tallest = 0;
+
+            for (int y = 0; y < cropHeight; y++)
+            {
+                int rowStart = y * cropWidth;
+                for (int x = 0; x < cropWidth; x++)
+                {
+                    if (pixels[rowStart + x].a <= AlphaFloor) continue;
+                    if (++rows[x] > tallest) tallest = rows[x];
+                }
+            }
+
+            if (tallest <= 0) return tight;
+
+            float threshold = tallest * OpaqueSpan.MassFraction;
+            int first = -1;
+            int last = -1;
+            for (int x = 0; x < cropWidth; x++)
+            {
+                if (rows[x] < threshold) continue;
+                if (first < 0) first = x;
+                last = x;
+            }
+
+            // Cannot happen while tallest > 0 -- the tallest column is its own
+            // threshold's best case -- but a mass box wider than the tight one
+            // would be a silently wrong stand-off rather than a visible error,
+            // so it degrades rather than trusting the loop above.
+            if (first < 0) return tight;
+
+            return new OpaqueSpan(tightLeft, tightRight, tightLeft + first, tightLeft + last + 1);
         }
 
         // Convenience overload for a pure sideways move (recoils, and any
