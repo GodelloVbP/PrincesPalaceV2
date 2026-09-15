@@ -320,7 +320,7 @@
     {
       "id": "tuck_in",
       "displayName": "Tuck In",
-      "description": "He folds the fleece over himself and waits. Spends up to 4 banked Wool and softens the next blow by 2% a Wool. Costs no mana and does not end his turn -- once a turn.",
+      "description": "He folds the fleece over himself and waits. Spends up to 4 banked Wool and cuts the next hit by 10% a Wool -- 40% off at a full four. Costs no mana and does not end his turn -- once a turn.",
       "characterId": "sheep",
       "unlockLevel": 999,
       "effect": "Ward",
@@ -329,7 +329,7 @@
       "resourceCost": 1,
       "spendsAllResource": true,
       "resourceSpendCap": 4,
-      "power": 2,
+      "power": 10,
       "freeAction": true
     },
     {
@@ -543,12 +543,12 @@
       "_comment": "bear_bulwark, not bulwark: ids are unique ACROSS content types and 'bulwark' is already an item modifier and an armour set. Same collision bog_mud_burst was named around.",
       "id": "bear_bulwark",
       "displayName": "Bulwark",
-      "description": "Fifty Fury, spent standing in front of somebody. The next blow they take lands 30% softer.",
+      "description": "Fifty Fury, spent standing in front of somebody. The next hit they take lands 50% softer.",
       "characterId": "bear",
       "unlockLevel": 999,
       "effect": "Ward",
       "manaCost": 50,
-      "flatAmount": 30
+      "flatAmount": 50
     },
     {
       "id": "second_wind",
@@ -1076,15 +1076,15 @@
       "scalingAxis": "Spell"
     },
     {
+      "_comment": "NO scalingAxis, unlike Mend beside it, and the asymmetry is the ward model rather than an oversight: a ward's number is a PERCENT off the next hit (StatusEffects.ConsumeWard), and a percent that scales with a stat which routinely passes 100 would read as 'the next hit does nothing'. Mend's 20 plus spell attack is hit points and scales honestly. Retuned with the rest of the wards, 2026-09-15.",
       "id": "prism_ward",
       "displayName": "Prism Ward",
-      "description": "Light bent into a shell around somebody else. The next blow they take lands 20 plus her spell attack percent softer.",
+      "description": "Light bent into a shell around somebody else. The next hit they take lands 40% softer.",
       "characterId": "owl",
       "unlockLevel": 999,
       "effect": "Ward",
       "manaCost": 8,
-      "flatAmount": 20,
-      "scalingAxis": "Spell"
+      "flatAmount": 40
     }
   ]
 }

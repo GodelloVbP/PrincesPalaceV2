@@ -143,7 +143,7 @@ namespace PrincesPalace.Domain.Tests
             AssertEntry(t, 23, TrackReward.StatPoint, 4);
             AssertEntry(t, 24, TrackReward.SkillCostDelta, 2, skillId: "battering_ram");
             AssertEntry(t, 25, TrackReward.SecondLife, 1);
-            AssertEntry(t, 26, TrackReward.SkillPowerDelta, 1, skillId: "tuck_in");
+            AssertEntry(t, 26, TrackReward.SkillPowerDelta, 5, skillId: "tuck_in");
             AssertEntry(t, 27, TrackReward.StatPoint, 4);
             AssertEntry(t, 28, TrackReward.ElementalDamagePercent, 5, against: DamageType.Nature);
             AssertEntry(t, 29, TrackReward.StatPoint, 4);
@@ -379,7 +379,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(15, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Nature, RewardTrack.MaxLevel), "Nature damage, 5 at 7/17/28");
             Assert.AreEqual(1, track.CollectedSkillCostDelta("shear", TrackResourceTarget.Signature, RewardTrack.MaxLevel), "Shear 3 to 2 Wool");
             Assert.AreEqual(2, track.CollectedSkillCostDelta("battering_ram", TrackResourceTarget.Signature, RewardTrack.MaxLevel), "Battering Ram 6 to 4 Wool");
-            Assert.AreEqual(1, track.CollectedSkillPowerDelta("tuck_in", RewardTrack.MaxLevel), "Tuck In wards 3 per Wool rather than 2");
+            Assert.AreEqual(5, track.CollectedSkillPowerDelta("tuck_in", RewardTrack.MaxLevel), "Tuck In wards 15% per Wool rather than 10% -- 60% off the next hit at a full four, against 40%");
         }
 
         [Test]
@@ -446,7 +446,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("+1 WOOL PER TURN", RewardTrackNames.Of(Sheep().At(5)));
             Assert.AreEqual("+2 WOOL WHEN HURT", RewardTrackNames.Of(Sheep().At(19)));
             Assert.AreEqual("SHEAR COSTS 1 LESS", RewardTrackNames.Of(Sheep().At(12)));
-            Assert.AreEqual("TUCK IN +1 PER POINT", RewardTrackNames.Of(Sheep().At(26)));
+            Assert.AreEqual("TUCK IN +5 PER POINT", RewardTrackNames.Of(Sheep().At(26)));
             Assert.AreEqual("LEARN CINDERFAULT", RewardTrackNames.Of(Sheep().At(20)));
             Assert.AreEqual("TITLE: CONTRACTOR", RewardTrackNames.Of(Sheep().At(31)));
 

@@ -3,7 +3,7 @@
   "tracks": [
     {
       "characterId": "sheep",
-      "_comment": "SHAWN, THE WOOL ECONOMY -- PLAN_PROGRESSION_V2.md section 4's first column, with section 5's own explanation of what each bump changes at the level it lands: Wool per turn 1 to 2 at 5 (Shear, 3 Wool, every other turn instead of every third); Shear 3 to 2 at 12 (with 2 a turn, Shear every turn); +2 Wool when hurt at 19 (two hits taken fund a Shear); Battering Ram 6 to 4 at 24 (affordable after two turns instead of three). Level 15 is TUCK IN, an Ability node rather than a Capability: phase 1 measured the automatic Wool absorb this slot originally held and rejected it (Shear starvation 41% at baseline to 55% with it, PHASE1_BOT_REPORT.md section b), so the node became a skill the player presses. The ability-then-choice rule still holds, because 16 is a Choice. Level 26 raises Tuck In's ward from 2 per Wool to 3 through SkillPowerDelta -- `power`, the per-point lever, not `flatAmount`. Level 30 is the owner-designed fourth ability and is a PLACEHOLDER (placeholder_shawn_capstone in skills.json carries the note): the node exists on the rail so the shape of the track is real, and what it grants is not designed yet.",
+      "_comment": "SHAWN, THE WOOL ECONOMY -- PLAN_PROGRESSION_V2.md section 4's first column, with section 5's own explanation of what each bump changes at the level it lands: Wool per turn 1 to 2 at 5 (Shear, 3 Wool, every other turn instead of every third); Shear 3 to 2 at 12 (with 2 a turn, Shear every turn); +2 Wool when hurt at 19 (two hits taken fund a Shear); Battering Ram 6 to 4 at 24 (affordable after two turns instead of three). Level 15 is TUCK IN, an Ability node rather than a Capability: phase 1 measured the automatic Wool absorb this slot originally held and rejected it (Shear starvation 41% at baseline to 55% with it, PHASE1_BOT_REPORT.md section b), so the node became a skill the player presses. The ability-then-choice rule still holds, because 16 is a Choice. Level 26 raises Tuck In's ward from 10% per Wool to 15% through SkillPowerDelta -- `power`, the per-point lever, not `flatAmount`. A ward is a PERCENT off the next hit and not an absorb pool (StatusEffects.ConsumeWard), so his ceiling goes from 40% to 60% at a full four Wool. Level 30 is the owner-designed fourth ability and is a PLACEHOLDER (placeholder_shawn_capstone in skills.json carries the note): the node exists on the rail so the shape of the track is real, and what it grants is not designed yet.",
       "levels": [
         { "level": 2,  "reward": "MaxHealth", "amount": 40 },
         { "level": 3,  "reward": "UnlockSkill", "skillId": "woolgathering" },
@@ -29,7 +29,7 @@
         { "level": 23, "reward": "StatPoint", "amount": 4 },
         { "level": 24, "reward": "SkillCostDelta", "amount": 2, "skillId": "battering_ram", "resource": "Signature" },
         { "level": 25, "reward": "SecondLife", "amount": 1 },
-        { "level": 26, "reward": "SkillPowerDelta", "amount": 1, "skillId": "tuck_in" },
+        { "level": 26, "reward": "SkillPowerDelta", "amount": 5, "skillId": "tuck_in" },
         { "level": 27, "reward": "StatPoint", "amount": 4 },
         { "level": 28, "reward": "ElementalDamagePercent", "amount": 5, "against": "Nature" },
         { "level": 29, "reward": "StatPoint", "amount": 4 },

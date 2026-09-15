@@ -38,3 +38,20 @@ Addendum r2.1 (2026-09-15, corrections from phase 1 and phase 2 reports):
 - Section 6 and section 1 contract 4 reworded: pay depends on whether a character was out for the whole fight (half) versus fell during a fight the party won (full), not on victory-vs-downed timing.
 - Section 4 table and section 5 Shawn bullet: level 15/26 Wool-absorb nodes replaced by Tuck In, the skill phase 1 selected after the automatic absorb was rejected for Shear starvation.
 - Section 5 reward types: noted SignatureAbsorbPerPoint is built but unused by the shipped tracks after phase 1.
+
+Addendum r2.2 (2026-09-15, phase 5 step 0 -- the ward retune):
+- Section 5's three ward bullets rewritten to the PERCENT model phase 4 found
+  in the code (StatusEffects.ConsumeWard: `damage - damage * Magnitude / 100`,
+  spent by the hit, applied at 999 turns so nothing expires). Revision 2 had
+  written them as an absorb pool measured in hit points and drained over two
+  of the wearer's turns; no such mechanism exists.
+- The numbers moved to match, because the old ones had been priced for the
+  pool and read as almost nothing as percentages: Tuck In 2 -> 10 per Wool
+  (40% off the next hit at a full four Wool, against 8%); Shawn's level-26
+  SkillPowerDelta 1 -> 5, so 15% per Wool and 60% at four; Bulwark 30 -> 50.
+- Prism Ward becomes a FLAT 40 and drops its spell-attack term. A percentage
+  that scales with a stat which routinely exceeds 100 would ward for more than
+  the hit. Mend is untouched -- 20 plus spell attack, in hit points.
+- Status line bumped to Revision 2.2.
+- Whether wards should become absorb pools at all is the owner's call and is
+  filed as AUDIT #152 rather than decided here.

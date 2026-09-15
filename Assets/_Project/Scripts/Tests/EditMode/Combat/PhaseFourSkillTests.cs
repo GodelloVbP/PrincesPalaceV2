@@ -23,6 +23,16 @@ namespace PrincesPalace.Domain.Tests
     // AND THE WARD RULES, pinned as the CODE behaves rather than as the plan
     // describes them, because the two differ and the difference is not a bug
     // to fix in this phase. See WardsAre* below.
+    //
+    // RETUNED 2026-09-15 (phase 5 step 0). Phase 4 found the code's ward to be
+    // a PERCENT off the next hit and pinned it that way; the numbers it
+    // inherited had been written for an absorb POOL, so a 30 ward meant to soak
+    // 30 points was taking 30% off any hit at all, and a 2-per-Wool Tuck In was
+    // taking 8% off at a full bank -- invisible. The three ward numbers below
+    // are now authored as percentages on purpose: Tuck In 10 a Wool (40% at
+    // four, 60% once level 26's +5 lands), Bulwark 50, Prism Ward a flat 40.
+    // Mend is untouched and still 20 plus spell attack, because a heal pays in
+    // hit points and scaling one is honest.
     public class PhaseFourSkillTests
     {
         // ---- the authored numbers, read from skills.json -------------------
@@ -161,8 +171,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- Bulwark -------------------------------------------------------
 
+        // FIFTY PERCENT off the next hit for fifty Fury -- the whole pool for
+        // halving one blow.
         [Test]
-        public void BulwarkCostsFiftyFromThePrimaryPoolAndWardsForThirty()
+        public void BulwarkCostsFiftyFromThePrimaryPoolAndWardsForFiftyPercent()
         {
             var bulwark = Authored("bear_bulwark");
 
@@ -175,7 +187,7 @@ namespace PrincesPalace.Domain.Tests
             int ward = SkillResolution.Amount(SkillEffect.Ward, bjorn, bjorn, bulwark.Power, bulwark.FlatAmount,
                 resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: bulwark.ScalingAxis);
 
-            Assert.AreEqual(30, ward);
+            Assert.AreEqual(50, ward);
         }
 
         [Test]
@@ -299,33 +311,45 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- Prism Ward ----------------------------------------------------
 
+        // A FLAT 40 PERCENT, and the flatness is the point. Prism Ward carried
+        // "20 plus spell attack" until the retune, which reads as hit points and
+        // is not: the number lands in the status's Magnitude and comes off the
+        // next hit as a percentage, so an Odette whose spell attack passes 80
+        // would have been warding for more than 100% -- one ally made immune to
+        // one hit, for eight mana, forever. Mend keeps its scaling term because
+        // Mend actually pays in hit points.
         [Test]
-        public void PrismWardIsTwentyPlusSpellAttackForEightMana()
+        public void PrismWardIsAFlatFortyPercentForEightManaAndDoesNotScale()
         {
             var prismWard = Authored("prism_ward");
-            var odette = Hero(attack: 4);
 
             Assert.AreEqual(SkillEffect.Ward, prismWard.Effect);
             Assert.AreEqual(SkillTargeting.SingleAlly, prismWard.Targeting);
             Assert.AreEqual(8, prismWard.ManaCost);
 
-            int ward = SkillResolution.Amount(SkillEffect.Ward, odette, odette, prismWard.Power,
-                prismWard.FlatAmount, resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical,
-                axis: prismWard.ScalingAxis);
+            int atFour = SkillResolution.Amount(SkillEffect.Ward, Hero(attack: 4), Hero(attack: 4),
+                prismWard.Power, prismWard.FlatAmount, resourceSpent: 0, ignoresDefense: false,
+                type: DamageType.Physical, axis: prismWard.ScalingAxis);
+            int atNinety = SkillResolution.Amount(SkillEffect.Ward, Hero(attack: 90), Hero(attack: 90),
+                prismWard.Power, prismWard.FlatAmount, resourceSpent: 0, ignoresDefense: false,
+                type: DamageType.Physical, axis: prismWard.ScalingAxis);
 
-            Assert.AreEqual(24, ward);
+            Assert.AreEqual(40, atFour);
+            Assert.AreEqual(40, atNinety, "a percentage ward grew with a stat that can exceed 100");
         }
 
         // ---- Tuck In -------------------------------------------------------
 
-        // 2 PER WOOL, up to 4 Wool -- so 2, 4, 6, 8 and never 10 however deep
-        // the bank is. The cap is what stops a hoarded twelve from being
-        // three times the ward.
-        [TestCase(1, 2)]
-        [TestCase(2, 4)]
-        [TestCase(4, 8)]
-        [TestCase(12, 8)]
-        public void TuckInWardsTwoPerWoolSpentUpToFour(int banked, int expectedWard)
+        // 10 PERCENT PER WOOL, up to 4 Wool -- so 10, 20, 40 and never 50
+        // however deep the bank is. The cap stops a hoarded twelve from being
+        // three times the ward, and at 10 a Wool it is also what keeps the
+        // ceiling under 100: four Wool is 40% off, and level 26's SkillPowerDelta
+        // of +5 takes that to 60%.
+        [TestCase(1, 10)]
+        [TestCase(2, 20)]
+        [TestCase(4, 40)]
+        [TestCase(12, 40)]
+        public void TuckInWardsTenPercentPerWoolSpentUpToFour(int banked, int expectedWard)
         {
             var tuckIn = Authored("tuck_in");
             var shawn = Hero();
@@ -336,7 +360,7 @@ namespace PrincesPalace.Domain.Tests
             int ward = SkillResolution.Amount(SkillEffect.Ward, shawn, shawn, tuckIn.Power, tuckIn.FlatAmount,
                 spent, ignoresDefense: false, type: DamageType.Physical, axis: tuckIn.ScalingAxis);
 
-            Assert.AreEqual(2, tuckIn.Power);
+            Assert.AreEqual(10, tuckIn.Power);
             Assert.AreEqual(4, tuckIn.ResourceSpendCap);
             Assert.AreEqual(expectedWard, ward);
         }
@@ -419,7 +443,9 @@ namespace PrincesPalace.Domain.Tests
         // enemy phase" (Tuck In) describe a timer that does not exist, and
         // every authored ward number in skills.json is a PERCENT rather than
         // an absorb pool. Changing that would be replacing the ward model,
-        // which is a phase of its own.
+        // which is a phase of its own -- AUDIT #152. Phase 5 step 0 took the
+        // other half of that fork and retuned the NUMBERS to the model the code
+        // actually has, rather than leaving three skills describing one.
 
         [Test]
         public void AWardIsAPercentageOfOneHitAndIsSpentByIt()

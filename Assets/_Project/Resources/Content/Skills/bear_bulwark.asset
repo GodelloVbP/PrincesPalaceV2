@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_bulwark
     DisplayName: Bulwark
-    Description: Fifty Fury, spent standing in front of somebody. The next blow they
-      take lands 30% softer.
+    Description: Fifty Fury, spent standing in front of somebody. The next hit they
+      take lands 50% softer.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 7
@@ -29,7 +29,7 @@ MonoBehaviour:
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
     Power: 0
-    FlatAmount: 30
+    FlatAmount: 50
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:
