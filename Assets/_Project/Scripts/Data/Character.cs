@@ -132,6 +132,35 @@ namespace PrincesPalace
         // track.
         public int claimedTrackLevel;
 
+        // PHASE 3: which collected Identity Title node (by the level it was
+        // collected at) is shown on the plate/roster/victory screen. 0, the
+        // default, means "never chosen" -- Core.CharacterIdentity.
+        // SelectedTitleFor then falls back to the newest collected title, so
+        // a character who has never opened the picker still shows the most
+        // recent one rather than nothing (docs/handoffs/progression_v2/
+        // PLAN_PROGRESSION_V2.md §4: "the newest is shown, earlier ones
+        // selectable in the hub roster").
+        //
+        // PURELY ADDITIVE, same as `embers` above: an older save has no such
+        // field, JsonUtility leaves it at zero, and zero already reads as
+        // "default" -- no SaveData version bump needed for this field.
+        //
+        // Every OTHER Identity item (plate rim, portrait frame, plate
+        // emboss, victory pose, mastery) has nothing to select between --
+        // there is exactly one of each per character, so nothing but Title
+        // needs a stored choice at all.
+        public int selectedTitleTrackLevel;
+
+        // Chooses which collected title shows. No validation here that
+        // `level` actually names a collected Title node -- Character has no
+        // ContentDatabase/track to check against (CODE_STANDARDS §1: content
+        // concepts do not belong in the save-shaped Data layer), so the
+        // caller (Core.CharacterIdentity) is expected to have already
+        // confirmed `level` is one of CollectedIdentity's own Title entries
+        // before calling this, the same trust ClaimTrackRewards' own callers
+        // are given.
+        public void SelectTitle(int level) => selectedTitleTrackLevel = level;
+
         public Character()
         {
         }

@@ -1000,6 +1000,18 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.MaxMana: return Screens.RewardTrackScreen.MaxManaArtKey;
                 case TrackReward.ManaRegen: return Screens.RewardTrackScreen.ManaRegenArtKey;
                 case TrackReward.UnlockSkill: return Screens.RewardTrackScreen.UnlockSkillArtKey;
+
+                // PHASE 3's seven -- see RewardTrackScreen's own constants
+                // for why five of these name art that has not been
+                // commissioned yet.
+                case TrackReward.FuryGainOnAttack: return Screens.RewardTrackScreen.FuryGainArtKey;
+                case TrackReward.FuryStartOfFight: return Screens.RewardTrackScreen.FuryStartArtKey;
+                case TrackReward.SpellCostDelta: return Screens.RewardTrackScreen.SpellCostDeltaArtKey;
+                case TrackReward.SkillCostDelta: return Screens.RewardTrackScreen.SkillCostDeltaArtKey;
+                case TrackReward.SkillFlatDelta: return Screens.RewardTrackScreen.SkillFlatDeltaArtKey;
+                case TrackReward.SignatureAbsorbPerPoint: return Screens.RewardTrackScreen.SignatureAbsorbPerPointArtKey;
+                case TrackReward.Identity: return Screens.RewardTrackScreen.IdentityArtKey;
+
                 default: return null;
             }
         }

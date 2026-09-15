@@ -146,10 +146,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, entry.Amount);
         }
 
+        // PHASE 3 ALIAS: reward_tracks.json still authors this node as
+        // "SignatureAbsorbs" (the old boolean), but RewardTrackEntryResolver
+        // now rewrites that to SignatureAbsorbPerPoint at amount 1 the
+        // moment it parses the entry -- see TrackReward.
+        // SignatureAbsorbPerPoint's own header. Re-pinned to the aliased
+        // kind rather than the authored string, since the authored string
+        // is no longer what a reader of the resolved track sees.
         [Test]
         public void SheepLevel60IsSignatureAbsorbs()
         {
-            Assert.AreEqual(TrackReward.SignatureAbsorbs, Sheep().At(60).Reward);
+            var entry = Sheep().At(60);
+            Assert.AreEqual(TrackReward.SignatureAbsorbPerPoint, entry.Reward);
+            Assert.AreEqual(1, entry.Amount);
         }
 
         [Test]

@@ -132,7 +132,7 @@ namespace PrincesPalace.Domain.Progression
             {
                 var m = resolved.Milestones[i];
                 milestones[i] = (m.Level, new TrackEntry(m.Reward, m.Amount, m.Against, m.SkillId,
-                    m.SkillDisplayName, m.ResourceDisplayName));
+                    m.SkillDisplayName, m.ResourceDisplayName, m.Resource, m.IdentityKind, m.IdentityValue));
             }
 
             var fillerMix = new (TrackEntry Entry, int Count)[resolved.Filler.Length];
@@ -261,6 +261,76 @@ namespace PrincesPalace.Domain.Progression
             }
 
             return skills;
+        }
+
+        // PHASE 3: how much of a SkillCostDelta entry naming `skillId` and
+        // `resource` has been collected -- SUMMED, unlike the SET-style
+        // reads UnlockedAmount answers (see TrackReward.SkillCostDelta's own
+        // header for why this one sums while FuryGainOnAttack does not).
+        public int CollectedSkillCostDelta(string skillId, TrackResourceTarget resource, int claimedLevel)
+        {
+            int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
+
+            int total = 0;
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward == TrackReward.SkillCostDelta && entry.SkillId == skillId && entry.Resource == resource)
+                {
+                    total += entry.Amount;
+                }
+            }
+
+            return total;
+        }
+
+        // PHASE 3: how much of a SkillFlatDelta entry naming `skillId` has
+        // been collected -- SUMMED (Bjorn's Slam: two +5 nodes read as +10).
+        public int CollectedSkillFlatDelta(string skillId, int claimedLevel)
+        {
+            int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
+
+            int total = 0;
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward == TrackReward.SkillFlatDelta && entry.SkillId == skillId)
+                {
+                    total += entry.Amount;
+                }
+            }
+
+            return total;
+        }
+
+        // PHASE 3: every Identity entry collected at or below claimedLevel,
+        // oldest first -- Core.CharacterIdentity's whole input. Level travels
+        // with each entry because "which title is newest" is a question about
+        // LEVEL, not about Amount (Identity entries carry no Amount at all).
+        public IReadOnlyList<(int Level, TrackEntry Entry)> CollectedIdentity(int claimedLevel)
+        {
+            int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
+            var items = new List<(int Level, TrackEntry Entry)>();
+
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward == TrackReward.Identity) items.Add((level, entry));
+            }
+
+            return items;
+        }
+
+        // Every level from StartingLevel+1 to MaxLevel, paired with what it
+        // pays -- RewardTrackNodeValidation's whole input. Not exposed as
+        // the raw array: a caller gets read-only pairs rather than a way to
+        // reach past MaxLevel or misread an index as a level.
+        public IEnumerable<(int Level, TrackEntry Entry)> AllLevels()
+        {
+            for (int level = RewardTrack.StartingLevel + 1; level <= RewardTrack.MaxLevel; level++)
+            {
+                yield return (level, _entries[level]);
+            }
         }
 
         // The first level that grants `reward`, or 0 if this track never does.

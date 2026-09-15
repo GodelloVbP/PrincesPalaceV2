@@ -40,6 +40,116 @@ namespace PrincesPalace.Domain.Progression
         MaxMana,
         ManaRegen,
         UnlockSkill,
+
+        // ---- PHASE 3 (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md
+        // §5, §7 phase 3): the reward grammar the 40-level combat stretch
+        // authors against. APPENDED, same convention as the block above --
+        // reordering any existing member relabels every already-authored
+        // entry the next time content loads. --
+
+        // SETS the primary pool's gainOnAttack to the authored value --
+        // READ LIVE as the highest amount collected (RewardTrackDefinition.
+        // UnlockedAmount), NOT summed, because the table this pays against
+        // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §4) authors
+        // "15 to 20" then "20 to 25" -- two TOTALS, not two deltas. A talent
+        // that added gain on top would still stack normally (Gain is a
+        // plain field TrackDatabase.BuildPrimaryPool writes once); none
+        // exists today. See ContentDatabase.BuildPrimaryPool for the read
+        // site.
+        FuryGainOnAttack,
+
+        // SETS the primary pool's opening value for fights after collection
+        // -- same SET-not-SUM reading as FuryGainOnAttack above, and the
+        // same reason (the table says "opens at 25" then "opens at 50").
+        // The pool DEFINITION's own startRule (Zero, for fury) is untouched;
+        // this is an override applied where ContentDatabase.BuildPrimaryPool
+        // would otherwise call ResourcePool's own StartingValue.
+        FuryStartOfFight,
+
+        // Every mana-costed skill in the collector's kit costs this many
+        // less, floored at 1 -- SET, not summed (the table says "cost 1
+        // less" then "cost 2 less"). Read at ContentDatabase.
+        // ApplyRewardTrackSkillDeltas, which is where FightEncounterAdapter.
+        // KitFor(Character, ...) builds the character's real kit -- so both
+        // SkillResolution.CanAfford and the mana actually charged
+        // (FightSession.ChargeSkillMana) see the same discounted number,
+        // because both read skill.ManaCost off that one already-adjusted
+        // ResolvedSkill rather than a second copy of the rule.
+        SpellCostDelta,
+
+        // ONE named skill's cost in ONE resource (mana or the collector's
+        // signature resource), reduced by Amount, floored at 1 -- SUMMED
+        // across every entry naming the same (SkillId, Resource) pair,
+        // unlike the two SETs above (Shawn's Shear and Battering Ram are
+        // each named once in the shipped table, but Bjorn's Slam pattern --
+        // two SkillFlatDelta entries on one skill -- is the shape this
+        // guards for). See TrackEntry.Resource and RewardTrackDefinition.
+        // CollectedSkillCostDelta.
+        SkillCostDelta,
+
+        // ONE named skill's flatAmount, increased by Amount -- SUMMED across
+        // every entry naming the same skill (Bjorn's Slam: two +5 nodes read
+        // as +10 total). See RewardTrackDefinition.CollectedSkillFlatDelta.
+        SkillFlatDelta,
+
+        // How much raw damage one point of the collector's signature
+        // resource absorbs -- SET, not summed (1, then 2). Replaces the old
+        // boolean SignatureAbsorbs semantics; see IsSignatureReward and the
+        // alias note on SignatureAbsorbs above (RewardTrackEntryResolver
+        // rewrites an authored SignatureAbsorbs entry into this reward at
+        // amount 1, so old content keeps resolving without a second read
+        // path). SignatureAbsorbs itself is deprecated as of this addition
+        // -- author SignatureAbsorbPerPoint directly in new content.
+        SignatureAbsorbPerPoint,
+
+        // A cosmetic payload with no combat number: a title, a plate rim, a
+        // portrait frame, a plate emboss, a victory pose, or mastery --
+        // exactly one per entry, selected by TrackEntry.IdentityKind.
+        // Collected, never spent; see RewardTrackDefinition.CollectedIdentity
+        // and Core/CharacterIdentity for the read model. No rendering yet
+        // (phase 5).
+        Identity,
+    }
+
+    // Which RESOURCE a SkillCostDelta entry discounts. Matched against the
+    // skill's own authored cost fields at content-build time
+    // (RewardTrackEntryResolver) -- "the resource must be one the skill
+    // actually costs" -- so an author cannot discount mana on a skill that
+    // only spends Wool by mistake.
+    public enum TrackResourceTarget
+    {
+        Mana,
+        Signature,
+    }
+
+    // The six cosmetic payloads an Identity entry can carry -- docs/
+    // handoffs/progression_v2/PLAN_PROGRESSION_V2.md §4's identity stretch
+    // (levels 31-40). Title/PlateRim/PlateEmboss read TrackEntry.
+    // IdentityValue (a title string, or "silver"/"gold"); the other three
+    // carry no value.
+    public enum TrackIdentityKind
+    {
+        Title,
+        PlateRim,
+        PortraitFrame,
+        PlateEmboss,
+        VictoryPose,
+        Mastery,
+    }
+
+    // WHAT KIND OF NODE A REWARD DRAWS AS, for the phase-3 node-kind
+    // validator (RewardTrackNodeValidation) and, later, the track screen's
+    // per-kind art. Derived from TrackReward alone -- see RewardTrack.KindOf
+    // -- rather than authored a second time, so a node's kind can never
+    // disagree with what it actually grants.
+    public enum TrackNodeKind
+    {
+        Ability,
+        Choice,
+        Bump,
+        Capability,
+        Utility,
+        Identity,
     }
 
     // One level's worth of reward.
@@ -70,8 +180,18 @@ namespace PrincesPalace.Domain.Progression
         public readonly string SkillDisplayName;
         public readonly string ResourceDisplayName;
 
+        // PHASE 3's two further selectors, beside Against and SkillId --
+        // which resource a SkillCostDelta entry discounts, and which
+        // cosmetic payload an Identity entry carries. Null/empty for every
+        // entry that is not that kind, the same "unused selector reads as
+        // nothing" convention Against/SkillId already follow.
+        public readonly TrackResourceTarget? Resource;
+        public readonly TrackIdentityKind? IdentityKind;
+        public readonly string IdentityValue;
+
         public TrackEntry(TrackReward reward, int amount, DamageType? against = null,
-            string skillId = null, string skillDisplayName = null, string resourceDisplayName = null)
+            string skillId = null, string skillDisplayName = null, string resourceDisplayName = null,
+            TrackResourceTarget? resource = null, TrackIdentityKind? identityKind = null, string identityValue = null)
         {
             Reward = reward;
             Amount = amount;
@@ -79,6 +199,9 @@ namespace PrincesPalace.Domain.Progression
             SkillId = skillId;
             SkillDisplayName = skillDisplayName;
             ResourceDisplayName = resourceDisplayName;
+            Resource = resource;
+            IdentityKind = identityKind;
+            IdentityValue = identityValue;
         }
 
         public bool IsSomething => Reward != TrackReward.None;
@@ -203,16 +326,97 @@ namespace PrincesPalace.Domain.Progression
             || reward == TrackReward.SignatureAbsorbs
             || reward == TrackReward.UnlockSkill;
 
+        // PHASE 3's broader filler ban. Every one-shot capability above
+        // still may not be filler, AND neither may any of the seven P3
+        // kinds -- not because they are one-shot (four of them can be
+        // collected more than once: SET-style kinds supersede rather than
+        // duplicate, and SkillFlatDelta/SkillCostDelta genuinely sum), but
+        // because every one of them either needs a level an author placed
+        // on purpose (a fury-opening step, a title) or a skillId a filler
+        // row has no field for at all (RawTrackFiller carries no skillId,
+        // the same reason UnlockSkill was already filler-ineligible). This
+        // is the check rule 3 actually runs -- IsOneShotCapability is kept
+        // separately because HasUnlocked and the "appears at most once"
+        // duplicate check upstream both still mean literally "one shot".
+        public static bool IsFillerIneligible(TrackReward reward) =>
+            IsOneShotCapability(reward)
+            || reward == TrackReward.FuryGainOnAttack
+            || reward == TrackReward.FuryStartOfFight
+            || reward == TrackReward.SpellCostDelta
+            || reward == TrackReward.SkillCostDelta
+            || reward == TrackReward.SkillFlatDelta
+            || reward == TrackReward.SignatureAbsorbPerPoint
+            || reward == TrackReward.Identity;
+
         // THE SET ContentDatabase.BuildSignatureResource PAYS -- a reward of
-        // any of these four kinds is meaningless on a character with no
+        // any of these five kinds is meaningless on a character with no
         // signature resource, which is what both the resolver (at authoring
         // time) and ContentDatabase's own validation (at load time, for a
         // hand-authored asset that never passed through the resolver) refuse.
+        // SignatureAbsorbPerPoint joins the original four in P3, replacing
+        // SignatureAbsorbs' boolean (SignatureAbsorbs is aliased onto it by
+        // the resolver -- see TrackReward.SignatureAbsorbPerPoint's own
+        // header -- so an authored SignatureAbsorbs entry is checked under
+        // this same rule by the time it reaches here).
         public static bool IsSignatureReward(TrackReward reward) =>
             reward == TrackReward.SignatureCapacity
             || reward == TrackReward.SignatureGainPerTurn
             || reward == TrackReward.SignatureGainOnDamageTaken
-            || reward == TrackReward.SignatureAbsorbs;
+            || reward == TrackReward.SignatureAbsorbs
+            || reward == TrackReward.SignatureAbsorbPerPoint;
+
+        // PHASE 3's node-kind mapping (docs/handoffs/progression_v2/
+        // PLAN_PROGRESSION_V2.md §7 phase 3's own list, read literally where
+        // it names a reward and resolved where it names a wildcard):
+        // UnlockSkill -> Ability; StatPoint -> Choice; every other numeric
+        // grant/bump -> Bump; the three "always-on from here" rules
+        // (SpellCostDelta, SignatureAbsorbPerPoint, FuryStartOfFight) ->
+        // Capability; the two run-scoped unlocks -> Utility; Identity ->
+        // Identity. FuryGainOnAttack sits with the numeric bumps (the
+        // brief's own "Fury*" wildcard) even though FuryStartOfFight, named
+        // explicitly right after it, does not -- see RewardTrackNodeValidation
+        // for why that split earns its own paragraph rather than a single
+        // "Fury* -> X" rule.
+        public static TrackNodeKind KindOf(TrackReward reward)
+        {
+            switch (reward)
+            {
+                case TrackReward.UnlockSkill:
+                    return TrackNodeKind.Ability;
+
+                case TrackReward.StatPoint:
+                    return TrackNodeKind.Choice;
+
+                case TrackReward.Respec:
+                case TrackReward.SecondLife:
+                    return TrackNodeKind.Utility;
+
+                case TrackReward.SpellCostDelta:
+                case TrackReward.SignatureAbsorbPerPoint:
+                case TrackReward.SignatureAbsorbs: // alias of SignatureAbsorbPerPoint -- see its own header
+                case TrackReward.FuryStartOfFight:
+                    return TrackNodeKind.Capability;
+
+                case TrackReward.Identity:
+                    return TrackNodeKind.Identity;
+
+                case TrackReward.MaxHealth:
+                case TrackReward.MaxMana:
+                case TrackReward.ManaRegen:
+                case TrackReward.ElementalDamagePercent:
+                case TrackReward.SignatureCapacity:
+                case TrackReward.SignatureGainPerTurn:
+                case TrackReward.SignatureGainOnDamageTaken:
+                case TrackReward.FuryGainOnAttack:
+                case TrackReward.SkillCostDelta:
+                case TrackReward.SkillFlatDelta:
+                    return TrackNodeKind.Bump;
+
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(reward), reward,
+                        "RewardTrack.KindOf has no case for this TrackReward -- a P3 kind was added without saying which node kind it draws as.");
+            }
+        }
 
         // HOW ONE NODE READS, given where the player is and how far the track
         // has paid. The screen's whole state model, in one pure function.

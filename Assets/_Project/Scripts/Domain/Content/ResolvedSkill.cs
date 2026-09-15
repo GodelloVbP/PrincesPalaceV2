@@ -169,6 +169,23 @@ namespace PrincesPalace.Domain.Content
 
         public bool HasPoolTiers => PoolTiers != null && PoolTiers.Length > 0;
 
+        // A SKILL WHOSE DESIGN HASN'T BEEN WRITTEN YET (Shawn's fourth
+        // ability, docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §7
+        // phase 3 package 3). Never player-selectable and never drawn by a
+        // monster's weighted pool -- SkillEntryResolver forces
+        // PlayerSelectable false on a placeholder entry regardless of what
+        // was authored, which is what actually keeps it out of
+        // AvailableSkillsFor/LegalActions/FightHudModel; Placeholder itself
+        // is read-model only, for a future dossier/track screen to show
+        // "Undecided" plus PlaceholderNote.
+        public bool Placeholder;
+
+        // Required together with Placeholder -- says why this skill exists
+        // undesigned, the way every other required-together pair in this
+        // file (appliesStatus/statusMagnitude, summonEnemyId/summonCap) is
+        // checked by the resolver rather than trusted.
+        public string PlaceholderNote = "";
+
         // The nullable reading of the Status/HasStatus pair, kept because it is
         // the shape both consumers (FightSession.Skills, FightSession.Enemies)
         // already ask in and the one the resolver hands in.
@@ -237,6 +254,41 @@ namespace PrincesPalace.Domain.Content
         // what lets the cast go back through the ordinary CastSkill path
         // without a second element gate, and what makes the detail card's
         // damage-type row read "FIRE" rather than re-listing all four.
+        // PHASE 3: THIS SKILL WITH THE REWARD TRACK'S COST/FLAT ADJUSTMENTS
+        // APPLIED -- ContentDatabase.ApplyRewardTrackSkillDeltas' only
+        // caller. MemberwiseClone, the same shape AsElement already uses and
+        // for the same reason: the catalogue's own ResolvedSkill (definition.
+        // Data) is shared by every fight that fields the character, so
+        // adjusting it in place would leak one player's collected track into
+        // every other combatant reading the same instance.
+        //
+        // FLOORED AT 1, NEVER BELOW -- "minimum 1" is the authored contract
+        // for both SpellCostDelta and SkillCostDelta, and it only applies to
+        // a cost that was already POSITIVE: a skill authored at 0 mana stays
+        // free rather than being floored up to 1 by a discount it was never
+        // charged in the first place.
+        public ResolvedSkill WithTrackDeltas(int manaCostDelta, int resourceCostDelta, int flatAmountDelta)
+        {
+            var copy = (ResolvedSkill)MemberwiseClone();
+
+            if (manaCostDelta != 0 && copy.ManaCost > 0)
+            {
+                copy.ManaCost = Math.Max(1, copy.ManaCost - manaCostDelta);
+            }
+
+            if (resourceCostDelta != 0 && copy.ResourceCost > 0)
+            {
+                copy.ResourceCost = Math.Max(1, copy.ResourceCost - resourceCostDelta);
+            }
+
+            if (flatAmountDelta != 0)
+            {
+                copy.FlatAmount += flatAmountDelta;
+            }
+
+            return copy;
+        }
+
         public ResolvedSkill AsElement(DamageType element)
         {
             var copy = (ResolvedSkill)MemberwiseClone();
@@ -293,8 +345,13 @@ namespace PrincesPalace.Domain.Content
             // APPENDED LAST, same reason. poolTiers is the newest field on
             // this type and the one least likely to be in hand at any
             // existing call site.
-            ResolvedPoolTier[] poolTiers = null)
+            ResolvedPoolTier[] poolTiers = null,
+            // APPENDED LAST OF ALL (P3): placeholder/placeholderNote are the
+            // newest fields on this type.
+            bool placeholder = false, string placeholderNote = "")
         {
+            Placeholder = placeholder;
+            PlaceholderNote = placeholderNote ?? "";
             Elements = elements ?? Array.Empty<ElementChoice>();
             PoolTiers = poolTiers ?? Array.Empty<ResolvedPoolTier>();
             BookOnly = bookOnly;

@@ -350,6 +350,25 @@ namespace PrincesPalace.Domain.Content
         // cast time.
         [ContentDoc("Ascending fractions of the owner's primary pool this skill can spend for extra damage; the highest tier the caster can afford fires automatically.")]
         public RawPoolTier[] poolTiers = Array.Empty<RawPoolTier>();
+
+        // A SKILL WHOSE DESIGN HASN'T BEEN WRITTEN YET -- a track Ability
+        // node may reference one so the node exists on the rail before the
+        // owner has decided what it does (docs/handoffs/progression_v2/
+        // PLAN_PROGRESSION_V2.md §7 phase 3 package 3). The resolver refuses
+        // a placeholder entry that authors ANY effect field (effect,
+        // manaCost, resourceCost, power, flatAmount, damageInstances,
+        // appliesStatus, elements, poolTiers) -- this is a stand-in, not an
+        // ability, and forces PlayerSelectable false regardless of what was
+        // authored.
+        [ContentDoc("Whether this skill's design has not been written yet; never player-selectable and never drawn by a monster, and may author no effect fields at all.")]
+        public bool placeholder;
+
+        // Required together with placeholder. No AUDIT.md grep lint exists
+        // in this codebase to check a note against (grepped: nothing under
+        // Editor/ or Tests/ reads AUDIT.md's own text), so this is the
+        // fallback the brief names instead of inventing one.
+        [ContentDoc("Required together with placeholder: why this skill exists undesigned.")]
+        public string placeholderNote = "";
     }
 
     // One tier of a poolTiers ladder -- see RawSkillEntry.poolTiers.

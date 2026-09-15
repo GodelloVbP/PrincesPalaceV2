@@ -698,8 +698,17 @@ namespace PrincesPalace
         private static PlayerKit KitFor(Character character, CharacterDefinition definition,
                                         IReadOnlyList<ResolvedRelic> relics)
         {
+            // PHASE 3: SpellCostDelta/SkillCostDelta/SkillFlatDelta applied
+            // ONCE HERE, at kit-build time -- the same "the kit is built once
+            // per fight" seam docs/PLAN_REWARD_TRACKS.md §3j already
+            // establishes for AvailableSkillsFor itself. Every later reader
+            // of a kit skill (affordability, the charge, the HUD's cost
+            // label) sees the same already-discounted ResolvedSkill, so
+            // there is nowhere downstream that could read the authored cost
+            // instead of the collected one by accident.
             var skills = ContentDatabase.AvailableSkillsFor(character)
                 .Select(Resolve)
+                .Select(s => ContentDatabase.ApplyRewardTrackSkillDeltas(character, s))
                 .ToList();
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,

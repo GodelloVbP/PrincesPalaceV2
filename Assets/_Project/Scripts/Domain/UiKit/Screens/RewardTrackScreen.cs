@@ -213,6 +213,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // was SecondLifeRefreshArtKey (SecondLifeRefresh) -> UnlockSkill
         public const string UnlockSkillArtKey = IconRoot + "/skull_unused.png";
 
+        // PHASE 3's seven new reward kinds. Same "placement, not a decision"
+        // posture as the block above -- FuryGainOnAttack and
+        // FuryStartOfFight repoint the two Processed icons the original
+        // twelve left spare (attack.png, speed.png -- a Fury reward is
+        // physical and fast, which is at least not an arbitrary pairing);
+        // the other five have no spare Processed icon to repoint at all, so
+        // they name a file that does not exist yet rather than collide with
+        // an already-assigned one -- LoadSprite's existing graceful
+        // degradation (null + a warning, never a thrown exception) is what
+        // keeps that a placeholder instead of a build break. Phase 4/5 is
+        // where real art (or a real repoint) replaces every one of these.
+        public const string FuryGainArtKey = IconRoot + "/attack.png";
+        public const string FuryStartArtKey = IconRoot + "/speed.png";
+        public const string SpellCostDeltaArtKey = IconRoot + "/spell_cost_delta_unused.png";
+        public const string SkillCostDeltaArtKey = IconRoot + "/skill_cost_delta_unused.png";
+        public const string SkillFlatDeltaArtKey = IconRoot + "/skill_flat_delta_unused.png";
+        public const string SignatureAbsorbPerPointArtKey = IconRoot + "/absorb_per_point_unused.png";
+        public const string IdentityArtKey = IconRoot + "/identity_unused.png";
+
         public UiNode Root;
 
         public NodeRef Viewport;

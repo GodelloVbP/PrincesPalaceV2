@@ -21,8 +21,17 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise.")]
         public string against = "";
 
-        [ContentDoc("The skill id this reward unlocks; only UnlockSkill reads this, empty otherwise.")]
+        [ContentDoc("The skill id this reward unlocks (UnlockSkill), or the one named skill a SkillCostDelta/SkillFlatDelta entry adjusts; empty otherwise.")]
         public string skillId = "";
+
+        [ContentDoc("Which TrackResourceTarget a SkillCostDelta entry discounts, matched case-insensitively; only SkillCostDelta reads this, empty otherwise.")]
+        public string resource = "";
+
+        [ContentDoc("Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise.")]
+        public string identityKind = "";
+
+        [ContentDoc("The Identity entry's payload -- a title string for Title, or 'silver'/'gold' for PlateRim/PlateEmboss; unused by PortraitFrame/VictoryPose/Mastery and by every non-Identity reward.")]
+        public string value = "";
     }
 
     // One filler mix row, exactly as typed into reward_tracks.json's

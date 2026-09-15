@@ -26,10 +26,24 @@ namespace PrincesPalace.Domain.Content
         public string SkillId = "";
         public string SkillDisplayName = "";
 
-        // Empty except for the four signature-resource kinds.
+        // Empty except for the five signature-resource kinds.
         public string ResourceDisplayName = "";
 
+        // PHASE 3: which resource a SkillCostDelta entry discounts (empty
+        // except for that one kind), and which cosmetic payload an Identity
+        // entry carries (empty except for that one). Same bool-pair
+        // nullable-replacement as Against/HasAgainst above -- Unity does not
+        // serialize TrackResourceTarget?/TrackIdentityKind?, and both enums
+        // have a valid zero member.
+        public TrackResourceTarget ResourceType;
+        public bool HasResource;
+        public TrackIdentityKind IdentityKindType;
+        public bool HasIdentityKind;
+        public string IdentityValue = "";
+
         public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
+        public TrackResourceTarget? Resource => HasResource ? (TrackResourceTarget?)ResourceType : null;
+        public TrackIdentityKind? IdentityKind => HasIdentityKind ? (TrackIdentityKind?)IdentityKindType : null;
 
         // For the serializer only.
         public ResolvedTrackMilestone()
@@ -37,7 +51,8 @@ namespace PrincesPalace.Domain.Content
         }
 
         public ResolvedTrackMilestone(int level, TrackReward reward, int amount, DamageType? against,
-            string skillId, string skillDisplayName, string resourceDisplayName)
+            string skillId, string skillDisplayName, string resourceDisplayName,
+            TrackResourceTarget? resource = null, TrackIdentityKind? identityKind = null, string identityValue = null)
         {
             Level = level;
             Reward = reward;
@@ -47,6 +62,11 @@ namespace PrincesPalace.Domain.Content
             SkillId = skillId ?? "";
             SkillDisplayName = skillDisplayName ?? "";
             ResourceDisplayName = resourceDisplayName ?? "";
+            HasResource = resource.HasValue;
+            ResourceType = resource ?? default;
+            HasIdentityKind = identityKind.HasValue;
+            IdentityKindType = identityKind ?? default;
+            IdentityValue = identityValue ?? "";
         }
     }
 

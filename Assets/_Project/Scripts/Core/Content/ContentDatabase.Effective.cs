@@ -305,15 +305,18 @@ namespace PrincesPalace.Content
             // does; the track can only turn it on for one that does not, and
             // a collected node cannot un-author the flag.
             //
-            // HasUnlocked, NOT CollectedTotal(...) > 0. The plan's read-site
-            // table says the latter and it cannot work: SignatureAbsorbs is a
-            // capability with no number, so its authored Amount is 0 and the
-            // sum is 0 however many of them are collected. HasUnlocked asks
-            // the question the entry actually answers -- is there such a node
-            // at or below the watermark -- and reads the watermark rather than
-            // `level`, which is what makes it a COLLECTED reward.
-            bool absorbs = definition.Data.SignatureAbsorbsDamage
-                           || track.HasUnlocked(TrackReward.SignatureAbsorbs, claimed);
+            // PHASE 3 replaced the boolean read: SignatureAbsorbPerPoint is a
+            // SET-style magnitude (1, then 2 -- RewardTrackDefinition.
+            // UnlockedAmount, the highest amount collected, never summed),
+            // and an authored SignatureAbsorbs entry is aliased onto it by
+            // the resolver at amount 1 (TrackReward.SignatureAbsorbPerPoint's
+            // own header), so this one read now covers both old and new
+            // content. Fallback 0 means "nothing collected", which keeps the
+            // class const below as the answer for a character authored to
+            // absorb with no track override at all.
+            int absorbPerPointOverride = track.UnlockedAmount(TrackReward.SignatureAbsorbPerPoint, claimed, fallback: 0);
+            bool absorbs = definition.Data.SignatureAbsorbsDamage || absorbPerPointOverride > 0;
+            int absorbPerPoint = absorbPerPointOverride > 0 ? absorbPerPointOverride : SignatureAbsorbPerPoint;
 
             return new ResourcePool(
                 definition.Data.SignatureId,
@@ -324,7 +327,7 @@ namespace PrincesPalace.Content
                 Mathf.Max(0, perTurn),
                 Mathf.Max(0, definition.Data.SignatureGainOnAttack),
                 Mathf.Max(0, onDamageTaken),
-                SignatureAbsorbPerPoint,
+                absorbPerPoint,
                 absorbs);
         }
 
@@ -786,7 +789,26 @@ namespace PrincesPalace.Content
             int gainPerTurn = PoolPrecedence.GainPerTurn(pool.Data,
                 manaRegen + effects.Best(ModifierEffectType.FlatManaRegenBonus));
 
-            return new ResourcePool(pool.Data, capacity, gainPerTurn);
+            var built = new ResourcePool(pool.Data, capacity, gainPerTurn);
+
+            // PHASE 3's two PRIMARY-pool overrides -- Fury, for Bjorn, not a
+            // signature resource (docs/handoffs/progression_v2/
+            // PLAN_PROGRESSION_V2.md §5). Both are SETS, read as the highest
+            // amount collected rather than summed (TrackReward.
+            // FuryGainOnAttack/FuryStartOfFight's own headers), with a -1
+            // fallback so "nothing collected" is distinguishable from an
+            // authored 0 -- a track COULD legitimately set the opening value
+            // back to 0, though none does today.
+            var track = RewardTracks.For(character);
+            int claimed = character.claimedTrackLevel;
+
+            int gainOnAttackOverride = track.UnlockedAmount(TrackReward.FuryGainOnAttack, claimed, fallback: -1);
+            if (gainOnAttackOverride >= 0) built.GainOnAttack = gainOnAttackOverride;
+
+            int startOverride = track.UnlockedAmount(TrackReward.FuryStartOfFight, claimed, fallback: -1);
+            if (startOverride >= 0) built.Current = Mathf.Clamp(startOverride, 0, built.Max);
+
+            return built;
         }
 
         // The same chain for the two paths that have a DEFINITION and no
@@ -809,6 +831,44 @@ namespace PrincesPalace.Content
             return new ResourcePool(pool.Data,
                 PoolPrecedence.Capacity(pool.Data, AbilityDerivation.MaxManaBonus(scores), modifiers, 0),
                 PoolPrecedence.GainPerTurn(pool.Data, manaRegen));
+        }
+
+        // PHASE 3: ONE skill, adjusted for what this character's reward
+        // track has paid against it -- SpellCostDelta (every mana-costed
+        // skill, SET-style), SkillCostDelta (one named skill/resource,
+        // summed) and SkillFlatDelta (one named skill, summed). The ONE seam
+        // both read sites SkillResolution needs share: FightEncounterAdapter.
+        // KitFor(Character, ...) calls this once per skill while building the
+        // in-run kit, so SkillResolution.CanAfford and ChargeSkillMana both
+        // read the SAME already-discounted ResolvedSkill.ManaCost/
+        // ResourceCost off the actor's kit -- no second copy of "how much
+        // does this cost" anywhere in Domain.
+        //
+        // RETURNS THE SAME INSTANCE when nothing applies, rather than a
+        // needless clone of every skill in every kit -- ResolvedSkill.
+        // WithTrackDeltas is the only place that ever clones (MemberwiseClone,
+        // the same shape AsElement already uses), and only when a delta is
+        // nonzero.
+        public static ResolvedSkill ApplyRewardTrackSkillDeltas(Character character, ResolvedSkill skill)
+        {
+            if (character == null || skill == null) return skill;
+
+            var track = RewardTracks.For(character);
+            int claimed = character.claimedTrackLevel;
+
+            int spellDelta = track.UnlockedAmount(TrackReward.SpellCostDelta, claimed, fallback: 0);
+            int skillManaDelta = track.CollectedSkillCostDelta(skill.Id, TrackResourceTarget.Mana, claimed);
+            int skillResourceDelta = track.CollectedSkillCostDelta(skill.Id, TrackResourceTarget.Signature, claimed);
+            int flatDelta = track.CollectedSkillFlatDelta(skill.Id, claimed);
+
+            // SpellCostDelta only ever touches a skill that actually costs
+            // mana -- Shear/Battering Ram cost Wool, not mana, so a universal
+            // spell discount must not also chip at their resourceCost.
+            int manaDelta = skillManaDelta + (skill.ManaCost > 0 ? spellDelta : 0);
+
+            if (manaDelta == 0 && skillResourceDelta == 0 && flatDelta == 0) return skill;
+
+            return skill.WithTrackDeltas(manaDelta, skillResourceDelta, flatDelta);
         }
 
         // A character's actual Skill mana cost including their level's

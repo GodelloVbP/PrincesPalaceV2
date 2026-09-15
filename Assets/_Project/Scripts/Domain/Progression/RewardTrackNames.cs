@@ -62,6 +62,29 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.UnlockSkill:
                     return $"LEARN {SkillNameOf(entry)}";
 
+                // ---- PHASE 3 ----
+
+                case TrackReward.FuryGainOnAttack:
+                    return $"+{amount} FURY PER ATTACK";
+
+                case TrackReward.FuryStartOfFight:
+                    return $"OPENS AT {amount} FURY";
+
+                case TrackReward.SpellCostDelta:
+                    return $"SPELLS COST {amount} LESS";
+
+                case TrackReward.SkillCostDelta:
+                    return $"{SkillNameOf(entry)} COSTS {amount} LESS";
+
+                case TrackReward.SkillFlatDelta:
+                    return $"{SkillNameOf(entry)} +{amount}";
+
+                case TrackReward.SignatureAbsorbPerPoint:
+                    return $"{ResourceNameOf(entry)} ABSORBS {amount} PER POINT";
+
+                case TrackReward.Identity:
+                    return IdentityCaption(entry);
+
                 default:
                     return "";
             }
@@ -89,5 +112,40 @@ namespace PrincesPalace.Domain.Progression
 
         private static string SkillNameOf(TrackEntry entry) =>
             string.IsNullOrEmpty(entry.SkillDisplayName) ? "" : entry.SkillDisplayName.ToUpperInvariant();
+
+        // PHASE 3: Identity's caption depends on WHICH of the six payloads
+        // the entry carries -- unlike every other kind, one reward maps to
+        // six different templates. Falls back to a generic line for an
+        // entry with no IdentityKind at all (a bare fixture, or content that
+        // somehow lost its selector) rather than an empty string, the same
+        // "never a blank line" posture every other case here already keeps.
+        private static string IdentityCaption(TrackEntry entry)
+        {
+            switch (entry.IdentityKind)
+            {
+                case TrackIdentityKind.Title:
+                    return string.IsNullOrEmpty(entry.IdentityValue)
+                        ? "A NEW TITLE"
+                        : $"TITLE: {entry.IdentityValue.ToUpperInvariant()}";
+
+                case TrackIdentityKind.PlateRim:
+                    return $"PLATE RIM, {(entry.IdentityValue ?? "").ToUpperInvariant()}";
+
+                case TrackIdentityKind.PortraitFrame:
+                    return "PORTRAIT FRAME";
+
+                case TrackIdentityKind.PlateEmboss:
+                    return $"PLATE EMBOSS, {(entry.IdentityValue ?? "").ToUpperInvariant()}";
+
+                case TrackIdentityKind.VictoryPose:
+                    return "VICTORY POSE";
+
+                case TrackIdentityKind.Mastery:
+                    return "MASTERY";
+
+                default:
+                    return "AN IDENTITY REWARD";
+            }
+        }
     }
 }
