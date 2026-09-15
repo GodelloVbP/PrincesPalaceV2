@@ -376,3 +376,347 @@ entries under `Assets/` or `tools/` — the only new artifact is
 `reports/bot/20260915-233830/` (gitignored) and this report file. No content
 was rebuilt (`tools/build_content.ps1` was not run) and no `.json` under
 `Assets/_Project/ContentData/` was edited.
+
+---
+
+# Part 2: with career mode
+
+Written against `9da83d74` (main tree, branch `prismatic-orb`), the commit that
+adds `BotRunDriver.PlayCareer`, `TurnTrace.PoolTierFired`/`.PrimaryPoolAfter`,
+and the `-Career` switch this part's batches actually use. Part 1's own
+limitations section is this part's brief: a true career (persistent
+level/exp across lives) and Bjorn's x2/x4 tier share were both flagged there
+as "not measurable with this batch" for want of a feature and a trace field.
+Both now exist; this is what they measure.
+
+## 0. The five batches this part is built from
+
+Five separate foreground calls, one per archetype (a single combined call was
+not attempted -- each archetype's career runs independently and nothing is
+lost by splitting, and splitting keeps every call comfortably inside the
+600s budget):
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 24 -Seed 1 -Career -Archetypes RandomLegal      -Profiles Fresh -DepthCap 80 -Shards 1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 24 -Seed 1 -Career -Archetypes GreedyAggressive -Profiles Fresh -DepthCap 80 -Shards 1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 24 -Seed 1 -Career -Archetypes GreedyDefensive  -Profiles Fresh -DepthCap 80 -Shards 1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 24 -Seed 1 -Career -Archetypes Lookahead2      -Profiles Fresh -DepthCap 80 -Shards 1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 24 -Seed 1 -Career -Archetypes ProtectTheFront -Profiles Fresh -DepthCap 80 -Shards 1
+```
+
+`-Career` reinterprets `-Runs 24` as 24 lives in ONE career at the single
+seed `-Seed 1`, played against one save (`BotRunDriver.PlayCareer`); `-Shards`
+is forced to 1 by the script regardless of what is passed, since a
+single-seed career has nothing to split across processes. Every life still
+lands an ordinary `traces.jsonl`/`runs.jsonl` row plus one `career.jsonl` row
+carrying its own run index and per-character level/exp.
+
+| archetype | batch dir | wall clock | bugs | determinism mismatches |
+|---|---|---|---|---|
+| RandomLegal | `reports/bot/20260916-002213/` | 5.8s | 0 | 0 |
+| GreedyAggressive | `reports/bot/20260916-002246/` | 77.7s | 0 | 0 |
+| GreedyDefensive | `reports/bot/20260916-002422/` | 38.2s | 1 (below) | 0 |
+| Lookahead2 | `reports/bot/20260916-002518/` | 174.9s | 0 | 0 |
+| ProtectTheFront | `reports/bot/20260916-002834/` | 89.4s | 0 | 0 |
+
+All gitignored under `reports/bot/`, nothing committed from them. `-ReplayShare`
+was left at its default (0.1 > 0), which for career mode means the WHOLE
+career is replayed once and every one of its 24 lives compared by hash
+(`determinism.checked` reads 24 for every cell above, not a tenth of it -- see
+`docs/BOT_SUMMARY_SCHEMA.md`'s new `career.jsonl` section on why career mode's
+determinism check does not sample individual lives). Zero mismatches across
+120 lives (24 x 5 archetypes), confirming a career replays byte-identically
+from its one seed.
+
+One genuine finding, not a regression: GreedyDefensive's run 21 (level 27,
+step 56/leg 7, seed `10995824595521919989`) hit `TooManyCommands` at the
+2000-command hard ceiling, the last ten actions all `Skill:mend` (Odette's
+heal). This is the exact blind spot `FightRunner.StallCommands`'s own comment
+already names -- an exchange where the party heals back everything it takes
+and occasionally lands a scratch on the enemy resets the 60-command stall
+counter every time that scratch lands, so the fight can wander for up to 2000
+commands before the hard ceiling (not the stall detector) finally cuts it off.
+Reproducible: the exact same seed, step and last-ten-actions came back
+identically on a from-scratch rerun of the batch. Not something this task's
+brief asked to be fixed.
+
+## 1. Career simulation, for real this time
+
+`BotRunDriver.PlayCareer(seed, archetype, "Fresh", runsInCareer: 24, depthCapSteps: 80)`
+plays 24 lives back to back against one save: `ProfilePresets.Build` runs
+once (life 0 starts Fresh -- level 1, nothing claimed), and every later life
+reuses that same `SaveData` through `RunOrchestrator.StartRun`/
+`RunManager.EndRun`, the same two doors a real player's hub-to-descent
+transition uses. Level, exp, `claimedTrackLevel`, stat points, embers and
+talents all carried; gear and the stockpile did not (`RunManager.EndRun`
+clears both on every completed life, exactly as it does on every completed
+real run -- see `BotRunDriver.PlayCareer`'s own header for why this was built
+to match that rather than special-case gear to survive a boundary nothing
+else survives).
+
+All three fielded characters (Shawn, Bjorn, Odette) sat at the identical
+level after every single one of the 120 lives across all five archetypes --
+nobody was ever downed for a whole won fight in this batch, so `RewardApplier`
+paying every fielded, non-downed character the full amount kept the squad
+perfectly in sync the entire time. The table below reports one "level"
+column rather than three for that reason; it is an observation about this
+batch, not a guarantee the game enforces.
+
+### Per-run table (run index, 1-based to match the plan's own "run N" wording; step; leg = `(step-1)/8 + 1`; squad level)
+
+**RandomLegal** (median depth 32/leg4 across the 24 lives, p10 24/p90 36, 0 capped):
+
+| run | step (leg) | level | run | step (leg) | level |
+|---|---|---|---|---|---|
+| 1 | 16 (2) | 4 | 13 | 32 (4) | 15 |
+| 2 | 24 (3) | 7 | 14 | 32 (4) | 16 |
+| 3 | 16 (2) | 8 | 15 | 32 (4) | 16 |
+| 4 | 28 (4) | 10 | 16 | 36 (5) | 17 |
+| 5 | 28 (4) | 11 | 17 | 32 (4) | 17 |
+| 6 | 32 (4) | 12 | 18 | 32 (4) | 17 |
+| 7 | 29 (4) | 13 | 19 | 32 (4) | 18 |
+| 8 | 28 (4) | 13 | 20 | 36 (5) | 18 |
+| 9 | 32 (4) | 14 | 21 | 40 (5) | 18 |
+| 10 | 36 (5) | 14 | 22 | 32 (4) | 19 |
+| 11 | 32 (4) | 15 | 23 | 40 (5) | 19 |
+| 12 | 30 (4) | 15 | 24 | 24 (3) | 19 |
+
+**GreedyAggressive** (median depth 56/leg7, p10 40/p90 80, capped 4/24 -- runs 9,11,13,20):
+
+| run | step (leg) | level | run | step (leg) | level |
+|---|---|---|---|---|---|
+| 1 | 24 (3) | 5 | 13 | **80 (10, capped)** | 23 |
+| 2 | 32 (4) | 9 | 14 | 64 (8) | 24 |
+| 3 | 40 (5) | 11 | 15 | 56 (7) | 24 |
+| 4 | 48 (6) | 13 | 16 | 56 (7) | 25 |
+| 5 | 40 (5) | 14 | 17 | 72 (9) | 26 |
+| 6 | 48 (6) | 15 | 18 | 72 (9) | 26 |
+| 7 | 54 (7) | 16 | 19 | 64 (8) | 27 |
+| 8 | 48 (6) | 17 | 20 | **80 (10, capped)** | 28 |
+| 9 | **80 (10, capped)** | 19 | 21 | 56 (7) | 28 |
+| 10 | 56 (7) | 20 | 22 | 72 (9) | 29 |
+| 11 | **80 (10, capped)** | 21 | 23 | 64 (8) | 29 |
+| 12 | 64 (8) | 22 | 24 | 64 (8) | 30 |
+
+**GreedyDefensive** (median depth ~52/leg7, capped 3/24 -- runs 9,11,13; run 21 hit the 2000-command ceiling, see §0):
+
+| run | step (leg) | level | run | step (leg) | level |
+|---|---|---|---|---|---|
+| 1 | 28 (4) | 6 | 13 | **80 (10, capped)** | 23 |
+| 2 | 32 (4) | 10 | 14 | 64 (8) | 24 |
+| 3 | 40 (5) | 11 | 15 | 56 (7) | 24 |
+| 4 | 48 (6) | 13 | 16 | 40 (5) | 24 |
+| 5 | 40 (5) | 14 | 17 | 48 (6) | 25 |
+| 6 | 44 (6) | 15 | 18 | 56 (7) | 25 |
+| 7 | 40 (5) | 15 | 19 | 64 (8) | 26 |
+| 8 | 44 (6) | 16 | 20 | 52 (7) | 26 |
+| 9 | **80 (10, capped)** | 18 | 21 | 56 (7, 2000-cmd ceiling) | 27 |
+| 10 | 56 (7) | 19 | 22 | 56 (7) | 27 |
+| 11 | **80 (10, capped)** | 21 | 23 | 64 (8) | 28 |
+| 12 | 64 (8) | 22 | 24 | 64 (8) | 28 |
+
+**Lookahead2** (median depth 80/leg10 -- capped **22/24** lives, the only archetype whose career spends almost its entirety at the depth cap):
+
+| run | step (leg) | level | run | step (leg) | level |
+|---|---|---|---|---|---|
+| 1 | 56 (7) | 11 | 13 | **80 (10, capped)** | 30 |
+| 2 | **80 (10, capped)** | 15 | 14 | **80 (10, capped)** | 31 |
+| 3 | 40 (5) | 16 | 15 | **80 (10, capped)** | 32 |
+| 4 | **80 (10, capped)** | 18 | 16 | **80 (10, capped)** | 33 |
+| 5 | **80 (10, capped)** | 20 | 17 | **80 (10, capped)** | 34 |
+| 6 | **80 (10, capped)** | 21 | 18 | **80 (10, capped)** | 34 |
+| 7 | **80 (10, capped)** | 23 | 19 | **80 (10, capped)** | 35 |
+| 8 | 72 (9) | 24 | 20 | **80 (10, capped)** | 36 |
+| 9 | **80 (10, capped)** | 25 | 21 | **80 (10, capped)** | 37 |
+| 10 | **80 (10, capped)** | 26 | 22 | **80 (10, capped)** | 38 |
+| 11 | **80 (10, capped)** | 27 | 23 | **80 (10, capped)** | 39 |
+| 12 | **80 (10, capped)** | 28 | 24 | **80 (10, capped)** | 39 |
+
+**ProtectTheFront** (median depth ~58/leg7-8, capped 5/24 -- runs 9,11,13,15,20):
+
+| run | step (leg) | level | run | step (leg) | level |
+|---|---|---|---|---|---|
+| 1 | 31 (4) | 7 | 13 | **80 (10, capped)** | 24 |
+| 2 | 40 (5) | 10 | 14 | 64 (8) | 24 |
+| 3 | 46 (6) | 12 | 15 | **80 (10, capped)** | 26 |
+| 4 | 48 (6) | 14 | 16 | 56 (7) | 26 |
+| 5 | 40 (5) | 14 | 17 | 72 (9) | 27 |
+| 6 | 48 (6) | 15 | 18 | 64 (8) | 27 |
+| 7 | 48 (6) | 16 | 19 | 64 (8) | 28 |
+| 8 | 48 (6) | 17 | 20 | **80 (10, capped)** | 29 |
+| 9 | **80 (10, capped)** | 19 | 21 | 52 (7) | 29 |
+| 10 | 56 (7) | 20 | 22 | 68 (9) | 30 |
+| 11 | **80 (10, capped)** | 21 | 23 | 64 (8) | 30 |
+| 12 | 72 (9) | 23 | 24 | 64 (8) | 31 |
+
+### Comparison against the plan's table (§3), with the actual depth pattern beside it
+
+The plan's table is a *deterministic* career: a fixed room sequence at a
+standing player's expected pay, so its "run N" rows describe a hypothetical
+player who always makes the paper-optimal choice. These five careers are
+real, seeded, archetype-played descents -- the comparison is honest exactly to
+the extent the two are different things measuring the same shape.
+
+| plan row | plan says | RandomLegal (weakest) | GreedyDefensive | GreedyAggressive | ProtectTheFront | Lookahead2 (strongest) |
+|---|---|---|---|---|---|---|
+| run 1, dies leg 2 -> level 5 | 710 XP, level 5 | **run 1, dies leg 2, level 4** (closest match -- RandomLegal is the only archetype that ever died in leg 2 at all in this batch) | never died leg 2 | never died leg 2 | never died leg 2 | never died leg 2 |
+| first deep run (leg 10) -> level 15 | -- | never capped in 24 lives | run 9, level 18 | run 9, level 19 | run 9, level 19 | **run 2, level 15** (exact level match) |
+| run 6 -> level 20 | level 20 | never reached level 20 | run 11 (step 80/leg10, capped), level 20 | run 10 (step 56/leg7), level 20 | run 10 (step 56/leg7), level 20 | run 5 (step 80/leg10, capped), level 20 |
+| run 10 -> level 25 | level 25 | never reached level 25 | run 17 (step 48/leg6), level 25 | run 16 (step 56/leg7), level 25 | run 15 (step 80/leg10, capped), level 25 | run 9 (step 80/leg10, capped), level 25 |
+| run 14 -> level 30 | level 30 | never reached level 30 (max 19 over 24 lives) | never reached level 30 (max 28 over 24 lives) | run 24 (step 64/leg8), level 30 | run 22 (step 68/leg9), level 30 | run 14 (step 80/leg10, capped), level 30 |
+
+Reading this honestly rather than charitably: the plan's table is a
+best-play deterministic pace, and only **Lookahead2** -- the strongest
+archetype, capped 22 of its 24 lives -- tracks it closely (level 15 at the
+first deep run on run 2 against the plan's own claim for "first deep run",
+and level 30 by run 14 landing on the plan's own row exactly). Every weaker
+archetype falls further behind the plan's pace the higher the target level
+goes, which is the expected shape (the plan's table is a ceiling a
+paper-optimal player reaches, not a floor every policy should hit) but is
+worth stating plainly rather than picking the one archetype that matches and
+calling the table validated. **GreedyDefensive never reached level 30 in 24
+lives at all** (topped out at 28), and RandomLegal -- see §2 -- never passed
+level 19.
+
+## 2. Stuck-player trajectory (RandomLegal proxy), now a real career
+
+Part 1 could not answer this at all ("no amount of additional `-Runs` fixes
+that; it needs the actual career-persistence feature"). It can now:
+
+| plan's cumulative target | plan says (run #) | RandomLegal's actual career (24 lives) |
+|---|---|---|
+| level 10 | run 3 | **run 4** (one run later than the plan) |
+| level 15 | run 11 | **run 11** (exact match) |
+| level 20 | run 28 | **never reached in 24 lives** (topped out at level 19 on run 24; the plan's own row needs 28 runs and this career only played 24) |
+
+RandomLegal -- the archetype that ranks nothing when choosing gear, stats or
+talents (`PLAN_BALANCE_BOT.md` §5's "all-zero vector") -- tracks the plan's
+own stuck-player pace remarkably closely through level 15 (one run late at
+10, exact at 15), and the level-20 row is not a miss so much as a career that
+was not run long enough to reach it: the plan's own row asks for run 28 and
+this batch stopped at 24. A longer `-Runs` would answer it directly; this
+was not rerun with a longer career because the brief's own batch spec was
+24 lives.
+
+RandomLegal died in leg 2 exactly once (run 1) and never again in this
+career -- from run 2 onward it consistently reached leg 3-5 before dying
+(see the full table in §1), so "the weakest policy always dies before leg 3"
+is not true of this batch beyond its very first life; the character's
+accumulated stat points and (idempotently, per-life) claimed track rewards
+are doing real work even under a policy that spends them at random.
+
+## 3. Bjorn's fury tiers, measured directly
+
+`TurnTrace.PoolTierFired` now exists (0 = no tier fired, 2 = the x2 tier, 4
+= the x4 tier -- `CombatBeat.PoolTierDamageMultiplier`'s own values, written
+by `FightRunner.Play` off the beat it drains per command). This replaces
+Part 1's contaminated damage-magnitude proxy (528x ratios, proven unusable)
+with the field the tier resolution itself decided.
+
+**Method and its one approximation.** `RunTrace` records a tier per command
+but not a level per command, so a turn's level bracket is read off the LIFE
+it belongs to: each life is bucketed by the level it STARTED at (the
+previous life's ending level, or 1 for life 0 of every career), and every
+Slam cast in that life counts toward that one bracket. This is exact for the
+overwhelming majority of a career -- most lives do not cross a bracket
+boundary mid-life -- but a life that levels from, say, 14 to 17 across its own
+XP gain has its early (pre-15) turns counted in the "15-26" bracket. Pooled
+across all five archetypes' careers (120 lives, every Slam cast from every
+one of them):
+
+| Bjorn's level | Slam casts | x2 share | x4 share |
+|---|---|---|---|
+| pre-15 (opening 0, node 15 inactive) | 2,414 | 33.1% (799) | 0.7% (18) |
+| 15-26 (opening 25 active, node 26 inactive) | 7,631 | 43.0% (3,278) | 0.8% (59) |
+| 26+ (opening 50 active) | 6,836 | 49.6% (3,392) | 0.6% (39) |
+
+**The trip-wire does not fire -- x4 stays under 1% in every bracket,
+including after level 26.** `PLAN_PROGRESSION_V2.md`'s phase 1 spec (§7,
+item c) worried about the opposite failure: "share of his turns that are x4
+slams; over a third sends opening 50 back to 40." That is not what this
+batch shows. The design's own §4 note for level 26 says "the x2 Slam is the
+opening move of every fight and the x4 tier needs 2 attacks" -- the measured
+x2 share (49.6% after 26, versus 33.1% before level 5's opening even
+exists) is consistent with that: fury opening at 50 does make x2 close to
+"every other Slam", exactly as designed. The x4 tier staying rare is also
+consistent with it needing a SECOND attack's worth of fury gain on top of an
+opening 50, which many fights do not last long enough (or do not spend a
+second Slam on) to reach. This is a real, level-bracketed measurement, not a
+proxy, and it says the level-26 node is landing as designed rather than
+overshooting into the trip-wire's territory.
+
+## 4. Collected-node timing (level-3 and level-10 abilities)
+
+One correction to the brief before the numbers: **"Bellow" does not exist in
+shipped content.** `Assets/_Project/ContentData/reward_tracks.json`'s `bear`
+track grants `placeholder_brawler_provoke` at level 3, not a skill named
+Bellow -- the plan's own flavor-text column (`PLAN_PROGRESSION_V2.md` §4) was
+never implemented under that name for Bjorn. Shawn's level-3/10 grants
+(`woolgathering`, `battering_ram`) and Odette's (`frost_flare`,
+`lightning_bolt`) match the plan exactly; only Bjorn's level-3 name is
+stale. Reported below by content id, with the plan's label in parentheses
+where it was accurate.
+
+First run (1-based, matching §1's table) each character casts each skill at
+least once, per archetype career; "never" means not cast in any of the 24
+lives:
+
+| archetype | Woolgathering (Shawn L3) | `placeholder_brawler_provoke` (Bjorn L3) | Frost Flare (Odette L3) | Battering Ram (Shawn L10) | Rampage (Bjorn L10) | Lightning Bolt (Odette L10) |
+|---|---|---|---|---|---|---|
+| RandomLegal | run 1 | never | run 1 | run 4 | run 4 | run 1 |
+| GreedyAggressive | never | never | run 1 | run 3 | run 3 | run 1 |
+| GreedyDefensive | run 1 | never | run 1 | run 3 | run 3 | run 1 |
+| Lookahead2 | run 1 | never | run 1 | run 1 | run 1 | run 1 |
+| ProtectTheFront | never | never | run 1 | run 2 | run 2 | run 1 |
+
+Two findings, not one. First, the level-10 verbs (Battering Ram, Rampage,
+Lightning Bolt -- all three offensive) are cast by every archetype within a
+handful of runs of unlocking them, exactly as the acquisition loop intends.
+Second, `placeholder_brawler_provoke` is **never cast by any archetype across
+120 lives**, and Woolgathering is skipped entirely by two of the five
+(GreedyAggressive, ProtectTheFront). `placeholder_brawler_provoke` is a
+Provoke-kind skill -- non-damaging, tanking utility -- and every archetype here
+is a damage-and-survival policy; `NonDamagingSkillGuard`
+(`Domain/Bot/NonDamagingSkillGuard.cs`) exists precisely to keep an archetype
+from wasting turns on the non-damaging class of skill, so a node that grants
+ONLY a non-damaging skill is, for every archetype measured, a level-up that
+buys nothing any of them will ever use. That is a fair reading of what these
+five policies do, not necessarily of what a human player would do with a
+taunt button -- but it is worth flagging next to the "Bellow" naming gap
+rather than past it, since both point at the same node.
+
+## Verification that nothing under Assets/ or tools/ changed beyond this session's own committed edit
+
+`git status --short` before this part's batches and after shows the same
+pre-existing uncommitted state Part 1 noted (Art/Fonts diffs, untracked
+`.agents/`/`.claude/skills/`/etc. from other work), unchanged by anything in
+this session beyond the one commit `9da83d74` (staged and committed by
+explicit path, listed below) and the five gitignored
+`reports/bot/20260916-*/` directories these batches wrote. No content was
+rebuilt (`tools/build_content.ps1` was not run) and no `.json` under
+`Assets/_Project/ContentData/` was edited.
+
+`9da83d74` -- "Add bot career mode and per-command fury-tier tracing":
+
+- `Assets/_Project/Scripts/Domain/Bot/RunTrace.cs` -- `TurnTrace.PoolTierFired`
+  / `.PrimaryPoolAfter`, folded into `RunTrace.Hash()`.
+- `Assets/_Project/Scripts/Domain/Bot/FightRunner.cs` -- drains and reads the
+  beat those two fields come from, per command.
+- `Assets/_Project/Scripts/Core/Bot/BotRunDriver.cs` -- `PlayDescent` split
+  out of `PlayOneRun`; `PlayCareer` and its `CareerRunSummary`/
+  `BotCareerResult` types.
+- `Assets/_Project/Scripts/Editor/Bot/BalanceBotRunner.cs` -- `-botCareer`,
+  `RunCareerCell`/`CareerRowJson`, and the `TraceJson` fix that writes the
+  two new `TurnTrace` fields (missing from the very first two batches of
+  this part, caught before the Bjorn analysis and fixed in a follow-up edit
+  before any of the final five batches above were run -- every batch cited
+  in this part already carries the fix).
+- `tools/bot.ps1` -- `-Career` switch.
+- `docs/BOT_SUMMARY_SCHEMA.md` -- the two new `TurnTrace` fields and a new
+  `career.jsonl` section.
+- `Assets/_Project/Scripts/Tests/EditMode/Combat/BotPoolTierTraceTests.cs`,
+  `Assets/_Project/Scripts/Tests/PlayMode/Run/BotCareerModeTests.cs` -- new.
+
+Full suite (`tools/run_tests_parallel.ps1`, no build switches, run before any
+of this part's batches): **EditMode 3834/3837 passed (3 skipped), PlayMode
+1014/1055 passed (41 skipped), 0 failed.**
