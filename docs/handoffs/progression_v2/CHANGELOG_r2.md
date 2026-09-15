@@ -30,3 +30,11 @@ Corrections:
   a new effect kind; seven new reward types listed.
 - Level 30 is the completion point; 31-40 optional prestige with cap-at-30
   fallback.
+
+Addendum r2.1 (2026-09-15, corrections from phase 1 and phase 2 reports):
+- Section 3 career table, run 2 dies leg 3: remainder corrected from 246 of 450 to 321 of 450.
+- Section 3 knockout paragraph: downed-at-every-boss trajectory corrected to reach level 5 on run 1 at 576 against 560, and level 30 on run 17 (was 562/run 15).
+- Section 5 Second Life bullet rewritten to the code as phase 2 pinned it: whole-party-wipe revive at half max health, one charge per collected node per run, pooled across the fielded squad.
+- Section 6 and section 1 contract 4 reworded: pay depends on whether a character was out for the whole fight (half) versus fell during a fight the party won (full), not on victory-vs-downed timing.
+- Section 4 table and section 5 Shawn bullet: level 15/26 Wool-absorb nodes replaced by Tuck In, the skill phase 1 selected after the automatic absorb was rejected for Shear starvation.
+- Section 5 reward types: noted SignatureAbsorbPerPoint is built but unused by the shipped tracks after phase 1.

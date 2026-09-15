@@ -1,6 +1,7 @@
 # Progression v2, revision 2
 
 Status: proposal, 2026-09-15. Supersedes revision 1 (kept beside this file).
+Revision 2.1, 2026-09-15: corrections from phase 1 and phase 2 reports (see CHANGELOG_r2.md addendum).
 Model: xp_model.md in this folder, computed by xp_model.py from the live
 content. Every number below traces to it or to the cost table in section 3.
 
@@ -46,7 +47,7 @@ Pacing:
 2. No level costs more than one deep run's pay (D); none costs less than two
    typical room-0 fights (58).
 3. A run that dies on leg 2 earns at least three levels.
-4. Downed at a victory pays half, rounded up; never zero.
+4. A character out for the whole fight earns half, rounded up; never zero.
 5. Combat stretch: no two neighbouring nodes of one kind; the node after an
    ability at 3, 10, 20 is a choice; 30 is the last combat node and is
    followed by identity. Utility nodes (respec at 8, Second Life at 25) occur
@@ -102,7 +103,7 @@ exact levels and remainders, the phase-2 pin.
 | After | Cum. XP | Level | Remainder to next | Clock |
 |---|---|---|---|---|
 | run 1, dies leg 2 | 710 | 5 | 150 of 300 | 25 min |
-| run 2, dies leg 3 | 1,931 | 8 | 246 of 450 | 1 h 05 |
+| run 2, dies leg 3 | 1,931 | 8 | 321 of 450 | 1 h 05 |
 | run 3, dies leg 5 | 4,573 | 11 | 813 of 1,600 | 2 h 10 |
 | run 4, first deep run | 14,726 | 15 | 1,966 of 3,500 | 4 h 20 |
 | run 6 | 35,032 | 20 | 1,272 of 6,000 | 8 h 40 |
@@ -117,10 +118,7 @@ margin of 496, under one normal fight at that depth; phase 2 confirms the row
 exactly and the owner may loosen level 30 to 9,500 if the margin reads as
 luck.
 
-Knockout trajectory: the same sequence with the character downed at every
-boss (half pay on the largest room of each leg) reaches level 5 on run 1
-still (562 against 560), level 14 not 15 after the first deep run, and level
-30 on run 15. Downed at every victory: level 3 by the leg-2 elite, level 30
+Knockout trajectory: the same sequence with the character downed at every boss (half pay on the largest room of each leg) reaches level 5 on run 1 still (576 against 560), level 14 not 15 after the first deep run, and level 30 on run 17. Downed at every victory: level 3 by the leg-2 elite, level 30
 around run 26. Phase 2 prints all three.
 
 Stuck-player trajectory (never past leg 3, 1,221 per run): level 10 on run
@@ -154,7 +152,7 @@ nodes share a kind. Each of V1 to V3 is followed by a C.
 | 12 | B | Shear costs 3 to 2 Wool | Slam +5 flat (27 to 32) | Mana regen +1 |
 | 13 | C | 4 points | 4 points | 4 points |
 | 14 | B | +40 max health | +50 max health | +30 max health |
-| 15 | K | Wool absorbs 1 per point | Fury opens at 25 | Spells cost 1 less |
+| 15 | K | Tuck In (free action) | Fury opens at 25 | Spells cost 1 less |
 | 16 | C | 4 points | 4 points | 4 points |
 | 17 | B | +5% Nature damage | +5% Physical damage | Max mana 36 to 42 |
 | 18 | C | 4 points | 4 points | 4 points |
@@ -165,7 +163,7 @@ nodes share a kind. Each of V1 to V3 is followed by a C.
 | 23 | C | 4 points | 4 points | 4 points |
 | 24 | B | Battering Ram 6 to 4 Wool | Slam +5 flat (32 to 37) | Mana regen +1 |
 | 25 | U | Second Life | Second Life | Second Life |
-| 26 | K | Wool absorbs 2 per point | Fury opens at 50 | Spells cost 2 less |
+| 26 | K | Tuck In wards 3 per Wool | Fury opens at 50 | Spells cost 2 less |
 | 27 | C | 4 points | 4 points | 4 points |
 | 28 | B | +5% Nature damage | +5% Physical damage | +5% spell damage |
 | 29 | C | 4 points | 4 points | 4 points |
@@ -214,13 +212,12 @@ What each bump changes, evaluated with the kit held at that level:
 ## 5. Behaviour specs
 
 Capabilities.
-- Shawn 15, Wool absorbs 1 per point: existing automatic rule, moved from 60.
-  Each point absorbs 1 damage from the shared Wool bank, partial points round
-  against the holder, capped by what is banked. Level 26 raises it to 2 per
-  point. Tension by design. Fallback if phase 1 fails: "Tuck In", a skill, 0
-  cost, converts up to 4 banked Wool into a ward of 2 per Wool for the enemy
-  phase, does not end the turn; a different design, specified and measured
-  on its own if reached.
+- Shawn 15, Tuck In: phase 1 rejected the automatic absorb (Shear starvation
+  41% at baseline to 55% with it, see PHASE1_BOT_REPORT.md). Tuck In is a
+  skill: costs 0 mana, spends up to 4 banked Wool, wards Shawn for 2 per Wool
+  spent for the enemy phase, and does not end the turn (one use per turn).
+  Level 26 raises the ward to 3 per Wool. It is an Ability-kind node; the
+  ability-then-choice rule holds because 16 is a choice.
 - Bjorn 15, Fury opens at 25; 26, opens at 50: the pool's start value for
   fights after collection. Decay, gain and tiers unchanged.
 - Odette 15, spells cost 1 less; 26, 2 less: every mana-costed skill, to a
@@ -228,10 +225,11 @@ Capabilities.
 
 Utility.
 - Respec at 8: refunds Embers and stat points, once per collection.
-- Second Life at 25: once per run, the first time this character would drop
-  to 0 health they stay at 1 and gain no other effect; consumed on use, reset
-  at run start, not shared. This is the existing rule as read from the code;
-  phase 2 pins it and any difference is reported before content moves.
+- Second Life at 25: the existing rule, pinned by phase 2 as the code behaves:
+  when the whole party is wiped, every downed member returns at half max
+  health (floored, minimum 1); one charge per collected node per run, pooled
+  across the fielded squad; consumed on use, reset at run start. It is combat
+  power, which is why it sits at 25.
 
 Abilities. New skills: Rampage, Bulwark, Second Wind, Mend, Prism Ward, and
 Shawn's V4 (owner-designed, not proposed). Existing and unchanged:
@@ -259,14 +257,16 @@ value), SpellCostDelta (all mana-costed skills), SkillCostDelta (one named
 skill, one resource; used for Shear, Battering Ram), SkillFlatDelta (one
 named skill; used for Slam), SignatureAbsorbPerPoint (1 or 2), Identity
 (title, rim, frame, emboss, pose, mastery). Seven; each is one row in the
-resolver and one validation rule.
+resolver and one validation rule. SignatureAbsorbPerPoint is built but unused
+by the shipped tracks after phase 1.
 
 ## 6. Experience, collection, saves
 
-Per fight: victory pays full to standing fielded characters; downed at
-victory pays half rounded up; revived before victory counts as standing; a
-wipe pays nothing for that fight and earlier fights are already saved;
-abandon keeps everything.
+Per fight: victory pays full to standing fielded characters; a character who
+was out for the whole fight (downed when the encounter was built) earns half
+rounded up; a character who fell during a fight the party won earns full,
+since they fought it; a wipe pays nothing for that fight and earlier fights
+are already saved; abandon keeps everything.
 
 Three moments: earned (level-up, node shows Waiting), collected (system menu,
 available in hub, map and fight), active (from the next fight; the kit is
