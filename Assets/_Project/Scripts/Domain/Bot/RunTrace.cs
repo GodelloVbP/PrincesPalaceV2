@@ -14,6 +14,29 @@ namespace PrincesPalace.Domain.Bot
         public string TargetId;
         public int PartyHpAfter;
         public int EnemyHpAfter;
+
+        // THE POOL TIER THIS COMMAND'S OWN CAST FIRED -- 0 for every command
+        // that is not a poolTiers skill's cast (an attack, an item, a move,
+        // an untiered skill, and a tiered skill that fired no tier at all),
+        // else the fired tier's damage multiplier (2 for Bjorn's Slam x2, 4
+        // for x4 -- CombatBeat.PoolTierDamageMultiplier's own values). Read
+        // by FightRunner off the beat it drains for THIS command whose Actor
+        // is this command's own actor -- see FightRunner.Play. Phase 1 of
+        // the fury-tier plan built and reverted this same field
+        // (PHASE1_BOT_REPORT.md's own note); this time it stays, so a batch
+        // can finally answer the plan's x2/x4 share trip-wire instead of the
+        // contaminated damage-magnitude proxy PHASE6_BOT_REPORT.md §3 had to
+        // fall back to.
+        public float PoolTierFired;
+
+        // THE ACTOR'S OWN PRIMARY POOL (mana, fury, whatever pools.json names
+        // it for this character), immediately after this command resolved --
+        // CombatantState.CurrentMana, which is PrimaryPool.Current under a
+        // friendlier name. Read AFTER FightAction.Apply, the same instant
+        // PartyHpAfter/EnemyHpAfter beside it are, so a tier that spent the
+        // pool down and a gainOnAttack that refilled part of it on the same
+        // command both show up in the one number the command leaves behind.
+        public int PrimaryPoolAfter;
     }
 
     // One fight, start to end.
@@ -283,7 +306,8 @@ namespace PrincesPalace.Domain.Bot
                 foreach (var turn in fight.TurnTraces)
                 {
                     sb.Append(turn.ActorId).Append('/').Append(turn.Action).Append('/').Append(turn.TargetId)
-                      .Append('/').Append(turn.PartyHpAfter).Append('/').Append(turn.EnemyHpAfter).Append('|');
+                      .Append('/').Append(turn.PartyHpAfter).Append('/').Append(turn.EnemyHpAfter)
+                      .Append('/').Append(turn.PoolTierFired).Append('/').Append(turn.PrimaryPoolAfter).Append('|');
                 }
                 sb.Append(';');
             }

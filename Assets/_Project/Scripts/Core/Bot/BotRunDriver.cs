@@ -81,6 +81,12 @@ namespace PrincesPalace
         private const uint ShopStream = 108;
         private const uint SpellAssignmentStream = 109;
 
+        // ONE PER RUN WITHIN A CAREER -- derives that run's own seed from the
+        // career's single top-level seed and the run's index, so a career
+        // replays deterministically without the caller having to hand in N
+        // seeds by hand. See PlayCareer.
+        private const uint CareerRunStream = 110;
+
         // ---- what one run hands back --------------------------------------------
 
         // One relic-draft round, which RunTrace has no field for.
@@ -130,6 +136,46 @@ namespace PrincesPalace
             public List<RelicRound> RelicRounds = new List<RelicRound>();
 
             // Milliseconds of wall clock, for the batch's own budget.
+            public double ElapsedMs;
+        }
+
+        // ---- career mode -----------------------------------------------------------
+
+        // ONE ROW PER LIFE IN A CAREER. Deliberately separate from BotRunResult
+        // rather than a widened copy of it: a career row's own reason to exist
+        // is the pair no single-life run has anything to compare against --
+        // per-character level/exp AFTER this run, so the summary can show a
+        // gains-per-run table without re-deriving cross-run state from a trace
+        // that (correctly) knows nothing about any run but its own.
+        public sealed class CareerRunSummary
+        {
+            public int RunIndex;
+
+            // The run's own DeathStep, or DepthCapSteps when Capped -- the
+            // single number a "run -> deepest step" table wants, so a caller
+            // does not have to re-apply that same ternary at every read site.
+            public int DeepestStep;
+            public bool Capped;
+
+            // Keyed by CharacterDefinition.id (Character.definitionId), read
+            // off save.ActiveSquad() the instant this run ends -- the fielded
+            // squad only, matching RunTrace.LevelAtDeath's own scope, but per
+            // character here because a career's whole point is showing HOW
+            // level/exp move run over run, and a squad-wide sum degrading three
+            // characters into one number is exactly the loss PLAN_BALANCE_BOT.md
+            // F5's own per-character correction (2026-09-11) was about.
+            public Dictionary<string, int> LevelByCharacter = new Dictionary<string, int>();
+            public Dictionary<string, int> ExpByCharacter = new Dictionary<string, int>();
+
+            public BotRunResult Result = new BotRunResult();
+        }
+
+        public sealed class BotCareerResult
+        {
+            public List<CareerRunSummary> Runs = new List<CareerRunSummary>();
+
+            // Milliseconds of wall clock for the WHOLE career, mirroring
+            // BotRunResult.ElapsedMs's own units.
             public double ElapsedMs;
         }
 
@@ -255,6 +301,205 @@ namespace PrincesPalace
             return result;
         }
 
+        // ---- career mode -----------------------------------------------------------
+
+        // ONE SAVE, MANY DESCENTS -- the career the real game already has
+        // (die, or walk out of a capped descent, and the next gate press
+        // starts a new run on the SAME character) and that PlayRun above
+        // never exercised: every call wiped the save with SaveSystem.
+        // ClearMemory() and rebuilt the profile from scratch, so a batch
+        // could only ever measure a single first life. This plays
+        // `runsInCareer` of them back to back against ONE save.
+        //
+        // ProfilePresets.Build RUNS ONCE, for run 0 -- level, track claim,
+        // stat points and talents for the STARTING preset, same as PlayRun.
+        // Every later run reuses that SAME SaveData and goes through
+        // RunOrchestrator.StartRun / RunManager.EndRun exactly the way the
+        // real game moves from one descent's end to the next one's start,
+        // rather than a bespoke "carry everything" copy this method would
+        // otherwise have to invent and keep in sync by hand.
+        //
+        // THAT IS ALSO WHY GEAR DOES NOT SURVIVE A CAREER RUN BOUNDARY, even
+        // though a first reading of "keep level, exp, stat points, embers,
+        // talents, gear" could be taken to mean it should: RunManager.EndRun
+        // clears every roster character's equipment and the whole stockpile
+        // on EVERY completed run, win or lose (its own header explains why --
+        // inventory and loot are run-scoped, same as a relic). "Run-scoped
+        // state resets as a real new run does" is the rule this method is
+        // built to MATCH, not override, so it does not special-case gear to
+        // survive a boundary nothing else survives either. Level, exp,
+        // claimedTrackLevel, stat points, embers and talents all live on
+        // Character/SaveData and are untouched by EndRun, so those five carry
+        // over exactly as asked, through the save object staying alive across
+        // the whole loop rather than through any code added here.
+        //
+        // DETERMINISM: each life's own seed is derived from the career's one
+        // top-level seed and its run index (RngStreams.Derive, CareerRunStream)
+        // rather than handed in per call, so a career replays byte-identically
+        // from the single seed alone -- the same guarantee PlayRun's own
+        // determinism check already makes for a single life, extended over
+        // the whole sequence (see BalanceBotSmokeTests' career case).
+        public static BotCareerResult PlayCareer(ulong seed, string archetype, string profile,
+            int runsInCareer, int depthCapSteps, ShopNodeMode shopNodes = ShopNodeMode.WhenOffered)
+        {
+            var careerResult = new BotCareerResult();
+            var started = DateTime.UtcNow;
+
+            bool inMemory = InMemorySaves;
+            string root = inMemory
+                ? SharedRoot()
+                : Path.Combine(Path.GetTempPath(), "pp-bot-" + Guid.NewGuid().ToString("N"));
+
+            try
+            {
+                using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
+                {
+                    if (!inMemory) Directory.CreateDirectory(root);
+
+                    SaveSystem.InMemory = inMemory;
+                    SaveSystem.ClearMemory();
+                    SaveSystem.RootOverride = root;
+                    SaveSlotManager.CurrentSlot = 0;
+                    SaveSlotManager.Forget();
+                    RunManager.ResetForTests();
+                    RoomResolver.Reset();
+                    Navigation.LoadOverride = _ => { };
+                }
+
+                var policy = PolicyFor(archetype);
+                var fightPolicy = policy as IFightPolicy;
+                var runPolicy = policy as IRunPolicy;
+
+                if (fightPolicy == null || runPolicy == null)
+                {
+                    careerResult.Runs.Add(FailedCareerRow(new InvariantHit(
+                        "UnknownArchetype", $"no policy named '{archetype}'")));
+                    return careerResult;
+                }
+
+                if (!ProfilePresets.IsKnown(profile))
+                {
+                    careerResult.Runs.Add(FailedCareerRow(new InvariantHit(
+                        "UnknownProfile", $"no preset named '{profile}'")));
+                    return careerResult;
+                }
+
+                SaveData save;
+                using (BotPhaseTimers.Measure(BotPhase.PresetBuild))
+                {
+                    save = ProfilePresets.Build(profile, runPolicy, StreamFor(seed, PresetStream, 0, 0));
+                }
+
+                if (save == null)
+                {
+                    careerResult.Runs.Add(FailedCareerRow(new InvariantHit("NoSave", "the profile built no save")));
+                    return careerResult;
+                }
+
+                for (int i = 0; i < runsInCareer; i++)
+                {
+                    // BELT AND BRACES, PER THE BRIEF: every won fight already
+                    // claims the track and spends every stat point
+                    // (CollectLevelUps, called from PlayTheFight), so this is
+                    // a no-op idempotent call on every run whose last fight
+                    // was a win it already settled through -- exactly the
+                    // "idempotent against its own watermark" guarantee
+                    // ClaimTrackRewards already makes. It exists so a node
+                    // earned right up to the previous life's last moment is
+                    // guaranteed active before the next life's first choice,
+                    // even if some future change to the settlement order
+                    // ever left one uncollected.
+                    using (BotPhaseTimers.Measure(BotPhase.LevelUp))
+                    {
+                        CollectLevelUps(seed, save, runPolicy, step: -(i + 1));
+                    }
+
+                    ulong runSeed = RngStreams.Derive(seed, CareerRunStream, i, 0);
+
+                    var runResult = new BotRunResult();
+                    runResult.Trace.Seed = runSeed;
+                    runResult.Trace.Archetype = archetype;
+                    runResult.Trace.Profile = profile;
+
+                    RunOrchestrator.StartRun(runSeed);
+                    if (!RunManager.HasRun)
+                    {
+                        runResult.Hits.Add(new InvariantHit("NoRun", "StartRun left no run standing"));
+                    }
+                    else
+                    {
+                        PlayDescent(runSeed, save, fightPolicy, runPolicy, depthCapSteps, shopNodes, runResult);
+
+                        // A CAPPED RUN NEVER DIES, so nothing else ever calls
+                        // EndRun for it -- SettleFight's own EndRun call only
+                        // fires on a loss. Settle it explicitly here, the way
+                        // a player choosing to leave a capped descent and
+                        // press the gate again would, so the NEXT life's
+                        // StartRun opens onto a real "no run standing" hub
+                        // state instead of overwriting a run that is still,
+                        // technically, open.
+                        if (RunManager.HasRun) RunManager.EndRun();
+                    }
+
+                    var row = new CareerRunSummary
+                    {
+                        RunIndex = i,
+                        DeepestStep = runResult.Trace.Capped ? depthCapSteps : runResult.Trace.DeathStep,
+                        Capped = runResult.Trace.Capped,
+                        Result = runResult,
+                    };
+
+                    foreach (var character in save.ActiveSquad())
+                    {
+                        if (character == null) continue;
+                        row.LevelByCharacter[character.definitionId] = character.level;
+                        row.ExpByCharacter[character.definitionId] = character.exp;
+                    }
+
+                    careerResult.Runs.Add(row);
+                }
+            }
+            catch (Exception e)
+            {
+                // SAME REASONING AS PlayRun's OWN CATCH: one bad career costs
+                // one row, with the stack, rather than the rest of the batch.
+                careerResult.Runs.Add(FailedCareerRow(new InvariantHit(
+                    "Exception", e.GetType().Name + ": " + e.Message + "\n" + e.StackTrace)));
+            }
+            finally
+            {
+                using (BotPhaseTimers.Measure(BotPhase.HarnessTeardown))
+                {
+                    Navigation.Reset();
+                    SaveSystem.RootOverride = null;
+                    SaveSystem.InMemory = false;
+                    SaveSystem.ClearMemory();
+                    SaveSlotManager.Forget();
+                    RunManager.ResetForTests();
+                    RoomResolver.Reset();
+
+                    try
+                    {
+                        if (!inMemory && Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                    }
+                    catch (IOException)
+                    {
+                        // Litter, not a finding -- same as PlayRun's own catch.
+                    }
+                }
+            }
+
+            careerResult.ElapsedMs = (DateTime.UtcNow - started).TotalMilliseconds;
+            return careerResult;
+        }
+
+        private static CareerRunSummary FailedCareerRow(InvariantHit hit)
+        {
+            var row = new CareerRunSummary();
+            row.Result.Hits.Add(hit);
+            return row;
+        }
+
         private static void PlayOneRun(
             ulong seed, string archetype, string profile, int depthCapSteps, ShopNodeMode shopNodes,
             BotRunResult result)
@@ -298,6 +543,19 @@ namespace PrincesPalace
                 return;
             }
 
+            PlayDescent(seed, save, fightPolicy, runPolicy, depthCapSteps, shopNodes, result);
+        }
+
+        // ONE DESCENT, on a save and a run StartRun has already opened -- the
+        // draft, the equip pass, and the room-by-room loop that used to be
+        // PlayOneRun's own tail, unchanged. Split out so PlayCareer (below)
+        // can call this once per life against the SAME save across many
+        // calls instead of duplicating the loop or forcing a fresh profile
+        // build every time PlayOneRun's shape used to require.
+        private static void PlayDescent(
+            ulong seed, SaveData save, IFightPolicy fightPolicy, IRunPolicy runPolicy,
+            int depthCapSteps, ShopNodeMode shopNodes, BotRunResult result)
+        {
             using (BotPhaseTimers.Measure(BotPhase.RelicDraft))
             {
                 Draft(seed, runPolicy, result);

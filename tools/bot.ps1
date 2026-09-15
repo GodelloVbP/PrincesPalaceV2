@@ -15,7 +15,22 @@ param(
     [ValidateSet("WhenOffered","Never")]
     [string]$ShopPolicy = "WhenOffered",
     [int]$Shards = 0,
-    [switch]$SkipSync
+    [switch]$SkipSync,
+
+    # CAREER MODE. Off (default) leaves -Runs meaning "seeds per cell", one
+    # independent life each, exactly as before. ON, -Runs is reinterpreted as
+    # LIVES IN ONE CAREER and -Seed is the single top-level seed for that
+    # career -- one career per (archetype, profile) cell, played against one
+    # save that persists across the whole career (level, exp, claimedTrack-
+    # Level, stat points, embers and talents carry between lives; gear and
+    # the stockpile do not, because RunManager.EndRun clears both between any
+    # two real descents and a career run boundary is exactly that -- see
+    # BotRunDriver.PlayCareer's own header). Writes an extra career.jsonl
+    # (docs/BOT_SUMMARY_SCHEMA.md) alongside the usual traces.jsonl/
+    # runs.jsonl/summary.json/report.html, which read a career batch with no
+    # changes at all: every life still lands its own row exactly the shape an
+    # independent run's would.
+    [switch]$Career
 )
 
 # Runs a balance-bot batch headlessly, across one or several Unity instances.
@@ -97,6 +112,26 @@ param(
 # cannot be merged from N medians, see that script's header -- and
 # tools/bot_report.py renders it.
 #
+# CAREER MODE (-Career)
+#
+#   -Career (a switch) plays ONE CAREER PER CELL instead of -Runs independent
+#   single lives: -Runs becomes lives in that one career, -Seed its single
+#   top-level seed, and every life in it is played consecutively against ONE
+#   save (BotRunDriver.PlayCareer). Level, exp, claimedTrackLevel, stat
+#   points, embers and talents carry between lives; gear and the stockpile do
+#   not -- RunManager.EndRun clears both between any two real descents, and a
+#   career run boundary is exactly that boundary, not a special case invented
+#   for the bot. Forces -Shards 1 (see the check below): there is one seed
+#   per cell, so nothing to split across processes.
+#
+#   Every life still writes its own traces.jsonl/runs.jsonl row exactly the
+#   shape an independent -Runs life would, so summary.json's existing depth/
+#   coverage/bug numbers read a career batch with zero changes to
+#   bot_merge.py or bot_report.py. What career mode adds on top is
+#   career.jsonl -- one row per life, carrying its run index and the
+#   per-character level/exp the save held at the end of that life
+#   (docs/BOT_SUMMARY_SCHEMA.md's own section on it).
+#
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here same as
 # everywhere else in tools/ -- an em-dash inside a string breaks PS 5.1's
 # parser, so plain "--" throughout.
@@ -113,6 +148,18 @@ $ProductLeaf = ($ProjectLeaf -replace "[^A-Za-z0-9]", "")
 
 if ($Shards -le 0) {
     $Shards = [Math]::Min(4, [Math]::Max(1, [int]([Environment]::ProcessorCount / 2)))
+}
+
+# A CAREER IS ONE SEED PER CELL -- there is nothing to split a single seed
+# across, and the seed-range-splitting logic below would otherwise slice
+# -Runs (now LIVES IN THE CAREER, not a seed count) into several partial
+# careers, each on its own truncated save. Forced rather than refused: a
+# caller who left -Shards at its multi-core default should not have to
+# retype the command with -Shards 1 just because -Career changed what -Runs
+# means.
+if ($Career -and $Shards -ne 1) {
+    Write-Host "-Career plays one career per cell from a single seed -- forcing -Shards 1 (was $Shards)."
+    $Shards = 1
 }
 
 # ---- which project copies this batch will use -------------------------------
@@ -252,8 +299,14 @@ New-Item -ItemType Directory -Path $MainOutDir -Force | Out-Null
 
 Write-Host ""
 $ArchetypesLabel = if ($Archetypes) { $Archetypes } else { "C# default (BotRunDriver.Archetypes)" }
-Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
-Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
+if ($Career) {
+    Write-Host "Running balance bot in CAREER mode: $Runs lives/career, seed $Seed, archetypes [$ArchetypesLabel],"
+    Write-Host "profiles [$Profiles], depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy."
+}
+else {
+    Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
+    Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
+}
 
 # ---- launch ------------------------------------------------------------------
 
@@ -294,6 +347,8 @@ foreach ($shard in $shardList) {
         "-buildTarget", "StandaloneWindows64",
         "-quit"
     )
+
+    if ($Career) { $unityArgs += @("-botCareer", "1") }
 
     Write-Host "  shard $($shard.Index): seeds $($shard.Seed)..$($shard.Seed + $shard.Runs - 1) in $($shard.Path)"
     $shard.Process = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow

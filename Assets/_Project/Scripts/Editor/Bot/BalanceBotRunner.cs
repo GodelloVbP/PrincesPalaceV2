@@ -127,6 +127,15 @@ namespace PrincesPalace.Editor.Bot
             // the mode has to be in the header or a report cannot say which
             // half it is looking at.
             public ShopNodeMode ShopNodes = ShopNodeMode.WhenOffered;
+
+            // CAREER MODE. Off (the default) leaves every cell exactly as it
+            // was: `Runs` independent single lives, one per seed in
+            // [FirstSeed, FirstSeed+Runs). ON, `Runs` is reinterpreted as
+            // LIVES IN ONE CAREER and each cell plays exactly one career, at
+            // the single seed FirstSeed, against one save that persists
+            // across the whole career -- see BotRunDriver.PlayCareer's own
+            // header for what does and does not carry between lives.
+            public bool Career = false;
         }
 
         private static Options ReadOptions()
@@ -143,6 +152,7 @@ namespace PrincesPalace.Editor.Bot
                 InMemorySaves = ArgInt(args, "-botInMemorySaves", 1) != 0,
                 Shard = Arg(args, "-botShard", "1/1"),
                 ShopNodes = ShopNodePreference.Parse(Arg(args, "-botShopPolicy", "WhenOffered")),
+                Career = ArgInt(args, "-botCareer", 0) != 0,
             };
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
@@ -161,6 +171,12 @@ namespace PrincesPalace.Editor.Bot
             if (o.Archetypes.Count == 0) throw new ArgumentException("-botArchetypes named nothing known");
             if (o.Profiles.Count == 0) throw new ArgumentException("-botProfiles named nothing known");
             if (o.Runs <= 0) throw new ArgumentException("-botRuns must be positive");
+
+            // ONE CAREER PER CELL, at ONE seed -- a career of one life is a
+            // degenerate but harmless request (identical to -botCareer 0 in
+            // everything but which file it writes to), so this is not
+            // refused, only worth knowing about if `-botRuns 1 -botCareer 1`
+            // ever shows up in a log and looks like a mistake.
 
             return o;
         }
@@ -261,6 +277,10 @@ namespace PrincesPalace.Editor.Bot
             var played = new List<Played>();
             var progress = new List<string>();
 
+            // CAREER MODE'S OWN EXTRA FILE. Empty and never written when
+            // o.Career is false -- see the write-out below.
+            var careerLines = new List<string>();
+
             BotRunDriver.InMemorySaves = o.InMemorySaves;
 
             var previousFilter = Debug.unityLogger.filterLogType;
@@ -283,6 +303,25 @@ namespace PrincesPalace.Editor.Bot
                 {
                     foreach (string archetype in o.Archetypes)
                     {
+                        if (o.Career)
+                        {
+                            // ONE CAREER, ONE SEED, `o.Runs` LIVES -- the
+                            // whole cell, in one call. Every life still lands
+                            // in traces.jsonl/runs.jsonl exactly like an
+                            // independent run would (RunRowJson/TraceJson do
+                            // not know or care that this life shares a save
+                            // with the one before it), so summary.json's
+                            // existing depth/coverage/bug machinery reads a
+                            // career batch with no changes at all. What ONLY
+                            // career.jsonl carries is the thing no ordinary
+                            // run has: this life's own index and the
+                            // per-character level/exp it leaves the save
+                            // holding.
+                            RunCareerCell(o, profile, archetype, traces, runs, careerLines);
+                            progress.Add($"[BalanceBot] {profile}/{archetype}: career of {o.Runs} runs done.");
+                            continue;
+                        }
+
                         for (int i = 0; i < o.Runs; i++)
                         {
                             ulong seed = o.FirstSeed + (ulong)i;
@@ -338,6 +377,17 @@ namespace PrincesPalace.Editor.Bot
             {
                 File.WriteAllText(Path.Combine(o.OutDir, "content.json"), ContentJson(), NoBom);
                 File.WriteAllText(Path.Combine(o.OutDir, "batch.json"), BatchJson(o, startedAt, elapsed), NoBom);
+
+                // CAREER MODE'S OWN FILE, one line per life, across every
+                // cell -- see docs/BOT_SUMMARY_SCHEMA.md's "career.jsonl"
+                // section. Not written at all when o.Career is false, same
+                // as traces.jsonl/runs.jsonl are always written regardless:
+                // an absent file is a clearer signal than an empty one that
+                // this batch was never asked for a career.
+                if (o.Career)
+                {
+                    File.WriteAllLines(Path.Combine(o.OutDir, "career.jsonl"), careerLines, NoBom);
+                }
             }
 
             Debug.Log($"[BalanceBot] shard {o.Shard}: {played.Count} runs in {elapsed:F1}s -> {o.OutDir}. " +
@@ -405,6 +455,126 @@ namespace PrincesPalace.Editor.Bot
             }
 
             return entry;
+        }
+
+        // ---- career mode --------------------------------------------------------------
+
+        // ONE CELL'S WHOLE CAREER, played (and, per o.ReplayShare, replayed)
+        // in one call -- the career-mode analogue of PlayOnePairSafely above,
+        // extending the SAME determinism guarantee across a whole sequence of
+        // lives rather than one: replaying the career from the same seed must
+        // reproduce every life's trace hash, in order, not just one life's.
+        //
+        // EVERY LIFE STILL WRITES A traces.jsonl/runs.jsonl ROW, exactly the
+        // shape an independent PlayRun call would have produced -- TraceJson
+        // and RunRowJson read a RunTrace/Played and do not know or care that
+        // this one shares a save with the life before it. That is what lets
+        // summary.json's existing depth/coverage/bug machinery read a career
+        // batch with no changes to bot_merge.py or the schema at all; what
+        // ONLY career.jsonl (CareerRowJson below) carries is the run index
+        // and the per-character level/exp a career-only question needs.
+        private static void RunCareerCell(
+            Options o, string profile, string archetype, StreamWriter traces, StreamWriter runs,
+            List<string> careerLines)
+        {
+            // NOT WRAPPED IN A PHASE TIMER HERE -- PlayCareer already measures
+            // its own internals (HarnessSetup, PresetBuild, RelicDraft,
+            // FightPlay, ...) exactly the way PlayRun does per life, and
+            // wrapping the whole call in one more phase would double-count
+            // every one of them into whichever phase this call chose, which
+            // is precisely the "of the time above" nesting BotPhase's own
+            // header warns a NEW phase must not do to the phases already
+            // inside it.
+            var career = BotRunDriver.PlayCareer(o.FirstSeed, archetype, profile, o.Runs, o.DepthCap, o.ShopNodes);
+            _runPlays += career.Runs.Count;
+
+            // SAMPLED THE SAME WAY A SINGLE CELL WOULD BE, just once for the
+            // whole career rather than once per life: o.ReplayShare > 0 means
+            // "this batch wants a determinism check", and a career is one
+            // seed, so there is exactly one thing here to decide whether to
+            // replay. o.ReplayShare's magnitude (as opposed to just its
+            // sign) has no extra meaning in career mode -- a career this
+            // small is cheap to replay whole, and "replay a THIRD of the
+            // lives in this one career" is not a question the plan asks.
+            BotRunDriver.BotCareerResult replayCareer = null;
+            if (o.ReplayShare > 0)
+            {
+                using (BotPhaseTimers.Measure(BotPhase.Replay))
+                {
+                    replayCareer = BotRunDriver.PlayCareer(o.FirstSeed, archetype, profile, o.Runs, o.DepthCap, o.ShopNodes);
+                }
+                _runPlays += replayCareer.Runs.Count;
+            }
+
+            for (int i = 0; i < career.Runs.Count; i++)
+            {
+                var row = career.Runs[i];
+                bool replayed = replayCareer != null && i < replayCareer.Runs.Count;
+                bool hashMatched = !replayed || row.Result.Trace.Hash() == replayCareer.Runs[i].Result.Trace.Hash();
+
+                var entry = new Played
+                {
+                    Seed = row.Result.Trace.Seed,
+                    Archetype = archetype,
+                    Profile = profile,
+                    Result = row.Result,
+                    Replayed = replayed,
+                    HashMatched = hashMatched,
+                };
+
+                using (BotPhaseTimers.Measure(BotPhase.TraceJson))
+                {
+                    traces.WriteLine(TraceJson(entry.Result.Trace));
+                    runs.WriteLine(RunRowJson(entry));
+                }
+
+                careerLines.Add(CareerRowJson(o.FirstSeed, archetype, profile, row));
+            }
+        }
+
+        // ONE LIFE'S ROW IN career.jsonl -- run index, the one number a
+        // "run -> deepest step" table wants (DeepestStep, already resolved
+        // against Capped by BotRunDriver so a reader never has to re-apply
+        // that ternary), and per-character level/exp keyed by
+        // CharacterDefinition.id. camelCase, matching runs.jsonl rather than
+        // traces.jsonl's PascalCase, because this is a merge-facing file same
+        // as runs.jsonl is (docs/BOT_SUMMARY_SCHEMA.md's own convention note
+        // for why the two files disagree on case).
+        private static string CareerRowJson(
+            ulong careerSeed, string archetype, string profile, BotRunDriver.CareerRunSummary row)
+        {
+            var sb = new StringBuilder();
+            sb.Append('{');
+            sb.Append("\"careerSeed\":").Append(careerSeed.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"archetype\":").Append(Str(archetype)).Append(',');
+            sb.Append("\"profile\":").Append(Str(profile)).Append(',');
+            sb.Append("\"runIndex\":").Append(row.RunIndex).Append(',');
+            sb.Append("\"runSeed\":").Append(row.Result.Trace.Seed.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"deepestStep\":").Append(row.DeepestStep).Append(',');
+            sb.Append("\"capped\":").Append(row.Capped ? "true" : "false").Append(',');
+
+            sb.Append("\"levelByCharacter\":{");
+            bool first = true;
+            foreach (var kv in row.LevelByCharacter)
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append(Str(kv.Key)).Append(':').Append(kv.Value);
+            }
+            sb.Append("},");
+
+            sb.Append("\"expByCharacter\":{");
+            first = true;
+            foreach (var kv in row.ExpByCharacter)
+            {
+                if (!first) sb.Append(',');
+                first = false;
+                sb.Append(Str(kv.Key)).Append(':').Append(kv.Value);
+            }
+            sb.Append('}');
+
+            sb.Append('}');
+            return sb.ToString();
         }
 
         // ---- traces.jsonl -----------------------------------------------------------
@@ -839,6 +1009,7 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"depthCapSteps\":").Append(o.DepthCap).Append(",\n");
             sb.Append("\"replayShare\":").Append(Num(o.ReplayShare)).Append(",\n");
             sb.Append("\"shopPolicy\":").Append(Str(ShopNodePreference.Name(o.ShopNodes))).Append(",\n");
+            sb.Append("\"career\":").Append(o.Career ? "true" : "false").Append(",\n");
             sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
             sb.Append("}\n");
             return sb.ToString();

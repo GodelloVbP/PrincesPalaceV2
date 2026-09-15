@@ -218,6 +218,20 @@ TurnTrace
                           resolved (including the enemy reply, per F6: one
                           command call resolves the whole exchange)
   EnemyHpAfter  int    -- sum of living enemies' HP immediately after
+  PoolTierFired float  -- 0 for every command that is not a poolTiers skill's
+                          cast, else the fired tier's own damage multiplier
+                          (2 for Bjorn's Slam x2, 4 for x4 --
+                          CombatBeat.PoolTierDamageMultiplier's own values).
+                          Read off the beat FightRunner drains for this
+                          command whose Actor is this command's own actor;
+                          see FightRunner.Play's own comment at the call
+                          site. Phase 1 of the fury-tier plan built and
+                          reverted the same field; this one stays.
+  PrimaryPoolAfter int  -- the actor's own primary pool (mana, fury,
+                          whatever pools.json names it for this character)
+                          immediately after this command resolved --
+                          CombatantState.CurrentMana at that instant, the
+                          same instant PartyHpAfter/EnemyHpAfter read theirs.
 
 RoomTrace
   Step          int
@@ -350,6 +364,71 @@ both sides of that comparison always include the new fields identically.
 Nothing about the existing fields' contribution to the hash changed -- the
 new `Append` calls are additions to the string being hashed, not edits to
 how the old fields are appended.
+
+The same applies to `TurnTrace.PoolTierFired`/`.PrimaryPoolAfter`, added
+alongside this section's own career-mode change: the hash of a trace taken
+before that change and the identical trace taken after it will differ for
+the same "covers strictly more of the trace" reason, and it is equally not a
+`determinism` mismatch for the same reason -- both sides of any one
+comparison are always taken with the same build.
+
+## `career.jsonl`
+
+Written only when a batch is run with `-Career` (`tools/bot.ps1`'s own
+header, `BalanceBotRunner`'s `-botCareer` flag). One JSON object per line,
+one line per LIFE across every cell -- not one per career, because a
+career's own point is showing how a fixed identity (one save) changes life
+over life, and that is a per-life reading. `camelCase`, matching
+`runs.jsonl` rather than `traces.jsonl`'s `PascalCase`, for the reason
+`runs.jsonl`'s own header gives: this is a file written for a Python
+reader, not a mirror of a C# type. Absent entirely (not merely empty) from
+a batch run without `-Career`.
+
+```
+careerSeed        uint64 -- the ONE top-level seed this life's whole career
+                            was played from (BalanceBotRunner's o.FirstSeed
+                            under -Career; -Shards is forced to 1 by
+                            tools/bot.ps1, so this is always the single seed
+                            the whole cell used)
+archetype         string
+profile           string
+runIndex          int    -- 0-based position of this life within its career
+runSeed           int    -- this life's OWN derived seed
+                            (RngStreams.Derive(careerSeed, CareerRunStream,
+                            runIndex, 0)), which is also the Seed this life's
+                            row carries in traces.jsonl/runs.jsonl -- the key
+                            that ties a career.jsonl row back to its full
+                            trace.
+deepestStep       int    -- this life's own DeathStep, or the batch's
+                            depthCapSteps when Capped is true -- already
+                            resolved so a reader never re-applies that
+                            ternary (BotRunDriver.CareerRunSummary.
+                            DeepestStep)
+capped            bool
+levelByCharacter  object -- CharacterDefinition.id -> Character.level, read
+                            off the fielded squad the instant this life
+                            ended (death or cap), BEFORE the next life's
+                            StartRun touches anything
+expByCharacter    object -- CharacterDefinition.id -> Character.exp, same
+                            reading instant as levelByCharacter
+```
+
+Every life in a career ALSO gets an ordinary row in `traces.jsonl` and
+`runs.jsonl`, keyed by its own `runSeed` -- `RunRowJson`/`TraceJson` do not
+know or care that this run shares a save with the one before it, so
+`summary.json`'s existing depth/coverage/bug machinery reads a career batch
+with no changes to `bot_merge.py` or this schema's `summary.json` section at
+all. `career.jsonl` carries only what an ordinary run has no way to
+express: this life's position in a sequence, and the per-character
+level/exp its shared save was left holding.
+
+Career mode's own determinism check replays the WHOLE career once (per
+`-ReplayShare > 0`, same switch a non-career batch reads) rather than
+sampling individual lives, and folds the result into the SAME
+`traces.jsonl`/`runs.jsonl`/`determinism.mismatches` machinery every other
+run uses -- a mismatch on any one life of a career shows up exactly like a
+mismatch on any one independent run would, keyed by that life's own
+`runSeed`.
 
 ## `summary.json`
 

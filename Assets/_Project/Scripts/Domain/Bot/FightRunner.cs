@@ -119,6 +119,34 @@ namespace PrincesPalace.Domain.Bot
                     onItemUsed?.Invoke(action.ItemId);
                 }
 
+                // THE TIER THIS COMMAND'S OWN CAST FIRED, if any -- drained
+                // off the session rather than read from live state, because
+                // by the time a command returns the pool it spent from has
+                // already moved (FightSession.Beats.RecordPoolTier's own
+                // header). One command can open several beats (the actor's
+                // own, then every enemy reply in the same exchange, per F6),
+                // so this is the LARGEST PoolTierDamageMultiplier among the
+                // beats whose Actor is THIS command's actor -- there is only
+                // ever one, but Max rather than First costs nothing and
+                // cannot silently pick an enemy's beat if the reference
+                // equality check were ever loosened.
+                //
+                // ALWAYS DRAINED, whether or not a trace is being kept, so
+                // the beat list this command opened never sits on the
+                // session past the command that produced it -- nothing
+                // downstream of the bot ever reads it (no FightController is
+                // attached to a headless session), so an undrained list
+                // would only ever grow for the rest of the fight.
+                float poolTierFired = 0f;
+                foreach (var beat in session.DrainBeats())
+                {
+                    if (beat != null && ReferenceEquals(beat.Actor, actor)
+                        && beat.PoolTierDamageMultiplier > poolTierFired)
+                    {
+                        poolTierFired = beat.PoolTierDamageMultiplier;
+                    }
+                }
+
                 if (traceOut != null)
                 {
                     traceOut.TurnTraces.Add(new TurnTrace
@@ -128,6 +156,8 @@ namespace PrincesPalace.Domain.Bot
                         TargetId = action.Target?.Name ?? "",
                         PartyHpAfter = session.Encounter.LivingPlayerParty.Sum(c => c.CurrentHealth),
                         EnemyHpAfter = session.Encounter.LivingEnemies.Sum(c => c.CurrentHealth),
+                        PoolTierFired = poolTierFired,
+                        PrimaryPoolAfter = actor?.CurrentMana ?? 0,
                     });
                 }
 
