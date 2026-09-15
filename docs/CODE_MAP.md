@@ -65,7 +65,13 @@ decal's key and pad, and the three baked defaults an unrefreshed scene shows.
 Every number pasted from `tools/normalize_pc_plates.py` and re-derived off the
 committed PNGs by `PcPlateArtTests`. WHICH plate a character wears is not here:
 that is `characters.json`'s `plateArt`, loaded at runtime by
-`Core/PcPlateSprites.cs`) · `UiString` ·
+`Core/PcPlateSprites.cs`) ·
+`IdentityMetals` (what SILVER and GOLD are, once, for every surface that draws
+progression v2's levels 31-40 -- the rim decal's tint, the emboss laid ON the
+plate art, the portrait frame round a roster card's art slot, and the identity
+line's ink. Same argument `PcTheme` makes for the six per-character colours, at
+the scale of two metals; WHICH of them a character has collected is
+`Core/CharacterIdentity.LookFor`) · `UiString` ·
 `UiStrings` ·
 `UiSolver` ·
 `SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
@@ -156,7 +162,7 @@ EditMode-testable):
 | `Glossary/` | `GlossaryCategory`, the rail order the glossary screen builds one button per — appending a value adds a button and nothing else, a new category is a value here plus a case in the Core adapter, never a new screen |
 | `Inventory/` | `InventoryEntry` (one stack of a held item, keyed by `(itemId, plus, modifierIds, riftTier)` — not by id alone, so two differently-rolled copies never silently merge) and `InventoryOps` (add/count/remove over a `List<InventoryEntry>` in one place, shared by `RunState.inventory` and `SaveData.stockpiledItems` so the stash uses the identical rules rather than a second copy) |
 | `Party/` | The Party screen's model, engine-free: `PartyFormation` (the 3-seat state machine — click-to-select-then-place, seats are mechanical since squad index 0 is the front rank, `PartyFormation.Drop` is the drag entry point a later package uses), `PartyMode` (Camp/Run/ViewOnly), `PartyOutcome`/`PartyToastKind` (what a command did, as data — display copy lives in `UiStrings`), `PartyCardState`/`PartySeatBadge`, `PartyRosterEntry` (id/name/`HasArt`, supplied by the caller — Domain cannot see `Resources`), `PartySeat` (Front/Middle/Rear constants), `PartySelectionSource` (Roster vs. a seat index) |
-| `Progression/` | `CarriedHealth` (what happens to current health when the maximum it is measured against moves under it — equipping +20 max health at 50/100 must not silently become 50/120), `LevelCurve` (what a level costs, kept in Domain rather than on `Character` so EditMode can pin it without Core), `RewardTrack`/`RewardTrackDefinition` (a reward track materialised for one character — milestones plus the filler mix an author, or `Default`, described), `RewardTrackNames` (display copy for a `TrackReward`, beside the table for the same reason as `RelicRarityNames`), `TrackNodeState` (the four states a node reads as, out of two integers — `level` and `claimedTrackLevel` — the distinction between a reward REACHED and one COLLECTED) |
+| `Progression/` | `CarriedHealth` (what happens to current health when the maximum it is measured against moves under it — equipping +20 max health at 50/100 must not silently become 50/120), `LevelCurve` (what a level costs, AND how many fights the next level is -- `FightsToGo` divides the remainder by one average NORMAL fight at a depth the caller supplies, which is the run's own step in a run and 0 in the hub; kept in Domain rather than on `Character` so EditMode can pin it without Core), `RewardTrack`/`RewardTrackDefinition` (a reward track materialised for one character — milestones plus the filler mix an author, or `Default`, described), `RewardTrackNames` (display copy for a `TrackReward`, beside the table for the same reason as `RelicRarityNames`), `TrackNodeState` (the four states a node reads as, out of two integers — `level` and `claimedTrackLevel` — the distinction between a reward REACHED and one COLLECTED) |
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
