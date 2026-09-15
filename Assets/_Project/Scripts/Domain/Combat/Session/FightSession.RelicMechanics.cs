@@ -102,12 +102,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // content contradicts: "every combatant has at most one of the two".
         // characters.json's sheep authors `signatureId: wool` and NO
         // `primaryPoolId`, so he takes the default mana pool and has BOTH --
-        // and skills.json prices static_fleece at 6 mana PLUS 3 wool, with
-        // FightHudModel.CostLabel carrying a dedicated "{mana} MP + {res}
-        // WOOL" branch to print it. For the one character who has both, the
-        // relic therefore always refilled the pool that already regenerates
-        // every turn and on attack, and never the one gating his two most
-        // expensive skills.
+        // and skills.json USED TO price two book spells (static_fleece 6 mana
+        // + 3 wool, golden_fleece 12 mana + 8 wool; both removed 2026-09-15,
+        // AUDIT #150) at both at once, which is what FightHudModel.CostLabel's
+        // dedicated "{mana} MP + {res} WOOL" branch exists to print. No
+        // shipped skill costs both today, but the branch and this ordering
+        // rule stay -- the day another one does, the relic still has to
+        // refill the pool actually gating it rather than the one that already
+        // regenerates on its own.
         //
         // WHAT A FURY HOLDER GETS: nothing, and that is correct rather than an
         // oversight. RestoreMana refuses a pool whose row says

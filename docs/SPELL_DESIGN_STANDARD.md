@@ -53,8 +53,8 @@ Examples:
 - Woolgathering
 - Battering Ram
 - Headbutt
-- Static Fleece
-- Golden Fleece
+- Static Fleece (removed 2026-09-15, AUDIT #150 -- see below)
+- Golden Fleece (removed 2026-09-15, AUDIT #150 -- see below)
 
 A skill may be supernatural and may reuse spell-presentation technology. That does not make it a global spell.
 
@@ -761,11 +761,11 @@ Today:
 - `ContentDatabase.AvailableSkillsFor` filters all entries—including learned book spells—against that character ID;
 - the current book-eligible spells are authored against `sheep`;
 - `spells.json` contains the shared level-based spell power/cost curve rather than the global spell catalogue;
-- Static Fleece and Golden Fleece are currently book-eligible despite depending on Shawn's Wool and therefore failing the universality test.
+- Static Fleece and Golden Fleece were book-eligible despite depending on Shawn's Wool and therefore failing the universality test -- **removed 2026-09-15 (AUDIT #150)** rather than reclassified, which resolves this specific bullet; the remaining four book spells (Mud Burst, Frost Flare, Cinderfault, Lightning Bolt) cost mana only and pass the test as authored.
 
 This is a transitional implementation constraint, not the product definition.
 
-Before multiple playable characters use spellbooks, the content model must allow a global spell definition to be assigned to any character without duplicating one definition per owner. Static Fleece and Golden Fleece should be reclassified as character skills unless their mechanics and fiction are redesigned to become genuinely universal.
+Before multiple playable characters use spellbooks, the content model must allow a global spell definition to be assigned to any character without duplicating one definition per owner. (Static Fleece and Golden Fleece, which this paragraph used to name as the candidates needing reclassification, are gone as of 2026-09-15 -- see above.)
 
 A likely target model is:
 

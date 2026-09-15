@@ -147,12 +147,16 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void BooksAreDrawnWithoutReplacementAndPricedByTier()
         {
+            // Four real book ids (skills.json's bookOnly rows), not that this
+            // test reads the catalogue at all -- RollBooks only sees the
+            // candidate list below. static_fleece/golden_fleece were removed
+            // 2026-09-15 (AUDIT #150); frost_flare/cinderfault stand in.
             var candidates = new List<ShopStock.BookCandidate>
             {
                 new ShopStock.BookCandidate("mud_burst", 1),
-                new ShopStock.BookCandidate("static_fleece", 2),
+                new ShopStock.BookCandidate("frost_flare", 2),
                 new ShopStock.BookCandidate("lightning_bolt", 3),
-                new ShopStock.BookCandidate("golden_fleece", 4),
+                new ShopStock.BookCandidate("cinderfault", 4),
             };
 
             var books = ShopStock.RollBooks(candidates, Stream(13));

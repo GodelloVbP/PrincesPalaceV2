@@ -87,10 +87,12 @@ namespace PrincesPalace.Domain.Tests
         // read signature first on the premise that "every combatant has at
         // most one of the two", which characters.json contradicts: the sheep
         // authors a wool signature and no primaryPoolId, so he gets the
-        // default mana pool and spends BOTH to act (static_fleece costs 6 mana
-        // + 3 wool). For the one character who has both, the relic therefore
-        // always refilled the pool that already regenerates every turn and
-        // never the one gating his two most expensive skills.
+        // default mana pool and spends BOTH to act -- static_fleece used to
+        // cost 6 mana + 3 wool (removed 2026-09-15, AUDIT #150; no shipped
+        // skill costs both today). For the one character who could have both,
+        // the relic therefore always refilled the pool that already
+        // regenerates every turn and never the one gating his most expensive
+        // skills.
         //
         // Literal: 20 missing mana x 20% = 4.
         [Test]
