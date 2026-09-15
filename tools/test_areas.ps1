@@ -13,6 +13,62 @@ $AreasProjectRoot = Split-Path $PSScriptRoot -Parent
 $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 
 # ---------------------------------------------------------------------------
+# Linked-worktree detection.
+#
+# tools/test.ps1 and run_tests_parallel.ps1 both derive their TestRunner
+# sibling paths from $PSScriptRoot's parent (see the DERIVED comment at the
+# top of each). That derivation is "correct" by its own logic even when
+# $PSScriptRoot sits inside a linked worktree under
+# <repo>/.claude/worktrees/<name>/ -- and wrong in practice: it builds fresh
+# Unity project copies beside the WORKTREE
+# (<repo>/.claude/worktrees/<name>-TestRunner and -TestRunner2), which is not
+# the tree anyone meant to test and which nothing ever cleans up.
+#
+# Detected two ways, either one enough:
+#   - `git rev-parse --git-dir` differs from `--git-common-dir`. A linked
+#     worktree's git-dir is <main-repo>/.git/worktrees/<name>; its
+#     git-common-dir is always the main repo's own .git. The two are equal
+#     only in the main checkout.
+#   - the resolved root sits under a `.claude\worktrees\` path segment, as a
+#     backstop if git is unavailable or the two dirs happen to resolve equal.
+#
+# GitDir/CommonDir are parameters, not a hardcoded `git` call, so this can be
+# proven without an actual worktree on disk -- see the -SelfCheck cases in
+# test.ps1's Invoke-SelfCheck, which pass fake values straight through
+# instead of shelling out.
+# ---------------------------------------------------------------------------
+function Test-IsLinkedWorktree {
+    param(
+        [string]$RepoRoot = $AreasProjectRoot,
+        [string]$GitDir = $null,
+        [string]$CommonDir = $null
+    )
+
+    if (-not $GitDir -and -not $CommonDir) {
+        $GitDir = (& git -C $RepoRoot rev-parse --git-dir 2>$null)
+        $CommonDir = (& git -C $RepoRoot rev-parse --git-common-dir 2>$null)
+    }
+
+    if ($GitDir -and $CommonDir) {
+        $gitDirFull = if ([System.IO.Path]::IsPathRooted($GitDir)) {
+            [System.IO.Path]::GetFullPath($GitDir)
+        } else {
+            [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $GitDir))
+        }
+        $commonDirFull = if ([System.IO.Path]::IsPathRooted($CommonDir)) {
+            [System.IO.Path]::GetFullPath($CommonDir)
+        } else {
+            [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $CommonDir))
+        }
+        if ($gitDirFull -ne $commonDirFull) { return $true }
+    }
+
+    if ($RepoRoot -match '\.claude[\\/]worktrees[\\/]') { return $true }
+
+    return $false
+}
+
+# ---------------------------------------------------------------------------
 # AN AREA IS A FOLDER.
 #
 # Tests/EditMode/<Area>/ and Tests/PlayMode/<Area>/, seven areas, plus a

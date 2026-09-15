@@ -69,6 +69,23 @@ $Runners = @(
     @{ Platform = "PlayMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner2"; Product = "${ProductLeaf}TestRunner2" }
 )
 
+# --- worktree refusal --------------------------------------------------
+# This script has no filter and no dotnet host for PlayMode -- every
+# invocation builds BOTH $Runners paths above through Unity. From a linked
+# worktree those paths land beside the WORKTREE, not beside the main repo
+# (see Test-IsLinkedWorktree's header in test_areas.ps1), so there is no
+# partial form of this run that is safe to allow: refuse outright, before
+# paying for discovery or a sync. tools/test.ps1 remains usable from a
+# worktree for named [D] dotnet-hosted classes.
+if (Test-IsLinkedWorktree) {
+    Write-Host "REFUSED: this is a linked worktree ($SourceProject)."
+    Write-Host "run_tests_parallel.ps1 has no dotnet path for PlayMode and always runs BOTH platforms through Unity, so it would build sibling project copies beside the WORKTREE rather than beside the main repo:"
+    foreach ($r in $Runners) { Write-Host "  [U] $($r.Platform) -> $($r.Path)" }
+    Write-Host ""
+    Write-Host "Run named [D] dotnet-hosted classes only (tools/test.ps1 -List marks each [D]/[U]) from a worktree, or run this from the main tree."
+    exit 1
+}
+
 # Elapsed-time stamps on every phase.
 #
 # Added because "the build is slow" could not be acted on: the generation

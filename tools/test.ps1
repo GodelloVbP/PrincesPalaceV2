@@ -109,6 +109,13 @@ $RunnerFor = @{
 # knows what an "area" is. An area is the folder a test file sits in.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
+# This tree building sibling *-TestRunner copies beside a linked worktree,
+# rather than beside the real repo, is exactly the failure Test-IsLinkedWorktree
+# exists to catch -- see its header in test_areas.ps1. -List and
+# -List -SelfCheck stay unaffected below; only a Unity-hosted run (any [U]
+# class, any area, -Changed, or a no-argument full run) gets refused.
+$IsWorktree = Test-IsLinkedWorktree
+
 # -SelfCheck points discovery at tools/test_areas_fixture/ instead of the real
 # Tests tree and asserts each refusal fires on the case built for it. Set
 # BEFORE the discovery calls below, and it works because a dot-sourced
@@ -272,6 +279,18 @@ function Invoke-SelfCheck {
            Ok   = { $structural.Count -eq 8 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
         @{ Name = "a green dotnet run produces no failure detail at all"
            Ok   = { (@(Select-DotnetFailureDetail -Lines @('  Determining projects to restore...', 'Passed!  - Failed:     0, Passed:    34'))).Count -eq 0 } }
+
+        # Test-IsLinkedWorktree cannot honestly be fired by pointing discovery
+        # at a fixture -- it is about git-dir vs git-common-dir and a real
+        # repo path, not about a tree of test files. So it is faked here
+        # instead, via the GitDir/CommonDir/RepoRoot parameters the function
+        # takes for exactly this reason (see its header in test_areas.ps1).
+        @{ Name = "a linked worktree (git-dir under .git/worktrees/, common-dir the main .git) is detected"
+           Ok   = { Test-IsLinkedWorktree -RepoRoot 'C:\Fake\Repo\.claude\worktrees\agent-fake' -GitDir 'C:\Fake\Repo\.git\worktrees\agent-fake' -CommonDir 'C:\Fake\Repo\.git' } }
+        @{ Name = "the main checkout (git-dir equals common-dir, no .claude\worktrees\ path) is NOT flagged as a worktree"
+           Ok   = { -not (Test-IsLinkedWorktree -RepoRoot 'C:\Fake\Repo' -GitDir 'C:\Fake\Repo\.git' -CommonDir 'C:\Fake\Repo\.git') } }
+        @{ Name = "a .claude\worktrees\ path is detected even if git-dir/common-dir are made to look equal"
+           Ok   = { Test-IsLinkedWorktree -RepoRoot 'C:\Fake\Repo\.claude\worktrees\agent-fake' -GitDir 'C:\Fake\Repo\.git' -CommonDir 'C:\Fake\Repo\.git' } }
     )
 
     $misses = @()
@@ -373,6 +392,13 @@ if ($List) {
 # Renamed from the automatic $args below -- shadowing it silently worked via
 # splatting but is fragile, and this block was already being touched.
 function Invoke-FullSuite {
+    if ($IsWorktree) {
+        Write-Host "REFUSED: this is a linked worktree ($SourceProject)."
+        Write-Host "The full suite is entirely Unity-hosted for PlayMode (there is no dotnet path for it), so run_tests_parallel.ps1 would build sibling *-TestRunner and *-TestRunner2 project copies beside this WORKTREE rather than beside the main tree."
+        Write-Host ""
+        Write-Host "Run named [D] dotnet-hosted classes only (tools/test.ps1 -List marks each [D]/[U]) from a worktree, or run this request from the main tree."
+        exit 1
+    }
     Write-Host "Running the FULL suite (tools/run_tests_parallel.ps1)..."
     $forwardArgs = @()
     if ($SkipSync) { $forwardArgs += "-SkipSync" }
@@ -445,6 +471,7 @@ if (-not $Changed -and -not $Filter) {
 
 # --- resolve what was asked for into concrete classes -----------------------
 $wanted = @()
+$usedArea = $false
 if ($Changed) {
     $wanted = $changedWanted
 } else {
@@ -454,6 +481,7 @@ if ($Changed) {
 
         if ($AreaNames -contains $term.ToLower()) {
             $area = $term.ToLower()
+            $usedArea = $true
             $wanted += $classes.Keys | Where-Object { $testAreas[$_] -eq $area }
             continue
         }
@@ -513,6 +541,31 @@ $dotnetWanted = @()
 $unityWanted = @()
 foreach ($c in $wanted) {
     if (-not $Unity -and $testHosts[$c] -eq "dotnet") { $dotnetWanted += $c } else { $unityWanted += $c }
+}
+
+# --- worktree refusal --------------------------------------------------
+# Refuses any [U] class, any area (even one that happens to be all [D]
+# today -- areas mix hosts and can grow a [U] class without this line
+# changing), and -Changed, unconditionally, from a linked worktree. See
+# Test-IsLinkedWorktree's header in test_areas.ps1 for why: any of these
+# would build sibling *-TestRunner project copies beside the WORKTREE, not
+# beside the main tree. Named [D] classes (this same split, just with
+# $unityWanted empty) are unaffected.
+if ($IsWorktree -and ($usedArea -or $Changed -or $unityWanted.Count -gt 0)) {
+    Write-Host "REFUSED: this is a linked worktree ($SourceProject)."
+    Write-Host "tools/test.ps1 derives its TestRunner sibling paths from the current tree, so a Unity-hosted run here would build fresh project copies beside the WORKTREE (*-TestRunner, *-TestRunner2), not beside the main repo."
+    Write-Host ""
+    if ($unityWanted) {
+        Write-Host "Offending [U] (Unity-hosted) class(es) in this request:"
+        foreach ($c in ($unityWanted | Sort-Object -Unique)) { Write-Host "  [U] $c" }
+    } elseif ($usedArea) {
+        Write-Host "An area request is refused unconditionally from a worktree, even one whose classes happen to be all [D] today."
+    } elseif ($Changed) {
+        Write-Host "-Changed is refused unconditionally from a worktree."
+    }
+    Write-Host ""
+    Write-Host "Run named [D] dotnet-hosted classes only (tools/test.ps1 -List marks each [D]/[U]) from a worktree, or run this request from the main tree."
+    exit 1
 }
 
 $platforms = $unityWanted | ForEach-Object { $classes[$_] } | Sort-Object -Unique
