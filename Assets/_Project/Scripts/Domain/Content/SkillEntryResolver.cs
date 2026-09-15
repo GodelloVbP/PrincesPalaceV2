@@ -163,6 +163,36 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // PHASE 3: a placeholder skill is a stand-in, not an ability --
+            // it may author no effect field at all, and must say why it is
+            // undesigned. Checked before any of those fields are resolved,
+            // against the RAW entry rather than the resolved defaults below
+            // (effect="" silently resolves to DamageSingle a few lines down,
+            // which would make "no effect fields authored" unreadable off
+            // the resolved shape).
+            if (raw.placeholder)
+            {
+                if (string.IsNullOrWhiteSpace(raw.placeholderNote))
+                {
+                    error = $"{label}: placeholder is set but placeholderNote is empty — say why this skill exists undesigned.";
+                    return false;
+                }
+
+                bool authorsAnEffectField = !string.IsNullOrWhiteSpace(raw.effect)
+                    || raw.manaCost >= 0 || raw.resourceCost >= 0 || raw.spendsAllResource
+                    || raw.power >= 0 || raw.flatAmount >= 0 || raw.ignoresDefense
+                    || (raw.damageInstances != null && raw.damageInstances.Length > 0)
+                    || !string.IsNullOrWhiteSpace(raw.appliesStatus) || raw.statusMagnitude >= 0 || raw.statusDuration >= 0
+                    || (raw.elements != null && raw.elements.Length > 0)
+                    || (raw.poolTiers != null && raw.poolTiers.Length > 0);
+
+                if (authorsAnEffectField)
+                {
+                    error = $"{label}: placeholder skills may not author any effect field — this is a stand-in, not an implemented ability.";
+                    return false;
+                }
+            }
+
             var effect = SkillEffect.DamageSingle;
             if (!string.IsNullOrWhiteSpace(raw.effect) && !Enum.TryParse(raw.effect, ignoreCase: true, out effect))
             {
@@ -252,10 +282,18 @@ namespace PrincesPalace.Domain.Content
             // about a player weighing this action against another one; a
             // monster's abilities are drawn by weight and it has no mana or
             // wool to spend either way. See RawSkillEntry.playerSelectable.
+            //
+            // AND NEVER FOR A PLACEHOLDER -- PlayerSelectable is FORCED false
+            // for one regardless of what raw.playerSelectable says (see the
+            // constructor call below), so the argument above already applies;
+            // checking raw.playerSelectable here would still catch a
+            // placeholder authored with the field left at its default true,
+            // which is exactly what "no effect fields authored" is supposed
+            // to leave alone.
             bool ownerOpensEmpty = zeroStartPoolOwnerIds != null
                                    && zeroStartPoolOwnerIds.Contains(raw.characterId);
 
-            if (raw.playerSelectable && manaCost == 0 && resourceCost == 0 && touchesHealthOrMana && !ownerOpensEmpty)
+            if (raw.playerSelectable && !raw.placeholder && manaCost == 0 && resourceCost == 0 && touchesHealthOrMana && !ownerOpensEmpty)
             {
                 error = $"{label}: a skill that costs neither mana nor resource is strictly better than every other action " +
                         "and would simply be spammed. Give it a cost.";
@@ -423,12 +461,21 @@ namespace PrincesPalace.Domain.Content
                 raw.vfx.Copy(),
                 sortOrder,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
-                raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
+                raw.queuePushSlots, transform,
+                // FORCED, not merely defaulted: a placeholder is never
+                // player-selectable and never drawn by a monster's weighted
+                // pool regardless of what raw.playerSelectable said, since
+                // that field's own default is true and a bool has no -1
+                // sentinel to distinguish "authored true" from "said
+                // nothing".
+                raw.placeholder ? false : raw.playerSelectable,
+                raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
                 ParseApproach(raw.approach), raw.shake, reach,
                 raw.bookOnly, raw.bookTier, elements,
                 raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "",
-                poolTiers);
+                poolTiers,
+                raw.placeholder, raw.placeholderNote ?? "");
             error = null;
             return true;
         }

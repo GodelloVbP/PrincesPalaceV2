@@ -308,6 +308,15 @@
       "resourceCost": 5
     },
     {
+      "id": "placeholder_shawn_capstone",
+      "displayName": "Shawn's Fourth Ability",
+      "description": "Shawn's fourth ability is not designed yet.",
+      "characterId": "sheep",
+      "placeholder": true,
+      "placeholderNote": "Reward track V4 (level 30) needs an owner-designed ability -- docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md phase 0 sign-off, phase 4 gate. Not placed on the track yet (phase 4).",
+      "playerSelectable": false
+    },
+    {
       "id": "boulder_slam",
       "displayName": "Boulder Slam",
       "description": "The golem heaves a slab of the floor overhead and brings it down.",
