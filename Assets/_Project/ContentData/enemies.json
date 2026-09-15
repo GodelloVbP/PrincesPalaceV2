@@ -65,7 +65,6 @@
       "weakness": "Nature",
       "resistance": "Physical",
       "spritePath": "Enemies/golem",
-      "attackHoldsPosition": true,
       "active": true,
       "abilities": [
         {

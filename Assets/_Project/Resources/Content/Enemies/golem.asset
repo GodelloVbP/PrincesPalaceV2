@@ -65,7 +65,7 @@ MonoBehaviour:
     StatusMagnitude: 0
     StatusDuration: 0
     AvoidsFrontSlot: 0
-    AttackHoldsPosition: 1
+    AttackHoldsPosition: 0
     AttackApproach: 1
     MinFloor: 5
     AttackType: 0

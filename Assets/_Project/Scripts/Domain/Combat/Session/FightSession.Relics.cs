@@ -287,8 +287,6 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (health > 0) HealAndCount(actor, health);
             if (mana > 0) CombatMath.RestoreMana(actor, mana);
-
-            AppendMessage($"{actor.Name}'s Lucky Deck turns up a red card - a moment to recover.");
         }
 
         // A FRACTION OF THE LANDED HIT, applied as raw damage rather than run

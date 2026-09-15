@@ -858,10 +858,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // whose PLAIN attack art is itself a stationary pose needs the same
             // treatment, or the view still lunges it toward the target -- and,
             // for a back-row target, climbs the stage -- while the art shows it
-            // rooted to the spot. The golem is the case this exists for: its
-            // "attack" stance is a byte-for-byte alias of its "cast" stance, a
-            // ground-slam with earth spikes rather than a forward strike, and
-            // without this the lunge made it read as flying.
+            // rooted to the spot. No enemy authors attackHoldsPosition today
+            // (the golem was the original case, but attackWeight: 0 means it
+            // never plain-attacks, so its flag was dead -- see AUDIT #126);
+            // the mechanic stays for the next stationary-plain-attack pose.
             if (!usingSkill && hasSource && source.AttackHoldsPosition)
             {
                 HoldActorPosition();
