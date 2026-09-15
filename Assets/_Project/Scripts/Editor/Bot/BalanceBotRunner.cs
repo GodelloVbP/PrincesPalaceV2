@@ -641,7 +641,16 @@ namespace PrincesPalace.Editor.Bot
                     sb.Append("\"Action\":").Append(Str(turn.Action)).Append(',');
                     sb.Append("\"TargetId\":").Append(Str(turn.TargetId)).Append(',');
                     sb.Append("\"PartyHpAfter\":").Append(turn.PartyHpAfter).Append(',');
-                    sb.Append("\"EnemyHpAfter\":").Append(turn.EnemyHpAfter);
+                    sb.Append("\"EnemyHpAfter\":").Append(turn.EnemyHpAfter).Append(',');
+
+                    // INVARIANT CULTURE, not a bare Append(float) -- StringBuilder.
+                    // Append(float) formats through the CURRENT CULTURE, and a
+                    // batch run under a comma-decimal locale would write "2,5"
+                    // into a file every downstream reader (bot_merge.py,
+                    // BOT_SUMMARY_SCHEMA.md's own parsers) expects as JSON.
+                    sb.Append("\"PoolTierFired\":")
+                      .Append(turn.PoolTierFired.ToString("0.###", CultureInfo.InvariantCulture)).Append(',');
+                    sb.Append("\"PrimaryPoolAfter\":").Append(turn.PrimaryPoolAfter);
                     sb.Append('}');
                 }
                 sb.Append("]}");
