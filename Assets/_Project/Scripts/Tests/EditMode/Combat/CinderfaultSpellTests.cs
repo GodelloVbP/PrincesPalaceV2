@@ -26,8 +26,8 @@ namespace PrincesPalace.Domain.Tests
     // EVERY EXPECTED NUMBER BELOW IS A LITERAL with its arithmetic spelled out,
     // never recomputed by calling the thing under test -- CLAUDE.md gotcha 5.
     // The fixture is chosen to make that possible: zero defense, zero typed
-    // resistance, variance off, so 10 Fire on a Fire-weak enemy is 10 x 1.5 =
-    // 15 and nothing else moves it.
+    // resistance, variance off, so 5 Fire on a Fire-weak enemy is
+    // round(5 x 1.5) = 8 and nothing else moves it.
     public class CinderfaultSpellTests
     {
         // The authored contract, restated once so every assertion below reads
@@ -35,8 +35,8 @@ namespace PrincesPalace.Domain.Tests
         // the behaviour tests cannot drift apart.
         private const int ManaCost = 15;
         private const int Cooldown = 3;
-        private const int FirePacket = 10;
-        private const int NaturePacket = 10;
+        private const int FirePacket = 5;
+        private const int NaturePacket = 5;
 
         // The two sliced sequences and where they rupture. Both layers compose
         // NINE frames peaking on frame FIVE (tools/slice_spell_sheet.py), which
@@ -71,7 +71,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheContentEntryAuthorsTenFireAndTenNature()
+        public void TheContentEntryAuthorsFiveFireAndFiveNature()
         {
             string entry = CinderfaultEntry();
             var packets = Regex.Matches(entry, "\"type\"\\s*:\\s*\"([A-Za-z]+)\"\\s*,\\s*\"amount\"\\s*:\\s*(\\d+)")
@@ -245,7 +245,7 @@ namespace PrincesPalace.Domain.Tests
         // exception and are written on the FINAL scale already. Ten and ten
         // against a neutral enemy is twenty, not two hundred.
         [Test]
-        public void TenFireAndTenNatureLandAsTwentyOnANeutralEnemy()
+        public void FiveFireAndFiveNatureLandAsTenOnANeutralEnemy()
         {
             var (session, _, foes) = Fight(Neutral, Neutral, Neutral);
             int before = foes[0].CurrentHealth;
@@ -253,19 +253,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(session.CastSkill(Cinderfault(), foes[0]));
 
             Assert.AreEqual(FirePacket + NaturePacket, before - foes[0].CurrentHealth,
-                "10 Fire + 10 Nature on the final health scale is 20, not 200");
+                "5 Fire + 5 Nature on the final health scale is 10, not 100");
         }
 
         // THE HEADLINE: three enemies, three matchups, three different correct
         // numbers -- from one cast, on one beat.
         //
-        //   neutral    10 + 10                     = 20
-        //   fire-weak  10 x 1.5 + 10               = 25
-        //   both-resistant  10 x 0.5 + 10 x 0.5    = 10
+        //   neutral    5 + 5                              = 10
+        //   fire-weak  round(5 x 1.5) + 5 = 8 + 5          = 13
+        //   both-resistant  round(5 x 0.5) x 2 = 3 + 3     = 6
         //
         // 1.5 and 0.5 are CombatMath's WeaknessMultiplier and
         // ResistanceMultiplier; written out rather than referenced so the
-        // expectation cannot move with the code it is checking.
+        // expectation cannot move with the code it is checking. Both matchups
+        // land on a rounded half-point (7.5, 2.5) -- Rounding.AwayFromZero
+        // rounds each away from zero (8, 3) before the two packets sum, which
+        // 10 and 20 never exercised.
         [Test]
         public void MixedWeaknessAndResistanceResolvePerEnemy()
         {
@@ -274,9 +277,9 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(session.CastSkill(Cinderfault(), foes[0]));
 
-            Assert.AreEqual(20, before[0] - foes[0].CurrentHealth, "neutral: 10 + 10");
-            Assert.AreEqual(25, before[1] - foes[1].CurrentHealth, "fire-weak: 15 + 10");
-            Assert.AreEqual(10, before[2] - foes[2].CurrentHealth, "resists both: 5 + 5");
+            Assert.AreEqual(10, before[0] - foes[0].CurrentHealth, "neutral: 5 + 5");
+            Assert.AreEqual(13, before[1] - foes[1].CurrentHealth, "fire-weak: round(5 x 1.5)=8 + 5");
+            Assert.AreEqual(6, before[2] - foes[2].CurrentHealth, "resists both: round(5 x 0.5)=3 + 3");
         }
 
         // AND THE VIEW IS TOLD ALL THREE. One beat used to carry one Amount --
@@ -292,11 +295,11 @@ namespace PrincesPalace.Domain.Tests
             var beat = session.DrainBeats().Single(b => b.HasPerTargetResults);
 
             Assert.AreEqual(3, beat.Results.Count, "one result per living enemy");
-            CollectionAssert.AreEquivalent(new[] { 20, 25, 10 },
+            CollectionAssert.AreEquivalent(new[] { 10, 13, 6 },
                 beat.Results.Select(r => r.Amount).ToList(),
                 "the beat must carry each enemy's own amount, not three copies of the largest");
 
-            Assert.AreEqual(25, beat.Amount,
+            Assert.AreEqual(13, beat.Amount,
                 "the beat-wide Amount stays the largest single hit -- every existing consumer reads it");
         }
 
@@ -333,7 +336,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(1, beat.Results.Count);
             Assert.IsNull(beat.SplashTargets, "there is nobody else to draw the effect on");
-            Assert.AreEqual(20, before - foes[0].CurrentHealth, "hit once, not once per empty slot");
+            Assert.AreEqual(10, before - foes[0].CurrentHealth, "hit once, not once per empty slot");
         }
 
         // ---- what it costs --------------------------------------------------------

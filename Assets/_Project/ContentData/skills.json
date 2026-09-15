@@ -47,7 +47,7 @@
       "characterId": "sheep",
       "effect": "DamageSingle",
       "manaCost": 8,
-      "flatAmount": 12,
+      "flatAmount": 6,
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 25,
       "statusDuration": 2,
@@ -74,11 +74,11 @@
       "damageInstances": [
         {
           "type": "Fire",
-          "amount": 7
+          "amount": 4
         },
         {
           "type": "Frost",
-          "amount": 7
+          "amount": 4
         }
       ],
       "vfx": {
@@ -103,11 +103,11 @@
       "damageInstances": [
         {
           "type": "Fire",
-          "amount": 10
+          "amount": 5
         },
         {
           "type": "Nature",
-          "amount": 10
+          "amount": 5
         }
       ],
       "vfx": {
@@ -156,7 +156,7 @@
       "damageInstances": [
         {
           "type": "Lightning",
-          "amount": 20
+          "amount": 10
         }
       ],
       "vfx": {
@@ -456,7 +456,7 @@
       "unlockLevel": 1,
       "effect": "DamageSingle",
       "manaCost": 0,
-      "flatAmount": 12,
+      "flatAmount": 17,
       "meleeReach": true,
       "approach": "close",
       "approachStance": "rush",
@@ -498,7 +498,7 @@
       "damageInstances": [
         {
           "type": "Earth",
-          "amount": 16
+          "amount": 8
         }
       ],
       "elements": [

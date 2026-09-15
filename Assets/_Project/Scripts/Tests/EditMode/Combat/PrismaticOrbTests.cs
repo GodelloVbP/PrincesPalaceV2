@@ -23,14 +23,14 @@ namespace PrincesPalace.Domain.Tests
     // EVERY EXPECTED NUMBER IS A LITERAL with its arithmetic written out, never
     // recomputed from the thing under test -- CLAUDE.md gotcha 5. The fixture
     // makes that possible: zero defense, zero typed resistance, variance off,
-    // so a 16 packet on a Fire-weak enemy cast as Fire is 16 x 1.5 = 24 and
+    // so an 8 packet on a Fire-weak enemy cast as Fire is 8 x 1.5 = 12 and
     // nothing else moves it.
     public class PrismaticOrbTests
     {
         // The authored contract, restated once so the content pin and the
         // behaviour tests below cannot drift apart.
         private const int ManaCost = 8;
-        private const int Packet = 16;
+        private const int Packet = 8;
 
         // ---- the content entry ----------------------------------------------------
 
@@ -176,8 +176,8 @@ namespace PrincesPalace.Domain.Tests
         // half again as much as picking anything it does not care about --
         // which is the entire reason the menu asks.
         //
-        //   Earth on a Fire-weak enemy   16 x 1.0 = 16
-        //   Fire  on a Fire-weak enemy   16 x 1.5 = 24
+        //   Earth on a Fire-weak enemy   8 x 1.0 = 8
+        //   Fire  on a Fire-weak enemy   8 x 1.5 = 12
         //
         // 1.5 is CombatMath's WeaknessMultiplier, written out rather than
         // referenced so the expectation cannot move with the code it checks.
@@ -187,14 +187,14 @@ namespace PrincesPalace.Domain.Tests
             var earth = Fight(WeakToFire);
             int earthBefore = earth.foe.CurrentHealth;
             Assert.IsTrue(earth.session.CastSkill(Orb(), earth.foe, DamageType.Earth));
-            Assert.AreEqual(16, earthBefore - earth.foe.CurrentHealth,
-                "Earth is neutral against a Fire-weak enemy: 16 lands as 16");
+            Assert.AreEqual(8, earthBefore - earth.foe.CurrentHealth,
+                "Earth is neutral against a Fire-weak enemy: 8 lands as 8");
 
             var fire = Fight(WeakToFire);
             int fireBefore = fire.foe.CurrentHealth;
             Assert.IsTrue(fire.session.CastSkill(Orb(), fire.foe, DamageType.Fire));
-            Assert.AreEqual(24, fireBefore - fire.foe.CurrentHealth,
-                "Fire on a Fire-weak enemy is 16 x 1.5 = 24");
+            Assert.AreEqual(12, fireBefore - fire.foe.CurrentHealth,
+                "Fire on a Fire-weak enemy is 8 x 1.5 = 12");
         }
 
         [Test]
@@ -206,8 +206,8 @@ namespace PrincesPalace.Domain.Tests
                 int before = foe.CurrentHealth;
 
                 Assert.IsTrue(session.CastSkill(Orb(), foe, element));
-                Assert.AreEqual(16, before - foe.CurrentHealth,
-                    $"{element} on a neutral enemy is the authored 16, on the final health scale");
+                Assert.AreEqual(8, before - foe.CurrentHealth,
+                    $"{element} on a neutral enemy is the authored 8, on the final health scale");
             }
         }
 
@@ -322,8 +322,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var (session, hero, _) = Fight(ElementalAffinity.Neutral);
 
-            Assert.AreEqual("16", FightHudModel.PowerLabel(session, hero, Orb()));
-            Assert.AreEqual("16", FightHudModel.PowerLabel(session, hero, Orb().AsElement(DamageType.Fire)));
+            Assert.AreEqual("8", FightHudModel.PowerLabel(session, hero, Orb()));
+            Assert.AreEqual("8", FightHudModel.PowerLabel(session, hero, Orb().AsElement(DamageType.Fire)));
         }
 
         // ---- the fixture ----------------------------------------------------------

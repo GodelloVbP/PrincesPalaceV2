@@ -28,7 +28,7 @@ MonoBehaviour:
     ResourceCost: 0
     SpendsAllResource: 0
     Power: 0
-    FlatAmount: 12
+    FlatAmount: 17
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:

@@ -29,7 +29,7 @@ MonoBehaviour:
     IgnoresDefense: 0
     DamageInstances:
     - type: 6
-      amount: 16
+      amount: 8
     Vfx:
       path: 
       seconds: 0.6

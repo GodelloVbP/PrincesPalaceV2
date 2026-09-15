@@ -117,16 +117,17 @@ namespace PrincesPalace.Domain.Tests
     // CastSkill actually wires it the way the plan describes. Every damage
     // number is a LITERAL, never a formula recomputed here (CLAUDE.md gotcha
     // 5): BaseDamage is stated once, as the max(1, ScaledAttack + flatAmount)
-    // SkillResolution.Damage would produce for Attack 10 / flatAmount 12 with
-    // no authored weapon scaling, and every assertion below is that number or
-    // a whole multiple of it.
+    // SkillResolution.Damage would produce for Attack 10 / flatAmount 17 with
+    // no authored weapon scaling (flatAmount raised from 12 to 17, 2026-09-15,
+    // alongside halving every spell's damage), and every assertion below is
+    // that number or a whole multiple of it.
     public class PoolTierSlamCastTests
     {
-        private const int BaseDamage = 22;
+        private const int BaseDamage = 27;
 
         private static ResolvedSkill Slam() =>
             new ResolvedSkill("slam", "Slam", "", "bear", 1, SkillEffect.DamageSingle,
-                SkillTargeting.SingleEnemy, 0, 0, false, 0, 12, false,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 17, false,
                 null, SpellPresentation.None, 0,
                 poolTiers: new[]
                 {

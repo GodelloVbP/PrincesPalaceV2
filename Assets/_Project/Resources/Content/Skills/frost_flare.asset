@@ -29,9 +29,9 @@ MonoBehaviour:
     IgnoresDefense: 0
     DamageInstances:
     - type: 1
-      amount: 7
+      amount: 4
     - type: 2
-      amount: 7
+      amount: 4
     Vfx:
       path: Spells/frost_flare
       seconds: 0.52
