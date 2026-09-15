@@ -32,6 +32,15 @@ the Phase A-E staging changes; this revision touches where the recipient
 interaction lives and how it's shown, not what it decides. Total build time
 moves from 9.5 to 11 days (§4).
 
+**Static Fleece and Golden Fleece were removed 2026-09-15 (AUDIT #150)** --
+both depended on Shawn's own Wool, so neither could ever work as a book
+another character equips, per `docs/SPELL_DESIGN_STANDARD.md`'s universality
+test. Every number and table below that names them is left as written: it is
+an accurate record of what shipped and why, not a live spec. Four book
+spells remain (Mud Burst, Frost Flare, Cinderfault, Lightning Bolt); Shawn's
+reward-track level 30, which used to unlock Static Fleece, now carries a
+placeholder pending the owner's replacement (AUDIT #150).
+
 **Revised 2026-09-03 (b) against a product review of the plan above.** The
 review's verdict was "technically diligent but product-risky": the plan
 proves implementation correctness before proving the shop creates decisions.

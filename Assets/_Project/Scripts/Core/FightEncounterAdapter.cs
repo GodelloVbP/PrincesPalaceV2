@@ -684,8 +684,10 @@ namespace PrincesPalace
         // authoring it at level 999 (see AvailableSkillsFor's own header), so
         // dropping that filter handed a level-1 Shawn the entire talent tree's
         // worth of abilities for free -- Ward, Shatter, Wail, all three Gifts,
-        // Provoke, Headbutt and Black Ram Mode, plus Golden Fleece seven levels
-        // early. The balance bot found it from the outside: a level-2 run with
+        // Provoke, Headbutt and Black Ram Mode, plus golden_fleece (unlockLevel
+        // 8 at the time; later made bookOnly, then removed 2026-09-15,
+        // AUDIT #150) seven levels early. The balance bot found it from the
+        // outside: a level-2 run with
         // an empty talentIds list recorded fleece_ward, gift_haste and shatter
         // in skillsUsed, and the defensive policy spent 41% of its deep-fight
         // turns on a Ward it had never bought.

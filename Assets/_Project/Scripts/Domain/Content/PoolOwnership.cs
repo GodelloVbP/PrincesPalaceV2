@@ -40,6 +40,20 @@ namespace PrincesPalace.Domain.Content
             IEnumerable<ResolvedPool> pools, IEnumerable<ResolvedCharacter> characters) =>
             OwnersWhere(pools, characters, pool => pool != null && pool.StartRule == PoolStartRule.Zero);
 
+        // The owners a poolTiers skill may be authored against -- every real
+        // CHARACTER (PrimaryPoolId always names a row, defaulting to "mana"
+        // -- ResolvedCharacter.PrimaryPoolId). What this set actually excludes
+        // is anyone NOT in the character catalogue at all: a monster-owned
+        // skill has no entry here regardless of what pools.json contains,
+        // because SkillEntryResolver cannot otherwise tell "this id is a
+        // character with a pool" from "this id is a typo" -- the same
+        // reachability question ContentDatabase.Validation's own
+        // "skill owned by no character" check asks from the loaded
+        // catalogue's side.
+        public static List<string> PrimaryPoolOwners(
+            IEnumerable<ResolvedPool> pools, IEnumerable<ResolvedCharacter> characters) =>
+            OwnersWhere(pools, characters, pool => pool != null);
+
         private static List<string> OwnersWhere(
             IEnumerable<ResolvedPool> pools, IEnumerable<ResolvedCharacter> characters,
             System.Func<ResolvedPool, bool> predicate)

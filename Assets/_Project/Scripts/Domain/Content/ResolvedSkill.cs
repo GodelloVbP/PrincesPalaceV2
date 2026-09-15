@@ -162,6 +162,13 @@ namespace PrincesPalace.Domain.Content
         // this requires authored packets to retype.
         public ElementChoice[] Elements = Array.Empty<ElementChoice>();
 
+        // See RawSkillEntry.poolTiers. Empty for every skill but a primary-
+        // pool tier skill's -- Bjorn's Slam is the first and, per
+        // SkillEntryResolver.TryResolvePoolTiers, ascending by Spend.
+        public ResolvedPoolTier[] PoolTiers = Array.Empty<ResolvedPoolTier>();
+
+        public bool HasPoolTiers => PoolTiers != null && PoolTiers.Length > 0;
+
         // The nullable reading of the Status/HasStatus pair, kept because it is
         // the shape both consumers (FightSession.Skills, FightSession.Enemies)
         // already ask in and the one the resolver hands in.
@@ -282,9 +289,14 @@ namespace PrincesPalace.Domain.Content
             // by meaning: every argument here is positional at its one call
             // site (SkillEntryResolver) and in a dozen test fixtures, so
             // inserting in the middle would silently repoint two strings.
-            string approachStance = "", string windupStance = "")
+            string approachStance = "", string windupStance = "",
+            // APPENDED LAST, same reason. poolTiers is the newest field on
+            // this type and the one least likely to be in hand at any
+            // existing call site.
+            ResolvedPoolTier[] poolTiers = null)
         {
             Elements = elements ?? Array.Empty<ElementChoice>();
+            PoolTiers = poolTiers ?? Array.Empty<ResolvedPoolTier>();
             BookOnly = bookOnly;
             BookTier = bookTier;
             Reach = reach;
@@ -359,6 +371,43 @@ namespace PrincesPalace.Domain.Content
             // COPIED, not aliased -- see ResolvedSkill's constructor for the
             // fight-edits-the-catalogue case this closes.
             Vfx = (vfx ?? SpellPresentation.None).Copy();
+        }
+    }
+
+    // ONE RUNG OF A PRIMARY-POOL DAMAGE LADDER -- see RawSkillEntry.poolTiers
+    // and PoolTierResolution.Pick, which is the only reader.
+    //
+    // CUE REUSES Combat.TransformHitCue RATHER THAN GROWING A SECOND SHAKE/
+    // hitStopSeconds PAIR. A worn transform's contact effect and a fired pool
+    // tier both answer the identical question -- "what does this blow's
+    // landing add, as a floor, on top of whatever the damage already
+    // earned" -- and FightSession.Beats.ApplyHitCueFloor applies both
+    // through the one rule. `vfx` on the cue is never authored by a pool
+    // tier today (RawPoolTier has no vfx block); it rides along unused
+    // because the type is shared, not because a tier draws anything of its
+    // own.
+    [Serializable]
+    public sealed class ResolvedPoolTier
+    {
+        public float Spend;
+        public float DamageMultiplier;
+        public Combat.TransformHitCue Cue = new Combat.TransformHitCue();
+
+        // For the serializer only.
+        public ResolvedPoolTier()
+        {
+        }
+
+        // UNCLAMPED, exactly like a transform's own raw hit cue
+        // (SkillEntryResolver.TryResolveTransform copies raw.transform.hit
+        // straight across with no numeric range check either) -- the
+        // hitStopSeconds ceiling is applied once, where it is consumed,
+        // by FightSession.Beats.ApplyHitCueFloor.
+        public ResolvedPoolTier(float spend, float damageMultiplier, float shake = 0f, float hitStopSeconds = 0f)
+        {
+            Spend = spend;
+            DamageMultiplier = damageMultiplier;
+            Cue = new Combat.TransformHitCue { shake = shake, hitStopSeconds = hitStopSeconds };
         }
     }
 }

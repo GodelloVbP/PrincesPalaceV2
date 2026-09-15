@@ -2797,3 +2797,26 @@ claiming a figure.
    no use to him right now" on the same evidence the other announcements use. Two lines.
 2. **Leave it.** It is a flavour line about drawing a card, not a claim about a number, and the
    card WAS drawn. Nothing is measurably wrong.
+
+## Findings from the fleece-spell removal, 2026-09-15
+
+### 150. Shawn's reward-track level 30 has no replacement for static_fleece
+
+Found 2026-09-15 while removing `static_fleece` and `golden_fleece` from `skills.json` (two
+book spells that failed `docs/SPELL_DESIGN_STANDARD.md`'s universality test -- both depend on
+Shawn's own Wool, so no other character could ever equip them as a book, the same problem that
+document already named at `:762-768`).
+
+`reward_tracks.json`'s sheep track named `static_fleece` at its level-30 milestone
+(`UnlockSkill`). Every one of a track's twelve milestone levels must carry exactly one entry
+(`RewardTrackEntryResolver`'s rule 1), so the level could not simply be left empty without
+failing the content build. It now carries a placeholder -- `StatPoint`, amount 2, marked with an
+inline `_comment` -- that keeps the track valid and commits to nothing.
+
+**This is the owner's call, not a design decision made here.** The previous milestone (level 25)
+already grants `SignatureCapacity 5`; the sheep track's other `UnlockSkill` milestones sit at 30
+and 70 (`cinderfault`). A real replacement could be: another `UnlockSkill` naming a different
+sheep skill, a bigger `StatPoint`/`MaxHealth` grant matching the milestone's weight, or an
+`ElementalDamagePercent` row (Shawn's level-1 element set is Nature, per `SkillDamageTypes.
+AtLevel1` and the existing level-45 milestone). Whatever is chosen, `RewardTrackContentPinTests`
+needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this same change).

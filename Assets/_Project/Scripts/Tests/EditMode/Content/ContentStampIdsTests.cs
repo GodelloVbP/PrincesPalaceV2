@@ -149,10 +149,11 @@ namespace PrincesPalace.Domain.Tests
             var characters = ResolveCharacters();
             var bookRefusers = PoolOwnership.BookRefusers(pools, characters);
             var zeroStartOwners = PoolOwnership.ZeroStartOwners(pools, characters);
+            var primaryPoolOwners = PoolOwnership.PrimaryPoolOwners(pools, characters);
 
             bool Resolver(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved,
                           out List<string> errors) =>
-                SkillEntryResolver.TryResolveAll(entries, bookRefusers, zeroStartOwners, out resolved, out errors);
+                SkillEntryResolver.TryResolveAll(entries, bookRefusers, zeroStartOwners, primaryPoolOwners, out resolved, out errors);
 
             return ResolveAllOf<RawSkillEntry, ResolvedSkill>(
                 "skills.json", ContentDataFiles.ParseFile<RawSkillFile>(ContentDataFiles.DataPath("skills.json")).skills,

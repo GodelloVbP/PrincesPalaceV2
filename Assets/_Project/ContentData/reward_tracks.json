@@ -7,7 +7,7 @@
         { "level": 10,  "reward": "SignatureGainPerTurn",       "amount": 1 },
         { "level": 20,  "reward": "Respec" },
         { "level": 25,  "reward": "SignatureCapacity",          "amount": 5 },
-        { "level": 30,  "reward": "UnlockSkill", "skillId": "static_fleece" },
+        { "_comment": "PLACEHOLDER, 2026-09-15: static_fleece was removed (AUDIT #150); this milestone needs a real replacement from the owner. StatPoint 2 keeps the track valid (every milestone level requires exactly one entry) without committing to a new unlock.", "level": 30, "reward": "StatPoint", "amount": 2 },
         { "level": 40,  "reward": "SignatureGainOnDamageTaken", "amount": 2 },
         { "level": 45,  "reward": "ElementalDamagePercent", "against": "Nature", "amount": 10 },
         { "level": 50,  "reward": "SignatureGainPerTurn",       "amount": 1 },

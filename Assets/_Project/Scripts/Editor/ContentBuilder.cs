@@ -143,7 +143,8 @@ public static class ContentBuilder
             // with no Editor -- see that file's own header.
             var skills = BuildSkills(
                 PoolOwnership.BookRefusers(pools, characters),
-                PoolOwnership.ZeroStartOwners(pools, characters));
+                PoolOwnership.ZeroStartOwners(pools, characters),
+                PoolOwnership.PrimaryPoolOwners(pools, characters));
             BuildModifiers();
 
             // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
@@ -465,13 +466,15 @@ public static class ContentBuilder
     // damageInstances) to validate UnlockSkill and rule 4's level-1 element
     // set against.
     private static IReadOnlyList<ResolvedSkill> BuildSkills(IReadOnlyCollection<string> bookRefusingOwnerIds,
-                                                            IReadOnlyCollection<string> zeroStartPoolOwnerIds)
+                                                            IReadOnlyCollection<string> zeroStartPoolOwnerIds,
+                                                            IReadOnlyCollection<string> primaryPoolOwnerIds)
     {
         // A LOCAL FUNCTION, the shape BuildCharacters and BuildRelics use to
-        // close over a second resolver argument -- here the owners whose pool
-        // refuses spell books, and the owners whose pool opens a fight empty.
+        // close over further resolver arguments -- here the owners whose pool
+        // refuses spell books, the owners whose pool opens a fight empty, and
+        // the owners a poolTiers skill may be authored against.
         bool Resolve(IReadOnlyList<RawSkillEntry> entries, out List<ResolvedSkill> resolved, out List<string> errors) =>
-            SkillEntryResolver.TryResolveAll(entries, bookRefusingOwnerIds, zeroStartPoolOwnerIds, out resolved, out errors);
+            SkillEntryResolver.TryResolveAll(entries, bookRefusingOwnerIds, zeroStartPoolOwnerIds, primaryPoolOwnerIds, out resolved, out errors);
 
         return Build<RawSkillEntry, ResolvedSkill, SkillDefinition>(
             "BuildSkills", "Assets/_Project/ContentData/skills.json", SkillsPath, "skills",

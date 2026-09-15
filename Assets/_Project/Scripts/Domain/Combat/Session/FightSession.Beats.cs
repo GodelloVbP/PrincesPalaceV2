@@ -88,7 +88,9 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat = null;
         }
 
-        // AND WHAT THE ACTOR'S WORN FORM ADDS TO THE BLOW.
+        // WHAT EVERY HIT-CUE AUTHOR ADDS TO THE BLOW -- a worn transform's
+        // contact effect (Transformation.Hit) and a fired poolTiers tier's own
+        // cue (CombatBeat.PoolTierCue), the two authors this floor has today.
         //
         // HERE, AT COMMIT, rather than in each of the paths that can land one.
         // "Every landed damaging hit by the holder" is a property of the BEAT
@@ -97,27 +99,53 @@ namespace PrincesPalace.Domain.Combat.Session
         // paths instead it would be four copies of one rule, and the fifth path
         // (an enemy ability, a relic's free swing, whatever lands next) would
         // silently not have it. No skill id and no character id is involved,
-        // which is the point: a second form authoring a cue gets this for free.
+        // which is the point: a second author of a cue gets this for free.
         //
         // LANDED DAMAGE ONLY. A heal, a miss, a buff and the transform's own
         // entry beat all commit through here too, and punctuating those would
         // teach the player that the cue means nothing.
         private static void RecordFormHitCue(CombatBeat beat)
         {
-            var cue = beat?.Actor?.Transformation?.Hit;
-            if (cue == null || !cue.IsAuthored) return;
+            if (beat == null) return;
             if (beat.IsHealing || beat.Missed || beat.Amount <= 0) return;
+
+            ApplyHitCueFloor(beat, beat.Actor?.Transformation?.Hit);
+            ApplyHitCueFloor(beat, beat.PoolTierCue);
+        }
+
+        // ONE FLOOR, ANY NUMBER OF AUTHORS. Called once per author above, so
+        // a beat that landed both a worn form's contact effect and a fired
+        // pool tier keeps the larger of the two floors on each field, rather
+        // than whichever author happened to apply last.
+        private static void ApplyHitCueFloor(CombatBeat beat, TransformHitCue cue)
+        {
+            if (cue == null || !cue.IsAuthored) return;
 
             if (cue.vfx != null && cue.vfx.HasArt) beat.FormVfx = cue.vfx;
 
-            // BOTH ARE FLOORS, so a blow that already reads harder than the
-            // form asks for keeps its own reading -- see CombatBeat.Shake's own
+            // BOTH ARE FLOORS, so a blow that already reads harder than this
+            // cue asks for keeps its own reading -- see CombatBeat.Shake's own
             // header for why a floor rather than an override.
             if (cue.shake > beat.Shake) beat.Shake = cue.shake;
 
-            beat.FormHitStopSeconds = cue.hitStopSeconds > HitStop.MaxSeconds
+            float hitStop = cue.hitStopSeconds > HitStop.MaxSeconds
                 ? HitStop.MaxSeconds
                 : (cue.hitStopSeconds < 0f ? 0f : cue.hitStopSeconds);
+            if (hitStop > beat.FormHitStopSeconds) beat.FormHitStopSeconds = hitStop;
+        }
+
+        // THE TIER A poolTiers CAST FIRED, staged at BeginBeat time (see
+        // FightSession.Skills.ResolveDamageSingle) so CommitBeat can float its
+        // shake/hit-stop through ApplyHitCueFloor alongside a worn form's, and
+        // so the row/log label and any test can read the multiplier straight
+        // off the beat rather than re-deriving it from live pool state (which
+        // has already been spent by the time a beat plays).
+        private void RecordPoolTier(PoolTierResolution.Result result)
+        {
+            if (_recordingBeat == null || !result.Fired) return;
+
+            _recordingBeat.PoolTierDamageMultiplier = result.Tier.DamageMultiplier;
+            _recordingBeat.PoolTierCue = result.Tier.Cue;
         }
 
         private void RecordBeatAmount(int amount, bool isHealing = false)

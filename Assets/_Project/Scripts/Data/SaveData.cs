@@ -957,9 +957,11 @@ namespace PrincesPalace
         // on every skill until Phase E's flip (docs/handoffs/shop_v2/
         // GAP_AUDIT.md, Gate 3), so a check against it here would prune every
         // learned spell the moment it was learned". The flip has happened: all
-        // six bookTier > 0 skills in skills.json (static_fleece, golden_fleece,
-        // mud_burst, frost_flare, cinderfault, lightning_bolt) carry
-        // bookOnly: true today, so the two predicates now agree.
+        // four bookTier > 0 skills in skills.json (mud_burst, frost_flare,
+        // cinderfault, lightning_bolt -- static_fleece and golden_fleece
+        // removed 2026-09-15, AUDIT #150, they failed the universality test
+        // docs/SPELL_DESIGN_STANDARD.md states) carry bookOnly: true today,
+        // so the two predicates now agree.
         //
         // They agree by COINCIDENCE, which is the thing to know. bookTier is
         // still the right question here -- "is this a skill a book can be" --

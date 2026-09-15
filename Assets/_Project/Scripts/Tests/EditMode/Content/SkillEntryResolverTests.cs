@@ -443,6 +443,183 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(ScalingAxis.Weapon, resolved[0].ScalingAxis);
         }
+
+        // ---- poolTiers (Bjorn's Slam, AUDIT plan step 1) --------------------
+
+        // manaCost 5, NOT the shipped skill's 0 -- the real row is free only
+        // because ContentBuilder tells the resolver "bear" opens every fight
+        // at zero Fury (PoolOwnership.ZeroStartOwners), a carve-out these
+        // isolated fixtures do not wire up and do not need to: it is
+        // SkillEntryResolverTests' OwnerOpensEmpty-suite's own concern, not
+        // poolTiers'.
+        private static RawSkillEntry SlamLike(string id = "slam", string owner = "bear",
+            params RawPoolTier[] tiers)
+        {
+            return new RawSkillEntry
+            {
+                id = id, displayName = "Slam", characterId = owner,
+                effect = "DamageSingle", manaCost = 5, flatAmount = 12,
+                poolTiers = tiers,
+            };
+        }
+
+        [Test]
+        public void PoolTiers_Ascending_Resolve()
+        {
+            var slam = SlamLike(tiers: new[]
+            {
+                new RawPoolTier { spend = 0.5f, damageMultiplier = 2f, shake = 0.6f },
+                new RawPoolTier { spend = 1.0f, damageMultiplier = 4f, shake = 1f, hitStopSeconds = 0.18f },
+            });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].HasPoolTiers);
+            Assert.AreEqual(2, resolved[0].PoolTiers.Length);
+            Assert.AreEqual(0.5f, resolved[0].PoolTiers[0].Spend);
+            Assert.AreEqual(2f, resolved[0].PoolTiers[0].DamageMultiplier);
+            Assert.AreEqual(0.6f, resolved[0].PoolTiers[0].Cue.shake);
+            Assert.AreEqual(1f, resolved[0].PoolTiers[1].Spend);
+            Assert.AreEqual(4f, resolved[0].PoolTiers[1].DamageMultiplier);
+            Assert.AreEqual(0.18f, resolved[0].PoolTiers[1].Cue.hitStopSeconds);
+        }
+
+        [Test]
+        public void PoolTiers_NoneAuthored_ResolvesEmpty_AndIsNotPoolTiered()
+        {
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { Minimal() }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsFalse(resolved[0].HasPoolTiers);
+            Assert.AreEqual(0, resolved[0].PoolTiers.Length);
+        }
+
+        [Test]
+        public void PoolTiers_DescendingOrder_IsRefused()
+        {
+            var slam = SlamLike(tiers: new[]
+            {
+                new RawPoolTier { spend = 0.75f, damageMultiplier = 2f },
+                new RawPoolTier { spend = 0.5f, damageMultiplier = 4f },
+            });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("ascending", errors[0]);
+        }
+
+        [Test]
+        public void PoolTiers_EqualSpend_IsRefused_NotJustStrictlyDescending()
+        {
+            var slam = SlamLike(tiers: new[]
+            {
+                new RawPoolTier { spend = 0.5f, damageMultiplier = 2f },
+                new RawPoolTier { spend = 0.5f, damageMultiplier = 4f },
+            });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+        }
+
+        [Test]
+        public void PoolTiers_SpendAboveOne_IsRefused()
+        {
+            var slam = SlamLike(tiers: new[] { new RawPoolTier { spend = 1.5f, damageMultiplier = 2f } });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            // NOT "spends 1.5" -- the runner's culture can print that as
+            // "1,5", so this checks the stable half of the message instead.
+            StringAssert.Contains("at most 1", errors[0]);
+        }
+
+        [Test]
+        public void PoolTiers_SpendOfZero_IsRefused()
+        {
+            var slam = SlamLike(tiers: new[] { new RawPoolTier { spend = 0f, damageMultiplier = 2f } });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+        }
+
+        [Test]
+        public void PoolTiers_MultiplierBelowOne_IsRefused()
+        {
+            var slam = SlamLike(tiers: new[] { new RawPoolTier { spend = 0.5f, damageMultiplier = 0.9f } });
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("damageMultiplier", errors[0]);
+        }
+
+        [Test]
+        public void PoolTiers_OnAnEffectOtherThanDamageSingle_IsRefused()
+        {
+            var heal = SlamLike(tiers: new[] { new RawPoolTier { spend = 0.5f, damageMultiplier = 2f } });
+            heal.effect = "HealSelf";
+            heal.flatAmount = 5;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { heal }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+        }
+
+        [Test]
+        public void PoolTiers_WithFixedDamageInstances_IsRefused()
+        {
+            var slam = SlamLike(tiers: new[] { new RawPoolTier { spend = 0.5f, damageMultiplier = 2f } });
+            slam.flatAmount = -1;
+            slam.damageInstances = new[] { new RawDamageInstance { type = "Physical", amount = 20 } };
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { slam }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+        }
+
+        // THE CROSS-CATALOGUE RULE: a poolTiers skill needs an owner
+        // PoolOwnership.PrimaryPoolOwners recognises. The set must be
+        // NON-EMPTY to exercise the refusal -- an empty set is read the same
+        // as null ("nothing checked this"), the same Count > 0 convention
+        // bookRefusingOwnerIds and zeroStartPoolOwnerIds already use -- so
+        // this names a real, different owner rather than passing an empty
+        // list.
+        [Test]
+        public void PoolTiers_OwnerNotInPrimaryPoolOwnerSet_IsRefused()
+        {
+            var slam = SlamLike(owner: "golem", tiers: new[] { new RawPoolTier { spend = 0.5f, damageMultiplier = 2f } });
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { slam },
+                bookRefusingOwnerIds: null,
+                zeroStartPoolOwnerIds: null,
+                primaryPoolOwnerIds: new List<string> { "sheep" },
+                out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("primary pool", errors[0]);
+        }
+
+        [Test]
+        public void PoolTiers_OwnerInPrimaryPoolOwnerSet_Resolves()
+        {
+            var slam = SlamLike(tiers: new[] { new RawPoolTier { spend = 0.5f, damageMultiplier = 2f } });
+
+            bool ok = SkillEntryResolver.TryResolveAll(
+                new List<RawSkillEntry> { slam },
+                bookRefusingOwnerIds: null,
+                zeroStartPoolOwnerIds: null,
+                primaryPoolOwnerIds: new List<string> { "bear" },
+                out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].HasPoolTiers);
+        }
     }
 
     public class SkillResolutionTests
@@ -729,5 +906,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StageApproach.Hold, resolved[0].Approach);
             Assert.AreEqual(StageApproach.Hold, resolved[1].Approach);
         }
+
     }
 }

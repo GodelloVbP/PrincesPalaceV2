@@ -642,12 +642,14 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(4242UL);
             RunManager.Run.learnedSpells.Add(
                 new LearnedSpellEntry { characterId = CharacterId, skillId = SkillId, slot = 0 });
-            GiveOneUnassignedCopy("static_fleece");
+            // A second, genuinely different book -- static_fleece before
+            // 2026-09-15 (AUDIT #150 removed it), frost_flare now.
+            GiveOneUnassignedCopy("frost_flare");
 
             SaveSlotManager.CurrentSave.Reconcile();
 
             Assert.AreEqual(1, RunManager.Run.learnedSpells.Count);
-            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, "static_fleece");
+            CollectionAssert.Contains(RunManager.Run.unassignedSpellBooks, "frost_flare");
         }
     }
 }

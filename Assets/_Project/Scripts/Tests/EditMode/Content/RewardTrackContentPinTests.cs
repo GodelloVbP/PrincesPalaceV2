@@ -63,6 +63,7 @@ namespace PrincesPalace.Domain.Tests
                 raw,
                 PoolOwnership.BookRefusers(pools, characters),
                 PoolOwnership.ZeroStartOwners(pools, characters),
+                PoolOwnership.PrimaryPoolOwners(pools, characters),
                 out var resolved, out var errors);
 
             Assert.IsTrue(ok, "skills.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));
@@ -107,12 +108,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, entry.Amount);
         }
 
+        // static_fleece was removed 2026-09-15 (AUDIT #150 -- it failed
+        // docs/SPELL_DESIGN_STANDARD.md's universality test, being a book
+        // spell that only ever worked for a Wool-holding owner). Level 30
+        // now carries a PLACEHOLDER, not a real milestone: StatPoint 2, just
+        // enough to keep the track's every-milestone-filled rule satisfied
+        // until the owner picks a real replacement. Pinned as a placeholder
+        // on purpose -- re-pin this the moment #150 is resolved, not before.
         [Test]
-        public void SheepLevel30UnlocksStaticFleece()
+        public void SheepLevel30IsAPlaceholder_PendingAudit150()
         {
             var entry = Sheep().At(30);
-            Assert.AreEqual(TrackReward.UnlockSkill, entry.Reward);
-            Assert.AreEqual("static_fleece", entry.SkillId);
+            Assert.AreEqual(TrackReward.StatPoint, entry.Reward);
+            Assert.AreEqual(2, entry.Amount);
         }
 
         [Test]
@@ -205,7 +213,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, track.CollectedTotal(TrackReward.SignatureGainOnDamageTaken, RewardTrack.MaxLevel), "wool when hurt");
             Assert.AreEqual(30, track.CollectedTotal(TrackReward.ElementalDamagePercent, DamageType.Nature, RewardTrack.MaxLevel), "Nature damage");
             Assert.AreEqual(150, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel), "max health");
-            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel), "stat points");
+            // 50 filler + 2 from level 30's placeholder (AUDIT #150, StatPoint
+            // 2 standing in for the removed static_fleece unlock) = 52. Re-pin
+            // this the moment #150 gets a real replacement.
+            Assert.AreEqual(52, track.GrantedBetween(TrackReward.StatPoint, RewardTrack.StartingLevel, RewardTrack.MaxLevel), "stat points");
         }
 
         [Test]

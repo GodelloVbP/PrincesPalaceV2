@@ -103,12 +103,25 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginCooldown(actor, skill);
             actor.SignaturePool?.TrySpend(resourceSpent);
 
+            // THE FURY TIER, spent from the actor's PRIMARY pool -- a
+            // different pool and a different question from resourceSpent
+            // above, which is the SIGNATURE pool's own wallet. Picked and
+            // spent HERE, before resolution, so the multiplier that reaches
+            // SkillResolution.Damage and the amount actually taken from the
+            // pool always agree -- picking again after the pool has already
+            // paid would silently choose a lower tier. See PoolTierResolution.
+            var poolTier = PoolTierResolution.Pick(actor.PrimaryPool, skill.PoolTiers);
+            if (poolTier.Fired)
+            {
+                actor.PrimaryPool.TrySpend(poolTier.SpendAmount);
+            }
+
             // Only a cast that can actually deal damage spends Gift: Fury. A
             // ward burning somebody else's gift would be a present the player
             // never got to open.
             RefreshAttackBonus(actor, spendingGift: DealsDamage(skill));
 
-            ResolveCharacterSkill(actor, skill, target, resourceSpent);
+            ResolveCharacterSkill(actor, skill, target, resourceSpent, poolTier);
 
             // SOURCED by the actor. The relic's shield and the Lamb's Ward are
             // the same status, and an unsourced one would be a ward whose
@@ -194,7 +207,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // Every skill effect, resolved from data. Damage goes through
         // CombatMath like everything else, so a target with its own signature
         // resource soaks it exactly as it would any other hit.
-        private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
+        private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             // ONE CAST, one advance of the counter, however many things it
             // lands on. See FightSession.Potency.
@@ -202,22 +216,23 @@ namespace PrincesPalace.Domain.Combat.Session
 
             try
             {
-                ResolveCharacterSkillInner(actor, skill, target, resourceSpent);
+                ResolveCharacterSkillInner(actor, skill, target, resourceSpent, poolTier);
             }
             finally
             {
                 // Every path out, including the ones that resolve nothing --
                 // a charge left armed would be spent by whatever acted next.
-                RelicsAfterCast(actor, skill, target, resourceSpent);
+                RelicsAfterCast(actor, skill, target, resourceSpent, poolTier);
             }
         }
 
-        private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
+        private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            int resourceSpent, PoolTierResolution.Result poolTier)
         {
             switch (skill.Effect)
             {
                 case SkillEffect.DamageSingle:
-                    ResolveDamageSingle(actor, skill, target, resourceSpent);
+                    ResolveDamageSingle(actor, skill, target, resourceSpent, poolTier);
                     break;
 
                 case SkillEffect.DamageAll:
@@ -449,19 +464,29 @@ namespace PrincesPalace.Domain.Combat.Session
             DisgruntledLackeyOnEnemySummon(actor);
         }
 
-        private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
+        private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             target = target ?? _encounter.OpponentsOf(actor).FirstOrDefault();
             if (target == null) return;
 
             BeginBeat(actor, target, isCast: true);
             RecordSpellPresentation(skill);
+            RecordPoolTier(poolTier);
 
             // THE SKILL'S OWN APPROACH, over the "rooted" BeginBeat assumed
             // for every cast. A melee skill is a swing that happens to be
             // authored as a skill, and until this line it connected from
             // wherever the caster was standing.
             ApproachAs(skill.Approach);
+
+            // WHAT THE LOG/CARD CALLS THIS CAST -- "Slam" under the first
+            // tier, "Slam x2"/"Slam x4" once one fires. Same string
+            // FightHudModel's row caption previews before the press; this is
+            // what actually happened, off the tier already chosen and spent
+            // in CastSkill rather than re-picked against a pool the cast has
+            // since drained.
+            string castLabel = PoolTierResolution.Label(skill.DisplayName, poolTier);
 
             int damage;
             if (skill.HasFixedDamage)
@@ -478,11 +503,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (dodgedInstances)
                 {
                     RecordMiss();
-                    AppendMessage($"{target.Name} dodges {actor.Name}'s {skill.DisplayName}!");
+                    AppendMessage($"{target.Name} dodges {actor.Name}'s {castLabel}!");
                     return;
                 }
 
-                AppendMessage($"{actor.Name} casts {skill.DisplayName} on {target.Name} for {damage}! -{detail}");
+                AppendMessage($"{actor.Name} casts {castLabel} on {target.Name} for {damage}! -{detail}");
             }
             else
             {
@@ -495,6 +520,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 // rather than against whatever the pipeline turns it into.
                 int baseAmount = SkillResolution.Amount(skill.Effect, actor, target, skill.Power,
                     skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+
+                // THE FURY TIER'S MULTIPLIER, applied to the skill's own
+                // computed damage and BEFORE defences -- so a x4 slam is a x4
+                // RAW hit, not a x4 hit after the target's armour already
+                // took its cut. See PoolTierResolution.ApplyDamageMultiplier.
+                baseAmount = PoolTierResolution.ApplyDamageMultiplier(baseAmount, poolTier);
 
                 var outcome = DamagePipeline.AfterDefences(
                     baseAmount,
@@ -510,13 +541,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (outcome.IsMiss)
                 {
                     RecordMiss();
-                    AppendMessage($"{target.Name} dodges {actor.Name}'s {skill.DisplayName}!");
+                    AppendMessage($"{target.Name} dodges {actor.Name}'s {castLabel}!");
                     return;
                 }
 
                 damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
-                AppendMessage($"{actor.Name} uses {skill.DisplayName} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
+                AppendMessage($"{actor.Name} uses {castLabel} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             }
 
             // Through the shared tail rather than its own copy of it, so a
