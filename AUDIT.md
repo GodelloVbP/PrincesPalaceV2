@@ -2739,7 +2739,7 @@ was not revisited.
 Either way a test pins it; today nothing does, so the answer can change under a refactor without
 anything going red.
 
-### 148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates
+### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability
 
 Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Enemies.cs`, in
 `ResolveEnemyAction`: a plain-swing commitment made before the enemy was Rooted is re-drawn with
