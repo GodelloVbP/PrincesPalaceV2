@@ -76,13 +76,19 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void ADownedCharacterGetsARowAndNothingElse()
+        public void ADownedCharacterGetsARowAndHalfThePay()
         {
             // They used to vanish from the reward entirely, so a party of three
             // came back as two rows with nothing saying why. Squad-of-three is
             // now the live default (SaveData.SquadOfThreeReady), so this test's
             // own "party of three" IS the fielded squad rather than a stand-in
             // for it -- every member should get a row, not a literal one.
+            //
+            // AND THE ROW IS NO LONGER EMPTY. Progression v2's contract 4 pays
+            // a downed character half, rounded up, where they used to earn
+            // nothing -- 25 of this fight's 50. The arithmetic itself is pinned
+            // in FightRewardsTests.ADownedSquadMemberEarnsHalfRoundedUp; what
+            // is here is that the halved figure reaches the save.
             var squad = SaveSlotManager.CurrentSave.ActiveSquad();
             var before = squad.Select(c => c.exp).ToList();
 
@@ -92,8 +98,8 @@ namespace PrincesPalace.PlayModeTests
             for (int i = 0; i < reward.Characters.Count; i++)
             {
                 Assert.IsTrue(reward.Characters[i].IsDowned);
-                Assert.AreEqual(0, reward.Characters[i].ExpGained);
-                Assert.AreEqual(before[i], squad[i].exp, "and they gained nothing");
+                Assert.AreEqual(25, reward.Characters[i].ExpGained);
+                Assert.AreEqual(before[i] + 25, squad[i].exp, "and half the pay reached the save");
             }
         }
 
@@ -171,7 +177,8 @@ namespace PrincesPalace.PlayModeTests
             var reward = RewardApplier.Apply(new VictoryRewards.Payout(50, 0), null);
 
             Assert.IsNotEmpty(reward.Characters);
-            Assert.IsTrue(reward.Characters.All(r => r.IsDowned && r.ExpGained == 0));
+            Assert.IsTrue(reward.Characters.All(r => r.IsDowned && r.ExpGained == 25),
+                "everyone downed should still collect half of the 50 this fight paid");
         }
 
         // ---- the reward track is NOT paid here any more --------------------------
@@ -340,9 +347,9 @@ namespace PrincesPalace.PlayModeTests
                 "the respec confiscated max health the player never chose to spend");
         }
 
-        // A downed character earns no exp and gains no level, and their debt is
-        // left exactly where it was -- neither settled on their behalf nor
-        // quietly written off for having sat the fight out.
+        // A downed character earns half, which at level 15 is nowhere near a
+        // level, and their debt is left exactly where it was -- neither settled
+        // on their behalf nor quietly written off for having sat the fight out.
         [Test]
         public void ADownedCharacterGainsNoLevelsAndKeepsTheirDebt()
         {
@@ -350,7 +357,9 @@ namespace PrincesPalace.PlayModeTests
             character.level = 15;
             character.claimedTrackLevel = 0;
 
-            // Fielded nobody: everyone is downed and gains zero exp.
+            // Fielded nobody: everyone is downed and collects half, 250 of the
+            // 500 this fight paid. Level 16 costs 3,500 (level_curve.json), so
+            // no amount of halved pay from one fight crosses it.
             RewardApplier.Apply(new VictoryRewards.Payout(500, 0), new List<string>());
 
             character = SquadFixture.FirstLiveMember();

@@ -128,12 +128,27 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(60, VictoryRewards.ExperienceFor(payout, isDowned: false));
         }
 
-        [Test]
-        public void ADownedSquadMemberEarnsNothing()
+        // HALF, ROUNDED UP, and never zero -- progression v2's contract 4. It
+        // used to be nothing at all, which compounded a bad run into a bad
+        // career: the player losing fights is the one who most needs the
+        // levels that would let them stop losing.
+        //
+        // The three literals are the plan's own worked cases plus the two
+        // edges. 29 is an average room-0 normal fight and 100 the boss;
+        // rounding UP is what keeps a 1-experience payout from paying nothing
+        // and quietly restoring the old rule.
+        [TestCase(0, 0)]
+        [TestCase(1, 1)]
+        [TestCase(15, 8)]
+        [TestCase(29, 15)]
+        [TestCase(100, 50)]
+        public void ADownedSquadMemberEarnsHalfRoundedUp(int raw, int expected)
         {
-            var payout = VictoryRewards.For(new[] { Kit(60, 0) }, isElite: false, depthStep: 0);
+            var payout = VictoryRewards.For(new[] { Kit(raw, 0) }, isElite: false, depthStep: 0);
 
-            Assert.AreEqual(0, VictoryRewards.ExperienceFor(payout, isDowned: true));
+            Assert.AreEqual(expected, VictoryRewards.ExperienceFor(payout, isDowned: true));
+            Assert.AreEqual(raw, VictoryRewards.ExperienceFor(payout, isDowned: false),
+                "standing pay moved with downed pay");
         }
 
         // ---- drops ---------------------------------------------------------------

@@ -162,10 +162,42 @@ namespace PrincesPalace.Domain.Combat.Session
             isBossFight || isEliteFight;
 
         // Experience is NOT split across the party -- every FIELDED character
-        // receives the full amount, and a character who was not fielded receives
-        // none. A pre-existing design decision, made visible here rather than
-        // changed.
-        public static int ExperienceFor(Payout payout, bool isDowned) =>
-            isDowned ? 0 : payout.Experience;
+        // receives the full amount. A pre-existing design decision, made
+        // visible here rather than changed.
+        //
+        // A DOWNED CHARACTER NOW EARNS HALF, ROUNDED UP, where they used to
+        // earn nothing. Progression v2's contract 4
+        // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §1): "downed at
+        // a victory pays half, rounded up; never zero". The reasoning is the
+        // one the plan's knockout trajectory measures -- a player who is
+        // losing fights is the player who most needs the levels that would
+        // let them stop losing, and zero pay compounds a bad run into a bad
+        // career. Half still costs them something real: the plan's
+        // downed-at-every-boss career reaches level 30 nine runs later than
+        // the standing one.
+        //
+        // ROUNDED UP rather than down, so the floor is 1 and not 0 -- "never
+        // zero" is the half of the contract that matters at room 0, where a
+        // rat-only fight pays 15 and a rounded-down half of a 1-experience
+        // payout would be the old rule wearing a new name.
+        //
+        // WHAT isDowned ACTUALLY MEANS is decided by the caller, and it is
+        // narrower than the plan's words: RewardApplier reads it as "not in
+        // the fielded list", and the fielded list is
+        // RunOrchestrator.FieldedIds -- every member of the encounter's
+        // PlayerParty. A squad member at 0 health when the encounter was BUILT
+        // is left out and is therefore downed; a member who falls during the
+        // fight is still in PlayerParty and collects in full. So "revived
+        // before victory counts as standing" holds trivially, and so does
+        // rather more than that. Reported to the owner rather than changed
+        // here, because widening it is a gameplay decision and not this
+        // commit's.
+        public static int ExperienceFor(Payout payout, bool isDowned)
+        {
+            if (!isDowned) return payout.Experience;
+
+            int experience = payout.Experience;
+            return experience <= 0 ? 0 : (experience + 1) / 2;
+        }
     }
 }

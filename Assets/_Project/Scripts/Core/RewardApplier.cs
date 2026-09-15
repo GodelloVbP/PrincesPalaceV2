@@ -52,12 +52,19 @@ namespace PrincesPalace
                 int expBefore = character.exp;
 
                 // Experience is NOT split across the party -- every fielded
-                // character receives the full amount. A pre-existing design
-                // decision, made visible here rather than changed.
-                //
-                // EXACTLY WHAT THE FIGHT PAID, no more -- nothing on the
+                // character receives the full amount, and a downed one half of
+                // it rounded up (progression v2 contract 4). Nothing on the
                 // reward track scales this figure per character.
-                int gained = isDowned ? 0 : payout.Experience;
+                //
+                // ASKED OF VictoryRewards RATHER THAN COMPUTED HERE. The rule
+                // was inlined on this line and stated a second time in
+                // VictoryRewards.ExperienceFor, which nothing in production
+                // called -- two copies of one rule, one of them live and the
+                // other only ever asserted against. They agreed until the day
+                // the rule changed, which is today. The Domain seam is the one
+                // that survives, so the arithmetic is pinnable without a save
+                // and there is one place to change it next time.
+                int gained = VictoryRewards.ExperienceFor(payout, isDowned);
                 if (gained > 0) character.AddExperience(gained);
 
                 // AND THE TRACK IS **NOT** PAID HERE ANY MORE.
