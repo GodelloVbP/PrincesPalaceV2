@@ -145,8 +145,17 @@ namespace PrincesPalace.Domain.Combat.Session
                 // contain locked entries.
                 var skill = option.Skill;
 
+                // WHAT THE ROW SAYS IT WILL DO RIGHT NOW, for a poolTiers
+                // skill -- "Slam" under the first tier, "Slam x2"/"Slam x4"
+                // once the actor can afford one. Previewed off the actor's
+                // CURRENT (unspent) primary pool, the same reading the press
+                // itself will pick a beat later -- see PoolTierResolution.Pick.
+                string rowName = skill.HasPoolTiers
+                    ? PoolTierResolution.Label(skill.DisplayName, PoolTierResolution.Pick(actor.PrimaryPool, skill.PoolTiers))
+                    : skill.DisplayName;
+
                 rows.Add(new SubmenuRow(
-                    skill.DisplayName,
+                    rowName,
                     MetaLine(skill),
 
                     // THE COST COLUMN SAYS THE WAIT INSTEAD, while there is

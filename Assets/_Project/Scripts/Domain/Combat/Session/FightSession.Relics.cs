@@ -112,7 +112,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // (docs/PLAN_SHOP.md §4 Phase E; see TryFirstRune's own comment
         // below for the same fact from the other side).
         private void RelicsAfterCast(CombatantState actor, ResolvedSkill skill, CombatantState target,
-                                     int resourceSpent)
+                                     int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             EndPotency();
 
@@ -131,7 +131,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // The First Rune, then Sword in a Box -- both are extra actions
             // AFTER everything else a cast can do, in the order a player would
             // read them: the spell repeats itself, and THEN steel follows.
-            TryFirstRune(actor, skill, target, resourceSpent);
+            TryFirstRune(actor, skill, target, resourceSpent, poolTier);
             TrySwordInABox(actor, target);
 
             // Rampaging Bull's Horn: fires only on a convergence (Transform)
@@ -197,8 +197,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // (ResolveCharacterSkill) always has a real ResolvedSkill -- the
         // basic Skill action this null case used to mean is gone
         // (docs/PLAN_SHOP.md §4 Phase E).
+        // POOL TIER CARRIED THROUGH, NOT RE-PICKED. The repeat is "the same
+        // spell, landing again" -- the Fury it spent (if any) was already
+        // taken by the outer cast, so the rune's free copy keeps whatever
+        // multiplier that cast fired rather than asking the pool a second
+        // time, which -- now spent down by the first hit -- would almost
+        // always answer with a lower tier or none at all.
         private void TryFirstRune(CombatantState actor, ResolvedSkill skill, CombatantState target,
-                                  int resourceSpent)
+                                  int resourceSpent, PoolTierResolution.Result poolTier = default)
         {
             if (actor == null || target == null || !target.IsAlive) return;
             if (!HasRelic(actor, RelicEffect.FirstRune)) return;
@@ -208,7 +214,7 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, target, isCast: true);
             AppendMessage($"{actor.Name}'s First Rune flares - the spell lands again!");
 
-            ResolveCharacterSkillInner(actor, skill, target, resourceSpent);
+            ResolveCharacterSkillInner(actor, skill, target, resourceSpent, poolTier);
         }
 
         // ---- the drowned lantern's mark ---------------------------------------------

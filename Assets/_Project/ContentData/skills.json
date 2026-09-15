@@ -480,7 +480,7 @@
     {
       "id": "placeholder_brawler_slam",
       "displayName": "Slam",
-      "description": "Placeholder kit. He crosses the ground, gets the hammer over his head, and puts it through whatever is under it.",
+      "description": "Placeholder kit. He crosses the ground, gets the hammer over his head, and puts it through whatever is under it. Below 50 Fury it lands as a normal blow; at 50 or more it spends half his Fury for double damage; at 100 it spends it all for quadruple damage. He always throws the hardest hit he can afford.",
       "characterId": "bear",
       "unlockLevel": 1,
       "effect": "DamageSingle",
@@ -490,7 +490,11 @@
       "approach": "close",
       "approachStance": "rush",
       "windupStance": "overhead",
-      "stance": "slam"
+      "stance": "slam",
+      "poolTiers": [
+        { "spend": 0.5, "damageMultiplier": 2, "shake": 0.6 },
+        { "spend": 1.0, "damageMultiplier": 4, "shake": 1.0, "hitStopSeconds": 0.18 }
+      ]
     },
     {
       "id": "placeholder_brawler_provoke",

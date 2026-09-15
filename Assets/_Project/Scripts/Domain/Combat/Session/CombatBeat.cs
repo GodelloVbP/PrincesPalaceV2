@@ -367,6 +367,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // above, for the one reaction that had no authored floor at all.
         // FightBeatPlayer.HitStopFor takes the larger of the blow's own weight
         // and this. Zero for everything that authored none.
+        //
+        // NOT ONLY A WORN FORM'S ANY MORE, despite the name -- a poolTiers
+        // skill's fired tier floors this exact field through the same rule
+        // (FightSession.Beats.ApplyHitCueFloor). Kept as one slot rather than
+        // a second "PoolTierHitStopSeconds" beside it: the question this
+        // answers ("how hard did the blow land, floored by SOMETHING besides
+        // the damage number") has one answer per beat, and a beat authoring
+        // both a worn form AND a fired tier still wants the larger of the two
+        // floors, which is what the shared rule already computes.
         public float FormHitStopSeconds;
 
         // Vitals as they stood BEFORE this beat's action. Only a spell beat
@@ -377,6 +386,20 @@ namespace PrincesPalace.Domain.Combat.Session
         public Dictionary<CombatantState, Vitals> PreSnapshot;
 
         public bool HasSpellAnimation => Vfx != null && Vfx.HasAnimation;
+
+        // THE POOL TIER THIS CAST FIRED, if any -- 0 for every beat that is
+        // not a poolTiers skill's cast, which is nearly all of them (multiplier
+        // is validated >= 1 by SkillEntryResolver, so 0 cannot be a real fired
+        // tier and is a safe "none" sentinel). Read by the view for a floating
+        // tag and asserted on directly by tests, alongside the fight log's own
+        // text -- see PoolTierResolution.Label for where the two agree.
+        public float PoolTierDamageMultiplier;
+
+        // THE TIER'S OWN HIT CUE -- staged at cast time (FightSession.Skills'
+        // ResolveDamageSingle) and applied through the SAME floor a worn
+        // form's Hit is, at CommitBeat -- see FightSession.Beats.
+        // ApplyHitCueFloor. Null for every beat but a fired tier's.
+        public TransformHitCue PoolTierCue;
 
         // How far through the animation the impact falls, as a fraction of its
         // total length. Pure arithmetic -- no Resources.Load, no beat, nothing

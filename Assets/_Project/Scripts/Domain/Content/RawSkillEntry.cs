@@ -332,6 +332,50 @@ namespace PrincesPalace.Domain.Content
         // lands as four blocks here and no C#.
         [ContentDoc("Elements the player chooses between before targeting; each retypes every authored damage packet.")]
         public RawElementChoice[] elements = Array.Empty<RawElementChoice>();
+
+        // BJORN'S SLAM: THE FIRST FURY SINK, and the model every future
+        // primary-pool tier skill authors through rather than a slam
+        // special case. Ascending fractions of the owner's PRIMARY pool
+        // capacity -- Fury for Bjorn, not a signature resource -- each
+        // buying a damage multiplier and (optionally) a floor on how hard
+        // the blow lands. THE HIGHEST TIER THE CASTER CAN CURRENTLY AFFORD
+        // FIRES AUTOMATICALLY: there is no menu choice, because affording
+        // more is always strictly better, and a resource that decays on an
+        // idle turn already punishes hoarding past the point of use.
+        //
+        // Empty (the default) is every skill authored before this existed
+        // and every skill that only ever spends mana/resourceCost. See
+        // SkillEntryResolver.TryResolvePoolTiers for the ordering and range
+        // rules, and PoolTierResolution for how the fired tier is picked at
+        // cast time.
+        [ContentDoc("Ascending fractions of the owner's primary pool this skill can spend for extra damage; the highest tier the caster can afford fires automatically.")]
+        public RawPoolTier[] poolTiers = Array.Empty<RawPoolTier>();
+    }
+
+    // One tier of a poolTiers ladder -- see RawSkillEntry.poolTiers.
+    //
+    // NO -1 SENTINEL ON spend/damageMultiplier, unlike most of this file's
+    // int fields. Both have a hard floor a legitimately authored value can
+    // never cross (spend must be > 0, damageMultiplier must be >= 1), so an
+    // unauthored 0 and an authored 0 need no telling apart -- either way
+    // SkillEntryResolver.TryResolvePoolTiers refuses it with the same
+    // message. The -1 convention exists for fields (power, flatAmount) where
+    // 0 IS a legitimate authored value and would otherwise be indistinguishable
+    // from "the author wrote nothing" -- that ambiguity does not exist here.
+    [Serializable]
+    public class RawPoolTier
+    {
+        [ContentDoc("Fraction of the owner's primary pool CAPACITY this tier spends, (0,1]; the pool's own gainOnAttack still fires afterwards as normal. Tiers must be authored in ascending order.")]
+        public float spend;
+
+        [ContentDoc("How much this tier multiplies the skill's own computed damage by; must be 1 or higher.")]
+        public float damageMultiplier;
+
+        [ContentDoc("A floor on how hard this tier's blow kicks the stage, 0..1, on top of the skill's own shake; 0 means no extra floor.")]
+        public float shake;
+
+        [ContentDoc("A floor on this tier's hit-stop, in seconds, clamped to HitStop.MaxSeconds; 0 means no extra floor.")]
+        public float hitStopSeconds;
     }
 
     // One option in a skill's `elements` list: the element itself, and

@@ -218,6 +218,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `meleeReach` | bool | `false` | Whether the front-rank melee-reach rule applies to this SingleEnemy skill. |  |
 | `reachSlots` | int[] | `[]` | Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere. |  |
 | `elements` | RawElementChoice[] (below) | `[]` | Elements the player chooses between before targeting; each retypes every authored damage packet. |  |
+| `poolTiers` | RawPoolTier[] (below) | `[]` | Ascending fractions of the owner's primary pool this skill can spend for extra damage; the highest tier the caster can afford fires automatically. |  |
 
 ## spells.json -- `RawSpellTierEntry`
 
@@ -325,6 +326,15 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `magnitude` | int | `0` | The rule's UNSCALED base magnitude; the fight reads base x TierMultiplier x RiftMultiplier. |  |
 | `threshold` | int | `0` | The rule's threshold; meaning depends on type. |  |
 | `damageType` | string | `""` | A DamageType name (or 'magical') this rule targets; required by TypedResistanceFlat only. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
+
+### `RawPoolTier`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `spend` | float | `0` | Fraction of the owner's primary pool CAPACITY this tier spends, (0,1]; the pool's own gainOnAttack still fires afterwards as normal. Tiers must be authored in ascending order. |  |
+| `damageMultiplier` | float | `0` | How much this tier multiplies the skill's own computed damage by; must be 1 or higher. |  |
+| `shake` | float | `0` | A floor on how hard this tier's blow kicks the stage, 0..1, on top of the skill's own shake; 0 means no extra floor. |  |
+| `hitStopSeconds` | float | `0` | A floor on this tier's hit-stop, in seconds, clamped to HitStop.MaxSeconds; 0 means no extra floor. |  |
 
 ### `RawRelicModifier`
 

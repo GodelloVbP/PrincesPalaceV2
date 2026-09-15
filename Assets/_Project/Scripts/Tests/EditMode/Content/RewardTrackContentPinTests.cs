@@ -63,6 +63,7 @@ namespace PrincesPalace.Domain.Tests
                 raw,
                 PoolOwnership.BookRefusers(pools, characters),
                 PoolOwnership.ZeroStartOwners(pools, characters),
+                PoolOwnership.PrimaryPoolOwners(pools, characters),
                 out var resolved, out var errors);
 
             Assert.IsTrue(ok, "skills.json does not resolve: " + string.Join("; ", errors ?? new List<string>()));

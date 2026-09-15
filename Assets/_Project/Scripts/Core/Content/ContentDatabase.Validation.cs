@@ -546,6 +546,21 @@ namespace PrincesPalace.Content
                         errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.Data.CharacterId}' has none.");
                     }
                 }
+
+                // The load-time twin of SkillEntryResolver's own cross-
+                // catalogue check (its comment records why it cannot make
+                // this call itself) -- checked here as well because content
+                // is validated at both moments and an asset built by hand
+                // under Resources/Content never passed through the resolver
+                // at all. A poolTiers skill spends the OWNER'S PRIMARY pool,
+                // not a signature resource, so the earlier CostsResource
+                // check above cannot stand in for this one -- Bjorn's Fury
+                // IS his primary pool.
+                if (skill.Data.HasPoolTiers && PrimaryPoolOf(skill.Data.CharacterId) == null)
+                {
+                    errors.Add($"Skill '{skill.id}' authors poolTiers, but '{skill.Data.CharacterId}' has no " +
+                               "primary pool to spend from.");
+                }
             }
 
             var seenSpellTierLevels = new HashSet<int>();

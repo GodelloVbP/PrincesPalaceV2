@@ -62,6 +62,21 @@ namespace PrincesPalace.Domain.Content
         public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries,
                                          IReadOnlyCollection<string> bookRefusingOwnerIds,
                                          IReadOnlyCollection<string> zeroStartPoolOwnerIds,
+                                         out List<ResolvedSkill> resolved, out List<string> errors) =>
+            TryResolveAll(entries, bookRefusingOwnerIds, zeroStartPoolOwnerIds, null, out resolved, out errors);
+
+        // THE THIRD CROSS-CATALOGUE FACT, threaded the same way as the two
+        // above and for the same reason: the owner ids a poolTiers skill may
+        // be authored against, i.e. every id PoolOwnership.PrimaryPoolOwners
+        // recognises as a real character (see that method's own header for
+        // what "recognises" excludes). Null or empty means "nothing refuses
+        // poolTiers on cross-catalogue grounds", same convention as the other
+        // two -- a fixture resolving skills.json alone still gets every
+        // WITHIN-FILE poolTiers rule (TryResolvePoolTiers), just not this one.
+        public static bool TryResolveAll(IReadOnlyList<RawSkillEntry> entries,
+                                         IReadOnlyCollection<string> bookRefusingOwnerIds,
+                                         IReadOnlyCollection<string> zeroStartPoolOwnerIds,
+                                         IReadOnlyCollection<string> primaryPoolOwnerIds,
                                          out List<ResolvedSkill> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedSkill>();
@@ -87,6 +102,17 @@ namespace PrincesPalace.Domain.Content
                                "whose primary pool refuses spell books — the only way to reach a book-only skill " +
                                "is to learn the book, and that character can never hold one. Give it an owner who " +
                                "can carry books, or drop bookOnly and author an unlockLevel.");
+                }
+            }
+
+            if (primaryPoolOwnerIds != null && primaryPoolOwnerIds.Count > 0)
+            {
+                foreach (var skill in resolved.Where(s => s.HasPoolTiers && !primaryPoolOwnerIds.Contains(s.CharacterId)))
+                {
+                    errors.Add($"skill '{skill.Id}': poolTiers is authored but '{skill.CharacterId}' is not a " +
+                               "character with a primary pool to spend from — poolTiers spends the OWNER'S primary " +
+                               "pool (Fury, for Bjorn), not a signature resource, and a monster or unknown owner " +
+                               "has none.");
                 }
             }
 
@@ -386,6 +412,11 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryResolvePoolTiers(raw, label, effect, out var poolTiers, out error))
+            {
+                return false;
+            }
+
             resolvedSkill = new ResolvedSkill(raw.id, raw.displayName, raw.description ?? "", raw.characterId.Trim(),
                 unlockLevel, effect, targeting, manaCost, resourceCost, raw.spendsAllResource,
                 power, flatAmount, raw.ignoresDefense, instances,
@@ -396,8 +427,81 @@ namespace PrincesPalace.Domain.Content
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
                 ParseApproach(raw.approach), raw.shake, reach,
                 raw.bookOnly, raw.bookTier, elements,
-                raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "");
+                raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "",
+                poolTiers);
             error = null;
+            return true;
+        }
+
+        // BJORN'S SLAM'S OWN RULES, all of them local to this one skill --
+        // the cross-catalogue "does the owner even have a primary pool" rule
+        // lives in TryResolveAll above, next to bookOnly's identical shape.
+        //
+        // SCOPED TO DamageSingle, same "this field has no meaning on that
+        // effect" rule ignoresDefense/queuePushSlots/meleeReach already
+        // follow. Nothing stops a future DamageAll or fixed-packet tier skill
+        // architecturally -- PoolTierResolution.ApplyDamageMultiplier does
+        // not care what shape the base damage came from -- but nothing reads
+        // PoolTiers from either of those paths TODAY (FightSession.Skills.
+        // ResolveDamageAll, ResolveDamageInstances), so authoring one there
+        // would spend a real pool for a multiplier nobody applies. Refused
+        // rather than left to silently do nothing, and widened the same day
+        // a second poolTiers skill actually needs it.
+        private static bool TryResolvePoolTiers(RawSkillEntry raw, string label, SkillEffect effect,
+            out ResolvedPoolTier[] poolTiers, out string error)
+        {
+            poolTiers = Array.Empty<ResolvedPoolTier>();
+            error = null;
+
+            var authored = raw.poolTiers;
+            if (authored == null || authored.Length == 0) return true;
+
+            if (effect != SkillEffect.DamageSingle || (raw.damageInstances != null && raw.damageInstances.Length > 0))
+            {
+                error = $"{label}: poolTiers only means anything on a DamageSingle skill with no fixed " +
+                        "damageInstances -- nothing multiplies a packet spell's or an AOE's damage by a tier today.";
+                return false;
+            }
+
+            var resolved = new ResolvedPoolTier[authored.Length];
+            float previousSpend = 0f;
+
+            for (int i = 0; i < authored.Length; i++)
+            {
+                var tier = authored[i];
+                if (tier == null)
+                {
+                    error = $"{label}: poolTiers entry #{i + 1} is missing.";
+                    return false;
+                }
+
+                if (tier.spend <= 0f || tier.spend > 1f)
+                {
+                    error = $"{label}: poolTiers entry #{i + 1} spends {tier.spend} of the primary pool's " +
+                            "capacity -- must be greater than 0 and at most 1.";
+                    return false;
+                }
+
+                if (tier.spend <= previousSpend)
+                {
+                    error = $"{label}: poolTiers entry #{i + 1} spends {tier.spend}, which is not greater than " +
+                            $"entry #{i}'s {previousSpend} -- tiers must be authored in strictly ascending order " +
+                            "so the highest affordable one is always the last in the list.";
+                    return false;
+                }
+
+                if (tier.damageMultiplier < 1f)
+                {
+                    error = $"{label}: poolTiers entry #{i + 1} has damageMultiplier {tier.damageMultiplier} -- " +
+                            "must be 1 or higher. A tier that does not even match the base cast is not a tier.";
+                    return false;
+                }
+
+                resolved[i] = new ResolvedPoolTier(tier.spend, tier.damageMultiplier, tier.shake, tier.hitStopSeconds);
+                previousSpend = tier.spend;
+            }
+
+            poolTiers = resolved;
             return true;
         }
 
