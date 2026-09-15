@@ -101,11 +101,11 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- milestones -----------------------------------------------------------
 
+        [TestCase(3)]
         [TestCase(10)]
         [TestCase(25)]
-        [TestCase(50)]
-        [TestCase(90)]
-        [TestCase(100)]
+        [TestCase(30)]
+        [TestCase(40)]
         public void AMilestoneLevelDrawsLarge(int level)
         {
             Assert.IsTrue(RewardTrackLayout.IsMilestone(level));
@@ -120,18 +120,19 @@ namespace PrincesPalace.Domain.Tests
                 if (!RewardTrackLayout.IsMilestone(level)) filler++;
             }
 
-            // 87 filler levels against 12 milestones -- if this ever inverts,
-            // the rail has lost its landmarks.
-            Assert.AreEqual(87, filler);
+            // 29 filler levels against 10 milestones -- if this ever inverts,
+            // the rail has lost its landmarks. Was 87 against 12 before
+            // progression v2 phase 2 cut the cap from 100 to 40.
+            Assert.AreEqual(29, filler);
             Assert.Greater(RewardTrackLayout.MilestoneDiameter, RewardTrackLayout.NodeDiameter);
         }
 
         [Test]
-        public void ThereAreTwelveLandmarks()
+        public void ThereAreTenLandmarks()
         {
             var levels = RewardTrackLayout.MilestoneLevels().ToList();
 
-            Assert.AreEqual(12, levels.Count);
+            Assert.AreEqual(10, levels.Count);
             CollectionAssert.IsOrdered(levels, "the ribbon numbers its dots in this order");
             CollectionAssert.AllItemsAreUnique(levels);
         }
@@ -412,13 +413,15 @@ namespace PrincesPalace.Domain.Tests
         {
             float width = RewardTrackLayout.RibbonWindowWidth(Window);
 
-            // 1520 of 19,000 drawn across 1440.
-            Assert.AreEqual(1520f / 19000f * 1440f, width, 0.001f);
+            // 1520 of 7,600 drawn across 1440. The content is 40 node
+            // pitches wide -- 39 levels plus half a pitch of padding at each
+            // end -- at 190 apiece, and it was 19,000 while the cap was 100.
+            Assert.AreEqual(1520f / 7600f * 1440f, width, 0.001f);
 
-            // Which is about eight and a half nodes of ninety-nine -- the
-            // clearest statement this screen makes about how little of the
-            // track the rail shows.
-            Assert.Less(width, RewardTrackLayout.RibbonWidth * 0.1f);
+            // Which is about eight nodes of thirty-nine. Still the clearest
+            // statement this screen makes about how little of the track the
+            // rail shows -- a fifth of it now rather than a twelfth.
+            Assert.Less(width, RewardTrackLayout.RibbonWidth * 0.25f);
         }
 
         // Drag the box to the far left and the rail must be at the far left,
@@ -480,8 +483,8 @@ namespace PrincesPalace.Domain.Tests
         // ---- which node the window is looking at ------------------------------------------
 
         [TestCase(2)]
-        [TestCase(47)]
-        [TestCase(100)]
+        [TestCase(21)]
+        [TestCase(40)]
         public void TheLevelAtTheCentreIsTheOneScrolledTo(int level)
         {
             Assert.AreEqual(level,
@@ -494,10 +497,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void JustPastANodeIsStillThatNode()
         {
-            float centre = -RewardTrackLayout.NodeX(47);
+            float centre = -RewardTrackLayout.NodeX(21);
 
-            Assert.AreEqual(47, RewardTrackLayout.LevelAtCentre(centre - 94f));
-            Assert.AreEqual(47, RewardTrackLayout.LevelAtCentre(centre + 94f));
+            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre - 94f));
+            Assert.AreEqual(21, RewardTrackLayout.LevelAtCentre(centre + 94f));
         }
 
         [Test]

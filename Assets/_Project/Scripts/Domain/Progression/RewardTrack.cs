@@ -120,14 +120,31 @@ namespace PrincesPalace.Domain.Progression
         // Where the track starts and ends. A character begins AT level 1, so
         // level 1 is not a reward -- the first thing a track pays is level 2.
         public const int StartingLevel = 1;
-        public const int MaxLevel = 100;
 
-        // THE SHARED CADENCE. Twelve levels, the same on every track whatever
-        // it pays at them -- docs/PLAN_REWARD_TRACKS.md §1 explains why this
+        // FORTY, down from a hundred, and the cut is a design decision rather
+        // than a tuning one. Progression v2 (docs/handoffs/progression_v2/
+        // PLAN_PROGRESSION_V2.md §0 D3, §3) prices a career at level 30 as
+        // the completion point with 31-40 as an optional prestige stretch; a
+        // hundred levels against the same total budget meant sixty of them
+        // carried filler nobody designed. Everything that reads this follows:
+        // level_curve.json holds exactly MaxLevel-1 rows and the resolver
+        // refuses a table that does not, and LevelCurve.AddExperience stops a
+        // character here rather than letting income carry them past the last
+        // authored node.
+        public const int MaxLevel = 40;
+
+        // THE SHARED CADENCE. Ten levels, the same on every track whatever it
+        // pays at them -- docs/PLAN_REWARD_TRACKS.md §1 explains why this
         // stays fixed while the CONTENT at each one does not.
+        //
+        // The early three (3, 5, 10) are new and are where the first hour
+        // actually is: 3 is the first ability, typically fight 6 of run 1, and
+        // a track whose first milestone sat at 10 had nothing to show for any
+        // of it. 30 is completion; 35, 38 and 40 are the prestige stretch's
+        // own three.
         public static readonly int[] MilestoneLevels =
         {
-            10, 20, 25, 30, 40, 45, 50, 60, 70, 80, 90, 100,
+            3, 5, 10, 15, 20, 25, 30, 35, 38, 40,
         };
 
         // Whether `level` carries a MILESTONE rather than filler. Asked of

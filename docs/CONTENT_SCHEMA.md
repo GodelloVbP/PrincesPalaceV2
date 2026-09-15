@@ -123,6 +123,13 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `statProfile` | string[] | `[]` | '<combat stat> <percent>' lines spending the combat-stat half of the budget; the five lines must sum to exactly 100. |  |
 | `pieces` | RawSetPiece[] (below) | `[]` | This set's pieces; see RawSetPiece. |  |
 
+## level_curve.json -- `RawLevelCurveEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `level` | int | `0` | The character level this row is the cost to ENTER; the table runs from 2 to RewardTrack.MaxLevel with no gaps. |  |
+| `cost` | int | `0` | Experience needed to go from the previous level to this one; must be 58-10153 and never lower than the row before it. |  |
+
 ## modifiers.json -- `RawModifierEntry`
 
 | Field | Type | Default | Description | Values |

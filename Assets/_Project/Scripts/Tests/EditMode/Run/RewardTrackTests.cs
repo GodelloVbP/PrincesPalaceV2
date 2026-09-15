@@ -19,23 +19,25 @@ namespace PrincesPalace.Domain.Tests
         // player is counting toward. Moving one is a design change and should
         // have to be typed twice.
         //
-        // NINE OF THE TWELVE ARE MaxHealth 15 -- the generated default has no
-        // author to give the other nine milestones their own flavour, so it
+        // SEVEN OF THE TEN ARE MaxHealth 15 -- the generated default has no
+        // author to give the other seven milestones their own flavour, so it
         // fills them with a plain, always-safe reward instead. The three
         // that are not are the spine every track shares: Respec at 20,
-        // StatPoint at 80, SecondLife at 90.
+        // SecondLife at 25, StatPoint at 30.
+        //
+        // The cadence itself moved with progression v2 phase 2 (cap 100 to
+        // 40); this is the placeholder track, and phase 4 authors the real
+        // ones.
+        [TestCase(3, TrackReward.MaxHealth, 15)]
+        [TestCase(5, TrackReward.MaxHealth, 15)]
         [TestCase(10, TrackReward.MaxHealth, 15)]
+        [TestCase(15, TrackReward.MaxHealth, 15)]
         [TestCase(20, TrackReward.Respec, 0)]
-        [TestCase(25, TrackReward.MaxHealth, 15)]
-        [TestCase(30, TrackReward.MaxHealth, 15)]
+        [TestCase(25, TrackReward.SecondLife, 1)]
+        [TestCase(30, TrackReward.StatPoint, 10)]
+        [TestCase(35, TrackReward.MaxHealth, 15)]
+        [TestCase(38, TrackReward.MaxHealth, 15)]
         [TestCase(40, TrackReward.MaxHealth, 15)]
-        [TestCase(45, TrackReward.MaxHealth, 15)]
-        [TestCase(50, TrackReward.MaxHealth, 15)]
-        [TestCase(60, TrackReward.MaxHealth, 15)]
-        [TestCase(70, TrackReward.MaxHealth, 15)]
-        [TestCase(80, TrackReward.StatPoint, 10)]
-        [TestCase(90, TrackReward.SecondLife, 1)]
-        [TestCase(100, TrackReward.MaxHealth, 15)]
         public void AMilestoneLandsOnItsLevel(int level, TrackReward reward, int amount)
         {
             var entry = Default.At(level);
@@ -54,7 +56,7 @@ namespace PrincesPalace.Domain.Tests
 
         [TestCase(0)]
         [TestCase(-1)]
-        [TestCase(101)]
+        [TestCase(41)]
         [TestCase(int.MaxValue)]
         public void LevelsOffTheTrackPayNothingRatherThanThrowing(int level)
         {
@@ -63,21 +65,28 @@ namespace PrincesPalace.Domain.Tests
 
         // THE REASON Spread() exists rather than filling from level 2 upward.
         //
-        // There are more filler levels (87) than rewards to put in them (50)
-        // until the remaining reward kinds are built, so a naive fill would
-        // pack everything into levels 2-58 and leave the back half of the track
-        // -- the half a player grinds hardest for -- completely empty.
+        // A naive fill packs everything into the front of the track and leaves
+        // the back half -- the half a player grinds hardest for -- empty. That
+        // WAS visible as a shortfall (87 filler levels, 50 rewards to put in
+        // them) and is not any more: since the cap came down to 40 the default
+        // mix sums to exactly the 29 filler levels there are, so what this
+        // asserts now is that the whole back half pays rather than that most
+        // of it does.
+        //
+        // Kept rather than deleted, because the shortfall comes straight back
+        // the moment a kind is added to the mix without a matching count, and
+        // this is the only test that would notice where it landed.
         [Test]
         public void RewardsReachTheBackHalfOfTheTrack()
         {
             int inTheBackHalf = 0;
-            for (int level = 51; level <= RewardTrack.MaxLevel; level++)
+            for (int level = RewardTrack.MaxLevel / 2 + 1; level <= RewardTrack.MaxLevel; level++)
             {
                 if (Default.At(level).IsSomething) inTheBackHalf++;
             }
 
-            Assert.Greater(inTheBackHalf, 20,
-                "the back half of the track is nearly empty, so the filler is packed into the front");
+            Assert.AreEqual(20, inTheBackHalf,
+                "the back half of the track is not full, so the filler is packed into the front");
         }
 
         // ---- grants vs unlocks --------------------------------------------------
@@ -135,9 +144,9 @@ namespace PrincesPalace.Domain.Tests
 
         [TestCase(TrackReward.Respec, 19, false)]
         [TestCase(TrackReward.Respec, 20, true)]
-        [TestCase(TrackReward.Respec, 99, true)]
-        [TestCase(TrackReward.SecondLife, 89, false)]
-        [TestCase(TrackReward.SecondLife, 90, true)]
+        [TestCase(TrackReward.Respec, 39, true)]
+        [TestCase(TrackReward.SecondLife, 24, false)]
+        [TestCase(TrackReward.SecondLife, 25, true)]
         public void ACapabilityTurnsOnAtItsLevelAndStaysOn(TrackReward reward, int level, bool expected)
         {
             Assert.AreEqual(expected, Default.HasUnlocked(reward, level));
@@ -171,7 +180,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(isSignatureReward, RewardTrack.IsSignatureReward(reward));
         }
 
-        // Level 80 grants ten stat points. It USED TO be sized to exactly one
+        // Level 30 grants ten stat points (level 80 before progression v2
+        // phase 2 moved the spine). It USED TO be sized to exactly one
         // AbilityDerivation.CharacterBand -- the edge past which a point
         // stopped paying a flat rate and started paying the square of the
         // excess, making the tenth point the last "cheap" one. Phase 2 of the
@@ -186,10 +196,10 @@ namespace PrincesPalace.Domain.Tests
         // (gotcha 5) rather than computed, so a future formula change has to
         // touch this number on purpose.
         [Test]
-        public void TheLevelEightyGrantIsTenPoints_AndEveryPointIsWorthTheSameFlatAmount()
+        public void TheStatPointMilestoneIsTenPoints_AndEveryPointIsWorthTheSameFlatAmount()
         {
-            Assert.AreEqual(TrackReward.StatPoint, Default.At(80).Reward);
-            Assert.AreEqual(10, Default.At(80).Amount);
+            Assert.AreEqual(TrackReward.StatPoint, Default.At(30).Reward);
+            Assert.AreEqual(10, Default.At(30).Amount);
 
             int firstStep = HealthAt(1) - HealthAt(0);
             int tenthStep = HealthAt(10) - HealthAt(9);
@@ -314,7 +324,8 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // 50 stat points across the whole track: 40 filler plus level 80's ten.
+        // 24 stat points across the whole track: 14 filler plus level 30's ten.
+        // Was 50 while the cap was 100.
         //
         // Under the 60 that would be six scores' worth of ten points each --
         // ten no longer names a formula band (AbilityDerivation.CharacterBand
@@ -328,14 +339,14 @@ namespace PrincesPalace.Domain.Tests
         {
             int points = Default.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel);
 
-            Assert.AreEqual(50, points);
+            Assert.AreEqual(24, points);
             Assert.Less(points, Stats.AbilityScores.All.Length * 10,
                 "the track grants enough points to max every band, so spending them is no longer a choice");
         }
 
-        // The default table's two totals (50 stat points, 229 max health)
+        // The default table's two totals (24 stat points, 135 max health)
         // are pinned in RewardTrackDefinitionTests.
-        // TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth
+        // TheDefaultTrackPaysTwentyFourStatPointsAndOneHundredThirtyFiveMaxHealth
         // instead of here -- RewardTrackDefinition.Default owns the table,
         // and Default.GrantedBetween(MaxHealth, ...) is 0 by construction
         // (OnlyStatPointIsAGrant above), so a MaxHealth total belongs beside

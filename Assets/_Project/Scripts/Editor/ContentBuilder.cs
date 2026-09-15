@@ -26,6 +26,9 @@ public static class ContentBuilder
     private const string RewardTracksPath = ContentRoot + "/RewardTracks";
     private const string PoolsPath = ContentRoot + "/Pools";
 
+    // ---- progression v2 phase 2: the authored level cost table ----------
+    private const string LevelCurvePath = ContentRoot + "/LevelCurve";
+
     // The talent grid's shape is not declared here, and must not be written
     // out here either. The tree's size has one home -- TalentPage.PathCount
     // for its width, TalentSkeleton.SlotCount for its depth -- and
@@ -91,6 +94,7 @@ public static class ContentBuilder
         EnsureFolder(ModifiersPath);
         EnsureFolder(RewardTracksPath);
         EnsureFolder(PoolsPath);
+        EnsureFolder(LevelCurvePath);
         Mark("folders");
 
         // ONE IMPORT PASS FOR THE WHOLE CATALOGUE, not one per asset.
@@ -159,6 +163,12 @@ public static class ContentBuilder
             // validated against what those two already resolved -- see
             // docs/PLAN_REWARD_TRACKS.md §4's touch-point table.
             BuildRewardTracks(characters, skills);
+
+            // ---- progression v2 phase 2 ----------------------------------
+            // Depends on nothing else in this method: the cost table is
+            // validated against RewardTrack.MaxLevel, which is code, not
+            // content. Last so the block stays one contiguous addition.
+            BuildLevelCurve();
         }
         finally
         {
@@ -457,6 +467,25 @@ public static class ContentBuilder
             // BY LEVEL, not by id -- a tier has no id of its own, and the
             // filename is what ContentDatabase browses.
             tier => $"level_{tier.Level}");
+
+    // ---- progression v2 phase 2: the authored level cost table --------------
+    //
+    // The ninth type through the shared Build<> shape, and the thinnest: two
+    // authored fields, one asset per row. What is NOT here is any arithmetic
+    // -- LevelCurveEntryResolver owns the three rules (gapless 2..MaxLevel,
+    // never falling, inside contract 2's 58-10153) and refuses the file
+    // outright, so nothing partial reaches disk.
+    //
+    // Filenames are zero-padded because they are what a human browsing
+    // Resources/Content/LevelCurve reads; the LOAD order is
+    // LevelCurveDefinition.SortOrder and does not depend on them.
+    private static void BuildLevelCurve() =>
+        Build<RawLevelCurveEntry, ResolvedLevelCost, LevelCurveDefinition>(
+            "BuildLevelCurve", "Assets/_Project/ContentData/level_curve.json", LevelCurvePath, "level costs",
+            json => JsonUtility.FromJson<RawLevelCurveFile>(json).levels,
+            LevelCurveEntryResolver.TryResolveAll,
+            (asset, row) => asset.SetData(row),
+            row => $"level_{row.Level:D2}");
 
     // No enum mapping step here, unlike BuildItems: SkillEffect and
     // SkillTargeting live in Domain and are used directly on both sides.

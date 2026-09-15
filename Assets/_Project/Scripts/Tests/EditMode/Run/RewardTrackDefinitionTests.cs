@@ -9,20 +9,25 @@ namespace PrincesPalace.Domain.Tests
     // docs/PLAN_REWARD_TRACKS.md P3.
     public class RewardTrackDefinitionTests
     {
-        // THE DEFAULT TABLE'S TWO TOTALS: 40 filler stat points + level 80's
-        // ten = 50; 47 filler MaxHealth at 2 each + 9 milestones at 15 each =
-        // 229. MaxHealth is read via CollectedTotal rather than
+        // THE DEFAULT TABLE'S TWO TOTALS: 14 filler stat points + level 30's
+        // ten = 24; 15 filler MaxHealth at 2 each + 7 milestones at 15 each =
+        // 135. MaxHealth is read via CollectedTotal rather than
         // GrantedBetween -- it is not a grant (RewardTrackTests.
         // OnlyStatPointIsAGrant).
+        //
+        // Both numbers came down with the cap (progression v2 phase 2: 100
+        // levels to 40, twelve milestones to ten). They are what the
+        // GENERATED placeholder track pays a character nobody has authored
+        // one for; phase 4 replaces it per character.
         [Test]
-        public void TheDefaultTrackPaysFiftyStatPointsAndTwoHundredTwentyNineMaxHealth()
+        public void TheDefaultTrackPaysTwentyFourStatPointsAndOneHundredThirtyFiveMaxHealth()
         {
             var track = RewardTrackDefinition.Default("bear");
 
-            Assert.AreEqual(50, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
-                "40 filler singles plus level 80's ten");
-            Assert.AreEqual(229, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
-                "9 milestone nodes at 15 plus 47 filler nodes at 2");
+            Assert.AreEqual(24, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
+                "14 filler singles plus level 30's ten");
+            Assert.AreEqual(135, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
+                "7 milestone nodes at 15 plus 15 filler nodes at 2");
         }
 
         // A landmark the screen draws large with nothing on it is the failure
@@ -52,33 +57,34 @@ namespace PrincesPalace.Domain.Tests
             var milestones = new (int Level, TrackEntry Entry)[]
             {
                 (25, new TrackEntry(TrackReward.SignatureCapacity, 5)),
-                (100, new TrackEntry(TrackReward.SignatureCapacity, 5)),
+                (RewardTrack.MaxLevel, new TrackEntry(TrackReward.SignatureCapacity, 5)),
             };
 
             var track = RewardTrackDefinition.Build("fixture", milestones,
                 System.Array.Empty<(TrackEntry Entry, int Count)>());
 
-            Assert.AreEqual(10, track.CollectedTotal(TrackReward.SignatureCapacity, 100),
+            Assert.AreEqual(10, track.CollectedTotal(TrackReward.SignatureCapacity, RewardTrack.MaxLevel),
                 "two SignatureCapacity entries did not sum once both were behind the watermark");
-            Assert.AreEqual(5, track.CollectedTotal(TrackReward.SignatureCapacity, 99),
-                "the level-100 entry was collected before level 100 was reached");
+            Assert.AreEqual(5, track.CollectedTotal(TrackReward.SignatureCapacity, RewardTrack.MaxLevel - 1),
+                "the top entry was collected before its level was reached");
         }
 
         // What has not been reached yet is not collected. SecondLife is the
         // one kind on the default track that can only ever appear at its
-        // single milestone (level 90) -- rule 3 in docs/PLAN_REWARD_TRACKS.md
-        // §4 refuses a one-shot capability as filler, so unlike MaxHealth
-        // (which also lands as filler well before level 10) there is no
-        // earlier entry that could make this pass by accident.
+        // single milestone (level 25 since progression v2 phase 2 repointed
+        // the cadence; it was 90) -- rule 3 in docs/PLAN_REWARD_TRACKS.md §4
+        // refuses a one-shot capability as filler, so unlike MaxHealth (which
+        // also lands as filler well before level 10) there is no earlier
+        // entry that could make this pass by accident.
         [Test]
         public void NothingIsCollectedAboveTheWatermark()
         {
             var track = RewardTrackDefinition.Default("bear");
 
-            Assert.AreEqual(0, track.CollectedTotal(TrackReward.SecondLife, 89),
-                "level 90's second life was collected before level 90 was reached");
-            Assert.AreEqual(1, track.CollectedTotal(TrackReward.SecondLife, 90),
-                "level 90's second life was not collected once it was reached");
+            Assert.AreEqual(0, track.CollectedTotal(TrackReward.SecondLife, 24),
+                "level 25's second life was collected before level 25 was reached");
+            Assert.AreEqual(1, track.CollectedTotal(TrackReward.SecondLife, 25),
+                "level 25's second life was not collected once it was reached");
         }
 
         // CollectedElementalTotals is ContentDatabase.Effective.ModifierEffects'

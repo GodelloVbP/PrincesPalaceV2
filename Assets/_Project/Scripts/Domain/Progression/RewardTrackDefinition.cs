@@ -6,16 +6,18 @@ namespace PrincesPalace.Domain.Progression
 {
     // A reward track MATERIALISED FOR ONE CHARACTER: the milestones and the
     // filler mix an author (or, for a character nobody has designed yet,
-    // Default) described, computed once into a hundred entries.
+    // Default) described, computed once into one entry per level.
     //
     // RewardTrack.cs keeps only the parts of a track that do NOT vary by
     // character -- the shared cadence, the state arithmetic; this class
     // holds the part that does, which reward sits at which level. See
     // docs/PLAN_REWARD_TRACKS.md §3 for the fuller rationale for the split.
     //
-    // DESCRIBED, THEN DERIVED: twelve milestones and a filler mix are
-    // written down, and the eighty-seven filler placements are computed by
-    // InterleaveMix/Spread. Every entry is a TrackEntry rather than a bare
+    // DESCRIBED, THEN DERIVED: the milestones and a filler mix are written
+    // down, and the filler placements are computed by InterleaveMix/Spread.
+    // Both counts follow RewardTrack.MaxLevel and its cadence -- ten
+    // milestones and twenty-nine filler levels since progression v2 phase 2
+    // cut the cap from 100 to 40. Every entry is a TrackEntry rather than a bare
     // (TrackReward, int) tuple, because TrackEntry carries the two authored
     // selectors -- Against, SkillId -- a track needs beyond reward and
     // amount.
@@ -73,30 +75,42 @@ namespace PrincesPalace.Domain.Progression
         // "no track authored" (there is none today) is one signature away
         // rather than a breaking change to every caller.
         //
-        // THE SPINE -- Respec at 20, StatPoint 10 at 80, SecondLife at 90 --
-        // is the same three levels on every track, authored or generated; the
-        // other nine milestones fill with MaxHealth 15 so the track still pays
-        // every level while a character has no flavour of their own yet.
+        // THE SPINE -- Respec, StatPoint 10 and SecondLife -- is the same
+        // three KINDS on every track, authored or generated; the other seven
+        // milestones fill with MaxHealth 15 so the track still pays every
+        // level while a character has no flavour of their own yet.
+        //
+        // REPOINTED, NOT RETUNED, by progression v2 phase 2. The cadence
+        // moved (RewardTrack.MilestoneLevels is now 3, 5, 10, 15, 20, 25, 30,
+        // 35, 38, 40) and Build indexes an array of MaxLevel+1, so the old
+        // rows at 45 through 100 were not merely wrong, they were out of
+        // bounds. The three spine kinds keep the ORDER they had -- respec
+        // before second life before the big stat grant -- landing on the
+        // three levels the plan gives them on the real tracks where it can
+        // (Second Life at 25, PLAN_PROGRESSION_V2.md §4). This is still the
+        // placeholder for a character nobody has designed; phase 4 authors
+        // the real ones.
         private static readonly (int Level, TrackEntry Entry)[] DefaultMilestones =
         {
-            (10,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (20,  new TrackEntry(TrackReward.Respec, 0)),
-            (25,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (30,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (40,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (45,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (50,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (60,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (70,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (80,  new TrackEntry(TrackReward.StatPoint, 10)),
-            (90,  new TrackEntry(TrackReward.SecondLife, 1)),
-            (100, new TrackEntry(TrackReward.MaxHealth, 15)),
+            (3,  new TrackEntry(TrackReward.MaxHealth, 15)),
+            (5,  new TrackEntry(TrackReward.MaxHealth, 15)),
+            (10, new TrackEntry(TrackReward.MaxHealth, 15)),
+            (15, new TrackEntry(TrackReward.MaxHealth, 15)),
+            (20, new TrackEntry(TrackReward.Respec, 0)),
+            (25, new TrackEntry(TrackReward.SecondLife, 1)),
+            (30, new TrackEntry(TrackReward.StatPoint, 10)),
+            (35, new TrackEntry(TrackReward.MaxHealth, 15)),
+            (38, new TrackEntry(TrackReward.MaxHealth, 15)),
+            (40, new TrackEntry(TrackReward.MaxHealth, 15)),
         };
 
+        // Twenty-nine filler levels: 39 levels from 2 to 40, less the ten
+        // milestones above. Same roughly-even split between the two filler
+        // kinds the hundred-level version used.
         private static readonly (TrackEntry Entry, int Count)[] DefaultFillerMix =
         {
-            (new TrackEntry(TrackReward.StatPoint, 1), 40),
-            (new TrackEntry(TrackReward.MaxHealth, 2), 47),
+            (new TrackEntry(TrackReward.StatPoint, 1), 14),
+            (new TrackEntry(TrackReward.MaxHealth, 2), 15),
         };
 
         public static RewardTrackDefinition Default(string characterId) =>
