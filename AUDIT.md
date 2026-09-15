@@ -2706,6 +2706,15 @@ orchestrator made, flip-able, see its commit message), F4 (`15b1560d`, Magic Mar
 
 ### 147. "The Flock" wards exactly one ally, and which one is decided by the field formation
 
+**The owner's answer, 2026-09-15.** Neither filed option: silently deciding by formation is
+"just stupid," but a real fix means the player picks the target, not the engine. There is no
+target-picker anywhere in this game today -- every ally-facing talent (this one, and
+`GiftRecipient`, which has the identical unsolved need per its own comment) auto-picks "the
+first ally in line." Building one for The Flock alone would mean building the same feature
+twice once `GiftRecipient` needs it too. Deferred on purpose: this wants a proper mid-combat
+target-selection feature covering both talents, not a patch on one. Left on the "first ally"
+auto-pick until that feature is scoped.
+
 Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Talents.cs`,
 `ApplyWard`: with `WardSpreadsToAllies` but not `WardSpreadsToWholeParty`, the loop wards the
 first living non-caster in `_encounter.PlayerParty` order and `break`s.
