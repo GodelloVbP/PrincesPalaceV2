@@ -466,10 +466,36 @@ namespace PrincesPalace
             // knows-it half already struck (a skill known by SOME fielded
             // characters is still offered), and the shop card's own fact line
             // is what tells the player who it is for.
+            //
+            // "KNOWS IT" NOW INCLUDES THE TRACK (progression v2 phase 4).
+            // Three book spells are handed over by a reward-track UnlockSkill
+            // node -- Cinderfault to Shawn at 20, Frost Flare and Lightning
+            // Bolt to Odette at 3 and 10 -- and before this the shelf only
+            // asked run.learnedSpells, so a squad who had collected all three
+            // could still be sold copies of them. That is the same dead card
+            // §2d already refuses for a book somebody bought: nothing on it
+            // can be acted on. The two routes are asked together rather than
+            // the track route being bolted on afterwards, because the
+            // question is one question -- "can this character already cast
+            // it" -- and splitting it is how the two answers drift.
+            //
+            // READ OFF claimedTrackLevel, like every other track read: a node
+            // reached but not collected has handed over nothing yet, so the
+            // book is still worth selling.
+            bool AlreadyKnows(string characterId, string skillId)
+            {
+                if (learned.Exists(e => e != null && e.characterId == characterId && e.skillId == skillId)) return true;
+
+                var character = SaveSlotManager.CurrentSave?.roster
+                    ?.FirstOrDefault(c => c != null && c.definitionId == characterId);
+                if (character == null) return false;
+
+                return RewardTracks.For(character).SkillsCollected(character.claimedTrackLevel).Contains(skillId);
+            }
+
             bool NobodyCanUse(string skillId) =>
                 squad.Count > 0 && squad.All(id =>
-                    !ContentDatabase.CanHoldSpellBooks(id)
-                    || learned.Exists(e => e != null && e.characterId == id && e.skillId == skillId));
+                    !ContentDatabase.CanHoldSpellBooks(id) || AlreadyKnows(id, skillId));
 
             return ContentDatabase.Skills
                 .Where(s => s != null && s.Data.BookTier > 0 && !NobodyCanUse(s.id))

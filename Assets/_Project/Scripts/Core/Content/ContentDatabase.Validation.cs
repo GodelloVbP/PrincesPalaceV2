@@ -487,9 +487,20 @@ namespace PrincesPalace.Content
                 // of the resolver's own authoring-time refusal: content is
                 // checked at both moments, and this is the one that would
                 // catch a hand-edited asset the resolver never saw.
-                if (!skill.Data.BookOnly && skill.Data.UnlockLevel < 1)
+                // ONE WAY TO LEARN A SKILL. The resolver's own rule, mirrored
+                // for the loaded catalogue -- see SkillEntryResolver's
+                // StartingKitUnlockLevel/GrantedElsewhereUnlockLevel for why
+                // there are exactly two legal values and nothing between
+                // them. Reads the same two constants rather than retyping
+                // the numbers, so the two doors cannot drift apart.
+                if (!skill.Data.BookOnly
+                    && skill.Data.UnlockLevel != SkillEntryResolver.StartingKitUnlockLevel
+                    && skill.Data.UnlockLevel != SkillEntryResolver.GrantedElsewhereUnlockLevel)
                 {
-                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.Data.UnlockLevel}; characters start at level 1.");
+                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.Data.UnlockLevel}. A skill is either " +
+                               $"part of the starting kit ({SkillEntryResolver.StartingKitUnlockLevel}) or handed " +
+                               $"over by a reward track or a talent ({SkillEntryResolver.GrantedElsewhereUnlockLevel}) " +
+                               "-- the levelling ladder in between is gone.");
                 }
 
                 if (skill.Data.BookOnly && skill.Data.UnlockLevel != int.MaxValue)

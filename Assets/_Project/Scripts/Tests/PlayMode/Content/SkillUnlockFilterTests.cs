@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -98,11 +99,10 @@ namespace PrincesPalace.PlayModeTests
         // A LITERAL, not just "the two sides agree with each other" -- two
         // calls into the same code compared to each other proves nothing
         // about either being right. Pinned against Shawn (skills.json's
-        // "sheep"): shear unlocks at 1, woolgathering at 2, battering_ram at
-        // 6, and nothing else on his own kit unlocks by level at all (the six
-        // book spells are bookOnly, and Provoke/Headbutt/Black Ram
-        // Mode/Fleece Ward/Shatter/Wail/the three Gifts are talent-granted at
-        // 999).
+        // "sheep"): shear is his whole starting kit, and nothing else he
+        // owns is reachable by level at all -- the book spells are bookOnly,
+        // and everything else on his row is at 999, handed over by his
+        // reward track or by a talent.
         [Test]
         public void ShawnsLevelOneKitIsExactlyShear()
         {
@@ -114,12 +114,27 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.AreEqual(new[] { "shear" }, ids);
         }
 
+        // THE LADDER IS GONE (progression v2 phase 4, contract 6). This test
+        // used to assert that levelling to 6 added Woolgathering and
+        // Battering Ram; both are at 999 now and arrive from the track's own
+        // UnlockSkill nodes instead. What replaces it is the assertion that
+        // makes the removal real rather than assumed: levelling to the cap
+        // adds NOTHING to anybody's kit, on every character in content, so
+        // there is no second route left for a track node to race.
         [Test]
-        public void ShawnsLevelSixKitAddsWoolgatheringAndBatteringRamInUnlockOrder()
+        public void LevellingToTheCapAddsNothingToAnybodysKit()
         {
-            var ids = ContentDatabase.SkillsUnlockedByLevel("sheep", 6).Select(s => s.id).ToList();
+            foreach (var definition in ContentDatabase.Characters)
+            {
+                var atOne = ContentDatabase.SkillsUnlockedByLevel(definition.id, 1)
+                    .Select(s => s.id).ToList();
+                var atCap = ContentDatabase.SkillsUnlockedByLevel(definition.id, RewardTrack.MaxLevel)
+                    .Select(s => s.id).ToList();
 
-            CollectionAssert.AreEqual(new[] { "shear", "woolgathering", "battering_ram" }, ids);
+                CollectionAssert.AreEqual(atOne, atCap,
+                    $"'{definition.id}': levelling still hands over a skill, so the unlockLevel ladder " +
+                    "survives beside the reward track.");
+            }
         }
     }
 }

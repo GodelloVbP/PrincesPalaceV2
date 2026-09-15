@@ -20,6 +20,14 @@ namespace PrincesPalace.Domain.Content
     public static class SkillEntryResolver
     {
         private const int DefaultUnlockLevel = 1;
+
+        // THE ONLY TWO unlockLevel VALUES a non-book skill may author -- see
+        // the check in TryResolveOne for what each one means and why there
+        // is nothing in between. Public so ContentDatabase.Validation can
+        // mirror the rule against the LOADED catalogue by reading the same
+        // two numbers rather than retyping them.
+        public const int StartingKitUnlockLevel = 1;
+        public const int GrantedElsewhereUnlockLevel = 999;
         private const int DefaultManaCost = 0;
         private const int DefaultResourceCost = 0;
         private const int DefaultPower = 0;
@@ -230,9 +238,36 @@ namespace PrincesPalace.Domain.Content
             else
             {
                 unlockLevel = raw.unlockLevel >= 0 ? raw.unlockLevel : DefaultUnlockLevel;
-                if (unlockLevel < 1)
+
+                // ONE WAY TO LEARN A SKILL, AND unlockLevel IS NO LONGER IT
+                // (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §1,
+                // contract 6: "One way to learn a skill: the track. The
+                // unlockLevel ladder is removed").
+                //
+                // Two values are left and they are not two halves of a
+                // ladder, they are two different statements:
+                //
+                //   1   -- the starting kit. This character HAS this from the
+                //          moment they exist, and every monster's whole
+                //          ability list is this too.
+                //   999 -- unreachable on purpose. Something else hands this
+                //          over: a track's UnlockSkill node, a talent's
+                //          grantsSkillId. The number is a marker, not a
+                //          level, which is why it is not MaxLevel + 1 -- it
+                //          must stay unreachable however far the cap moves.
+                //
+                // Anything between them is the ladder, and a ladder plus a
+                // track is two systems handing out the same skill at two
+                // different moments with no rule about which wins. Refused
+                // with the skill named, rather than resolved and left to be
+                // discovered when a level-6 character gets Battering Ram the
+                // track had not paid out yet.
+                if (unlockLevel != StartingKitUnlockLevel && unlockLevel != GrantedElsewhereUnlockLevel)
                 {
-                    error = $"{label}: unlockLevel must be 1 or higher (got {unlockLevel}). Characters start at level 1.";
+                    error = $"{label}: unlockLevel is {unlockLevel}. A skill is either part of the starting kit " +
+                            $"({StartingKitUnlockLevel}) or handed over by a reward track or a talent " +
+                            $"({GrantedElsewhereUnlockLevel}) -- the levelling ladder in between is gone. " +
+                            "Put the skill on the character's track instead.";
                     return false;
                 }
             }

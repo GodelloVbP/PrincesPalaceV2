@@ -186,6 +186,52 @@ namespace PrincesPalace.PlayModeTests
                 "a card nobody fielded could act on is a dead card holding a live card's slot");
         }
 
+        // PROGRESSION V2 PHASE 4: a book a character's own TRACK handed over
+        // is one they already know, so it leaves the shelf the same way a
+        // bought copy does.
+        //
+        // Three book spells are now track rewards -- Cinderfault to Shawn at
+        // 20, Frost Flare and Lightning Bolt to Odette at 3 and 10 -- and
+        // until this the shelf only ever asked run.learnedSpells. A squad who
+        // had collected all three could still be sold copies of them, which
+        // is precisely the dead card §2d already refuses for a bought book.
+        //
+        // A SOLO ODETTE, because the threshold is ALL: with Shawn fielded
+        // beside her the book is correctly still stock for him, and the two
+        // halves of the rule would hide each other. Solo is an ordinary
+        // fielding (ABookLeavesTheShelfOnlyWhenEveryFieldedCharacterRefusesIt
+        // builds a solo Bjorn the same way).
+        //
+        // CLAIMED, NOT REACHED: the level below the node still sells the
+        // book, which is the assertion that makes this about collection
+        // rather than about the character id.
+        [Test]
+        public void ABookTheTrackHasAlreadyHandedOverLeavesTheShelf()
+        {
+            RunManager.StartRun(4242UL);
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "owl" };
+            CollectionAssert.AreEqual(new[] { "owl" }, save.ActiveSquadIds(),
+                "the bench did not take, so this is still testing a mixed squad");
+
+            var odette = save.roster.Single(c => c.definitionId == "owl");
+            int frostFlareLevel = RewardTracks.For(odette).UnlockLevel(Domain.Progression.TrackReward.UnlockSkill);
+            Assert.Greater(frostFlareLevel, 0, "Odette's track no longer unlocks a skill at all");
+            Assert.AreEqual("frost_flare", RewardTracks.For(odette).At(frostFlareLevel).SkillId,
+                "her first UnlockSkill node is not Frost Flare any more -- repin this fixture");
+
+            odette.claimedTrackLevel = frostFlareLevel - 1;
+            CollectionAssert.Contains(
+                RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), "frost_flare",
+                "the node has not been collected, so the book is still worth selling");
+
+            odette.claimedTrackLevel = frostFlareLevel;
+            CollectionAssert.DoesNotContain(
+                RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), "frost_flare",
+                "she has collected the node that teaches it, so the book is a card she cannot act on");
+        }
+
         // GATE 4. Reconcile runs on LOAD, so a save written before a
         // character's pool changed reaches a fight through routes that never
         // opened a save file (the tooling party, a preview) -- this is what

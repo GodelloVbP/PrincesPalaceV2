@@ -1,5 +1,5 @@
 {
-  "_readme": "Per-character combat skills, unlocked by levelling -- with one exception, and it is the one most likely to be got wrong. A bookOnly skill is never granted by the level ladder; a reward track may still name one. It belongs to whoever LEARNED it, not to whoever it was authored against. characterId on a book records who it was drafted for and nothing else -- all four book spells say 'sheep' because Shawn is who they were written for -- while run.learnedSpells records who actually bought it, and that is what a fight reads (ContentDatabase.AvailableSkillsFor). The shop has always offered a book to whoever is buying; this is that promise kept on the other end. Edit this file, then run Prince's Palace > Build Default Content. These are DIFFERENT from spells.json: that is one global power curve every character shares, which only changes the name and number of the single Skill button; these are a character's own kit, shown as their own row of buttons in a fight. Damage is (Attack, scaled by the caster's own weapon or spell scaling depending on scalingAxis, + flatAmount + power x (resource spent), minus the target's Defense unless ignoresDefense is set, floored at 1) x10 — health pools are on a x10 scale and stat-derived damage is scaled to match (CombatMath.DamageScale). damageInstances is the exception: a list of {type, amount} packets written directly on the final scale and NOT multiplied, each one checked against the target's weakness and resistance on its own, so one cast can land at +50% and -50% at the same time — 25 Fire + 25 Frost against something that resists Frost and burns to Fire is 37 + 12, not 50 of something averaged. Mana restores are flatAmount + power x (resource spent). Heals are that PLUS the caster's Wisdom: half a percent of the caster's own max health per point of Wisdom above 10 (CombatMath.WisdomHealBonus), floored at neutral so a caster with no authored ability scores -- every monster -- heals exactly what it authored. That percentage shape is what lets one heal read sensibly at both ends of the game: Woolgathering (40 flat + 2 a wool, 4 wool, cooldownTurns 2) lands about 52 on a fresh Shawn (WIS 12, ~400 max health) and about 198 -- a fifth of the bar -- on a level-60 build that actually bought Wisdom (WIS 40, ~1000 max health). Both anchors are pinned literally in WoolgatheringHealTests. A skill must cost SOMETHING (manaCost and/or resourceCost); power scales per point actually spent, so a skill with power but no resource cost is rejected rather than silently scaling by zero. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Per-character combat skills. THERE IS ONE WAY TO LEARN ONE AND unlockLevel IS NOT IT: a non-book skill authors either 1 (the starting kit, and every monster ability) or 999 (unreachable on purpose -- something else hands it over: a reward track UnlockSkill node, or a talent grantsSkillId). Anything in between is refused by SkillEntryResolver and by ContentDatabase.Validation, naming the skill. The ladder is gone because a ladder PLUS a track is two systems handing out the same skill at two different moments with no rule about which wins (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md section 1, contract 6). A bookOnly skill authors NO unlockLevel at all -- with one exception, and it is the one most likely to be got wrong. A bookOnly skill is never granted by the level ladder; a reward track may still name one. It belongs to whoever LEARNED it, not to whoever it was authored against. characterId on a book records who it was drafted for and nothing else -- all four book spells say 'sheep' because Shawn is who they were written for -- while run.learnedSpells records who actually bought it, and that is what a fight reads (ContentDatabase.AvailableSkillsFor). The shop has always offered a book to whoever is buying; this is that promise kept on the other end. Edit this file, then run Prince's Palace > Build Default Content. These are DIFFERENT from spells.json: that is one global power curve every character shares, which only changes the name and number of the single Skill button; these are a character's own kit, shown as their own row of buttons in a fight. Damage is (Attack, scaled by the caster's own weapon or spell scaling depending on scalingAxis, + flatAmount + power x (resource spent), minus the target's Defense unless ignoresDefense is set, floored at 1) x10 — health pools are on a x10 scale and stat-derived damage is scaled to match (CombatMath.DamageScale). damageInstances is the exception: a list of {type, amount} packets written directly on the final scale and NOT multiplied, each one checked against the target's weakness and resistance on its own, so one cast can land at +50% and -50% at the same time — 25 Fire + 25 Frost against something that resists Frost and burns to Fire is 37 + 12, not 50 of something averaged. Mana restores are flatAmount + power x (resource spent). Heals are that PLUS the caster's Wisdom: half a percent of the caster's own max health per point of Wisdom above 10 (CombatMath.WisdomHealBonus), floored at neutral so a caster with no authored ability scores -- every monster -- heals exactly what it authored. That percentage shape is what lets one heal read sensibly at both ends of the game: Woolgathering (40 flat + 2 a wool, 4 wool, cooldownTurns 2) lands about 52 on a fresh Shawn (WIS 12, ~400 max health) and about 198 -- a fifth of the bar -- on a level-60 build that actually bought Wisdom (WIS 40, ~1000 max health). Both anchors are pinned literally in WoolgatheringHealTests. A skill must cost SOMETHING (manaCost and/or resourceCost); power scales per point actually spent, so a skill with power but no resource cost is rejected rather than silently scaling by zero. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "skills": [
     {
       "id": "shear",
@@ -18,7 +18,7 @@
       "displayName": "Woolgathering",
       "description": "Chew, breathe, and let the fleece knit the day back together.",
       "characterId": "sheep",
-      "unlockLevel": 2,
+      "unlockLevel": 999,
       "effect": "HealSelf",
       "resourceCost": 4,
       "power": 2,
@@ -31,7 +31,7 @@
       "displayName": "Battering Ram",
       "description": "Head down. Armour is a suggestion.",
       "characterId": "sheep",
-      "unlockLevel": 6,
+      "unlockLevel": 999,
       "effect": "DamageSingle",
       "resourceCost": 6,
       "power": 2,
@@ -310,6 +310,7 @@
     {
       "id": "placeholder_shawn_capstone",
       "displayName": "Shawn's Fourth Ability",
+      "unlockLevel": 999,
       "description": "Shawn's fourth ability is not designed yet.",
       "characterId": "sheep",
       "placeholder": true,
@@ -481,7 +482,7 @@
       "displayName": "Bellow",
       "description": "Placeholder kit. Reuses the Provoke effect Shawn's own kit already defines.",
       "characterId": "bear",
-      "unlockLevel": 1,
+      "unlockLevel": 999,
       "effect": "Provoke",
       "manaCost": 0,
       "resourceCost": 0

@@ -32,16 +32,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Targeting_IsInferredFromTheEffect()
         {
-            // Distinct unlock levels: two skills on one character sharing a
-            // level is rejected outright, which is a separate rule tested
-            // below and would otherwise fail this one for the wrong reason.
+            // 1 and 999 are the only two values left (see
+            // OnlyTheStartingKitAndTheGrantedSentinelAreLegalUnlockLevels
+            // below); this used to say 2 and 4.
             var aoe = Minimal("aoe");
             aoe.effect = "DamageAll";
-            aoe.unlockLevel = 2;
+            aoe.unlockLevel = 1;
             var heal = Minimal("heal");
             heal.effect = "HealSelf";
             heal.flatAmount = 5;
-            heal.unlockLevel = 4;
+            heal.unlockLevel = 999;
 
             bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { aoe, heal }, out var resolved, out var errors);
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
@@ -282,19 +282,90 @@ namespace PrincesPalace.Domain.Tests
         // Sharing an unlock level is ALLOWED. An earlier version rejected it
         // as "almost always a typo", which was wrong the first time a
         // character needed to start with more than one spell - Shawn opens
-        // with Shear, Lightning Bolt and Frost Flare all at level 1.
+        // with Shear, Lightning Bolt and Frost Flare all at level 1. It is
+        // now the ordinary case rather than the exception: with the ladder
+        // gone every skill a character owns is at 1 or at 999.
         [Test]
         public void TwoSkillsForOneCharacterMayShareAnUnlockLevel()
         {
             var a = Minimal("a");
-            a.unlockLevel = 4;
+            a.unlockLevel = 999;
             var b = Minimal("b");
-            b.unlockLevel = 4;
+            b.unlockLevel = 999;
 
             bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { a, b }, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(2, resolved.Count);
+        }
+
+        // ---- one way to learn a skill (progression v2 phase 4) ----
+        //
+        // 1 is the starting kit and 999 says "something else hands this
+        // over"; a ladder rung in between is refused, because a ladder plus
+        // a reward track is two systems granting one skill at two moments
+        // with no rule about which wins. The message names the skill,
+        // because an author who typed 6 needs to know which row to move onto
+        // the track.
+        [TestCase(2)]
+        [TestCase(6)]
+        [TestCase(40)]
+        [TestCase(998)]
+        [TestCase(1000)]
+        public void ALadderRungUnlockLevel_IsRejectedNamingTheSkill(int unlockLevel)
+        {
+            var entry = Minimal("woolgathering");
+            entry.unlockLevel = unlockLevel;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            string joined = string.Join("; ", errors);
+            StringAssert.Contains("woolgathering", joined);
+            StringAssert.Contains(unlockLevel.ToString(), joined);
+        }
+
+        [TestCase(1)]
+        [TestCase(999)]
+        public void OnlyTheStartingKitAndTheGrantedSentinelAreLegalUnlockLevels(int unlockLevel)
+        {
+            var entry = Minimal();
+            entry.unlockLevel = unlockLevel;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(unlockLevel, resolved[0].UnlockLevel);
+        }
+
+        // 0 and below were refused before this rule existed, and still are --
+        // by the same check now, which is worth pinning so the old refusal
+        // is not assumed to have survived on its own.
+        [TestCase(0)]
+        public void AnUnlockLevelBelowOne_IsStillRejected(int unlockLevel)
+        {
+            var entry = Minimal();
+            entry.unlockLevel = unlockLevel;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "unlockLevel " + unlockLevel + " resolved");
+        }
+
+        // A bookOnly skill authors NO unlockLevel at all and resolves to
+        // int.MaxValue -- the rule above must not catch it, and the
+        // both-authored refusal must still fire.
+        [Test]
+        public void ABookOnlySkillIsUntouchedByTheUnlockLevelRule()
+        {
+            var entry = Minimal("mud_burst");
+            entry.bookOnly = true;
+            entry.unlockLevel = -1;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(int.MaxValue, resolved[0].UnlockLevel);
         }
 
         // Two characters may of course share a level.
