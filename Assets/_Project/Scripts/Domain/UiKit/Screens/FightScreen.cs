@@ -189,10 +189,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // one is ever shown, which PartyFormationCaptureTests asserts.
         public List<NodeRef> PcPlateHighlights = new List<NodeRef>();
 
-        // THE IDENTITY LINE, one per plate, in the free band under the bars:
-        // whichever title the player has chosen, then VICTOR, then MASTER.
-        // Empty and hidden for every character below level 31, which is most
-        // of a career -- see Core/CharacterIdentity.LookFor.
+        // THE IDENTITY WORD, one per plate, in the free band under the bars:
+        // MASTER once mastery is collected, else whichever title the player
+        // has chosen. ONE word -- three ("LEGEND . VICTOR . MASTER") read as
+        // noise at this band's width, and VICTOR is a victory-screen word,
+        // not a plate one. Empty and hidden for every character below level
+        // 31, which is most of a career -- see Core/CharacterIdentity.
+        // LookFor's PlateWord.
         public List<NodeRef> PcIdentityLines = new List<NodeRef>();
 
         // THE IDENTITY RIM, one per plate: the plate's own glow decal again,

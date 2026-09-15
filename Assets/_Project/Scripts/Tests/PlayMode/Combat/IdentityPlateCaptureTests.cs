@@ -19,11 +19,12 @@ namespace PrincesPalace.PlayModeTests
     //
     // TWO PLATES, ONE FRAME. The squad is set to level 40 with the whole track
     // collected, which is every identity node at once: the gold rim (38, and
-    // again via Mastery at 40), the emboss, the portrait frame and the line
-    // reading TITLE . VICTOR . MASTER. Photographing the maximum is what makes
-    // the picture worth taking -- a plate with one silver rim and nothing else
-    // proves the rim and says nothing about whether four states stacked on one
-    // 452px strip still leave it readable.
+    // again via Mastery at 40), the emboss, the portrait frame and the plate
+    // word, which at 40 reads MASTER (mastery outranks the selected title --
+    // Core/CharacterIdentity.LookFor's PlateWord). Photographing the maximum
+    // is what makes the picture worth taking -- a plate with one silver rim
+    // and nothing else proves the rim and says nothing about whether three
+    // states stacked on one 452px strip still leave it readable.
     //
     // Graphics device only: tools/screenshot.ps1 -Runtime -RuntimeFilter
     // IdentityPlateCaptureTests.

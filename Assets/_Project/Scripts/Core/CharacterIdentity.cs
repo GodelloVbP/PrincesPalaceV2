@@ -92,7 +92,21 @@ namespace PrincesPalace
             // The words under the name: the selected title, then VICTOR if the
             // victory pose is collected, then MASTER. Empty for a character
             // below level 31, which is most of a career.
+            //
+            // NOT WHAT THE FIGHT PLATE DRAWS -- see PlateWord below. This
+            // stays the full sentence so the victory screen (its own
+            // placeholder for the pose art, §5) still has VICTOR to say when
+            // it is built; the plate found three words unreadable at its
+            // band's width and phase 5's review cut it down to one there
+            // without touching what this field means everywhere else.
             public readonly string Line;
+
+            // THE FIGHT PLATE'S OWN WORD: MASTER when mastery is collected
+            // (it outranks a title the same way it already forces both
+            // metals gold), else the selected title, else empty. Never
+            // VICTOR -- the plate has no room for three words at a legible
+            // size, and the pose is a placeholder word anyway, not a title.
+            public readonly string PlateWord;
 
             // "silver", "gold" or null. Gold wins wherever both are collected
             // -- §4 authors silver at 32 and gold at 38, and a rim cannot be
@@ -101,9 +115,10 @@ namespace PrincesPalace
             public readonly string EmbossMetal;
             public readonly bool HasPortraitFrame;
 
-            public IdentityLook(string line, string rimMetal, string embossMetal, bool hasPortraitFrame)
+            public IdentityLook(string line, string plateWord, string rimMetal, string embossMetal, bool hasPortraitFrame)
             {
                 Line = line ?? "";
+                PlateWord = plateWord ?? "";
                 RimMetal = rimMetal;
                 EmbossMetal = embossMetal;
                 HasPortraitFrame = hasPortraitFrame;
@@ -127,7 +142,7 @@ namespace PrincesPalace
 
         public static IdentityLook LookFor(Character character)
         {
-            if (character == null) return new IdentityLook("", null, null, false);
+            if (character == null) return new IdentityLook("", "", null, null, false);
 
             var collected = CollectedFor(character);
 
@@ -170,12 +185,20 @@ namespace PrincesPalace
             if (pose) words.Add(VictorWord);
             if (mastery) words.Add(MasterWord);
 
+            // THE PLATE'S ONE WORD. Mastery outranks a title the same way it
+            // already outranks the metals above -- a character who reached
+            // 40 is not still introduced by whatever they picked at 32. The
+            // pose never appears here; VICTOR stays in Line only.
+            string plateWord = mastery
+                ? MasterWord
+                : (title != null && !string.IsNullOrWhiteSpace(title.Value.Value) ? title.Value.Value.ToUpperInvariant() : "");
+
             // A MIDDLE DOT WOULD BE NON-ASCII and this string reaches a TMP
             // label through UiString.Runtime; the kit's own separator
             // everywhere else on these screens is a full stop with air round
             // it (UiStrings.TrackRibbonHint, PartyCardTagInParty), so this
             // uses the same one.
-            return new IdentityLook(string.Join("   .   ", words), rim, emboss, frame);
+            return new IdentityLook(string.Join("   .   ", words), plateWord, rim, emboss, frame);
         }
     }
 }

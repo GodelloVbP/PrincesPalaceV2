@@ -871,9 +871,9 @@ namespace PrincesPalace
 
             if (Has(pcIdentityLines, i))
             {
-                bool any = look.Line.Length > 0;
+                bool any = look.PlateWord.Length > 0;
                 pcIdentityLines[i].gameObject.SetShown(any);
-                if (any) pcIdentityLines[i].SetContent(look.Line);
+                if (any) pcIdentityLines[i].SetContent(look.PlateWord);
             }
 
             if (Has(pcPlateRims, i))
