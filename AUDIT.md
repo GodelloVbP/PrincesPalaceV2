@@ -2065,7 +2065,7 @@ weights to sum to ~1.0).
    per-score share of a variable pool rather than a fixed one, accepting the current spread as
    intended variety between materials.
 
-### 126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable
+### ~~126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable~~ — fixed in `62094abf`: option 1, dropped the flag and rewrote the stale comment (no other enemy plain-attacks with a stationary pose yet, so the worked example was removed rather than relocated)
 
 `Assets/_Project/ContentData/enemies.json`, row `golem`: `"attackHoldsPosition": true` beside
 `"attackWeight": 0` and one ability (`boulder_slam`, weight 1).
@@ -2768,7 +2768,7 @@ Root landed -- which is the balance bot's determinism lens, not a player-visible
    frequency depends on play, and what that does and does not cost. Cheapest, and honest, but
    it leaves the invariant with a hole in it that the next reader has to re-derive.
 
-### 149. Lucky Deck's red card says "a moment to recover" even when nothing recovered
+### ~~149. Lucky Deck's red card says "a moment to recover" even when nothing recovered~~ — fixed in `62094abf`: option 2, the owner's call was to drop the line rather than measure it
 
 Found 2026-09-11 by the combat finder as a suspected sixth instance of F5 (`0aad2cec`), checked
 by the F5 fixer and found NOT to be one. `Domain/Combat/Session/FightSession.Relics.cs`,
