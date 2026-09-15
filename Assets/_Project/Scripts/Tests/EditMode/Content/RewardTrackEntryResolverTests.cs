@@ -1,224 +1,144 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Pins docs/PLAN_REWARD_TRACKS.md §4's five validation rules against
+    // Pins docs/PLAN_REWARD_TRACKS.md §4's validation rules against
     // RewardTrackEntryResolver directly -- no JSON, no ContentBuilder, the
     // same shape RelicEntryResolverTests/SkillEntryResolverTests use.
+    //
+    // THREE RULES SINCE PROGRESSION V2 PHASE 4, not five. Every level from 2
+    // to MaxLevel carries exactly one entry (which is what the old
+    // "every milestone level, exactly once" and "the filler counts sum to
+    // 29" rules said between them), a one-shot capability appears at most
+    // once, and a signature reward needs a signature resource. The two
+    // filler rules went with the filler mix -- see RawTrackLevel's header.
     public class RewardTrackEntryResolverTests
     {
-        private static RawTrackMilestone Milestone(int level, string reward, int amount = 0,
+        private static RawTrackLevel Level(int level, string reward, int amount = 0,
             string against = "", string skillId = "") =>
-            new RawTrackMilestone { level = level, reward = reward, amount = amount, against = against, skillId = skillId };
+            new RawTrackLevel { level = level, reward = reward, amount = amount, against = against, skillId = skillId };
 
-        private static RawTrackFiller Filler(string reward, int count, int amount = 1, string against = "") =>
-            new RawTrackFiller { reward = reward, amount = amount, against = against, count = count };
+        private static RawRewardTrackEntry Track(string characterId, List<RawTrackLevel> levels) =>
+            new RawRewardTrackEntry { characterId = characterId, levels = levels.ToArray() };
 
-        private static RawRewardTrackEntry Track(string characterId, List<RawTrackMilestone> milestones,
-            List<RawTrackFiller> filler) =>
-            new RawRewardTrackEntry { characterId = characterId, milestones = milestones.ToArray(), filler = filler.ToArray() };
-
-        // The ten fixed milestone levels, filled with the same interim
-        // kinds RewardTrackDefinition's own DefaultMilestones table uses
-        // today -- a full, valid milestone set every refusal test below
-        // starts from and breaks exactly one rule against.
-        //
-        // TEN, NOT TWELVE, since progression v2 phase 2 cut the cap to 40 and
-        // repointed the cadence to 3, 5, 10, 15, 20, 25, 30, 35, 38, 40.
-        private static List<RawTrackMilestone> FullMilestones() => new List<RawTrackMilestone>
+        // A FULL, VALID 39-LEVEL TRACK every refusal test below starts from
+        // and breaks exactly one rule against. Same shape as
+        // RewardTrackDefinition.DefaultLevels: Bump and Choice alternating
+        // through the combat stretch so no two neighbours share a kind, the
+        // two utilities where the real tracks put them, Identity above 30.
+        // It has to satisfy RewardTrackNodeValidation as well as the format,
+        // because the resolver runs both.
+        private static List<RawTrackLevel> FullLevels()
         {
-            Milestone(3,  "MaxHealth", 15),
-            Milestone(5,  "MaxHealth", 15),
-            Milestone(10, "MaxHealth", 15),
-            Milestone(15, "MaxHealth", 15),
-            Milestone(20, "Respec"),
-            Milestone(25, "SecondLife", 1),
-            Milestone(30, "StatPoint", 10),
-            Milestone(35, "MaxHealth", 15),
-            Milestone(38, "MaxHealth", 15),
-            Milestone(40, "MaxHealth", 15),
-        };
+            var levels = new List<RawTrackLevel>();
 
-        // 14 + 15 = 29, the track's filler-level count (39 levels from 2 to
-        // 40, less the ten milestones) -- mirrors RewardTrackDefinition's own
-        // DefaultFillerMix.
-        private static List<RawTrackFiller> FullFiller() => new List<RawTrackFiller>
-        {
-            Filler("StatPoint", 14, amount: 1),
-            Filler("MaxHealth", 15, amount: 2),
-        };
-
-        // ---- rule 1: every milestone level, exactly once; no non-milestone level named ----
-
-        [Test]
-        public void MissingMilestoneLevel_IsRejectedNamingTheLevel()
-        {
-            var milestones = FullMilestones();
-            milestones.RemoveAll(m => m.level == 35);
-
-            bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
-                null, out _, out var errors);
-
-            Assert.IsFalse(ok);
-            StringAssert.Contains("35", string.Join("; ", errors));
-            StringAssert.Contains("no entry", string.Join("; ", errors));
-        }
-
-        [Test]
-        public void EntryAtANonMilestoneLevel_IsRejectedNamingItNotAMilestone()
-        {
-            var milestones = FullMilestones();
-            milestones.Add(Milestone(34, "MaxHealth", 15));
-
-            bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
-                null, out _, out var errors);
-
-            Assert.IsFalse(ok);
-            string joined = string.Join("; ", errors);
-            StringAssert.Contains("34", joined);
-            StringAssert.Contains("not a milestone level", joined);
-        }
-
-        // ---- rule 2: filler counts sum to exactly 29 ----
-
-        [Test]
-        public void FillerSumOf28_IsRejectedNaming29()
-        {
-            var filler = new List<RawTrackFiller>
+            for (int level = 2; level <= 30; level++)
             {
-                Filler("StatPoint", 14, amount: 1),
-                Filler("MaxHealth", 14, amount: 2),
-            };
+                if (level == 8) levels.Add(Level(8, "Respec"));
+                else if (level == 25) levels.Add(Level(25, "SecondLife", 1));
+                else if (level % 2 == 0) levels.Add(Level(level, "MaxHealth", 30));
+                else levels.Add(Level(level, "StatPoint", 4));
+            }
+
+            levels.Add(Identity(31, "Title", "Contractor"));
+            levels.Add(Identity(32, "PlateRim", "silver"));
+            levels.Add(Identity(33, "Title", "Champion"));
+            levels.Add(Identity(34, "PortraitFrame"));
+            levels.Add(Identity(35, "PlateEmboss", "silver"));
+            levels.Add(Identity(36, "Title", "Veteran"));
+            levels.Add(Identity(37, "VictoryPose"));
+            levels.Add(Identity(38, "PlateRim", "gold"));
+            levels.Add(Identity(39, "Title", "Legend"));
+            levels.Add(Identity(40, "Mastery"));
+
+            return levels;
+        }
+
+        private static RawTrackLevel Identity(int level, string kind, string value = "") =>
+            new RawTrackLevel { level = level, reward = "Identity", identityKind = kind, value = value };
+
+        private static void Replace(List<RawTrackLevel> levels, RawTrackLevel replacement)
+        {
+            levels.RemoveAll(l => l.level == replacement.level);
+            levels.Add(replacement);
+        }
+
+        // ---- rule 1: every level from 2 to MaxLevel, exactly once ----
+
+        [Test]
+        public void AMissingLevel_IsRejectedNamingTheLevel()
+        {
+            var levels = FullLevels();
+            levels.RemoveAll(l => l.level == 17);
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", FullMilestones(), filler) },
-                null, out _, out var errors);
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, null, out _, out var errors);
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("28", joined);
-            StringAssert.Contains("29", joined);
+            StringAssert.Contains("17", joined);
+            StringAssert.Contains("no entry", joined);
         }
 
         [Test]
-        public void FillerSumOf30_IsRejectedNaming29()
+        public void ALevelAuthoredTwice_IsRejectedNamingTheLevel()
         {
-            var filler = new List<RawTrackFiller>
-            {
-                Filler("StatPoint", 14, amount: 1),
-                Filler("MaxHealth", 16, amount: 2),
-            };
+            var levels = FullLevels();
+            levels.Add(Level(17, "MaxHealth", 30));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", FullMilestones(), filler) },
-                null, out _, out var errors);
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, null, out _, out var errors);
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("30", joined);
-            StringAssert.Contains("29", joined);
+            StringAssert.Contains("17", joined);
+            StringAssert.Contains("more than one entry", joined);
         }
 
-        // ---- rule 3: no one-shot capability as filler ----
-
-        [Test]
-        public void RespecAsFiller_IsRejected()
+        // Level 1 is where a character starts, not somewhere they arrive --
+        // so it is outside the span, the same as 41 is.
+        [TestCase(1)]
+        [TestCase(41)]
+        public void ALevelOutsideTheTracksSpan_IsRejected(int level)
         {
-            var filler = new List<RawTrackFiller>
-            {
-                Filler("StatPoint", 40, amount: 1),
-                Filler("MaxHealth", 46, amount: 2),
-                Filler("Respec", 1, amount: 0),
-            };
+            var levels = FullLevels();
+            levels.Add(Level(level, "MaxHealth", 30));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", FullMilestones(), filler) },
-                null, out _, out var errors);
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, null, out _, out var errors);
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
-            StringAssert.Contains("Respec", joined);
-            StringAssert.Contains("cannot appear as filler", joined);
-        }
-
-        [Test]
-        public void SecondLifeAsFiller_IsRejected()
-        {
-            var filler = new List<RawTrackFiller>
-            {
-                Filler("StatPoint", 40, amount: 1),
-                Filler("MaxHealth", 46, amount: 2),
-                Filler("SecondLife", 1, amount: 1),
-            };
-
-            bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", FullMilestones(), filler) },
-                null, out _, out var errors);
-
-            Assert.IsFalse(ok);
-            string joined = string.Join("; ", errors);
-            StringAssert.Contains("SecondLife", joined);
-            StringAssert.Contains("cannot appear as filler", joined);
+            StringAssert.Contains(level.ToString(), joined);
+            StringAssert.Contains("outside the track's span", joined);
         }
 
         // ---- rule 1, continued: a one-shot capability at most once ----
 
         [Test]
-        public void SecondLifeAtTwoMilestones_IsRejectedNamingBothLevels()
+        public void SecondLifeAtTwoLevels_IsRejectedNamingBothLevels()
         {
-            var milestones = FullMilestones();
-            milestones.RemoveAll(m => m.level == 20);
-            milestones.Add(Milestone(20, "SecondLife", 1));
-            // FullMilestones already carries SecondLife at 25, so this
-            // fixture now names the same capability at 20 and 25.
+            var levels = FullLevels();
+            // FullLevels already carries SecondLife at 25; level 21 is a
+            // Choice between two Bumps, so swapping it for a Utility breaks
+            // no adjacency rule and leaves the duplicate as the only fault.
+            Replace(levels, Level(21, "SecondLife", 1));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", milestones, FullFiller()) },
-                null, out _, out var errors);
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, null, out _, out var errors);
 
             Assert.IsFalse(ok);
             string joined = string.Join("; ", errors);
             StringAssert.Contains("SecondLife", joined);
-            StringAssert.Contains("20", joined);
+            StringAssert.Contains("21", joined);
             StringAssert.Contains("25", joined);
         }
 
-        // ---- rules 4 and 5: cross-catalogue ----
-        //
-        // ElementalDamagePercent and the four SignatureX kinds were
-        // unreachable until P3 added them to TrackReward -- Enum.TryParse
-        // refused any entry naming one as "not a known TrackReward" before
-        // the resolver's own rule 4/5 checks were ever reached. P3 has
-        // landed (docs/PLAN_REWARD_TRACKS.md's P6), so both are asserted for
-        // real now.
-
-        [Test]
-        public void FillerElementalDamageOfAnUnknownElement_IsRejected()
-        {
-            var context = new RewardTrackCharacterContext
-            {
-                Level1DamageTypes = new[] { Stats.DamageType.Nature },
-            };
-            var characters = new Dictionary<string, RewardTrackCharacterContext> { ["sheep"] = context };
-
-            var filler = new List<RawTrackFiller>
-            {
-                Filler("StatPoint", 13, amount: 1),
-                Filler("MaxHealth", 15, amount: 2),
-                Filler("ElementalDamagePercent", 1, amount: 1, against: "Lightning"),
-            };
-
-            bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("sheep", FullMilestones(), filler) },
-                characters, out _, out var errors);
-
-            Assert.IsFalse(ok);
-            StringAssert.Contains("level 1", string.Join("; ", errors));
-        }
+        // ---- rule 5: a signature reward needs a signature resource ----
 
         [Test]
         public void SignatureRewardOnACharacterWithNoSignatureResource_IsRejected()
@@ -228,27 +148,59 @@ namespace PrincesPalace.Domain.Tests
                 ["owl"] = new RewardTrackCharacterContext { HasSignatureResource = false },
             };
 
-            var milestones = FullMilestones();
-            milestones.RemoveAll(m => m.level == 15);
-            milestones.Add(Milestone(15, "SignatureCapacity", 5));
+            var levels = FullLevels();
+            Replace(levels, Level(16, "SignatureCapacity", 5));
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(
-                new List<RawRewardTrackEntry> { Track("owl", milestones, FullFiller()) },
-                characters, out _, out var errors);
+                new List<RawRewardTrackEntry> { Track("owl", levels) }, characters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("no signature resource", string.Join("; ", errors));
         }
 
+        // ---- the two filler rules are GONE, and their premise with them ----
+        //
+        // A one-shot capability as filler, and a filler element the
+        // character cannot deal at level 1, were both refused because a
+        // filler row's LEVEL was computed. Nothing computes a level now, so
+        // what those rules refused is simply authorable: an element nobody
+        // can deal yet sits at whichever level an author put it at, which is
+        // the same freedom a MILESTONE always had (the old rule 4 exempted
+        // milestones by name, for exactly this reason). Asserted rather than
+        // left to be inferred from an absence, so a reader who goes looking
+        // for the rule finds out here that it was retired on purpose.
+        [Test]
+        public void AnElementTheCharacterCannotYetDeal_IsAcceptedAtAnyLevel()
+        {
+            var characters = new Dictionary<string, RewardTrackCharacterContext>
+            {
+                ["sheep"] = new RewardTrackCharacterContext
+                {
+                    Level1DamageTypes = new[] { Stats.DamageType.Nature },
+                },
+            };
+
+            var levels = FullLevels();
+            Replace(levels, Level(6, "ElementalDamagePercent", 5, against: "Lightning"));
+
+            bool ok = RewardTrackEntryResolver.TryResolveAll(
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, characters, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            var entry = resolved[0].Levels.Single(l => l.Level == 6);
+            Assert.AreEqual(TrackReward.ElementalDamagePercent, entry.Reward);
+            Assert.AreEqual(Stats.DamageType.Lightning, entry.Against);
+        }
+
         // ---- a valid two-track fixture ----
 
         [Test]
-        public void TwoValidTracks_ResolveToTenMilestonesEach()
+        public void TwoValidTracks_ResolveToThirtyNineLevelsEach()
         {
             var entries = new List<RawRewardTrackEntry>
             {
-                Track("sheep", FullMilestones(), FullFiller()),
-                Track("owl", FullMilestones(), FullFiller()),
+                Track("sheep", FullLevels()),
+                Track("owl", FullLevels()),
             };
 
             bool ok = RewardTrackEntryResolver.TryResolveAll(entries, null, out var resolved, out var errors);
@@ -257,16 +209,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, resolved.Count);
             foreach (var track in resolved)
             {
-                Assert.AreEqual(10, track.Milestones.Length, $"{track.CharacterId}'s track");
-                Assert.AreEqual(29, SumCounts(track), $"{track.CharacterId}'s filler");
+                Assert.AreEqual(39, track.Levels.Length, $"{track.CharacterId}'s track");
+                Assert.AreEqual(RewardTrack.StartingLevel + 1, track.Levels.Min(l => l.Level), $"{track.CharacterId}'s first level");
+                Assert.AreEqual(RewardTrack.MaxLevel, track.Levels.Max(l => l.Level), $"{track.CharacterId}'s last level");
             }
-        }
-
-        private static int SumCounts(ResolvedRewardTrack track)
-        {
-            int total = 0;
-            foreach (var f in track.Filler) total += f.Count;
-            return total;
         }
     }
 }

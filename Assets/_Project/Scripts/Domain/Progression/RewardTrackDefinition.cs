@@ -4,22 +4,26 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Progression
 {
-    // A reward track MATERIALISED FOR ONE CHARACTER: the milestones and the
-    // filler mix an author (or, for a character nobody has designed yet,
-    // Default) described, computed once into one entry per level.
+    // A reward track MATERIALISED FOR ONE CHARACTER: the level table an
+    // author (or, for a character nobody has designed yet, Default) wrote
+    // down, indexed for reading.
     //
     // RewardTrack.cs keeps only the parts of a track that do NOT vary by
     // character -- the shared cadence, the state arithmetic; this class
     // holds the part that does, which reward sits at which level. See
     // docs/PLAN_REWARD_TRACKS.md §3 for the fuller rationale for the split.
     //
-    // DESCRIBED, THEN DERIVED: the milestones and a filler mix are written
-    // down, and the filler placements are computed by InterleaveMix/Spread.
-    // Both counts follow RewardTrack.MaxLevel and its cadence -- ten
-    // milestones and twenty-nine filler levels since progression v2 phase 2
-    // cut the cap from 100 to 40. Every entry is a TrackEntry rather than a bare
-    // (TrackReward, int) tuple, because TrackEntry carries the two authored
-    // selectors -- Against, SkillId -- a track needs beyond reward and
+    // AUTHORED, NOT DERIVED, since progression v2 phase 4. A track used to
+    // be DESCRIBED -- ten milestones plus a "filler mix" of (reward,
+    // amount, count) rows that InterleaveMix/Spread laid across the levels
+    // nobody had named -- and both of those are gone with the mix: the
+    // 40-level table (PLAN_PROGRESSION_V2.md §4) names a reward at every
+    // level from 2 to MaxLevel, so there is nothing left to compute a
+    // placement for and no second way for a level to acquire a reward. See
+    // RawTrackLevel's own header for what the old shape could not express.
+    // Every entry is a TrackEntry rather than a bare (TrackReward, int)
+    // tuple, because TrackEntry carries the authored selectors -- Against,
+    // SkillId, Resource, IdentityKind -- a track needs beyond reward and
     // amount.
     public sealed class RewardTrackDefinition
     {
@@ -35,86 +39,105 @@ namespace PrincesPalace.Domain.Progression
 
         // ---- construction --------------------------------------------------
 
-        // `milestones` names exactly the levels it wants to fill; every other
-        // level from StartingLevel+1 upward is filler, and `fillerMix` is
-        // spread across those levels in the order InterleaveMix computes.
-        // Callers outside this file: the content resolver (docs/PLAN_REWARD_
-        // TRACKS.md P4/P6) building an authored track from JSON, and Default
-        // below, building the generated one.
+        // `levels` names a reward for each level it fills. A level nobody
+        // names reads as TrackReward.None -- which an AUTHORED track can no
+        // longer contain (RewardTrackEntryResolver refuses a file with a
+        // gap) but a hand-built fixture deliberately can, so this stays
+        // tolerant rather than throwing.
+        //
+        // Callers outside this file: the content resolver (via From below)
+        // building an authored track from JSON, Default below, and the
+        // fixtures in RewardTrackDefinitionTests / RewardTrackNodeValidationTests.
         public static RewardTrackDefinition Build(string characterId,
-            (int Level, TrackEntry Entry)[] milestones,
-            (TrackEntry Entry, int Count)[] fillerMix)
+            (int Level, TrackEntry Entry)[] levels)
         {
             var entries = new TrackEntry[RewardTrack.MaxLevel + 1];
 
-            foreach (var milestone in milestones)
+            foreach (var level in levels)
             {
-                entries[milestone.Level] = milestone.Entry;
+                if (level.Level < RewardTrack.StartingLevel || level.Level > RewardTrack.MaxLevel) continue;
+                entries[level.Level] = level.Entry;
             }
-
-            // Every level from 2 upward that no milestone claimed. Level 1 is
-            // where a character starts, not somewhere they arrive.
-            var fillerLevels = new int[RewardTrack.MaxLevel];
-            int fillerCount = 0;
-            for (int level = RewardTrack.StartingLevel + 1; level <= RewardTrack.MaxLevel; level++)
-            {
-                if (entries[level].Reward == TrackReward.None) fillerLevels[fillerCount++] = level;
-            }
-
-            var mixed = InterleaveMix(fillerMix);
-            Spread(entries, fillerLevels, fillerCount, mixed);
 
             return new RewardTrackDefinition(characterId, entries);
         }
 
         // THE GENERATED DEFAULT, for a character with no authored track.
-        // RewardTrackDefinitionTests.TheDefaultTrackPaysFiftyStatPoints-
-        // AndTwoHundredTwentyNineMaxHealth pins the two totals (50 stat
-        // points, 229 max health) this must keep producing. `characterId` is
-        // accepted rather than ignored so a future per-character variant of
-        // "no track authored" (there is none today) is one signature away
-        // rather than a breaking change to every caller.
+        // RewardTrackDefinitionTests pins the two totals it must keep
+        // producing. `characterId` is accepted rather than ignored so a
+        // future per-character variant of "no track authored" (there is
+        // none today) is one signature away rather than a breaking change
+        // to every caller.
         //
-        // THE SPINE -- Respec, StatPoint 10 and SecondLife -- is the same
-        // three KINDS on every track, authored or generated; the other seven
-        // milestones fill with MaxHealth 15 so the track still pays every
-        // level while a character has no flavour of their own yet.
+        // WRITTEN OUT IN FULL, one row per level, since progression v2
+        // phase 4 retired the filler mix. It pays only what a character
+        // nobody has designed can certainly receive: health, stat points,
+        // the two utilities, and the identity stretch. No signature reward
+        // (the character may have no signature resource), no mana reward
+        // (their primary pool may refuse mana), no UnlockSkill (there is no
+        // skill to name), no elemental percentage (there is no attackType
+        // to key it to) -- exactly the four gaps bear's authored track had
+        // to work around before it existed, and the reason this is a
+        // placeholder rather than a template.
         //
-        // REPOINTED, NOT RETUNED, by progression v2 phase 2. The cadence
-        // moved (RewardTrack.MilestoneLevels is now 3, 5, 10, 15, 20, 25, 30,
-        // 35, 38, 40) and Build indexes an array of MaxLevel+1, so the old
-        // rows at 45 through 100 were not merely wrong, they were out of
-        // bounds. The three spine kinds keep the ORDER they had -- respec
-        // before second life before the big stat grant -- landing on the
-        // three levels the plan gives them on the real tracks where it can
-        // (Second Life at 25, PLAN_PROGRESSION_V2.md §4). This is still the
-        // placeholder for a character nobody has designed; phase 4 authors
-        // the real ones.
-        private static readonly (int Level, TrackEntry Entry)[] DefaultMilestones =
+        // IT OBEYS THE NODE RULES AS WELL AS THE FORMAT. The kinds
+        // alternate Bump/Choice across the combat stretch so no two
+        // neighbours share one, the two utilities sit at 8 and 25 where the
+        // real tracks put them, and 31-40 are Identity. Nothing calls
+        // RewardTrackNodeValidation on it today (it never passes through
+        // the resolver), but a default that could not survive the
+        // validator would be a trap for whoever first authors a track by
+        // copying it.
+        //
+        // Every character on the roster has a track, so this is reached
+        // only by an id no row names -- it is still the rule, not
+        // scaffolding.
+        private static readonly (int Level, TrackEntry Entry)[] DefaultLevels =
         {
-            (3,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (5,  new TrackEntry(TrackReward.MaxHealth, 15)),
-            (10, new TrackEntry(TrackReward.MaxHealth, 15)),
-            (15, new TrackEntry(TrackReward.MaxHealth, 15)),
-            (20, new TrackEntry(TrackReward.Respec, 0)),
+            (2,  new TrackEntry(TrackReward.MaxHealth, 30)),
+            (3,  new TrackEntry(TrackReward.StatPoint, 4)),
+            (4,  new TrackEntry(TrackReward.MaxHealth, 30)),
+            (5,  new TrackEntry(TrackReward.StatPoint, 4)),
+            (6,  new TrackEntry(TrackReward.MaxHealth, 30)),
+            (7,  new TrackEntry(TrackReward.StatPoint, 4)),
+            (8,  new TrackEntry(TrackReward.Respec, 0)),
+            (9,  new TrackEntry(TrackReward.StatPoint, 4)),
+            (10, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (11, new TrackEntry(TrackReward.StatPoint, 4)),
+            (12, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (13, new TrackEntry(TrackReward.StatPoint, 4)),
+            (14, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (15, new TrackEntry(TrackReward.StatPoint, 4)),
+            (16, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (17, new TrackEntry(TrackReward.StatPoint, 4)),
+            (18, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (19, new TrackEntry(TrackReward.StatPoint, 4)),
+            (20, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (21, new TrackEntry(TrackReward.StatPoint, 4)),
+            (22, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (23, new TrackEntry(TrackReward.StatPoint, 4)),
+            (24, new TrackEntry(TrackReward.MaxHealth, 30)),
             (25, new TrackEntry(TrackReward.SecondLife, 1)),
-            (30, new TrackEntry(TrackReward.StatPoint, 10)),
-            (35, new TrackEntry(TrackReward.MaxHealth, 15)),
-            (38, new TrackEntry(TrackReward.MaxHealth, 15)),
-            (40, new TrackEntry(TrackReward.MaxHealth, 15)),
-        };
+            (26, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (27, new TrackEntry(TrackReward.StatPoint, 4)),
+            (28, new TrackEntry(TrackReward.MaxHealth, 30)),
+            (29, new TrackEntry(TrackReward.StatPoint, 4)),
+            (30, new TrackEntry(TrackReward.MaxHealth, 30)),
 
-        // Twenty-nine filler levels: 39 levels from 2 to 40, less the ten
-        // milestones above. Same roughly-even split between the two filler
-        // kinds the hundred-level version used.
-        private static readonly (TrackEntry Entry, int Count)[] DefaultFillerMix =
-        {
-            (new TrackEntry(TrackReward.StatPoint, 1), 14),
-            (new TrackEntry(TrackReward.MaxHealth, 2), 15),
+            (31, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Contractor")),
+            (32, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.PlateRim, identityValue: "silver")),
+            (33, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Champion")),
+            (34, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.PortraitFrame)),
+            (35, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.PlateEmboss, identityValue: "silver")),
+            (36, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Veteran")),
+            (37, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.VictoryPose)),
+            (38, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.PlateRim, identityValue: "gold")),
+            (39, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Legend")),
+            (40, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Mastery)),
         };
 
         public static RewardTrackDefinition Default(string characterId) =>
-            Build(characterId, DefaultMilestones, DefaultFillerMix);
+            Build(characterId, DefaultLevels);
 
         // THE BRIDGE FROM CONTENT. ResolvedRewardTrack (Domain/Content) is
         // what RewardTrackEntryResolver hands back after validating and
@@ -127,23 +150,15 @@ namespace PrincesPalace.Domain.Progression
         // call rather than reimplementing the conversion.
         public static RewardTrackDefinition From(ResolvedRewardTrack resolved)
         {
-            var milestones = new (int Level, TrackEntry Entry)[resolved.Milestones.Length];
-            for (int i = 0; i < resolved.Milestones.Length; i++)
+            var levels = new (int Level, TrackEntry Entry)[resolved.Levels.Length];
+            for (int i = 0; i < resolved.Levels.Length; i++)
             {
-                var m = resolved.Milestones[i];
-                milestones[i] = (m.Level, new TrackEntry(m.Reward, m.Amount, m.Against, m.SkillId,
-                    m.SkillDisplayName, m.ResourceDisplayName, m.Resource, m.IdentityKind, m.IdentityValue));
+                var row = resolved.Levels[i];
+                levels[i] = (row.Level, new TrackEntry(row.Reward, row.Amount, row.Against, row.SkillId,
+                    row.SkillDisplayName, row.ResourceDisplayName, row.Resource, row.IdentityKind, row.IdentityValue));
             }
 
-            var fillerMix = new (TrackEntry Entry, int Count)[resolved.Filler.Length];
-            for (int i = 0; i < resolved.Filler.Length; i++)
-            {
-                var f = resolved.Filler[i];
-                fillerMix[i] = (new TrackEntry(f.Reward, f.Amount, f.Against, null, null,
-                    f.ResourceDisplayName), f.Count);
-            }
-
-            return Build(resolved.CharacterId, milestones, fillerMix);
+            return Build(resolved.CharacterId, levels);
         }
 
         // ---- reads -----------------------------------------------------------
@@ -303,6 +318,27 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
+        // PHASE 4: how much of a SkillPowerDelta entry naming `skillId` has
+        // been collected -- SUMMED, the same reading as SkillFlatDelta above
+        // and for the same reason (two nodes on one skill are two steps of
+        // one number, not two competing totals).
+        public int CollectedSkillPowerDelta(string skillId, int claimedLevel)
+        {
+            int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
+
+            int total = 0;
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward == TrackReward.SkillPowerDelta && entry.SkillId == skillId)
+                {
+                    total += entry.Amount;
+                }
+            }
+
+            return total;
+        }
+
         // PHASE 3: every Identity entry collected at or below claimedLevel,
         // oldest first -- Core.CharacterIdentity's whole input. Level travels
         // with each entry because "which title is newest" is a question about
@@ -391,66 +427,12 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
-        // ---- construction helpers, moved verbatim from RewardTrack.cs -----------
-
-        // The filler mix as an ORDER, with the kinds interleaved rather than
-        // clumped. Largest-deficit selection, cross-multiplied to stay in
-        // integers: at each step, hand the slot to whichever entry is furthest
-        // behind the share its Count entitles it to. Ties go to declaration
-        // order, so the sequence is fully determined by the table passed in.
-        private static TrackEntry[] InterleaveMix((TrackEntry Entry, int Count)[] fillerMix)
-        {
-            int total = 0;
-            foreach (var part in fillerMix) total += part.Count;
-
-            var sequence = new TrackEntry[total];
-            var emitted = new int[fillerMix.Length];
-
-            for (int placed = 0; placed < total; placed++)
-            {
-                int best = -1;
-                long bestDeficit = long.MinValue;
-
-                for (int e = 0; e < fillerMix.Length; e++)
-                {
-                    if (emitted[e] >= fillerMix[e].Count) continue;
-
-                    long deficit = (long)fillerMix[e].Count * (placed + 1) - (long)emitted[e] * total;
-                    if (deficit > bestDeficit)
-                    {
-                        bestDeficit = deficit;
-                        best = e;
-                    }
-                }
-
-                if (best < 0) break;
-
-                emitted[best]++;
-                sequence[placed] = fillerMix[best].Entry;
-            }
-
-            return sequence;
-        }
-
-        // Places `mixed` evenly across the filler levels. Bresenham: slot i
-        // takes the next reward when the running share crosses an integer
-        // boundary -- see RewardTrack.cs's original comment for why this is
-        // evenly spread rather than packed into the front.
-        private static void Spread(TrackEntry[] entries, int[] fillerLevels, int fillerCount, TrackEntry[] mixed)
-        {
-            if (fillerCount <= 0 || mixed.Length == 0) return;
-
-            int taken = 0;
-
-            for (int i = 0; i < fillerCount && taken < mixed.Length; i++)
-            {
-                int before = i * mixed.Length / fillerCount;
-                int after = (i + 1) * mixed.Length / fillerCount;
-
-                if (after <= before) continue;
-
-                entries[fillerLevels[i]] = mixed[taken++];
-            }
-        }
+        // InterleaveMix AND Spread ARE GONE (progression v2 phase 4). They
+        // were the whole of "described, then derived": a largest-deficit
+        // interleave over the filler mix, then a Bresenham spread across
+        // whichever levels no milestone had claimed. Nothing computes a
+        // placement any more -- every level names its own reward, including
+        // DefaultLevels above -- so keeping them would have left two ways
+        // for a level to acquire a reward and only one of them reachable.
     }
 }

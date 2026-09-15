@@ -31,7 +31,7 @@ namespace PrincesPalace.Domain.Tests
                 (5, new TrackEntry(TrackReward.FuryGainOnAttack, 20)),
                 (15, new TrackEntry(TrackReward.FuryGainOnAttack, 25)),
             };
-            var track = RewardTrackDefinition.Build("bear", entries, System.Array.Empty<(TrackEntry, int)>());
+            var track = RewardTrackDefinition.Build("bear", entries);
 
             // Before either node: no override collected.
             Assert.AreEqual(-1, track.UnlockedAmount(TrackReward.FuryGainOnAttack, 4, fallback: -1));
@@ -52,8 +52,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(15, pool.GainOnAttack, "the authored base, before any override");
 
             var track = RewardTrackDefinition.Build("bear",
-                new (int, TrackEntry)[] { (5, new TrackEntry(TrackReward.FuryGainOnAttack, 25)) },
-                System.Array.Empty<(TrackEntry, int)>());
+                new (int, TrackEntry)[] { (5, new TrackEntry(TrackReward.FuryGainOnAttack, 25)) });
 
             int overrideAmount = track.UnlockedAmount(TrackReward.FuryGainOnAttack, level: 5, fallback: -1);
             if (overrideAmount >= 0) pool.GainOnAttack = overrideAmount;
@@ -69,8 +68,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, pool.Current, "Zero-start, before any override");
 
             var track = RewardTrackDefinition.Build("bear",
-                new (int, TrackEntry)[] { (15, new TrackEntry(TrackReward.FuryStartOfFight, 50)) },
-                System.Array.Empty<(TrackEntry, int)>());
+                new (int, TrackEntry)[] { (15, new TrackEntry(TrackReward.FuryStartOfFight, 50)) });
 
             int overrideAmount = track.UnlockedAmount(TrackReward.FuryStartOfFight, level: 15, fallback: -1);
             if (overrideAmount >= 0) pool.Current = System.Math.Min(pool.Max, overrideAmount);
@@ -145,8 +143,7 @@ namespace PrincesPalace.Domain.Tests
                 {
                     (12, new TrackEntry(TrackReward.SkillFlatDelta, 5, skillId: "placeholder_brawler_slam")),
                     (24, new TrackEntry(TrackReward.SkillFlatDelta, 5, skillId: "placeholder_brawler_slam")),
-                },
-                System.Array.Empty<(TrackEntry, int)>());
+                });
 
             int summedDelta = track.CollectedSkillFlatDelta("placeholder_brawler_slam", claimedLevel: 24);
             Assert.AreEqual(10, summedDelta);
@@ -163,8 +160,7 @@ namespace PrincesPalace.Domain.Tests
                 {
                     (12, new TrackEntry(TrackReward.SkillCostDelta, 1, skillId: "shear", resource: TrackResourceTarget.Signature)),
                     (24, new TrackEntry(TrackReward.SkillCostDelta, 2, skillId: "battering_ram", resource: TrackResourceTarget.Signature)),
-                },
-                System.Array.Empty<(TrackEntry, int)>());
+                });
 
             Assert.AreEqual(1, track.CollectedSkillCostDelta("shear", TrackResourceTarget.Signature, 30));
             Assert.AreEqual(2, track.CollectedSkillCostDelta("battering_ram", TrackResourceTarget.Signature, 30));
@@ -196,8 +192,7 @@ namespace PrincesPalace.Domain.Tests
                 {
                     (15, new TrackEntry(TrackReward.SignatureAbsorbPerPoint, 1)),
                     (26, new TrackEntry(TrackReward.SignatureAbsorbPerPoint, 2)),
-                },
-                System.Array.Empty<(TrackEntry, int)>());
+                });
 
             Assert.AreEqual(0, track.UnlockedAmount(TrackReward.SignatureAbsorbPerPoint, 14, fallback: 0));
             Assert.AreEqual(1, track.UnlockedAmount(TrackReward.SignatureAbsorbPerPoint, 15, fallback: 0));
@@ -224,8 +219,7 @@ namespace PrincesPalace.Domain.Tests
                     (31, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Contractor")),
                     (33, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Reaver")),
                     (32, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.PlateRim, identityValue: "silver")),
-                },
-                System.Array.Empty<(TrackEntry, int)>());
+                });
 
             var collected = track.CollectedIdentity(40);
 
@@ -255,8 +249,7 @@ namespace PrincesPalace.Domain.Tests
                 {
                     (31, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Contractor")),
                     (33, new TrackEntry(TrackReward.Identity, 0, identityKind: TrackIdentityKind.Title, identityValue: "Reaver")),
-                },
-                System.Array.Empty<(TrackEntry, int)>());
+                });
 
             Assert.AreEqual(1, track.CollectedIdentity(31).Count);
             Assert.AreEqual(0, track.CollectedIdentity(30).Count);

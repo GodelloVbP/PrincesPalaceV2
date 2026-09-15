@@ -8,10 +8,11 @@ namespace PrincesPalace.Domain.Progression
     // a tidiness one -- see RewardTrack's header for why.
     public enum TrackReward
     {
-        // Nothing authored at this level yet. Not an error: a track's filler
-        // mix is sized to exactly cover its filler levels, but a track under
-        // construction (or the interim generated default, before this list
-        // was full) can still have gaps.
+        // Nothing authored at this level. An authored track can no longer
+        // contain one -- RewardTrackEntryResolver refuses a file that leaves
+        // any level between 2 and MaxLevel unclaimed -- but a hand-built
+        // FIXTURE can, and every read below already skips it, so this stays
+        // the honest zero rather than an error state.
         None = 0,
 
         // ---- THE ONE GRANT: a quantity, claimed once against the save's
@@ -109,6 +110,43 @@ namespace PrincesPalace.Domain.Progression
         // and Core/CharacterIdentity for the read model. No rendering yet
         // (phase 5).
         Identity,
+
+        // PHASE 4 (docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md §4's
+        // authored table). APPENDED, same convention as every block above.
+
+        // ONE named skill's `power` -- what it adds per POINT of resource
+        // actually spent -- increased by Amount. SUMMED across every entry
+        // naming the same skill, exactly like SkillFlatDelta.
+        //
+        // A SIBLING OF SkillFlatDelta RATHER THAN A WIDENING OF IT, and the
+        // split is the skill's own arithmetic rather than a taxonomy
+        // preference. `flatAmount` and `power` are two independent levers in
+        // SkillResolution ("a flat part, plus `power` for every point of the
+        // signature resource the cast actually spent"), a skill may author
+        // both (Woolgathering: 40 flat, 2 a wool), and SkillFlatDelta's own
+        // validation refuses any skill without a flatAmount PATH -- a
+        // DamageSingle with no packets. Shawn's level 26, "Tuck In wards 3
+        // per Wool", is a Ward and adjusts the per-point lever, so it is
+        // neither the same field nor a skill SkillFlatDelta would accept.
+        // One reward per authored number keeps "which field does this
+        // change" answerable from the reward's name.
+        SkillPowerDelta,
+
+        // EVERY NON-PHYSICAL DAMAGE TYPE, by Amount percent -- Odette's
+        // "+5% spell damage" at 7, 19 and 28 (§4). SUMMED like
+        // ElementalDamagePercent, which is what it hangs off: the read site
+        // (ContentDatabase.Effective.ModifierEffects) expands one of these
+        // into the same per-element ModifierEffect rows an
+        // ElementalDamagePercent entry produces, one per non-Physical
+        // DamageType, so there is no second combat hook and no second rule
+        // about how a percentage applies.
+        //
+        // ONE REWARD RATHER THAN N AUTHORED ROWS, because the table has one
+        // row per level and "+5% to everything she casts" is one decision.
+        // Authoring it per element would need ten entries at one level, which
+        // the format cannot express, and would have to be re-authored every
+        // time a DamageType is added.
+        SpellDamagePercent,
     }
 
     // Which RESOURCE a SkillCostDelta entry discounts. Matched against the
@@ -326,27 +364,18 @@ namespace PrincesPalace.Domain.Progression
             || reward == TrackReward.SignatureAbsorbs
             || reward == TrackReward.UnlockSkill;
 
-        // PHASE 3's broader filler ban. Every one-shot capability above
-        // still may not be filler, AND neither may any of the seven P3
-        // kinds -- not because they are one-shot (four of them can be
-        // collected more than once: SET-style kinds supersede rather than
-        // duplicate, and SkillFlatDelta/SkillCostDelta genuinely sum), but
-        // because every one of them either needs a level an author placed
-        // on purpose (a fury-opening step, a title) or a skillId a filler
-        // row has no field for at all (RawTrackFiller carries no skillId,
-        // the same reason UnlockSkill was already filler-ineligible). This
-        // is the check rule 3 actually runs -- IsOneShotCapability is kept
-        // separately because HasUnlocked and the "appears at most once"
-        // duplicate check upstream both still mean literally "one shot".
-        public static bool IsFillerIneligible(TrackReward reward) =>
-            IsOneShotCapability(reward)
-            || reward == TrackReward.FuryGainOnAttack
-            || reward == TrackReward.FuryStartOfFight
-            || reward == TrackReward.SpellCostDelta
-            || reward == TrackReward.SkillCostDelta
-            || reward == TrackReward.SkillFlatDelta
-            || reward == TrackReward.SignatureAbsorbPerPoint
-            || reward == TrackReward.Identity;
+        // THE FILLER BAN IS GONE, with the filler mechanism it policed.
+        //
+        // IsFillerIneligible lived here from phase 3 until phase 4: a track
+        // was authored as twelve milestones plus a "filler mix" whose
+        // placements the game computed, and a reward whose whole meaning is
+        // WHERE it sits (a fury-opening step, a title, a skill) could not be
+        // allowed to land wherever an interleave happened to put it. Phase 4
+        // made every level an authored row (see RawTrackLevel), so there is
+        // no computed placement left to refuse and no kind that is
+        // ineligible for one. IsOneShotCapability above stays, because the
+        // question it answers -- "may this appear twice on one track" -- is
+        // about HasUnlocked's reading, not about placement.
 
         // THE SET ContentDatabase.BuildSignatureResource PAYS -- a reward of
         // any of these five kinds is meaningless on a character with no
@@ -410,6 +439,8 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.FuryGainOnAttack:
                 case TrackReward.SkillCostDelta:
                 case TrackReward.SkillFlatDelta:
+                case TrackReward.SkillPowerDelta:
+                case TrackReward.SpellDamagePercent:
                     return TrackNodeKind.Bump;
 
                 default:

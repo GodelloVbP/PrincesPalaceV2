@@ -13,31 +13,15 @@ namespace PrincesPalace.Domain.Progression
     // restated copy -- one implementation, two call sites, per CODE_STANDARDS
     // §10.
     //
-    // GUARDED BEHIND THE CONTENT'S DECLARED CAP. reward_tracks.json today is
-    // still the pre-P3, 100-level track (twelve fixed milestones, 87
-    // interleaved filler levels) that docs/PLAN_REWARD_TRACKS.md shipped --
-    // phase 4 replaces it with the 40-level content these rules are written
-    // for. Applying combat-stretch rules ("no two neighbouring KINDS between
-    // level 2 and 30") to that shape would refuse every existing track
-    // outright, so this returns no errors at all while RewardTrack.MaxLevel
-    // still reads LegacyMaxLevel. The guard reads the constant rather than a
-    // per-track field because there is no such field: a RewardTrackDefinition
-    // is always sized to RewardTrack.MaxLevel (see Build's fixed-size
-    // allocation), which is one shared cap for every track in the game, not
-    // a per-character one. When the phase-2 change lands and moves MaxLevel
-    // off 100, these rules switch on for every track with no second edit
-    // here -- and phase 4 is what deletes this guard once the legacy shape
-    // is gone (see this file's own header note on "delete the old path").
+    // UNGUARDED SINCE PHASE 4. Phase 3 shipped these rules switched off
+    // behind a LegacyMaxLevel == 100 check, because reward_tracks.json was
+    // still the hundred-level milestone/filler content and applying
+    // combat-stretch rules to it would have refused every track outright.
+    // Phase 4 replaced that content with the authored 40-level table these
+    // rules were written for, so the guard is gone and every track built
+    // from JSON is checked.
     public static class RewardTrackNodeValidation
     {
-        // The pre-P3 cap docs/PLAN_REWARD_TRACKS.md shipped. Not
-        // RewardTrack.MaxLevel -- that constant is phase 2's to move, and
-        // comparing against a COPY of its old value (rather than reading it
-        // live and guessing what "old" means) is what lets this guard keep
-        // working unmodified whatever phase 2 lands on, including if phase 2
-        // lands on a value other than 40.
-        private const int LegacyMaxLevel = 100;
-
         // Levels 3, 10 and 20 -- literal per the plan's own contract #5
         // ("the node after an ability at 3, 10, 20 is a choice"), not
         // derived from RewardTrack.MilestoneLevels. That array is phase 2's
@@ -66,26 +50,24 @@ namespace PrincesPalace.Domain.Progression
         private const int MinFuryGainStep = 5;
         private const int MinSignatureGainPerTurn = 1;
 
-        // THE PRODUCTION DOOR -- guarded behind RewardTrack.MaxLevel, so this
-        // is a no-op against the pre-P3, 100-level content shipped today.
+        // THE PRODUCTION DOOR. Every track the resolver builds and every
+        // track ContentDatabase.Validation loads comes through here.
         public static List<string> Validate(string label, RewardTrackDefinition track)
         {
-            if (track == null || RewardTrack.MaxLevel == LegacyMaxLevel) return new List<string>();
+            if (track == null) return new List<string>();
 
             return ValidateAgainstCap(label, track, RewardTrack.MaxLevel);
         }
 
-        // THE RULE LOGIC ALONE, parameterised by the cap it should enforce,
-        // with no guard -- what a test calls directly. RewardTrackDefinition.
-        // Build always sizes a track's entry array to the GLOBAL
-        // RewardTrack.MaxLevel (today, 100; phase 2 moves it), so there is
-        // no way to construct an actually-40-level RewardTrackDefinition
-        // while that constant still reads 100. A fixture stops authoring
-        // anything past its own intended cap instead (every level beyond it
-        // reads TrackReward.None, which every rule below already skips), and
-        // `declaredCap` is what tells this method where that fixture MEANT
-        // to stop -- the same number rule F checks the fixture's own highest
-        // rewarding level against.
+        // THE RULE LOGIC ALONE, parameterised by the cap it should enforce
+        // -- what a test calls directly. RewardTrackDefinition.Build always
+        // sizes a track's entry array to the GLOBAL RewardTrack.MaxLevel,
+        // one shared cap for every track in the game, so a fixture that
+        // wants to be checked against a SHORTER track stops authoring past
+        // its own intended cap (every level beyond it reads
+        // TrackReward.None, which every rule below already skips) and says
+        // where it meant to stop with `declaredCap` -- the same number the
+        // highest-rewarding-level rule checks it against.
         public static List<string> ValidateAgainstCap(string label, RewardTrackDefinition track, int declaredCap)
         {
             var errors = new List<string>();

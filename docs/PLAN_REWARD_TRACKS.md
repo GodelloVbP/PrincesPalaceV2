@@ -414,6 +414,26 @@ author writes twelve milestones and a filler mix, and the 87 filler placements
 are computed by the existing `InterleaveMix`/`Spread` pair
 (`RewardTrack.cs:497-580`), moved onto the definition unchanged.
 
+> **Superseded 2026-09-15 by progression v2 phase 4.** The format below —
+> `milestones` plus a `filler` mix of `(reward, amount, count)` rows — is gone,
+> and with it `InterleaveMix`/`Spread` and validation rules 2, 3 and 4. A track
+> is now **one `levels` array with an explicit entry for every level from 2 to
+> `RewardTrack.MaxLevel`** (`RawTrackLevel`: `level`, `reward`, `amount`, plus
+> the optional `against` / `skillId` / `resource` / `identityKind` / `value`
+> selectors). The 40-level table in
+> `docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md` §4 places every node
+> deliberately — "+5% Nature damage at 7, 17 and 28", "Slam +5 at 12 and 24" —
+> and a computed placement cannot express a placement. Three rules remain:
+> every level from 2 to `MaxLevel` carries exactly one entry and no entry names
+> a level outside that span; a one-shot capability appears at most once; a
+> signature reward needs a signature resource. Rules 3 ("a one-shot kind may
+> not be filler") and 4 ("a filler element must be one the character can
+> already deal at level 1") were both policing computed placement — a milestone
+> was always exempt from rule 4 for exactly that reason — so both retired with
+> the mechanism. The rest of this section is kept for the reasoning behind the
+> separate file and the twelve captions, which is unchanged; the placement
+> arithmetic below it describes code that no longer exists.
+
 ### Where a filler node actually lands, so an author can predict it
 
 **The mix's order IS the level order, one node per free level, from level 2

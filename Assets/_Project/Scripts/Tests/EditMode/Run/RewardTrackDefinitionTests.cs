@@ -9,25 +9,59 @@ namespace PrincesPalace.Domain.Tests
     // docs/PLAN_REWARD_TRACKS.md P3.
     public class RewardTrackDefinitionTests
     {
-        // THE DEFAULT TABLE'S TWO TOTALS: 14 filler stat points + level 30's
-        // ten = 24; 15 filler MaxHealth at 2 each + 7 milestones at 15 each =
-        // 135. MaxHealth is read via CollectedTotal rather than
-        // GrantedBetween -- it is not a grant (RewardTrackTests.
-        // OnlyStatPointIsAGrant).
+        // THE DEFAULT TABLE'S TWO TOTALS: 13 Choice nodes at 4 stat points
+        // each = 52; 14 Bump nodes at 30 max health each = 420. MaxHealth is
+        // read via CollectedTotal rather than GrantedBetween -- it is not a
+        // grant (RewardTrackTests.OnlyStatPointIsAGrant).
         //
-        // Both numbers came down with the cap (progression v2 phase 2: 100
-        // levels to 40, twelve milestones to ten). They are what the
-        // GENERATED placeholder track pays a character nobody has authored
-        // one for; phase 4 replaces it per character.
+        // REPINNED BY PROGRESSION V2 PHASE 4, which rewrote the generated
+        // default from a ten-milestone/filler-mix description into an
+        // explicit 39-row table (the filler mix itself is gone -- see
+        // RawTrackLevel). It pays more than the old one did because the
+        // authored floors it now obeys are higher than the interim filler
+        // amounts were: a Choice node is worth exactly 4 and a MaxHealth
+        // Bump at least 30, both of which RewardTrackNodeValidation
+        // enforces on every authored track. This is still the placeholder
+        // for a character nobody designed one for, and every character on
+        // the roster has a real track.
         [Test]
-        public void TheDefaultTrackPaysTwentyFourStatPointsAndOneHundredThirtyFiveMaxHealth()
+        public void TheDefaultTrackPaysFiftyTwoStatPointsAndFourHundredTwentyMaxHealth()
         {
             var track = RewardTrackDefinition.Default("bear");
 
-            Assert.AreEqual(24, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
-                "14 filler singles plus level 30's ten");
-            Assert.AreEqual(135, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
-                "7 milestone nodes at 15 plus 15 filler nodes at 2");
+            Assert.AreEqual(52, track.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel),
+                "13 Choice nodes at 4 each");
+            Assert.AreEqual(420, track.CollectedTotal(TrackReward.MaxHealth, RewardTrack.MaxLevel),
+                "14 Bump nodes at 30 each");
+        }
+
+        // The generated default is not authored content and never passes
+        // through RewardTrackEntryResolver, so nothing else checks it
+        // against the node-kind rules every authored track must satisfy.
+        // Checked here because the default is the obvious thing to copy
+        // when authoring a new track, and one that could not itself survive
+        // the validator would be a trap.
+        [Test]
+        public void TheDefaultTrackSatisfiesTheNodeRules()
+        {
+            var errors = RewardTrackNodeValidation.Validate("the generated default",
+                RewardTrackDefinition.Default("bear"));
+
+            CollectionAssert.IsEmpty(errors, string.Join(" | ", errors));
+        }
+
+        // Every level from 2 to MaxLevel pays something -- the format rule
+        // RewardTrackEntryResolver enforces on authored content, asserted
+        // here against the one track no resolver ever sees.
+        [Test]
+        public void TheDefaultTrackFillsEveryLevel()
+        {
+            var track = RewardTrackDefinition.Default("bear");
+
+            for (int level = RewardTrack.StartingLevel + 1; level <= RewardTrack.MaxLevel; level++)
+            {
+                Assert.IsTrue(track.At(level).IsSomething, $"level {level} carries nothing");
+            }
         }
 
         // A landmark the screen draws large with nothing on it is the failure
@@ -60,8 +94,7 @@ namespace PrincesPalace.Domain.Tests
                 (RewardTrack.MaxLevel, new TrackEntry(TrackReward.SignatureCapacity, 5)),
             };
 
-            var track = RewardTrackDefinition.Build("fixture", milestones,
-                System.Array.Empty<(TrackEntry Entry, int Count)>());
+            var track = RewardTrackDefinition.Build("fixture", milestones);
 
             Assert.AreEqual(10, track.CollectedTotal(TrackReward.SignatureCapacity, RewardTrack.MaxLevel),
                 "two SignatureCapacity entries did not sum once both were behind the watermark");
@@ -103,8 +136,7 @@ namespace PrincesPalace.Domain.Tests
                 (10, new TrackEntry(TrackReward.ElementalDamagePercent, 10, DamageType.Fire)),
             };
 
-            var track = RewardTrackDefinition.Build("fixture", entries,
-                System.Array.Empty<(TrackEntry Entry, int Count)>());
+            var track = RewardTrackDefinition.Build("fixture", entries);
 
             var atMilestone = track.CollectedElementalTotals(10);
             Assert.AreEqual(14, atMilestone[DamageType.Fire], "both filler entries plus the milestone");

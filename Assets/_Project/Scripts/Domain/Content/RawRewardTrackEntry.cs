@@ -2,17 +2,32 @@ using System;
 
 namespace PrincesPalace.Domain.Content
 {
-    // One milestone reward, exactly as typed into reward_tracks.json's
-    // "milestones" array. See docs/PLAN_REWARD_TRACKS.md §4 for the
-    // authoring format and RewardTrackEntryResolver for what each field is
-    // validated against.
+    // ONE LEVEL'S REWARD, exactly as typed into reward_tracks.json's
+    // "levels" array. See docs/PLAN_REWARD_TRACKS.md §4 for the authoring
+    // format and RewardTrackEntryResolver for what each field is validated
+    // against.
+    //
+    // EVERY LEVEL IS AUTHORED NOW. Until progression v2 phase 4 a track was
+    // DESCRIBED rather than levelled: twelve milestone rows plus a "filler
+    // mix" of (reward, amount, count) rows the game spread across the other
+    // 87 levels by itself. That bought an author a short file and cost them
+    // the ability to say what any one of those 87 levels pays -- which is
+    // exactly what the 40-level track (PLAN_PROGRESSION_V2.md §4) is: a
+    // table with a designed entry on every row, where "+5% Nature damage at
+    // 7, 17 and 28" and "Slam +5 at 12 and 24" are placements, not counts.
+    // A computed placement cannot express either, so the mix is gone and
+    // with it the two rules that only existed to police it (a one-shot
+    // capability may not be filler; a filler element must be one the
+    // character can already deal). Both said the same thing -- "a level the
+    // author did not choose must not carry a decision" -- and neither has
+    // anything left to say now that the author chooses every level.
     [Serializable]
-    public class RawTrackMilestone
+    public class RawTrackLevel
     {
-        [ContentDoc("The milestone level this entry lands on; must be one of the track's twelve fixed milestone levels (10, 20, 25, 30, 40, 45, 50, 60, 70, 80, 90, 100), and every one of the twelve must be named exactly once.")]
+        [ContentDoc("The level this entry pays, from 2 to RewardTrack.MaxLevel; every one of those levels must carry exactly one entry and no entry may name a level outside that range.")]
         public int level;
 
-        [ContentDoc("Which TrackReward this milestone grants, matched case-insensitively against the enum member name.")]
+        [ContentDoc("Which TrackReward this level grants, matched case-insensitively against the enum member name.")]
         public string reward = "";
 
         [ContentDoc("The reward's magnitude -- a count for a grant (a stat point, max health), or an unlock's own parameter where it has one (SecondLife's charge count); 0 for an unlock with none (Respec).")]
@@ -21,7 +36,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise.")]
         public string against = "";
 
-        [ContentDoc("The skill id this reward unlocks (UnlockSkill), or the one named skill a SkillCostDelta/SkillFlatDelta entry adjusts; empty otherwise.")]
+        [ContentDoc("The skill id this reward unlocks (UnlockSkill), or the one named skill a SkillCostDelta/SkillFlatDelta/SkillPowerDelta entry adjusts; empty otherwise.")]
         public string skillId = "";
 
         [ContentDoc("Which TrackResourceTarget a SkillCostDelta entry discounts, matched case-insensitively; only SkillCostDelta reads this, empty otherwise.")]
@@ -34,26 +49,6 @@ namespace PrincesPalace.Domain.Content
         public string value = "";
     }
 
-    // One filler mix row, exactly as typed into reward_tracks.json's
-    // "filler" array -- a KIND and a COUNT, not a level. See
-    // docs/PLAN_REWARD_TRACKS.md §4, "where a filler node actually lands",
-    // for how a count becomes a placement.
-    [Serializable]
-    public class RawTrackFiller
-    {
-        [ContentDoc("Which TrackReward this filler row grants, matched case-insensitively against the enum member name. A one-shot capability (an unlock) is refused here -- filler may only be a grant.")]
-        public string reward = "";
-
-        [ContentDoc("The reward's magnitude, paid at every filler level this row places.")]
-        public int amount;
-
-        [ContentDoc("The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise.")]
-        public string against = "";
-
-        [ContentDoc("How many of the track's 87 filler levels this row occupies. Every row's count in a track must sum to exactly 87.")]
-        public int count;
-    }
-
     // One character's reward track, exactly as typed into an element of
     // reward_tracks.json's top-level "tracks" array.
     [Serializable]
@@ -62,11 +57,8 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The character this track belongs to; matches a characters.json id.")]
         public string characterId = "";
 
-        [ContentDoc("The track's twelve milestone rewards, one per fixed milestone level; see RawTrackMilestone.")]
-        public RawTrackMilestone[] milestones = Array.Empty<RawTrackMilestone>();
-
-        [ContentDoc("The track's filler reward mix, spread evenly across its 87 non-milestone levels; see RawTrackFiller.")]
-        public RawTrackFiller[] filler = Array.Empty<RawTrackFiller>();
+        [ContentDoc("One entry per level from 2 to RewardTrack.MaxLevel, in any order; see RawTrackLevel.")]
+        public RawTrackLevel[] levels = Array.Empty<RawTrackLevel>();
     }
 
     // JsonUtility cannot deserialize a bare top-level array, so

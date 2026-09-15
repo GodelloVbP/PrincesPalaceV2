@@ -182,8 +182,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
 | `characterId` | string | `""` | The character this track belongs to; matches a characters.json id. |  |
-| `milestones` | RawTrackMilestone[] (below) | `[]` | The track's twelve milestone rewards, one per fixed milestone level; see RawTrackMilestone. |  |
-| `filler` | RawTrackFiller[] (below) | `[]` | The track's filler reward mix, spread evenly across its 87 non-milestone levels; see RawTrackFiller. |  |
+| `levels` | RawTrackLevel[] (below) | `[]` | One entry per level from 2 to RewardTrack.MaxLevel, in any order; see RawTrackLevel. |  |
 
 ## skills.json -- `RawSkillEntry`
 
@@ -375,26 +374,17 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `magnitude` | int | `0` | The rule's magnitude; meaning depends on type. |  |
 | `threshold` | int | `0` | The rule's threshold; meaning depends on type. |  |
 
-### `RawTrackFiller`
+### `RawTrackLevel`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `reward` | string | `""` | Which TrackReward this filler row grants, matched case-insensitively against the enum member name. A one-shot capability (an unlock) is refused here -- filler may only be a grant. | None, StatPoint, MaxHealth, Respec, SecondLife, SignatureCapacity, SignatureGainPerTurn, SignatureGainOnDamageTaken, SignatureAbsorbs, ElementalDamagePercent, MaxMana, ManaRegen, UnlockSkill, FuryGainOnAttack, FuryStartOfFight, SpellCostDelta, SkillCostDelta, SkillFlatDelta, SignatureAbsorbPerPoint, Identity |
-| `amount` | int | `0` | The reward's magnitude, paid at every filler level this row places. |  |
-| `against` | string | `""` | The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
-| `count` | int | `0` | How many of the track's 87 filler levels this row occupies. Every row's count in a track must sum to exactly 87. |  |
-
-### `RawTrackMilestone`
-
-| Field | Type | Default | Description | Values |
-|---|---|---|---|---|
-| `level` | int | `0` | The milestone level this entry lands on; must be one of the track's twelve fixed milestone levels (10, 20, 25, 30, 40, 45, 50, 60, 70, 80, 90, 100), and every one of the twelve must be named exactly once. |  |
-| `reward` | string | `""` | Which TrackReward this milestone grants, matched case-insensitively against the enum member name. | None, StatPoint, MaxHealth, Respec, SecondLife, SignatureCapacity, SignatureGainPerTurn, SignatureGainOnDamageTaken, SignatureAbsorbs, ElementalDamagePercent, MaxMana, ManaRegen, UnlockSkill, FuryGainOnAttack, FuryStartOfFight, SpellCostDelta, SkillCostDelta, SkillFlatDelta, SignatureAbsorbPerPoint, Identity |
+| `level` | int | `0` | The level this entry pays, from 2 to RewardTrack.MaxLevel; every one of those levels must carry exactly one entry and no entry may name a level outside that range. |  |
+| `reward` | string | `""` | Which TrackReward this level grants, matched case-insensitively against the enum member name. | None, StatPoint, MaxHealth, Respec, SecondLife, SignatureCapacity, SignatureGainPerTurn, SignatureGainOnDamageTaken, SignatureAbsorbs, ElementalDamagePercent, MaxMana, ManaRegen, UnlockSkill, FuryGainOnAttack, FuryStartOfFight, SpellCostDelta, SkillCostDelta, SkillFlatDelta, SignatureAbsorbPerPoint, Identity, SkillPowerDelta, SpellDamagePercent |
 | `amount` | int | `0` | The reward's magnitude -- a count for a grant (a stat point, max health), or an unlock's own parameter where it has one (SecondLife's charge count); 0 for an unlock with none (Respec). |  |
 | `against` | string | `""` | The DamageType this reward is typed against, matched case-insensitively; only ElementalDamagePercent reads this, empty otherwise. | Physical, Fire, Ice, Nature, Poison, Arcane, Earth, Water, Wind, Lightning, Void |
-| `skillId` | string | `""` | The skill id this reward unlocks (UnlockSkill), or the one named skill a SkillCostDelta/SkillFlatDelta entry adjusts; empty otherwise. |  |
-| `resource` | string | `""` | Which TrackResourceTarget a SkillCostDelta entry discounts, matched case-insensitively; only SkillCostDelta reads this, empty otherwise. |  |
-| `identityKind` | string | `""` | Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise. |  |
+| `skillId` | string | `""` | The skill id this reward unlocks (UnlockSkill), or the one named skill a SkillCostDelta/SkillFlatDelta/SkillPowerDelta entry adjusts; empty otherwise. |  |
+| `resource` | string | `""` | Which TrackResourceTarget a SkillCostDelta entry discounts, matched case-insensitively; only SkillCostDelta reads this, empty otherwise. | Mana, Signature |
+| `identityKind` | string | `""` | Which TrackIdentityKind an Identity entry carries, matched case-insensitively; only Identity reads this, empty otherwise. | Title, PlateRim, PortraitFrame, PlateEmboss, VictoryPose, Mastery |
 | `value` | string | `""` | The Identity entry's payload -- a title string for Title, or 'silver'/'gold' for PlateRim/PlateEmboss; unused by PortraitFrame/VictoryPose/Mastery and by every non-Identity reward. |  |
 
 ### `SpellEmitter`

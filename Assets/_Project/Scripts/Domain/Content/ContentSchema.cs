@@ -89,10 +89,10 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawModifierEffect), nameof(RawModifierEffect.damageType))] = typeof(Stats.DamageType),
                 [(typeof(RawTalentEffect), nameof(RawTalentEffect.type))] = typeof(Combat.TalentEffectType),
                 [(typeof(RawAchievementEntry), nameof(RawAchievementEntry.condition))] = typeof(AchievementCondition),
-                [(typeof(RawTrackMilestone), nameof(RawTrackMilestone.reward))] = typeof(Progression.TrackReward),
-                [(typeof(RawTrackMilestone), nameof(RawTrackMilestone.against))] = typeof(Stats.DamageType),
-                [(typeof(RawTrackFiller), nameof(RawTrackFiller.reward))] = typeof(Progression.TrackReward),
-                [(typeof(RawTrackFiller), nameof(RawTrackFiller.against))] = typeof(Stats.DamageType),
+                [(typeof(RawTrackLevel), nameof(RawTrackLevel.reward))] = typeof(Progression.TrackReward),
+                [(typeof(RawTrackLevel), nameof(RawTrackLevel.against))] = typeof(Stats.DamageType),
+                [(typeof(RawTrackLevel), nameof(RawTrackLevel.resource))] = typeof(Progression.TrackResourceTarget),
+                [(typeof(RawTrackLevel), nameof(RawTrackLevel.identityKind))] = typeof(Progression.TrackIdentityKind),
 
                 // A presentation's own word, and the six a layer is authored
                 // in. `place` is here for its CLOSED half only -- its open

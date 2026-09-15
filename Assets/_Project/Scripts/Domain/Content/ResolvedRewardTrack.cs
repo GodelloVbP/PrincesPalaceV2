@@ -4,12 +4,19 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
-    // One milestone entry, resolved: the reward's kind and magnitude plus
-    // the two selectors and two captions RewardTrackEntryResolver bakes on
-    // -- see docs/PLAN_REWARD_TRACKS.md §4, "the two display names the
-    // captions need".
+    // One LEVEL's reward, resolved: the reward's kind and magnitude plus the
+    // selectors and the two captions RewardTrackEntryResolver bakes on --
+    // see docs/PLAN_REWARD_TRACKS.md §4, "the two display names the captions
+    // need".
+    //
+    // ONE RECORD FOR EVERY LEVEL. There used to be two -- a milestone
+    // (which carried a level) and a filler row (which carried a count and
+    // let the game pick the level) -- and progression v2 phase 4 retired the
+    // second when every level became authored; see RawTrackLevel's own
+    // header for why a computed placement could not express the 40-level
+    // table.
     [Serializable]
-    public sealed class ResolvedTrackMilestone
+    public sealed class ResolvedTrackLevel
     {
         public int Level;
         public TrackReward Reward;
@@ -22,16 +29,16 @@ namespace PrincesPalace.Domain.Content
         public DamageType AgainstType;
         public bool HasAgainst;
 
-        // Empty except for UnlockSkill.
+        // Empty except for UnlockSkill and the three Skill*Delta kinds.
         public string SkillId = "";
         public string SkillDisplayName = "";
 
         // Empty except for the five signature-resource kinds.
         public string ResourceDisplayName = "";
 
-        // PHASE 3: which resource a SkillCostDelta entry discounts (empty
-        // except for that one kind), and which cosmetic payload an Identity
-        // entry carries (empty except for that one). Same bool-pair
+        // Which resource a SkillCostDelta entry discounts (empty except for
+        // that one kind), and which cosmetic payload an Identity entry
+        // carries (empty except for that one). Same bool-pair
         // nullable-replacement as Against/HasAgainst above -- Unity does not
         // serialize TrackResourceTarget?/TrackIdentityKind?, and both enums
         // have a valid zero member.
@@ -46,11 +53,11 @@ namespace PrincesPalace.Domain.Content
         public TrackIdentityKind? IdentityKind => HasIdentityKind ? (TrackIdentityKind?)IdentityKindType : null;
 
         // For the serializer only.
-        public ResolvedTrackMilestone()
+        public ResolvedTrackLevel()
         {
         }
 
-        public ResolvedTrackMilestone(int level, TrackReward reward, int amount, DamageType? against,
+        public ResolvedTrackLevel(int level, TrackReward reward, int amount, DamageType? against,
             string skillId, string skillDisplayName, string resourceDisplayName,
             TrackResourceTarget? resource = null, TrackIdentityKind? identityKind = null, string identityValue = null)
         {
@@ -70,45 +77,6 @@ namespace PrincesPalace.Domain.Content
         }
     }
 
-    // One filler mix row, resolved -- a kind, a magnitude and a count, never
-    // a level (see RawTrackFiller).
-    [Serializable]
-    public sealed class ResolvedTrackFiller
-    {
-        public TrackReward Reward;
-        public int Amount;
-        public DamageType AgainstType;
-        public bool HasAgainst;
-        public int Count;
-
-        // Empty except for the four signature-resource kinds -- and three of
-        // those four CAN be filler (SignatureAbsorbs is the one-shot, refused
-        // by rule 3), so the caption's resource name has to ride here as well
-        // as on a milestone. Shawn's twelve `+1 WOOL CAPACITY` filler nodes
-        // are the case: without this they caption "+1 SIGNATURE CAPACITY",
-        // RewardTrackNames' blank-name fallback rather than the character's
-        // own word for the resource.
-        public string ResourceDisplayName = "";
-
-        public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
-
-        // For the serializer only.
-        public ResolvedTrackFiller()
-        {
-        }
-
-        public ResolvedTrackFiller(TrackReward reward, int amount, DamageType? against, int count,
-            string resourceDisplayName)
-        {
-            Reward = reward;
-            Amount = amount;
-            HasAgainst = against.HasValue;
-            AgainstType = against ?? default;
-            Count = count;
-            ResourceDisplayName = resourceDisplayName ?? "";
-        }
-    }
-
     // One character's reward track, resolved -- the shape
     // RewardTrackDefinitionAsset stores.
     //
@@ -123,8 +91,7 @@ namespace PrincesPalace.Domain.Content
     public sealed class ResolvedRewardTrack
     {
         public string CharacterId = "";
-        public ResolvedTrackMilestone[] Milestones = Array.Empty<ResolvedTrackMilestone>();
-        public ResolvedTrackFiller[] Filler = Array.Empty<ResolvedTrackFiller>();
+        public ResolvedTrackLevel[] Levels = Array.Empty<ResolvedTrackLevel>();
 
         // Listed by the character's own roster order -- see
         // RewardTrackDefinitionAsset.SortOrder and
@@ -136,12 +103,10 @@ namespace PrincesPalace.Domain.Content
         {
         }
 
-        public ResolvedRewardTrack(string characterId, ResolvedTrackMilestone[] milestones,
-            ResolvedTrackFiller[] filler, int sortOrder)
+        public ResolvedRewardTrack(string characterId, ResolvedTrackLevel[] levels, int sortOrder)
         {
             CharacterId = characterId ?? "";
-            Milestones = milestones ?? Array.Empty<ResolvedTrackMilestone>();
-            Filler = filler ?? Array.Empty<ResolvedTrackFiller>();
+            Levels = levels ?? Array.Empty<ResolvedTrackLevel>();
             SortOrder = sortOrder;
         }
     }

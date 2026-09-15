@@ -141,9 +141,20 @@ namespace PrincesPalace.Domain.Content
     // Validates reward_tracks.json. Same collected-not-first-only error
     // reporting as SkillEntryResolver/RelicEntryResolver, and the same
     // shape RelicEntryResolver uses for a second, cross-catalogue argument
-    // -- here a per-character lookup rather than a flat id set, because
-    // each track's rules 4/5 depend on which character it belongs to. See
-    // docs/PLAN_REWARD_TRACKS.md §4, "the five validation rules".
+    // -- here a per-character lookup rather than a flat id set, because the
+    // signature-resource rule depends on which character the track belongs
+    // to. See docs/PLAN_REWARD_TRACKS.md §4, "the validation rules".
+    //
+    // THREE RULES, DOWN FROM FIVE (progression v2 phase 4). Every level from
+    // StartingLevel+1 to MaxLevel carries exactly one entry and no entry
+    // names a level outside that span (rule 1, which now subsumes rule 2's
+    // "the filler counts add up"); a one-shot capability appears at most
+    // once (rule 1's second half); a signature reward is refused on a
+    // character with no signature resource (rule 5). Rules 3 and 4 -- "a
+    // one-shot kind may not be filler", "a filler element must be one the
+    // character can already deal at level 1" -- existed only because a
+    // filler row's LEVEL was computed rather than authored, and both went
+    // with the mix that computed it (see RawTrackLevel's own header).
     public static class RewardTrackEntryResolver
     {
         public static bool TryResolveAll(IReadOnlyList<RawRewardTrackEntry> entries,
@@ -154,14 +165,6 @@ namespace PrincesPalace.Domain.Content
             errors = new List<string>();
             characters ??= new Dictionary<string, RewardTrackCharacterContext>();
 
-            var milestoneLevels = RewardTrack.MilestoneLevels;
-
-            // RULE 2's target: the number of levels the track pays that are
-            // NOT one of the twelve milestones. Restated from
-            // RewardTrack.MaxLevel - RewardTrack.MilestoneLevels.Length -
-            // StartingLevel, never typed as a literal 87.
-            int expectedFillerCount = (RewardTrack.MaxLevel - RewardTrack.StartingLevel) - milestoneLevels.Length;
-
             for (int i = 0; i < entries.Count; i++)
             {
                 var raw = entries[i];
@@ -169,7 +172,7 @@ namespace PrincesPalace.Domain.Content
                     ? $"reward_tracks.json entry #{i + 1}"
                     : $"reward track '{raw.characterId}'";
 
-                if (TryResolveOne(raw, label, milestoneLevels, expectedFillerCount, characters, out var single, out var trackErrors))
+                if (TryResolveOne(raw, label, characters, out var single, out var trackErrors))
                 {
                     resolved.Add(single);
                 }
@@ -193,8 +196,8 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveOne(RawRewardTrackEntry raw, string label, IReadOnlyList<int> milestoneLevels,
-            int expectedFillerCount, IReadOnlyDictionary<string, RewardTrackCharacterContext> characters,
+        private static bool TryResolveOne(RawRewardTrackEntry raw, string label,
+            IReadOnlyDictionary<string, RewardTrackCharacterContext> characters,
             out ResolvedRewardTrack track, out List<string> errors)
         {
             track = null;
@@ -211,44 +214,53 @@ namespace PrincesPalace.Domain.Content
                 context = new RewardTrackCharacterContext();
             }
 
-            // ---- rule 1: every one of the twelve milestone levels carries exactly one entry, and no entry names a non-milestone level ----
-            var byLevel = new Dictionary<int, RawTrackMilestone>();
-            foreach (var m in raw.milestones ?? Array.Empty<RawTrackMilestone>())
+            // ---- RULE 1: every level from StartingLevel+1 to MaxLevel
+            // carries exactly one entry, and no entry names a level outside
+            // that span. This is the whole of what the milestone/filler pair
+            // of rules used to say between them: the twelve-milestone check
+            // and the "filler counts sum to 87" check were two halves of
+            // "every node on the rail pays something", which one walk over
+            // the levels now answers directly. ----
+            int firstLevel = RewardTrack.StartingLevel + 1;
+            var byLevel = new Dictionary<int, RawTrackLevel>();
+
+            foreach (var row in raw.levels ?? Array.Empty<RawTrackLevel>())
             {
-                if (m == null) continue;
+                if (row == null) continue;
 
-                if (!milestoneLevels.Contains(m.level))
+                if (row.level < firstLevel || row.level > RewardTrack.MaxLevel)
                 {
-                    errors.Add($"{label}: milestone entry names level {m.level}, which is not a milestone level " +
-                               $"-- the track's twelve are {string.Join(", ", milestoneLevels)}.");
+                    errors.Add($"{label}: entry names level {row.level}, outside the track's span of " +
+                               $"{firstLevel} to {RewardTrack.MaxLevel}.");
                     continue;
                 }
 
-                if (byLevel.ContainsKey(m.level))
+                if (byLevel.ContainsKey(row.level))
                 {
-                    errors.Add($"{label}: level {m.level} has more than one milestone entry.");
+                    errors.Add($"{label}: level {row.level} has more than one entry.");
                     continue;
                 }
 
-                byLevel[m.level] = m;
+                byLevel[row.level] = row;
             }
 
-            foreach (int level in milestoneLevels)
+            for (int level = firstLevel; level <= RewardTrack.MaxLevel; level++)
             {
                 if (!byLevel.ContainsKey(level))
                 {
-                    errors.Add($"{label}: milestone level {level} has no entry -- every one of the twelve must carry exactly one.");
+                    errors.Add($"{label}: level {level} has no entry -- every level from {firstLevel} to " +
+                               $"{RewardTrack.MaxLevel} must carry exactly one.");
                 }
             }
 
-            var resolvedMilestones = new List<ResolvedTrackMilestone>();
+            var resolvedLevels = new List<ResolvedTrackLevel>();
             foreach (var pair in byLevel.OrderBy(p => p.Key))
             {
                 if (TryResolveEntry(label, $"level {pair.Key}", pair.Value.reward, pair.Value.amount, pair.Value.against,
                         pair.Value.skillId, pair.Value.resource, pair.Value.identityKind, pair.Value.value,
-                        isFiller: false, context, out var core, out string entryError))
+                        context, out var core, out string entryError))
                 {
-                    resolvedMilestones.Add(new ResolvedTrackMilestone(pair.Key, core.Reward, core.Amount, core.Against,
+                    resolvedLevels.Add(new ResolvedTrackLevel(pair.Key, core.Reward, core.Amount, core.Against,
                         core.SkillId, core.SkillDisplayName, core.ResourceDisplayName, core.Resource, core.IdentityKind,
                         core.IdentityValue));
                 }
@@ -258,76 +270,41 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
-            // ---- rule 1, continued: a one-shot capability may appear at most
-            // once across the track's milestones. Rule 3 already keeps every
-            // one-shot kind out of filler, so a milestone is the only place
-            // one can be authored at all -- and HasUnlocked only ever asks
-            // "has the FIRST level this reward appears at been reached", so a
-            // second Respec or SecondLife milestone would be content no
-            // player could ever see paid out twice. UnlockSkill is keyed by
-            // skillId rather than by kind: two milestones naming two
-            // different skills are two different unlocks, but the same
-            // skillId named twice is the same dead-content bug.
+            // ---- RULE 1, continued: a one-shot capability may appear at
+            // most once on a track. HasUnlocked only ever asks "has the
+            // FIRST level this reward appears at been reached", so a second
+            // Respec or SecondLife node would be content no player could
+            // ever see paid out twice. UnlockSkill is keyed by skillId
+            // rather than by kind: two levels naming two different skills
+            // are two different unlocks, but the same skillId named twice is
+            // the same dead-content bug. ----
             var firstLevelOfCapability = new Dictionary<string, int>();
-            foreach (var milestone in resolvedMilestones)
+            foreach (var entry in resolvedLevels)
             {
-                if (!RewardTrack.IsOneShotCapability(milestone.Reward)) continue;
+                if (!RewardTrack.IsOneShotCapability(entry.Reward)) continue;
 
-                string key = milestone.Reward == TrackReward.UnlockSkill
-                    ? $"{milestone.Reward}:{milestone.SkillId}"
-                    : milestone.Reward.ToString();
+                string key = entry.Reward == TrackReward.UnlockSkill
+                    ? $"{entry.Reward}:{entry.SkillId}"
+                    : entry.Reward.ToString();
 
-                if (firstLevelOfCapability.TryGetValue(key, out int firstLevel))
+                if (firstLevelOfCapability.TryGetValue(key, out int alreadyAt))
                 {
-                    errors.Add($"{label}: {milestone.Reward} is a one-shot capability and appears at both level " +
-                               $"{firstLevel} and level {milestone.Level} -- it may only be granted once.");
+                    errors.Add($"{label}: {entry.Reward} is a one-shot capability and appears at both level " +
+                               $"{alreadyAt} and level {entry.Level} -- it may only be granted once.");
                 }
                 else
                 {
-                    firstLevelOfCapability[key] = milestone.Level;
-                }
-            }
-
-            // ---- rule 2: the filler counts sum to exactly the number of filler levels ----
-            var rawFiller = raw.filler ?? Array.Empty<RawTrackFiller>();
-            int fillerSum = rawFiller.Where(f => f != null).Sum(f => f.count);
-            if (fillerSum != expectedFillerCount)
-            {
-                errors.Add($"{label}: filler counts sum to {fillerSum}, but the track has {expectedFillerCount} " +
-                           $"filler levels -- they must sum to exactly {expectedFillerCount}.");
-            }
-
-            var resolvedFiller = new List<ResolvedTrackFiller>();
-            foreach (var f in rawFiller)
-            {
-                if (f == null) continue;
-
-                // rule 3 (a one-shot reward as filler) is checked inside
-                // TryResolveEntry, along with rules 4/5 -- filler and
-                // milestone entries share one validation path so a change
-                // to a rule cannot apply to one and not the other by
-                // accident.
-                if (TryResolveEntry(label, "a filler row", f.reward, f.amount, f.against, null, null, null, null,
-                        isFiller: true, context, out var core, out string entryError))
-                {
-                    resolvedFiller.Add(new ResolvedTrackFiller(core.Reward, core.Amount, core.Against, f.count,
-                        core.ResourceDisplayName));
-                }
-                else
-                {
-                    errors.Add(entryError);
+                    firstLevelOfCapability[key] = entry.Level;
                 }
             }
 
             if (errors.Count > 0) return false;
 
-            track = new ResolvedRewardTrack(raw.characterId, resolvedMilestones.ToArray(), resolvedFiller.ToArray(), context.SortOrder);
+            track = new ResolvedRewardTrack(raw.characterId, resolvedLevels.ToArray(), context.SortOrder);
 
             // PHASE 3's node-kind rules, mirrored (not restated -- see
             // RewardTrackNodeValidation's own header) at ContentDatabase.
-            // Validation for the loaded-catalogue path. Guarded internally
-            // behind RewardTrack.MaxLevel, so this is a no-op against the
-            // pre-P3, 100-level content still shipped today.
+            // Validation for the loaded-catalogue path.
             var nodeErrors = RewardTrackNodeValidation.Validate(label, RewardTrackDefinition.From(track));
             if (nodeErrors.Count > 0)
             {
@@ -340,10 +317,8 @@ namespace PrincesPalace.Domain.Content
         }
 
         // The reward-kind-independent core of one line -- reward, amount,
-        // against, skillId/skillDisplayName, resourceDisplayName, and P3's
-        // resource/identityKind/identityValue -- shared by a milestone entry
-        // (which also carries a level, added by the caller) and a filler
-        // row (which also carries a count).
+        // against, skillId/skillDisplayName, resourceDisplayName, and
+        // resource/identityKind/identityValue. The caller adds the level.
         private readonly struct ResolvedEntryCore
         {
             public readonly TrackReward Reward;
@@ -374,7 +349,7 @@ namespace PrincesPalace.Domain.Content
 
         private static bool TryResolveEntry(string trackLabel, string where, string rawReward, int amount,
             string rawAgainst, string skillId, string rawResource, string rawIdentityKind, string rawIdentityValue,
-            bool isFiller, RewardTrackCharacterContext context,
+            RewardTrackCharacterContext context,
             out ResolvedEntryCore core, out string error)
         {
             core = default;
@@ -400,15 +375,6 @@ namespace PrincesPalace.Domain.Content
                 amount = 1;
             }
 
-            // RULE 3, widened in P3 -- see RewardTrack.IsFillerIneligible's
-            // own header for why this is a broader question than "is this a
-            // one-shot capability".
-            if (isFiller && RewardTrack.IsFillerIneligible(reward))
-            {
-                error = $"{trackLabel}, {where}: {reward} cannot appear as filler -- only grants may.";
-                return false;
-            }
-
             DamageType? against = null;
             if (!string.IsNullOrWhiteSpace(rawAgainst))
             {
@@ -421,22 +387,13 @@ namespace PrincesPalace.Domain.Content
                 against = parsedAgainst;
             }
 
-            // RULE 4. P3 has landed TrackReward.ElementalDamagePercent, so
-            // this reads the parsed enum value directly rather than the
-            // reward's raw string -- see RewardTrackEntryResolverTests'
-            // FillerElementalDamageOfAnUnknownElement_IsRejected.
-            if (isFiller && reward == TrackReward.ElementalDamagePercent
-                         && against.HasValue && !context.Level1DamageTypes.Contains(against.Value))
-            {
-                error = $"{trackLabel}, {where}: filler {against} damage is not an element this character can deal " +
-                        "at level 1 (their own attackType, a damageInstances entry on a skill they own with " +
-                        "unlockLevel <= 1, or an element a level-1 skill's own Elements list lets them choose) -- " +
-                        "only a MILESTONE may place an element the character has not unlocked yet.";
-                return false;
-            }
-
-            // RULE 5. Same as rule 4: P3 has landed the four signature-
-            // resource kinds, so this reads the parsed enum value directly.
+            // RULE 5, the one cross-character rule left. (Rule 4 -- "a
+            // filler element must be one the character can already deal at
+            // level 1" -- went with the filler mix: a MILESTONE was always
+            // exempt from it precisely because its level was authored, and
+            // every level is authored now, so the exemption swallowed the
+            // rule. Level1DamageTypes is kept on the context for the
+            // ContentDatabase.Validation mirror and for whatever asks next.)
             if (RewardTrack.IsSignatureReward(reward) && !context.HasSignatureResource)
             {
                 error = $"{trackLabel}, {where}: {rawReward} is authored on a character with no signature resource.";
@@ -516,6 +473,33 @@ namespace PrincesPalace.Domain.Content
 
                 resolvedSkillId = skillId;
                 skillDisplayName = skillCtx.DisplayName;
+            }
+
+            // PHASE 4: SkillPowerDelta -- one named skill, and it must
+            // actually spend a signature resource for a per-point bonus to
+            // have anything to multiply. A skill with no resourceCost never
+            // reaches SkillResolution's `power * resourceSpent` term at all,
+            // so a delta on one would be a number nothing reads -- the same
+            // dead-authoring failure HasFlatAmountPath refuses for
+            // SkillFlatDelta.
+            if (reward == TrackReward.SkillPowerDelta)
+            {
+                if (string.IsNullOrWhiteSpace(skillId) || !context.Skills.TryGetValue(skillId, out var powerCtx))
+                {
+                    error = $"{trackLabel}, {where}: SkillPowerDelta names skillId '{skillId}', which is not a skill " +
+                            "in the catalogue.";
+                    return false;
+                }
+
+                if (powerCtx.ResourceCost <= 0)
+                {
+                    error = $"{trackLabel}, {where}: SkillPowerDelta names '{skillId}', which spends no signature " +
+                            "resource -- `power` is paid per point spent, so a delta on it would never be read.";
+                    return false;
+                }
+
+                resolvedSkillId = skillId;
+                skillDisplayName = powerCtx.DisplayName;
             }
 
             // P3: Identity -- exactly one payload kind, with a value required

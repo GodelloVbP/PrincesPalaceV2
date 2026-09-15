@@ -5,38 +5,51 @@ using PrincesPalace.Domain.Progression;
 namespace PrincesPalace.Domain.Tests
 {
     // PHASE 3's node-kind validator (docs/handoffs/progression_v2/
-    // PLAN_PROGRESSION_V2.md §7 phase 3). Exercised through
-    // ValidateAgainstCap directly rather than Validate -- see that method's
-    // own header: RewardTrackDefinition.Build always sizes a track to the
-    // GLOBAL RewardTrack.MaxLevel (100 today), so there is no way to build
-    // an actually-40-level track while phase 2's change to that constant
-    // has not landed, and the guarded production door (Validate) would
-    // return no errors at all against ANY track right now. ValidateAgainstCap
-    // is the rule logic with the cap handed in explicitly, which is what
-    // lets these rules be pinned before that constant moves.
+    // PLAN_PROGRESSION_V2.md §7 phase 3). Most cases go through
+    // ValidateAgainstCap rather than Validate, because a fixture that only
+    // authors levels 2 to 5 would otherwise fail the "highest rewarding
+    // level equals the cap" rule for a reason that has nothing to do with
+    // what it is testing -- `declaredCap` is how a short fixture says where
+    // it meant to stop. The production door (Validate) is exercised on its
+    // own below, against a full-length fixture.
     public class RewardTrackNodeValidationTests
     {
         private const string Label = "fixture";
 
         private static RewardTrackDefinition Build(params (int Level, TrackEntry Entry)[] entries) =>
-            RewardTrackDefinition.Build("fixture", entries, System.Array.Empty<(TrackEntry, int)>());
+            RewardTrackDefinition.Build("fixture", entries);
 
         private static string Join(List<string> errors) => string.Join(" | ", errors);
 
-        // ---- the production door is a no-op against today's 100-level content ----
+        // ---- the production door runs the rules, unguarded ----
+        //
+        // Phase 3 shipped Validate switched off behind a
+        // MaxLevel == 100 check, and the test that stood here asserted
+        // exactly that no-op. Phase 4 removed the guard with the
+        // hundred-level content it existed for, so what has to be pinned
+        // now is the opposite: the door a real build goes through actually
+        // refuses a broken track.
 
         [Test]
-        public void Validate_IsANoOpWhileMaxLevelIsStillTheLegacyOneHundred()
+        public void Validate_RefusesABrokenTrack()
         {
-            // A track that would fail rule A outright if the guard were not
-            // in place: two neighbouring StatPoint (Choice) nodes.
+            // Two neighbouring StatPoint (Choice) nodes -- rule A.
             var track = Build(
                 (2, new TrackEntry(TrackReward.StatPoint, 4)),
                 (3, new TrackEntry(TrackReward.StatPoint, 4)));
 
             var errors = RewardTrackNodeValidation.Validate(Label, track);
 
-            Assert.AreEqual(0, errors.Count, "guarded off while RewardTrack.MaxLevel == 100");
+            Assert.IsNotEmpty(errors, "the production door let two neighbouring Choice nodes through");
+            StringAssert.Contains("neighbouring", Join(errors));
+        }
+
+        [Test]
+        public void Validate_AcceptsAConformingTrack()
+        {
+            var errors = RewardTrackNodeValidation.Validate(Label, ConformingFixture());
+
+            CollectionAssert.IsEmpty(errors, Join(errors));
         }
 
         // ---- a minimal conforming 40-level fixture accepts ----
@@ -96,7 +109,7 @@ namespace PrincesPalace.Domain.Tests
                 entries.Add((level, new TrackEntry(TrackReward.Identity, 0)));
             }
 
-            return RewardTrackDefinition.Build("fixture", entries.ToArray(), System.Array.Empty<(TrackEntry, int)>());
+            return RewardTrackDefinition.Build("fixture", entries.ToArray());
         }
 
         // ---- each rule refuses a minimal offending fixture ----

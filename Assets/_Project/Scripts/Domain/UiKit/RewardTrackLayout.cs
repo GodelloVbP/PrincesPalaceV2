@@ -964,7 +964,11 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.None: return null;
                 case TrackReward.StatPoint: return "proc:track_stat";
                 case TrackReward.MaxHealth: return "proc:track_health";
-                case TrackReward.ElementalDamagePercent: return "proc:track_exp";
+                // SpellDamagePercent shares the elemental mark, because it
+                // IS an elemental percentage -- one applied to every
+                // non-Physical type at once (see its own header).
+                case TrackReward.ElementalDamagePercent:
+                case TrackReward.SpellDamagePercent: return "proc:track_exp";
                 case TrackReward.MaxMana:
                 case TrackReward.ManaRegen: return "proc:track_favor";
                 default: return "proc:ring_outline";
@@ -1012,6 +1016,13 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.SignatureAbsorbPerPoint: return Screens.RewardTrackScreen.SignatureAbsorbPerPointArtKey;
                 case TrackReward.Identity: return Screens.RewardTrackScreen.IdentityArtKey;
 
+                // PHASE 4's two. Both share a key with the kind they are a
+                // variant of rather than naming new art: a per-point skill
+                // delta is still a skill delta, and an all-spell percentage
+                // is still an elemental percentage.
+                case TrackReward.SkillPowerDelta: return Screens.RewardTrackScreen.SkillFlatDeltaArtKey;
+                case TrackReward.SpellDamagePercent: return Screens.RewardTrackScreen.ElementalArtKey;
+
                 default: return null;
             }
         }
@@ -1028,7 +1039,8 @@ namespace PrincesPalace.Domain.UiKit
             {
                 case TrackReward.StatPoint: return "#EDE6FF2E";
                 case TrackReward.MaxHealth: return "#D8B4A82E";
-                case TrackReward.ElementalDamagePercent: return "#C8B4DE2E";
+                case TrackReward.ElementalDamagePercent:
+                case TrackReward.SpellDamagePercent: return "#C8B4DE2E";
                 case TrackReward.MaxMana:
                 case TrackReward.ManaRegen: return "#F2DB9E2E";
                 default: return "#C8B4DE1F";

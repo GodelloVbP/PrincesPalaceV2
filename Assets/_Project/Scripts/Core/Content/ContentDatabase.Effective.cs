@@ -440,7 +440,37 @@ namespace PrincesPalace.Content
             var own = GetCharacter(character.definitionId)?.Data.AttackType;
             var track = RewardTracks.For(character);
 
-            foreach (var elemental in track.CollectedElementalTotals(character.claimedTrackLevel))
+            // PHASE 4: SpellDamagePercent is expanded RIGHT HERE, into the
+            // same per-element rows an ElementalDamagePercent entry
+            // produces, one per non-Physical DamageType -- Odette's "+5%
+            // spell damage" at 7, 19 and 28. Summed into the per-element
+            // totals BEFORE the loop below rather than added as extra rows
+            // after it, so a character who somehow held both an all-spell
+            // node and a per-element one on the same element gets one row
+            // for that element at their combined value, not two rows that
+            // ModifierEffectSet.Best() would collapse to the larger.
+            //
+            // PHYSICAL IS THE ONE EXCLUSION, and it is the whole definition
+            // of "spell" this reward has: every other DamageType in the game
+            // is something cast. That keeps the reward build-agnostic (§4's
+            // own argument for replacing Odette's per-element bumps) without
+            // a second list of "which elements count as magic" to maintain
+            // beside DamageType itself.
+            int allSpellPercent = track.CollectedTotal(TrackReward.SpellDamagePercent, character.claimedTrackLevel);
+
+            var elementalTotals = new Dictionary<DamageType, int>(track.CollectedElementalTotals(character.claimedTrackLevel));
+            if (allSpellPercent > 0)
+            {
+                foreach (DamageType type in System.Enum.GetValues(typeof(DamageType)))
+                {
+                    if (type == DamageType.Physical) continue;
+
+                    elementalTotals.TryGetValue(type, out int running);
+                    elementalTotals[type] = running + allSpellPercent;
+                }
+            }
+
+            foreach (var elemental in elementalTotals)
             {
                 DamageType type = elemental.Key;
                 int n = elemental.Value;
@@ -860,15 +890,16 @@ namespace PrincesPalace.Content
             int skillManaDelta = track.CollectedSkillCostDelta(skill.Id, TrackResourceTarget.Mana, claimed);
             int skillResourceDelta = track.CollectedSkillCostDelta(skill.Id, TrackResourceTarget.Signature, claimed);
             int flatDelta = track.CollectedSkillFlatDelta(skill.Id, claimed);
+            int powerDelta = track.CollectedSkillPowerDelta(skill.Id, claimed);
 
             // SpellCostDelta only ever touches a skill that actually costs
             // mana -- Shear/Battering Ram cost Wool, not mana, so a universal
             // spell discount must not also chip at their resourceCost.
             int manaDelta = skillManaDelta + (skill.ManaCost > 0 ? spellDelta : 0);
 
-            if (manaDelta == 0 && skillResourceDelta == 0 && flatDelta == 0) return skill;
+            if (manaDelta == 0 && skillResourceDelta == 0 && flatDelta == 0 && powerDelta == 0) return skill;
 
-            return skill.WithTrackDeltas(manaDelta, skillResourceDelta, flatDelta);
+            return skill.WithTrackDeltas(manaDelta, skillResourceDelta, flatDelta, powerDelta);
         }
 
         // A character's actual Skill mana cost including their level's

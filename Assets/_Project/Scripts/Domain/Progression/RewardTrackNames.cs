@@ -79,6 +79,19 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.SkillFlatDelta:
                     return $"{SkillNameOf(entry)} +{amount}";
 
+                // ---- PHASE 4 ----
+
+                // "+1 PER POINT" rather than a bare "+1", because the whole
+                // difference between this and SkillFlatDelta above is that
+                // the number is paid once per point of resource spent -- a
+                // caption that read the same as the flat one would make the
+                // two nodes indistinguishable on the rail.
+                case TrackReward.SkillPowerDelta:
+                    return $"{SkillNameOf(entry)} +{amount} PER POINT";
+
+                case TrackReward.SpellDamagePercent:
+                    return $"+{amount}% SPELL DAMAGE";
+
                 case TrackReward.SignatureAbsorbPerPoint:
                     return $"{ResourceNameOf(entry)} ABSORBS {amount} PER POINT";
 

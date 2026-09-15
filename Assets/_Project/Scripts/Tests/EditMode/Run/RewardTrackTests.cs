@@ -19,25 +19,30 @@ namespace PrincesPalace.Domain.Tests
         // player is counting toward. Moving one is a design change and should
         // have to be typed twice.
         //
-        // SEVEN OF THE TEN ARE MaxHealth 15 -- the generated default has no
-        // author to give the other seven milestones their own flavour, so it
-        // fills them with a plain, always-safe reward instead. The three
-        // that are not are the spine every track shares: Respec at 20,
-        // SecondLife at 25, StatPoint at 30.
+        // THE GENERATED DEFAULT has no author to give its milestones their
+        // own flavour, so it alternates the two rewards every character can
+        // certainly receive -- a Choice worth 4 stat points, a Bump worth 30
+        // max health -- and puts the two utilities where the real tracks put
+        // them (Respec 8, Second Life 25). Above 30 it is Identity, like
+        // every authored track.
         //
-        // The cadence itself moved with progression v2 phase 2 (cap 100 to
-        // 40); this is the placeholder track, and phase 4 authors the real
-        // ones.
-        [TestCase(3, TrackReward.MaxHealth, 15)]
-        [TestCase(5, TrackReward.MaxHealth, 15)]
-        [TestCase(10, TrackReward.MaxHealth, 15)]
-        [TestCase(15, TrackReward.MaxHealth, 15)]
-        [TestCase(20, TrackReward.Respec, 0)]
+        // REPINNED BY PROGRESSION V2 PHASE 4, which rewrote the default as
+        // an explicit 39-row table. What a milestone level happens to pay on
+        // the default track is now a consequence of that alternation rather
+        // than a design decision in its own right -- the real decisions are
+        // in reward_tracks.json, pinned by RewardTrackContentPinTests. This
+        // stays because the levels themselves are still a promise: the
+        // screen draws these ten large.
+        [TestCase(3, TrackReward.StatPoint, 4)]
+        [TestCase(5, TrackReward.StatPoint, 4)]
+        [TestCase(10, TrackReward.MaxHealth, 30)]
+        [TestCase(15, TrackReward.StatPoint, 4)]
+        [TestCase(20, TrackReward.MaxHealth, 30)]
         [TestCase(25, TrackReward.SecondLife, 1)]
-        [TestCase(30, TrackReward.StatPoint, 10)]
-        [TestCase(35, TrackReward.MaxHealth, 15)]
-        [TestCase(38, TrackReward.MaxHealth, 15)]
-        [TestCase(40, TrackReward.MaxHealth, 15)]
+        [TestCase(30, TrackReward.MaxHealth, 30)]
+        [TestCase(35, TrackReward.Identity, 0)]
+        [TestCase(38, TrackReward.Identity, 0)]
+        [TestCase(40, TrackReward.Identity, 0)]
         public void AMilestoneLandsOnItsLevel(int level, TrackReward reward, int amount)
         {
             var entry = Default.At(level);
@@ -142,8 +147,8 @@ namespace PrincesPalace.Domain.Tests
         // rather than merely reached (docs/PLAN_REWARD_TRACKS.md §2). The
         // arithmetic under test is the same either way.
 
-        [TestCase(TrackReward.Respec, 19, false)]
-        [TestCase(TrackReward.Respec, 20, true)]
+        [TestCase(TrackReward.Respec, 7, false)]
+        [TestCase(TrackReward.Respec, 8, true)]
         [TestCase(TrackReward.Respec, 39, true)]
         [TestCase(TrackReward.SecondLife, 24, false)]
         [TestCase(TrackReward.SecondLife, 25, true)]
@@ -180,15 +185,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(isSignatureReward, RewardTrack.IsSignatureReward(reward));
         }
 
-        // Level 30 grants ten stat points (level 80 before progression v2
-        // phase 2 moved the spine). It USED TO be sized to exactly one
+        // A CHOICE NODE IS WORTH FOUR POINTS, everywhere -- the plan's own
+        // bundle size (PLAN_PROGRESSION_V2.md §4) and the exact number
+        // RewardTrackNodeValidation refuses any other value for.
+        //
+        // The bundle USED TO be ten, sized to exactly one
         // AbilityDerivation.CharacterBand -- the edge past which a point
         // stopped paying a flat rate and started paying the square of the
         // excess, making the tenth point the last "cheap" one. Phase 2 of the
         // balance redesign (D2) deleted that piecewise curve: every derivation
-        // is a straight line now, so there is no band edge left for this
-        // milestone to be exactly sized to. See RewardTrack.cs's own comment
-        // at this milestone for the fuller account.
+        // is a straight line now, so there is no band edge left for a bundle
+        // to be sized to, which is why four is a pacing decision rather than
+        // a formula one.
         //
         // What is left to assert is simpler and still true: every point,
         // inside the old band or past it, is worth exactly the same amount --
@@ -196,10 +204,10 @@ namespace PrincesPalace.Domain.Tests
         // (gotcha 5) rather than computed, so a future formula change has to
         // touch this number on purpose.
         [Test]
-        public void TheStatPointMilestoneIsTenPoints_AndEveryPointIsWorthTheSameFlatAmount()
+        public void AChoiceNodeIsFourPoints_AndEveryPointIsWorthTheSameFlatAmount()
         {
-            Assert.AreEqual(TrackReward.StatPoint, Default.At(30).Reward);
-            Assert.AreEqual(10, Default.At(30).Amount);
+            Assert.AreEqual(TrackReward.StatPoint, Default.At(3).Reward);
+            Assert.AreEqual(4, Default.At(3).Amount);
 
             int firstStep = HealthAt(1) - HealthAt(0);
             int tenthStep = HealthAt(10) - HealthAt(9);
@@ -311,10 +319,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the max-health nodes -------------------------------------------------
 
-        // EVERY LEVEL PAYS. The filler counts sum to exactly the number of
-        // filler levels, so there is no level between 2 and 100 that hands over
-        // nothing -- which is the whole reason the track can be walked without
-        // a stretch of it feeling broken.
+        // EVERY LEVEL PAYS. Every level from 2 to MaxLevel is authored, on
+        // the generated default as much as on a real track, so there is no
+        // level that hands over nothing -- which is the whole reason the
+        // track can be walked without a stretch of it feeling broken.
         [Test]
         public void NoLevelOfTheTrackPaysNothing()
         {
@@ -324,8 +332,8 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // 24 stat points across the whole track: 14 filler plus level 30's ten.
-        // Was 50 while the cap was 100.
+        // 52 stat points across the whole track: 13 Choice nodes at 4 each.
+        // Was 24 under phase 2's filler mix, and 50 while the cap was 100.
         //
         // Under the 60 that would be six scores' worth of ten points each --
         // ten no longer names a formula band (AbilityDerivation.CharacterBand
@@ -339,14 +347,14 @@ namespace PrincesPalace.Domain.Tests
         {
             int points = Default.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel);
 
-            Assert.AreEqual(24, points);
+            Assert.AreEqual(52, points);
             Assert.Less(points, Stats.AbilityScores.All.Length * 10,
                 "the track grants enough points to max every band, so spending them is no longer a choice");
         }
 
-        // The default table's two totals (24 stat points, 135 max health)
+        // The default table's two totals (52 stat points, 420 max health)
         // are pinned in RewardTrackDefinitionTests.
-        // TheDefaultTrackPaysTwentyFourStatPointsAndOneHundredThirtyFiveMaxHealth
+        // TheDefaultTrackPaysFiftyTwoStatPointsAndFourHundredTwentyMaxHealth
         // instead of here -- RewardTrackDefinition.Default owns the table,
         // and Default.GrantedBetween(MaxHealth, ...) is 0 by construction
         // (OnlyStatPointIsAGrant above), so a MaxHealth total belongs beside

@@ -267,7 +267,14 @@ namespace PrincesPalace.Domain.Content
         // a cost that was already POSITIVE: a skill authored at 0 mana stays
         // free rather than being floored up to 1 by a discount it was never
         // charged in the first place.
-        public ResolvedSkill WithTrackDeltas(int manaCostDelta, int resourceCostDelta, int flatAmountDelta)
+        //
+        // `powerDelta` (phase 4) is the one that ADDS rather than discounts,
+        // alongside flatAmountDelta: Shawn's level 26 raises Tuck In's ward
+        // from 2 per Wool to 3 by moving `power`, the per-point lever, not
+        // the flat one. No floor on either -- a track only ever pays a
+        // positive delta into them.
+        public ResolvedSkill WithTrackDeltas(int manaCostDelta, int resourceCostDelta, int flatAmountDelta,
+            int powerDelta = 0)
         {
             var copy = (ResolvedSkill)MemberwiseClone();
 
@@ -284,6 +291,11 @@ namespace PrincesPalace.Domain.Content
             if (flatAmountDelta != 0)
             {
                 copy.FlatAmount += flatAmountDelta;
+            }
+
+            if (powerDelta != 0)
+            {
+                copy.Power += powerDelta;
             }
 
             return copy;

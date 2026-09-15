@@ -620,80 +620,47 @@ namespace PrincesPalace.Content
             // validates the LOADED catalogue: an asset created by hand under
             // Resources/Content never passed through a resolver at all.
             //
-            // Rules 4 and 5 below are the resolver's own two checks, mirrored
-            // for the same reason.
+            // The two rules left are the resolver's own, mirrored for the
+            // same reason: a skillId that names a real skill, and no
+            // signature reward on a character with no signature resource.
+            // (The old "filler element must be one the character can deal
+            // at level 1" mirror went with the filler mix itself --
+            // progression v2 phase 4, see RawTrackLevel.)
             foreach (var track in _rewardTracks)
             {
                 var owner = GetCharacter(track.Data.CharacterId);
                 bool hasSignatureResource = owner != null && owner.Data.HasSignatureResource;
 
-                // RULE 4's set: the character's own AttackType, plus the
-                // type of every damageInstances entry (and every choosable
-                // element) on a skill authored to them with unlockLevel <= 1
-                // -- what they can already deal at level 1. A milestone is
-                // exempt (its level is authored and visible, so its element
-                // can be placed deliberately after the skill that first
-                // deals it); only filler is checked, matching the resolver's
-                // own gate. SkillDamageTypes.AtLevel1 is the one walk --
-                // RewardTrackCharacterContext.BuildAll asks the identical
-                // question over its own resolved skill list; this one only
-                // has to agree.
-                var level1Types = owner == null
-                    ? new HashSet<DamageType>()
-                    : SkillDamageTypes.AtLevel1(owner.Data.AttackType,
-                        _skills.Where(s => s.Data.CharacterId == track.Data.CharacterId && s.Data.UnlockLevel <= 1)
-                            .Select(s => s.Data));
-
-                foreach (var milestone in track.Data.Milestones)
+                foreach (var level in track.Data.Levels)
                 {
-                    // PHASE 3: the same "resolves to a real skill, nothing
-                    // about whose it is" check as UnlockSkill's, extended to
-                    // SkillCostDelta/SkillFlatDelta's own skillId -- §3h
-                    // again, a track IS the character.
-                    bool needsSkillId = milestone.Reward == TrackReward.UnlockSkill
-                        || milestone.Reward == TrackReward.SkillCostDelta
-                        || milestone.Reward == TrackReward.SkillFlatDelta;
+                    // The same "resolves to a real skill, nothing about
+                    // whose it is" check as UnlockSkill's, extended to the
+                    // three Skill*Delta kinds' own skillId -- §3h again, a
+                    // track IS the character.
+                    bool needsSkillId = level.Reward == TrackReward.UnlockSkill
+                        || level.Reward == TrackReward.SkillCostDelta
+                        || level.Reward == TrackReward.SkillFlatDelta
+                        || level.Reward == TrackReward.SkillPowerDelta;
 
-                    if (needsSkillId && (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null))
+                    if (needsSkillId && (string.IsNullOrEmpty(level.SkillId) || GetSkill(level.SkillId) == null))
                     {
-                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} ({milestone.Reward}) " +
-                                   $"names unknown skill id '{milestone.SkillId}'.");
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} ({level.Reward}) " +
+                                   $"names unknown skill id '{level.SkillId}'.");
                     }
 
-                    // RULE 5: milestone or filler, unlike rule 4 -- a
-                    // milestone with no signature resource to pay into is
-                    // just as broken as a filler row would be. Covers
-                    // SignatureAbsorbPerPoint too (P3) since IsSignatureReward
-                    // now names it alongside the original four.
-                    if (RewardTrack.IsSignatureReward(milestone.Reward) && !hasSignatureResource)
+                    if (RewardTrack.IsSignatureReward(level.Reward) && !hasSignatureResource)
                     {
-                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} authors " +
-                                   $"{milestone.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
+                                   $"{level.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
                     }
                 }
 
-                // PHASE 3's node-kind rules, mirrored from the resolver for
-                // the loaded-catalogue path -- see RewardTrackNodeValidation's
-                // own header. Guarded internally behind RewardTrack.MaxLevel,
-                // so this is a no-op against the pre-P3 shipped content.
+                // The node-kind rules, mirrored from the resolver for the
+                // loaded-catalogue path -- see RewardTrackNodeValidation's
+                // own header for why this is one function called twice
+                // rather than the same rules typed twice.
                 errors.AddRange(RewardTrackNodeValidation.Validate($"Reward track '{track.Data.CharacterId}'",
                     RewardTrackDefinition.From(track.Data)));
-
-                foreach (var filler in track.Data.Filler)
-                {
-                    if (filler.Reward == TrackReward.ElementalDamagePercent && filler.Against.HasValue
-                        && !level1Types.Contains(filler.Against.Value))
-                    {
-                        errors.Add($"Reward track '{track.Data.CharacterId}' filler {filler.Against} damage is not " +
-                                   "an element the character can deal at level 1.");
-                    }
-
-                    if (RewardTrack.IsSignatureReward(filler.Reward) && !hasSignatureResource)
-                    {
-                        errors.Add($"Reward track '{track.Data.CharacterId}' filler authors {filler.Reward}, but " +
-                                   $"'{track.Data.CharacterId}' has no signature resource.");
-                    }
-                }
             }
 
             return errors;
