@@ -24,19 +24,28 @@ namespace PrincesPalace.PlayModeTests
     // The owner, 2026-09-09: "when attacking from the middle and backline,
     // when you go in for a hit, you stop earlier and not in front of the
     // enemy", and "Slam for Bjorn clips into the enemy when he goes in".
-    // Both are claims about ONE NUMBER -- the daylight between the attacker's
-    // leading opaque edge and the target's near opaque edge at the moment the
-    // blow lands -- and nothing measured that number before this fixture.
+    // Both are claims about the daylight between the two figures at the moment
+    // the blow lands, and nothing measured that before this fixture.
     // StageStandOffTests pins the arithmetic in Domain; this proves the
     // arithmetic reaches the real stage, wearing the real art, at the real
     // marks.
     //
+    // TWO GAPS PER BEAT SINCE 2026-09-15, because the owner's third complaint
+    // is that the first two were answered against the wrong edge: Bjorn's
+    // hammer stopped 12px from the TIP of the beetle's horn, about a body's
+    // width in front of the beetle. The stand-off now closes on BODIES, so
+    // that is the gap the contract is written against, and the gap between the
+    // outermost drawn pixels is bounded above only -- weapons are supposed to
+    // be inside the target at impact. See MinGap/MaxGap below.
+    //
     // MEASURED OFF THE RENDERED TRANSFORMS, not off the production formula:
-    // the opaque box is read as a FRACTION of each sprite's own untrimmed
-    // canvas and applied to the Image's rendered bounds, so this agrees with
+    // every edge is read as a FRACTION of each sprite's own untrimmed canvas
+    // and applied to the Image's rendered bounds, so this agrees with
     // StageStandOff only if the stage really put the figure where the
     // arithmetic says. Re-deriving TravelTo here would assert that
-    // multiplication is deterministic (CLAUDE.md gotcha 5).
+    // multiplication is deterministic (CLAUDE.md gotcha 5), and so would
+    // asking StageActorAnimator where the body edges are -- this fixture
+    // counts the columns itself and shares only the threshold.
     //
     // A BARE FightBeatPlayer DRIVING THE REAL SLOTS, the seam
     // FightBeatPlayerFixtureTests opened. The scene's own controller is left
@@ -48,8 +57,20 @@ namespace PrincesPalace.PlayModeTests
     {
         private const ulong Seed = 20260904UL;
 
-        // The contract: contact, and no clipping. A Lunge or a Close leaves
-        // the authored gap; a Charge ends against what it hit.
+        // THE CONTRACT, IN TWO NUMBERS PER BEAT.
+        //
+        // The BODIES touch and do not interpenetrate: a Lunge or a Close
+        // leaves the authored gap, a Charge ends against what it hit, and
+        // neither ever leaves daylight you could park a third figure in. That
+        // is MinGap..MaxGap, and it is measured between the two MASS edges,
+        // which is where the stand-off aims.
+        //
+        // And there is NEVER DAYLIGHT between the two drawings. The tight-edge
+        // gap is normally negative here -- the attacker's weapon is inside the
+        // target's silhouette at the instant of the blow, which is the whole
+        // point of closing on bodies rather than on outermost pixels -- so it
+        // is bounded above only. A positive tight gap larger than MaxGap means
+        // the two figures are visibly apart at impact whatever the bodies say.
         private const float MinGap = 0f;
         private const float MaxGap = 30f;
 
@@ -174,17 +195,24 @@ namespace PrincesPalace.PlayModeTests
             return found.ToArray();
         }
 
-        // The opaque x-range of whatever drawing is in this slot right now, in
-        // canvas pixels.
-        //
-        // THE TRIMMED RECT AS A FRACTION OF THE UNTRIMMED ONE, applied to the
+        // BOTH PAIRS OF EDGES of whatever drawing is in this slot right now, in
+        // canvas pixels. Tight is the outermost opaque pixel; Mass is where
+        // the body ends, ignoring a horn, a tail, a raised weapon or a wingtip
+        // (StageStandOff / OpaqueSpan.MassFraction argue why the stand-off
+        // closes on the second pair).
+        private struct Edges
+        {
+            public float TightLeft, TightRight, MassLeft, MassRight;
+        }
+
+        // EVERY EDGE AS A FRACTION OF THE UNTRIMMED CANVAS, applied to the
         // Image's own rendered bounds -- which folds in the depth scale, the
         // mirror and the live travel offset without this fixture restating any
         // of them. (A Tight sprite mesh crops the stored texture down to the
         // alpha box; textureRectOffset is where that box sits inside the
         // authored canvas, and forgetting it is the bug
         // FightController.StageVisuals' FootBandCentreFraction documents.)
-        private static (float Left, float Right) OpaqueX(Stand stand)
+        private static Edges EdgesOf(Stand stand)
         {
             var image = stand.Sprite;
             var sprite = image.sprite;
@@ -192,14 +220,69 @@ namespace PrincesPalace.PlayModeTests
             var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(canvasRect, image.rectTransform);
 
             float canvasWidth = sprite.rect.width;
-            float fracLeft = sprite.textureRectOffset.x / canvasWidth;
-            float fracRight = (sprite.textureRectOffset.x + sprite.textureRect.width) / canvasWidth;
+            float tightLeft = sprite.textureRectOffset.x / canvasWidth;
+            float tightRight = (sprite.textureRectOffset.x + sprite.textureRect.width) / canvasWidth;
+            var mass = MassFractionsOf(sprite);
 
             bool mirrored = image.rectTransform.localScale.x < 0f;
-            float l = mirrored ? 1f - fracRight : fracLeft;
-            float r = mirrored ? 1f - fracLeft : fracRight;
+            float Map(float fraction) =>
+                bounds.min.x + (mirrored ? 1f - fraction : fraction) * bounds.size.x;
 
-            return (bounds.min.x + l * bounds.size.x, bounds.min.x + r * bounds.size.x);
+            return new Edges
+            {
+                TightLeft = Map(mirrored ? tightRight : tightLeft),
+                TightRight = Map(mirrored ? tightLeft : tightRight),
+                MassLeft = Map(mirrored ? mass.Right : mass.Left),
+                MassRight = Map(mirrored ? mass.Left : mass.Right),
+            };
+        }
+
+        // THE FIXTURE'S OWN COLUMN COUNT, deliberately not
+        // StageActorAnimator's. Only the THRESHOLD is shared
+        // (OpaqueSpan.MassFraction), because a number with two homes rots;
+        // finding the edge is re-derived here, or this would assert that a
+        // method equals itself (CLAUDE.md gotcha 5).
+        //
+        // Cached per Sprite because this fixture plays seven beats over a
+        // roster of six actors and GetPixels on an 830x413 canvas is not free.
+        private static readonly Dictionary<Sprite, (float Left, float Right)> MassBox =
+            new Dictionary<Sprite, (float Left, float Right)>();
+
+        private static (float Left, float Right) MassFractionsOf(Sprite sprite)
+        {
+            if (MassBox.TryGetValue(sprite, out var cached)) return cached;
+
+            // ASSERTED, NEVER SKIPPED PAST. StanceSpriteImporter forces every
+            // stance texture readable; a stance that arrives here unreadable
+            // is a broken import, and a fixture that quietly fell back to the
+            // tight box would still go green while measuring the wrong thing.
+            Assert.IsTrue(sprite.texture != null && sprite.texture.isReadable,
+                $"stance texture '{sprite.name}' is not readable -- StanceSpriteImporter should have forced it");
+
+            var crop = sprite.textureRect;
+            int cropWidth = Mathf.RoundToInt(crop.width);
+            int cropHeight = Mathf.RoundToInt(crop.height);
+            Assert.Greater(cropWidth, 0, $"'{sprite.name}' has an empty texture rect");
+
+            var pixels = sprite.texture.GetPixels(
+                Mathf.RoundToInt(crop.x), Mathf.RoundToInt(crop.y), cropWidth, cropHeight);
+
+            var rows = new int[cropWidth];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (pixels[i].a > 0.02f) rows[i % cropWidth]++;
+            }
+
+            float threshold = rows.Max() * OpaqueSpan.MassFraction;
+            int first = Array.FindIndex(rows, count => count >= threshold);
+            int last = Array.FindLastIndex(rows, count => count >= threshold);
+            Assert.GreaterOrEqual(first, 0, $"'{sprite.name}' has no opaque column at all");
+
+            float canvasWidth = sprite.rect.width;
+            float offsetX = sprite.textureRectOffset.x;
+            var box = ((offsetX + first) / canvasWidth, (offsetX + last + 1) / canvasWidth);
+            MassBox[sprite] = box;
+            return box;
         }
 
         // ---- the fixture ------------------------------------------------------
@@ -299,10 +382,14 @@ namespace PrincesPalace.PlayModeTests
         private struct Extent
         {
             public float Travel;
-            public float Gap;
+            public float MassGap;
+            public float TightGap;
             public string Wearing;
             public Vector2 StoodAt;
             public string Diagnostic;
+
+            public bool Honours(float min, float max) =>
+                MassGap >= min && MassGap <= max && TightGap <= max;
         }
 
         // Plays the beat and keeps the frame that matters: the actor at FULL
@@ -358,8 +445,9 @@ namespace PrincesPalace.PlayModeTests
             // one run and 74 on the next with nothing changed between them.
             // The contract is about where the attacker stops relative to
             // where the target STANDS.
-            var targetBox = OpaqueX(target);
-            float targetNear = actorApproachesFromTheLeft ? targetBox.Left : targetBox.Right;
+            var targetBox = EdgesOf(target);
+            float targetNearMass = actorApproachesFromTheLeft ? targetBox.MassLeft : targetBox.MassRight;
+            float targetNearTight = actorApproachesFromTheLeft ? targetBox.TightLeft : targetBox.TightRight;
 
             float peak = -1f;
             var atPeak = new Extent();
@@ -376,15 +464,21 @@ namespace PrincesPalace.PlayModeTests
                 float travel = Vector2.Distance(actor.Slot.anchoredPosition, mark);
                 if (travel < peak - 1f) continue;
 
-                var actorBox = OpaqueX(actor);
-                float actorForward = actorApproachesFromTheLeft ? actorBox.Right : actorBox.Left;
+                var actorBox = EdgesOf(actor);
+                float actorForwardMass = actorApproachesFromTheLeft ? actorBox.MassRight : actorBox.MassLeft;
+                float actorForwardTight = actorApproachesFromTheLeft ? actorBox.TightRight : actorBox.TightLeft;
+                float Daylight(float forward, float near) =>
+                    actorApproachesFromTheLeft ? near - forward : forward - near;
+
                 var here = new Extent
                 {
                     Travel = travel,
-                    Gap = actorApproachesFromTheLeft ? (targetNear - actorForward) : (actorForward - targetNear),
+                    MassGap = Daylight(actorForwardMass, targetNearMass),
+                    TightGap = Daylight(actorForwardTight, targetNearTight),
                     Wearing = actor.Sprite.sprite.name,
                     StoodAt = actor.Slot.anchoredPosition,
-                    Diagnostic = $"forward edge {actorForward:F1}, target near edge {targetNear:F1}",
+                    Diagnostic = $"body edges {actorForwardMass:F1} -> {targetNearMass:F1}, " +
+                                 $"drawn edges {actorForwardTight:F1} -> {targetNearTight:F1}",
                 };
 
                 if (travel > peak)
@@ -462,10 +556,11 @@ namespace PrincesPalace.PlayModeTests
                 string line = $"{stand.Name} {stand.Combatant} {(isBjorn ? "Slam (Close)" : "Attack (Lunge)")} " +
                               $"from mark {stand.Animator.Mark.x:F0},{stand.Animator.Mark.y:F0} " +
                               $"-> stood at {_peak.StoodAt.x:F1},{_peak.StoodAt.y:F1} " +
-                              $"wearing '{_peak.Wearing}'; GAP {_peak.Gap:F1}px [{_peak.Diagnostic}]";
+                              $"wearing '{_peak.Wearing}'; BODY GAP {_peak.MassGap:F1}px, DRAWN GAP {_peak.TightGap:F1}px " +
+                              $"[{_peak.Diagnostic}]";
                 _report.Add(line);
 
-                if (_peak.Gap < MinGap || _peak.Gap > MaxGap)
+                if (!_peak.Honours(MinGap, MaxGap))
                 {
                     failures.Add(line);
                 }
@@ -493,8 +588,9 @@ namespace PrincesPalace.PlayModeTests
             }
 
             CollectionAssert.IsEmpty(failures,
-                $"an attacker did not arrive in front of its target (want {MinGap}..{MaxGap}px of daylight " +
-                "between the two opaque edges):\n  " + string.Join("\n  ", failures));
+                $"an attacker did not arrive in front of its target (want {MinGap}..{MaxGap}px between " +
+                $"the two BODIES, and never more than {MaxGap}px between the two DRAWINGS):\n  " +
+                string.Join("\n  ", failures));
         }
 
         // WHERE AN ENEMY STOPS HITTING THE PARTY, and where a party attacker
@@ -605,10 +701,11 @@ namespace PrincesPalace.PlayModeTests
                 string line = $"{actor.Name} {actor.Combatant} {label} at Party0 Shawn " +
                               $"from mark {actor.Animator.Mark.x:F0},{actor.Animator.Mark.y:F0} " +
                               $"-> stood at {_peak.StoodAt.x:F1},{_peak.StoodAt.y:F1} " +
-                              $"wearing '{_peak.Wearing}'; GAP {_peak.Gap:F1}px [{_peak.Diagnostic}]";
+                              $"wearing '{_peak.Wearing}'; BODY GAP {_peak.MassGap:F1}px, DRAWN GAP {_peak.TightGap:F1}px " +
+                              $"[{_peak.Diagnostic}]";
                 report.Add(line);
 
-                if (_peak.Gap < MinGap || _peak.Gap > MaxGap)
+                if (!_peak.Honours(MinGap, MaxGap))
                 {
                     failures.Add(line);
                 }
@@ -643,10 +740,11 @@ namespace PrincesPalace.PlayModeTests
                 string line = $"Party0 Shawn Attack (Lunge) at back rank {backEnemy.Name} {backEnemy.Combatant} " +
                               $"from mark {frontParty.Animator.Mark.x:F0},{frontParty.Animator.Mark.y:F0} " +
                               $"-> stood at {_peak.StoodAt.x:F1},{_peak.StoodAt.y:F1} " +
-                              $"wearing '{_peak.Wearing}'; GAP {_peak.Gap:F1}px [{_peak.Diagnostic}]";
+                              $"wearing '{_peak.Wearing}'; BODY GAP {_peak.MassGap:F1}px, DRAWN GAP {_peak.TightGap:F1}px " +
+                              $"[{_peak.Diagnostic}]";
                 report.Add(line);
 
-                if (_peak.Gap < MinGap || _peak.Gap > MaxGap)
+                if (!_peak.Honours(MinGap, MaxGap))
                 {
                     failures.Add(line);
                 }
@@ -674,8 +772,9 @@ namespace PrincesPalace.PlayModeTests
             }
 
             CollectionAssert.IsEmpty(failures,
-                $"an attacker did not arrive in front of its target (want {MinGap}..{MaxGap}px of daylight " +
-                "between the two opaque edges):\n  " + string.Join("\n  ", failures));
+                $"an attacker did not arrive in front of its target (want {MinGap}..{MaxGap}px between " +
+                $"the two BODIES, and never more than {MaxGap}px between the two DRAWINGS):\n  " +
+                string.Join("\n  ", failures));
         }
     }
 }
