@@ -787,20 +787,27 @@ namespace PrincesPalace.Domain.Combat.Session
             // staleness -- only the "has a legal skill, but the stale
             // commitment says plain swing" gap needs handling here.
             //
-            // Re-drawing (not merely refusing) is safe specifically for a
-            // PLAIN SWING: TelegraphSuffix never shows one ("only SKILLS are
-            // telegraphed" -- see its own header), so nothing was promised
-            // to the player for this turn, and honouring a promise that was
-            // never shown is not a promise worth keeping. A committed SKILL
+            // THE SWING IS VOIDED, not replaced. This used to redraw a fresh
+            // ability from the pool -- safe from a pure "nothing was promised"
+            // standpoint, since TelegraphSuffix never shows a plain swing
+            // ("only SKILLS are telegraphed" -- see its own header) -- but it
+            // meant Root, landed specifically to stop an incoming swing,
+            // could hand the enemy a different, un-telegraphed attack instead
+            // of stopping it. That is the opposite of what the player spent
+            // the status on. AUDIT #148: the redraw also spent a real RNG
+            // roll on a branch whose frequency depends on how the player is
+            // playing, which every sibling "just checking, not committing"
+            // read in this file deliberately avoids. Voiding the swing fixes
+            // both: Root reliably cancels the attack it caught, and nothing
+            // is drawn from the seeded stream to decide it. A committed SKILL
             // is never touched here, matching every other path in this
             // method that honours the telegraph outright.
             if (chosen.HasValue && chosen.Value.IsPlainSwing && StatusEffects.HasRooted(enemy.Statuses))
             {
-                var effective = EffectivePoolFor(enemy, pool);
-                int redraw = EnemyAbilityDraw.Pick(effective, _rng?.NextFloat() ?? 0f);
-                chosen = effective != null && redraw >= 0 && redraw < effective.Count
-                    ? effective[redraw]
-                    : (EnemyAbility?)null;
+                _intents.Remove(enemy);
+                AppendMessage($"{enemy.Name} is rooted and cannot follow through with the attack!");
+                CommitBeat();
+                return;
             }
 
             _intents.Remove(enemy);

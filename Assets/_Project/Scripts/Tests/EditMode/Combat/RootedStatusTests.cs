@@ -63,9 +63,7 @@ namespace PrincesPalace.Domain.Tests
         // before being multiplied by the pool's total weight, and
         // 1_000_000 / 1_000_000.01 exceeds that clamp. This makes the
         // baseline assertion below a mathematical certainty, not a seed that
-        // happened to work -- and once Rooted zeroes the plain-swing entry,
-        // the skill is the ONLY positive weight left, which Pick always
-        // returns regardless of roll (see EffectivePoolFor's own comment).
+        // happened to work.
         private static IReadOnlyList<EnemyAbility> OverwhelminglyPlainSwingPool(ResolvedSkill skill) =>
             new List<EnemyAbility>
             {
@@ -75,8 +73,14 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the enemy action-selection gate -----------------------------------
 
+        // AUDIT #148: this committed swing turns illegal by resolution time
+        // (Rooted lands on the enemy between its intent being drawn and that
+        // intent resolving) used to redraw a fresh ability from the pool --
+        // even one the player was never shown, undoing the very thing Root
+        // was spent to stop. The owner's call: Root reliably cancels the
+        // swing it caught. Full stop, whether or not a legal skill exists.
         [Test]
-        public void RootedEnemyDrawsItsSkillInsteadOfThePlainAttack_WhenOneIsLegal()
+        public void RootedEnemyWithACommittedPlainSwing_VoidsTheAttack_EvenWithALegalSkillAvailable()
         {
             var skill = Skill();
 
@@ -105,10 +109,13 @@ namespace PrincesPalace.Domain.Tests
             rootedSession.ExecuteAttack(rootedMonster);
             var rootedLines = MessagesOf(EnemyBeats(rootedSession.DrainBeats())).ToList();
 
-            Assert.IsTrue(rootedLines.Any(m => m.Contains("Thorn Lash")),
-                "Rooted must exclude the plain-attack entry from the draw entirely, forcing the only " +
-                "remaining option -- the identical weights and identical seed as the baseline above, so " +
-                "the only variable that changed is Rooted");
+            Assert.IsTrue(rootedLines.Any(m => m.Contains("rooted")),
+                "Rooted must void the stale plain-swing commitment outright");
+            Assert.IsFalse(rootedLines.Any(m => m.Contains("Thorn Lash")),
+                "the legal skill must NOT fire as a substitute -- Root cancels the swing, it does not " +
+                "hand the enemy a different, un-telegraphed attack");
+            Assert.IsFalse(rootedLines.Any(m => m.Contains("damage")),
+                "a voided swing must land no damage");
         }
 
         [Test]
@@ -325,8 +332,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(monsterHealthBefore, monster.CurrentHealth, "the dodged swing must deal no damage");
 
             var monsterLines = MessagesOf(EnemyBeats(beats)).ToList();
-            Assert.IsTrue(monsterLines.Any(m => m.Contains("Thorn Lash")),
-                "Rooted's own gate must still exclude the plain attack from the monster's OWN turn, " +
+            Assert.IsTrue(monsterLines.Any(m => m.Contains("rooted")),
+                "Rooted's own gate must still void the plain attack on the monster's OWN turn, " +
                 "unaffected by the dodge that just fired against it or by Chilled slowing it down");
         }
 
