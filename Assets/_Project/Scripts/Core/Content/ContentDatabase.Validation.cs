@@ -646,22 +646,38 @@ namespace PrincesPalace.Content
 
                 foreach (var milestone in track.Data.Milestones)
                 {
-                    if (milestone.Reward == TrackReward.UnlockSkill
-                        && (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null))
+                    // PHASE 3: the same "resolves to a real skill, nothing
+                    // about whose it is" check as UnlockSkill's, extended to
+                    // SkillCostDelta/SkillFlatDelta's own skillId -- §3h
+                    // again, a track IS the character.
+                    bool needsSkillId = milestone.Reward == TrackReward.UnlockSkill
+                        || milestone.Reward == TrackReward.SkillCostDelta
+                        || milestone.Reward == TrackReward.SkillFlatDelta;
+
+                    if (needsSkillId && (string.IsNullOrEmpty(milestone.SkillId) || GetSkill(milestone.SkillId) == null))
                     {
-                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} unlocks " +
-                                   $"unknown skill id '{milestone.SkillId}'.");
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} ({milestone.Reward}) " +
+                                   $"names unknown skill id '{milestone.SkillId}'.");
                     }
 
                     // RULE 5: milestone or filler, unlike rule 4 -- a
                     // milestone with no signature resource to pay into is
-                    // just as broken as a filler row would be.
+                    // just as broken as a filler row would be. Covers
+                    // SignatureAbsorbPerPoint too (P3) since IsSignatureReward
+                    // now names it alongside the original four.
                     if (RewardTrack.IsSignatureReward(milestone.Reward) && !hasSignatureResource)
                     {
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {milestone.Level} authors " +
                                    $"{milestone.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
                     }
                 }
+
+                // PHASE 3's node-kind rules, mirrored from the resolver for
+                // the loaded-catalogue path -- see RewardTrackNodeValidation's
+                // own header. Guarded internally behind RewardTrack.MaxLevel,
+                // so this is a no-op against the pre-P3 shipped content.
+                errors.AddRange(RewardTrackNodeValidation.Validate($"Reward track '{track.Data.CharacterId}'",
+                    RewardTrackDefinition.From(track.Data)));
 
                 foreach (var filler in track.Data.Filler)
                 {

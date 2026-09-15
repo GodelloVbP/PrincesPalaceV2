@@ -20,6 +20,25 @@ namespace PrincesPalace.Domain.Content
     // signature resource, no level-1 elements beyond none, no skills -- so
     // rules 4/5 and the skillId check refuse anything that needs a lookup,
     // which is the correct answer for a character nothing is known about.
+    // PHASE 3: enough of one skill's own authored shape to validate a
+    // SkillCostDelta/SkillFlatDelta entry against it -- see
+    // RewardTrackCharacterContext.Skills.
+    public sealed class RewardTrackSkillContext
+    {
+        public readonly string DisplayName;
+        public readonly int ManaCost;
+        public readonly int ResourceCost;
+        public readonly bool HasFlatAmountPath;
+
+        public RewardTrackSkillContext(string displayName, int manaCost, int resourceCost, bool hasFlatAmountPath)
+        {
+            DisplayName = displayName;
+            ManaCost = manaCost;
+            ResourceCost = resourceCost;
+            HasFlatAmountPath = hasFlatAmountPath;
+        }
+    }
+
     public sealed class RewardTrackCharacterContext
     {
         public int SortOrder;
@@ -47,6 +66,17 @@ namespace PrincesPalace.Domain.Content
         // this is.
         public IReadOnlyDictionary<string, string> SkillDisplayNames = new Dictionary<string, string>();
 
+        // PHASE 3: the same whole-catalogue skill list as SkillDisplayNames
+        // above, but carrying enough of each skill's own authored shape to
+        // validate SkillCostDelta/SkillFlatDelta -- "the resource must be
+        // one the skill actually costs", "the skill must have a flatAmount
+        // path". A SEPARATE dictionary rather than widening
+        // SkillDisplayNames' value type, so every existing fixture that
+        // builds a RewardTrackCharacterContext by hand (this file's own
+        // tests, RewardTrackContentPinTests) keeps compiling unchanged.
+        public IReadOnlyDictionary<string, RewardTrackSkillContext> Skills =
+            new Dictionary<string, RewardTrackSkillContext>();
+
         // Assembles one context per character from the characters and skills
         // an earlier content-build phase already resolved -- see this
         // class's own header for why SkillDisplayNames is the whole
@@ -60,7 +90,22 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
         {
             var everySkillName = new Dictionary<string, string>();
-            foreach (var skill in skills) everySkillName[skill.Id] = skill.DisplayName;
+            var everySkillContext = new Dictionary<string, RewardTrackSkillContext>();
+            foreach (var skill in skills)
+            {
+                everySkillName[skill.Id] = skill.DisplayName;
+
+                // HasFlatAmountPath: DamageSingle with no damageInstances --
+                // SkillFlatDelta's own validation rule, "the skill must have
+                // a flatAmount path". A fixed-packet spell's damage comes
+                // from DamageInstances instead and never reads flatAmount at
+                // all (SkillResolution.Damage), so a SkillFlatDelta on one
+                // would author a number nothing ever looks at.
+                bool hasFlatAmountPath = skill.Effect == PrincesPalace.Domain.Combat.SkillEffect.DamageSingle && !skill.HasFixedDamage;
+
+                everySkillContext[skill.Id] = new RewardTrackSkillContext(skill.DisplayName, skill.ManaCost,
+                    skill.ResourceCost, hasFlatAmountPath);
+            }
 
             var contexts = new Dictionary<string, RewardTrackCharacterContext>();
 
@@ -85,6 +130,7 @@ namespace PrincesPalace.Domain.Content
                     SignatureDisplayName = character.SignatureDisplayName,
                     Level1DamageTypes = level1Types,
                     SkillDisplayNames = everySkillName,
+                    Skills = everySkillContext,
                 };
             }
 
@@ -199,10 +245,12 @@ namespace PrincesPalace.Domain.Content
             foreach (var pair in byLevel.OrderBy(p => p.Key))
             {
                 if (TryResolveEntry(label, $"level {pair.Key}", pair.Value.reward, pair.Value.amount, pair.Value.against,
-                        pair.Value.skillId, isFiller: false, context, out var core, out string entryError))
+                        pair.Value.skillId, pair.Value.resource, pair.Value.identityKind, pair.Value.value,
+                        isFiller: false, context, out var core, out string entryError))
                 {
                     resolvedMilestones.Add(new ResolvedTrackMilestone(pair.Key, core.Reward, core.Amount, core.Against,
-                        core.SkillId, core.SkillDisplayName, core.ResourceDisplayName));
+                        core.SkillId, core.SkillDisplayName, core.ResourceDisplayName, core.Resource, core.IdentityKind,
+                        core.IdentityValue));
                 }
                 else
                 {
@@ -259,8 +307,8 @@ namespace PrincesPalace.Domain.Content
                 // milestone entries share one validation path so a change
                 // to a rule cannot apply to one and not the other by
                 // accident.
-                if (TryResolveEntry(label, "a filler row", f.reward, f.amount, f.against, null, isFiller: true,
-                        context, out var core, out string entryError))
+                if (TryResolveEntry(label, "a filler row", f.reward, f.amount, f.against, null, null, null, null,
+                        isFiller: true, context, out var core, out string entryError))
                 {
                     resolvedFiller.Add(new ResolvedTrackFiller(core.Reward, core.Amount, core.Against, f.count,
                         core.ResourceDisplayName));
@@ -274,13 +322,28 @@ namespace PrincesPalace.Domain.Content
             if (errors.Count > 0) return false;
 
             track = new ResolvedRewardTrack(raw.characterId, resolvedMilestones.ToArray(), resolvedFiller.ToArray(), context.SortOrder);
+
+            // PHASE 3's node-kind rules, mirrored (not restated -- see
+            // RewardTrackNodeValidation's own header) at ContentDatabase.
+            // Validation for the loaded-catalogue path. Guarded internally
+            // behind RewardTrack.MaxLevel, so this is a no-op against the
+            // pre-P3, 100-level content still shipped today.
+            var nodeErrors = RewardTrackNodeValidation.Validate(label, RewardTrackDefinition.From(track));
+            if (nodeErrors.Count > 0)
+            {
+                errors.AddRange(nodeErrors);
+                track = null;
+                return false;
+            }
+
             return true;
         }
 
         // The reward-kind-independent core of one line -- reward, amount,
-        // against, skillId/skillDisplayName, resourceDisplayName -- shared
-        // by a milestone entry (which also carries a level, added by the
-        // caller) and a filler row (which also carries a count).
+        // against, skillId/skillDisplayName, resourceDisplayName, and P3's
+        // resource/identityKind/identityValue -- shared by a milestone entry
+        // (which also carries a level, added by the caller) and a filler
+        // row (which also carries a count).
         private readonly struct ResolvedEntryCore
         {
             public readonly TrackReward Reward;
@@ -289,9 +352,13 @@ namespace PrincesPalace.Domain.Content
             public readonly string SkillId;
             public readonly string SkillDisplayName;
             public readonly string ResourceDisplayName;
+            public readonly TrackResourceTarget? Resource;
+            public readonly TrackIdentityKind? IdentityKind;
+            public readonly string IdentityValue;
 
             public ResolvedEntryCore(TrackReward reward, int amount, DamageType? against, string skillId,
-                string skillDisplayName, string resourceDisplayName)
+                string skillDisplayName, string resourceDisplayName, TrackResourceTarget? resource,
+                TrackIdentityKind? identityKind, string identityValue)
             {
                 Reward = reward;
                 Amount = amount;
@@ -299,11 +366,15 @@ namespace PrincesPalace.Domain.Content
                 SkillId = skillId;
                 SkillDisplayName = skillDisplayName;
                 ResourceDisplayName = resourceDisplayName;
+                Resource = resource;
+                IdentityKind = identityKind;
+                IdentityValue = identityValue;
             }
         }
 
         private static bool TryResolveEntry(string trackLabel, string where, string rawReward, int amount,
-            string rawAgainst, string skillId, bool isFiller, RewardTrackCharacterContext context,
+            string rawAgainst, string skillId, string rawResource, string rawIdentityKind, string rawIdentityValue,
+            bool isFiller, RewardTrackCharacterContext context,
             out ResolvedEntryCore core, out string error)
         {
             core = default;
@@ -314,19 +385,27 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // RULE 3. The four kinds RewardTrack.IsOneShotCapability names --
-            // Respec, SecondLife, SignatureAbsorbs, UnlockSkill.
-            //
-            // THIS ASKED IsUnlock UNTIL P4, which was the same four while the
-            // grants were StatPoint/MaxHealth/Favor/ExpPermille and became
-            // "everything but StatPoint" the moment the one-grant model landed
-            // -- so it refused the MaxHealth filler row both shipped tracks
-            // author. The rule was always about a capability whose LEVEL would
-            // otherwise be computed, not about the grant/unlock split, and it
-            // now says so in one place.
-            if (isFiller && RewardTrack.IsOneShotCapability(reward))
+            // P3 ALIAS: SignatureAbsorbs (the old boolean) is rewritten to
+            // SignatureAbsorbPerPoint at amount 1 the moment it is parsed, so
+            // every rule below (filler-eligibility, the signature-resource
+            // check, node-kind classification) sees exactly one kind rather
+            // than two that mean the same thing. See TrackReward.
+            // SignatureAbsorbPerPoint's own header -- new content should
+            // author SignatureAbsorbPerPoint directly; SignatureAbsorbs is
+            // kept parseable only so old reward_tracks.json content still
+            // resolves.
+            if (reward == TrackReward.SignatureAbsorbs)
             {
-                error = $"{trackLabel}, {where}: {reward} is a one-shot capability and cannot appear as filler -- only grants may.";
+                reward = TrackReward.SignatureAbsorbPerPoint;
+                amount = 1;
+            }
+
+            // RULE 3, widened in P3 -- see RewardTrack.IsFillerIneligible's
+            // own header for why this is a broader question than "is this a
+            // one-shot capability".
+            if (isFiller && RewardTrack.IsFillerIneligible(reward))
+            {
+                error = $"{trackLabel}, {where}: {reward} cannot appear as filler -- only grants may.";
                 return false;
             }
 
@@ -366,7 +445,10 @@ namespace PrincesPalace.Domain.Content
 
             // UnlockSkill's skillId, resolved against the WHOLE skill
             // catalogue -- see RewardTrackCharacterContext.SkillDisplayNames
-            // for why there is no ownership test here (§3f/§3h).
+            // for why there is no ownership test here (§3f/§3h). SkillCostDelta/
+            // SkillFlatDelta share the same no-ownership skillId lookup, via
+            // context.Skills below -- a track IS the character, so naming a
+            // skill on it has already said whose it is (§3h again).
             string resolvedSkillId = "";
             string skillDisplayName = "";
             if (reward == TrackReward.UnlockSkill)
@@ -381,11 +463,106 @@ namespace PrincesPalace.Domain.Content
                 resolvedSkillId = skillId;
             }
 
+            // P3: SkillCostDelta -- one named skill, one resource, and that
+            // resource must be one the skill actually costs (a nonzero
+            // manaCost for Mana, a nonzero resourceCost for Signature).
+            TrackResourceTarget? resource = null;
+            if (reward == TrackReward.SkillCostDelta)
+            {
+                if (string.IsNullOrWhiteSpace(skillId) || !context.Skills.TryGetValue(skillId, out var skillCtx))
+                {
+                    error = $"{trackLabel}, {where}: SkillCostDelta names skillId '{skillId}', which is not a skill " +
+                            "in the catalogue.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(rawResource) || !Enum.TryParse<TrackResourceTarget>(rawResource, ignoreCase: true, out var parsedResource))
+                {
+                    error = $"{trackLabel}, {where}: SkillCostDelta needs a resource ('Mana' or 'Signature'), got '{rawResource}'.";
+                    return false;
+                }
+
+                bool costsIt = parsedResource == TrackResourceTarget.Mana ? skillCtx.ManaCost > 0 : skillCtx.ResourceCost > 0;
+                if (!costsIt)
+                {
+                    error = $"{trackLabel}, {where}: SkillCostDelta discounts {parsedResource} on '{skillId}', but " +
+                            $"'{skillId}' does not cost {parsedResource}.";
+                    return false;
+                }
+
+                resource = parsedResource;
+                resolvedSkillId = skillId;
+                skillDisplayName = skillCtx.DisplayName;
+            }
+
+            // P3: SkillFlatDelta -- one named skill, and it must have a
+            // flatAmount path (DamageSingle with no damageInstances) for the
+            // delta to land on anything.
+            if (reward == TrackReward.SkillFlatDelta)
+            {
+                if (string.IsNullOrWhiteSpace(skillId) || !context.Skills.TryGetValue(skillId, out var skillCtx))
+                {
+                    error = $"{trackLabel}, {where}: SkillFlatDelta names skillId '{skillId}', which is not a skill " +
+                            "in the catalogue.";
+                    return false;
+                }
+
+                if (!skillCtx.HasFlatAmountPath)
+                {
+                    error = $"{trackLabel}, {where}: SkillFlatDelta names '{skillId}', which has no flatAmount path " +
+                            "-- it must be a DamageSingle skill with no damageInstances.";
+                    return false;
+                }
+
+                resolvedSkillId = skillId;
+                skillDisplayName = skillCtx.DisplayName;
+            }
+
+            // P3: Identity -- exactly one payload kind, with a value required
+            // for Title (any string) and PlateRim/PlateEmboss (silver or
+            // gold); PortraitFrame/VictoryPose/Mastery carry no value.
+            TrackIdentityKind? identityKind = null;
+            string identityValue = "";
+            if (reward == TrackReward.Identity)
+            {
+                if (string.IsNullOrWhiteSpace(rawIdentityKind) || !Enum.TryParse<TrackIdentityKind>(rawIdentityKind, ignoreCase: true, out var parsedKind))
+                {
+                    error = $"{trackLabel}, {where}: Identity needs an identityKind. Valid options: " +
+                            $"{string.Join(", ", Enum.GetNames(typeof(TrackIdentityKind)))}.";
+                    return false;
+                }
+
+                if (parsedKind == TrackIdentityKind.Title)
+                {
+                    if (string.IsNullOrWhiteSpace(rawIdentityValue))
+                    {
+                        error = $"{trackLabel}, {where}: Identity Title needs a value -- the title text.";
+                        return false;
+                    }
+
+                    identityValue = rawIdentityValue;
+                }
+                else if (parsedKind == TrackIdentityKind.PlateRim || parsedKind == TrackIdentityKind.PlateEmboss)
+                {
+                    string normalized = (rawIdentityValue ?? "").Trim().ToLowerInvariant();
+                    if (normalized != "silver" && normalized != "gold")
+                    {
+                        error = $"{trackLabel}, {where}: Identity {parsedKind} needs a value of 'silver' or 'gold', got '{rawIdentityValue}'.";
+                        return false;
+                    }
+
+                    identityValue = normalized;
+                }
+
+                identityKind = parsedKind;
+            }
+
             string resourceDisplayName = RewardTrack.IsSignatureReward(reward)
                 ? (string.IsNullOrWhiteSpace(context.SignatureDisplayName) ? "SIGNATURE" : context.SignatureDisplayName)
                 : "";
 
-            core = new ResolvedEntryCore(reward, amount, against, resolvedSkillId, skillDisplayName, resourceDisplayName);
+            core = new ResolvedEntryCore(reward, amount, against, resolvedSkillId, skillDisplayName, resourceDisplayName,
+                resource, identityKind, identityValue);
             error = null;
             return true;
         }
