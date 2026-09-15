@@ -129,6 +129,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- per roster card, in row order, length RosterCardCount ---------------
         public List<NodeRef> CardButtons = new List<NodeRef>();
         public List<NodeRef> CardArts = new List<NodeRef>();
+
+        // THE PORTRAIT FRAME, level 34's identity node: an outline round the
+        // card's own art slot, hidden until it is collected. The kit's
+        // OutlineBox at a gold hairline -- the same recipe the selection ring
+        // and the monogram plate already wear, round a different rect.
+        public List<NodeRef> CardPortraitFrames = new List<NodeRef>();
         public List<NodeRef> CardMonogramPlates = new List<NodeRef>();
         public List<NodeRef> CardMonogramLetters = new List<NodeRef>();
         public List<NodeRef> CardNames = new List<NodeRef>();
@@ -516,6 +522,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             button.Children.Add(letter);
             screen.CardMonogramLetters.Add(letter);
+
+            // ROUND THE ART SLOT, not round the card -- the card's own outline
+            // is the selection ring (CardRings below) and a second rectangle
+            // at the same inset would read as a doubled border rather than as
+            // a frame on a picture.
+            var portraitFrame = Ui.OutlineBox(stem + "PortraitFrame",
+                Place.At(0f, PartyLayout.CardArtCentreY),
+                new UiVec(PartyLayout.CardWidth - 16f, PartyLayout.CardArtHeight + 2f),
+                null, IdentityMetals.PortraitFrame);
+            portraitFrame.AsDecor().Inactive();
+            button.Children.Add(portraitFrame);
+            screen.CardPortraitFrames.Add(portraitFrame);
 
             var name = Ui.Label(stem + "Name", UiString.Runtime,
                     new UiVec(PartyLayout.CardWidth - 12f, PartyLayout.CardNameHeight), 14, NameText,

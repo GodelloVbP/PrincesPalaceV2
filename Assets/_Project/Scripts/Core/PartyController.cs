@@ -71,6 +71,10 @@ namespace PrincesPalace
         // ---- roster cards, in save.roster order, length RosterCardCount -------
         [SerializeField] internal Button[] cardButtons;
         [SerializeField] internal Image[] cardArts;
+
+        // Level 34's identity node, drawn round the art slot. Hidden until
+        // collected, which for most of a career is always.
+        [SerializeField] internal GameObject[] cardPortraitFrames;
         [SerializeField] internal GameObject[] cardMonogramPlates;
         [SerializeField] internal TMP_Text[] cardMonogramLetters;
         [SerializeField] internal TMP_Text[] cardNames;
@@ -752,6 +756,9 @@ namespace PrincesPalace
                 }
             }
 
+            SetShown(cardPortraitFrames, index,
+                CharacterIdentity.LookFor(CharacterFor(id)).HasPortraitFrame);
+
             SetShown(cardRings, index, state.IsSelected);
             SetShown(cardSelectedTags, index, state.IsSelected);
 
@@ -781,6 +788,7 @@ namespace PrincesPalace
                 tag.gameObject.SetShown(false);
             }
 
+            SetShown(cardPortraitFrames, index, false);
             SetShown(cardRings, index, false);
             SetShown(cardSelectedTags, index, false);
             SetShown(cardWashes, index, false);

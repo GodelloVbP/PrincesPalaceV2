@@ -998,56 +998,144 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward.
+        // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward -- OR NULL,
+        // which is now a real answer rather than a gap.
         //
-        // Keyed off the reward KIND rather than the level, so the twelve
-        // milestones and the eighty-seven filler nodes go through one map and a
-        // new reward kind is a compile error here rather than a blank plate. It
-        // returns null for None, which the card draws as its stroke glyph --
-        // graceful degradation, and the same fallback a missing file gets.
+        // NINE OF TWENTY-ONE, AND THE OTHER TWELVE GET WORDS. Phase 4 mapped
+        // every kind onto a picture because RewardTrackScreenTests demanded a
+        // distinct sprite per kind, and said so plainly in its own note: three
+        // of the seven it added were "nearly honest" and the other four (a flat
+        // delta on VULNERABLE, a per-point delta on POISON, all-spell damage on
+        // FEARED, IDENTITY on PROTECT) were "chosen because they are different
+        // from each other and for no other reason". A player could not read the
+        // rail by glyph, and those four came from the STATUS set -- flat cel art
+        // in cool violets -- which on a card whose other slots are painted gold
+        // medallions reads as a bug before it reads as a reward.
         //
-        // See RewardTrackScreen's art block for why these are the card's and
-        // not the rail's, and for how provisional the assignments are. Every
-        // case below points at one of the same twelve art-key constants
-        // (docs/PLAN_REWARD_TRACKS.md §1's table), not a fresh commission
-        // per reward kind.
+        // So the uniqueness rule moves from "a distinct SPRITE per kind" to
+        // "a distinct VISUAL per kind", and a kind with no honest medallion
+        // draws a short word in the kit's own type instead (CardGlyphFor).
+        // Nothing is commissioned, nothing is arbitrary, and the status set
+        // goes back to meaning statuses.
+        //
+        // WHAT EACH OF THE NINE IS, and why it reads right -- the talent
+        // tree's painted set, whose file names undersell what is drawn on them:
+        //
+        //   StatPoint                 ability_score.png, a tree. It is the
+        //                             ability-score icon and the reward is
+        //                             ability-score points.
+        //   MaxHealth                 health.png, a heart.
+        //   MaxMana                   mana.png, a potion flask. (Phase 4 had
+        //                             this on eye_unused and gave the flask to
+        //                             a signature-gain node, which is the two
+        //                             the wrong way round.)
+        //   ManaRegen                 regen.png, a bolt -- the set's own regen
+        //                             mark, and mana coming back is the only
+        //                             regeneration this game has.
+        //   UnlockSkill               skill_cost.png, an open book. Three of
+        //                             the track's four ability nodes hand over
+        //                             an actual book spell.
+        //   SecondLife                flame_unused.png, a flame relit.
+        //   SignatureAbsorbPerPoint   defense.png, a shield. The reward is
+        //                             damage soaked.
+        //   FuryGainOnAttack          attack.png, a sword. Fury per attack.
+        //   FuryStartOfFight          fist_unused.png, a clenched fist. Fury
+        //                             already up when the fight opens.
+        //
+        // The five medallions left over (a cross, an eye, a crosshair, a skull,
+        // a winged boot) stay UNUSED on purpose. Every one of them could be
+        // assigned to something; none of them would mean it, and assigning
+        // them anyway is the exact move this pass exists to undo.
         public static string CardArtKeyFor(TrackReward reward)
         {
             switch (reward)
             {
                 case TrackReward.StatPoint: return Screens.RewardTrackScreen.StatArtKey;
                 case TrackReward.MaxHealth: return Screens.RewardTrackScreen.HealthArtKey;
-                case TrackReward.Respec: return Screens.RewardTrackScreen.RespecArtKey;
-                case TrackReward.SecondLife: return Screens.RewardTrackScreen.SecondLifeArtKey;
-                case TrackReward.SignatureCapacity: return Screens.RewardTrackScreen.SignatureCapacityArtKey;
-                case TrackReward.SignatureGainPerTurn: return Screens.RewardTrackScreen.SignatureGainArtKey;
-                case TrackReward.SignatureGainOnDamageTaken: return Screens.RewardTrackScreen.SignatureHurtArtKey;
-                case TrackReward.SignatureAbsorbs: return Screens.RewardTrackScreen.SignatureAbsorbArtKey;
-                case TrackReward.ElementalDamagePercent: return Screens.RewardTrackScreen.ElementalArtKey;
                 case TrackReward.MaxMana: return Screens.RewardTrackScreen.MaxManaArtKey;
                 case TrackReward.ManaRegen: return Screens.RewardTrackScreen.ManaRegenArtKey;
                 case TrackReward.UnlockSkill: return Screens.RewardTrackScreen.UnlockSkillArtKey;
-
-                // PHASE 3's seven -- see RewardTrackScreen's own constants
-                // for why five of these name art that has not been
-                // commissioned yet.
+                case TrackReward.SecondLife: return Screens.RewardTrackScreen.SecondLifeArtKey;
+                case TrackReward.SignatureAbsorbPerPoint: return Screens.RewardTrackScreen.SignatureAbsorbArtKey;
                 case TrackReward.FuryGainOnAttack: return Screens.RewardTrackScreen.FuryGainArtKey;
                 case TrackReward.FuryStartOfFight: return Screens.RewardTrackScreen.FuryStartArtKey;
-                case TrackReward.SpellCostDelta: return Screens.RewardTrackScreen.SpellCostDeltaArtKey;
-                case TrackReward.SkillCostDelta: return Screens.RewardTrackScreen.SkillCostDeltaArtKey;
-                case TrackReward.SkillFlatDelta: return Screens.RewardTrackScreen.SkillFlatDeltaArtKey;
-                case TrackReward.SignatureAbsorbPerPoint: return Screens.RewardTrackScreen.SignatureAbsorbPerPointArtKey;
-                case TrackReward.Identity: return Screens.RewardTrackScreen.IdentityArtKey;
 
-                // PHASE 4's two. A distinct key each, not a share with the
-                // kind they are a variant of -- see RewardTrackScreen's own
-                // block for why every kind needs its own sprite and where
-                // these seven came from.
-                case TrackReward.SkillPowerDelta: return Screens.RewardTrackScreen.SkillPowerDeltaArtKey;
-                case TrackReward.SpellDamagePercent: return Screens.RewardTrackScreen.SpellDamagePercentArtKey;
-
+                // Everything else draws a word -- see CardGlyphFor.
                 default: return null;
             }
+        }
+
+        // THE TWELVE KINDS WITH NO HONEST MEDALLION, as a short word set in the
+        // kit's own face on the card's 86px plate.
+        //
+        // WORDS RATHER THAN INVENTED SYMBOLS, and the choice is about who has
+        // to be taught. A bespoke glyph for "the flat part of one named skill"
+        // is a symbol the player must learn before it says anything; "+HIT" is
+        // a symbol they already know. The card's caption underneath still says
+        // the whole sentence ("SLAM +5 FLAT"), so the plate's job is only to be
+        // scannable and distinct -- which is what a five-letter token at 26pt
+        // is, and what a violet ghost from the status set was not.
+        //
+        // SIX CHARACTERS IS THE CEILING. The slot is 86 wide, the face is
+        // Chakra Petch and 26pt measures about 13px a character with this
+        // label's tracking, so seven would touch the mat's edges. The fit audit
+        // measures none of these (they are runtime text), so the ceiling is
+        // kept by RewardTrackScreenTests rather than by eye.
+        //
+        // WHAT SHOULD BE COMMISSIONED, if a painter is ever pointed at this
+        // screen: twelve small medallions in the talent tree's own hand, one
+        // per token below. None is urgent -- a word is a worse picture and a
+        // perfectly good label -- but the four naming a number a player tunes a
+        // build around (ELEM, SPELL, -MANA, -COST) are where a picture helps
+        // most.
+        public static string CardGlyphFor(TrackReward reward)
+        {
+            switch (reward)
+            {
+                case TrackReward.None: return null;
+
+                // Take your points back.
+                case TrackReward.Respec: return "RESET";
+
+                // The signature family: four rewards about one pool, told apart
+                // by WHICH question they answer -- how much it holds, how fast
+                // it fills, what fills it, what it stops.
+                case TrackReward.SignatureCapacity: return "CAP";
+                case TrackReward.SignatureGainPerTurn: return "/TURN";
+                case TrackReward.SignatureGainOnDamageTaken: return "HURT";
+                case TrackReward.SignatureAbsorbs: return "SOAK";
+
+                // Damage percentages: one element, or everything she casts.
+                case TrackReward.ElementalDamagePercent: return "ELEM";
+                case TrackReward.SpellDamagePercent: return "SPELL";
+
+                // The four cost/size levers, each naming the field it moves.
+                case TrackReward.SpellCostDelta: return "-MANA";
+                case TrackReward.SkillCostDelta: return "-COST";
+                case TrackReward.SkillFlatDelta: return "+HIT";
+                case TrackReward.SkillPowerDelta: return "+POWER";
+
+                // A crest, not a title: Identity covers the rim, the frame, the
+                // emboss and the pose as well as the four titles, and "TITLE"
+                // would name three nodes of ten.
+                case TrackReward.Identity: return "CREST";
+
+                // Everything with a medallion.
+                default: return null;
+            }
+        }
+
+        // The card's ONE visual per reward kind: the medallion where there is
+        // an honest one, else the word. Never both and never neither -- which
+        // is what RewardTrackScreenTests asserts, and what makes "a distinct
+        // visual per kind" a checkable statement rather than a hope.
+        public static string CardVisualKeyFor(TrackReward reward)
+        {
+            string art = CardArtKeyFor(reward);
+            if (!string.IsNullOrEmpty(art)) return art;
+
+            string glyph = CardGlyphFor(reward);
+            return string.IsNullOrEmpty(glyph) ? null : "glyph:" + glyph;
         }
 
         // The hue a reward kind tints its art-slot mat with.

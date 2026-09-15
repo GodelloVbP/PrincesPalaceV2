@@ -143,7 +143,21 @@ namespace PrincesPalace
         // Domain/UiKit/PcPlateArt.GlowKey for why.
         [SerializeField] internal Image[] pcPlateHighlights;
 
+        // THE IDENTITY RIM, worn for the rest of a career rather than for a
+        // turn: the same glow decal at a third of the halo's pad, tinted by
+        // whichever PlateRim node the character has collected. A second decal
+        // rather than a state on the halo above, because a rim earned at
+        // level 32 and "it is your go" are different facts and a surface that
+        // said both would say neither.
+        [SerializeField] internal Image[] pcPlateRims;
+
         [SerializeField] internal TMP_Text[] pcNames;
+
+        // The line under the bars: the chosen title, then VICTOR, then
+        // MASTER. Hidden outright for a character with nothing collected,
+        // which is every character below level 31.
+        [SerializeField] internal TMP_Text[] pcIdentityLines;
+
         [SerializeField] internal TMP_Text[] pcSignatures;
         [SerializeField] internal TMP_Text[] pcHpValues;
         [SerializeField] internal Image[] pcHpFills;

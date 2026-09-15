@@ -845,6 +845,71 @@ namespace PrincesPalace
             {
                 pcNames[i].color = isActing ? Hex(colours.Name) : Hex(FightHudPalette.TextPrimary);
             }
+
+            ApplyPlateIdentityStretch(i, kit);
+        }
+
+        // LEVELS 31 TO 40, ON THE PLATE: the line of words under the bars, the
+        // rim round the leather, and the metal the head is struck in.
+        //
+        // READ LIVE OFF THE SAVE, unlike the Level printed beside the name --
+        // which the kit carries precisely so a level-up mid-round cannot change
+        // the plate before the beat that earned it has played. The identity
+        // stretch is the opposite case and wants the opposite rule: it is
+        // COLLECTED by hand, from the system menu, inside this fight, and the
+        // whole point of a cosmetic reward is that it appears when you take it.
+        // Nothing here touches a combat number, so there is no beat for it to
+        // get ahead of.
+        //
+        // GRACEFUL ON EVERY MISS, like ApplyPlateIdentity above it: no kit, no
+        // save, no such character on the roster, or nothing collected all
+        // resolve to "hide the line and the rim", never to a half-painted
+        // plate.
+        private void ApplyPlateIdentityStretch(int i, PlayerKit kit)
+        {
+            var look = CharacterIdentity.LookFor(RosterCharacter(kit?.Id));
+
+            if (Has(pcIdentityLines, i))
+            {
+                bool any = look.Line.Length > 0;
+                pcIdentityLines[i].gameObject.SetShown(any);
+                if (any) pcIdentityLines[i].SetContent(look.Line);
+            }
+
+            if (Has(pcPlateRims, i))
+            {
+                string rim = IdentityMetals.RimFor(look.RimMetal);
+                pcPlateRims[i].gameObject.SetShown(rim != null);
+                if (rim != null) pcPlateRims[i].color = Hex(rim);
+            }
+
+            // THE EMBOSS IS A TINT ON THE LEATHER ITSELF, and it is written
+            // last on purpose: RefreshPcPlate has already set this Image's
+            // ALPHA for the ally-pick dim, so this takes the colour it finds
+            // and keeps its alpha rather than assigning a fresh opaque one.
+            // Writing a flat colour here would light a blocked plate back up.
+            //
+            // WHITE IS "NO EMBOSS", not a colour -- Image.color multiplies, so
+            // white is the identity and every metal below it darkens the strip
+            // slightly toward its own hue.
+            if (Has(pcPlateArts, i))
+            {
+                string emboss = IdentityMetals.EmbossFor(look.EmbossMetal);
+                var tint = emboss != null ? Hex(emboss) : Color.white;
+                tint.a = pcPlateArts[i].color.a;
+                pcPlateArts[i].color = tint;
+            }
+        }
+
+        // The save's own entry for a kit, or null. Resolved fresh per paint
+        // rather than held: a slot load can replace the save, and this is
+        // three lookups over a roster of a handful.
+        private static Character RosterCharacter(string definitionId)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null || string.IsNullOrEmpty(definitionId)) return null;
+
+            return save.roster.FirstOrDefault(c => c != null && c.definitionId == definitionId);
         }
 
         private static Color Opaque(Color colour) => new Color(colour.r, colour.g, colour.b, 1f);

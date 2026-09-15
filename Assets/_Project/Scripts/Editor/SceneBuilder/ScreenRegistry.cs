@@ -1077,10 +1077,20 @@ public static class ScreenRegistry
                 : SceneBuilder.LoadSpriteByKey(RewardTrackLayout.IconFor(reward)))
             .ToArray();
 
+        // NULL IS A REAL ANSWER HERE NOW, not a miss. Since phase 5 only nine
+        // reward kinds have a medallion that honestly means them; the other
+        // twelve draw a word (RewardTrackLayout.CardGlyphFor) and CardArtKeyFor
+        // returns null for every one of them. UiWiringSweep still refuses a
+        // half-wired array whatever the reason, so those slots carry the same
+        // neutral ring TrackReward.None does -- and the controller never reads
+        // them, because it asks CardGlyphFor first and hides the Image
+        // outright when there is a word to draw.
         controller.cardArtByReward = rewardKinds
-            .Select(reward => reward == TrackReward.None
-                ? neutralMark
-                : SceneBuilder.LoadSpriteByKey(RewardTrackLayout.CardArtKeyFor(reward)))
+            .Select(reward =>
+            {
+                string key = RewardTrackLayout.CardArtKeyFor(reward);
+                return string.IsNullOrEmpty(key) ? neutralMark : SceneBuilder.LoadSpriteByKey(key);
+            })
             .ToArray();
 
         // The disc is bound as BOTH the Button that takes the click and the

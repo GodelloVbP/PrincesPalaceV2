@@ -53,6 +53,11 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform cardRect;
         [SerializeField] internal Image cardMat;
         [SerializeField] internal Image cardArt;
+
+        // The word the plate draws when a reward kind has no honest medallion
+        // (RewardTrackLayout.CardGlyphFor). Exactly one of this and cardArt is
+        // ever shown.
+        [SerializeField] internal TMP_Text cardGlyph;
         [SerializeField] internal TMP_Text cardKicker;
         [SerializeField] internal TMP_Text cardLevel;
         [SerializeField] internal TMP_Text cardCaption;
@@ -529,7 +534,23 @@ namespace PrincesPalace
             bool waiting = RewardTrack.IsWaiting(level, _level, _claimed);
             var entry = _track.At(level);
 
-            if (cardArt != null)
+            // A MEDALLION OR A WORD, never both. Nine reward kinds have a
+            // painted mark that means them; the other twelve have a token in
+            // the kit's own type, which is a worse picture and a much better
+            // label than the borrowed status icon it replaced -- see
+            // RewardTrackLayout.CardGlyphFor.
+            string glyphWord = RewardTrackLayout.CardGlyphFor(entry.Reward);
+            bool wordOnly = !string.IsNullOrEmpty(glyphWord);
+
+            if (cardGlyph != null)
+            {
+                cardGlyph.gameObject.SetShown(wordOnly);
+                if (wordOnly) cardGlyph.SetContent(glyphWord);
+            }
+
+            if (cardArt != null) cardArt.gameObject.SetShown(!wordOnly);
+
+            if (cardArt != null && !wordOnly)
             {
                 // THE CARD TAKES THE NODE'S OWN SPRITE, which is handoff section
                 // 8's "reuses the milestone or filler art at the larger size"

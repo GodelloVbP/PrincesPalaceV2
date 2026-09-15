@@ -15,20 +15,30 @@ namespace PrincesPalace.Domain.Tests
     //
     // NOT re-proving RewardTrackDefinitionTests.
     // EveryRewardKindResolvesAnArtKeyAndAName, which already walks the same
-    // enum and asserts both lookups are non-empty per kind -- that is a
-    // Domain-layer fact about the switch statements themselves. What is new
-    // here, and is a UI-layer property rather than a Domain one, is what
-    // ScreenRegistry actually NEEDS from CardArtKeyFor: twelve DIFFERENT
-    // keys. Two reward kinds sharing one would still compile and still
-    // resolve -- cardArtByReward would just have two slots pointing at the
-    // same Sprite, and the card would draw the wrong medallion for one of
-    // them with nothing in a diff to say so.
+    // enum and asserts both lookups resolve per kind -- that is a Domain-layer
+    // fact about the switch statements themselves. What is new here, and is a
+    // UI-layer property rather than a Domain one, is what the CARD actually
+    // needs: a visual that tells this reward kind apart from every other. Two
+    // kinds sharing one would still compile and still resolve -- the card would
+    // simply draw the same thing for both, with nothing in a diff to say so.
+    //
+    // THE RULE IS "A DISTINCT VISUAL", NOT "A DISTINCT SPRITE", and phase 5
+    // changed it deliberately rather than relaxing it. The old wording forced
+    // twenty-one pictures out of a set that honestly contains nine, and phase 4
+    // met it by borrowing status icons -- writing in its own note that four of
+    // them were "chosen because they are different from each other and for no
+    // other reason". A rule that can only be satisfied by an arbitrary answer
+    // produces arbitrary answers. So a kind's visual is now its medallion OR
+    // its word (RewardTrackLayout.CardVisualKeyFor), exactly one of the two,
+    // and the distinctness this file cares about is checked over both channels
+    // at once -- which is strictly stronger than the old check, because it also
+    // refuses a word that collides with another word.
     public class RewardTrackScreenTests
     {
         [Test]
-        public void EveryRewardKindBindsAMarkAndACardSprite()
+        public void EveryRewardKindBindsAMarkAndADistinctCardVisual()
         {
-            var cardKeys = new HashSet<string>();
+            var visuals = new HashSet<string>();
             int kindCount = 0;
 
             foreach (TrackReward reward in Enum.GetValues(typeof(TrackReward)))
@@ -37,18 +47,76 @@ namespace PrincesPalace.Domain.Tests
                 kindCount++;
 
                 string mark = RewardTrackLayout.IconFor(reward);
-                string card = RewardTrackLayout.CardArtKeyFor(reward);
+                string visual = RewardTrackLayout.CardVisualKeyFor(reward);
 
                 Assert.IsFalse(string.IsNullOrEmpty(mark), $"{reward} has no rail mark key");
-                Assert.IsFalse(string.IsNullOrEmpty(card), $"{reward} has no card art key");
+                Assert.IsFalse(string.IsNullOrEmpty(visual),
+                    $"{reward} has neither a card medallion nor a card glyph -- the plate would draw nothing");
 
-                Assert.IsTrue(cardKeys.Add(card),
-                    $"{reward}'s card art key ({card}) is shared with another reward kind -- " +
-                    "cardArtByReward would draw the same medallion for both");
+                Assert.IsTrue(visuals.Add(visual),
+                    $"{reward}'s card visual ({visual}) is shared with another reward kind -- " +
+                    "the card would draw the same thing for both");
             }
 
-            Assert.AreEqual(kindCount, cardKeys.Count,
-                "the twelve reward kinds should resolve to twelve distinct card sprites");
+            Assert.AreEqual(kindCount, visuals.Count,
+                "every reward kind should resolve to a card visual nothing else resolves to");
+        }
+
+        // EXACTLY ONE OF THE TWO, for every kind. Both would draw a word over a
+        // medallion in the same 86px rect; neither is the blank plate the old
+        // arrangement was trying to avoid.
+        [Test]
+        public void AKindHasAMedallionOrAWordAndNeverBoth()
+        {
+            foreach (TrackReward reward in Enum.GetValues(typeof(TrackReward)))
+            {
+                if (reward == TrackReward.None) continue;
+
+                bool art = !string.IsNullOrEmpty(RewardTrackLayout.CardArtKeyFor(reward));
+                bool glyph = !string.IsNullOrEmpty(RewardTrackLayout.CardGlyphFor(reward));
+
+                Assert.AreNotEqual(art, glyph,
+                    $"{reward} resolves {(art ? "both a medallion and a word" : "neither a medallion nor a word")}");
+            }
+        }
+
+        // SIX CHARACTERS, because the slot is 86 wide at 26pt in Chakra Petch
+        // and the fit audit does not measure runtime text. Nothing else keeps
+        // this ceiling; a seventh letter would touch the mat's own edges and no
+        // build would say so.
+        [Test]
+        public void NoCardGlyphIsWiderThanTheSlot()
+        {
+            foreach (TrackReward reward in Enum.GetValues(typeof(TrackReward)))
+            {
+                string glyph = RewardTrackLayout.CardGlyphFor(reward);
+                if (string.IsNullOrEmpty(glyph)) continue;
+
+                Assert.LessOrEqual(glyph.Length, 6,
+                    $"{reward}'s card glyph '{glyph}' is longer than the 86px plate can hold at " +
+                    $"{RewardTrackScreen.CardGlyphFont}pt");
+
+                Assert.AreEqual(glyph.ToUpperInvariant(), glyph,
+                    $"{reward}'s card glyph '{glyph}' is not upper case -- every token on this screen is");
+            }
+        }
+
+        // NO STATUS ICON IS LEFT ON THIS SCREEN. Phase 4 borrowed seven from
+        // Art/UI/Status/Processed -- flat cel art in cool violets, on a card
+        // whose every other slot is a painted gold medallion -- and phase 5
+        // took them back off. Asserted as a PREFIX check rather than by listing
+        // the seven, so borrowing an eighth fails too.
+        [Test]
+        public void NoCardMedallionComesFromTheStatusSet()
+        {
+            foreach (TrackReward reward in Enum.GetValues(typeof(TrackReward)))
+            {
+                string key = RewardTrackLayout.CardArtKeyFor(reward);
+                if (string.IsNullOrEmpty(key)) continue;
+
+                StringAssert.StartsWith(RewardTrackScreen.IconRoot, key,
+                    $"{reward}'s medallion is not from the talent tree's painted set");
+            }
         }
 
         // ---- the tree itself -------------------------------------------------

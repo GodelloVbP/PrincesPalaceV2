@@ -70,6 +70,18 @@ summary constant moves, and captions get easier rather than harder.**
 
 ### The third measurement: no new art
 
+> **Superseded by progression v2 phase 5, 2026-09-15.** The table below is
+> kept as the record of what P3 planned. What shipped is different in kind: a
+> card medallion now exists only where the talent tree's painted set contains
+> one that HONESTLY means the reward (nine of twenty-one), and the other
+> twelve draw a short word in the kit's own type instead. The "PLACEMENTS,
+> not decisions" posture this section leans on is what phase 4 then used to
+> borrow seven flat-cel status icons onto a card of painted gold medallions,
+> four of them admittedly arbitrary -- so phase 5 replaced the rule that
+> forced it (a distinct SPRITE per kind) with a distinct VISUAL per kind.
+> Live mapping and the reasoning per medallion: `RewardTrackLayout.
+> CardArtKeyFor` / `CardGlyphFor`.
+
 Twelve reward kinds after the change, and exactly twelve card-art keys already
 declared at `RewardTrackScreen.cs:191-202`. The mapping is a re-point of
 constants, not a commission (and that block's own header already says these are

@@ -145,22 +145,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(4, beforeMilestone[DamageType.Fire], "the milestone had not been reached yet");
         }
 
-        // A new TrackReward compiles, resolves an art key, and displays as
-        // nothing -- the failure this walk exists to catch, over all twelve
-        // kinds at once rather than trusting each caption template to have
-        // used its own selector. The entry carries every optional field a
-        // caption might read (Against/SkillDisplayName/ResourceDisplayName)
-        // so a template that forgot to read its own selector cannot pass by
-        // accident on a blank fallback.
+        // A new TrackReward compiles, resolves a card visual, and displays as
+        // nothing -- the failure this walk exists to catch, over every kind at
+        // once rather than trusting each caption template to have used its own
+        // selector. The entry carries every optional field a caption might read
+        // (Against/SkillDisplayName/ResourceDisplayName) so a template that
+        // forgot to read its own selector cannot pass by accident on a blank
+        // fallback.
+        //
+        // CardVisualKeyFor, NOT CardArtKeyFor, since phase 5: the card draws a
+        // medallion for the nine kinds that have an honest one and a word for
+        // the twelve that do not, so "has a card art key" is no longer the
+        // question -- "has something to draw" is. See RewardTrackScreenTests
+        // for the distinctness half of the same rule.
         [Test]
-        public void EveryRewardKindResolvesAnArtKeyAndAName()
+        public void EveryRewardKindResolvesACardVisualAndAName()
         {
             foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
             {
                 if (reward == TrackReward.None) continue;
 
                 Assert.IsNotEmpty(RewardTrackLayout.IconFor(reward), $"{reward} has no rail icon key");
-                Assert.IsNotEmpty(RewardTrackLayout.CardArtKeyFor(reward), $"{reward} has no card art key");
+                Assert.IsNotEmpty(RewardTrackLayout.CardVisualKeyFor(reward),
+                    $"{reward} has neither a card medallion nor a card glyph");
 
                 var entry = new TrackEntry(reward, 5, against: DamageType.Fire,
                     skillId: "fixture_skill", skillDisplayName: "Fixture Skill",

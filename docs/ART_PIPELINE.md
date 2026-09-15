@@ -1026,6 +1026,27 @@ sizing/tiling requirements.
   replace that placeholder without touching anything else, but nothing is
   blocked on it.
 
+- **Victory-pose stills**, one per playable character (Shawn, Odette, Bjorn).
+  Progression v2's level 37 grants a victory pose and §5 authors it as
+  "(art)" — a still nobody has drawn. Phase 5 ships the node as a WORD on the
+  fight party plate ("VICTOR", beside the chosen title) so the level pays
+  something the moment it is collected rather than being the one identity
+  level that visibly does nothing. When the stills land, the word comes out
+  and the pose goes in: `Core/CharacterIdentity.VictorWord` is the whole of
+  what to delete. Format is the usual key-pose still, one canvas per actor
+  via `slice_actor_sheet.py` (§4b).
+- **Twelve reward-track card medallions**, in the talent tree's own painted
+  hand (gold on a dark ground, ~350px, circular), 86px delivery. Phase 5
+  gave the reward track a medallion only where an existing talent icon
+  honestly means the reward — nine of twenty-one kinds — and the other
+  twelve draw a short word in the kit's type on the card's own art plate.
+  The tokens, which are also the brief, are in
+  `RewardTrackLayout.CardGlyphFor`: RESET, CAP, /TURN, HURT, SOAK, ELEM,
+  SPELL, -MANA, -COST, +HIT, +POWER, CREST. **Nothing is blocked on these**
+  — a word is a perfectly good label — but the four that name a number a
+  player tunes a build around (ELEM, SPELL, -MANA, -COST) are where a
+  picture would earn its commission first.
+
 ## 8. Model and tool licences — read before adding an AI step
 
 This is a **commercial** project, so a non-commercial model anywhere in the art

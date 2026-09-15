@@ -193,86 +193,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the player stands, and a painted medallion tinted violet reads as a
         // painting behind glass rather than as an unreached reward.
         //
-        // These are PLACEMENTS, not decisions. Twelve rewards mapped onto
-        // twelve icons drawn for a different screen is a first fit and should
-        // be overruled by anyone with an opinion; the whole map is the switch
-        // in RewardTrackLayout.CardArtKeyFor.
-        //
-        // THESE ARE RE-POINTS OF A FIXED SET OF ART CONSTANTS
-        // (docs/PLAN_REWARD_TRACKS.md §1's table), not new commissions --
-        // each constant is named for what actually uses it today.
+        // NINE KEYS, DOWN FROM TWENTY-ONE (phase 5). Every constant below now
+        // names a medallion that actually MEANS the reward it is on -- see
+        // RewardTrackLayout.CardArtKeyFor for the nine, one line each on why.
+        // The twelve kinds with no honest picture draw a short word instead
+        // (CardGlyphFor), which is what retired the "placement, not a decision"
+        // note this block used to carry and the seven borrowed status icons
+        // phase 4 added under it. THE FIVE UNUSED MEDALLIONS -- cross, eye,
+        // precision, skull, speed -- are deliberately not listed here: a
+        // constant naming a file nothing draws is an invitation to assign it.
         public const string IconRoot = "UI/TalentTree/Icons/Processed";
 
         public const string StatArtKey = IconRoot + "/ability_score.png";
         public const string HealthArtKey = IconRoot + "/health.png";
-        public const string RespecArtKey = IconRoot + "/regen.png";
+        public const string MaxManaArtKey = IconRoot + "/mana.png";
+        public const string ManaRegenArtKey = IconRoot + "/regen.png";
+        public const string UnlockSkillArtKey = IconRoot + "/skill_cost.png";
         public const string SecondLifeArtKey = IconRoot + "/flame_unused.png";
-
-        // was ExpArtKey (ExpFind) -> ElementalDamagePercent
-        public const string ElementalArtKey = IconRoot + "/skill_cost.png";
-        // was FavorArtKey (Favor) -> MaxMana
-        public const string MaxManaArtKey = IconRoot + "/eye_unused.png";
-        // was RestArtKey (RestBeforeBoss) -> SignatureGainPerTurn
-        public const string SignatureGainArtKey = IconRoot + "/mana.png";
-        // was RerollArtKey (OfferReroll) -> ManaRegen
-        public const string ManaRegenArtKey = IconRoot + "/precision.png";
-        // was OfferArtKey (WiderOffer) -> SignatureAbsorbs
-        public const string SignatureAbsorbArtKey = IconRoot + "/cross_unused.png";
-        // was RelicArtKey (StartingRelics) -> SignatureCapacity
-        public const string SignatureCapacityArtKey = IconRoot + "/defense.png";
-        // was ChosenRelicArtKey (ChosenStartingRelics) -> SignatureGainOnDamageTaken
-        public const string SignatureHurtArtKey = IconRoot + "/fist_unused.png";
-        // was SecondLifeRefreshArtKey (SecondLifeRefresh) -> UnlockSkill
-        public const string UnlockSkillArtKey = IconRoot + "/skull_unused.png";
-
-        // PHASE 3's seven new reward kinds, and PHASE 4's two. Same
-        // "placement, not a decision" posture as the block above --
-        // FuryGainOnAttack and FuryStartOfFight repoint the two Processed
-        // icons the original twelve left spare (attack.png, speed.png -- a
-        // Fury reward is physical and fast, which is at least not an
-        // arbitrary pairing).
-        //
-        // THE OTHER SEVEN BORROW FROM THE STATUS SET, and phase 4 is why.
-        // Phase 3 pointed five of them at files that do not exist -- named
-        // "*_unused.png" -- reasoning that LoadSprite degrades gracefully
-        // (null plus a warning, never a throw). It does. What does NOT
-        // degrade is UiWiringSweep, which refuses a half-wired
-        // [SerializeField] array outright: `cardArtByReward[15..20] is null`
-        // failed the scene build the first time anybody built one after
-        // phase 3, which was this phase.
-        //
-        // AND THEY CANNOT SHARE. RewardTrackScreenTests asserts every reward
-        // kind resolves a DISTINCT card key, because two kinds pointing at
-        // one sprite draws the wrong medallion for one of them with nothing
-        // in a diff to say so -- a rule worth more than the convenience of
-        // reusing a talent glyph. There are fourteen TalentTree icons and
-        // twenty-two reward kinds, so distinctness had to come from
-        // somewhere, and Art/UI/Status/Processed is a keyed, processed set
-        // of the same lineage that the reward track does not otherwise use.
-        //
-        // THE MAPPING IS ARBITRARY BEYOND DISTINCTNESS, and that is the
-        // thing to know rather than to discover. Three of the seven are
-        // nearly honest -- absorb-per-point wears the shield, a spell
-        // discount wears empowered, a skill cost coming down wears
-        // speed_down -- and the other four (a flat delta on vulnerable, a
-        // per-point delta on poison, all-spell damage on feared, IDENTITY on
-        // protect) are chosen because they are different from each other and
-        // for no other reason. A player cannot read this rail by glyph
-        // today. Phase 5 owns the screen and should commission seven marks
-        // or pick a mapping on purpose; this one exists so the build passes
-        // and the uniqueness rule stays at full strength.
+        public const string SignatureAbsorbArtKey = IconRoot + "/defense.png";
         public const string FuryGainArtKey = IconRoot + "/attack.png";
-        public const string FuryStartArtKey = IconRoot + "/speed.png";
+        public const string FuryStartArtKey = IconRoot + "/fist_unused.png";
 
-        public const string StatusIconRoot = "UI/Status/Processed";
-
-        public const string SpellCostDeltaArtKey = StatusIconRoot + "/empowered.png";
-        public const string SkillCostDeltaArtKey = StatusIconRoot + "/speed_down.png";
-        public const string SkillFlatDeltaArtKey = StatusIconRoot + "/vulnerable.png";
-        public const string SkillPowerDeltaArtKey = StatusIconRoot + "/poison.png";
-        public const string SignatureAbsorbPerPointArtKey = StatusIconRoot + "/shielded.png";
-        public const string SpellDamagePercentArtKey = StatusIconRoot + "/feared.png";
-        public const string IdentityArtKey = StatusIconRoot + "/protect.png";
+        // THE WORD ON THE PLATE, for the twelve kinds with no medallion.
+        //
+        // 26pt in the slot's own 86px, gold, and centred in both axes -- a
+        // token, not a caption. The caption is the line beside it and says the
+        // whole sentence.
+        public const int CardGlyphFont = 26;
+        public const string CardGlyphInk = Gold;
 
         public UiNode Root;
 
@@ -304,6 +252,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Card;
         public NodeRef CardMat;
         public NodeRef CardArt;
+
+        // The word the plate draws for a reward kind with no honest medallion
+        // -- see RewardTrackLayout.CardGlyphFor. Exactly one of this and
+        // CardArt is ever on.
+        public NodeRef CardGlyph;
         public NodeRef CardKicker;
         public NodeRef CardLevel;
         public NodeRef CardCaption;
@@ -1151,6 +1104,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             screen.CardArt = art;
             yield return art;
+
+            // THE WORD, in the same rect. Built inactive: the controller turns
+            // exactly one of the two on per reward kind, and a scene that was
+            // never refreshed should show the neutral ring rather than a token
+            // for whatever reward happened to be first in the enum.
+            var glyph = Ui.Label("TrackCardGlyph", UiString.Runtime,
+                    new UiVec(RewardTrackLayout.CardArtSize, RewardTrackLayout.CardArtSize),
+                    CardGlyphFont, CardGlyphInk, Place.At(x, 0f))
+                .Tracked(6f)
+                .AsDecor()
+                .Inactive();
+            screen.CardGlyph = glyph;
+            yield return glyph;
         }
 
         // ---- the ascent ribbon ----------------------------------------------

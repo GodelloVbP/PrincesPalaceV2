@@ -72,5 +72,110 @@ namespace PrincesPalace
             // levels ascending, so the last Title in the list is the newest.
             return titles[titles.Count - 1];
         }
+
+        // ---- PHASE 5: what the identity stretch actually LOOKS like ----------
+        //
+        // Six Identity kinds resolved into the four things a surface can draw:
+        // a line of words, a rim metal, an emboss metal, and whether the
+        // portrait is framed. ONE read model for every surface -- the fight
+        // plate, the hub roster card and whatever draws them next -- because
+        // the alternative is each screen walking CollectedFor with its own
+        // idea of what "gold" means and the three quietly disagreeing.
+        //
+        // MASTERY IS A MODIFIER, NOT A SEVENTH KIND. §4's level 40 reads
+        // "Mastery: gold plate, 'Master'", which is three of the four fields
+        // at once: it forces both metals gold and adds a word to the line.
+        // Resolved here rather than at each draw site, so a surface that draws
+        // only the rim cannot forget the half of mastery that is a rim.
+        public readonly struct IdentityLook
+        {
+            // The words under the name: the selected title, then VICTOR if the
+            // victory pose is collected, then MASTER. Empty for a character
+            // below level 31, which is most of a career.
+            public readonly string Line;
+
+            // "silver", "gold" or null. Gold wins wherever both are collected
+            // -- §4 authors silver at 32 and gold at 38, and a rim cannot be
+            // two metals.
+            public readonly string RimMetal;
+            public readonly string EmbossMetal;
+            public readonly bool HasPortraitFrame;
+
+            public IdentityLook(string line, string rimMetal, string embossMetal, bool hasPortraitFrame)
+            {
+                Line = line ?? "";
+                RimMetal = rimMetal;
+                EmbossMetal = embossMetal;
+                HasPortraitFrame = hasPortraitFrame;
+            }
+
+            public bool IsAnything =>
+                Line.Length > 0 || RimMetal != null || EmbossMetal != null || HasPortraitFrame;
+        }
+
+        public const string Silver = "silver";
+        public const string Gold = "gold";
+
+        // THE VICTORY POSE HAS NO ART AND IS DRAWN AS A WORD, deliberately and
+        // temporarily. §5: the pose is "(art)" -- a still nobody has drawn --
+        // and phase 5 renders it as a line on the plate so the node pays
+        // something the moment it is collected rather than being the one
+        // identity level that visibly does nothing. It is on the art backlog;
+        // when the stills land this word comes out and the pose goes in.
+        public const string VictorWord = "VICTOR";
+        public const string MasterWord = "MASTER";
+
+        public static IdentityLook LookFor(Character character)
+        {
+            if (character == null) return new IdentityLook("", null, null, false);
+
+            var collected = CollectedFor(character);
+
+            string rim = null;
+            string emboss = null;
+            bool frame = false;
+            bool pose = false;
+            bool mastery = false;
+
+            foreach (var item in collected)
+            {
+                switch (item.Kind)
+                {
+                    // ASCENDING ORDER MAKES THE LAST ONE WIN, which is the
+                    // same "newest is shown" rule the title follows and lands
+                    // on gold for a fully collected track without this file
+                    // having to rank the metals itself. CollectedFor walks
+                    // levels ascending; §4 authors silver below gold.
+                    case TrackIdentityKind.PlateRim: rim = item.Value; break;
+                    case TrackIdentityKind.PlateEmboss: emboss = item.Value; break;
+                    case TrackIdentityKind.PortraitFrame: frame = true; break;
+                    case TrackIdentityKind.VictoryPose: pose = true; break;
+                    case TrackIdentityKind.Mastery: mastery = true; break;
+                }
+            }
+
+            if (mastery)
+            {
+                rim = Gold;
+                emboss = Gold;
+            }
+
+            var words = new List<string>();
+            var title = SelectedTitleFor(character);
+            if (title != null && !string.IsNullOrWhiteSpace(title.Value.Value))
+            {
+                words.Add(title.Value.Value.ToUpperInvariant());
+            }
+
+            if (pose) words.Add(VictorWord);
+            if (mastery) words.Add(MasterWord);
+
+            // A MIDDLE DOT WOULD BE NON-ASCII and this string reaches a TMP
+            // label through UiString.Runtime; the kit's own separator
+            // everywhere else on these screens is a full stop with air round
+            // it (UiStrings.TrackRibbonHint, PartyCardTagInParty), so this
+            // uses the same one.
+            return new IdentityLook(string.Join("   .   ", words), rim, emboss, frame);
+        }
     }
 }

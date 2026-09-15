@@ -189,6 +189,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // one is ever shown, which PartyFormationCaptureTests asserts.
         public List<NodeRef> PcPlateHighlights = new List<NodeRef>();
 
+        // THE IDENTITY LINE, one per plate, in the free band under the bars:
+        // whichever title the player has chosen, then VICTOR, then MASTER.
+        // Empty and hidden for every character below level 31, which is most
+        // of a career -- see Core/CharacterIdentity.LookFor.
+        public List<NodeRef> PcIdentityLines = new List<NodeRef>();
+
+        // THE IDENTITY RIM, one per plate: the plate's own glow decal again,
+        // tinted silver or gold by the collected PlateRim node (or forced gold
+        // by Mastery). A SECOND decal rather than a state on the acting
+        // highlight, because the two answer different questions -- the
+        // highlight says whose turn it is and goes out again, and a rim earned
+        // at level 32 is worn for the rest of the career.
+        public List<NodeRef> PcPlateRims = new List<NodeRef>();
+
         public List<NodeRef> PcNames = new List<NodeRef>();
         public List<NodeRef> PcSignatures = new List<NodeRef>();
         public List<NodeRef> PcHpValues = new List<NodeRef>();
@@ -1534,6 +1548,31 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // acting card any more. Parked in the free band at the bottom-left of
         // the BOTTOM plate: a fixed anchor at the foot of the column, which
         // is if anything clearer than a badge that moved with the turn.
+        // THE IDENTITY LINE'S OWN ROW, in the free band the plate already
+        // leaves between the bars (-23.5) and the content's bottom inset
+        // (-37.85). 13px of label centred at -30.7 sits inside that with half
+        // a pixel to spare at each end, and NOTHING ABOVE IT MOVES -- which is
+        // the constraint this row was given rather than a happy accident. The
+        // band was deliberate empty leather ("the plate is a leather STRIP
+        // with a head on it"), and one quiet line of small caps is about the
+        // most that can go in it without it stopping being that.
+        private const float PcIdentityRowY = -30.7f;
+        private const float PcIdentityRowH = 13f;
+        private const int PcIdentityFontSize = 12;
+
+        // INDENTED PAST THE REVIVE BADGE'S SLOT ON EVERY PLATE, including the
+        // two that never carry one. The party-wide Second Life badge sits at
+        // the bottom-left of the BOTTOM plate only, in this same band; a line
+        // starting at the content's left edge would run under it on that one
+        // plate and sit flush on the other two, so three plates would indent
+        // differently for a reason no player could see. Reserving the slot
+        // everywhere costs 18px of a 352px row and makes the column agree with
+        // itself.
+        private static float PcIdentityLeft =>
+            PcContentLeft + PcSecondLifeSize + PcRowGapX;
+
+        private static float PcIdentityWidth => PcContentRight - PcIdentityLeft;
+
         private const float PcSecondLifeSize = 14f;
         private static float PcSecondLifeY =>
             (PcBarRowY - PcBarH * 0.5f + PcContentBottom) * 0.5f;
@@ -1575,6 +1614,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // slot (PcPlateArt.BakedDefaults) so a freshly built scene
                 // reads as the roster that ships; RefreshPcPlate overwrites
                 // it from the occupant's own plateArt on the first repaint.
+                // THE IDENTITY RIM, between the acting halo and the plate:
+                // the same decal at a third of the halo's pad, so a character
+                // who is both acting and gold-rimmed reads as a tight metal
+                // edge inside a wide bloom rather than as one thicker smear.
+                // Baked white and hidden, like the halo -- an unrefreshed
+                // scene must not show a rim nobody has earned.
+                float rimPad = glowPad / 3f;
+                var identityRim = Ui.Sprite($"PcPlate{i}Rim", PcPlateArt.GlowKey,
+                        Place.Stretch(-rimPad, -rimPad, -rimPad, -rimPad), UiSize.Fill)
+                    .AsDecor()
+                    .Inactive()
+                    .AllowOverflow("the identity rim is the plate's own glow decal at a smaller pad -- like the acting halo it sits OUTSIDE the silhouette on purpose, which is what makes it read as an edge round the plate rather than a band across it");
+
                 var art = Ui.Sprite($"PcPlate{i}Art", PcPlateArt.BakedDefaults[i % PcPlateArt.BakedDefaults.Length],
                     Place.Stretch(), UiSize.Fill);
                 art.PreserveAspect = true;
@@ -1690,7 +1742,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
+                // 12pt, hard left, quiet -- subordinate to the 16pt name two
+                // rows above it, which is what a title is to a name.
+                var identity = Ui.Label($"PcPlate{i}Identity", UiString.Runtime,
+                        new UiVec(PcIdentityWidth, PcIdentityRowH), PcIdentityFontSize,
+                        IdentityMetals.Line,
+                        Place.At(PcIdentityLeft, PcIdentityRowY, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left)
+                    .Inactive();
+
                 PcPlateArts.Add(art);
+                PcPlateRims.Add(identityRim);
+                PcIdentityLines.Add(identity);
                 PcPlateReticles.Add(reticle);
                 PcPlateHighlights.Add(highlight);
                 PcNames.Add(name);
@@ -1704,7 +1767,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 var children = new List<UiNode>
                 {
-                    highlight, art, name, signature, hp.Track, mp.Track, split, reticle,
+                    highlight, identityRim, art, name, identity, signature,
+                    hp.Track, mp.Track, split, reticle,
                 };
 
                 // RIGHT-ALIGNED, ending where the head zone begins. Laid out
