@@ -240,6 +240,21 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackFightsToGoOne =
             UiString.Define("track.fights_to_go_one", "ABOUT ONE FIGHT TO GO");
 
+        // THE SAME LINE, ABOVE LEVEL 30. A fight count alone reads as a
+        // sprint at prestige depth the way it does everywhere else on the
+        // rail, but the rail's own §7 phase-6 language for these ten levels
+        // is "the prestige stretch" -- runs, not fights, so the card adds
+        // the coarser unit rather than replacing the fine one. "ROUGHLY"
+        // because RewardTrackController's own FightsPerDeepRun (53, plan
+        // §2's own figure) divides an ABOUT into another ABOUT.
+        public static readonly UiString TrackFightsToGoWithRuns =
+            UiString.Define("track.fights_to_go_with_runs",
+                "ABOUT {0} FIGHTS, ROUGHLY {1} RUNS", "ABOUT 999 FIGHTS, ROUGHLY 19 RUNS");
+
+        public static readonly UiString TrackFightsToGoWithRunsOne =
+            UiString.Define("track.fights_to_go_with_runs_one",
+                "ABOUT {0} FIGHTS, ROUGHLY ONE RUN", "ABOUT 999 FIGHTS, ROUGHLY ONE RUN");
+
         // ---- completion, and the ten levels past it -------------------------
         //
         // Two words under the rail, one at level 30 and one under the stretch

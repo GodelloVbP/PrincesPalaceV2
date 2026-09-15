@@ -133,6 +133,47 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(900, result.Ledger.Single(e => e.characterId == "shawn").physicalDealt);
         }
 
+        // THE HUB'S "ABOUT N FIGHTS TO GO" READS THIS FIELD (RewardTrackController.
+        // DepthStep), which is the whole reason Settle writes it here rather
+        // than the estimate reaching for the last-ended run itself -- by the
+        // time the hub asks, EndRun has already replaced the snapshot Settle
+        // read this from.
+        [Test]
+        public void SettleWritesTheSquadsLastRunDepthOntoTheCharactersWhoRanIt()
+        {
+            var fielded = Save.ActiveSquad().First();
+            Assert.AreEqual(0, fielded.lastRunDeepestStep, "fixture: a fresh character has never run");
+
+            var run = Run();
+            run.deepestStep = 40;
+
+            RunSettlement.Settle(Save, run);
+
+            Assert.AreEqual(40, fielded.lastRunDeepestStep);
+        }
+
+        // THE LAST RUN, NOT THE DEEPEST EVER -- unlike lifetimeDeepestStep,
+        // which only ever climbs. A character who retreats to a shallow
+        // retry after a deep failed run should see the hub's fight estimate
+        // get cheaper again, not stay priced at their best depth forever.
+        [Test]
+        public void SettleOverwritesLastRunDepthEvenWhenItIsShallowerThanBefore()
+        {
+            var fielded = Save.ActiveSquad().First();
+
+            var deep = Run();
+            deep.deepestStep = 80;
+            RunSettlement.Settle(Save, deep);
+            Assert.AreEqual(80, fielded.lastRunDeepestStep);
+
+            var shallow = Run();
+            shallow.deepestStep = 5;
+            RunSettlement.Settle(Save, shallow);
+
+            Assert.AreEqual(5, fielded.lastRunDeepestStep, "the LAST run, not the best one");
+            Assert.AreEqual(80, Save.lifetimeDeepestStep, "the lifetime high-water mark still only climbs");
+        }
+
         [Test]
         public void SettlingANullRunDegradesRatherThanThrowing()
         {

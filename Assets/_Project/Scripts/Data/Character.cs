@@ -161,6 +161,26 @@ namespace PrincesPalace
         // are given.
         public void SelectTitle(int level) => selectedTitleTrackLevel = level;
 
+        // HOW DEEP THIS CHARACTER'S LAST RUN REACHED, in dungeon steps.
+        // Written once per settled run (RunSettlement.Settle, every fielded
+        // squad member, win or wipe or abandon alike -- whichever step the
+        // run's own RunSnapshot.deepestStep had reached when it closed) and
+        // read by the hub's reward-track card so "about N fights to go" can
+        // price a fight at the depth this character actually plays, instead
+        // of the room-0 rate every character shared before this field
+        // existed. THE LAST RUN, not the deepest ever: a character who has
+        // fallen back to shallow retries after a deep failed one should see
+        // the hub estimate get cheaper again, which lifetimeDeepestStep
+        // (SaveData, a save-wide high-water mark used for the ember gate)
+        // cannot do and was never meant to.
+        //
+        // PURELY ADDITIVE, same as `selectedTitleTrackLevel` above: an older
+        // save has no such field, JsonUtility leaves it at zero, and zero
+        // already reads correctly -- Character.FightsToNextLevel's caller
+        // falls back to 0 for a character who has never run, which is
+        // exactly what an absent field means. No SaveData version bump.
+        public int lastRunDeepestStep;
+
         public Character()
         {
         }

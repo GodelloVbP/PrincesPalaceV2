@@ -232,7 +232,7 @@ namespace PrincesPalace
             _track = RewardTracks.For(character);
             _level = character?.level ?? RewardTrack.StartingLevel;
             _claimed = character?.claimedTrackLevel ?? 0;
-            _fightsToNext = character?.FightsToNextLevel(DepthStep()) ?? 0;
+            _fightsToNext = character?.FightsToNextLevel(DepthStep(character)) ?? 0;
 
             // The fade cache is filled BEFORE the nodes are painted, because
             // PaintNode multiplies by it. PaintDepthOfField is the scroll-time
@@ -265,16 +265,24 @@ namespace PrincesPalace
         // no dossier in between to call ShowFor, still gets a character
         // rather than a blank screen -- graceful degradation, and the reason
         // SystemMenuCaptureTests needs no fixture change (plan §8).
-        // WHAT DEPTH THE NEXT FIGHT WILL BE FOUGHT AT, which is the whole of
-        // what the fights-to-go estimate needs from outside Domain.
-        //
-        // Two answers and no third: in a run it is the run's own step, because
-        // that is the pay the next victory will actually carry; in the hub it
-        // is 0, because the next fight is the first room of the next descent.
-        // The same pair FightBootstrap already writes into the session's own
-        // DepthStep, read the same way, so the screen's estimate and the fight
-        // that settles it cannot disagree about where the party is.
-        private static int DepthStep() => RunManager.HasRun ? RunManager.Run.step : 0;
+        // WHAT DEPTH TO PRICE THE ESTIMATE AT -- not what depth the next real
+        // fight literally opens at. Those used to be the same question and
+        // this returned 0 in the hub to match FightBootstrap's own room-0
+        // start; the two are no longer the same question. A level-15
+        // character sitting in the hub between descents does not fight their
+        // next level at room 0 -- they fight it wherever their run gets to,
+        // and pricing the card at room 0 overstated the fight count by
+        // whatever multiple that depth's pay has climbed (phase 5 review:
+        // "121 fights" quoted at a level a returning player pays off in a
+        // fraction of that). IN A RUN, the run's own step, unchanged --
+        // that IS the pay the next victory carries. IN THE HUB, the
+        // character's OWN last run's deepest step
+        // (Character.lastRunDeepestStep, written by RunSettlement.Settle
+        // every time a run ends), because that is the depth this
+        // character's next descent will actually reach on the way to a
+        // level bought there -- 0 only for a character who has never run.
+        private static int DepthStep(Character character) =>
+            RunManager.HasRun ? RunManager.Run.step : character?.lastRunDeepestStep ?? 0;
 
         private Character ResolveCharacter()
         {
@@ -704,6 +712,17 @@ namespace PrincesPalace
         //
         // AND BLANK AT THE CAP, where _fightsToNext is 0: there is no next
         // level, and "ABOUT 0 FIGHTS TO GO" would be counting toward nothing.
+        //
+        // ABOVE RewardTrack.CompletionLevel (30) THE LINE ADDS RUNS, not in
+        // place of the fight count but beside it: docs/handoffs/
+        // progression_v2/PLAN_PROGRESSION_V2.md §2 measures a deep run at
+        // about 53 fights, and every level from 31 up costs a full 10,000 --
+        // the plan's own cap (contract 2) -- so the raw fight count there
+        // regularly reads in the hundreds. The owner has not decided to hide
+        // the line at that stretch (phase 5 review), only to say it in the
+        // unit a prestige rung is actually paid in.
+        private const int FightsPerDeepRun = 53;
+
         private void PaintCardFights(int level)
         {
             if (cardFights == null) return;
@@ -711,6 +730,14 @@ namespace PrincesPalace
             if (level != _level + 1 || _fightsToNext <= 0)
             {
                 cardFights.SetContent(string.Empty);
+                return;
+            }
+
+            if (level > RewardTrack.CompletionLevel)
+            {
+                int runs = (_fightsToNext + FightsPerDeepRun - 1) / FightsPerDeepRun;
+                if (runs <= 1) cardFights.Set(UiStrings.TrackFightsToGoWithRunsOne, _fightsToNext);
+                else cardFights.Set(UiStrings.TrackFightsToGoWithRuns, _fightsToNext, runs);
                 return;
             }
 

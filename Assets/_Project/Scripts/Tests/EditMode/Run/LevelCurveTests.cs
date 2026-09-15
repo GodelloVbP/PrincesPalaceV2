@@ -216,6 +216,13 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(3000, 40, 39)]  // 3,000 / 77 = 38.96
         [TestCase(3000, 0, 104)]  // 3,000 / 29 = 103.4 -- depth is what makes the same debt cheaper
         [TestCase(10000, 80, 48)] // a level-31 rung at the bottom of a deep run: 10,000 / 209 = 47.8
+        [TestCase(3500, 0, 121)]  // level 16's own cost, priced at room 0 -- the hub's OLD bug: a
+                                   // level-15 character whose last run reached step 40 saw this
+                                   // number, three times the true estimate below, because the hub
+                                   // hardcoded depth 0 whatever the character had actually reached
+        [TestCase(3500, 40, 46)]  // the SAME level, priced at Character.lastRunDeepestStep 40 --
+                                   // 3,500 / 77 = 45.45, the fix: RewardTrackController.DepthStep
+                                   // reads the character's own last run in the hub instead of 0
         public void FightsToGoCountsAverageNormalFightsAtThatDepth(int remaining, int step, int expected)
         {
             Assert.AreEqual(expected, LevelCurve.FightsToGo(remaining, step));
