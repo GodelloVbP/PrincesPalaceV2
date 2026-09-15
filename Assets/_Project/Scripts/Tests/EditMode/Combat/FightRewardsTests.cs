@@ -94,13 +94,28 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void RewardsRideTheSameCurveAsTheThreat()
+        public void GoldRidesTheSameCurveAsTheThreat()
         {
-            // Not a separate rate, on purpose: if pay lagged difficulty the deep
-            // game would quietly become worse value per fight.
+            // Not a separate rate, on purpose: gold is spent inside the run it
+            // was earned in, at a shop whose prices climb with depth, so if it
+            // lagged difficulty the deep game would be worse value per fight.
             var payout = VictoryRewards.For(new[] { Kit(100, 100) }, isElite: false, depthStep: 25);
 
-            Assert.AreEqual(DifficultyCurve.ScaleReward(100, 25), payout.Experience);
+            Assert.AreEqual(DifficultyCurve.ScaleReward(100, 25), payout.Gold);
+        }
+
+        [Test]
+        public void ExperienceDoesNotRideTheThreatCurve()
+        {
+            // Progression v2 phase 2 gave experience its own, much flatter
+            // rate -- the whole reason the two are separate methods now. The
+            // literal pins live in ExperienceRateTests; this one only has to
+            // catch the two being wired back together.
+            var payout = VictoryRewards.For(new[] { Kit(100, 100) }, isElite: false, depthStep: 25);
+
+            Assert.AreEqual(DifficultyCurve.ScaleExperience(100, 25), payout.Experience);
+            Assert.Less(payout.Experience, payout.Gold,
+                "experience and gold are on the same rate again");
         }
 
         [Test]

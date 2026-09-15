@@ -63,8 +63,16 @@ namespace PrincesPalace.Domain.Combat.Session
                 rawGold += kit.Source.CurrencyReward;
             }
 
+            // TWO CURVES, ONE ROOM. The elite multiplier and the rounding are
+            // shared; the depth rate is not. Experience rides
+            // ScaleExperience (25 permille a step) and gold rides ScaleReward
+            // (the health rate, 75) -- see DifficultyCurve's own headers for
+            // why the two were separated, and note the ORDER is unchanged:
+            // elite first, then round, then depth, which is what
+            // FightRewardsTests.TheEliteMultiplierIsAppliedBeforeTheDepthCurve
+            // pins.
             return new Payout(
-                DifficultyCurve.ScaleReward(Rounding.AwayFromZero(rawExp * multiplier), depthStep),
+                DifficultyCurve.ScaleExperience(Rounding.AwayFromZero(rawExp * multiplier), depthStep),
                 DifficultyCurve.ScaleReward(Rounding.AwayFromZero(rawGold * multiplier), depthStep));
         }
 
