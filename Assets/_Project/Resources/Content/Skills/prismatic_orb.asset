@@ -49,7 +49,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 30
+    SortOrder: 28
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -1332,3 +1332,4 @@ MonoBehaviour:
             weights: []
         layerFormat: 1
         hitCueSeconds: 0.4167
+    PoolTiers: []

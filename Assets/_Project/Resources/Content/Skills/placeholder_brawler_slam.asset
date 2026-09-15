@@ -16,7 +16,10 @@ MonoBehaviour:
     Id: placeholder_brawler_slam
     DisplayName: Slam
     Description: Placeholder kit. He crosses the ground, gets the hammer over his
-      head, and puts it through whatever is under it.
+      head, and puts it through whatever is under it. Below 50 Fury it lands as a
+      normal blow; at 50 or more it spends half his Fury for double damage; at 100
+      it spends it all for quadruple damage. He always throws the hardest hit he
+      can afford.
     CharacterId: bear
     UnlockLevel: 1
     Effect: 0
@@ -47,7 +50,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 27
+    SortOrder: 25
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -106,3 +109,52 @@ MonoBehaviour:
     BookOnly: 0
     BookTier: 0
     Elements: []
+    PoolTiers:
+    - Spend: 0.5
+      DamageMultiplier: 2
+      Cue:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0.6
+        hitStopSeconds: 0
+    - Spend: 1
+      DamageMultiplier: 4
+      Cue:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 1
+        hitStopSeconds: 0.18

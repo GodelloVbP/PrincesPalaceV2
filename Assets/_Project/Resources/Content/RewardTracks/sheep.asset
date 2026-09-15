@@ -40,12 +40,12 @@ MonoBehaviour:
       SkillDisplayName: 
       ResourceDisplayName: Wool
     - Level: 30
-      Reward: 12
-      Amount: 0
+      Reward: 1
+      Amount: 2
       AgainstType: 0
       HasAgainst: 0
-      SkillId: static_fleece
-      SkillDisplayName: Static Fleece
+      SkillId: 
+      SkillDisplayName: 
       ResourceDisplayName: 
     - Level: 40
       Reward: 7

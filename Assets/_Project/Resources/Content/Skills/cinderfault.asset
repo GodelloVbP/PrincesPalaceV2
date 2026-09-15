@@ -145,7 +145,7 @@ MonoBehaviour:
           weights: []
       layerFormat: 1
       hitCueSeconds: 0.43333334
-    SortOrder: 7
+    SortOrder: 5
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -204,3 +204,4 @@ MonoBehaviour:
     BookOnly: 1
     BookTier: 2
     Elements: []
+    PoolTiers: []

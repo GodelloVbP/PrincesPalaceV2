@@ -106,3 +106,4 @@ MonoBehaviour:
     BookOnly: 0
     BookTier: 0
     Elements: []
+    PoolTiers: []

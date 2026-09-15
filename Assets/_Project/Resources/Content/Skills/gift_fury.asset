@@ -46,7 +46,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 16
+    SortOrder: 14
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -105,3 +105,4 @@ MonoBehaviour:
     BookOnly: 0
     BookTier: 0
     Elements: []
+    PoolTiers: []
