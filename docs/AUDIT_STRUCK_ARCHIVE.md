@@ -631,3 +631,48 @@ size range and a modest burst count. Fix shape: an optional `weights` array on
 consumed by a cumulative-weight lookup in place of the modulus, seeded the same way so
 previews stay repeatable; absent means uniform, so every shipped emitter is unchanged.
 A resolver rule refuses a weights array whose length is not the folder's frame count.
+
+### ~~147. "The Flock" wards exactly one ally, and which one is decided by the field formation~~ - fixed in `ee0d7727`; struck heading in `AUDIT.md`. The write-up below is verbatim as it stood, the owner's 2026-09-15 answer included -- that answer is what produced the ally picker rather than either option it filed.
+
+
+**The owner's answer, 2026-09-15.** Neither filed option: silently deciding by formation is
+"just stupid," but a real fix means the player picks the target, not the engine. There is no
+target-picker anywhere in this game today -- every ally-facing talent (this one, and
+`GiftRecipient`, which has the identical unsolved need per its own comment) auto-picks "the
+first ally in line." Building one for The Flock alone would mean building the same feature
+twice once `GiftRecipient` needs it too. Deferred on purpose: this wants a proper mid-combat
+target-selection feature covering both talents, not a patch on one. Left on the "first ally"
+auto-pick until that feature is scoped.
+
+Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Talents.cs`,
+`ApplyWard`: with `WardSpreadsToAllies` but not `WardSpreadsToWholeParty`, the loop wards the
+first living non-caster in `_encounter.PlayerParty` order and `break`s.
+
+Since the positions pass, **party list order IS the field formation**, and the player changes it
+with Move. So which ally receives the Flock ward is decided by who happens to be standing
+furthest forward -- which nothing states, nothing tests, and no player would guess. The talent's
+own header (`:210-213`) explains only the STRENGTH of the spread ("a PERCENTAGE OF THE WARD'S
+OWN strength ... one strand tunes the construct, the other decides how far it reaches"), never
+who gets it.
+
+There is no intent evidence either way, which is why this is filed rather than fixed. The
+contrast that makes it worth filing is `GiftRecipient` in the same file: it had the identical
+"the first ally is as good as any" answer and was given an explicit pick when the third party
+slot landed, with its reasoning written out -- "the squad is one deep by default and two at
+most, so 'an ally' is unambiguous today... It needs a real target picker the moment a third
+party slot exists." That slot exists. The Flock is the other place that sentence applies and it
+was not revisited.
+
+**Two options.**
+1. **Give it a pick, the way Gift: Mana got one.** The natural reading for a damage ward is
+   "whoever most needs it" -- lowest current health, or lowest fraction of maximum -- with
+   party order as the stable tiebreak, exactly the shape `GiftRecipient` uses. Costs one
+   `OrderBy` and one test; makes the talent's value legible and stops a Move silently
+   redirecting it.
+2. **Say the rule out loud and keep it.** "The ward spreads to the ally standing nearest the
+   front" is a defensible design -- it makes formation matter and rewards the player for
+   putting the right character forward -- but it has to be in the talent's description, not
+   only in a `break`. Costs a line of content and a comment.
+
+Either way a test pins it; today nothing does, so the answer can change under a refactor without
+anything going red.

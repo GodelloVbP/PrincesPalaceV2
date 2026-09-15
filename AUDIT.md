@@ -2704,49 +2704,7 @@ orchestrator made, flip-able, see its commit message), F4 (`15b1560d`, Magic Mar
 -- likewise), F3 (`c0e72b3a`, the timed slow's missing refresh) and four small restores
 (`310c4f43`). The three below need the owner.
 
-### 147. "The Flock" wards exactly one ally, and which one is decided by the field formation
-
-**The owner's answer, 2026-09-15.** Neither filed option: silently deciding by formation is
-"just stupid," but a real fix means the player picks the target, not the engine. There is no
-target-picker anywhere in this game today -- every ally-facing talent (this one, and
-`GiftRecipient`, which has the identical unsolved need per its own comment) auto-picks "the
-first ally in line." Building one for The Flock alone would mean building the same feature
-twice once `GiftRecipient` needs it too. Deferred on purpose: this wants a proper mid-combat
-target-selection feature covering both talents, not a patch on one. Left on the "first ally"
-auto-pick until that feature is scoped.
-
-Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Talents.cs`,
-`ApplyWard`: with `WardSpreadsToAllies` but not `WardSpreadsToWholeParty`, the loop wards the
-first living non-caster in `_encounter.PlayerParty` order and `break`s.
-
-Since the positions pass, **party list order IS the field formation**, and the player changes it
-with Move. So which ally receives the Flock ward is decided by who happens to be standing
-furthest forward -- which nothing states, nothing tests, and no player would guess. The talent's
-own header (`:210-213`) explains only the STRENGTH of the spread ("a PERCENTAGE OF THE WARD'S
-OWN strength ... one strand tunes the construct, the other decides how far it reaches"), never
-who gets it.
-
-There is no intent evidence either way, which is why this is filed rather than fixed. The
-contrast that makes it worth filing is `GiftRecipient` in the same file: it had the identical
-"the first ally is as good as any" answer and was given an explicit pick when the third party
-slot landed, with its reasoning written out -- "the squad is one deep by default and two at
-most, so 'an ally' is unambiguous today... It needs a real target picker the moment a third
-party slot exists." That slot exists. The Flock is the other place that sentence applies and it
-was not revisited.
-
-**Two options.**
-1. **Give it a pick, the way Gift: Mana got one.** The natural reading for a damage ward is
-   "whoever most needs it" -- lowest current health, or lowest fraction of maximum -- with
-   party order as the stable tiebreak, exactly the shape `GiftRecipient` uses. Costs one
-   `OrderBy` and one test; makes the talent's value legible and stops a Move silently
-   redirecting it.
-2. **Say the rule out loud and keep it.** "The ward spreads to the ally standing nearest the
-   front" is a defensible design -- it makes formation matter and rewards the player for
-   putting the right character forward -- but it has to be in the talent's description, not
-   only in a `break`. Costs a line of content and a comment.
-
-Either way a test pins it; today nothing does, so the answer can change under a refactor without
-anything going red.
+### ~~147. "The Flock" wards exactly one ally, and which one is decided by the field formation~~ - fixed in `ee0d7727`: neither filed option, and not a patch on this talent. The owner's call was that the engine deciding for the player is "just stupid", so nothing auto-picks any more: `SkillTargeting.SingleAlly` enters the same Target depth `SingleEnemy` does, on the party rack, and Ward plus all three Gifts go through it. Who may be picked is `Domain/Combat/AllyTargeting`, one predicate per effect, read by the plates, by `CastSkill`'s refusal and by the bot alike; `FightSession.EligibleAllies` is the filter over it, beside `EligibleTargets`; `CanReach` split into `CanReachEnemy`, `CanReachAlly` and a side-blind core, and the ally side takes no `Reach` at all because nothing stands between a caster and his own squad. The Flock's own rule (owner, 2026-09-15) is now: warding himself spreads nowhere, warding somebody else sends the share back to him -- isolated in `FlockSpread` so it is one edit to retune. `GiftRecipient` is gone; its two orderings and the ward's "his own back first" moved to `Domain/Bot/AllyTargetSelection`, the only caller left that must choose with no hand on the mouse. Full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability
 
@@ -2820,3 +2778,33 @@ sheep skill, a bigger `StatPoint`/`MaxHealth` grant matching the milestone's wei
 `ElementalDamagePercent` row (Shawn's level-1 element set is Nature, per `SkillDamageTypes.
 AtLevel1` and the existing level-45 milestone). Whatever is chosen, `RewardTrackContentPinTests`
 needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this same change).
+
+### 151. Provoke's "bellows at nothing in particular" line cannot be reached
+
+Found 2026-09-15 while shipping the ally picker (#147), by a test fixture that stopped guessing
+targeting. `Assets/_Project/Scripts/Domain/Combat/Session/FightSession.Skills.cs`,
+`ResolveCharacterSkillInner`'s `SkillEffect.Provoke` arm: `ApplyProvoke` returns a count, and 0
+prints `"{actor.Name} bellows at nothing in particular."`
+
+Nothing can produce that 0. Provoke is `SingleEnemy` (`SkillEntryResolver.DefaultTargetingFor`
+falls through to it and `provoke`'s row authors no override), so `CastSkill`'s reach gate refuses
+the cast unless the target is a living enemy -- and a living enemy is exactly what `ApplyProvoke`
+then provokes, whether or not `ProvokeHitsEveryEnemy` widens it. The menu cannot reach the line
+and neither can the bot, whose `LegalActions` offers a `SingleEnemy` skill only against
+`EligibleTargets`.
+
+**How it stayed invisible.** `FightTalentTests` built every synthetic skill with a hardcoded
+`SkillTargeting.Self`, which skips the reach gate entirely -- so
+`BellowingAtAnEmptyRoomSaysSoHonestly` cast at a corpse, resolved, and went green against content
+`skills.json` could never produce. That is the exact failure mode `DefaultTargetingFor`'s own
+header warns about ("a fixture that guessed SingleEnemy for a HealSelf was building content
+skills.json could never produce"). The fixture asks the resolver now, and the test pins the
+refusal instead (`BellowingAtACorpseIsRefusedRatherThanResolved`).
+
+**Not fixed here, because which way it should go is a design question.** Either the line is dead
+copy and should be deleted with the `provoked == 0` branch, or Provoke should not be
+`SingleEnemy` at all once `ProvokeHitsEveryEnemy` is held -- it already ignores its target in
+that case, so the front-rank rule is gating a cast that does not aim. The second reading is the
+more interesting one: a taunt the player cannot open with because a bodyguard is in the way is
+arguably wrong, and `SkillEffect.Provoke`'s own comment says the widening happens "at CAST time
+when the caster's tree says so", which no targeting currently reflects.
