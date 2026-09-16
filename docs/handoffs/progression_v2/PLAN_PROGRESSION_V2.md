@@ -1,9 +1,10 @@
 # Progression v2, revision 2
 
-Status: Revision 2.3, 2026-09-16. Supersedes revision 1 (kept beside this file).
+Status: Revision 2.4, 2026-09-16. Supersedes revision 1 (kept beside this file).
 Revision 2.1, 2026-09-15: corrections from phase 1 and phase 2 reports (see CHANGELOG_r2.md addendum).
 Revision 2.2, 2026-09-15: the ward numbers retuned to the percent model phase 4 found in the code (section 5; CHANGELOG_r2.md addendum r2.2).
-Revision 2.3, 2026-09-16: the owner's call on AUDIT #152 -- a ward IS a shield. The percent model is gone, section 5's ward bullets are back to a pool of points on a two-turn clock, and the numbers are shield points (CHANGELOG_r2.md addendum r2.3).
+Revision 2.3, 2026-09-16: the owner's call on AUDIT #152 -- a ward IS a shield. The percent model is gone, section 5's ward bullets are back to a pool of points, and the numbers are shield points (CHANGELOG_r2.md addendum r2.3).
+Revision 2.4, 2026-09-16: the owner's four calls on the shield model as built -- wards STACK, the default duration is ONE turn, Brace is a percentage of Bjorn's health with a cooldown, and The Golden Fleece belongs to the caster (CHANGELOG_r2.md addendum r2.4).
 Model: xp_model.md in this folder, computed by xp_model.py from the live
 content. Every number below traces to it or to the cost table in section 3.
 
@@ -217,10 +218,11 @@ Capabilities.
 - Shawn 15, Tuck In: phase 1 rejected the automatic absorb (Shear starvation
   41% at baseline to 55% with it, see PHASE1_BOT_REPORT.md). Tuck In is a
   skill: costs 0 mana, spends up to 4 banked Wool, and puts up a shield of
-  **5 points per Wool spent** -- 20 points at a full four. It costs no mana
-  and does not end the turn (one use per turn). Level 26 raises it to 8 points
-  a Wool, so 32 at four. It is an Ability-kind node; the ability-then-choice
-  rule holds because 16 is a choice.
+  **5 points per Wool spent** -- 20 points at a full four, standing for one
+  turn. It costs no mana and does not end the turn (one use per turn), which
+  since the one-turn clock is also the only reason he can look at it. Level 26
+  raises it to 8 points a Wool, so 32 at four. It is an Ability-kind node; the
+  ability-then-choice rule holds because 16 is a choice.
 - Bjorn 15, Fury opens at 25; 26, opens at 50: the pool's start value for
   fights after collection. Decay, gain and tiers unchanged.
 - Odette 15, spells cost 1 less; 26, 2 less: every mana-costed skill, to a
@@ -252,18 +254,37 @@ Bolt.
   smaller than it leaves the pool standing with less in it. It sits after
   dodge and every defence and before health, and before the signature pool
   (Wool) where both exist -- `StatusEffects`' own WARDS header states the
-  whole order and is the only place that does. One ward per character: a new
-  ward replaces a smaller or equal pool and is refused against a larger one,
-  with a line saying so; wards never stack. Duration is two of the wearer's
-  own turns by default, authored per row as `wardTurns` and counted down at
-  the wearer's turn start; The Golden Fleece makes the clock permanent, and
-  the pool still drains.
+  whole order and is the only place that does.
+
+  **Wards STACK.** A character may carry several; the shield total is the sum
+  of the live entries, and a new ward never replaces, refreshes or refuses an
+  existing one. Damage drains the entry that **expires soonest first**, then
+  the next, and an entry emptied by a hit is removed; ties break by age,
+  oldest first, and an entry that never expires sorts last. Soonest-first is
+  the only order that does not waste shield.
+
+  **Duration is one of the wearer's own turns** by default, authored per row
+  as `wardTurns` and counted down at the wearer's turn start. None of the five
+  ward skills authors one, so all five take the default; the three relic wards
+  (Magical Shield, Sparring Buckler, Runic's mana conversion) author the whole
+  fight instead, which is the promise they have always made. **The Golden
+  Fleece** stops the clock on wards whose **caster** holds it -- his own, and
+  the ones the Flock spreads onto other people -- and does nothing for a ward
+  somebody else put on him. The pool still drains either way.
 
   This is what revision 2 described and what the code had never had. Phase 4
   found the ward to be a percentage off one hit with a 999-turn duration and
   pinned it honestly; revision 2.2 retuned the numbers into that model rather
   than build the pool, and filed the model question as AUDIT #152. The owner
-  answered it on 2026-09-16: shields.
+  answered it on 2026-09-16: shields, stacking, one turn.
+
+  **A one-turn ward is not visible on the caster's own turn**, and that is a
+  consequence rather than a bug: it is applied during turn N and ticked away
+  at the start of turn N+1, so it covers exactly the enemy phase in between.
+  Two things fall out of it -- the badge is only on screen while the monsters
+  act, and Shatter cannot reach a ward cast on an earlier turn, so the Fragile
+  Lamb's Shatter strand needs her own `WardIsFreeAction` node to function at
+  all. Filed as AUDIT #153 for the owner rather than tuned here.
 - Second Wind (Bjorn 30): requires at least 25 Fury, spends all, heals 1% of
   max health per Fury spent; at 100 a full heal.
 - Mend (Odette 20): heals the chosen ally for 20 plus her spell attack (the
