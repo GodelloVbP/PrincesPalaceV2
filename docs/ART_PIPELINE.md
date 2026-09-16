@@ -1028,13 +1028,18 @@ sizing/tiling requirements.
 
 - **Victory-pose stills**, one per playable character (Shawn, Odette, Bjorn).
   Progression v2's level 37 grants a victory pose and §5 authors it as
-  "(art)" — a still nobody has drawn. Phase 5 ships the node as a WORD on the
-  fight party plate ("VICTOR", beside the chosen title) so the level pays
-  something the moment it is collected rather than being the one identity
-  level that visibly does nothing. When the stills land, the word comes out
-  and the pose goes in: `Core/CharacterIdentity.VictorWord` is the whole of
-  what to delete. Format is the usual key-pose still, one canvas per actor
-  via `slice_actor_sheet.py` (§4b).
+  "(art)" — a still nobody has drawn. **The pose has no plate rendering at
+  all until the stills exist** — a 2026-09-16 code review found the word
+  phase 5 meant to ship on the fight party plate ("VICTOR", beside the
+  chosen title) had no renderer reaching it (only `IdentityLook.PlateWord`
+  ever reached a TMP label, never the field the pose word lived on), so the
+  dead field and its `VictorWord` constant were deleted rather than kept as
+  unreachable content. The node still shows as collected on the reward-track
+  screen and the hub roster (`RewardTrackDefinition.CollectedIdentity`) —
+  only the plate itself draws nothing for it. When the stills land, give the
+  pose its own rendering on `Core/CharacterIdentity.IdentityLook`. Format is
+  the usual key-pose still, one canvas per actor via `slice_actor_sheet.py`
+  (§4b).
 - **Twelve reward-track card medallions**, in the talent tree's own painted
   hand (gold on a dark ground, ~350px, circular), 86px delivery. Phase 5
   gave the reward track a medallion only where an existing talent icon

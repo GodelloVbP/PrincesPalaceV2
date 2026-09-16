@@ -53,11 +53,21 @@ namespace PrincesPalace
         // Title, else null (nothing collected yet). Defaulting to newest
         // matches the plan's own words: "the newest is shown, earlier ones
         // selectable in the hub roster".
-        public static CharacterIdentityItem? SelectedTitleFor(Character character)
-        {
-            if (character == null) return null;
+        public static CharacterIdentityItem? SelectedTitleFor(Character character) =>
+            character == null ? null : SelectedTitleFor(character, CollectedFor(character));
 
-            var titles = CollectedFor(character).Where(item => item.Kind == TrackIdentityKind.Title).ToList();
+        // SAME ANSWER, GIVEN THE COLLECTED LIST RATHER THAN RECOMPUTING IT --
+        // LookFor below already has to call CollectedFor once for the rim/
+        // emboss/pose/mastery walk, so it hands that same list in here
+        // instead of paying CollectedFor's own RewardTracks.For + LINQ walk
+        // a second time for the same character. The single-argument overload
+        // above stays the public entry point for every other caller, who has
+        // no collected list of their own lying around.
+        public static CharacterIdentityItem? SelectedTitleFor(Character character, IReadOnlyList<CharacterIdentityItem> collected)
+        {
+            if (character == null || collected == null) return null;
+
+            var titles = collected.Where(item => item.Kind == TrackIdentityKind.Title).ToList();
             if (titles.Count == 0) return null;
 
             if (character.selectedTitleTrackLevel > 0)
@@ -76,7 +86,7 @@ namespace PrincesPalace
         // ---- PHASE 5: what the identity stretch actually LOOKS like ----------
         //
         // Six Identity kinds resolved into the four things a surface can draw:
-        // a line of words, a rim metal, an emboss metal, and whether the
+        // a plate word, a rim metal, an emboss metal, and whether the
         // portrait is framed. ONE read model for every surface -- the fight
         // plate, the hub roster card and whatever draws them next -- because
         // the alternative is each screen walking CollectedFor with its own
@@ -84,28 +94,24 @@ namespace PrincesPalace
         //
         // MASTERY IS A MODIFIER, NOT A SEVENTH KIND. §4's level 40 reads
         // "Mastery: gold plate, 'Master'", which is three of the four fields
-        // at once: it forces both metals gold and adds a word to the line.
+        // at once: it forces both metals gold and becomes the plate word.
         // Resolved here rather than at each draw site, so a surface that draws
         // only the rim cannot forget the half of mastery that is a rim.
         public readonly struct IdentityLook
         {
-            // The words under the name: the selected title, then VICTOR if the
-            // victory pose is collected, then MASTER. Empty for a character
-            // below level 31, which is most of a career.
-            //
-            // NOT WHAT THE FIGHT PLATE DRAWS -- see PlateWord below. This
-            // stays the full sentence so the victory screen (its own
-            // placeholder for the pose art, §5) still has VICTOR to say when
-            // it is built; the plate found three words unreadable at its
-            // band's width and phase 5's review cut it down to one there
-            // without touching what this field means everywhere else.
-            public readonly string Line;
-
             // THE FIGHT PLATE'S OWN WORD: MASTER when mastery is collected
             // (it outranks a title the same way it already forces both
             // metals gold), else the selected title, else empty. Never
             // VICTOR -- the plate has no room for three words at a legible
             // size, and the pose is a placeholder word anyway, not a title.
+            //
+            // THE ONLY WORD THIS TYPE RENDERS. A victory pose's placeholder
+            // word (formerly VICTOR, on a since-deleted `Line` field) had no
+            // renderer of its own -- only PlateWord ever reached a TMP label
+            // (FightController.Hud.cs) -- so it was dead content rather than
+            // a second surface waiting to be built. See docs/ART_PIPELINE.md
+            // §7's victory-pose backlog entry for where the pose word goes
+            // once the stills exist.
             public readonly string PlateWord;
 
             // "silver", "gold" or null. Gold wins wherever both are collected
@@ -115,9 +121,8 @@ namespace PrincesPalace
             public readonly string EmbossMetal;
             public readonly bool HasPortraitFrame;
 
-            public IdentityLook(string line, string plateWord, string rimMetal, string embossMetal, bool hasPortraitFrame)
+            public IdentityLook(string plateWord, string rimMetal, string embossMetal, bool hasPortraitFrame)
             {
-                Line = line ?? "";
                 PlateWord = plateWord ?? "";
                 RimMetal = rimMetal;
                 EmbossMetal = embossMetal;
@@ -125,31 +130,23 @@ namespace PrincesPalace
             }
 
             public bool IsAnything =>
-                Line.Length > 0 || RimMetal != null || EmbossMetal != null || HasPortraitFrame;
+                PlateWord.Length > 0 || RimMetal != null || EmbossMetal != null || HasPortraitFrame;
         }
 
         public const string Silver = "silver";
         public const string Gold = "gold";
 
-        // THE VICTORY POSE HAS NO ART AND IS DRAWN AS A WORD, deliberately and
-        // temporarily. §5: the pose is "(art)" -- a still nobody has drawn --
-        // and phase 5 renders it as a line on the plate so the node pays
-        // something the moment it is collected rather than being the one
-        // identity level that visibly does nothing. It is on the art backlog;
-        // when the stills land this word comes out and the pose goes in.
-        public const string VictorWord = "VICTOR";
         public const string MasterWord = "MASTER";
 
         public static IdentityLook LookFor(Character character)
         {
-            if (character == null) return new IdentityLook("", "", null, null, false);
+            if (character == null) return new IdentityLook("", null, null, false);
 
             var collected = CollectedFor(character);
 
             string rim = null;
             string emboss = null;
             bool frame = false;
-            bool pose = false;
             bool mastery = false;
 
             foreach (var item in collected)
@@ -164,7 +161,16 @@ namespace PrincesPalace
                     case TrackIdentityKind.PlateRim: rim = item.Value; break;
                     case TrackIdentityKind.PlateEmboss: emboss = item.Value; break;
                     case TrackIdentityKind.PortraitFrame: frame = true; break;
-                    case TrackIdentityKind.VictoryPose: pose = true; break;
+
+                    // VICTORYPOSE CONTRIBUTES NOTHING HERE. It is still read
+                    // by CollectedIdentity's own list (the track screen and
+                    // roster show the node as collected) but has no plate
+                    // rendering -- it has no still to draw, and the one word
+                    // it used to add (VICTOR, on a since-deleted `Line`
+                    // field) reached no renderer. See docs/ART_PIPELINE.md
+                    // §7's victory-pose backlog entry.
+                    case TrackIdentityKind.VictoryPose: break;
+
                     case TrackIdentityKind.Mastery: mastery = true; break;
                 }
             }
@@ -175,30 +181,16 @@ namespace PrincesPalace
                 emboss = Gold;
             }
 
-            var words = new List<string>();
-            var title = SelectedTitleFor(character);
-            if (title != null && !string.IsNullOrWhiteSpace(title.Value.Value))
-            {
-                words.Add(title.Value.Value.ToUpperInvariant());
-            }
-
-            if (pose) words.Add(VictorWord);
-            if (mastery) words.Add(MasterWord);
+            var title = SelectedTitleFor(character, collected);
 
             // THE PLATE'S ONE WORD. Mastery outranks a title the same way it
             // already outranks the metals above -- a character who reached
-            // 40 is not still introduced by whatever they picked at 32. The
-            // pose never appears here; VICTOR stays in Line only.
+            // 40 is not still introduced by whatever they picked at 32.
             string plateWord = mastery
                 ? MasterWord
                 : (title != null && !string.IsNullOrWhiteSpace(title.Value.Value) ? title.Value.Value.ToUpperInvariant() : "");
 
-            // A MIDDLE DOT WOULD BE NON-ASCII and this string reaches a TMP
-            // label through UiString.Runtime; the kit's own separator
-            // everywhere else on these screens is a full stop with air round
-            // it (UiStrings.TrackRibbonHint, PartyCardTagInParty), so this
-            // uses the same one.
-            return new IdentityLook(string.Join("   .   ", words), plateWord, rim, emboss, frame);
+            return new IdentityLook(plateWord, rim, emboss, frame);
         }
     }
 }

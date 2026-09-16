@@ -187,7 +187,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(look.IsAnything,
                 "the reset left the character wearing rewards from a track they no longer have");
-            Assert.IsEmpty(look.Line, "a title survived the reset");
+            Assert.IsEmpty(look.PlateWord, "a title survived the reset");
             Assert.IsNull(look.RimMetal, "a plate rim survived the reset");
             Assert.IsNull(look.EmbossMetal, "a plate emboss survived the reset");
             Assert.IsFalse(look.HasPortraitFrame, "a portrait frame survived the reset");
