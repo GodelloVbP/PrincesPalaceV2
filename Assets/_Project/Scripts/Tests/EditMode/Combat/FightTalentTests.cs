@@ -811,10 +811,12 @@ namespace PrincesPalace.Domain.Tests
         // it has always had in the game and was refused, because the only
         // combatant it could have been aimed at is a corpse.
         //
-        // So the refusal is what this pins now. ResolveCharacterSkillInner's
-        // "bellows at nothing in particular" line is unreachable through the
-        // menu and through the bot alike, which is a finding rather than
-        // something to fix here.
+        // So the refusal is what this pins now, and it is the ONLY path: the
+        // `provoked == 0` branch that used to print "bellows at nothing in
+        // particular" was deleted with AUDIT #151, because nothing the player
+        // or the bot can press reaches it. This test is what keeps that true —
+        // if the reach gate ever stops refusing, a Provoke resolving against a
+        // corpse would land back on a message that no longer exists.
         [Test]
         public void BellowingAtACorpseIsRefusedRatherThanResolved()
         {

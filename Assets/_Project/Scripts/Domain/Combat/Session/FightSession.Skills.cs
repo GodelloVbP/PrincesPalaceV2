@@ -442,12 +442,20 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, target ?? _encounter.OpponentsOf(actor).FirstOrDefault(), isCast: true);
                     RecordSpellPresentation(skill);
+                    // AT LEAST ONE VICTIM, ALWAYS. Provoke is SingleEnemy
+                    // targeting, so CastSkill's reach gate has already refused
+                    // the cast unless the target is a living enemy -- and a
+                    // living enemy is exactly what ApplyProvoke then provokes,
+                    // whether or not ProvokeHitsEveryEnemy widens the set. The
+                    // "bellows at nothing in particular" line that used to sit
+                    // on a `provoked == 0` branch here was unreachable from the
+                    // menu and from the bot alike (AUDIT #151); the refusal is
+                    // the one path a player can see, and it is pinned by
+                    // FightTalentTests.BellowingAtACorpseIsRefusedRatherThanResolved.
                     int provoked = ApplyProvoke(actor, target);
-                    AppendMessage(provoked == 0
-                        ? $"{actor.Name} bellows at nothing in particular."
-                        : provoked == 1
-                            ? $"{actor.Name} bellows - one enemy can see nothing else."
-                            : $"{actor.Name} bellows - all {provoked} of them come for him.");
+                    AppendMessage(provoked == 1
+                        ? $"{actor.Name} bellows - one enemy can see nothing else."
+                        : $"{actor.Name} bellows - all {provoked} of them come for him.");
                     break;
                 }
 
