@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: fleece_ward
     DisplayName: Ward
-    Description: A turn of the fleece, wrapped tight. The next blow finds wool before
-      it finds him.
+    Description: A turn of the fleece, wrapped tight. A 50-point shield, and two
+      turns to spend it.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7
@@ -28,8 +28,10 @@ MonoBehaviour:
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 2
     Power: 0
-    FlatAmount: 0
+    FlatAmount: 50
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:

@@ -28,6 +28,8 @@ MonoBehaviour:
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 2
     Power: 0
     FlatAmount: 6
     IgnoresDefense: 0

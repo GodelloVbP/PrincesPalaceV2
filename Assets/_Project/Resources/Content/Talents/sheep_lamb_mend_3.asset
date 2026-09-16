@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_3
     DisplayName: Parting Gift
-    Description: A ward breaking heals whoever was wearing it for a tenth of their
+    Description: A ward running out heals whoever was wearing it for a tenth of their
       health. Losing one stops being a loss.
     CharacterId: sheep
     Column: 1

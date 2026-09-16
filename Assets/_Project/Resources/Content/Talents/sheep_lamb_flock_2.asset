@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_2
     DisplayName: The Whole Flock
-    Description: Everyone, at half strength.
+    Description: Everyone, for half the shield.
     CharacterId: sheep
     Column: 1
     Row: 14

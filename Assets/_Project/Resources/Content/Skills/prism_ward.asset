@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: prism_ward
     DisplayName: Prism Ward
-    Description: Light bent into a shell around somebody else. The next hit they
-      take lands 40% softer.
+    Description: Light bent into a shell around somebody else. A 20-point shield
+      plus her spell attack, and two turns to spend it.
     CharacterId: owl
     UnlockLevel: 999
     Effect: 7
@@ -28,8 +28,10 @@ MonoBehaviour:
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 2
     Power: 0
-    FlatAmount: 40
+    FlatAmount: 20
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:
@@ -63,7 +65,7 @@ MonoBehaviour:
       wisdom: 0
       intelligence: 0
       charisma: 0
-    ScalingAxis: 0
+    ScalingAxis: 2
     QueuePushSlots: 0
     Transform:
       displayName: 

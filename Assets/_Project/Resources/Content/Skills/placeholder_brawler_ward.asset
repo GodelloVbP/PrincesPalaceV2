@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: placeholder_brawler_ward
     DisplayName: Brace
-    Description: Placeholder kit. Reuses the Ward effect Shawn's own kit already
-      defines; see placeholder_brawler_ward_root in talents.json for the magnitude
-      it needs to do anything.
+    Description: Placeholder kit. A 60-point shield, reusing the Ward effect Shawn's
+      own kit already defines; placeholder_brawler_ward_root in talents.json deepens
+      it by 40%.
     CharacterId: bear
     UnlockLevel: 1
     Effect: 7
@@ -29,8 +29,10 @@ MonoBehaviour:
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 2
     Power: 0
-    FlatAmount: 0
+    FlatAmount: 60
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:

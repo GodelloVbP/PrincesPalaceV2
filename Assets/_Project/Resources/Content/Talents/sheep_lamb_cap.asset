@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_cap
     DisplayName: The Golden Fleece
-    Description: Wards stop breaking. They last the fight. Free, gated at 20 embers
-      spent in this path.
+    Description: Wards stop timing out. They last the fight, until something spends
+      them. Free, gated at 20 embers spent in this path.
     CharacterId: sheep
     Column: 1
     Row: 20

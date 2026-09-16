@@ -329,7 +329,7 @@ MonoBehaviour:
       IdentityValue: 
     - Level: 26
       Reward: 19
-      Amount: 5
+      Amount: 3
       AgainstType: 0
       HasAgainst: 0
       SkillId: tuck_in

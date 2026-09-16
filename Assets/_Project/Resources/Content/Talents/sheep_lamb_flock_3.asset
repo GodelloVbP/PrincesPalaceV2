@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_3
     DisplayName: Nobody Left Out
-    Description: Everyone, at full strength, for the same two wool.
+    Description: Everyone, for the whole shield, for the same two wool.
     CharacterId: sheep
     Column: 1
     Row: 17

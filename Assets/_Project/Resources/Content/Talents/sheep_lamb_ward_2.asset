@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_2
     DisplayName: Thicker Fleece
-    Description: Sixty percent, now.
+    Description: Sixty percent more shield, now -- eighty points of Ward.
     CharacterId: sheep
     Column: 1
     Row: 4

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: bear_bulwark
     DisplayName: Bulwark
-    Description: Fifty Fury, spent standing in front of somebody. The next hit they
-      take lands 50% softer.
+    Description: Fifty Fury, spent standing in front of somebody. A shield worth
+      30% of Bjorn's own health, and two turns to spend it.
     CharacterId: bear
     UnlockLevel: 999
     Effect: 7
@@ -28,8 +28,10 @@ MonoBehaviour:
     SpendsAllPrimary: 0
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
+    PercentOfCasterMaxHealth: 30
+    WardTurns: 2
     Power: 0
-    FlatAmount: 50
+    FlatAmount: 0
     IgnoresDefense: 0
     DamageInstances: []
     Vfx:

@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_1
     DisplayName: Fleece Ward
-    Description: 'Unlocks Ward (2 wool): the next blow to land on you is 40% softer.'
+    Description: 'Unlocks Ward (2 wool): a shield you can put on anybody, and 40%
+      more of it. Seventy points, spent a hit at a time, for two turns.'
     CharacterId: sheep
     Column: 1
     Row: 1

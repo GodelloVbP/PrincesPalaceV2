@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_1
     DisplayName: The Flock
-    Description: A ward also covers one other, at half strength.
+    Description: A ward also covers one other, for half the shield.
     CharacterId: sheep
     Column: 1
     Row: 11
