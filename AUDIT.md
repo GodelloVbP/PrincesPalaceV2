@@ -2779,35 +2779,7 @@ sheep skill, a bigger `StatPoint`/`MaxHealth` grant matching the milestone's wei
 AtLevel1` and the existing level-45 milestone). Whatever is chosen, `RewardTrackContentPinTests`
 needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this same change).
 
-### 151. Provoke's "bellows at nothing in particular" line cannot be reached
-
-Found 2026-09-15 while shipping the ally picker (#147), by a test fixture that stopped guessing
-targeting. `Assets/_Project/Scripts/Domain/Combat/Session/FightSession.Skills.cs`,
-`ResolveCharacterSkillInner`'s `SkillEffect.Provoke` arm: `ApplyProvoke` returns a count, and 0
-prints `"{actor.Name} bellows at nothing in particular."`
-
-Nothing can produce that 0. Provoke is `SingleEnemy` (`SkillEntryResolver.DefaultTargetingFor`
-falls through to it and `provoke`'s row authors no override), so `CastSkill`'s reach gate refuses
-the cast unless the target is a living enemy -- and a living enemy is exactly what `ApplyProvoke`
-then provokes, whether or not `ProvokeHitsEveryEnemy` widens it. The menu cannot reach the line
-and neither can the bot, whose `LegalActions` offers a `SingleEnemy` skill only against
-`EligibleTargets`.
-
-**How it stayed invisible.** `FightTalentTests` built every synthetic skill with a hardcoded
-`SkillTargeting.Self`, which skips the reach gate entirely -- so
-`BellowingAtAnEmptyRoomSaysSoHonestly` cast at a corpse, resolved, and went green against content
-`skills.json` could never produce. That is the exact failure mode `DefaultTargetingFor`'s own
-header warns about ("a fixture that guessed SingleEnemy for a HealSelf was building content
-skills.json could never produce"). The fixture asks the resolver now, and the test pins the
-refusal instead (`BellowingAtACorpseIsRefusedRatherThanResolved`).
-
-**Not fixed here, because which way it should go is a design question.** Either the line is dead
-copy and should be deleted with the `provoked == 0` branch, or Provoke should not be
-`SingleEnemy` at all once `ProvokeHitsEveryEnemy` is held -- it already ignores its target in
-that case, so the front-rank rule is gating a cast that does not aim. The second reading is the
-more interesting one: a taunt the player cannot open with because a bodyguard is in the way is
-arguably wrong, and `SkillEffect.Provoke`'s own comment says the widening happens "at CAST time
-when the caster's tree says so", which no targeting currently reflects.
+### ~~151. Provoke's "bellows at nothing in particular" line cannot be reached~~ - fixed in `399d6c1d`: the owner's call was that the line is dead copy; the `provoked == 0` branch is gone and the reach refusal is the one path; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 152. Wards are a percent of the next hit with no timer; the owner may want absorb pools
 
