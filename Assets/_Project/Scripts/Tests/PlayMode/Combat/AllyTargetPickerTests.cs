@@ -68,10 +68,14 @@ namespace PrincesPalace.PlayModeTests
         // resource, no cooldown and no ability requirement, so the row is
         // affordable on turn one and the test is about the PICKER rather than
         // about affordability.
+        // flatAmount 50, matching skills.json's own fleece_ward: a ward is a
+        // POOL of shield points since the shield model (AUDIT #152), so a row
+        // that authors nothing puts up nothing and this picker would have had
+        // no ward to confirm.
         private static ResolvedSkill Ward() =>
             new ResolvedSkill("fleece_ward", "Ward", "", "sheep", 1, SkillEffect.Ward,
                 SkillEntryResolver.DefaultTargetingFor(SkillEffect.Ward),
-                0, 0, false, 0, 0, false, null, SpellPresentation.None, 0);
+                0, 0, false, 0, 50, false, null, SpellPresentation.None, 0);
 
         private IEnumerator LoadFightWithAWard()
         {

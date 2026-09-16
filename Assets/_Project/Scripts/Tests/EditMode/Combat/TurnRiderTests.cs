@@ -434,7 +434,8 @@ namespace PrincesPalace.Domain.Tests
                 Foe("A", 1), Foe("B", 1), Foe("C", 1), Foe("Tank", 100000));
 
             // Three turns of Shielded, applied before the hero's first action.
-            StatusEffects.Apply(hero.Statuses, StatusEffectType.Shielded, 50, 3);
+            // Through ApplyWard, which is the only door into this status.
+            StatusEffects.ApplyWard(hero.Statuses, 50, 3);
 
             session.ExecuteAttack(encounter.Enemies[0]);
             session.ExecuteAttack(encounter.Enemies[1]);

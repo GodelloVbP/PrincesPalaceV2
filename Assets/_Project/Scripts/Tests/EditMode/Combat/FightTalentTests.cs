@@ -39,10 +39,21 @@ namespace PrincesPalace.Domain.Tests
         // was casting through a path the game stopped taking when the ally
         // picker landed (AUDIT #147), and would have gone on passing while
         // the real cast refused.
+        //
+        // A WARD AUTHORS ITS OWN POOL, like every ward in skills.json does
+        // since the shield model (AUDIT #152). It used to author nothing,
+        // because WardReductionPercent WAS the ward; the talent is a
+        // multiplier over the row's number now, so a row with no number is a
+        // shield of nothing and SkillEntryResolver refuses one outright.
+        // Forty points is this file's ward: a talent of 50 makes it 60, and
+        // one of 100 makes it 80.
+        private const int FixtureWardPoints = 40;
+
         private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null) =>
             new ResolvedSkill("t", name, "", "hero", 1, effect,
                 SkillEntryResolver.DefaultTargetingFor(effect),
-                0, 0, false, 100, 0, false, null, SpellPresentation.None, 0, transform: transform);
+                0, 0, false, 100, effect == SkillEffect.Ward ? FixtureWardPoints : 0,
+                false, null, SpellPresentation.None, 0, transform: transform);
 
         private static PlayerKit Kit(params ResolvedSkill[] skills) =>
             new PlayerKit("hero", CharacterRole.Tank, skills, null, null);
@@ -164,13 +175,15 @@ namespace PrincesPalace.Domain.Tests
         {
             // One strand tunes the construct, the other decides how far it
             // reaches -- so deepening the ward deepens what the flock gets.
-            // LITERALS, not a re-derivation: 60 is the authored reduction and
-            // 30 is half of it, written out rather than computed from the
-            // same expression the production code uses.
+            // LITERALS, not a re-derivation: the fixture ward is 40 points, a
+            // +100% talent makes it 80, and half of that is 40. The
+            // neighbouring whole-party test runs the same shape at +50% and
+            // gets 60/30, which is the pair that shows the share tracking the
+            // pool rather than a number of its own.
             var lamb = Hero("Lamb");
             var ally = Hero("Ally");
             Talents(lamb,
-                new TalentEffect(TalentEffectType.WardReductionPercent, 60),
+                new TalentEffect(TalentEffectType.WardReductionPercent, 100),
                 new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
@@ -178,10 +191,8 @@ namespace PrincesPalace.Domain.Tests
 
             session.CastSkill(0, ally);
 
-            var onAlly = ally.Statuses.First(s => s.Type == StatusEffectType.Shielded);
-            var onLamb = lamb.Statuses.First(s => s.Type == StatusEffectType.Shielded);
-            Assert.AreEqual(60, onAlly.Magnitude, "the pick gets the full ward");
-            Assert.AreEqual(30, onLamb.Magnitude, "and the caster gets the share");
+            Assert.AreEqual(80, StatusEffects.WardPoints(ally), "the pick gets the full ward");
+            Assert.AreEqual(40, StatusEffects.WardPoints(lamb), "and the caster gets the share");
         }
 
         [Test]
@@ -205,9 +216,10 @@ namespace PrincesPalace.Domain.Tests
 
             session.CastSkill(0, lamb);
 
-            Assert.AreEqual(50, lamb.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
-            Assert.AreEqual(25, one.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
-            Assert.AreEqual(25, two.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude);
+            // 40 points at +50% is 60, and half of that is 30.
+            Assert.AreEqual(60, StatusEffects.WardPoints(lamb));
+            Assert.AreEqual(30, StatusEffects.WardPoints(one));
+            Assert.AreEqual(30, StatusEffects.WardPoints(two));
         }
 
         [Test]

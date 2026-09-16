@@ -315,72 +315,67 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, target.CurrentHealth);
         }
 
-        // ---- ConsumeShieldedReduction (Magical Shield) --------------------
+        // ---- the ward pool (Magical Shield, and every other ward) ---------
+        //
+        // WardTests owns the model in full; these four are what this file's
+        // own Magical Shield coverage always asserted, repinned as points.
 
         [Test]
-        public void ConsumeShieldedReduction_WithNoShield_ReturnsDamageUnchanged()
+        public void ConsumeWard_WithNoWard_ReturnsDamageUnchanged()
         {
             var target = MakeCombatant();
 
-            int result = StatusEffects.ConsumeShieldedReduction(target, 100);
-
-            Assert.AreEqual(100, result);
+            Assert.AreEqual(100, StatusEffects.ConsumeWard(target, 100).Damage);
         }
 
         [Test]
-        public void ConsumeShieldedReduction_HalvesTheHit_AndRemovesTheStatus()
+        public void ConsumeWard_EatsThePoolAndRemovesTheStatus()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Shielded, 50, 99);
+            StatusEffects.ApplyWard(target.Statuses, 50, 99);
 
-            int result = StatusEffects.ConsumeShieldedReduction(target, 100);
-
-            Assert.AreEqual(50, result);
+            Assert.AreEqual(50, StatusEffects.ConsumeWard(target, 100).Damage,
+                "50 points of a 100 hit");
             Assert.IsFalse(target.Statuses.Exists(s => s.Type == StatusEffectType.Shielded),
-                "The shield should be spent by the hit it reduced");
+                "The shield should be gone once its pool is empty");
         }
 
-        // The whole point: it is consumed by the NEXT HIT, not by a turn
-        // count, so a second hit after the first one landed should not be
-        // reduced again.
+        // It is spent by damage, not by a turn count, and a hit bigger than
+        // the pool takes the whole pool with it.
         [Test]
-        public void ConsumeShieldedReduction_OnlyReducesTheOneHitItCatches()
+        public void ConsumeWard_HasNothingLeftForASecondBigHit()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Shielded, 50, 99);
+            StatusEffects.ApplyWard(target.Statuses, 50, 99);
 
-            int first = StatusEffects.ConsumeShieldedReduction(target, 100);
-            int second = StatusEffects.ConsumeShieldedReduction(target, 100);
-
-            Assert.AreEqual(50, first);
-            Assert.AreEqual(100, second, "The shield was already spent by the first hit");
+            Assert.AreEqual(50, StatusEffects.ConsumeWard(target, 100).Damage);
+            Assert.AreEqual(100, StatusEffects.ConsumeWard(target, 100).Damage,
+                "The pool was emptied by the first hit");
         }
 
-        // Re-applying while the shield still stands must not stack — the
-        // same refresh-not-stack rule Apply already gives every status, and
-        // exactly what "does not stack" means for this relic.
+        // Re-raising while the shield still stands must not stack -- the same
+        // does-not-stack promise this relic always made, now enforced by
+        // ApplyWard's replacement rule rather than by Apply's merge.
         [Test]
-        public void ReapplyingShielded_WhileStillUp_DoesNotStack()
+        public void ReapplyingAWard_WhileStillUp_DoesNotStack()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Shielded, 50, 99);
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Shielded, 50, 99);
+            StatusEffects.ApplyWard(target.Statuses, 50, 99);
+            StatusEffects.ApplyWard(target.Statuses, 50, 99);
 
             Assert.AreEqual(1, target.Statuses.Count);
-
-            int result = StatusEffects.ConsumeShieldedReduction(target, 100);
-            Assert.AreEqual(50, result);
+            Assert.AreEqual(50, StatusEffects.WardPoints(target));
         }
 
         [Test]
-        public void ConsumeShieldedReduction_DoesNotConsumeOnNonPositiveDamage()
+        public void ConsumeWard_DoesNotSpendOnNonPositiveDamage()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Shielded, 50, 99);
+            StatusEffects.ApplyWard(target.Statuses, 50, 99);
 
-            StatusEffects.ConsumeShieldedReduction(target, 0);
+            StatusEffects.ConsumeWard(target, 0);
 
-            Assert.IsTrue(target.Statuses.Exists(s => s.Type == StatusEffectType.Shielded),
+            Assert.AreEqual(50, StatusEffects.WardPoints(target),
                 "A non-hit should not spend the shield");
         }
 

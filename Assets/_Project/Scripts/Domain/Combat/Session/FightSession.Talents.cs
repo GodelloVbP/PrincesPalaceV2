@@ -66,10 +66,27 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- the Fragile Lamb --------------------------------------------------
 
-        // A Ward lasts effectively forever and is removed by being SPENT, not by
-        // expiring. Generous rather than infinite so an ordinary turn-start tick
-        // can never quietly expire one first.
-        private const int WardDurationTurns = 999;
+        // HOW LONG THIS WARD STANDS: the skill's own authored `wardTurns`
+        // (already defaulted to FightTuning.DefaultWardTurns by the resolver),
+        // or forever for The Golden Fleece.
+        //
+        // The capstone changed meaning with the model and it is worth saying
+        // where. It used to be read inside ConsumeWard as "the ward never
+        // pops", which was the only thing "permanent" could mean while a ward
+        // was a percentage spent whole by one hit. Against a shield POOL that
+        // reading is literal immunity, so it means what the node's own text
+        // always said instead -- "they last the fight" -- and the pool still
+        // drains.
+        // Gift: Fury is spent by the next SWING, not by a clock, so its
+        // duration only has to be long enough that ordinary ticking can never
+        // take it first -- the same "generous rather than infinite" trick
+        // every ward in the game used to use.
+        private const int GiftFuryDurationTurns = 999;
+
+        private static int WardTurnsFor(CombatantState caster, ResolvedSkill skill) =>
+            caster != null && caster.Talents.Has(TalentEffectType.WardsNeverExpire)
+                ? StatusEffects.PermanentWardTurns
+                : skill?.WardTurns ?? FightTuning.DefaultWardTurns;
 
         // Who has already paid the Lamb's engine this turn.
         //
@@ -110,6 +127,10 @@ namespace PrincesPalace.Domain.Combat.Session
             if (outcome.Healed > 0)
             {
                 AppendMessage($"The ward breaks over {target.Name} and knits {outcome.Healed} back.");
+            }
+            else if (outcome.Broke)
+            {
+                AppendMessage($"The shield over {target.Name} gives way.");
             }
 
             // Weight of Wool T3. Only a SELF-ward starts the grace period: the
@@ -204,38 +225,38 @@ namespace PrincesPalace.Domain.Combat.Session
         // `wearer` IS THE PICK, never a default: the Ward is SingleAlly
         // targeting now and CastSkill refuses one aimed at nobody, so this is
         // reached with a living squadmate (possibly the caster) every time.
-        // `skill` and `resourceSpent` are how a ward says what it is worth
-        // on its own account -- SkillResolution.Amount's Ward case is the one
-        // place that decides, and it takes the larger of the skill's own
-        // authored figure and the caster's talent. Before progression v2
-        // phase 4 every ward in the game was the Fragile Lamb's and the
-        // talent was the only source; see that case's own header.
+        // `skill` and `resourceSpent` are how a ward says how many SHIELD
+        // POINTS it is worth -- SkillResolution.Amount's Ward case is the one
+        // place that decides, and the caster's WardReductionPercent talent
+        // scales whatever it lands on.
         private int ApplyWard(CombatantState caster, CombatantState wearer, ResolvedSkill skill, int resourceSpent)
         {
-            int reduction = SkillResolution.Amount(SkillEffect.Ward, caster, wearer, skill.Power, skill.FlatAmount,
-                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis);
-            if (reduction <= 0) return 0;
+            int points = SkillResolution.Amount(SkillEffect.Ward, caster, wearer, skill.Power, skill.FlatAmount,
+                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+                percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
+            if (points <= 0) return 0;
 
-            int landed = 0;
-            WardOne(caster, wearer, reduction);
-            landed++;
+            int turns = WardTurnsFor(caster, skill);
+            int landed = WardOne(caster, wearer, points, turns) ? 1 : 0;
 
-            // The Flock. The spread is a PERCENTAGE OF THE WARD'S OWN strength
-            // rather than its own number, so deepening Fleece Ward deepens what
-            // the flock gets too -- one strand tunes the construct, the other
-            // decides how far it reaches.
+            // The Flock. The spread is a FRACTION OF THE WARD'S OWN pool
+            // rather than its own number, so deepening Fleece Ward deepens
+            // what the flock gets too -- one strand tunes the construct, the
+            // other decides how far it reaches. Unchanged in form by the
+            // shield model: half of 50 points is as sensible as half of 50
+            // percent was.
             int spread = caster.Talents.Best(TalentEffectType.WardSpreadsToAllies);
             if (spread <= 0) return landed;
 
-            // APPLIED AFTER THE FULL WARD, never before: StatusEffects.Apply
-            // refreshes rather than stacks, so a share landing second on the
-            // same wearer would overwrite the full strength with the share.
-            // FlockSpread never yields the wearer, which is what keeps that
-            // from being a rule two call sites have to remember.
+            // APPLIED AFTER THE FULL WARD, never before: a share landing
+            // first would be replaced by the full pool anyway, but a share
+            // landing on the WEARER would be refused against the pool it was
+            // supposed to be a share of. FlockSpread never yields the wearer,
+            // which is what keeps that from being a rule two call sites have
+            // to remember.
             foreach (var other in FlockSpread(caster, wearer))
             {
-                WardOne(caster, other, reduction * spread / 100);
-                landed++;
+                if (WardOne(caster, other, points * spread / 100, turns)) landed++;
             }
 
             return landed;
@@ -271,21 +292,39 @@ namespace PrincesPalace.Domain.Combat.Session
                 : new[] { caster };
         }
 
-        private void WardOne(CombatantState caster, CombatantState wearer, int reduction)
+        // Puts one shield pool up, and says whether it landed.
+        //
+        // A SMALLER WARD IS REFUSED, not quietly merged: one ward per
+        // character, the bigger pool wins, and the player is told rather than
+        // left to wonder why the number on the badge did not move
+        // (StatusEffects.ApplyWard owns the rule). The Flock's half-strength
+        // share meeting somebody's own full Bulwark is the case this fires on
+        // most, and "left alone" is the right outcome there.
+        //
+        // Mending Fleece does NOT ride a refused ward. The regen is the ward's
+        // rider, and a ward that did not land has nothing to ride.
+        private bool WardOne(CombatantState caster, CombatantState wearer, int points, int turns)
         {
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded,
-                System.Math.Max(1, reduction), WardDurationTurns, caster);
+            points = System.Math.Max(1, points);
+
+            int standing = StatusEffects.WardPoints(wearer);
+            if (!StatusEffects.ApplyWard(wearer.Statuses, points, turns, caster))
+            {
+                AppendMessage($"{wearer.Name} is already behind {standing} - the thinner ward finds no room.");
+                return false;
+            }
 
             // Mending Fleece. Rides along with the ward rather than being its own
             // cast, so the sustain strand costs no extra action and no extra
             // wool -- it makes the thing he was already doing worth more.
             int regenPercent = caster.Talents.Best(TalentEffectType.WardAlsoAppliesRegen);
-            if (regenPercent <= 0 || wearer.MaxHealth <= 0) return;
+            if (regenPercent <= 0 || wearer.MaxHealth <= 0) return true;
 
-            int turns = caster.Talents.Threshold(TalentEffectType.WardAlsoAppliesRegen);
+            int regenTurns = caster.Talents.Threshold(TalentEffectType.WardAlsoAppliesRegen);
             StatusEffects.Apply(wearer.Statuses, StatusEffectType.Regen,
                 System.Math.Max(1, wearer.MaxHealth * regenPercent / 100),
-                System.Math.Max(1, turns), caster);
+                System.Math.Max(1, regenTurns), caster);
+            return true;
         }
 
         // Whether this cast will actually do something, checked BEFORE its cost
@@ -480,9 +519,13 @@ namespace PrincesPalace.Domain.Combat.Session
                     int percent = caster.Talents.Best(TalentEffectType.GiftAttackBonusPercent);
 
                     // Generous duration, spent by the swing rather than by the
-                    // clock -- see StatusEffectType.Empowered.
+                    // clock -- see StatusEffectType.Empowered. It read the
+                    // ward's own 999 until the wards became shields with real
+                    // two-turn clocks; a gift is still the old shape, so it
+                    // now says so with its own number instead of borrowing
+                    // one that no longer means what it used to.
                     StatusEffects.Apply(ally.Statuses, StatusEffectType.Empowered,
-                        System.Math.Max(1, percent), WardDurationTurns, caster);
+                        System.Math.Max(1, percent), GiftFuryDurationTurns, caster);
                     AppendMessage($"{caster.Name} winds {ally.Name} up - their next swing lands {percent}% harder.");
                     break;
                 }

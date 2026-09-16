@@ -476,11 +476,20 @@ namespace PrincesPalace.Domain.Combat.Session
                     var wearer = target ?? actor;
                     BeginBeat(actor, wearer, isCast: true);
                     RecordSpellPresentation(skill);
+                    // ZERO IS REACHABLE NOW, and it must not print a line
+                    // saying the fleece landed. One ward per character and
+                    // the bigger pool wins (StatusEffects.ApplyWard), so a
+                    // thinner ward cast over a deeper one is refused -- and
+                    // WardOne has already said so in the wearer's own words.
                     int warded = ApplyWard(actor, wearer, skill, resourceSpent);
-                    AppendMessage(
-                        warded > 1 ? $"{actor.Name} throws the fleece wide - {warded} of them are warded."
-                        : ReferenceEquals(wearer, actor) ? $"{actor.Name} pulls the fleece close."
-                        : $"{actor.Name} wraps {wearer.Name} in the fleece.");
+                    if (warded > 0)
+                    {
+                        AppendMessage(
+                            warded > 1 ? $"{actor.Name} throws the fleece wide - {warded} of them are warded."
+                            : ReferenceEquals(wearer, actor) ? $"{actor.Name} pulls the fleece close."
+                            : $"{actor.Name} wraps {wearer.Name} in the fleece.");
+                    }
+
                     break;
                 }
 
@@ -1058,7 +1067,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
                     skill.FlatAmount, pointsSpent, skill.IgnoresDefense, castType, skill.ScalingAxis,
-                    skill.PercentOfMaxHealthPerPoint);
+                    skill.PercentOfMaxHealthPerPoint, skill.PercentOfCasterMaxHealth);
             }
             finally
             {
@@ -1141,8 +1150,17 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (!HasRelic(actor, RelicEffect.MagicalShield)) return;
 
-            StatusEffects.Apply(actor.Statuses, StatusEffectType.Shielded,
-                FightTuning.MagicalShieldReductionPercent, FightTuning.MagicalShieldDurationTurns, actor);
+            // REFUSED against a deeper pool, and silent about it: the relic
+            // raises itself on every qualifying cast with no cost and no
+            // choice, so "it did not replace the ward you spent a turn on" is
+            // correct behaviour rather than news. A skill's own ward says so
+            // (WardOne) because a skill cost something.
+            if (!StatusEffects.ApplyWard(actor.Statuses, FightTuning.MagicalShieldPoints,
+                    FightTuning.MagicalShieldDurationTurns, actor))
+            {
+                return;
+            }
+
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }
 

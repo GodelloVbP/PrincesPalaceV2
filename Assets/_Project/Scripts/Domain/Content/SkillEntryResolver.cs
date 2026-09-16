@@ -198,7 +198,9 @@ namespace PrincesPalace.Domain.Content
                     // is complete: a field missing from it is an effect a
                     // stand-in can quietly author.
                     || raw.resourceSpendCap != 0 || raw.spendsAllPrimary
-                    || raw.percentOfMaxHealthPerPoint != 0 || raw.freeAction;
+                    || raw.percentOfMaxHealthPerPoint != 0 || raw.freeAction
+                    // AND THE SHIELD MODEL'S TWO, for the same reason.
+                    || raw.percentOfCasterMaxHealth != 0 || raw.wardTurns != 0;
 
                 if (authorsAnEffectField)
                 {
@@ -445,6 +447,51 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // ---- the shield model's two authored fields ------------------
+            //
+            // Same shape of refusal again: a field that would resolve
+            // cleanly and then be read by nothing.
+
+            if (raw.percentOfCasterMaxHealth < 0)
+            {
+                error = $"{label}: percentOfCasterMaxHealth cannot be negative (got {raw.percentOfCasterMaxHealth}).";
+                return false;
+            }
+
+            if (raw.percentOfCasterMaxHealth > 0 && effect != SkillEffect.Ward)
+            {
+                error = $"{label}: percentOfCasterMaxHealth is only read by a Ward, not by {effect}. " +
+                        "A heal that wants a share of the caster's bar uses percentOfMaxHealthPerPoint.";
+                return false;
+            }
+
+            if (raw.wardTurns < 0)
+            {
+                error = $"{label}: wardTurns cannot be negative (got {raw.wardTurns}). 0 means the default of two.";
+                return false;
+            }
+
+            if (raw.wardTurns != 0 && effect != SkillEffect.Ward)
+            {
+                error = $"{label}: wardTurns is how long a Ward stands, and this skill is a {effect}.";
+                return false;
+            }
+
+            // A WARD WITH NO SIZE IS A CAST THAT DOES NOTHING, and it is the
+            // exact failure the old model could hide: every ward's strength
+            // used to be able to come from the caster's WardReductionPercent
+            // talent instead of from the row, so a row authoring no number at
+            // all was legal. The talent is a MULTIPLIER now
+            // (SkillResolution.Amount's Ward case), and a multiplier on
+            // nothing is nothing.
+            if (effect == SkillEffect.Ward && flatAmount == 0 && power == 0
+                && raw.percentOfCasterMaxHealth == 0 && !ridesAnAuthoredAxis)
+            {
+                error = $"{label}: a Ward with no flatAmount, no power, no percentOfCasterMaxHealth and no " +
+                        "authored scalingAxis puts up a shield of nothing.";
+                return false;
+            }
+
             // A free action is a choice the PLAYER gets to make twice in one
             // turn. A monster's abilities are drawn one per turn by a
             // weighted pool that has no concept of acting again, so the flag
@@ -604,7 +651,8 @@ namespace PrincesPalace.Domain.Content
                 raw.approachStance?.Trim() ?? "", raw.windupStance?.Trim() ?? "",
                 poolTiers,
                 raw.placeholder, raw.placeholderNote ?? "",
-                raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction);
+                raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction,
+                raw.percentOfCasterMaxHealth, raw.wardTurns);
             error = null;
             return true;
         }

@@ -236,7 +236,7 @@ namespace PrincesPalace.Domain.Tests
                 var lamb = Hero("Lamb");
                 Talents(lamb, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { Foe() });
-                var session = Session(encounter, Kit(Skill(SkillEffect.Ward, "Fleece Ward")));
+                var session = Session(encounter, Kit(Skill(SkillEffect.Ward, "Fleece Ward", flatAmount: 40)));
 
                 // AIMED, since AUDIT #147: a ward is SingleAlly and his own
                 // plate is one of the squadmates it may be aimed at.
@@ -259,7 +259,7 @@ namespace PrincesPalace.Domain.Tests
                 var foe = Foe();
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { foe });
                 var session = Session(encounter, Kit(
-                    Skill(SkillEffect.Ward, "Fleece Ward"),
+                    Skill(SkillEffect.Ward, "Fleece Ward", flatAmount: 40),
                     Skill(SkillEffect.Shatter, "Shatter")));
 
                 Assert.IsTrue(session.CastSkill(0, lamb), "fixture: the ward did not go up");
@@ -454,7 +454,12 @@ namespace PrincesPalace.Domain.Tests
 
             if (effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty
                 || effect == SkillEffect.HealSingle
-                || effect == SkillEffect.RestorePartyMana)
+                || effect == SkillEffect.RestorePartyMana
+                // A Ward is refused with no size for the same reason a heal is
+                // refused with no amount: since the shield model the talent is
+                // a multiplier over the row's own pool, and a multiplier on
+                // nothing is nothing.
+                || effect == SkillEffect.Ward)
             {
                 raw.flatAmount = 10;
             }

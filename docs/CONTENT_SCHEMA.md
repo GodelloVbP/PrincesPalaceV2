@@ -201,6 +201,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `resourceSpendCap` | int | `0` | A ceiling on how much a spendsAllResource cast takes; 0 means no ceiling. Meaningless without spendsAllResource. |  |
 | `spendsAllPrimary` | bool | `false` | Whether the cast takes the caster's entire PRIMARY pool (Fury, mana) instead of manaCost, with manaCost as the minimum. |  |
 | `percentOfMaxHealthPerPoint` | int | `0` | Percent of the caster's own max health added to a heal per point of the pool actually spent; 0 means none. |  |
+| `percentOfCasterMaxHealth` | int | `0` | Percent of the caster's own max health added to a Ward's shield pool, flat; 0 means none. Ward only. |  |
+| `wardTurns` | int | `0` | How many of the wearer's own turns a Ward stands before expiring; 0 means the default of two. |  |
 | `freeAction` | bool | `false` | Whether casting this does not end the caster's turn; at most one free action per turn. |  |
 | `power` | int | `-1` | Added per point of resource actually spent when casting. |  |
 | `flatAmount` | int | `-1` | A flat contribution before scaling: the whole amount for a heal, an offset on top of Attack for damage. |  |

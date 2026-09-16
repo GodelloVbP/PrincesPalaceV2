@@ -207,7 +207,7 @@ namespace PrincesPalace.Domain.Tests
             // (0.25), the fixed rate ManaToWardOnTurnStartPercent's own
             // header says is a code constant rather than an authored one.
             var effect = new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0);
-            Assert.AreEqual($"{Keyword("25%")} unspent mana -> Ward each turn",
+            Assert.AreEqual($"{Keyword("25%")} of unspent mana as shield each turn",
                 ModifierEffectText.Describe(effect));
         }
 

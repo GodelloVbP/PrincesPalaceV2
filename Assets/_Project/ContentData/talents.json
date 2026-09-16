@@ -380,7 +380,7 @@
       "displayName": "Fleece Ward",
       "column": 1,
       "row": 1,
-      "description": "Unlocks Ward (2 wool): the next blow to land on you is 40% softer.",
+      "description": "Unlocks Ward (2 wool): a shield you can put on anybody, and 40% more of it. Seventy points, spent a hit at a time, for two turns.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -398,7 +398,7 @@
       "displayName": "Thicker Fleece",
       "column": 1,
       "row": 4,
-      "description": "Sixty percent, now.",
+      "description": "Sixty percent more shield, now -- eighty points of Ward.",
       "prerequisites": [
         "sheep_lamb_ward_1"
       ],
@@ -467,7 +467,7 @@
       "displayName": "Parting Gift",
       "column": 1,
       "row": 8,
-      "description": "A ward breaking heals whoever was wearing it for a tenth of their health. Losing one stops being a loss.",
+      "description": "A ward running out heals whoever was wearing it for a tenth of their health. Losing one stops being a loss.",
       "prerequisites": [
         "sheep_lamb_mend_2"
       ],
@@ -566,7 +566,7 @@
       "displayName": "The Flock",
       "column": 1,
       "row": 11,
-      "description": "A ward also covers one other, at half strength.",
+      "description": "A ward also covers one other, for half the shield.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -583,7 +583,7 @@
       "displayName": "The Whole Flock",
       "column": 1,
       "row": 14,
-      "description": "Everyone, at half strength.",
+      "description": "Everyone, for half the shield.",
       "prerequisites": [
         "sheep_lamb_flock_1"
       ],
@@ -603,7 +603,7 @@
       "displayName": "Nobody Left Out",
       "column": 1,
       "row": 17,
-      "description": "Everyone, at full strength, for the same two wool.",
+      "description": "Everyone, for the whole shield, for the same two wool.",
       "prerequisites": [
         "sheep_lamb_flock_2"
       ],
@@ -731,7 +731,7 @@
       "displayName": "The Golden Fleece",
       "column": 1,
       "row": 20,
-      "description": "Wards stop breaking. They last the fight. Free, gated at 20 embers spent in this path.",
+      "description": "Wards stop timing out. They last the fight, until something spends them. Free, gated at 20 embers spent in this path.",
       "prerequisites": [
         "sheep_lamb_flock_3",
         "sheep_lamb_gift_3",
@@ -750,7 +750,7 @@
       "displayName": "Placeholder: Brace",
       "column": 0,
       "row": 0,
-      "description": "Placeholder kit. Gives placeholder_brawler_ward (skills.json) a magnitude to apply, in sheep_lamb_ward's own range.",
+      "description": "Placeholder kit. Deepens placeholder_brawler_ward (skills.json) by 40%, in sheep_lamb_ward's own range.",
       "effects": [
         {
           "type": "WardReductionPercent",

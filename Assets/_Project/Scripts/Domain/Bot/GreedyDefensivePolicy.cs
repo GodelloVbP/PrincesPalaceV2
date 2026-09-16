@@ -44,10 +44,13 @@ namespace PrincesPalace.Domain.Bot
         // GreedyDefensive: FightInvariants.TooManyCommands, 201 commands, the
         // last ten all fleece_ward, the enemy's HP never moving.
         //
-        // fleece_ward is a SINGLE-HIT shield -- StatusEffects.ConsumeWard
-        // removes the Shielded status the moment a hit lands (WardOne applies
-        // it with a 999-turn duration, but that duration is never what ends
-        // it; the hit is). Against an enemy that lands one every round, the
+        // fleece_ward was a SINGLE-HIT shield when this livelock was found --
+        // StatusEffects.ConsumeWard removed the Shielded status the moment any
+        // hit landed, whatever its size. It is a POOL now (AUDIT #152), which
+        // makes the livelock rarer rather than impossible: a pool a big enemy
+        // empties in one blow is exactly the old case, and the two-turn clock
+        // is a second way for "!alreadyWarded" to come back true. Against an
+        // enemy that clears the pool every round, the
         // ward is gone again before this policy is next asked, so
         // "!alreadyWarded" is true on every single turn and the ward branch
         // -- which runs before the damage branch below -- recasts it forever

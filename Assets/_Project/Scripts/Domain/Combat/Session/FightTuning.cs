@@ -72,11 +72,38 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- relics ----------------------------------------------------------
 
-        // 99 turns is "for the rest of the fight" spelled as a duration. The
-        // shield is refreshed rather than stacked (StatusEffects.Apply's own
-        // rule), so recasting while it stands never compounds.
-        public const int MagicalShieldReductionPercent = 50;
+        // ---- wards ------------------------------------------------------------
+
+        // HOW LONG A SKILL'S WARD STANDS when its row authors no `wardTurns`
+        // -- two of the WEARER'S own turns, counted down by StatusEffects.
+        // Tick like every other duration in the game.
+        //
+        // Two rather than "until something hits it", which is what every ward
+        // in this game used to be (they were all applied at 999 turns). A
+        // shield POOL survives small hits, so without a clock one Bulwark
+        // would stand for the rest of the dungeon and the skill would stop
+        // being a decision about WHEN. See StatusEffects' own WARDS header
+        // for the model this belongs to.
+        public const int DefaultWardTurns = 2;
+
+        // 99 turns is "for the rest of the fight" spelled as a duration --
+        // the promise the two relic wards make, and deliberately NOT the
+        // two-turn clock a skill's ward runs on. A relic ward is small and
+        // free; a skill's is big and costs a turn, and the one that costs
+        // something is the one with a window.
+        //
+        // The shield is not stacked on a re-raise: StatusEffects.ApplyWard
+        // replaces a pool no bigger than the new one and refuses a bigger
+        // one outright, so raising it again while it stands never compounds.
         public const int MagicalShieldDurationTurns = 99;
+
+        // MAGICAL SHIELD'S OWN POOL, in shield points. Roughly one leg-two
+        // enemy hit (those measured at 19-23 in phase 1's bot run) -- it is a
+        // relic that raises itself for free on a cast, so it buys a blow, not
+        // a plan. It read 50 while a ward was a PERCENTAGE off one hit, which
+        // is the same "half of whatever lands" promise expressed in the unit
+        // the model no longer uses.
+        public const int MagicalShieldPoints = 20;
 
         // ---- item modifiers (Rift affixes, Phase C) ---------------------------
 
@@ -93,14 +120,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // reduction at the start of every one of their own turns, for free.
         // A generous rate here would make "hoard mana, never cast" the
         // correct answer to "how do I tank", which is backwards for a
-        // resource whose entire other purpose is being spent. Percent Ward
-        // granted per point of UNSPENT mana at turn start.
+        // resource whose entire other purpose is being spent. SHIELD POINTS
+        // granted per point of UNSPENT mana at turn start -- the same rate
+        // the number has always carried, now read in the unit the ward model
+        // actually uses.
         public const float RunicWardConversionRate = 0.25f;
 
         // However deep a mana pool gets, the conversion never grants more
-        // than a quarter damage reduction -- keeps a high-mana build from
-        // turning "never cast" into near-immunity.
-        public const int RunicWardMagnitudeCapPercent = 25;
+        // than this many shield points -- keeps a high-mana build from
+        // turning "never cast" into a wall that renews every turn. Sized at
+        // one leg-two enemy hit's worth (19-23, phase 1's bot run), the same
+        // bar MagicalShieldPoints is set against.
+        public const int RunicWardPointsCap = 20;
 
         // ---- chilled (Phase D2, item-modifier plan) ----------------------------
         //
@@ -180,11 +211,13 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int SparringSaberSpeedPercent = 30;
         public const int SparringSaberSpeedTurns = 1;
 
-        // Sparring Buckler: the ward's own strength, as a percent reduction
-        // on the wearer's next hit -- see FightSession.RelicMechanics.
-        // NoteDeliberateMove for the "ward" reading taken (this game's
-        // existing Shielded status, not a flat absorb pool).
-        public const int SparringBucklerWardPercent = 15;
+        // Sparring Buckler: the ward's own pool, in shield points. Half a
+        // leg-two enemy hit -- it is granted free by moving, once a turn, and
+        // a relic that paid for a whole blow every turn for nothing would be
+        // the best defensive item in the game. It read 15 as a PERCENT before
+        // the shield model landed, which was the same "a sliver off whatever
+        // lands" intent in the old unit.
+        public const int SparringBucklerWardPoints = 10;
 
         // Essence Siphon: percent of max health healed per non-summon kill.
         public const int EssenceSiphonHealPercent = 3;

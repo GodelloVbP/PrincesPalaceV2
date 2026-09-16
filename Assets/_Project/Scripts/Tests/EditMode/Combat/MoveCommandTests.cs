@@ -176,8 +176,8 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(session.Move(MoveDirection.Back));
 
-            Assert.AreEqual(85, StatusEffects.ConsumeShieldedReduction(mover, 100),
-                "15% off the mover's next hit -- the footwork was theirs");
+            Assert.AreEqual(90, StatusEffects.ConsumeWard(mover, 100).Damage,
+                "10 shield points off the mover's next hit -- the footwork was theirs");
             Assert.IsFalse(StatusEffects.IsWarded(partner),
                 "and nothing for the one who was displaced");
         }

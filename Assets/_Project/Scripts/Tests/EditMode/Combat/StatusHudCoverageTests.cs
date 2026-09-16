@@ -124,6 +124,40 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("25%", StatusHud.RowFor(status).Tooltip);
         }
 
+        // A WARD'S BADGE COUNTS POINTS, NOT TURNS, and it is the only row in
+        // the table that does. Every other badge's number answers "how much
+        // longer"; a shield's answers "how much is left", which is the
+        // question a player deciding whether to eat the next hit is actually
+        // asking -- and the only one that moves between two of the wearer's
+        // turns. The duration is still in the tooltip.
+        [Test]
+        public void AWardsBadgeCountsItsRemainingShieldPoints()
+        {
+            var row = StatusHud.RowFor(new ActiveStatus(StatusEffectType.Shielded, 37, 2));
+
+            Assert.AreEqual("SHD", row.Code);
+            Assert.AreEqual(37, row.Counter, "the badge drew the turn count instead of the pool");
+            Assert.IsTrue(row.IsPositive);
+            StringAssert.Contains("37 shield", row.Tooltip);
+            StringAssert.Contains("2 turns", row.Tooltip);
+            StringAssert.DoesNotContain("%", row.Tooltip);
+        }
+
+        // A PERMANENT WARD SAYS SO rather than counting 999 down, and says it
+        // in the words a pool wants: "until it is used" was right while a ward
+        // was one hit's worth of percentage and is wrong for something spent
+        // gradually.
+        [Test]
+        public void APermanentWardReadsAsTheRestOfTheFight()
+        {
+            var row = StatusHud.RowFor(
+                new ActiveStatus(StatusEffectType.Shielded, 50, StatusEffects.PermanentWardTurns));
+
+            Assert.AreEqual(50, row.Counter, "a permanent ward still shows what is left in it");
+            StringAssert.Contains("for the rest of the fight", row.Tooltip);
+            StringAssert.DoesNotContain("until it is used", row.Tooltip);
+        }
+
         // Marked must NOT promise a damage effect it doesn't have -- see
         // section 5: "Today's tooltip promises 'increased damage from
         // focused attacks', which overstates it." Marked is a token spent by
@@ -184,11 +218,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.GreaterOrEqual(Marks.MarkDurationTurns, StatusHud.SentinelTurns);
             Assert.GreaterOrEqual(FightTuning.MagicalShieldDurationTurns, StatusHud.SentinelTurns);
 
-            var wardField = typeof(FightSession).GetField("WardDurationTurns", BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(wardField, "FightSession.WardDurationTurns was not found by reflection -- has it moved or been renamed?");
-            int wardDuration = (int)wardField.GetValue(null);
-            Assert.AreEqual(999, wardDuration, "pinned literal -- see FightSession.Talents.cs's own comment on why a Ward lasts effectively forever");
-            Assert.GreaterOrEqual(wardDuration, StatusHud.SentinelTurns);
+            // THE ONLY WARD SENTINEL LEFT is The Golden Fleece's. Ordinary
+            // wards run a real two-turn clock since the shield model (AUDIT
+            // #152) and are covered by the sibling test below; a permanent one
+            // still has to clear the threshold so its badge reads "for the
+            // rest of the fight" rather than counting 999 down.
+            Assert.AreEqual(999, StatusEffects.PermanentWardTurns,
+                "pinned literal -- see StatusEffects' own WARDS header");
+            Assert.GreaterOrEqual(StatusEffects.PermanentWardTurns, StatusHud.SentinelTurns);
         }
 
         // Every OTHER duration FightTuning authors is a real, tickable
@@ -208,6 +245,10 @@ namespace PrincesPalace.Domain.Tests
                 .GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Where(f => f.IsLiteral && f.FieldType == typeof(int) && f.Name.EndsWith("Turns"))
                 .Where(f => f.Name != nameof(FightTuning.MagicalShieldDurationTurns))
+                // DefaultWardTurns is 2 and belongs BELOW the sentinel, which
+                // is exactly what this test asserts of it -- no exemption
+                // needed, listed here only so the next reader does not go
+                // looking for one.
                 .ToList();
 
             Assert.IsNotEmpty(fields, "no FightTuning *Turns constants found -- " +

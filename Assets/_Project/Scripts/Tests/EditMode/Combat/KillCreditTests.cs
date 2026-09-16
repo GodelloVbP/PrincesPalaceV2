@@ -482,8 +482,11 @@ namespace PrincesPalace.Domain.Tests
             new EnemyKit(new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false,
                 DamageType.Physical, DamageType.Physical, 0), false);
 
+        // A Ward gets a flatAmount because a ward is a POOL of shield points
+        // and a row authoring nothing puts up nothing (AUDIT #152).
         private static ResolvedSkill Skill(SkillEffect effect, string name, TransformGrant transform = null) =>
             new ResolvedSkill("t_" + name, name, "", "hero", 1, effect, SkillTargeting.Self,
-                0, 0, false, 100, 0, false, null, SpellPresentation.None, 0, transform: transform);
+                0, 0, false, 100, effect == SkillEffect.Ward ? 40 : 0, false, null,
+                SpellPresentation.None, 0, transform: transform);
     }
 }

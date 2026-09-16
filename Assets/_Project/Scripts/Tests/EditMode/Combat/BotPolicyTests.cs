@@ -121,9 +121,11 @@ namespace PrincesPalace.Domain.Tests
             return (session, hero, foes);
         }
 
+        // flatAmount 40: a ward is a POOL of shield points since the shield
+        // model, and a row that authors nothing puts up nothing.
         private static ResolvedSkill WardSkill() =>
             new ResolvedSkill("ward", "Fleece Ward", "", "hero", 1, SkillEffect.Ward,
-                SkillTargeting.Self, 0, 0, false, 100, 0, false, null, SpellPresentation.None, 0);
+                SkillTargeting.Self, 0, 0, false, 100, 40, false, null, SpellPresentation.None, 0);
 
         private static ResolvedSkill HealSelfSkill() =>
             new ResolvedSkill("mend", "Mend", "", "hero", 1, SkillEffect.HealSelf,

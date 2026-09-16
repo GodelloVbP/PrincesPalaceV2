@@ -269,16 +269,20 @@ namespace PrincesPalace.Domain.Combat.Session
             // roll actually landed on, not the pre-roll figure).
             result = ApplyVariance(result, varianceRange, rng);
 
-            // Magical Shield -- and the Fragile Lamb's Ward, which is the same
-            // status -- spends here, in the one funnel every TYPED damage path
-            // shares, same reasoning as the Protect/Vulnerable and resistance
-            // handling above.
-            result = resolveWard == null ? result : resolveWard(target, result);
-
-            // Stalwart's flat physical reduction -- LAST, deliberately, and
-            // PHYSICAL ONLY. See ApplyFlatPhysicalReduction's own comment for
-            // why this sits after the ward rather than before it.
+            // Stalwart's flat physical reduction -- PHYSICAL ONLY, and just
+            // BEFORE the ward. See ApplyFlatPhysicalReduction's own comment
+            // for why it moved from after it.
             result = ApplyFlatPhysicalReduction(result, target, type);
+
+            // THE WARD POOL IS THE LAST THING BETWEEN THIS NUMBER AND THE
+            // WEARER -- Magical Shield, the Fragile Lamb's Ward and every
+            // other shield are one status and one pool (StatusEffects' own
+            // WARDS header owns the full order). It spends here, in the one
+            // funnel every TYPED damage path shares, same reasoning as the
+            // Protect/Vulnerable and resistance handling above, and what it
+            // returns can legitimately be ZERO: a pool that ate the whole hit
+            // is not a hit that was merely softened.
+            result = resolveWard == null ? result : resolveWard(target, result);
 
             return new Outcome(result, effectiveness, detonated);
         }
@@ -349,25 +353,37 @@ namespace PrincesPalace.Domain.Combat.Session
                 CombatMath.TotalDefense(target, DamageType.Physical, actor, ignoresDefense));
 
             result = ApplyVariance(result, varianceRange, rng);
-            result = resolveWard == null ? result : resolveWard(target, result);
 
             // Untyped damage IS physical damage (see this method's own
-            // header), so Stalwart's flat reduction applies here too.
+            // header), so Stalwart's flat reduction applies here too -- and
+            // in the same place the typed overload puts it, just ahead of the
+            // ward.
             result = ApplyFlatPhysicalReduction(result, target, DamageType.Physical);
+            result = resolveWard == null ? result : resolveWard(target, result);
 
             return new Outcome(result, 1f, 0);
         }
 
         // Stalwart's FlatPhysicalDamageReduction: a flat subtraction from
-        // PHYSICAL damage only, applied as the LAST step of the funnel —
-        // after the R/(R+100) mitigation curve, the variance roll, AND the
-        // ward, not folded into any of them. Last on purpose: it is armour
-        // PLATING, a fixed amount of harm that never reaches the wearer
-        // regardless of how big or small the hit that produced this number
-        // was, which is a different promise than "resists a percentage of
-        // it" (PhysicalDefense) or "the next hit is cut by a percentage"
-        // (Shielded/Ward) — both of those scale with the incoming number,
-        // this deliberately does not.
+        // PHYSICAL damage only, applied after the R/(R+100) mitigation curve
+        // and the variance roll and JUST BEFORE the ward, not folded into any
+        // of them. It is armour PLATING, a fixed amount of harm that never
+        // reaches the wearer regardless of how big or small the hit that
+        // produced this number was, which is a different promise than
+        // "resists a percentage of it" (PhysicalDefense).
+        //
+        // IT USED TO RUN AFTER THE WARD, and had to move when the ward became
+        // a shield POOL. Two things broke at once in the old order. The floor
+        // of 1 below fires on any number at or under the reduction, so a hit
+        // the pool swallowed whole -- a 0 -- came back out of this method as
+        // a 1, which is a fully-absorbed blow that still hurt. And a pool
+        // paying for damage that plating was about to erase anyway is the
+        // wearer's shield being spent on nothing: plating is a property of
+        // the armour and the ward is the last thing between the finished
+        // number and the wearer (StatusEffects' own WARDS header states the
+        // whole order). The old comment's argument for going last does not
+        // survive the model change either -- it rested on the ward being "a
+        // percentage of the incoming number", and a pool is not.
         //
         // Floored at 1, the same damage floor every other step in this
         // pipeline already enforces (CombatMath.AfterResistance's own

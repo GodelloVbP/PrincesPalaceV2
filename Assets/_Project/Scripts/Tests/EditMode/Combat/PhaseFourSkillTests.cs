@@ -20,19 +20,20 @@ namespace PrincesPalace.Domain.Tests
     // a full bar -- the derivation is in the comment and the assertion is
     // still the literal.
     //
-    // AND THE WARD RULES, pinned as the CODE behaves rather than as the plan
-    // describes them, because the two differ and the difference is not a bug
-    // to fix in this phase. See WardsAre* below.
+    // AND THE WARD RULES. A ward IS A SHIELD -- a pool of points, drained
+    // hit by hit, on a two-turn clock (AUDIT #152, owner's call 2026-09-16).
     //
-    // RETUNED 2026-09-15 (phase 5 step 0). Phase 4 found the code's ward to be
-    // a PERCENT off the next hit and pinned it that way; the numbers it
-    // inherited had been written for an absorb POOL, so a 30 ward meant to soak
-    // 30 points was taking 30% off any hit at all, and a 2-per-Wool Tuck In was
-    // taking 8% off at a full bank -- invisible. The three ward numbers below
-    // are now authored as percentages on purpose: Tuck In 10 a Wool (40% at
-    // four, 60% once level 26's +5 lands), Bulwark 50, Prism Ward a flat 40.
-    // Mend is untouched and still 20 plus spell attack, because a heal pays in
-    // hit points and scaling one is honest.
+    // TWICE RETUNED, and the second one is the model rather than the numbers.
+    // Phase 4 found the code's ward to be a PERCENT off one hit and pinned it
+    // that way; phase 5 step 0 (2026-09-15) retuned the authored numbers INTO
+    // percentages rather than build the pool, because replacing the ward model
+    // reaches every ward in the game. The owner then decided the pool. So
+    // every ward number below is now SHIELD POINTS: Tuck In 5 a Wool (20 at
+    // four, 32 once level 26's +3 lands), Bulwark 30% of the caster's own max
+    // health, Prism Ward 20 plus her spell attack, Fleece Ward 50, Brace 60.
+    // Mend is untouched, and Prism Ward's scaling term came BACK with the
+    // model: a spell attack that passes 80 now buys a bigger shield instead of
+    // an immunity.
     public class PhaseFourSkillTests
     {
         // ---- the authored numbers, read from skills.json -------------------
@@ -183,11 +184,18 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(50, bulwark.ManaCost);
             Assert.AreEqual(0, bulwark.ResourceCost, "Bjorn has no signature resource to spend");
 
-            var bjorn = Hero(attack: 10, pool: 100);
-            int ward = SkillResolution.Amount(SkillEffect.Ward, bjorn, bjorn, bulwark.Power, bulwark.FlatAmount,
-                resourceSpent: 0, ignoresDefense: false, type: DamageType.Physical, axis: bulwark.ScalingAxis);
+            // 30% OF THE CASTER'S OWN MAX HEALTH, in shield points. Two
+            // literals rather than one, because the whole reason this is a
+            // percentage and not a flat number is that it tracks the bar:
+            // Bjorn's authored level-1 260 gives 78, and this file's 500-health
+            // fixture hero gives 150.
+            Assert.AreEqual(30, bulwark.PercentOfCasterMaxHealth);
+            Assert.AreEqual(0, bulwark.FlatAmount, "Bulwark's size is the percentage, not a flat number");
 
-            Assert.AreEqual(50, ward);
+            var bjorn = Hero(attack: 10, pool: 100);
+            Assert.AreEqual(150, WardPoints(bulwark, bjorn));
+            Assert.AreEqual(78, WardPoints(bulwark, Hero(health: 260, attack: 10, pool: 100)),
+                "Bjorn's own level-1 bar");
         }
 
         [Test]
@@ -311,45 +319,91 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- Prism Ward ----------------------------------------------------
 
-        // A FLAT 40 PERCENT, and the flatness is the point. Prism Ward carried
-        // "20 plus spell attack" until the retune, which reads as hit points and
-        // is not: the number lands in the status's Magnitude and comes off the
-        // next hit as a percentage, so an Odette whose spell attack passes 80
-        // would have been warding for more than 100% -- one ally made immune to
-        // one hit, for eight mana, forever. Mend keeps its scaling term because
-        // Mend actually pays in hit points.
+        // 20 PLUS HER SPELL ATTACK, in shield points, exactly as
+        // PLAN_PROGRESSION_V2 section 5 authored it. It was cut to a flat 40
+        // percent by the step-0 retune and the reason it was cut is gone with
+        // the percent model: a spell attack of 90 used to mean a ward worth
+        // more than 100% of any hit, i.e. one ally immune for eight mana. A
+        // pool of 110 points is just a big shield.
         [Test]
-        public void PrismWardIsAFlatFortyPercentForEightManaAndDoesNotScale()
+        public void PrismWardIsTwentyPlusSpellAttackForEightMana()
         {
             var prismWard = Authored("prism_ward");
 
             Assert.AreEqual(SkillEffect.Ward, prismWard.Effect);
             Assert.AreEqual(SkillTargeting.SingleAlly, prismWard.Targeting);
             Assert.AreEqual(8, prismWard.ManaCost);
+            Assert.AreEqual(ScalingAxis.Spell, prismWard.ScalingAxis, "the scaling term came back with the pool");
 
-            int atFour = SkillResolution.Amount(SkillEffect.Ward, Hero(attack: 4), Hero(attack: 4),
-                prismWard.Power, prismWard.FlatAmount, resourceSpent: 0, ignoresDefense: false,
-                type: DamageType.Physical, axis: prismWard.ScalingAxis);
-            int atNinety = SkillResolution.Amount(SkillEffect.Ward, Hero(attack: 90), Hero(attack: 90),
-                prismWard.Power, prismWard.FlatAmount, resourceSpent: 0, ignoresDefense: false,
-                type: DamageType.Physical, axis: prismWard.ScalingAxis);
-
-            Assert.AreEqual(40, atFour);
-            Assert.AreEqual(40, atNinety, "a percentage ward grew with a stat that can exceed 100");
+            // Attack 4 is Odette's level-1 figure and the fixture's scores are
+            // neutral, so her spell attack is 4 flat: 24. At 90 it is 110.
+            Assert.AreEqual(24, WardPoints(prismWard, Hero(attack: 4)));
+            Assert.AreEqual(110, WardPoints(prismWard, Hero(attack: 90)));
         }
+
+        // ---- Fleece Ward and Brace, the two older wards --------------------
+
+        // BOTH AUTHOR A NUMBER NOW. Neither used to: while WardReductionPercent
+        // WAS the ward, a row could carry nothing but its cost and get its
+        // strength from the tree. The talent is a multiplier over the row's own
+        // pool since the shield model landed, and a multiplier on nothing is
+        // nothing -- which is why SkillEntryResolver refuses a sizeless Ward.
+        [Test]
+        public void FleeceWardIsFiftyShieldPointsForTwoWool()
+        {
+            var fleeceWard = Authored("fleece_ward");
+
+            Assert.AreEqual(SkillEffect.Ward, fleeceWard.Effect);
+            Assert.AreEqual(2, fleeceWard.ResourceCost);
+            Assert.AreEqual(50, fleeceWard.FlatAmount);
+            Assert.AreEqual(50, WardPoints(fleeceWard, Hero()));
+        }
+
+        [Test]
+        public void BraceIsSixtyShieldPoints()
+        {
+            var brace = Authored("placeholder_brawler_ward");
+
+            Assert.AreEqual(SkillEffect.Ward, brace.Effect);
+            Assert.AreEqual(60, brace.FlatAmount);
+            Assert.AreEqual(60, WardPoints(brace, Hero()));
+        }
+
+        // THE TALENT SCALES THE POOL. sheep_lamb_ward_1 authors 40, so Fleece
+        // Ward's 50 becomes 70 and Brace's 60 becomes 84 -- and Tuck In's four
+        // Wool become 28. It used to be the LARGER of talent-or-authored, which
+        // meant a 40 talent did nothing at all to a 50 ward.
+        [Test]
+        public void TheWardTalentAddsItsPercentToWhateverTheSkillAuthored()
+        {
+            var shawn = Hero();
+            shawn.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.WardReductionPercent, 40),
+            });
+
+            Assert.AreEqual(70, WardPoints(Authored("fleece_ward"), shawn));
+            Assert.AreEqual(84, WardPoints(Authored("placeholder_brawler_ward"), shawn));
+        }
+
+        // WHAT ONE WARD IS WORTH, in one place, so nine assertions above
+        // cannot drift into nine slightly different calls.
+        private static int WardPoints(ResolvedSkill skill, CombatantState caster, int resourceSpent = 0) =>
+            SkillResolution.Amount(SkillEffect.Ward, caster, caster, skill.Power, skill.FlatAmount,
+                resourceSpent, ignoresDefense: false, type: DamageType.Physical, axis: skill.ScalingAxis,
+                percentOfMaxHealthPerPoint: 0, percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
 
         // ---- Tuck In -------------------------------------------------------
 
-        // 10 PERCENT PER WOOL, up to 4 Wool -- so 10, 20, 40 and never 50
+        // 5 SHIELD POINTS PER WOOL, up to 4 Wool -- so 5, 10, 20 and never 25
         // however deep the bank is. The cap stops a hoarded twelve from being
-        // three times the ward, and at 10 a Wool it is also what keeps the
-        // ceiling under 100: four Wool is 40% off, and level 26's SkillPowerDelta
-        // of +5 takes that to 60%.
-        [TestCase(1, 10)]
-        [TestCase(2, 20)]
-        [TestCase(4, 40)]
-        [TestCase(12, 40)]
-        public void TuckInWardsTenPercentPerWoolSpentUpToFour(int banked, int expectedWard)
+        // three times the ward. Level 26's SkillPowerDelta of +3 takes the
+        // per-Wool figure to 8, so the ceiling goes 20 -> 32.
+        [TestCase(1, 5)]
+        [TestCase(2, 10)]
+        [TestCase(4, 20)]
+        [TestCase(12, 20)]
+        public void TuckInWardsFiveShieldPointsPerWoolSpentUpToFour(int banked, int expectedWard)
         {
             var tuckIn = Authored("tuck_in");
             var shawn = Hero();
@@ -357,12 +411,28 @@ namespace PrincesPalace.Domain.Tests
 
             int spent = SkillResolution.ResourceToSpend(shawn.SignaturePool, tuckIn.ResourceCost,
                 tuckIn.SpendsAllResource, tuckIn.ResourceSpendCap);
-            int ward = SkillResolution.Amount(SkillEffect.Ward, shawn, shawn, tuckIn.Power, tuckIn.FlatAmount,
-                spent, ignoresDefense: false, type: DamageType.Physical, axis: tuckIn.ScalingAxis);
 
-            Assert.AreEqual(10, tuckIn.Power);
+            Assert.AreEqual(5, tuckIn.Power);
             Assert.AreEqual(4, tuckIn.ResourceSpendCap);
-            Assert.AreEqual(expectedWard, ward);
+            Assert.AreEqual(expectedWard, WardPoints(tuckIn, shawn, spent));
+        }
+
+        // LEVEL 26's +3, pinned as the arithmetic rather than through the
+        // reward track (RewardTrackContentPinTests owns the track's own row).
+        [Test]
+        public void TuckInAtLevelTwentySixIsEightAWoolAndThirtyTwoAtFour()
+        {
+            var tuckIn = Authored("tuck_in");
+            var shawn = Hero();
+            shawn.SignaturePool = Wool(12);
+
+            int spent = SkillResolution.ResourceToSpend(shawn.SignaturePool, tuckIn.ResourceCost,
+                tuckIn.SpendsAllResource, tuckIn.ResourceSpendCap);
+
+            Assert.AreEqual(4, spent);
+            Assert.AreEqual(32, SkillResolution.Amount(SkillEffect.Ward, shawn, shawn, tuckIn.Power + 3,
+                tuckIn.FlatAmount, spent, ignoresDefense: false, type: DamageType.Physical,
+                axis: tuckIn.ScalingAxis));
         }
 
         [Test]
@@ -423,82 +493,97 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(session.CastSkill(0, shawn), "the new turn did not get its own free action");
         }
 
-        // ---- the ward rules, as the CODE behaves ---------------------------
+        // ---- the ward rules, as the PLAN and the code now both state them --
         //
-        // PLAN_PROGRESSION_V2.md §5 states the ward rule as "one ward per
-        // character, a new ward replaces a smaller one and not a larger one,
-        // absorbs until spent or expired". The first two halves are what
-        // StatusEffects does. THE THIRD IS NOT, and this phase pins the code
-        // rather than changing it:
-        //
-        //  - A ward is a PERCENTAGE REDUCTION of ONE incoming hit
-        //    (StatusEffects.ConsumeWard: `damage - damage * Magnitude / 100`),
-        //    not a pool of points that absorbs until exhausted. A 30 ward
-        //    takes 30% off the next blow whatever its size, and is gone.
-        //  - It has no meaningful DURATION either: every ward is applied with
-        //    FightSession.WardDurationTurns, which is 999. Nothing expires a
-        //    ward; the next hit spends it.
-        //
-        // So "two of the wearer's turns" (Bulwark, Prism Ward) and "for the
-        // enemy phase" (Tuck In) describe a timer that does not exist, and
-        // every authored ward number in skills.json is a PERCENT rather than
-        // an absorb pool. Changing that would be replacing the ward model,
-        // which is a phase of its own -- AUDIT #152. Phase 5 step 0 took the
-        // other half of that fork and retuned the NUMBERS to the model the code
-        // actually has, rather than leaving three skills describing one.
+        // PLAN_PROGRESSION_V2.md section 5 always stated the rule as "one ward
+        // per character, a new ward replaces a smaller one and not a larger
+        // one, absorbs until spent or expired". Phase 4 pinned the first two
+        // halves as real and the third as fiction: a ward was a percentage off
+        // one hit, applied at 999 turns, so nothing absorbed and nothing
+        // expired. All three halves are real now (AUDIT #152, owner 2026-09-16).
 
         [Test]
-        public void AWardIsAPercentageOfOneHitAndIsSpentByIt()
+        public void AWardAbsorbsUpToItsPoolAndCarriesTheRestThrough()
         {
             var wearer = Hero(health: 1000);
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 30, 999);
+            StatusEffects.ApplyWard(wearer.Statuses, 30, 2);
 
-            Assert.AreEqual(70, StatusEffects.ConsumeShieldedReduction(wearer, 100),
-                "30% off a 100 hit");
-            Assert.IsFalse(StatusEffects.IsWarded(wearer), "the ward survived the hit it was meant to be spent on");
+            Assert.AreEqual(70, StatusEffects.ConsumeWard(wearer, 100).Damage,
+                "30 points off a 100 hit, and 70 reaches health");
+            Assert.IsFalse(StatusEffects.IsWarded(wearer), "a hit that empties the pool takes the ward with it");
         }
 
         [Test]
-        public void AWardScalesWithTheHitRatherThanAbsorbingAFixedPool()
+        public void ASmallHitLeavesThePoolStandingWithLessInIt()
         {
             var wearer = Hero(health: 1000);
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 30, 999);
+            StatusEffects.ApplyWard(wearer.Statuses, 30, 2);
 
-            // An absorb pool of 30 would leave 970 here. A percentage leaves
-            // 700. The difference is the whole of the plan-versus-code gap.
-            Assert.AreEqual(700, StatusEffects.ConsumeShieldedReduction(wearer, 1000));
+            var first = StatusEffects.ConsumeWard(wearer, 12);
+            Assert.AreEqual(0, first.Damage, "nothing reached health");
+            Assert.AreEqual(12, first.Absorbed);
+            Assert.IsFalse(first.Broke);
+            Assert.AreEqual(18, StatusEffects.WardPoints(wearer));
+
+            var second = StatusEffects.ConsumeWard(wearer, 25);
+            Assert.AreEqual(7, second.Damage, "18 of the 25 was eaten, 7 got through");
+            Assert.IsTrue(second.Broke);
+            Assert.AreEqual(0, StatusEffects.WardPoints(wearer));
         }
 
         [Test]
-        public void OneWardPerCharacterAndTheLargerWins()
+        public void OneWardPerCharacterAndTheLargerPoolWins()
         {
             var wearer = Hero();
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 30, 999);
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 12, 999);
+
+            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 30, 2));
+            Assert.IsFalse(StatusEffects.ApplyWard(wearer.Statuses, 12, 2), "a smaller ward was allowed in");
 
             Assert.AreEqual(1, wearer.Statuses.Count(s => s.Type == StatusEffectType.Shielded),
-                "a second ward stacked rather than refreshing");
-            Assert.AreEqual(30, wearer.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude,
-                "a smaller ward overwrote a larger one");
+                "a second ward stacked rather than replacing");
+            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "a smaller ward overwrote a larger one");
 
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 44, 999);
-            Assert.AreEqual(44, wearer.Statuses.First(s => s.Type == StatusEffectType.Shielded).Magnitude,
-                "a larger ward failed to replace a smaller one");
+            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 44, 2));
+            Assert.AreEqual(44, StatusEffects.WardPoints(wearer), "a larger ward failed to replace a smaller one");
+
+            // EQUAL REPLACES rather than refusing, which is what refreshes the
+            // clock on a ward the player recast deliberately.
+            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 44, 2), "re-casting the same ward was refused");
         }
 
-        // Every ward the game applies carries the same 999-turn duration, so
-        // no ward in the game has ever expired on a clock. Read by
-        // reflection off the private constant rather than retyped, the same
-        // way StatusHudCoverageTests already reaches it.
+        // TWO OF THE WEARER'S OWN TURNS, counted down by the ordinary
+        // turn-start tick. Nothing here is a special case: Shielded is not in
+        // StatusEffects' IsSpentByTheTurn list, so it ages like Poison does.
         [Test]
-        public void NoWardExpiresOnATimer()
+        public void AWardExpiresAfterTwoOfTheWearersOwnTurns()
         {
-            var field = typeof(FightSession).GetField("WardDurationTurns",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var wearer = Hero();
+            StatusEffects.ApplyWard(wearer.Statuses, 30, FightTuning.DefaultWardTurns);
 
-            Assert.IsNotNull(field, "FightSession.WardDurationTurns has moved or been renamed");
-            Assert.AreEqual(999, (int)field.GetRawConstantValue(),
-                "a ward duration short enough to expire would be a change to the ward model, not to a skill");
+            Assert.AreEqual(2, FightTuning.DefaultWardTurns);
+
+            StatusEffects.Tick(wearer);
+            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "gone one turn early");
+
+            StatusEffects.Tick(wearer);
+            Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing after its second turn");
+        }
+
+        // THE GOLDEN FLEECE IS A DURATION, not immunity. WardTests covers what
+        // ConsumeWard does to a permanent pool; this pins the number the
+        // session hands ApplyWard, which is the half that changed.
+        [Test]
+        public void TheGoldenFleeceWardNeverTimesOut()
+        {
+            var wearer = Hero();
+            StatusEffects.ApplyWard(wearer.Statuses, 30, StatusEffects.PermanentWardTurns);
+
+            for (int turn = 0; turn < 10; turn++)
+            {
+                StatusEffects.Tick(wearer);
+            }
+
+            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "ten turns aged a permanent ward away");
         }
 
         // ---- the talent and the authored flag are one rule -----------------

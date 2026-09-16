@@ -39,7 +39,15 @@ namespace PrincesPalace.Domain.Combat
             // so a hundred Fury is a full heal whatever his bar has grown to
             // -- a flat `power` tracks that at exactly one point on the
             // health curve and drifts everywhere else.
-            int percentOfMaxHealthPerPoint = 0)
+            int percentOfMaxHealthPerPoint = 0,
+            // APPENDED LAST AGAIN, and deliberately NOT a widening of the
+            // parameter above it: this is a FLAT percent of the caster's own
+            // max health, read only by Ward, where the one beside it is paid
+            // per point of the pool spent and read only by the heals. One
+            // field meaning both would have to be told apart by the effect,
+            // which is a third meaning for a number that already has two
+            // homes' worth of documentation.
+            int percentOfCasterMaxHealth = 0)
         {
             switch (effect)
             {
@@ -93,47 +101,43 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.Transform:
                     return 0;
 
-                // The shield strain a Ward grants IS a number worth showing,
-                // but it lives on the caster's WardReductionPercent talent,
-                // not on power/flatAmount/resourceSpent -- see
-                // SkillEffect.Ward's own header on why every Ward/Shatter
-                // number is talent-authored. Mirrors ApplyWard/WardOne
-                // (FightSession.Talents.cs) exactly, short of the side
-                // effects a preview must not have: same zero-if-unwarded
-                // gate, same floor of 1 once it lands.
+                // How many SHIELD POINTS a Ward puts up. Mirrors ApplyWard/
+                // WardOne (FightSession.Talents.cs) exactly, short of the side
+                // effects a preview must not have: same terms, same floor of
+                // 1 once it lands.
                 case SkillEffect.Ward:
                 {
                     // WHAT A WARD IS WORTH, in ONE place, read by the
                     // preview (this) and by the cast (FightSession's
                     // ApplyWard, which calls straight through here).
                     //
-                    // IT USED TO BE TALENT-ONLY. Every ward in the game was
-                    // the Fragile Lamb's, so "how strong is a ward" was a
-                    // question only her tree answered
-                    // (TalentEffectType.WardReductionPercent) and a skill
-                    // carried nothing but the cost. Progression v2 phase 4
-                    // adds three wards with no tree behind them -- Bjorn's
-                    // Bulwark, Odette's Prism Ward, Shawn's Tuck In -- so a
-                    // skill can now author its own strength through the same
-                    // flat/per-point/attack terms every other effect here
-                    // already uses. A skill that authors none of them is
-                    // exactly as talent-driven as it was.
+                    // SHIELD POINTS, not a percentage (AUDIT #152, owner
+                    // 2026-09-16: a ward IS a shield). The number is built
+                    // from exactly the flat + per-resource-power + scaled-
+                    // attack terms every damage and heal effect above already
+                    // shares, plus the one term a ward alone wants -- a
+                    // percent of the CASTER'S own max health, which is how
+                    // Bulwark stays worth something on a Bjorn whose bar has
+                    // grown. It rides percentOfCasterMaxHealth and NOT the
+                    // heals' percentOfMaxHealthPerPoint beside it: that one
+                    // is paid per point of the pool spent, and Bulwark's cost
+                    // is fifty Fury off the primary pool, which is not a
+                    // number a ward should get bigger with.
                     //
-                    // THE LARGER OF THE TWO WINS rather than the sum, and
-                    // that is the same rule StatusEffects.Apply already runs
-                    // when two wards land on one wearer ("takes the stronger
-                    // magnitude"). Adding them would make a Lamb casting an
-                    // authored ward strictly better than either source
-                    // intended, which is the silent compounding this
-                    // codebase's other systems go out of their way to avoid.
-                    //
-                    // THE MAGNITUDE IS A PERCENTAGE of the next hit taken,
-                    // NOT an absorb pool -- see StatusEffects.ConsumeWard.
-                    // Every authored number here is therefore a percent.
-                    int authored = AuthoredAttackTerm(actor, axis) + flatAmount + power * resourceSpent;
-                    int talent = actor.Talents.Best(TalentEffectType.WardReductionPercent);
-                    int strength = Math.Max(authored, talent);
-                    return strength <= 0 ? 0 : Math.Max(1, strength);
+                    // THE TALENT IS A MULTIPLIER NOW, not a rival figure.
+                    // WardReductionPercent used to BE the ward ("the next hit
+                    // is 40% softer") and the larger of talent-or-authored
+                    // won; under a pool it reads as "+40% shield amount" and
+                    // scales whatever the skill authored. That is what lets
+                    // Fleece Ward and Thicker Fleece deepen Tuck In and
+                    // Bulwark alike instead of being a floor that the authored
+                    // wards quietly stepped over.
+                    int authored = AuthoredAttackTerm(actor, axis) + flatAmount + power * resourceSpent
+                                   + PercentOfCasterMaxHealth(actor, percentOfCasterMaxHealth);
+                    if (authored <= 0) return 0;
+
+                    int bonusPercent = actor.Talents.Best(TalentEffectType.WardReductionPercent);
+                    return Math.Max(1, authored + authored * bonusPercent / 100);
                 }
 
                 // Previews ONE ward's worth of detonation damage -- how many
@@ -188,6 +192,18 @@ namespace PrincesPalace.Domain.Combat
             if (actor == null || percentPerPoint <= 0 || pointsSpent <= 0) return 0;
 
             return actor.MaxHealth * percentPerPoint * pointsSpent / 100;
+        }
+
+        // The flat twin of the above, for a ward whose size is a share of the
+        // caster's own bar rather than of what the cast spent. Floored at 1
+        // once it is authored at all, the same way every other ward term is:
+        // a Bulwark on a character with a tiny health bar is a small shield,
+        // never no shield.
+        private static int PercentOfCasterMaxHealth(CombatantState actor, int percent)
+        {
+            if (actor == null || percent <= 0 || actor.MaxHealth <= 0) return 0;
+
+            return Math.Max(1, actor.MaxHealth * percent / 100);
         }
 
         // THE CASTER'S SCALED ATTACK, but only when the skill EXPLICITLY

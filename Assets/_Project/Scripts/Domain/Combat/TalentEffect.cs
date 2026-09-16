@@ -186,9 +186,11 @@ namespace PrincesPalace.Domain.Combat
         // Her whole path is built on ONE construct: the Ward. It is
         // implemented with StatusEffectType.Shielded and it is called a Ward
         // everywhere — content, code and UI — because "shield" already means
-        // two other things here (BreakShield is a stagger meter, Shielded is
-        // the Magical Shield relic's per-hit reduction) and a third meaning
-        // in this pipeline would produce a real bug.
+        // something else here (BreakShield is a stagger meter) and a second
+        // meaning in this pipeline would produce a real bug. A ward IS a
+        // shield in the player's sense since 2026-09-16 (a pool of points);
+        // it is still not BreakShield, which is why the two names stay
+        // apart.
         //
         // She has no defensive stats. Wool is her armour AND her ammunition,
         // and every point is the same live question: protection, or damage?
@@ -198,10 +200,25 @@ namespace PrincesPalace.Domain.Combat
 
         // ── Fleece Ward: the construct itself ────────────────────────────
 
-        // A Ward reduces its wearer's next hit by Magnitude percent, then is
-        // spent. POPPING ON THE FIRST HIT IS LOAD-BEARING, not incidental: a
-        // ward that absorbed several hits would pay the engine each time and
-        // return more wool than it cost.
+        // +Magnitude PERCENT to the size of every Ward this character puts
+        // up -- a multiplier on the shield pool the skill's own row authors
+        // (SkillResolution.Amount's Ward case), not a pool of its own.
+        //
+        // THE MEMBER NAME IS KEPT AND THE MEANING IS NOT. It used to BE the
+        // ward: "the next hit is Magnitude percent softer", and the larger of
+        // talent-or-authored won. Under the shield model (AUDIT #152, owner
+        // 2026-09-16) a percentage cannot be a shield, so the node scales
+        // whatever the skill is worth instead -- which is what finally lets
+        // Fleece Ward and Thicker Fleece deepen Tuck In and Bulwark too,
+        // rather than being a floor the authored wards stepped over. The id
+        // is kept because renaming a talents.json effect type is a content
+        // migration for no behavioural gain; the DESCRIPTIONS in talents.json
+        // all moved.
+        //
+        // The engine's once-per-warded-combatant-per-turn cap
+        // (WoolWhenWardedAllyHit) is what now stops a ward that absorbs
+        // several hits from paying several times -- it used to be enough that
+        // a ward popped on the first hit at all, and a pool does not.
         WardReductionPercent,
 
         // Warding no longer consumes the action, so she can ward and attack
@@ -311,21 +328,28 @@ namespace PrincesPalace.Domain.Combat
 
         // ── The capstone: The Golden Fleece ──────────────────────────────
 
-        // Wards stop popping. They persist to the end of the fight.
+        // Wards stop timing out. They stand to the end of the fight.
         // Magnitude is ignored.
         //
         // The payoff to the WHOLE path rather than to one strand: Weight of
-        // Wool sits permanently at maximum, Shatter always has full
-        // ammunition, and Mending Fleece's regen never lapses. The same shape
-        // as the Ram's capstone — take a temporary state and make it who you
-        // are — on a different resource.
+        // Wool sits at maximum for as long as the pool lasts, Shatter always
+        // has ammunition, and Mending Fleece's regen is re-applied every time
+        // the ward is. The same shape as the Ram's capstone — take a
+        // temporary state and make it who you are — on a different resource.
         //
-        // The engine survives it. Income is paid for CARRYING a ward when
-        // hit, not for the ward being spent (see WoolWhenWardedAllyHit's
-        // once-per-turn cap), so a ward that never pops still pays once per
-        // combatant per turn rather than never again. That was the handoff's
-        // own stated fallback if income collapsed; it costs nothing to have
-        // built it that way from the start.
+        // IT MEANT "WARDS STOP POPPING" until the shield model landed (AUDIT
+        // #152, owner 2026-09-16), and it could not keep meaning that. While
+        // a ward was a percentage spent whole by one hit, "never expires" and
+        // "never pops" were the same sentence; against a pool of shield
+        // points, a ward that never pops is literal immunity to everything
+        // forever. So it is the DURATION that is permanent -- ApplyWard is
+        // handed StatusEffects.PermanentWardTurns -- and the pool drains like
+        // anybody else's. The node's own text in talents.json ("They last the
+        // fight") was already the duration reading and needed no change.
+        //
+        // The engine survives it either way. Income is paid for CARRYING a
+        // ward when hit, not for the ward being spent (see
+        // WoolWhenWardedAllyHit's once-per-turn cap).
         WardsNeverExpire,
     }
 

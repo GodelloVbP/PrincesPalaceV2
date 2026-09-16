@@ -119,8 +119,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(session.IsPlayerTurn,
                 "fixture check: the hero must remain Current so GrantTurnStart runs for the hero, not an enemy");
 
-            // FightTuning.RunicWardConversionRate (0.25) x 40 unspent mana = 10,
-            // well under FightTuning.RunicWardMagnitudeCapPercent (25).
+            // FightTuning.RunicWardConversionRate (0.25) x 40 unspent mana = 10
+            // shield points, well under FightTuning.RunicWardPointsCap (20).
             var ward = hero.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
             Assert.IsNotNull(ward, "unspent mana at turn start must convert to a Shielded ward");
             Assert.AreEqual(10, ward.Magnitude);
@@ -153,7 +153,7 @@ namespace PrincesPalace.Domain.Tests
 
             var ward = hero.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
             Assert.IsNotNull(ward);
-            Assert.AreEqual(FightTuning.RunicWardMagnitudeCapPercent, ward.Magnitude,
+            Assert.AreEqual(FightTuning.RunicWardPointsCap, ward.Magnitude,
                 "a deep mana pool must never grant more than the deliberately conservative cap");
         }
 

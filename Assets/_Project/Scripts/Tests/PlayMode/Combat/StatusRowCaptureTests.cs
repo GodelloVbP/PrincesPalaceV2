@@ -126,7 +126,7 @@ namespace PrincesPalace.PlayModeTests
                 ? session.Current
                 : session.Encounter.LivingPlayerParty.First();
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Poison, 3, 2);
-            StatusEffects.Apply(actor.Statuses, StatusEffectType.Shielded, 30, FightTuning.MagicalShieldDurationTurns);
+            StatusEffects.ApplyWard(actor.Statuses, 30, FightTuning.MagicalShieldDurationTurns);
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Regen, 5, 3);
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Protect, 20, 2);
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Vulnerable, 15, 2);

@@ -914,8 +914,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePowerRowMatchesTheCastItDescribes_WithAWardJustLanded()
         {
+            // flatAmount 40 -- a ward authors its own pool now.
             var ward = new ResolvedSkill("fleece_ward", "Fleece Ward", "", "hero", 1, SkillEffect.Ward,
-                SkillEntryResolver.DefaultTargetingFor(SkillEffect.Ward), 0, 0, false, 0, 0, false,
+                SkillEntryResolver.DefaultTargetingFor(SkillEffect.Ward), 0, 0, false, 0, 40, false,
                 null, SpellPresentation.None, 0);
             var hit = PowerRowHit();
 

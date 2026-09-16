@@ -35,13 +35,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void RunicWardMagnitudeCapPercent_Pin()
+        public void RunicWardPointsCap_Pin()
         {
-            // The hard ceiling on Runic's mana-to-Ward conversion, however
+            // The hard ceiling on Runic's mana-to-shield conversion, however
             // deep the mana pool. ItemModifierRunicHookTests already proves
             // the cap is ENFORCED; this is the missing proof that the cap
-            // ITSELF still reads 25.
-            Assert.AreEqual(25, FightTuning.RunicWardMagnitudeCapPercent);
+            // ITSELF still reads 20. It read 25 as a PERCENT before wards
+            // became shield pools.
+            Assert.AreEqual(20, FightTuning.RunicWardPointsCap);
         }
 
         [Test]

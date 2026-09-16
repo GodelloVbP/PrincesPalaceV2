@@ -52,8 +52,25 @@ namespace PrincesPalace.Domain.Combat
         // (ScalingProfile's additive-not-multiplicative rule, SpeedScale's
         // hard ceiling) go out of their way to avoid — re-casting the same
         // status should never be strictly better than casting it once.
+        //
+        // REFUSES Shielded OUTRIGHT. A ward is a POOL of shield points and
+        // obeys a different application rule from every other status (see
+        // ApplyWard): a bigger pool replaces a smaller one and a smaller one
+        // is refused, where this method would quietly keep the larger
+        // magnitude AND the longer duration and report nothing. Throwing is
+        // the cheap tier-1 version of that rule -- the API cannot express the
+        // mistake -- and it is worth a throw rather than a silent redirect
+        // because the caller also has a log line to write about the refusal,
+        // which only it can word.
         public static void Apply(List<ActiveStatus> statuses, StatusEffectType type, int magnitude, int turns, CombatantState source = null)
         {
+            if (type == StatusEffectType.Shielded)
+            {
+                throw new ArgumentException(
+                    "A ward is a shield POOL with its own replacement rule -- call StatusEffects.ApplyWard, "
+                    + "which reports whether the ward landed so the caller can say so.", nameof(type));
+            }
+
             var existing = statuses.FirstOrDefault(s => s.Type == type);
             if (existing != null)
             {
@@ -252,63 +269,144 @@ namespace PrincesPalace.Domain.Combat
             return Math.Max(MinimumDamageTakenMultiplier, total);
         }
 
-        // Spends Shielded on ONE hit rather than reading it passively like
-        // Protect — the whole point of Magical Shield is "the next hit,
-        // whenever it lands", not "every hit while the buff still has turns
-        // left". Takes the damage a hit was about to deal, halves it (or
-        // whatever Magnitude says) if Shielded is present, removes the
-        // status as a side effect, and returns the reduced figure.
+        // ===== WARDS =====================================================
         //
-        // Non-positive damage does not consume it — nothing actually hit the
-        // shield, so there is nothing to spend it on.
-        public static int ConsumeShieldedReduction(CombatantState target, int damage)
+        // A WARD IS A SHIELD: a pool of shield POINTS sitting on one
+        // character, carried on StatusEffectType.Shielded's Magnitude.
+        // Incoming damage comes off the pool first and the remainder off
+        // health, so a hit bigger than the pool carries the rest through and
+        // a hit smaller than it leaves the pool standing with less in it.
+        //
+        // IT USED TO BE A PERCENTAGE off one hit -- `damage - damage *
+        // Magnitude / 100`, spent whole by the first blow that landed, with
+        // every ward applied at 999 turns so none of them ever expired on a
+        // clock. That model is gone (AUDIT #152, owner's call 2026-09-16: a
+        // ward IS a shield). Nothing anywhere reads a ward's Magnitude as a
+        // percent any more, and the two readings must never coexist -- which
+        // is why Apply refuses Shielded outright rather than leaving a second
+        // door into this status open.
+        //
+        // WHERE A WARD SITS IN THE ORDER A HIT MEETS ITS DEFENCES, stated
+        // HERE and nowhere else, because it is the step most likely to be
+        // quietly re-ordered:
+        //
+        //   dodge -> effectiveness/Protect/Vulnerable/resistance
+        //     -> variance roll -> flat plating (Stalwart)
+        //     -> THE WARD POOL -> the signature pool (Wool) -> health
+        //
+        // The first five live in DamagePipeline.AfterDefences, which reaches
+        // ConsumeWard through its `resolveWard` hook; the last two live in
+        // CombatMath.ApplyDamageDetailed. Ward before Wool is the owner's
+        // stated order, and it is the one that reads right: the thing you
+        // spent a turn putting up is spent before the thing that comes back
+        // on its own.
+
+        // "For the rest of the fight", spelled as a duration -- The Golden
+        // Fleece (TalentEffectType.WardsNeverExpire) and the relic wards that
+        // promise to stand until something hits them. Comfortably above
+        // StatusHud.SentinelTurns, which is what makes the badge read "for
+        // the rest of the fight" rather than counting down from a number
+        // nobody chose.
+        public const int PermanentWardTurns = 999;
+
+        // How many shield points this combatant is carrying, 0 for unwarded.
+        public static int WardPoints(CombatantState combatant)
         {
-            return ConsumeWard(target, damage).Damage;
+            if (combatant == null) return 0;
+
+            var ward = combatant.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
+            return ward?.Magnitude ?? 0;
+        }
+
+        // ONE WARD PER CHARACTER, AND THE BIGGER POOL WINS. A new ward
+        // replaces a smaller (or equal) one outright -- pool, duration and
+        // credit together -- and is REFUSED against a larger one, returning
+        // false so the caller can say so rather than eating the cast in
+        // silence.
+        //
+        // Equal replaces rather than refuses, deliberately: re-casting the
+        // same ward on the same wearer is how its duration gets refreshed,
+        // and a Fleece Ward that refused itself would be a skill that stops
+        // working precisely when it is working.
+        //
+        // WARDS DO NOT STACK, which is the rule Apply runs for every other
+        // status and for the same reason -- re-casting should never be
+        // strictly better than casting once. What is different here is that a
+        // pool CAN be partly spent, so Apply's "keep the stronger magnitude,
+        // keep the longer duration" merge is not safe: it would hand back
+        // points a hit had already eaten.
+        public static bool ApplyWard(List<ActiveStatus> statuses, int points, int turns, CombatantState source = null)
+        {
+            if (statuses == null || points <= 0) return false;
+
+            var existing = statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
+            if (existing != null)
+            {
+                if (existing.Magnitude > points) return false;
+
+                statuses.Remove(existing);
+            }
+
+            statuses.Add(new ActiveStatus(StatusEffectType.Shielded, points, turns, source));
+            return true;
         }
 
         // What a Ward did to a hit, for a caller that needs to say so.
         //
-        // The int-returning overload above is what almost everything wants
-        // and every existing call site keeps compiling. This one exists
-        // because two of the Lamb's nodes make a ward's ABSORPTION visible in
-        // its own right — Mending Fleece T3 heals the wearer when a ward is
-        // spent, and the engine pays wool for having been warded at all — and
-        // neither is inferable from the damage figure afterwards.
+        // Absorbed and Broke are both here because two of the Lamb's nodes
+        // make a ward's ABSORPTION visible in its own right -- Mending Fleece
+        // T3 heals the wearer when a ward is spent, and the engine pays wool
+        // for having been warded at all -- and neither is inferable from the
+        // damage figure afterwards.
         public readonly struct WardOutcome
         {
+            // What is left to take off health once the pool has eaten what it
+            // can.
             public readonly int Damage;
 
             // Who put the ward there, or null if there was no ward. Non-null
-            // even when the ward SURVIVED the hit (The Golden Fleece), because
-            // the question the engine asks is "was this combatant warded when
-            // it was struck", not "did something break".
+            // even when the pool SURVIVED the hit, because the question the
+            // engine asks is "was this combatant warded when it was struck",
+            // not "did something break".
             public readonly CombatantState WardedBy;
 
-            // How much the wearer was healed by the ward breaking.
+            // How much the wearer was healed by the pool being emptied.
             public readonly int Healed;
 
-            public WardOutcome(int damage, CombatantState wardedBy, int healed)
+            // How many points the pool took off this hit.
+            public readonly int Absorbed;
+
+            // Whether this hit emptied the pool, so the ward is gone.
+            public readonly bool Broke;
+
+            public WardOutcome(int damage, CombatantState wardedBy, int healed, int absorbed, bool broke)
             {
                 Damage = damage;
                 WardedBy = wardedBy;
                 Healed = healed;
+                Absorbed = absorbed;
+                Broke = broke;
             }
         }
 
+        // SPENDS SHIELD POINTS, and removes the ward when the pool runs out.
+        //
+        // Non-positive damage does not touch it -- nothing actually hit the
+        // shield, so there is nothing to spend on it.
         public static WardOutcome ConsumeWard(CombatantState target, int damage)
         {
             if (target == null || damage <= 0)
             {
-                return new WardOutcome(damage, null, 0);
+                return new WardOutcome(damage, null, 0, 0, false);
             }
 
             var ward = target.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
             if (ward == null)
             {
-                return new WardOutcome(damage, null, 0);
+                return new WardOutcome(damage, null, 0, 0, false);
             }
 
-            // Whose talents decide what this ward does on the way out — the
+            // Whose talents decide what this ward does on the way out -- the
             // one who CAST it, not the one wearing it. A ward Shawn put on the
             // turtle heals by Shawn's Mending Fleece, and the turtle has no
             // say in it. Null for the Magical Shield relic's own shield, which
@@ -316,13 +414,24 @@ namespace PrincesPalace.Domain.Combat
             var caster = ward.Source;
             var casterTalents = caster?.Talents ?? TalentEffectSet.Empty;
 
-            int reduced = damage - (damage * ward.Magnitude / 100);
+            int absorbed = Math.Min(ward.Magnitude, damage);
+            ward.Magnitude -= absorbed;
+            int through = damage - absorbed;
 
-            // The Golden Fleece. A ward that never pops still counted as a
-            // ward for this hit, so WardedBy is reported either way.
-            if (casterTalents.Has(TalentEffectType.WardsNeverExpire))
+            // STILL STANDING. A partly-spent pool is the whole point of the
+            // shield model: a small hit costs the ward what it was worth and
+            // no more.
+            //
+            // The Golden Fleece does NOT get a branch here any more. It used
+            // to mean "the ward never pops", which was the only thing
+            // "permanent" could mean while a ward was one hit's worth of
+            // percentage; against a pool that reading is literal immunity. It
+            // means what it says on the tin instead -- the ward never times
+            // out, because ApplyWard is handed PermanentWardTurns -- and the
+            // pool drains like everybody else's.
+            if (ward.Magnitude > 0)
             {
-                return new WardOutcome(reduced, caster, 0);
+                return new WardOutcome(through, caster, 0, absorbed, false);
             }
 
             target.Statuses.Remove(ward);
@@ -336,12 +445,12 @@ namespace PrincesPalace.Domain.Combat
                 healed = target.CurrentHealth - before;
             }
 
-            return new WardOutcome(reduced, caster, healed);
+            return new WardOutcome(through, caster, healed, absorbed, true);
         }
 
         // Who has warded this combatant, or null. The engine's question,
-        // asked BEFORE a hit resolves — by the time damage has landed the
-        // ward has usually been spent and the answer is gone.
+        // asked BEFORE a hit resolves -- by the time damage has landed the
+        // pool may have been emptied and the answer is gone.
         public static CombatantState WardedBy(CombatantState combatant)
         {
             if (combatant == null)
@@ -369,9 +478,11 @@ namespace PrincesPalace.Domain.Combat
         // how much more it is worth. Zero for the overwhelming majority of
         // swings, which carry no gift.
         //
-        // Consume-and-remove rather than a passive multiplier, the same shape
-        // Shielded uses and for the same reason: "your next attack" is one
-        // swing whenever it arrives, not a window that decays.
+        // Consume-and-remove rather than a passive multiplier: "your next
+        // attack" is one swing whenever it arrives, not a window that decays.
+        // This is the shape Shielded used to share and no longer does -- a
+        // ward is a pool that drains and runs a real clock, a gift is still
+        // all-or-nothing on one swing.
         public static int ConsumeEmpowerment(CombatantState attacker)
         {
             if (attacker == null)

@@ -145,7 +145,7 @@ namespace PrincesPalace.Domain.Combat
                     return $"{Keyword($"-{effect.Magnitude}%")} next skill cost after a hit";
 
                 case ModifierEffectType.ManaToWardOnTurnStartPercent:
-                    return $"{Keyword($"{RatePercent(FightTuning.RunicWardConversionRate)}%")} unspent mana -> Ward each turn";
+                    return $"{Keyword($"{RatePercent(FightTuning.RunicWardConversionRate)}%")} of unspent mana as shield each turn";
 
                 case ModifierEffectType.FortunateFavorBonusFlat:
                     return $"{Keyword($"+{effect.Magnitude}")} Favor";

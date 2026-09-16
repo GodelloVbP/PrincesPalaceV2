@@ -198,9 +198,10 @@ namespace PrincesPalace.Domain.Combat
         NextSkillManaDiscountPercent,
 
         // Runic's mana->Ward conversion: at the start of the wearer's own
-        // turn, unspent mana becomes a Shielded (Ward) status — reuses
-        // StatusEffectType.Shielded + StatusEffects.Apply, the exact status
-        // the Magical Shield relic already grants. A FLAG, like
+        // turn, unspent mana becomes shield points — reuses
+        // StatusEffectType.Shielded + StatusEffects.ApplyWard, the exact
+        // status the Magical Shield relic already grants, at a quarter of a
+        // point per point of mana. A FLAG, like
         // GuaranteedFirstAction above: Magnitude is ignored, and the
         // conversion RATE is a fixed, deliberately conservative constant
         // (FightTuning.RunicWardConversionRate) rather than an authored

@@ -56,6 +56,13 @@ namespace PrincesPalace.Domain.Content
         public int PercentOfMaxHealthPerPoint;
         public bool FreeAction;
 
+        // The two a Ward alone reads -- see RawSkillEntry's own headers.
+        // WardTurns is already resolved here: 0 on the raw row becomes
+        // FightTuning.DefaultWardTurns, so nothing downstream has to know
+        // what an unauthored duration means.
+        public int PercentOfCasterMaxHealth;
+        public int WardTurns;
+
         public int Power;
         public int FlatAmount;
         public bool IgnoresDefense;
@@ -372,12 +379,17 @@ namespace PrincesPalace.Domain.Content
             // APPENDED LAST OF ALL AGAIN (phase 4), same positional-argument
             // reason every block above gives.
             int resourceSpendCap = 0, bool spendsAllPrimary = false, int percentOfMaxHealthPerPoint = 0,
-            bool freeAction = false)
+            bool freeAction = false,
+            // APPENDED LAST OF ALL AGAIN (the shield model, phase 5), for the
+            // same positional-argument reason every block above gives.
+            int percentOfCasterMaxHealth = 0, int wardTurns = 0)
         {
             ResourceSpendCap = resourceSpendCap;
             SpendsAllPrimary = spendsAllPrimary;
             PercentOfMaxHealthPerPoint = percentOfMaxHealthPerPoint;
             FreeAction = freeAction;
+            PercentOfCasterMaxHealth = percentOfCasterMaxHealth;
+            WardTurns = wardTurns > 0 ? wardTurns : FightTuning.DefaultWardTurns;
             Placeholder = placeholder;
             PlaceholderNote = placeholderNote ?? "";
             Elements = elements ?? Array.Empty<ElementChoice>();

@@ -15,12 +15,12 @@ namespace PrincesPalace.Domain.Combat
     //
     // Shielded is the sixth, added for the Magical Shield relic, and it did
     // NOT fit any of the five existing shapes. Protect looked closest but is
-    // wrong on purpose: Protect decays by TURN COUNT and reads passively as
-    // one more multiplier every hit takes; Magical Shield is spent by the
-    // very next hit REGARDLESS of how many turns that takes to arrive, which
-    // needed its own consume-and-remove call (StatusEffects.
-    // ConsumeShieldedReduction) rather than another line in
-    // DamageTakenMultiplier.
+    // wrong on purpose: Protect reads passively as one more multiplier every
+    // hit takes, where a ward is a QUANTITY that damage is taken out of and
+    // that runs out. That needed its own spend-and-remove call
+    // (StatusEffects.ConsumeWard) rather than another line in
+    // DamageTakenMultiplier -- and it still does, now more than ever: a pool
+    // has a number left in it, which no multiplier can express.
     public enum StatusEffectType
     {
         // Magnitude damage at the start of each of the holder's own turns.
@@ -41,12 +41,22 @@ namespace PrincesPalace.Domain.Combat
         // gone — spent, not decremented on a timer.
         Stun,
 
-        // The next hit this combatant takes is reduced by Magnitude percent,
-        // then the status is gone — spent on that ONE hit, not decremented
-        // by turn count. TurnsRemaining is set generously high when this is
-        // applied (see StatusEffects.Apply's caller) precisely so ordinary
-        // turn-start ticking never expires it first; only
-        // ConsumeShieldedReduction ever removes it.
+        // A WARD: a pool of shield POINTS, carried on Magnitude. Incoming
+        // damage comes off the pool before it comes off health, the pool
+        // keeps whatever a small hit did not spend, and the status is removed
+        // when it reaches zero. TurnsRemaining is a real duration counted
+        // down by StatusEffects.Tick like every other status's -- two of the
+        // wearer's own turns by default (FightTuning.DefaultWardTurns), or
+        // StatusEffects.PermanentWardTurns for The Golden Fleece and the
+        // relic wards.
+        //
+        // IT WAS A PERCENTAGE until 2026-09-16 (AUDIT #152) -- "the next hit
+        // is Magnitude percent softer", spent whole by that hit, applied at
+        // 999 turns so no clock could take it first. StatusEffects' own WARDS
+        // header carries the model and the order a hit meets it in;
+        // StatusEffects.ApplyWard is the only way to put one up, and
+        // StatusEffects.Apply throws on this member precisely so the two
+        // readings can never coexist.
         Shielded,
 
         // The holder's next attack must target whoever provoked them

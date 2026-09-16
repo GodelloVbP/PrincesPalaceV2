@@ -86,6 +86,31 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Percent of the caster's own max health added to a heal per point of the pool actually spent; 0 means none.")]
         public int percentOfMaxHealthPerPoint;
 
+        // A FLAT percent of the CASTER'S own max health, in shield points,
+        // added to a Ward. Bjorn's Bulwark is 30: a shield worth roughly
+        // three enemy hits at the start of a run, and still worth three of
+        // them once his bar and theirs have both grown.
+        //
+        // NOT percentOfMaxHealthPerPoint above. That one multiplies by the
+        // pool actually spent, which is right for Second Wind ("a hundred
+        // Fury is a full heal") and wrong for Bulwark, whose fifty Fury is a
+        // PRICE rather than a dial. Read only by Ward; 0, the default, is
+        // every other skill.
+        [ContentDoc("Percent of the caster's own max health added to a Ward's shield pool, flat; 0 means none. Ward only.")]
+        public int percentOfCasterMaxHealth;
+
+        // How many of the WEARER'S own turns a Ward stands before it times
+        // out. 0, the default, means the house rule -- FightTuning.
+        // DefaultWardTurns, two of them.
+        //
+        // A ward used to be applied at 999 turns by every one of its callers,
+        // because it was spent by the first hit that landed and a clock would
+        // only ever have taken it away early. A shield pool survives small
+        // hits, so it needs a real duration or a single Bulwark would stand
+        // for the whole dungeon. Meaningless on anything but a Ward.
+        [ContentDoc("How many of the wearer's own turns a Ward stands before expiring; 0 means the default of two.")]
+        public int wardTurns;
+
         // A CAST THAT DOES NOT END THE TURN -- Shawn's Tuck In, and the
         // Fragile Lamb's Fleece Ward T3 talent, which sets the same flag
         // rather than being a second rule.

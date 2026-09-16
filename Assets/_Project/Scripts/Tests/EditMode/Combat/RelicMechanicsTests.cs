@@ -470,11 +470,12 @@ namespace PrincesPalace.Domain.Tests
 
             session.NoteDeliberateMoveForTest(foe1, hero); // hero's cast moved foe1
 
-            // "Ward" reuses this game's existing Shielded status -- spent on
-            // the NEXT hit taken, not a passive multiplier -- see
+            // "Ward" reuses this game's one ward -- a pool of shield points
+            // damage is taken out of, not a passive multiplier -- see
             // NoteDeliberateMove's own comment.
-            int reduced = StatusEffects.ConsumeShieldedReduction(hero, 100);
-            Assert.AreEqual(85, reduced, "15% off the next hit taken");
+            Assert.AreEqual(10, StatusEffects.WardPoints(hero), "the buckler's own pool");
+            Assert.AreEqual(90, StatusEffects.ConsumeWard(hero, 100).Damage,
+                "10 shield points off the next hit taken");
         }
 
         [Test]
@@ -483,7 +484,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, hero, foe1, foe2) = FightWithSpeed(RelicEffect.SparringBuckler);
 
             session.NoteDeliberateMoveForTest(foe1, hero);
-            StatusEffects.ConsumeShieldedReduction(hero, 999); // spend it
+            StatusEffects.ConsumeWard(hero, 999); // spend it
 
             session.NoteDeliberateMoveForTest(foe2, hero); // same turn, second trigger
 

@@ -372,18 +372,19 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             // Sparring Buckler: any action of the acting character's that
-            // changes ANY position on the field, once per turn. "Ward" reuses this game's existing
-            // Shielded status (a percent reduction consumed on the next
-            // hit, the same shape Magical Shield and Fleece Ward already
-            // use) rather than a flat absorb pool -- there is no such pool
-            // anywhere else in this vocabulary, and inventing one for a
-            // single relic would be a second system claiming the word
-            // "ward" already means something specific here.
+            // changes ANY position on the field, once per turn. "Ward" is
+            // this game's one ward -- StatusEffectType.Shielded, a pool of
+            // shield points (StatusEffects' own WARDS header) -- and the
+            // relic authors a small one rather than a second system.
+            //
+            // Silent when a deeper pool refuses it, same as Magical Shield
+            // and for the same reason: it is free and automatic, so a line
+            // every turn saying it did nothing would be noise.
             if (actingCharacter != null && HasRelic(actingCharacter, RelicEffect.SparringBuckler)
-                && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
+                && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey)
+                && StatusEffects.ApplyWard(actingCharacter.Statuses, FightTuning.SparringBucklerWardPoints,
+                    FightTuning.MagicalShieldDurationTurns, actingCharacter))
             {
-                StatusEffects.Apply(actingCharacter.Statuses, StatusEffectType.Shielded,
-                    FightTuning.SparringBucklerWardPercent, FightTuning.MagicalShieldDurationTurns, actingCharacter);
                 AppendMessage($"{actingCharacter.Name}'s buckler comes up - a ward from the footwork.");
             }
         }

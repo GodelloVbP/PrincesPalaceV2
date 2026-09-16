@@ -32,7 +32,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // status reads as "until it is used" rather than a countdown -- see
         // section 2. Every sentinel this game actually authors
         // (Marks.MarkDurationTurns 99, FightTuning.MagicalShieldDurationTurns
-        // 99, the Fragile Lamb's ward at 999) clears this with room to
+        // 99, StatusEffects.PermanentWardTurns 999 for The Golden Fleece)
+        // clears this with room to
         // spare; every genuine authored duration (content's statusDuration
         // tops out at 3, IceFingernailStackTurns at 5) sits nowhere near it.
         // StatusHudCoverageTests pins both sides of that gap so a future
@@ -46,6 +47,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private static string DurationPhrase(int turnsRemaining) =>
             turnsRemaining < SentinelTurns ? Plural(turnsRemaining, "turn") : "until it is used";
+
+        // A WARD'S sentinel reads differently, and it is the only status
+        // whose does. "Until it is used" was exactly right while a ward was
+        // one hit's worth of percentage spent whole by the next blow; a
+        // shield pool is spent gradually, so a permanent one (The Golden
+        // Fleece, and the two relic wards) stands until something empties it
+        // rather than until it is "used".
+        private static string WardDurationPhrase(int turnsRemaining) =>
+            turnsRemaining < SentinelTurns ? Plural(turnsRemaining, "turn") : "for the rest of the fight";
 
         // Speed's own duration reads differently: TurnsLeft < 0 means "for
         // the rest of the fight" (FightSession.SpeedBuffs' own convention),
@@ -254,8 +264,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     return $"Vulnerable -- {Wrap(positive, $"{status.Magnitude}% more damage taken")}, {duration}";
                 case StatusEffectType.Stun:
                     return $"Stunned -- {Wrap(positive, "turn skipped")}, {duration}";
+                // THE POOL, not a percentage: Magnitude is how many shield
+                // points are LEFT, which is also what the badge counts (see
+                // CounterFor's caller in RowFor).
                 case StatusEffectType.Shielded:
-                    return $"Shielded -- {Wrap(positive, $"next hit taken reduced {status.Magnitude}%")}, {duration}";
+                    return $"Shielded -- {Wrap(positive, $"{status.Magnitude} shield")}, "
+                           + WardDurationPhrase(status.TurnsRemaining);
                 case StatusEffectType.Provoked:
                     return $"Provoked -- {Wrap(positive, $"must attack its provoker, for {status.Magnitude}% less damage to them")}, {duration}";
                 case StatusEffectType.Empowered:
@@ -295,13 +309,27 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- assembling a row --------------------------------------------------
 
+        // A WARD'S BADGE COUNTS POINTS, NOT TURNS, and it is the one row that
+        // does. Every other badge's number answers "how much longer"; a
+        // shield's answers "how much is left", which is the question a player
+        // deciding whether to eat the next hit is actually asking -- and the
+        // only one whose answer moves between two of the wearer's turns. The
+        // duration is still in the tooltip.
+        //
+        // No sentinel branch: a pool is never 90-odd points by accident, and
+        // a ward with points left always has a number worth drawing.
+        private static int CounterForBadge(ActiveStatus status) =>
+            status.Type == StatusEffectType.Shielded
+                ? status.Magnitude
+                : CounterFor(status.TurnsRemaining);
+
         public static FightHudModel.StatusRow RowFor(ActiveStatus status) =>
             new FightHudModel.StatusRow(
                 CodeFor(status.Type),
                 SlugFor(status.Type),
                 TooltipFor(status),
                 IsPositive(status.Type),
-                CounterFor(status.TurnsRemaining),
+                CounterForBadge(status),
                 SortKeyFor(status.Type));
 
         // A running transformation as one badge. `displayName` is the form's
