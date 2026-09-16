@@ -83,11 +83,12 @@ namespace PrincesPalace.Domain.Progression
         // IT OBEYS THE NODE RULES AS WELL AS THE FORMAT. The kinds
         // alternate Bump/Choice across the combat stretch so no two
         // neighbours share one, the two utilities sit at 8 and 25 where the
-        // real tracks put them, and 31-40 are Identity. Nothing calls
-        // RewardTrackNodeValidation on it today (it never passes through
-        // the resolver), but a default that could not survive the
-        // validator would be a trap for whoever first authors a track by
-        // copying it.
+        // real tracks put them, and 31-40 are Identity. The default never
+        // passes through the resolver at runtime, but
+        // RewardTrackDefinitionTests.TheDefaultTrackSatisfiesTheNodeRules
+        // calls RewardTrackNodeValidation on it directly, because a default
+        // that could not survive the validator would be a trap for whoever
+        // first authors a track by copying it.
         //
         // Every character on the roster has a track, so this is reached
         // only by an id no row names -- it is still the rule, not
@@ -278,6 +279,31 @@ namespace PrincesPalace.Domain.Progression
             return skills;
         }
 
+        // ONE LOOP, THREE PUBLIC READS. CollectedSkillCostDelta/FlatDelta/
+        // PowerDelta each summed an identical walk over _entries with only
+        // the reward kind and an optional resource filter differing --
+        // extracted here rather than left as three copies, per CODE_STANDARDS
+        // §5 ("a long function is a problem when a different paragraph
+        // changes for a different reason each time"; this was the inverse,
+        // the same paragraph typed three times). `resource` is null for the
+        // two kinds (SkillFlatDelta, SkillPowerDelta) that carry no resource
+        // filter at all -- see TrackReward's own headers for why only
+        // SkillCostDelta needs one.
+        private int SumSkillDelta(TrackReward reward, string skillId, int throughLevel, TrackResourceTarget? resource)
+        {
+            int total = 0;
+            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
+            {
+                var entry = _entries[level];
+                if (entry.Reward != reward || entry.SkillId != skillId) continue;
+                if (resource.HasValue && entry.Resource != resource.Value) continue;
+
+                total += entry.Amount;
+            }
+
+            return total;
+        }
+
         // PHASE 3: how much of a SkillCostDelta entry naming `skillId` and
         // `resource` has been collected -- SUMMED, unlike the SET-style
         // reads UnlockedAmount answers (see TrackReward.SkillCostDelta's own
@@ -285,18 +311,7 @@ namespace PrincesPalace.Domain.Progression
         public int CollectedSkillCostDelta(string skillId, TrackResourceTarget resource, int claimedLevel)
         {
             int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
-
-            int total = 0;
-            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
-            {
-                var entry = _entries[level];
-                if (entry.Reward == TrackReward.SkillCostDelta && entry.SkillId == skillId && entry.Resource == resource)
-                {
-                    total += entry.Amount;
-                }
-            }
-
-            return total;
+            return SumSkillDelta(TrackReward.SkillCostDelta, skillId, throughLevel, resource);
         }
 
         // PHASE 3: how much of a SkillFlatDelta entry naming `skillId` has
@@ -304,18 +319,7 @@ namespace PrincesPalace.Domain.Progression
         public int CollectedSkillFlatDelta(string skillId, int claimedLevel)
         {
             int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
-
-            int total = 0;
-            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
-            {
-                var entry = _entries[level];
-                if (entry.Reward == TrackReward.SkillFlatDelta && entry.SkillId == skillId)
-                {
-                    total += entry.Amount;
-                }
-            }
-
-            return total;
+            return SumSkillDelta(TrackReward.SkillFlatDelta, skillId, throughLevel, null);
         }
 
         // PHASE 4: how much of a SkillPowerDelta entry naming `skillId` has
@@ -325,18 +329,7 @@ namespace PrincesPalace.Domain.Progression
         public int CollectedSkillPowerDelta(string skillId, int claimedLevel)
         {
             int throughLevel = claimedLevel > RewardTrack.MaxLevel ? RewardTrack.MaxLevel : claimedLevel;
-
-            int total = 0;
-            for (int level = RewardTrack.StartingLevel; level <= throughLevel; level++)
-            {
-                var entry = _entries[level];
-                if (entry.Reward == TrackReward.SkillPowerDelta && entry.SkillId == skillId)
-                {
-                    total += entry.Amount;
-                }
-            }
-
-            return total;
+            return SumSkillDelta(TrackReward.SkillPowerDelta, skillId, throughLevel, null);
         }
 
         // PHASE 3: every Identity entry collected at or below claimedLevel,
