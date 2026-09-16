@@ -466,7 +466,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (raw.ignoresDefense && !(effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll))
+            if (raw.ignoresDefense && !SkillEffects.IsDamagePipeline(effect))
             {
                 error = $"{label}: ignoresDefense only means anything for a damage effect, not {effect}.";
                 return false;
@@ -640,7 +640,7 @@ namespace PrincesPalace.Domain.Content
             var authored = raw.poolTiers;
             if (authored == null || authored.Length == 0) return true;
 
-            bool tieredEffect = effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
+            bool tieredEffect = SkillEffects.IsDamagePipeline(effect);
             if (!tieredEffect || (raw.damageInstances != null && raw.damageInstances.Length > 0))
             {
                 error = $"{label}: poolTiers only means anything on a DamageSingle or DamageAll skill with no fixed " +

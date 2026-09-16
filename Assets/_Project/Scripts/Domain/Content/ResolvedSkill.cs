@@ -211,7 +211,7 @@ namespace PrincesPalace.Domain.Content
         // FightHudModel's SCALES/POWER rows already use (HasNoPreviewablePower/
         // ScalingLabelForSkill), repeated here rather than duplicated a third
         // time for the damage-type row those two rows sit beside.
-        public bool IsDamaging => Effect == SkillEffect.DamageSingle || Effect == SkillEffect.DamageAll;
+        public bool IsDamaging => SkillEffects.IsDamagePipeline(Effect);
 
         // The damage type THIS SKILL authors directly -- only ever answerable
         // for a fixed-damage (multi-packet) spell, whose packets already

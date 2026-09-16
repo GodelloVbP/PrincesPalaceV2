@@ -113,6 +113,16 @@ namespace PrincesPalace.Domain.Combat
         HealSingle,
     }
 
+    // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier
+    // multiplier, the defense-ignoring flag and ResolvedSkill.IsDamaging all
+    // mean by "damaging" cannot list DamageSingle/DamageAll separately and
+    // quietly disagree the next time a third damage effect is added.
+    public static class SkillEffects
+    {
+        public static bool IsDamagePipeline(SkillEffect effect) =>
+            effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
+    }
+
     // Who a skill is aimed at. Kept separate from the effect because the
     // targeting question the UI has to answer ("do I need the player to
     // click an enemy?") is not the same as the resolution question.
