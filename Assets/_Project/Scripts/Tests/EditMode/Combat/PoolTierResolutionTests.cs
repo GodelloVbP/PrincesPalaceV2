@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
@@ -108,6 +110,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("Slam", PoolTierResolution.Label("Slam", PoolTierResolution.Pick(Fury(0), SlamTiers)));
             Assert.AreEqual("Slam x2", PoolTierResolution.Label("Slam", PoolTierResolution.Pick(Fury(50), SlamTiers)));
             Assert.AreEqual("Slam x4", PoolTierResolution.Label("Slam", PoolTierResolution.Pick(Fury(100), SlamTiers)));
+        }
+
+        // INVARIANT CULTURE, PROVEN RATHER THAN ASSUMED. nl-NL formats a
+        // fraction with a comma ("1,5"), which is exactly what ":0.#" without
+        // an explicit culture would have printed here -- "Slam x1,5" instead
+        // of "Slam x1.5". Restored in finally so a failure mid-test cannot
+        // leave a later test running under nl-NL.
+        [Test]
+        public void Label_FormatsTheMultiplierWithInvariantCulture_RegardlessOfCurrentCulture()
+        {
+            var halfAgainTiers = new[] { new ResolvedPoolTier(1.0f, 1.5f, shake: 0.6f) };
+
+            var original = Thread.CurrentThread.CurrentCulture;
+            try
+            {
+                Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("nl-NL");
+
+                var result = PoolTierResolution.Pick(Fury(100), halfAgainTiers);
+                Assert.AreEqual("Slam x1.5", PoolTierResolution.Label("Slam", result));
+            }
+            finally
+            {
+                Thread.CurrentThread.CurrentCulture = original;
+            }
         }
     }
 

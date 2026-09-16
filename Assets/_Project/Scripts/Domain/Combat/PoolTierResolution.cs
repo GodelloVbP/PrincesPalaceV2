@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
@@ -86,7 +87,14 @@ namespace PrincesPalace.Domain.Combat
         // ToString() so an authored whole multiplier (2, 4) reads as "x2" and
         // not "x2.0" -- every multiplier shipped today is a whole number, and
         // a fractional one (a future half-again tier) still prints cleanly.
+        //
+        // InvariantCulture -- ":0.#" reads the CURRENT culture otherwise, and
+        // a comma-decimal locale (nl-NL) would print "x1,5" instead of
+        // "x1.5" for a fractional tier. Same convention BalanceBotRunner's
+        // own number formatting already follows.
         public static string Label(string displayName, Result result) =>
-            result.Fired ? $"{displayName} x{result.Tier.DamageMultiplier:0.#}" : displayName;
+            result.Fired
+                ? $"{displayName} x{result.Tier.DamageMultiplier.ToString("0.#", CultureInfo.InvariantCulture)}"
+                : displayName;
     }
 }
