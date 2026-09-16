@@ -186,6 +186,12 @@ namespace PrincesPalace.PlayModeTests
             // MovingFocusAtTargetDepthCyclesTheHoveredLivingEnemy, and the
             // same narrow claim: one step per call, through the cursor the
             // confirm actually reads.
+            //
+            // LITERAL INDICES, not just "changed" -- WrapFromNoHover's fix
+            // (FightController.Input.cs) made a first "next" press land on
+            // pickable[0] rather than pickable[1]. All three plates are
+            // pickable for this fixture's Ward (AWardOpensThePartyRackAnd-
+            // ClosesTheEnemyOne), so pickable == [0, 1, 2] in plate order.
             yield return LoadFightWithAWard();
             yield return OpenTheAllyPick();
 
@@ -195,8 +201,24 @@ namespace PrincesPalace.PlayModeTests
             _fight.MoveFocus(1);
             int second = _fight.HoveredAllyIndexForTest;
 
-            Assert.AreNotEqual(-1, first, "the first move should hover a plate, not leave it unset");
-            Assert.AreNotEqual(first, second, "a second move should hover a DIFFERENT plate");
+            Assert.AreEqual(0, first, "a first \"next\" press from no hover lands on the first pickable plate");
+            Assert.AreEqual(1, second, "a second \"next\" press steps to the next pickable plate");
+        }
+
+        // THE OTHER HALF OF THE SAME FIX: a first "previous" press from no
+        // hover lands on the LAST pickable plate rather than the first --
+        // WrapFromNoHover(-1, -1, count) == count - 1. Pinned alongside
+        // MovingFocusAtTargetDepthCyclesTheHoveredLivingAlly's "next" case so
+        // the two directions cannot silently drift apart.
+        [UnityTest]
+        public IEnumerator AFirstPreviousPressAtTargetDepthLandsOnTheLastPickableAlly()
+        {
+            yield return LoadFightWithAWard();
+            yield return OpenTheAllyPick();
+
+            _fight.MoveFocus(-1);
+            Assert.AreEqual(2, _fight.HoveredAllyIndexForTest,
+                "a first \"previous\" press from no hover lands on the last pickable plate, index 2 of 3");
         }
 
         [UnityTest]

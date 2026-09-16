@@ -113,14 +113,52 @@ namespace PrincesPalace.PlayModeTests
             // actually moves which enemy is hovered, one step per call,
             // through the exact hover state RefreshInitiative's ghost
             // preview and the reticle's hover-brighten already read.
+            //
+            // LITERAL INDICES, not just "changed" -- WrapFromNoHover's fix
+            // (FightController.Input.cs) made a first "next" press land on
+            // living[0] rather than living[1], so this pins the corrected
+            // value instead of only proving movement happened.
             _fight.MoveFocus(1);
             int first = _fight.HoveredEnemyIndexForTest;
 
             _fight.MoveFocus(1);
             int second = _fight.HoveredEnemyIndexForTest;
 
-            Assert.AreNotEqual(-1, first, "the first move should hover a living enemy, not leave it unset");
-            Assert.AreNotEqual(first, second, "a second move should hover a DIFFERENT enemy, not repeat the first");
+            Assert.AreEqual(0, first, "a first \"next\" press from no hover lands on the first living enemy");
+            Assert.AreEqual(1, second, "a second \"next\" press steps to the next living enemy");
+        }
+
+        // THE OTHER HALF OF THE SAME FIX: a first "previous" press from no
+        // hover lands on the LAST living enemy rather than the first --
+        // WrapFromNoHover(-1, -1, count) == count - 1, which this pins as a
+        // literal alongside MovingFocusAtTargetDepthCyclesTheHoveredLivingEnemy's
+        // "next" case so the two directions cannot silently drift apart.
+        [UnityTest]
+        public IEnumerator AFirstPreviousPressAtTargetDepthLandsOnTheLastLivingEnemy()
+        {
+            yield return LoadFight();
+
+            var hero = ContentDatabase.Characters.FirstOrDefault(c => c != null);
+            var enemyIds = ContentDatabase.Enemies.Where(e => e != null).Take(2).Select(e => e.id).ToList();
+            Assert.IsNotNull(hero, "no characters in content");
+            Assert.GreaterOrEqual(enemyIds.Count, 2, "need at least two enemies to prove target cycling");
+
+            var built = FightEncounterAdapter.Build(
+                new List<string> { hero.id }, enemyIds, new Domain.Rng.SeededRandom(3));
+
+            built.Session.Begin();
+            _fight.Bind(built.Session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            for (int i = 0; i < 60 && !built.Session.IsPlayerTurn; i++) yield return null;
+            Assert.IsTrue(built.Session.IsPlayerTurn, "never reached a player turn to test input against");
+
+            _fight.ConfirmFocus();
+            yield return null;
+
+            _fight.MoveFocus(-1);
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "a first \"previous\" press from no hover lands on the last living enemy, index 1 of 2");
         }
     }
 }

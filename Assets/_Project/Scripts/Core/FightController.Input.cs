@@ -1222,6 +1222,20 @@ namespace PrincesPalace
 
         public static int Wrap(int value, int count) => count <= 0 ? 0 : ((value % count) + count) % count;
 
+        // THE FIRST STICK PRESS FROM NO HOVER, on either target rack. Folding
+        // a virtual "at 0" through Wrap(at + delta, count) -- what both racks
+        // did before this helper existed -- happened to give "previous" the
+        // right answer by accident (Wrap(-1, count) == count-1, the last
+        // index) but gave "next" the wrong one: Wrap(0 + 1, count) == 1,
+        // skipping index 0 entirely. ConfirmFocus already treats no-hover as
+        // index 0 (ally and enemy racks below), so ":next" landing on 1
+        // disagreed with what confirming it unhovered would have picked.
+        // ONE HELPER for both racks, so a future third rack cannot drift back
+        // into the two independently-reasoned cases this replaces -- see
+        // FightGamepadNavigationTests for the literal indices this pins.
+        public static int WrapFromNoHover(int at, int delta, int count) =>
+            at < 0 ? (delta > 0 ? 0 : count - 1) : Wrap(at + delta, count);
+
         // internal, not private -- legacy Input cannot be simulated
         // headlessly (see PollGamepadNavigation's own comment), so a test
         // that had to press a stick to reach this could not exist. Tests
@@ -1269,7 +1283,7 @@ namespace PrincesPalace
                         if (allies.Count == 0) return;
 
                         int atAlly = allies.IndexOf(_hoveredAllyIndex);
-                        OnAllyHovered(allies[Wrap((atAlly < 0 ? 0 : atAlly) + delta, allies.Count)]);
+                        OnAllyHovered(allies[WrapFromNoHover(atAlly, delta, allies.Count)]);
                         break;
                     }
 
@@ -1282,7 +1296,7 @@ namespace PrincesPalace
 
                     if (living.Count == 0) return;
                     int at = living.IndexOf(_hoveredEnemyIndex);
-                    int next = Wrap((at < 0 ? 0 : at) + delta, living.Count);
+                    int next = WrapFromNoHover(at, delta, living.Count);
                     OnEnemyHovered(living[next]);
                     break;
             }
