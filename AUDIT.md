@@ -2781,23 +2781,4 @@ needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this sa
 
 ### ~~151. Provoke's "bellows at nothing in particular" line cannot be reached~~ - fixed in `399d6c1d`: the owner's call was that the line is dead copy; the `provoked == 0` branch is gone and the reach refusal is the one path; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 152. Wards are a percent of the next hit with no timer; the owner may want absorb pools
-
-Raised 2026-09-15 by phase 5 step 0's retune, from what phase 4 pinned. A ward in this game is
-`StatusEffects.ConsumeWard`'s one line -- `damage - damage * Magnitude / 100` -- spent by the
-first hit that lands, and applied with `FightSession.WardDurationTurns` = 999, so no ward has
-ever expired on a clock. Every authored ward number is therefore a PERCENTAGE off one blow.
-
-`docs/handoffs/progression_v2/PLAN_PROGRESSION_V2.md` §5 was written against a different model:
-an absorb POOL in hit points, drained over "two of the wearer's turns". Step 0 retuned the
-numbers to the model the code has (Tuck In 10% a Wool, Bulwark 50%, Prism Ward a flat 40%)
-rather than building the pool, because replacing the ward model touches every ward in the game
--- the Lamb's whole talent branch, the Magical Shield relic, `placeholder_brawler_ward`,
-`fleece_ward` -- plus the status HUD, which shows a ward as a state and not as a quantity.
-
-**The open question is which model the game wants**, and it is a design call with real
-consequences either way. A percentage is build-agnostic and never reads as wasted, but it cannot
-be partly spent and makes a big hit the best thing to eat. A pool absorbs what it says it
-absorbs, survives small hits, and gives the HUD a number to count down -- and would need a
-duration, which nothing in the ward code has today. If absorb pools are wanted, they are a phase
-of their own, not a number change.
+### ~~152. Wards are a percent of the next hit with no timer; the owner may want absorb pools~~ - fixed in `339ce102`: the owner answered shields; a ward is a pool of shield points on a two-turn clock; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`

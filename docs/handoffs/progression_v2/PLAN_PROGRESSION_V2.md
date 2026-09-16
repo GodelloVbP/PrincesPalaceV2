@@ -1,8 +1,9 @@
 # Progression v2, revision 2
 
-Status: Revision 2.2, 2026-09-15. Supersedes revision 1 (kept beside this file).
+Status: Revision 2.3, 2026-09-16. Supersedes revision 1 (kept beside this file).
 Revision 2.1, 2026-09-15: corrections from phase 1 and phase 2 reports (see CHANGELOG_r2.md addendum).
 Revision 2.2, 2026-09-15: the ward numbers retuned to the percent model phase 4 found in the code (section 5; CHANGELOG_r2.md addendum r2.2).
+Revision 2.3, 2026-09-16: the owner's call on AUDIT #152 -- a ward IS a shield. The percent model is gone, section 5's ward bullets are back to a pool of points on a two-turn clock, and the numbers are shield points (CHANGELOG_r2.md addendum r2.3).
 Model: xp_model.md in this folder, computed by xp_model.py from the live
 content. Every number below traces to it or to the cost table in section 3.
 
@@ -215,11 +216,11 @@ What each bump changes, evaluated with the kit held at that level:
 Capabilities.
 - Shawn 15, Tuck In: phase 1 rejected the automatic absorb (Shear starvation
   41% at baseline to 55% with it, see PHASE1_BOT_REPORT.md). Tuck In is a
-  skill: costs 0 mana, spends up to 4 banked Wool, and cuts the next hit he
-  takes by **10% per Wool spent** -- 40% off at a full four. It costs no mana
-  and does not end the turn (one use per turn). Level 26 raises the ward to
-  15% per Wool, so 60% off at four. It is an Ability-kind node; the
-  ability-then-choice rule holds because 16 is a choice.
+  skill: costs 0 mana, spends up to 4 banked Wool, and puts up a shield of
+  **5 points per Wool spent** -- 20 points at a full four. It costs no mana
+  and does not end the turn (one use per turn). Level 26 raises it to 8 points
+  a Wool, so 32 at four. It is an Ability-kind node; the ability-then-choice
+  rule holds because 16 is a choice.
 - Bjorn 15, Fury opens at 25; 26, opens at 50: the pool's start value for
   fights after collection. Decay, gain and tiers unchanged.
 - Odette 15, spells cost 1 less; 26, 2 less: every mana-costed skill, to a
@@ -241,26 +242,40 @@ Bolt.
   (19 at base 27), tiers as Slam: tier chosen at cast from current Fury,
   spent at cast, gain on attack fires once after the action.
 - Bulwark (Bjorn 20): costs 50 Fury from the primary pool (refused under 50),
-  and cuts the next hit the chosen ally or himself takes by **50%**. Ward
-  rules, as the code actually has them and as phase 4 pinned them: one ward
-  per character, a new ward replaces a smaller one and not a larger one, and a
-  ward is a PERCENT off ONE hit, spent by that hit, with no timer -- every
-  ward is applied at 999 turns, so nothing ever expires on a clock. Revision 2
-  described an absorb POOL measured in hit points and drained over two turns;
-  no such thing exists, and revision 2.2 retunes the numbers to the model
-  rather than building a second one. Whether an absorb pool should replace
-  the percent model is left open as AUDIT #152 -- it is a phase of its own.
+  and puts a shield worth **30% of Bjorn's own max health** on the chosen ally
+  or himself -- 78 points on his authored 260, and still worth about three
+  enemy hits once both bars have grown.
+
+  **The ward rules, in full.** A ward IS A SHIELD: a pool of shield points on
+  one character. Incoming damage comes off the pool first and the remainder
+  off health, so a hit bigger than the pool carries the rest through and a hit
+  smaller than it leaves the pool standing with less in it. It sits after
+  dodge and every defence and before health, and before the signature pool
+  (Wool) where both exist -- `StatusEffects`' own WARDS header states the
+  whole order and is the only place that does. One ward per character: a new
+  ward replaces a smaller or equal pool and is refused against a larger one,
+  with a line saying so; wards never stack. Duration is two of the wearer's
+  own turns by default, authored per row as `wardTurns` and counted down at
+  the wearer's turn start; The Golden Fleece makes the clock permanent, and
+  the pool still drains.
+
+  This is what revision 2 described and what the code had never had. Phase 4
+  found the ward to be a percentage off one hit with a 999-turn duration and
+  pinned it honestly; revision 2.2 retuned the numbers into that model rather
+  than build the pool, and filed the model question as AUDIT #152. The owner
+  answered it on 2026-09-16: shields.
 - Second Wind (Bjorn 30): requires at least 25 Fury, spends all, heals 1% of
   max health per Fury spent; at 100 a full heal.
 - Mend (Odette 20): heals the chosen ally for 20 plus her spell attack (the
   same ScaledAttack on the spell axis that spells use for damage), 6 mana.
   New effect kind HealSingle; today only HealSelf and HealParty exist.
-- Prism Ward (Odette 30): cuts the next hit the chosen ally takes by a flat
-  **40%**, 8 mana. Same ward rules. Flat, and NOT 20 plus spell attack: the
-  number lands in a percentage, and a spell attack that passes 80 late in a
-  career would ward for more than the whole hit -- one ally made immune to one
-  blow, for eight mana, forever. Mend keeps the scaling term one line above
-  because Mend pays in hit points, where scaling is honest.
+- Prism Ward (Odette 30): a shield of **20 points plus her spell attack** on
+  the chosen ally, 8 mana. Same ward rules. The scaling term is back: revision
+  2.2 cut it because the number landed in a percentage and a spell attack past
+  80 would have warded for more than the whole hit -- one ally immune for eight
+  mana, forever. In shield points a spell attack of 90 buys a 110-point pool,
+  which is a big shield and nothing worse, so Prism Ward scales for exactly the
+  reason Mend one line above always did.
 
 Reward types to add: FuryGainOnAttack (sets the pool's gain; talents that add
 gain stack on top; none exist today), FuryStartOfFight (sets the start

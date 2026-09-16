@@ -55,3 +55,33 @@ Addendum r2.2 (2026-09-15, phase 5 step 0 -- the ward retune):
 - Status line bumped to Revision 2.2.
 - Whether wards should become absorb pools at all is the owner's call and is
   filed as AUDIT #152 rather than decided here.
+
+Addendum r2.3 (2026-09-16, the owner's call on AUDIT #152 -- a ward IS a shield):
+- The ward MODEL is replaced, not retuned. StatusEffectType.Shielded's Magnitude
+  is a pool of shield points: damage comes off the pool first and the remainder
+  off health, a hit bigger than the pool carries the rest through, and a hit
+  smaller than it leaves the pool standing with less in it. This is what
+  revision 2 described all along and what the code had never had.
+- Section 5's ward bullets are rewritten to it, and the full ward rules now sit
+  in one place under Bulwark: the absorb order (after dodge and defences,
+  before health, before Wool), one ward per character with the bigger pool
+  winning and the smaller refused out loud, and a real duration of two of the
+  wearer's own turns.
+- The numbers are shield points, sized against phase 1's measured leg-2 enemy
+  hits of 19-23: Brace 60, Fleece Ward 50, Bulwark 30% of the caster's max
+  health (78 on Bjorn's authored 260), Prism Ward 20 plus her spell attack,
+  Tuck In 5 a Wool capped at four (20), with level 26's SkillPowerDelta cut
+  from +5 to +3 so the ceiling reads 32.
+- Prism Ward's spell-attack term comes BACK. r2.2 cut it because a percentage
+  scaling past 100 is an immunity; a 110-point pool is just a big shield.
+- The Golden Fleece is reinterpreted rather than retuned: "wards never expire"
+  meant "wards never break" while a ward was one hit's worth of percentage, and
+  against a pool that is literal immunity. It is the clock that is permanent
+  now; the pool drains like anybody else's. The node's own text ("They last the
+  fight") already read that way.
+- WardReductionPercent keeps its effect id and becomes "+N% shield amount", a
+  multiplier over whatever the skill row authored, rather than a rival figure
+  the larger of which won. Two rows had to start authoring a size at all --
+  fleece_ward and placeholder_brawler_ward carried only their cost, because the
+  talent used to BE the ward.
+- Status line bumped to Revision 2.3.
