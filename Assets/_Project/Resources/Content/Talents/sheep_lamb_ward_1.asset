@@ -16,7 +16,8 @@ MonoBehaviour:
     Id: sheep_lamb_ward_1
     DisplayName: Fleece Ward
     Description: 'Unlocks Ward (2 wool): a shield you can put on anybody, and 40%
-      more of it. Seventy points, spent a hit at a time, for two turns.'
+      more of it. Seventy points, spent a hit at a time, standing for one turn. Shields
+      stack, so a second one adds to the first.'
     CharacterId: sheep
     Column: 1
     Row: 1

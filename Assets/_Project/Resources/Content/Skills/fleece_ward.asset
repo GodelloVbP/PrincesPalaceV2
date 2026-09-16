@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: fleece_ward
     DisplayName: Ward
-    Description: A turn of the fleece, wrapped tight. A 50-point shield, and two
-      turns to spend it.
+    Description: A turn of the fleece, wrapped tight. A 50-point shield, and one
+      turn to spend it.
     CharacterId: sheep
     UnlockLevel: 999
     Effect: 7
@@ -29,7 +29,7 @@ MonoBehaviour:
     PercentOfMaxHealthPerPoint: 0
     FreeAction: 0
     PercentOfCasterMaxHealth: 0
-    WardTurns: 2
+    WardTurns: 1
     Power: 0
     FlatAmount: 50
     IgnoresDefense: 0
