@@ -45,6 +45,13 @@ namespace PrincesPalace.Domain.Content
         public bool HasSignatureResource;
         public string SignatureDisplayName = "";
 
+        // WHETHER THIS CHARACTER'S PRIMARY POOL STARTS EMPTY -- what
+        // FuryStartOfFight's own legality rule turns on (see
+        // TryResolveEntry's rule 6 below). Computed from pools.json rather
+        // than characters.json alone, the same reason PoolOwnership exists:
+        // a fact about the OWNER's pool, not about the skill or the track.
+        public bool PrimaryPoolStartsZero;
+
         // Every element this character can already deal at level 1: their
         // own AttackType, plus the type of every damageInstances entry on a
         // skill authored to them with unlockLevel <= 1. Rule 4.
@@ -87,8 +94,12 @@ namespace PrincesPalace.Domain.Content
         // each need beside it: a change to what a context needs has one
         // place to update instead of three that could quietly drift apart.
         public static Dictionary<string, RewardTrackCharacterContext> BuildAll(
-            IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
+            IReadOnlyList<ResolvedPool> pools, IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
         {
+            var poolById = (pools ?? Array.Empty<ResolvedPool>())
+                .Where(pool => pool != null)
+                .ToDictionary(pool => pool.Id, pool => pool);
+
             var everySkillName = new Dictionary<string, string>();
             var everySkillContext = new Dictionary<string, RewardTrackSkillContext>();
             foreach (var skill in skills)
@@ -123,11 +134,15 @@ namespace PrincesPalace.Domain.Content
                 // identical question over its own build-time skill list.
                 var level1Types = SkillDamageTypes.AtLevel1(character.AttackType, level1Skills);
 
+                bool primaryPoolStartsZero = poolById.TryGetValue(character.PrimaryPoolId ?? "", out var primaryPool)
+                    && primaryPool.StartRule == PoolStartRule.Zero;
+
                 contexts[character.Id] = new RewardTrackCharacterContext
                 {
                     SortOrder = character.SortOrder,
                     HasSignatureResource = character.HasSignatureResource,
                     SignatureDisplayName = character.SignatureDisplayName,
+                    PrimaryPoolStartsZero = primaryPoolStartsZero,
                     Level1DamageTypes = level1Types,
                     SkillDisplayNames = everySkillName,
                     Skills = everySkillContext,
@@ -145,16 +160,18 @@ namespace PrincesPalace.Domain.Content
     // signature-resource rule depends on which character the track belongs
     // to. See docs/PLAN_REWARD_TRACKS.md §4, "the validation rules".
     //
-    // THREE RULES, DOWN FROM FIVE (progression v2 phase 4). Every level from
-    // StartingLevel+1 to MaxLevel carries exactly one entry and no entry
-    // names a level outside that span (rule 1, which now subsumes rule 2's
-    // "the filler counts add up"); a one-shot capability appears at most
-    // once (rule 1's second half); a signature reward is refused on a
-    // character with no signature resource (rule 5). Rules 3 and 4 -- "a
-    // one-shot kind may not be filler", "a filler element must be one the
-    // character can already deal at level 1" -- existed only because a
-    // filler row's LEVEL was computed rather than authored, and both went
-    // with the mix that computed it (see RawTrackLevel's own header).
+    // FOUR RULES, DOWN FROM FIVE AT PHASE 4 AND UP ONE SINCE (the P3 fury
+    // addendum below). Every level from StartingLevel+1 to MaxLevel carries
+    // exactly one entry and no entry names a level outside that span (rule
+    // 1, which now subsumes rule 2's "the filler counts add up"); a
+    // one-shot capability appears at most once (rule 1's second half); a
+    // signature reward is refused on a character with no signature resource
+    // (rule 5); FuryStartOfFight is refused on anyone but a positive-amount,
+    // Zero-start pool owner (rule 6). Rules 3 and 4 -- "a one-shot kind may
+    // not be filler", "a filler element must be one the character can
+    // already deal at level 1" -- existed only because a filler row's LEVEL
+    // was computed rather than authored, and both went with the mix that
+    // computed it (see RawTrackLevel's own header).
     public static class RewardTrackEntryResolver
     {
         public static bool TryResolveAll(IReadOnlyList<RawRewardTrackEntry> entries,
@@ -360,21 +377,6 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // P3 ALIAS: SignatureAbsorbs (the old boolean) is rewritten to
-            // SignatureAbsorbPerPoint at amount 1 the moment it is parsed, so
-            // every rule below (filler-eligibility, the signature-resource
-            // check, node-kind classification) sees exactly one kind rather
-            // than two that mean the same thing. See TrackReward.
-            // SignatureAbsorbPerPoint's own header -- new content should
-            // author SignatureAbsorbPerPoint directly; SignatureAbsorbs is
-            // kept parseable only so old reward_tracks.json content still
-            // resolves.
-            if (reward == TrackReward.SignatureAbsorbs)
-            {
-                reward = TrackReward.SignatureAbsorbPerPoint;
-                amount = 1;
-            }
-
             DamageType? against = null;
             if (!string.IsNullOrWhiteSpace(rawAgainst))
             {
@@ -397,6 +399,28 @@ namespace PrincesPalace.Domain.Content
             if (RewardTrack.IsSignatureReward(reward) && !context.HasSignatureResource)
             {
                 error = $"{trackLabel}, {where}: {rawReward} is authored on a character with no signature resource.";
+                return false;
+            }
+
+            // RULE 6 (P3 fury addendum): FuryStartOfFight only means
+            // anything when the track owner's primary pool actually starts
+            // empty. SkillEntryResolver.cs's own free-turn-one exemption
+            // (zeroStartPoolOwnerIds, derived from PoolOwnership.
+            // ZeroStartOwners) reasons from that same StartRule.Zero fact to
+            // excuse a Zero-start owner's free action from the "costs
+            // nothing, would be spammed" refusal -- an override that could
+            // not raise a full-start pool above its own authored starting
+            // value would either do nothing or contradict the reasoning that
+            // exemption depends on. amount > 0 for the same reason a Bump
+            // floor is never authored at 0: an override that sets the
+            // opening value back to what it already was pays nothing.
+            // Mirrored in ContentDatabase.Validation for a hand-authored
+            // asset that never passed through this resolver.
+            if (reward == TrackReward.FuryStartOfFight && (!context.PrimaryPoolStartsZero || amount <= 0))
+            {
+                error = $"{trackLabel}, {where}: FuryStartOfFight is only legal on a character whose primary pool " +
+                        "starts at Zero, with an amount above 0 -- it may only raise a zero-start pool, because " +
+                        "SkillEntryResolver's free-action exemption reasons from that same start rule.";
                 return false;
             }
 

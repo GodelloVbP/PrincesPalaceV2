@@ -66,9 +66,10 @@ namespace PrincesPalace.Domain.Tests
         // mana, 0 signature, DamageSingle/no packets -- has a flatAmount
         // path) plus a spell (8 mana) -- enough shapes for every
         // cross-catalogue rule below.
-        private static RewardTrackCharacterContext Context(bool hasSignature = true) => new RewardTrackCharacterContext
+        private static RewardTrackCharacterContext Context(bool hasSignature = true, bool primaryPoolStartsZero = false) => new RewardTrackCharacterContext
         {
             HasSignatureResource = hasSignature,
+            PrimaryPoolStartsZero = primaryPoolStartsZero,
             SignatureDisplayName = "Wool",
             Skills = new Dictionary<string, RewardTrackSkillContext>
             {
@@ -219,11 +220,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, entry.Amount);
         }
 
-        // ---- SpellCostDelta / FuryGainOnAttack / FuryStartOfFight / SignatureAbsorbPerPoint ----
-        // These four carry no cross-catalogue rule (SignatureAbsorbPerPoint
+        // ---- SpellCostDelta / FuryGainOnAttack / SignatureAbsorbPerPoint ----
+        // These three carry no cross-catalogue rule (SignatureAbsorbPerPoint
         // aside, covered by rule 5 below) -- they resolve like any other
         // numeric kind, and are pinned at the Domain-arithmetic level
-        // (RewardTrackPhase3Tests) rather than here.
+        // (RewardTrackPhase3Tests) rather than here. FuryStartOfFight moved
+        // out of this list once rule 6 gave it one -- see the three tests
+        // below.
 
         [Test]
         public void SignatureAbsorbPerPoint_OnACharacterWithNoSignatureResource_IsRejected()
@@ -235,15 +238,38 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("no signature resource", string.Join("; ", errors));
         }
 
+        // ---- FuryStartOfFight (rule 6) ----
+
         [Test]
-        public void SignatureAbsorbs_IsAliasedToSignatureAbsorbPerPointAtOne()
+        public void FuryStartOfFight_OnACharacterWhosePrimaryPoolDoesNotStartAtZero_IsRejected()
         {
-            bool ok = TryOne(Level(10, "SignatureAbsorbs"), "sheep", Context(), out var resolved, out var errors);
+            bool ok = TryOne(Level(10, "FuryStartOfFight", amount: 25),
+                "bear", Context(primaryPoolStartsZero: false), out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("starts at Zero", string.Join("; ", errors));
+        }
+
+        [Test]
+        public void FuryStartOfFight_WithAmountNotAboveZero_IsRejected()
+        {
+            bool ok = TryOne(Level(10, "FuryStartOfFight", amount: 0),
+                "bear", Context(primaryPoolStartsZero: true), out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("starts at Zero", string.Join("; ", errors));
+        }
+
+        [Test]
+        public void FuryStartOfFight_OnAZeroStartOwnerWithAPositiveAmount_Resolves()
+        {
+            bool ok = TryOne(Level(10, "FuryStartOfFight", amount: 25),
+                "bear", Context(primaryPoolStartsZero: true), out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             var entry = TenthOf(resolved);
-            Assert.AreEqual(TrackReward.SignatureAbsorbPerPoint, entry.Reward);
-            Assert.AreEqual(1, entry.Amount);
+            Assert.AreEqual(TrackReward.FuryStartOfFight, entry.Reward);
+            Assert.AreEqual(25, entry.Amount);
         }
 
         // ---- Identity ----

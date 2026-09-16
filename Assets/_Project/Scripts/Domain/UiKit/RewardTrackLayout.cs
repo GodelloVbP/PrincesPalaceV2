@@ -1103,7 +1103,6 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.SignatureCapacity: return "CAP";
                 case TrackReward.SignatureGainPerTurn: return "/TURN";
                 case TrackReward.SignatureGainOnDamageTaken: return "HURT";
-                case TrackReward.SignatureAbsorbs: return "SOAK";
 
                 // Damage percentages: one element, or everything she casts.
                 case TrackReward.ElementalDamagePercent: return "ELEM";

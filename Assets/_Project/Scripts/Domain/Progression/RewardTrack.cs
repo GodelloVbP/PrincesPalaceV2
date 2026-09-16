@@ -36,7 +36,6 @@ namespace PrincesPalace.Domain.Progression
         SignatureCapacity,
         SignatureGainPerTurn,
         SignatureGainOnDamageTaken,
-        SignatureAbsorbs,
         ElementalDamagePercent,
         MaxMana,
         ManaRegen,
@@ -95,12 +94,11 @@ namespace PrincesPalace.Domain.Progression
 
         // How much raw damage one point of the collector's signature
         // resource absorbs -- SET, not summed (1, then 2). Replaces the old
-        // boolean SignatureAbsorbs semantics; see IsSignatureReward and the
-        // alias note on SignatureAbsorbs above (RewardTrackEntryResolver
-        // rewrites an authored SignatureAbsorbs entry into this reward at
-        // amount 1, so old content keeps resolving without a second read
-        // path). SignatureAbsorbs itself is deprecated as of this addition
-        // -- author SignatureAbsorbPerPoint directly in new content.
+        // boolean SignatureAbsorbs semantics; see IsSignatureReward.
+        // SignatureAbsorbs itself, and the resolver-side alias that rewrote
+        // an authored SignatureAbsorbs entry into this reward at amount 1,
+        // were removed in a 2026-09-16 code review once reward_tracks.json
+        // no longer authored the old name anywhere.
         SignatureAbsorbPerPoint,
 
         // A cosmetic payload with no combat number: a title, a plate rim, a
@@ -348,7 +346,7 @@ namespace PrincesPalace.Domain.Progression
         // time CollectedTotal re-reads the same levels.
         public static bool IsGrant(TrackReward reward) => reward == TrackReward.StatPoint;
 
-        // A CAPABILITY GRANTED ONCE -- the four kinds whose whole meaning is
+        // A CAPABILITY GRANTED ONCE -- the three kinds whose whole meaning is
         // that they happened.
         //
         // "GRANTED ONCE" IS NOT "HAS NO NUMBER", and this comment said the
@@ -358,25 +356,24 @@ namespace PrincesPalace.Domain.Progression
         // squad to get the ceiling. Author it as 0 -- which is what the old
         // wording told you to do -- and the level-90 milestone silently
         // grants nothing, with no resolver rule refusing it and nothing on
-        // screen saying so. Respec, SignatureAbsorbs and UnlockSkill are the
-        // three that genuinely carry no number; see TrackEntry.Amount, which
-        // has always said "the PARAMETER of the capability where it has one".
-        // These are the four an author may not place as FILLER
-        // (docs/PLAN_REWARD_TRACKS.md §4's rule 3): a filler node's level is
-        // computed rather than authored, and "you learn Lightning Bolt at
-        // whichever level the interleave happens to put it" is not a design
-        // decision anybody made.
+        // screen saying so. Respec and UnlockSkill are the two that
+        // genuinely carry no number; see TrackEntry.Amount, which has always
+        // said "the PARAMETER of the capability where it has one". These are
+        // the three an author may not place as FILLER (docs/PLAN_REWARD_
+        // TRACKS.md §4's rule 3): a filler node's level is computed rather
+        // than authored, and "you learn Lightning Bolt at whichever level
+        // the interleave happens to put it" is not a design decision anybody
+        // made.
         //
         // NOT "every kind but the one grant". A helper with that broader
         // meaning briefly gated the filler check here and refused MaxHealth
         // 10 x15, which is a filler row on BOTH shipped tracks -- MaxHealth
         // is not StatPoint either, so the broader test caught it too and
         // would have left levels 2-24 as nothing but stat points. This list
-        // names the four one-shot kinds explicitly instead.
+        // names the three one-shot kinds explicitly instead.
         public static bool IsOneShotCapability(TrackReward reward) =>
             reward == TrackReward.Respec
             || reward == TrackReward.SecondLife
-            || reward == TrackReward.SignatureAbsorbs
             || reward == TrackReward.UnlockSkill;
 
         // THE FILLER BAN IS GONE, with the filler mechanism it policed.
@@ -393,20 +390,16 @@ namespace PrincesPalace.Domain.Progression
         // about HasUnlocked's reading, not about placement.
 
         // THE SET ContentDatabase.BuildSignatureResource PAYS -- a reward of
-        // any of these five kinds is meaningless on a character with no
+        // any of these four kinds is meaningless on a character with no
         // signature resource, which is what both the resolver (at authoring
         // time) and ContentDatabase's own validation (at load time, for a
         // hand-authored asset that never passed through the resolver) refuse.
-        // SignatureAbsorbPerPoint joins the original four in P3, replacing
-        // SignatureAbsorbs' boolean (SignatureAbsorbs is aliased onto it by
-        // the resolver -- see TrackReward.SignatureAbsorbPerPoint's own
-        // header -- so an authored SignatureAbsorbs entry is checked under
-        // this same rule by the time it reaches here).
+        // SignatureAbsorbPerPoint replaces the old SignatureAbsorbs boolean
+        // -- see its own header.
         public static bool IsSignatureReward(TrackReward reward) =>
             reward == TrackReward.SignatureCapacity
             || reward == TrackReward.SignatureGainPerTurn
             || reward == TrackReward.SignatureGainOnDamageTaken
-            || reward == TrackReward.SignatureAbsorbs
             || reward == TrackReward.SignatureAbsorbPerPoint;
 
         // PHASE 3's node-kind mapping (docs/handoffs/progression_v2/
@@ -437,7 +430,6 @@ namespace PrincesPalace.Domain.Progression
 
                 case TrackReward.SpellCostDelta:
                 case TrackReward.SignatureAbsorbPerPoint:
-                case TrackReward.SignatureAbsorbs: // alias of SignatureAbsorbPerPoint -- see its own header
                 case TrackReward.FuryStartOfFight:
                     return TrackNodeKind.Capability;
 

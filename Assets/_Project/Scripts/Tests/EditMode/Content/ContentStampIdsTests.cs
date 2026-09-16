@@ -225,7 +225,7 @@ namespace PrincesPalace.Domain.Tests
             var characters = ResolveCharacters();
             var skills = ResolveSkills();
 
-            var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
+            var contexts = RewardTrackCharacterContext.BuildAll(ResolvePools(), characters, skills);
 
             bool Resolver(IReadOnlyList<RawRewardTrackEntry> entries, out List<ResolvedRewardTrack> resolved,
                           out List<string> errors) =>

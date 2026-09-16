@@ -4,6 +4,14 @@ One track per character, authored as content, every reward derived from what the
 character has **collected** rather than from what the squad has **reached**.
 Nothing on the track is an over-arching modifier any more.
 
+> **2026-09-16 addendum, not a correction to the plan below.** `TrackReward.
+> SignatureAbsorbs` (the old boolean this plan's own P3 sections describe
+> being replaced by `SignatureAbsorbPerPoint`) and its resolver-side alias
+> are deleted as of this date -- `reward_tracks.json` never authored the old
+> name, so nothing depended on the alias staying parseable. Every mention of
+> `SignatureAbsorbs` below is left as written, describing the plan as it was
+> designed and built.
+
 ---
 
 ## 1. The measurement that decides the design

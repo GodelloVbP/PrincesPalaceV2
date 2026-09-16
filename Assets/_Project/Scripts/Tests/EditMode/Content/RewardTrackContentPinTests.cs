@@ -89,7 +89,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var characters = Characters();
             var skills = Skills();
-            var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
+            var contexts = RewardTrackCharacterContext.BuildAll(Pools(), characters, skills);
 
             var raw = ContentDataFiles.ParseFile<RawRewardTrackFile>(ContentDataFiles.DataPath("reward_tracks.json")).tracks;
             bool ok = RewardTrackEntryResolver.TryResolveAll(raw, contexts, out var resolved, out var errors);
@@ -236,6 +236,26 @@ namespace PrincesPalace.Domain.Tests
         public void BjornsFuryOpeningIsTheHighestCollectedNotTheSum(int claimedLevel, int expected)
         {
             Assert.AreEqual(expected, Bear().UnlockedAmount(TrackReward.FuryStartOfFight, claimedLevel, fallback: 0));
+        }
+
+        // THE ACCEPTING CASE FOR RewardTrackEntryResolver's RULE 6, proven
+        // against the REAL content rather than a fixture standing in for it:
+        // Bjorn's `fury` pool authors startRule Zero (ContentData/pools.json)
+        // and both of his FuryStartOfFight nodes author a positive amount
+        // (25, 50 above), so the real bear track only resolves at all if
+        // PrimaryPoolStartsZero reached RewardTrackEntryResolver correctly.
+        // Tracks() already asserts the resolve succeeded (its own
+        // Assert.IsTrue) -- this names the specific entries that prove it,
+        // rather than leaving rule 6's coverage implicit in every other test
+        // that happens to call Bear().
+        [Test]
+        public void BjornsFuryStartOfFightNodesResolveBecauseFuryStartsAtZero()
+        {
+            var bear = Bear();
+            Assert.AreEqual(TrackReward.FuryStartOfFight, bear.At(15).Reward);
+            Assert.AreEqual(25, bear.At(15).Amount);
+            Assert.AreEqual(TrackReward.FuryStartOfFight, bear.At(26).Reward);
+            Assert.AreEqual(50, bear.At(26).Amount);
         }
 
         // SLAM'S TWO +5 NODES DO SUM, unlike the Fury pair above -- base 27
@@ -474,7 +494,6 @@ namespace PrincesPalace.Domain.Tests
                 TrackReward.SignatureCapacity,
                 TrackReward.SignatureGainPerTurn,
                 TrackReward.SignatureGainOnDamageTaken,
-                TrackReward.SignatureAbsorbs,
                 TrackReward.SignatureAbsorbPerPoint,
                 TrackReward.MaxMana,
                 TrackReward.ManaRegen,

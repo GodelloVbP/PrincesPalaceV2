@@ -161,8 +161,11 @@ public static class ContentBuilder
             // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
             // track's rules 4/5 and its UnlockSkill/signature captions are
             // validated against what those two already resolved -- see
-            // docs/PLAN_REWARD_TRACKS.md §4's touch-point table.
-            BuildRewardTracks(characters, skills);
+            // docs/PLAN_REWARD_TRACKS.md §4's touch-point table. Pools too,
+            // now: rule 6 (FuryStartOfFight) needs the owner's primary pool
+            // StartRule, the same fact PoolOwnership.ZeroStartOwners above
+            // already reads off `pools`.
+            BuildRewardTracks(pools, characters, skills);
 
             // ---- progression v2 phase 2 ----------------------------------
             // Depends on nothing else in this method: the cost table is
@@ -371,9 +374,9 @@ public static class ContentBuilder
     // characters and skills this same build already resolved -- see that
     // method's own header for why nothing here re-reads characters.json or
     // skills.json.
-    private static void BuildRewardTracks(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
+    private static void BuildRewardTracks(IReadOnlyList<ResolvedPool> pools, IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
     {
-        var contexts = RewardTrackCharacterContext.BuildAll(characters, skills);
+        var contexts = RewardTrackCharacterContext.BuildAll(pools, characters, skills);
 
         // A LOCAL FUNCTION, the same shape BuildRelics uses to close over a
         // second resolver argument -- here the per-character context map

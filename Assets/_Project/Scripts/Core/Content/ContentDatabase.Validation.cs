@@ -643,9 +643,11 @@ namespace PrincesPalace.Content
             // validates the LOADED catalogue: an asset created by hand under
             // Resources/Content never passed through a resolver at all.
             //
-            // The two rules left are the resolver's own, mirrored for the
-            // same reason: a skillId that names a real skill, and no
-            // signature reward on a character with no signature resource.
+            // The three rules left are the resolver's own, mirrored for the
+            // same reason: a skillId that names a real skill, no signature
+            // reward on a character with no signature resource, and
+            // FuryStartOfFight refused on anyone but a positive-amount,
+            // Zero-start pool owner (RewardTrackEntryResolver's rule 6).
             // (The old "filler element must be one the character can deal
             // at level 1" mirror went with the filler mix itself --
             // progression v2 phase 4, see RawTrackLevel.)
@@ -653,6 +655,13 @@ namespace PrincesPalace.Content
             {
                 var owner = GetCharacter(track.Data.CharacterId);
                 bool hasSignatureResource = owner != null && owner.Data.HasSignatureResource;
+
+                // THE RESOLVER'S OWN RULE 6, mirrored for the same reason as
+                // the signature-resource check just above: this validates
+                // the LOADED catalogue, which a hand-authored asset can
+                // reach without ever passing through RewardTrackEntryResolver.
+                bool primaryPoolStartsZero = owner != null
+                    && PrimaryPoolFor(owner.Data.PrimaryPoolId)?.Data?.StartRule == PoolStartRule.Zero;
 
                 foreach (var level in track.Data.Levels)
                 {
@@ -675,6 +684,13 @@ namespace PrincesPalace.Content
                     {
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
                                    $"{level.Reward}, but '{track.Data.CharacterId}' has no signature resource.");
+                    }
+
+                    if (level.Reward == TrackReward.FuryStartOfFight && (!primaryPoolStartsZero || level.Amount <= 0))
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
+                                   "FuryStartOfFight, but it is only legal on a character whose primary pool " +
+                                   "starts at Zero, with an amount above 0.");
                     }
                 }
 

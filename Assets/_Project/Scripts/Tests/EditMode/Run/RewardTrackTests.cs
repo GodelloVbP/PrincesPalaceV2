@@ -177,7 +177,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(TrackReward.SignatureCapacity, true)]
         [TestCase(TrackReward.SignatureGainPerTurn, true)]
         [TestCase(TrackReward.SignatureGainOnDamageTaken, true)]
-        [TestCase(TrackReward.SignatureAbsorbs, true)]
+        [TestCase(TrackReward.SignatureAbsorbPerPoint, true)]
         [TestCase(TrackReward.MaxHealth, false)]
         [TestCase(TrackReward.StatPoint, false)]
         public void OnlyTheFourSignatureResourceKindsAreSignatureRewards(TrackReward reward, bool isSignatureReward)

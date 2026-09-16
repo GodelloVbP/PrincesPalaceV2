@@ -47,9 +47,6 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.SignatureGainOnDamageTaken:
                     return $"+{amount} {ResourceNameOf(entry)} WHEN HURT";
 
-                case TrackReward.SignatureAbsorbs:
-                    return $"{ResourceNameOf(entry)} ABSORBS DAMAGE";
-
                 case TrackReward.ElementalDamagePercent:
                     return $"+{amount}% {ElementNameOf(entry)} DAMAGE";
 

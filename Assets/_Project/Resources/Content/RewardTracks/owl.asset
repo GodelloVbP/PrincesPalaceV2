@@ -29,7 +29,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 3
-      Reward: 12
+      Reward: 11
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -55,7 +55,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 5
-      Reward: 10
+      Reward: 9
       Amount: 6
       AgainstType: 0
       HasAgainst: 0
@@ -81,7 +81,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 7
-      Reward: 21
+      Reward: 20
       Amount: 5
       AgainstType: 0
       HasAgainst: 0
@@ -120,7 +120,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 10
-      Reward: 12
+      Reward: 11
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 12
-      Reward: 11
+      Reward: 10
       Amount: 1
       AgainstType: 0
       HasAgainst: 0
@@ -185,7 +185,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 15
-      Reward: 15
+      Reward: 14
       Amount: 1
       AgainstType: 0
       HasAgainst: 0
@@ -211,7 +211,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 17
-      Reward: 10
+      Reward: 9
       Amount: 6
       AgainstType: 0
       HasAgainst: 0
@@ -237,7 +237,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 19
-      Reward: 21
+      Reward: 20
       Amount: 5
       AgainstType: 0
       HasAgainst: 0
@@ -250,7 +250,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 20
-      Reward: 12
+      Reward: 11
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -302,7 +302,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 24
-      Reward: 11
+      Reward: 10
       Amount: 1
       AgainstType: 0
       HasAgainst: 0
@@ -328,7 +328,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 26
-      Reward: 15
+      Reward: 14
       Amount: 2
       AgainstType: 0
       HasAgainst: 0
@@ -354,7 +354,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 28
-      Reward: 21
+      Reward: 20
       Amount: 5
       AgainstType: 0
       HasAgainst: 0
@@ -380,7 +380,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 30
-      Reward: 12
+      Reward: 11
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -393,7 +393,7 @@ MonoBehaviour:
       HasIdentityKind: 0
       IdentityValue: 
     - Level: 31
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -406,7 +406,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: Scholar
     - Level: 32
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -419,7 +419,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: silver
     - Level: 33
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -432,7 +432,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: Adept
     - Level: 34
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -445,7 +445,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: 
     - Level: 35
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -458,7 +458,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: silver
     - Level: 36
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -471,7 +471,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: Veteran
     - Level: 37
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -484,7 +484,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: 
     - Level: 38
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -497,7 +497,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: gold
     - Level: 39
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
@@ -510,7 +510,7 @@ MonoBehaviour:
       HasIdentityKind: 1
       IdentityValue: Legend
     - Level: 40
-      Reward: 19
+      Reward: 18
       Amount: 0
       AgainstType: 0
       HasAgainst: 0
