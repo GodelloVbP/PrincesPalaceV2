@@ -112,3 +112,23 @@ Addendum r2.4 (2026-09-16, the owner's four calls on the shield model as built):
   consequence the one-turn clock has for Shatter and for the badge is recorded
   there and filed as AUDIT #153.
 - Status line bumped to Revision 2.4.
+
+Addendum r2.5 (2026-09-16, the owner's answers to AUDIT #153 and #154):
+- A WARD'S CLOCK RUNS AT THE END OF THE WEARER'S OWN TURN, and the turn it was
+  raised on does not count. It is the only duration in the game that does not
+  tick at a turn's start, and the difference is one turn of visibility: cast on
+  turn N, present at the start and the end of N+1, gone at the start of N+2.
+  An authored `wardTurns: 2` is gone at the start of N+3 -- N turns means
+  standing through the wearer's next N turns, the same spelling a cooldown uses.
+- Two things that were not possible yesterday now are: the player can see the
+  shield badge on their own turn, and Shatter can detonate a ward cast on the
+  turn before without the Fragile Lamb's WardIsFreeAction node. Six test
+  fixtures that had been granted that node purely to keep a ward alive long
+  enough to assert on have been reverted.
+- NOTHING CAPS A WARD. RunicWardPointsCap is deleted and no ceiling replaces it,
+  on the size of a ward, on the total a character carries, or on how often a
+  source may lay one down. A Runic wearer banking points every turn for the
+  whole fight is the design, not a hole in it.
+- Section 5's ward-rules block carries both, and the paragraph r2.4 added about
+  the badge and Shatter is gone with the problem it described.
+- Status line bumped to Revision 2.5.

@@ -1,10 +1,11 @@
 # Progression v2, revision 2
 
-Status: Revision 2.4, 2026-09-16. Supersedes revision 1 (kept beside this file).
+Status: Revision 2.5, 2026-09-16. Supersedes revision 1 (kept beside this file).
 Revision 2.1, 2026-09-15: corrections from phase 1 and phase 2 reports (see CHANGELOG_r2.md addendum).
 Revision 2.2, 2026-09-15: the ward numbers retuned to the percent model phase 4 found in the code (section 5; CHANGELOG_r2.md addendum r2.2).
 Revision 2.3, 2026-09-16: the owner's call on AUDIT #152 -- a ward IS a shield. The percent model is gone, section 5's ward bullets are back to a pool of points, and the numbers are shield points (CHANGELOG_r2.md addendum r2.3).
 Revision 2.4, 2026-09-16: the owner's four calls on the shield model as built -- wards STACK, the default duration is ONE turn, Brace is a percentage of Bjorn's health with a cooldown, and The Golden Fleece belongs to the caster (CHANGELOG_r2.md addendum r2.4).
+Revision 2.5, 2026-09-16: the owner's answers to AUDIT #153 and #154 -- a ward's clock runs at the END of the wearer's turn, so it is visible on the turn it protects and Shatter can reach it, and nothing caps a ward anywhere (CHANGELOG_r2.md addendum r2.5).
 Model: xp_model.md in this folder, computed by xp_model.py from the live
 content. Every number below traces to it or to the cost table in section 3.
 
@@ -264,13 +265,26 @@ Bolt.
   the only order that does not waste shield.
 
   **Duration is one of the wearer's own turns** by default, authored per row
-  as `wardTurns` and counted down at the wearer's turn start. None of the five
-  ward skills authors one, so all five take the default; the three relic wards
-  (Magical Shield, Sparring Buckler, Runic's mana conversion) author the whole
-  fight instead, which is the promise they have always made. **The Golden
-  Fleece** stops the clock on wards whose **caster** holds it -- his own, and
-  the ones the Flock spreads onto other people -- and does nothing for a ward
-  somebody else put on him. The pool still drains either way.
+  as `wardTurns`, and it is **counted down at the END of that turn** -- the one
+  duration in the game that is, and the turn it was raised on does not count.
+  So a ward cast during turn N covers the enemy phase, stands through the whole
+  of turn N+1, and is gone at the start of N+2; `wardTurns: 2` is gone at the
+  start of N+3. The player can therefore see the badge on their own turn, and
+  Shatter can reach a ward cast the turn before, neither of which was true
+  while the clock ran at the turn's start (AUDIT #153).
+
+  None of the five ward skills authors a `wardTurns`, so all five take the
+  default; the three relic wards (Magical Shield, Sparring Buckler, Runic's
+  mana conversion) author the whole fight instead, which is the promise they
+  have always made. **The Golden Fleece** stops the clock on wards whose
+  **caster** holds it -- his own, and the ones the Flock spreads onto other
+  people -- and does nothing for a ward somebody else put on him. The pool
+  still drains either way.
+
+  **Nothing caps a ward.** Not the size of one, not the total a character can
+  carry, not how often a source may lay one down. Runic's conversion had a
+  ceiling until the owner removed it (AUDIT #154): a wearer who hoards mana and
+  banks points every turn for the whole fight is the design.
 
   This is what revision 2 described and what the code had never had. Phase 4
   found the ward to be a percentage off one hit with a 999-turn duration and
@@ -278,13 +292,6 @@ Bolt.
   than build the pool, and filed the model question as AUDIT #152. The owner
   answered it on 2026-09-16: shields, stacking, one turn.
 
-  **A one-turn ward is not visible on the caster's own turn**, and that is a
-  consequence rather than a bug: it is applied during turn N and ticked away
-  at the start of turn N+1, so it covers exactly the enemy phase in between.
-  Two things fall out of it -- the badge is only on screen while the monsters
-  act, and Shatter cannot reach a ward cast on an earlier turn, so the Fragile
-  Lamb's Shatter strand needs her own `WardIsFreeAction` node to function at
-  all. Filed as AUDIT #153 for the owner rather than tuned here.
 - Second Wind (Bjorn 30): requires at least 25 Fury, spends all, heals 1% of
   max health per Fury spent; at 100 a full heal.
 - Mend (Odette 20): heals the chosen ally for 20 plus her spell attack (the

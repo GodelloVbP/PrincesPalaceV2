@@ -2783,59 +2783,6 @@ needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this sa
 
 ### ~~152. Wards are a percent of the next hit with no timer; the owner may want absorb pools~~ - fixed in `339ce102`: the owner answered shields; a ward is a pool of shield points, stacking, on a one-turn clock (the stacking and the clock are the follow-up calls of the same day -- see 8f005266); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 153. A one-turn ward is never visible on its caster's own turn, and Shatter cannot reach one
+### ~~153. A one-turn ward is never visible on its caster's own turn, and Shatter cannot reach one~~ - closed in `214e7ad7`: the owner's answer was to move the tick to the END of the wearer's turn, so a ward is visible on the turn it protects and Shatter can reach one cast the turn before; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-Found 2026-09-16 while building the owner's four shield-model decisions, by six test fixtures that
-stopped asserting what they had always asserted.
-
-`FightTuning.DefaultWardTurns` is 1, and `StatusEffects.Tick` counts a duration down at the
-HOLDER'S turn start. So a ward applied during turn N reaches 0 at the start of turn N+1 and is
-removed there. That is correct, and it is exactly what "one of the wearer's own turns" should mean
--- the ward covers the enemy phase between your turns, which is the phase it exists for. Two things
-fall out of it that the decision may not have priced:
-
-**(a) The player never sees the badge on their own turn.** `CastSkill` resolves, ends the turn, and
-control returns at the caster's next turn start -- after the tick that took the ward. The SHD badge
-is on screen only while the monsters are acting.
-
-**(b) `SkillEffect.Shatter` cannot reach a ward cast on an earlier turn.** Its whole premise is
-"detonate the wards you have out" (`FightSession.Talents.ResolveShatter`, gated by
-`CanResolveSkill`'s `WardsCastBy(actor).Count == 0` refusal). A ward cast on turn N is gone by turn
-N+1, so the Fragile Lamb's entire Shatter strand is unusable unless she also holds
-`sheep_lamb_ward_3` (`WardIsFreeAction`), which keeps the ward and the detonation inside one turn.
-Six fixtures -- `FightTalentTests`' Flock and Shatter tests, `SkillDispatchTests`,
-`SkillEffectBehaviourTests`, `DodgeCoversEveryDamagePathTests` and `KillCreditTests` -- had to grant
-that node to keep passing. That is the evidence, not the fix.
-
-**(c) Stacking is barely observable for one caster.** Two presses of the same ward can never
-coexist, because the first is ticked away before the second is cast. Stacking shows up between a
-skill ward and a relic ward (which author the whole fight), between two casters inside one enemy
-phase, or through The Flock's share -- and nowhere else.
-
-**Not fixed here, because every way out is a design call.** Ticking a ward at the END of the
-holder's turn rather than the start would make it visible and would let Shatter reach it, at the
-cost of a ward that also covers the caster's own next turn. A default of 2 does the same more
-bluntly and is what the owner has just moved away from. Leaving it and accepting that
-`WardIsFreeAction` is load-bearing for the Shatter strand is also coherent -- it is one node, and
-the strand it gates is hers.
-
-### 154. The three relic wards stack on themselves every turn, on a whole-fight duration
-
-Raised 2026-09-16 by the same pass. Wards stack now, and the three non-skill wards re-apply on a
-schedule nothing spends: `FightSession.Riders.ApplyRunicWardConversion` fires at the start of every
-one of the wearer's own turns, `FightSession.RelicMechanics`' Sparring Buckler fires once per turn
-on any action that moves anybody, and `FightSession.Skills.RaiseMagicalShield` fires on a qualifying
-cast. All three author `FightTuning.MagicalShieldDurationTurns` (99), so nothing they lay down
-expires inside a fight.
-
-The arithmetic: a Runic wearer who hoards mana banks `RunicWardPointsCap` (20) a turn for the whole
-fight, unbounded. The cap that used to hold this held it because a new ward REPLACED the standing
-one -- "the conversion tops the pool back up" was true while only one ward could stand. It is not
-true now.
-
-**Not fixed here, because it is the owner's number rather than a fault in the model.** The options
-are a whole-fight ward that refuses to stack on itself (a per-source cap, which would be the first
-special case in a model that deliberately has none), a short duration on the relic wards so the bank
-drains as fast as it fills, or a ceiling on total shield points. Left standing so the call is made
-rather than discovered.
-
+### ~~154. The three relic wards stack on themselves every turn, on a whole-fight duration~~ - closed in `214e7ad7`: NOT a fix -- the owner chose unbounded stacking on purpose, so `RunicWardPointsCap` is deleted and no ceiling replaces it anywhere; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
