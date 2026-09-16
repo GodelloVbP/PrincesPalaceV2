@@ -1492,6 +1492,12 @@ namespace PrincesPalace
         // the measured centre away from where the FEET actually are.
         private const int FootBandHeight = 24;
 
+        // The alpha floor both readers below compare against, scaled once to
+        // the 0..255 byte range GetPixels32's Color32 buffer works in rather
+        // than re-deriving it at each comparison site.
+        private const float AlphaFloor = 0.02f;
+        private const byte AlphaFloorByte = (byte)(AlphaFloor * 255f);
+
         private static float ContentCentreFractionForActor(string folder)
         {
             if (string.IsNullOrWhiteSpace(folder)) return 0f;
@@ -1512,10 +1518,10 @@ namespace PrincesPalace
         // for the measured numbers that found this). The band is the
         // `FootBandHeight` rows starting at the ground line and reaching
         // up; the ground line is authored in canvas-bottom-relative pixels,
-        // which is `textureRect.y` rows above where GetPixels' own
+        // which is `textureRect.y` rows above where GetPixels32's own
         // bottom-up row 0 sits, so that offset has to be subtracted before
         // the ground line means anything as an index into the pixels
-        // GetPixels actually returns.
+        // GetPixels32 actually returns.
         private static float FootBandCentreFraction(Sprite sprite, float groundLine)
         {
             if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
@@ -1533,15 +1539,24 @@ namespace PrincesPalace
             int bandBottom = Mathf.Clamp(Mathf.RoundToInt(groundLine) - cropY, 0, Mathf.Max(cropHeight - 1, 0));
             int bandTop = Mathf.Clamp(bandBottom + FootBandHeight, bandBottom, cropHeight);
 
-            var pixels = sprite.texture.GetPixels(cropX, cropY, cropWidth, cropHeight);
+            // GetPixels32, NOT GetPixels -- a byte-per-channel buffer for an
+            // alpha-only read. UNLIKE GetPixels, GetPixels32 has no
+            // cropped-rect overload (Unity ships only
+            // GetPixels32(int miplevel)), so this reads the WHOLE texture and
+            // indexes at the crop's own texture-space offset (+cropX,
+            // +cropY) rather than a crop-local one.
+            var texture = sprite.texture;
+            var pixels = texture.GetPixels32();
+            int textureWidth = texture.width;
             int left = int.MaxValue;
             int right = int.MinValue;
 
             for (int y = bandBottom; y < bandTop; y++)
             {
+                int rowStart = (cropY + y) * textureWidth + cropX;
                 for (int x = 0; x < cropWidth; x++)
                 {
-                    if (pixels[y * cropWidth + x].a <= 0.02f) continue;
+                    if (pixels[rowStart + x].a <= AlphaFloorByte) continue;
                     if (x < left) left = x;
                     if (x > right) right = x;
                 }
@@ -1588,15 +1603,29 @@ namespace PrincesPalace
             if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
 
             var rect = sprite.textureRect;
-            var pixels = sprite.texture.GetPixels((int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
+            int cropX = (int)rect.x;
+            int cropY = (int)rect.y;
+            int cropWidth = (int)rect.width;
+            int cropHeight = (int)rect.height;
 
-            // GetPixels is bottom-up, so walking down from the last row finds the
+            // GetPixels32, NOT GetPixels -- see FootBandCentreFraction's own
+            // comment for why this reads the WHOLE texture (GetPixels32 has
+            // no cropped-rect overload) and indexes at the crop's own
+            // texture-space offset. y stays crop-local -- callers read the
+            // return value as an offset from the crop's own bottom, same as
+            // before.
+            var texture = sprite.texture;
+            var pixels = texture.GetPixels32();
+            int textureWidth = texture.width;
+
+            // GetPixels32 is bottom-up, so walking down from the last row finds the
             // visual TOP on the first opaque hit.
-            for (int y = (int)rect.height - 1; y >= 0; y--)
+            for (int y = cropHeight - 1; y >= 0; y--)
             {
-                for (int x = 0; x < (int)rect.width; x++)
+                int rowStart = (cropY + y) * textureWidth + cropX;
+                for (int x = 0; x < cropWidth; x++)
                 {
-                    if (pixels[y * (int)rect.width + x].a > 0.02f) return y + 1;
+                    if (pixels[rowStart + x].a > AlphaFloorByte) return y + 1;
                 }
             }
 

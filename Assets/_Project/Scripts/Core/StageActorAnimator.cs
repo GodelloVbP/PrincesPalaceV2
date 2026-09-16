@@ -455,6 +455,13 @@ namespace PrincesPalace
         // put an actor's feet and its body edges on different drawings.
         private const float AlphaFloor = 0.02f;
 
+        // GetPixels32 (below) hands back Color32, whose alpha is a byte --
+        // AlphaFloor is authored as a float fraction, so this is the one
+        // place that scales it to the 0..255 range GetPixels32 works in.
+        // Every comparison site reads this byte rather than re-deriving
+        // it, so the floor still has exactly one home.
+        private const byte AlphaFloorByte = (byte)(AlphaFloor * 255f);
+
         // THE BODY'S EDGES, added to the tight box the caller already has.
         //
         // Per column of the drawing, count the opaque rows; the mass edge on
@@ -463,18 +470,18 @@ namespace PrincesPalace
         // carries the reasoning and the measured numbers; this is only the
         // arithmetic.
         //
-        // GetPixels, and every coordinate it hands back is LOCAL TO THE
-        // TRIMMED CROP -- the exact trap FootBandCentreFraction documents
-        // shipping once. Column 0 is `tightLeft` in canvas space by
-        // construction (the caller derived tightLeft from textureRectOffset,
-        // which is where the crop sits inside the authored canvas), so a
-        // column index maps back by addition and nothing here divides by the
-        // trimmed width.
+        // x, rows[x], first and last are all LOCAL TO THE TRIMMED CROP --
+        // the loop below only ever walks 0..cropWidth -- the exact trap
+        // FootBandCentreFraction documents shipping once. Column 0 is
+        // `tightLeft` in canvas space by construction (the caller derived
+        // tightLeft from textureRectOffset, which is where the crop sits
+        // inside the authored canvas), so a column index maps back by
+        // addition and nothing here divides by the trimmed width.
         //
-        // Costs one GetPixels per Sprite for the life of the process, folded
-        // into the caller's own SpanCache -- which is keyed by Sprite and
-        // never cleared, for the reason its own header gives: the art is on
-        // disk and does not change.
+        // Costs one GetPixels32 per Sprite for the life of the process,
+        // folded into the caller's own SpanCache -- which is keyed by Sprite
+        // and never cleared, for the reason its own header gives: the art is
+        // on disk and does not change.
         private static OpaqueSpan MassEdged(Sprite sprite, float tightLeft, float tightRight)
         {
             var tight = new OpaqueSpan(tightLeft, tightRight);
@@ -489,16 +496,25 @@ namespace PrincesPalace
             int cropHeight = Mathf.RoundToInt(crop.height);
             if (cropWidth <= 0 || cropHeight <= 0) return tight;
 
-            var pixels = texture.GetPixels(cropX, cropY, cropWidth, cropHeight);
+            // GetPixels32, NOT GetPixels -- a byte-per-channel buffer instead
+            // of a float-per-channel one for a read this method already pays
+            // once per Sprite for the life of the process. UNLIKE GetPixels,
+            // GetPixels32 has no cropped-rect overload (Unity ships only
+            // GetPixels32(int miplevel)), so this reads the WHOLE texture and
+            // indexes into it at the crop's own texture-space offset rather
+            // than a crop-local one -- textureWidth is the row stride, not
+            // cropWidth.
+            var pixels = texture.GetPixels32();
+            int textureWidth = texture.width;
             var rows = new int[cropWidth];
             int tallest = 0;
 
             for (int y = 0; y < cropHeight; y++)
             {
-                int rowStart = y * cropWidth;
+                int rowStart = (cropY + y) * textureWidth + cropX;
                 for (int x = 0; x < cropWidth; x++)
                 {
-                    if (pixels[rowStart + x].a <= AlphaFloor) continue;
+                    if (pixels[rowStart + x].a <= AlphaFloorByte) continue;
                     if (++rows[x] > tallest) tallest = rows[x];
                 }
             }
