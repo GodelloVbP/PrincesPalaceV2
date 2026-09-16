@@ -100,6 +100,44 @@ namespace PrincesPalace.Domain.Combat.Session
         private readonly HashSet<(CombatantState caster, CombatantState wearer)> _wardPayoutsThisTurn =
             new HashSet<(CombatantState caster, CombatantState wearer)>();
 
+        // THE WARDS PUT UP DURING THE TURN THAT IS CURRENTLY OPEN, whoever
+        // they landed on.
+        //
+        // A ward's clock runs at the END of the wearer's own turn and does not
+        // count the turn it was raised on (StatusEffects' own WARDS header),
+        // and this is the only thing in the game that knows which turn that
+        // was. Cleared by OpenTurnFor and NOT by ReopenTurnFor, because an
+        // extra action is the same turn (AUDIT #113) and a ward raised before
+        // a trample must still be exempt from the end of it.
+        //
+        // Holds the ActiveStatus itself rather than the wearer: two pools of
+        // the same size on the same clock are told apart by nothing else.
+        private readonly HashSet<ActiveStatus> _wardsRaisedThisTurn = new HashSet<ActiveStatus>();
+
+        // THE ONE PLACE A WARD GOES UP. Every ward in the game -- the five
+        // skills through WardOne, and the three relic wards -- comes through
+        // here, so the "does not count the turn it was raised on" rule has one
+        // home rather than four call sites that each have to remember it.
+        private void RaiseWard(CombatantState wearer, int points, int turns, CombatantState source)
+        {
+            var ward = StatusEffects.ApplyWard(wearer.Statuses, points, turns, source);
+            if (ward != null) _wardsRaisedThisTurn.Add(ward);
+        }
+
+        // Counts the ending actor's wards down and says so when one lapses.
+        // Called from AdvanceAfterAction, which is the end of a turn.
+        private void TickWardsAtTurnEnd(CombatantState actor)
+        {
+            if (actor == null) return;
+
+            int expired = StatusEffects.TickWardsAtTurnEnd(actor, _wardsRaisedThisTurn);
+            if (expired <= 0) return;
+
+            AppendMessage(expired == 1
+                ? $"The shield around {actor.Name} fades."
+                : $"{expired} shields around {actor.Name} fade.");
+        }
+
         // What the wards on a combatant do to one incoming hit: absorb it, pay
         // whoever put them up, heal the wearer as they break, and start the
         // grace period on a self-ward that ran out.
@@ -326,7 +364,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // shield rather than nothing.
         private void WardOne(CombatantState caster, CombatantState wearer, int points, int turns)
         {
-            StatusEffects.ApplyWard(wearer.Statuses, System.Math.Max(1, points), turns, caster);
+            RaiseWard(wearer, System.Math.Max(1, points), turns, caster);
 
             // Mending Fleece. Rides along with the ward rather than being its own
             // cast, so the sustain strand costs no extra action and no extra
@@ -573,6 +611,12 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 _wardPayoutsThisTurn.Clear();
             }
+
+            // UNCONDITIONALLY, unlike the payout set above -- that one is the
+            // Lamb's own bookkeeping and costs nothing to leave standing for a
+            // party with no Lamb in it, where this one decides whether a ward
+            // ages at all. See its own declaration.
+            _wardsRaisedThisTurn.Clear();
 
             if (actor.SelfWardGraceTurns > 0)
             {

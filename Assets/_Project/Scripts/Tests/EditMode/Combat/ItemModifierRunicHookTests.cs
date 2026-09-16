@@ -120,7 +120,7 @@ namespace PrincesPalace.Domain.Tests
                 "fixture check: the hero must remain Current so GrantTurnStart runs for the hero, not an enemy");
 
             // FightTuning.RunicWardConversionRate (0.25) x 40 unspent mana = 10
-            // shield points, well under FightTuning.RunicWardPointsCap (20).
+            // shield points.
             var ward = hero.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
             Assert.IsNotNull(ward, "unspent mana at turn start must convert to a Shielded ward");
             Assert.AreEqual(10, ward.Magnitude);
@@ -140,8 +140,16 @@ namespace PrincesPalace.Domain.Tests
                 "no Runic modifier, no ward -- unspent mana just sits there, same as it always has");
         }
 
+        // NO CEILING, and the owner meant it (AUDIT #154). This test used to
+        // assert the opposite -- that a deep pool was capped at 20 points --
+        // and the cap held while a new ward REPLACED the standing one. Wards
+        // stack now, so a cap would have been the only special case in a model
+        // that deliberately has none, and the owner's answer was to delete it.
+        //
+        // 0.25 x 1000 unspent mana = 250, a literal rather than a reference to
+        // a constant that no longer exists.
         [Test]
-        public void TheWardConversion_IsCappedRatherThanScalingUnbounded()
+        public void TheWardConversion_ScalesWithTheWholePool_WithNoCeiling()
         {
             var hero = Hero(mana: 1000, speed: 50);
             hero.PrimaryPool.Current = 1000;
@@ -153,8 +161,8 @@ namespace PrincesPalace.Domain.Tests
 
             var ward = hero.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Shielded);
             Assert.IsNotNull(ward);
-            Assert.AreEqual(FightTuning.RunicWardPointsCap, ward.Magnitude,
-                "a deep mana pool must never grant more than the deliberately conservative cap");
+            Assert.AreEqual(250, ward.Magnitude,
+                "a deep mana pool converts all of it -- there is no cap left to clip it");
         }
 
         [Test]

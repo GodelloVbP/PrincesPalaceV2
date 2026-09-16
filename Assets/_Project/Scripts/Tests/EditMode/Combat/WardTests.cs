@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
@@ -31,10 +32,8 @@ namespace PrincesPalace.Domain.Tests
             combatant.Talents = new TalentEffectSet(effects);
         }
 
-        private static void Ward(CombatantState caster, CombatantState wearer, int points, int turns = 1)
-        {
+        private static ActiveStatus Ward(CombatantState caster, CombatantState wearer, int points, int turns = 1) =>
             StatusEffects.ApplyWard(wearer.Statuses, points, turns, caster);
-        }
 
         [Test]
         public void AWard_EatsUpToItsPoolAndTheRestReachesHealth()
@@ -199,30 +198,57 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // ---- the clock -----------------------------------------------------
+        //
+        // A WARD IS THE ONE DURATION IN THE GAME THAT RUNS AT THE END OF THE
+        // WEARER'S TURN rather than at its start, and the turn it was raised
+        // on does not count (owner's answer to AUDIT #153, 2026-09-16). That
+        // is a turn of visibility: at turn start it would be gone before the
+        // player got the turn back.
 
-        // ONE OF THE WEARER'S OWN TURNS by default, on the ordinary tick.
         [Test]
-        public void AWardExpiresOnTheClock()
+        public void TheTurnStartTickDoesNotTouchAWard()
         {
             var lamb = Fighter();
             Ward(lamb, lamb, 60, turns: 1);
 
             StatusEffects.Tick(lamb);
+            StatusEffects.Tick(lamb);
+            StatusEffects.Tick(lamb);
 
+            Assert.AreEqual(60, StatusEffects.WardPoints(lamb),
+                "a ward's clock runs at the END of the turn -- Tick is the wrong end");
+        }
+
+        // THE TURN IT WENT UP DOES NOT COUNT. Handed to the end-of-turn tick
+        // as a raised-this-turn entry, a one-turn ward survives that turn's
+        // end and goes at the end of the next one.
+        [Test]
+        public void AWardRaisedThisTurn_SurvivesThisTurnsEnd_AndGoesAtTheNextOne()
+        {
+            var lamb = Fighter();
+            Ward(lamb, lamb, 60, turns: 1);
+            var raised = new List<ActiveStatus>(lamb.Statuses);
+
+            Assert.AreEqual(0, StatusEffects.TickWardsAtTurnEnd(lamb, raised), "the turn it went up counted");
+            Assert.AreEqual(60, StatusEffects.WardPoints(lamb));
+
+            Assert.AreEqual(1, StatusEffects.TickWardsAtTurnEnd(lamb));
             Assert.IsFalse(StatusEffects.IsWarded(lamb), "still standing past its one turn");
         }
 
+        // N TURNS IS N OF THE WEARER'S NEXT TURNS, the same spelling a
+        // cooldown uses.
         [Test]
         public void ALongerWardOutlastsTheTurnsItWasGiven()
         {
             var lamb = Fighter();
             Ward(lamb, lamb, 60, turns: 3);
 
-            StatusEffects.Tick(lamb);
-            StatusEffects.Tick(lamb);
+            StatusEffects.TickWardsAtTurnEnd(lamb);
+            StatusEffects.TickWardsAtTurnEnd(lamb);
             Assert.AreEqual(60, StatusEffects.WardPoints(lamb), "gone a turn early");
 
-            StatusEffects.Tick(lamb);
+            StatusEffects.TickWardsAtTurnEnd(lamb);
             Assert.IsFalse(StatusEffects.IsWarded(lamb));
         }
 
@@ -241,7 +267,7 @@ namespace PrincesPalace.Domain.Tests
 
             for (int turn = 0; turn < 20; turn++)
             {
-                StatusEffects.Tick(shawn);
+                StatusEffects.TickWardsAtTurnEnd(shawn);
             }
 
             Assert.AreEqual(60, StatusEffects.WardPoints(shawn), "his own ward aged away");
@@ -257,7 +283,7 @@ namespace PrincesPalace.Domain.Tests
 
             for (int turn = 0; turn < 20; turn++)
             {
-                StatusEffects.Tick(ally);
+                StatusEffects.TickWardsAtTurnEnd(ally);
             }
 
             Assert.AreEqual(30, StatusEffects.WardPoints(ally),
@@ -272,7 +298,7 @@ namespace PrincesPalace.Domain.Tests
             var odette = Fighter("Odette");
             Ward(odette, shawn, 30, turns: 1);
 
-            StatusEffects.Tick(shawn);
+            StatusEffects.TickWardsAtTurnEnd(shawn);
 
             Assert.IsFalse(StatusEffects.IsWarded(shawn),
                 "the capstone is the caster's, and Odette does not hold it");
@@ -441,8 +467,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var wearer = Fighter();
 
-            StatusEffects.ApplyWard(wearer.Statuses, 0, 1);
-            StatusEffects.ApplyWard(wearer.Statuses, -5, 1);
+            Assert.IsNull(StatusEffects.ApplyWard(wearer.Statuses, 0, 1));
+            Assert.IsNull(StatusEffects.ApplyWard(wearer.Statuses, -5, 1));
 
             Assert.IsFalse(StatusEffects.IsWarded(wearer));
         }

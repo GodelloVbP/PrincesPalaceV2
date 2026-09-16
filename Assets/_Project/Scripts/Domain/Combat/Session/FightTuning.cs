@@ -75,8 +75,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- wards ------------------------------------------------------------
 
         // HOW LONG A SKILL'S WARD STANDS when its row authors no `wardTurns`
-        // -- ONE of the WEARER'S own turns, counted down by StatusEffects.Tick
-        // like every other duration in the game.
+        // -- ONE of the WEARER'S own turns, counted down at the END of that
+        // turn (StatusEffects.TickWardsAtTurnEnd) rather than at its start
+        // like every other duration in the game. See that file's WARDS header
+        // for why the exception exists: it is the difference between a shield
+        // the player can see on the turn it protects and one they cannot.
         //
         // One rather than "until something hits it", which is what every ward
         // in this game used to be (they were all applied at 999 turns). A
@@ -134,12 +137,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // actually uses.
         public const float RunicWardConversionRate = 0.25f;
 
-        // However deep a mana pool gets, the conversion never grants more
-        // than this many shield points -- keeps a high-mana build from
-        // turning "never cast" into a wall that renews every turn. Sized at
-        // one leg-two enemy hit's worth (19-23, phase 1's bot run), the same
-        // bar MagicalShieldPoints is set against.
-        public const int RunicWardPointsCap = 20;
+        // RunicWardPointsCap IS GONE, owner 2026-09-16 (AUDIT #154). It was 20
+        // -- one leg-two enemy hit's worth -- and it held while a new ward
+        // REPLACED the standing one. Wards stack now, and the owner's answer
+        // to "a Runic wearer banks 20 points a turn forever" was that this is
+        // the design: no cap, on anything. There is no ward ceiling anywhere
+        // in this file, and that absence is deliberate rather than an
+        // oversight, which is why it is written down.
 
         // ---- chilled (Phase D2, item-modifier plan) ----------------------------
         //

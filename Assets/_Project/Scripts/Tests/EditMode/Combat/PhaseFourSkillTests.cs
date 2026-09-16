@@ -218,15 +218,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(session.CastSkill(0, bjorn), "50 Fury is exactly the price and must pay it");
             Assert.AreEqual(0, bjorn.PrimaryPool.Current);
 
-            // THE POOL IS ALREADY GONE BY THE TIME CONTROL RETURNS, and that
-            // is the one-turn clock rather than a cast that did nothing. This
-            // fixture's foe is speed 1 against Bjorn's 10, so the turn comes
-            // straight back to him and his own turn-start tick is what takes
-            // the ward -- which is true of every non-free ward cast in the
-            // game, not of this fixture (AUDIT #153). The cast is what this
-            // test is about; the clock is pinned by
-            // AWardExpiresAfterOneOfTheWearersOwnTurns.
-            StringAssert.Contains("pulls the fleece close", string.Join(" | ", Messages(session)));
+            Assert.IsTrue(StatusEffects.IsWarded(bjorn));
         }
 
         // ---- Second Wind ---------------------------------------------------
@@ -613,19 +605,105 @@ namespace PrincesPalace.Domain.Tests
                 "the relic's 20 and four Wool of Tuck In at 5 points each");
         }
 
-        // ONE OF THE WEARER'S OWN TURNS, counted down by the ordinary
-        // turn-start tick. Nothing here is a special case: Shielded is not in
-        // StatusEffects' IsSpentByTheTurn list, so it ages like Poison does.
+        // THE CLOCK, WALKED THROUGH A REAL FIGHT, which is the half no
+        // StatusEffects test can reach: the end-of-turn tick, the exemption
+        // for the turn it went up, and the turn order that decides when either
+        // happens are all FightSession's.
+        //
+        // CAST ON TURN N -> PRESENT AT THE START AND THE END OF N+1 -> GONE AT
+        // THE START OF N+2. The owner's own spelling of it (AUDIT #153), and
+        // this fixture's foe is speed 1 against the hero's 10, so "the next
+        // turn" is the hero's again and every step below is one of his.
         [Test]
-        public void AWardExpiresAfterOneOfTheWearersOwnTurns()
+        public void AWardCastOnOneTurnStandsThroughTheWholeOfTheNextOne()
         {
-            var wearer = Hero();
-            StatusEffects.ApplyWard(wearer.Statuses, 30, FightTuning.DefaultWardTurns);
+            // A toothless foe, for the reason
+            // ATwoTurnWardIsGoneAtTheStartOfTheThirdTurn gives: it acts on the
+            // turn after the cast, and a 30-point swing would empty a 20-point
+            // pool before the clock could be what took it.
+            var shawn = Hero(pool: 0);
+            shawn.SignaturePool = Wool(4);
+            var (session, encounter) = Fight(new[] { shawn }, new[] { Foe(attack: 0) }, Kit(Authored("tuck_in")));
+            session.Begin();
 
             Assert.AreEqual(1, FightTuning.DefaultWardTurns);
 
-            StatusEffects.Tick(wearer);
-            Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing after its one turn");
+            // Turn N. Tuck In is a free action, so the turn is still N here --
+            // the plain swing below is what ends it.
+            Assert.IsTrue(session.CastSkill(0, shawn));
+            Assert.AreEqual(20, StatusEffects.WardPoints(shawn));
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            // Turn N+1, both ends of it.
+            Assert.AreEqual(20, StatusEffects.WardPoints(shawn), "gone at the start of N+1");
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            // Turn N+2.
+            Assert.IsFalse(StatusEffects.IsWarded(shawn), "still standing at the start of N+2");
+        }
+
+        // AND SHATTER CAN REACH IT, which is what the end-of-turn clock was
+        // for: the ward goes up on one turn and is detonated on the next,
+        // through two separate turns, with no free-action node in play.
+        [Test]
+        public void ShatterReachesAWardCastTheTurnBefore()
+        {
+            // Twelve Wool: Tuck In takes four (its own cap) and Shatter's
+            // authored three has to still be payable on the turn after.
+            var shawn = Hero(pool: 0, attack: 40);
+            shawn.SignaturePool = Wool(12);
+            shawn.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100),
+            });
+
+            var foe = Foe(health: 100000);
+            var (session, _) = Fight(new[] { shawn }, new[] { foe },
+                Kit(Authored("tuck_in"), Authored("shatter")));
+            session.Begin();
+
+            Assert.IsTrue(session.CastSkill(0, shawn), "turn N: the ward");
+            session.ExecuteAttack(foe);
+
+            Assert.IsTrue(session.CastSkill(1, null), "turn N+1: the detonation was refused");
+            Assert.Less(foe.CurrentHealth, foe.MaxHealth);
+            Assert.IsFalse(StatusEffects.IsWarded(shawn), "the ward survived its own detonation");
+        }
+
+        // A TWO-TURN WARD IS GONE AT THE START OF N+3, by the same rule one
+        // more time.
+        [Test]
+        public void ATwoTurnWardIsGoneAtTheStartOfTheThirdTurn()
+        {
+            // NO SHIPPED SKILL AUTHORS A TWO-TURN WARD -- all five take the
+            // house default -- so this one is built here. Through a CAST
+            // rather than by hand, because the turn it was raised on not
+            // counting is FightSession's half of the rule and a ward dropped
+            // straight into the list would miss it.
+            var twoTurns = new ResolvedSkill("two_turn_ward", "Long Ward", "", "hero", 1,
+                SkillEffect.Ward, SkillEntryResolver.DefaultTargetingFor(SkillEffect.Ward),
+                0, 0, false, 0, 9999, false, null, SpellPresentation.None, 0,
+                wardTurns: 2);
+
+            // A NINE-THOUSAND-POINT POOL AND A TOOTHLESS FOE, so the only
+            // thing that can take this ward away is the clock. The monster in
+            // this fixture acts on the turn after the cast and a 30-point
+            // swing empties an ordinary pool outright, which is a true fact
+            // about wards and a useless one to be measuring here.
+            var wearer = Hero();
+            var (session, encounter) = Fight(new[] { wearer }, new[] { Foe(attack: 0) }, Kit(twoTurns));
+            session.Begin();
+
+            // Turn N. The cast ends it, and the ward is exempt from that end.
+            Assert.IsTrue(session.CastSkill(0, wearer));
+            Assert.IsTrue(StatusEffects.IsWarded(wearer), "gone at the start of N+1");
+
+            session.ExecuteAttack(encounter.Enemies[0]);   // N+1 ends: 2 -> 1
+            Assert.IsTrue(StatusEffects.IsWarded(wearer), "gone at the start of N+2");
+
+            session.ExecuteAttack(encounter.Enemies[0]);   // N+2 ends: 1 -> 0
+            Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing at the start of N+3");
         }
 
         // AND EVERY SHIPPED WARD SKILL TAKES THAT DEFAULT -- none of the five

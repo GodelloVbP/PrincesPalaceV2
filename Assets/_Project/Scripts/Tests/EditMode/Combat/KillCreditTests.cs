@@ -493,14 +493,10 @@ namespace PrincesPalace.Domain.Tests
         // A Ward gets a flatAmount because a ward is a POOL of shield points
         // and a row authoring nothing puts up nothing (AUDIT #152).
         // A Ward gets a flatAmount because a ward is a POOL of shield points
-        // and a row authoring nothing puts up nothing (AUDIT #152), and
-        // freeAction because it stands one turn and would be ticked away at
-        // the caster's next turn start before Shatter could reach it
-        // (AUDIT #153).
+        // and a row authoring nothing puts up nothing (AUDIT #152).
         private static ResolvedSkill Skill(SkillEffect effect, string name, TransformGrant transform = null) =>
             new ResolvedSkill("t_" + name, name, "", "hero", 1, effect, SkillTargeting.Self,
                 0, 0, false, 100, effect == SkillEffect.Ward ? 40 : 0, false, null,
-                SpellPresentation.None, 0, transform: transform,
-                freeAction: effect == SkillEffect.Ward);
+                SpellPresentation.None, 0, transform: transform);
     }
 }

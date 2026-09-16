@@ -384,7 +384,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actingCharacter != null && HasRelic(actingCharacter, RelicEffect.SparringBuckler)
                 && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
             {
-                StatusEffects.ApplyWard(actingCharacter.Statuses, FightTuning.SparringBucklerWardPoints,
+                RaiseWard(actingCharacter, FightTuning.SparringBucklerWardPoints,
                     FightTuning.MagicalShieldDurationTurns, actingCharacter);
                 AppendMessage($"{actingCharacter.Name}'s buckler comes up - a ward from the footwork.");
             }

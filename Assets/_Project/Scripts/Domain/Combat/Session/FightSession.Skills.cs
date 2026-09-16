@@ -1155,8 +1155,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // it. MagicalShieldDurationTurns rather than the skills' one-turn
             // default, because this relic's promise is a shield that stands
             // until something spends it.
-            StatusEffects.ApplyWard(actor.Statuses, FightTuning.MagicalShieldPoints,
-                FightTuning.MagicalShieldDurationTurns, actor);
+            RaiseWard(actor, FightTuning.MagicalShieldPoints, FightTuning.MagicalShieldDurationTurns, actor);
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }
 

@@ -99,6 +99,20 @@ namespace PrincesPalace.Domain.Combat.Session
                 _bloodlustChainCount = 0;
             }
 
+            // THE END OF THE TURN, and the one clock in the game that runs
+            // here rather than at a turn's start -- see StatusEffects' own
+            // WARDS header for why a ward is visible on the turn it protects
+            // and every other duration is not.
+            //
+            // SKIPPED WHEN THE SAME ACTOR IS ABOUT TO ACT AGAIN, on exactly
+            // the rule the line below already states: an extra action is the
+            // SAME turn (AUDIT #113), so a trample chain must not age a ward
+            // once per swing.
+            if (_grantedExtraTurnTo == null || !ReferenceEquals(_grantedExtraTurnTo, _encounter.Current))
+            {
+                TickWardsAtTurnEnd(_encounter.Current);
+            }
+
             _encounter.AdvanceTurn();
 
             // AUDIT #113: an extra action is the SAME turn, so it re-pays
@@ -395,16 +409,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // comment for why this is gated on Has() (a flag) rather than a
         // magnitude.
         //
-        // STACKS, like every ward does now, and that is the one thing about
-        // this conversion worth watching: it fires at the top of every one of
-        // the wearer's turns for free, so a hoarded mana pool that is never
-        // spent lays down another RunicWardPointsCap on top of the last one
-        // every round. The cap is what holds it -- see
-        // FightTuning.RunicWardPointsCap -- and the ward it lays down carries
-        // the relic wards' whole-fight duration
-        // (FightTuning.MagicalShieldDurationTurns) rather than the skills'
-        // one-turn default, because this is a standing property of the armour
-        // and not a window somebody spent a cast opening.
+        // STACKS, WITHOUT A CEILING, and that is the owner's call rather than
+        // an oversight (AUDIT #154): it fires at the top of every one of the
+        // wearer's turns for free, so a hoarded mana pool that is never spent
+        // lays another pool on top of the last one every round, for the whole
+        // fight. The ward it lays down carries the relic wards' whole-fight
+        // duration (FightTuning.MagicalShieldDurationTurns) rather than the
+        // skills' one-turn default, because this is a standing property of the
+        // armour and not a window somebody spent a cast opening.
         private void ApplyRunicWardConversion(CombatantState actor)
         {
             if (actor == null || actor.CurrentMana <= 0) return;
@@ -426,12 +438,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (!actor.ModifierEffects.Has(ModifierEffectType.ManaToWardOnTurnStartPercent)) return;
 
-            int wardPoints = Math.Min(FightTuning.RunicWardPointsCap,
-                Rounding.AwayFromZero(actor.CurrentMana * FightTuning.RunicWardConversionRate));
+            // NO CEILING, owner 2026-09-16 (AUDIT #154). It used to be capped
+            // at RunicWardPointsCap, and the cap made sense while a new ward
+            // REPLACED the standing one -- "the conversion tops the pool back
+            // up" was true then. Wards stack now and the owner's answer is
+            // that a wearer who hoards mana banking points every turn is the
+            // design, not a hole in it.
+            int wardPoints = Rounding.AwayFromZero(actor.CurrentMana * FightTuning.RunicWardConversionRate);
             if (wardPoints <= 0) return;
 
-            StatusEffects.ApplyWard(actor.Statuses, wardPoints,
-                FightTuning.MagicalShieldDurationTurns, actor);
+            RaiseWard(actor, wardPoints, FightTuning.MagicalShieldDurationTurns, actor);
             AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
         }
 

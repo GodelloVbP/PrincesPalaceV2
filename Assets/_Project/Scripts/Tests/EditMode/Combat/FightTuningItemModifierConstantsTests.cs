@@ -34,16 +34,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, FightTuning.ModifierPushBackSlots);
         }
 
-        [Test]
-        public void RunicWardPointsCap_Pin()
-        {
-            // The hard ceiling on Runic's mana-to-shield conversion, however
-            // deep the mana pool. ItemModifierRunicHookTests already proves
-            // the cap is ENFORCED; this is the missing proof that the cap
-            // ITSELF still reads 20. It read 25 as a PERCENT before wards
-            // became shield pools.
-            Assert.AreEqual(20, FightTuning.RunicWardPointsCap);
-        }
+        // RunicWardPointsCap_Pin IS GONE, and so is the cap. The owner's
+        // answer to AUDIT #154 was that unlimited stacking is the design,
+        // relic wards included, so there is no ceiling left to pin. The
+        // conversion RATE is still a constant and is still pinned above;
+        // ItemModifierRunicHookTests now asserts the absence, which is the
+        // half a deleted constant cannot cover on its own.
 
         [Test]
         public void ChilledOnHitTurns_Pin()

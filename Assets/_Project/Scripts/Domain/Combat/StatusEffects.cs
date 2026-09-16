@@ -276,6 +276,27 @@ namespace PrincesPalace.Domain.Combat
         // carries the rest through and a hit smaller than it leaves the pool
         // standing with less in it.
         //
+        // A WARD'S CLOCK TICKS AT THE END OF THE WEARER'S OWN TURN, and it is
+        // the only duration in the game that does -- every other status counts
+        // down at the START of its holder's turn, in Tick. The difference is
+        // one turn of visibility, and it is the whole reason for the
+        // exception: a ward counted down at turn start is applied during turn
+        // N and taken at the start of N+1, so control never returns to the
+        // player with the ward still up. They could not see the badge, and
+        // Shatter -- "detonate the wards you have out" -- could not reach a
+        // ward cast the turn before (AUDIT #153, owner's answer 2026-09-16).
+        //
+        // THE TURN IT WENT UP DOES NOT COUNT. A ward raised during the
+        // wearer's own turn N is exempt from that turn's end tick, so a
+        // one-turn ward covers the enemy phase after N and stands through the
+        // whole of N+1, going at the end of it. FightSession owns the
+        // exemption (it is the only thing that knows whose turn it is) and
+        // hands the entries it raised this turn to TickWardsAtTurnEnd.
+        //
+        // N turns therefore means "standing through the wearer's next N
+        // turns", which is what an author says out loud -- the same spelling
+        // rule FightSession.Cooldowns already follows for a cooldown.
+
         // WARDS STACK (owner, 2026-09-16). A character may carry SEVERAL ward
         // entries at once; their shield TOTAL is the sum of the live ones. A
         // new ward is a new entry -- it never replaces, refreshes or refuses
@@ -434,11 +455,18 @@ namespace PrincesPalace.Domain.Combat
         // a rule -- a shield of nothing is an authoring mistake
         // (SkillEntryResolver refuses a sizeless Ward) or a Flock share of a
         // ward that was already nothing.
-        public static void ApplyWard(List<ActiveStatus> statuses, int points, int turns, CombatantState source = null)
+        // RETURNS THE ENTRY IT PUT UP, or null for the non-positive no-op.
+        // The caller needs it: a ward does not count the turn it was raised
+        // on, and the only way to say "this one, not that one" about two pools
+        // with the same size and the same clock is to hold the entry itself.
+        public static ActiveStatus ApplyWard(List<ActiveStatus> statuses, int points, int turns,
+            CombatantState source = null)
         {
-            if (statuses == null || points <= 0) return;
+            if (statuses == null || points <= 0) return null;
 
-            statuses.Add(new ActiveStatus(StatusEffectType.Shielded, points, turns, source));
+            var ward = new ActiveStatus(StatusEffectType.Shielded, points, turns, source);
+            statuses.Add(ward);
+            return ward;
         }
 
         // WHAT ONE WARD ENTRY DID TO THIS HIT. A hit that reaches through two
@@ -576,6 +604,42 @@ namespace PrincesPalace.Domain.Combat
             int before = wearer.CurrentHealth;
             CombatMath.Heal(wearer, wearer.MaxHealth * healPercent / 100);
             return wearer.CurrentHealth - before;
+        }
+
+        // COUNTS THE WEARER'S WARDS DOWN BY ONE OF THEIR OWN TURNS, at the
+        // END of that turn, and removes what ran out. Returns how many went,
+        // so the caller can say so only when something happened.
+        //
+        // `raisedThisTurn` is the entries put up DURING the turn that is
+        // ending, which do not count it -- see this file's WARDS header for
+        // why, and FightSession.Riders for who keeps the set. Null means
+        // "nothing was raised", which is every turn but a few.
+        //
+        // A ward whose caster holds The Golden Fleece is skipped outright:
+        // that capstone is a stopped clock, not a bigger number, so there is
+        // nothing here for it to count.
+        public static int TickWardsAtTurnEnd(CombatantState wearer,
+            ICollection<ActiveStatus> raisedThisTurn = null)
+        {
+            if (wearer == null) return 0;
+
+            int expired = 0;
+
+            // Materialised, because removing from the list below would
+            // otherwise invalidate the walk.
+            foreach (var ward in WardsInDrainOrder(wearer))
+            {
+                if (NeverExpires(ward)) continue;
+                if (raisedThisTurn != null && raisedThisTurn.Contains(ward)) continue;
+
+                ward.TurnsRemaining--;
+                if (ward.TurnsRemaining > 0) continue;
+
+                wearer.Statuses.Remove(ward);
+                expired++;
+            }
+
+            return expired;
         }
 
         // Somebody who has warded this combatant, or null. The engine's
@@ -748,13 +812,13 @@ namespace PrincesPalace.Domain.Combat
                 //
                 // Their countdown lives in ConsumeStun instead, beside
                 // ConsumeProvoke, at the moment the skip is actually spent.
-                // AND A WARD WHOSE CASTER HOLDS THE GOLDEN FLEECE IS NOT
-                // COUNTED DOWN AT ALL. That is the capstone, and it is read
-                // off the ward's own Source every tick rather than baked into
-                // its duration when it went up -- see NeverExpires for why the
-                // CASTER and not the wearer, and why it has to stay a live
-                // question.
-                if (!IsSpentByTheTurn(status.Type) && !NeverExpires(status))
+                // A WARD IS NOT COUNTED DOWN HERE AT ALL -- its clock runs at
+                // the END of the wearer's turn instead (TickWardsAtTurnEnd),
+                // which is what makes it visible on the turn it protects. This
+                // is NOT IsSpentByTheTurn's reason: those three are spent by
+                // the turn rather than aged by it, where a ward is aged by a
+                // turn, just by the other end of one.
+                if (!IsSpentByTheTurn(status.Type) && status.Type != StatusEffectType.Shielded)
                 {
                     status.TurnsRemaining--;
                 }
