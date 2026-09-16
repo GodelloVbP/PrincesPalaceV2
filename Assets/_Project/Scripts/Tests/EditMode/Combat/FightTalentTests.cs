@@ -122,6 +122,14 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(afterOneTurn, 2, "at most one payout, however many blows landed");
         }
 
+        // EVERY WARD TEST BELOW GRANTS WardIsFreeAction, and it is not
+        // decoration. A ward stands for ONE of the wearer's own turns
+        // (FightTuning.DefaultWardTurns), counted down at that turn's start --
+        // so a cast that ENDS the turn hands control back after the tick that
+        // took the ward away, and there is nothing left to assert. The free
+        // action keeps the turn with the caster, which is the only way the
+        // Lamb can look at her own ward at all. See AUDIT #153.
+
         // ---- The Flock, owner's rule 2026-09-15 (AUDIT #147) ------------------
         //
         // WARD HIMSELF AND IT SPREADS NOWHERE; WARD SOMEBODY ELSE AND THE
@@ -138,6 +146,7 @@ namespace PrincesPalace.Domain.Tests
             var ally = Hero("Ally");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
@@ -158,6 +167,7 @@ namespace PrincesPalace.Domain.Tests
             var ally = Hero("Ally");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
@@ -184,6 +194,7 @@ namespace PrincesPalace.Domain.Tests
             var ally = Hero("Ally");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 100),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50));
 
             var (session, _) = Fight(new[] { lamb, ally }, new[] { Foe() },
@@ -208,6 +219,7 @@ namespace PrincesPalace.Domain.Tests
             var two = Hero("Two");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardSpreadsToAllies, 50),
                 new TalentEffect(TalentEffectType.WardSpreadsToWholeParty, 1));
 
@@ -228,6 +240,7 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardAlsoAppliesRegen, 5, threshold: 3));
 
             var (session, _) = Fight(new[] { lamb }, new[] { Foe() },
@@ -265,6 +278,7 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Hero("Lamb");
             Talents(lamb,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
 
             var foe = Foe();
@@ -287,6 +301,7 @@ namespace PrincesPalace.Domain.Tests
             var plain = Hero("Plain");
             Talents(plain,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
             var plainFoe = Foe();
             var (control, _) = Fight(new[] { plain }, new[] { plainFoe },
@@ -298,6 +313,7 @@ namespace PrincesPalace.Domain.Tests
             var boosted = Hero("Boosted");
             Talents(boosted,
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100),
                 new TalentEffect(TalentEffectType.ShatterSelfWardMultiplier, 300));
             var boostedFoe = Foe();

@@ -380,7 +380,7 @@
       "displayName": "Fleece Ward",
       "column": 1,
       "row": 1,
-      "description": "Unlocks Ward (2 wool): a shield you can put on anybody, and 40% more of it. Seventy points, spent a hit at a time, for two turns.",
+      "description": "Unlocks Ward (2 wool): a shield you can put on anybody, and 40% more of it. Seventy points, spent a hit at a time, standing for one turn. Shields stack, so a second one adds to the first.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -731,7 +731,7 @@
       "displayName": "The Golden Fleece",
       "column": 1,
       "row": 20,
-      "description": "Wards stop timing out. They last the fight, until something spends them. Free, gated at 20 embers spent in this path.",
+      "description": "Wards YOU cast stop timing out -- yours, wherever you put them, including the ones the Flock spreads. They last the fight, until something spends them. A ward somebody else put on you keeps its own clock. Free, gated at 20 embers spent in this path.",
       "prerequisites": [
         "sheep_lamb_flock_3",
         "sheep_lamb_gift_3",
@@ -750,7 +750,7 @@
       "displayName": "Placeholder: Brace",
       "column": 0,
       "row": 0,
-      "description": "Placeholder kit. Deepens placeholder_brawler_ward (skills.json) by 40%, in sheep_lamb_ward's own range.",
+      "description": "Placeholder kit. Deepens placeholder_brawler_ward (skills.json) by 40%, in sheep_lamb_ward's own range: 52 points becomes 72.",
       "effects": [
         {
           "type": "WardReductionPercent",

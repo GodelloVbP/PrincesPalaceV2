@@ -377,14 +377,15 @@ namespace PrincesPalace.Domain.Combat.Session
             // shield points (StatusEffects' own WARDS header) -- and the
             // relic authors a small one rather than a second system.
             //
-            // Silent when a deeper pool refuses it, same as Magical Shield
-            // and for the same reason: it is free and automatic, so a line
-            // every turn saying it did nothing would be noise.
+            // Another entry on top of whatever is already up -- wards stack
+            // -- and on the relic's own whole-fight duration rather than the
+            // skills' one-turn default, because footwork armour is a standing
+            // property of the kit and not a window somebody opened.
             if (actingCharacter != null && HasRelic(actingCharacter, RelicEffect.SparringBuckler)
-                && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey)
-                && StatusEffects.ApplyWard(actingCharacter.Statuses, FightTuning.SparringBucklerWardPoints,
-                    FightTuning.MagicalShieldDurationTurns, actingCharacter))
+                && _locks.OncePerTurn(actingCharacter, FightTuning.SparringBucklerLockKey))
             {
+                StatusEffects.ApplyWard(actingCharacter.Statuses, FightTuning.SparringBucklerWardPoints,
+                    FightTuning.MagicalShieldDurationTurns, actingCharacter);
                 AppendMessage($"{actingCharacter.Name}'s buckler comes up - a ward from the footwork.");
             }
         }

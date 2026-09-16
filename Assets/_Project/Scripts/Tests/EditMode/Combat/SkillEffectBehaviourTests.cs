@@ -233,8 +233,14 @@ namespace PrincesPalace.Domain.Tests
 
             new Row(SkillEffect.Ward, "the caster carries a ward he cast on himself", () =>
             {
+                // WardIsFreeAction so the ward is still up when this looks:
+                // a ward stands one of the wearer's own turns and is ticked
+                // away at the start of the next, so a cast that ends the turn
+                // hands control back with nothing to see (AUDIT #153).
                 var lamb = Hero("Lamb");
-                Talents(lamb, new TalentEffect(TalentEffectType.WardReductionPercent, 50));
+                Talents(lamb,
+                    new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                    new TalentEffect(TalentEffectType.WardIsFreeAction, 1));
                 var encounter = new CombatEncounter(new[] { lamb }, new[] { Foe() });
                 var session = Session(encounter, Kit(Skill(SkillEffect.Ward, "Fleece Ward", flatAmount: 40)));
 

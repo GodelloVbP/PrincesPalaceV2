@@ -8,6 +8,10 @@ namespace PrincesPalace.Domain.Tests
     // and since 2026-09-16 (AUDIT #152, the owner's call) a SHIELD: a pool of
     // points that damage is taken out of, not a percentage off one blow.
     //
+    // WARDS STACK, decided the same day, once the one-ward-per-character rule
+    // had been built and read back. A character carries several entries; the
+    // total is the sum; damage drains the entry that expires soonest first.
+    //
     // Called a Ward everywhere, and implemented with
     // StatusEffectType.Shielded. "Shield" already means something else in this
     // pipeline (BreakShield is a stagger meter), so the two names stay apart
@@ -27,10 +31,9 @@ namespace PrincesPalace.Domain.Tests
             combatant.Talents = new TalentEffectSet(effects);
         }
 
-        private static void Ward(CombatantState caster, CombatantState wearer, int points, int turns = 2)
+        private static void Ward(CombatantState caster, CombatantState wearer, int points, int turns = 1)
         {
-            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, points, turns, caster),
-                "fixture: the ward did not land");
+            StatusEffects.ApplyWard(wearer.Statuses, points, turns, caster);
         }
 
         [Test]
@@ -79,57 +82,219 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, second.Absorbed);
         }
 
-        // ONE WARD PER CHARACTER. A bigger pool replaces a smaller one, an
-        // equal one refreshes it, a smaller one is refused outright -- and the
-        // refusal is a return value rather than a silent no-op precisely
-        // because the caster has a line to write about it.
+        // ---- stacking, and the order damage drains it ----------------------
+
+        // WARDS ADD UP. Nothing replaces, refreshes or refuses anything: three
+        // wards on one character are three entries and one total.
         [Test]
-        public void ABiggerPoolReplaces_AnEqualOneRefreshes_ASmallerOneIsRefused()
+        public void EveryWardIsItsOwnEntry_AndThePointsAddUp()
         {
             var lamb = Fighter();
             var tank = Fighter("Turtle");
 
-            Assert.IsTrue(StatusEffects.ApplyWard(tank.Statuses, 50, 2, lamb));
-            Assert.IsFalse(StatusEffects.ApplyWard(tank.Statuses, 49, 2, lamb), "a thinner ward pushed in");
-            Assert.AreEqual(50, StatusEffects.WardPoints(tank));
+            Ward(lamb, tank, 50);
+            Ward(lamb, tank, 10);
+            Ward(lamb, tank, 20);
 
-            Assert.IsTrue(StatusEffects.ApplyWard(tank.Statuses, 50, 2, lamb), "an equal ward failed to refresh");
-            Assert.IsTrue(StatusEffects.ApplyWard(tank.Statuses, 51, 2, lamb));
-            Assert.AreEqual(51, StatusEffects.WardPoints(tank));
-
-            Assert.AreEqual(1, tank.Statuses.Count(s => s.Type == StatusEffectType.Shielded),
-                "wards stacked instead of replacing");
+            Assert.AreEqual(3, tank.Statuses.Count(s => s.Type == StatusEffectType.Shielded));
+            Assert.AreEqual(80, StatusEffects.WardPoints(tank));
         }
 
-        // A PARTLY SPENT POOL IS NOT A BIGGER ONE. The replacement rule reads
-        // what is LEFT, so a 60 ward with 10 points remaining gives way to a
-        // fresh 20 -- which the old Math.Max refresh could not have done,
-        // because it kept the magnitude as authored.
+        // A THIN WARD OVER A THICK ONE IS NOT REFUSED. This is the case the
+        // rule that shipped for a few hours got wrong: The Flock's
+        // half-strength share bounced off anybody already covered, and a free
+        // relic ward was a coin flip against whatever the player had spent a
+        // turn on.
         [Test]
-        public void TheRuleReadsWhatIsLeftInThePool_NotWhatItStartedAt()
+        public void AThinnerWardOverAThickerOne_Lands()
         {
             var lamb = Fighter();
-            Ward(lamb, lamb, 60);
-            StatusEffects.ConsumeWard(lamb, 50);
-            Assert.AreEqual(10, StatusEffects.WardPoints(lamb));
+            var tank = Fighter("Turtle");
 
-            Assert.IsTrue(StatusEffects.ApplyWard(lamb.Statuses, 20, 2, lamb));
-            Assert.AreEqual(20, StatusEffects.WardPoints(lamb));
+            Ward(lamb, tank, 50);
+            Ward(lamb, tank, 5);
+
+            Assert.AreEqual(55, StatusEffects.WardPoints(tank));
         }
 
-        // TWO OF THE WEARER'S OWN TURNS by default, on the ordinary tick.
+        // SOONEST TO LAPSE IS SPENT FIRST, which is the only order that does
+        // not waste shield -- the pool that was about to go anyway pays, and
+        // the durable one is still there for the hit after this.
+        [Test]
+        public void DamageDrainsTheEntryThatExpiresSoonestFirst()
+        {
+            var lamb = Fighter();
+            var tank = Fighter("Turtle");
+
+            Ward(lamb, tank, 30, turns: 3);
+            Ward(lamb, tank, 20, turns: 1);
+
+            var outcome = StatusEffects.ConsumeWard(tank, 20);
+
+            Assert.AreEqual(0, outcome.Damage);
+            Assert.AreEqual(30, StatusEffects.WardPoints(tank), "the three-turn pool paid instead of the one-turn one");
+            Assert.AreEqual(3, StatusEffects.WardsInDrainOrder(tank).Single().TurnsRemaining);
+        }
+
+        // AND THEN THE NEXT ONE. A hit bigger than the head of the order
+        // reaches through it, and everything after it, before it reaches
+        // health.
+        [Test]
+        public void AHitReachesThroughOnePoolIntoTheNext_AndThenIntoHealth()
+        {
+            var lamb = Fighter();
+            var tank = Fighter("Turtle");
+
+            Ward(lamb, tank, 30, turns: 3);
+            Ward(lamb, tank, 20, turns: 1);
+
+            var outcome = StatusEffects.ConsumeWard(tank, 60);
+
+            Assert.AreEqual(10, outcome.Damage, "60 less 20 less 30");
+            Assert.AreEqual(50, outcome.Absorbed);
+            Assert.AreEqual(2, outcome.Hits.Count);
+            Assert.AreEqual(20, outcome.Hits[0].Absorbed, "the one-turn pool went first");
+            Assert.AreEqual(30, outcome.Hits[1].Absorbed);
+            Assert.IsFalse(StatusEffects.IsWarded(tank));
+        }
+
+        // TIES BREAK BY AGE, oldest first, so the order is total and two reads
+        // of the same board can never disagree.
+        [Test]
+        public void TwoWardsWithTheSameClock_DrainOldestFirst()
+        {
+            var lamb = Fighter();
+            var owl = Fighter("Odette");
+            var tank = Fighter("Turtle");
+
+            Ward(lamb, tank, 20, turns: 2);
+            Ward(owl, tank, 20, turns: 2);
+
+            var outcome = StatusEffects.ConsumeWard(tank, 20);
+
+            Assert.AreEqual(1, outcome.Hits.Count);
+            Assert.AreSame(lamb, outcome.Hits[0].Caster, "the newer ward paid first");
+            Assert.AreSame(owl, StatusEffects.WardsInDrainOrder(tank).Single().Source);
+        }
+
+        // A WARD THAT NEVER EXPIRES SORTS LAST however few turns its counter
+        // happens to say -- it is not going anywhere, so it is the one worth
+        // keeping.
+        [Test]
+        public void APermanentWardIsSpentAfterEveryWardOnAClock()
+        {
+            var shawn = Fighter();
+            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            var owl = Fighter("Odette");
+            var tank = Fighter("Turtle");
+
+            Ward(shawn, tank, 20, turns: 1);
+            Ward(owl, tank, 20, turns: 5);
+
+            var outcome = StatusEffects.ConsumeWard(tank, 20);
+
+            Assert.AreSame(owl, outcome.Hits[0].Caster,
+                "the five-turn ward paid before the permanent one-turn one");
+            Assert.AreSame(shawn, StatusEffects.WardsInDrainOrder(tank).Single().Source);
+        }
+
+        // ---- the clock -----------------------------------------------------
+
+        // ONE OF THE WEARER'S OWN TURNS by default, on the ordinary tick.
         [Test]
         public void AWardExpiresOnTheClock()
         {
             var lamb = Fighter();
-            Ward(lamb, lamb, 60, turns: 2);
+            Ward(lamb, lamb, 60, turns: 1);
 
+            StatusEffects.Tick(lamb);
+
+            Assert.IsFalse(StatusEffects.IsWarded(lamb), "still standing past its one turn");
+        }
+
+        [Test]
+        public void ALongerWardOutlastsTheTurnsItWasGiven()
+        {
+            var lamb = Fighter();
+            Ward(lamb, lamb, 60, turns: 3);
+
+            StatusEffects.Tick(lamb);
             StatusEffects.Tick(lamb);
             Assert.AreEqual(60, StatusEffects.WardPoints(lamb), "gone a turn early");
 
             StatusEffects.Tick(lamb);
-            Assert.IsFalse(StatusEffects.IsWarded(lamb), "still standing past its duration");
+            Assert.IsFalse(StatusEffects.IsWarded(lamb));
         }
+
+        // ---- The Golden Fleece belongs to the CASTER ------------------------
+        //
+        // Three cases, owner 2026-09-16, and the middle one is the whole
+        // reason it is read off the ward's Source rather than off whoever is
+        // wearing it.
+
+        [Test]
+        public void TheGoldenFleece_KeepsTheCastersOwnWardStanding()
+        {
+            var shawn = Fighter();
+            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Ward(shawn, shawn, 60, turns: 1);
+
+            for (int turn = 0; turn < 20; turn++)
+            {
+                StatusEffects.Tick(shawn);
+            }
+
+            Assert.AreEqual(60, StatusEffects.WardPoints(shawn), "his own ward aged away");
+        }
+
+        [Test]
+        public void TheGoldenFleece_KeepsAWardHeSpreadOntoSomebodyElseStanding()
+        {
+            var shawn = Fighter();
+            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            var ally = Fighter("Bjorn");
+            Ward(shawn, ally, 30, turns: 1);
+
+            for (int turn = 0; turn < 20; turn++)
+            {
+                StatusEffects.Tick(ally);
+            }
+
+            Assert.AreEqual(30, StatusEffects.WardPoints(ally),
+                "a Flock share is his work and holds the capstone, whatever the wearer bought");
+        }
+
+        [Test]
+        public void TheGoldenFleece_DoesNothingForAWardSomebodyElsePutOnHim()
+        {
+            var shawn = Fighter();
+            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            var odette = Fighter("Odette");
+            Ward(odette, shawn, 30, turns: 1);
+
+            StatusEffects.Tick(shawn);
+
+            Assert.IsFalse(StatusEffects.IsWarded(shawn),
+                "the capstone is the caster's, and Odette does not hold it");
+        }
+
+        // AND IT IS NOT IMMUNITY. The clock stops; the pool still drains, and
+        // a hit that empties it takes the ward with it.
+        [Test]
+        public void TheGoldenFleece_StopsTheClock_NotTheDraining()
+        {
+            var lamb = Fighter();
+            Give(lamb, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Ward(lamb, lamb, 60);
+
+            var outcome = StatusEffects.ConsumeWard(lamb, 100);
+
+            Assert.AreEqual(40, outcome.Damage);
+            Assert.AreSame(lamb, outcome.WardedBy, "it still counts as having been warded, so the engine still pays");
+            Assert.IsFalse(StatusEffects.IsWarded(lamb), "a permanent ward is still spent by what empties it");
+        }
+
+        // ---- who a ward belongs to -----------------------------------------
 
         // The CASTER's talents decide what a ward does on the way out, not the
         // wearer's. A ward Shawn put on the turtle heals by Shawn's Mending
@@ -167,6 +332,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(100, tank.CurrentHealth);
         }
 
+        // EACH ENTRY HEALS BY ITS OWN CASTER'S TALENT. A hit that breaks
+        // Shawn's ward and a relic's in one blow pays for Shawn's and not for
+        // the relic's.
+        [Test]
+        public void AHitThroughTwoWards_HealsOnlyForTheOneWhoseCasterHasTheNode()
+        {
+            var lamb = Fighter();
+            Give(lamb, new TalentEffect(TalentEffectType.WardHealsWhenSpent, 10));
+
+            var tank = Fighter("Turtle", maxHealth: 300);
+            tank.CurrentHealth = 100;
+
+            StatusEffects.ApplyWard(tank.Statuses, 10, 1);       // unsourced relic ward, goes first
+            Ward(lamb, tank, 10, turns: 2);
+
+            var outcome = StatusEffects.ConsumeWard(tank, 40);
+
+            Assert.AreEqual(20, outcome.Damage, "40 less 10 less 10");
+            Assert.AreEqual(2, outcome.Hits.Count);
+            Assert.AreEqual(0, outcome.Hits[0].Healed, "nobody cast the relic ward, so nobody heals for it");
+            Assert.AreEqual(30, outcome.Hits[1].Healed, "a tenth of the wearer's 300");
+            Assert.AreEqual(30, outcome.Healed, "and the total is the sum");
+        }
+
         [Test]
         public void WithoutMendingFleece_AWardBreakingHealsNothing()
         {
@@ -185,32 +374,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(100, tank.CurrentHealth);
         }
 
-        // THE GOLDEN FLEECE IS A DURATION, NOT IMMUNITY, and this is the test
-        // that changed most with the model. It used to assert the ward did not
-        // pop at all -- the only reading "permanent" could have while a ward
-        // was one hit's worth of percentage. Against a pool that would be
-        // immunity to everything forever, so the capstone buys a clock that
-        // never runs out and the pool drains normally.
-        [Test]
-        public void TheGoldenFleece_StopsTheClock_NotTheDraining()
-        {
-            var lamb = Fighter();
-            Give(lamb, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
-            Ward(lamb, lamb, 60, turns: StatusEffects.PermanentWardTurns);
-
-            for (int turn = 0; turn < 20; turn++)
-            {
-                StatusEffects.Tick(lamb);
-            }
-
-            Assert.AreEqual(60, StatusEffects.WardPoints(lamb), "a permanent ward aged away");
-
-            var outcome = StatusEffects.ConsumeWard(lamb, 100);
-            Assert.AreEqual(40, outcome.Damage);
-            Assert.AreSame(lamb, outcome.WardedBy, "it still counts as having been warded, so the engine still pays");
-            Assert.IsFalse(StatusEffects.IsWarded(lamb), "a permanent ward is still spent by what empties it");
-        }
-
         // The Magical Shield relic applies the same status with no source.
         // Every Lamb rule has to read that as absent rather than throwing.
         [Test]
@@ -227,13 +390,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(StatusEffects.IsWarded(wearer));
         }
 
+        // IsWardedBy IS THE PRECISE QUESTION, and IsWarded/WardedBy are the
+        // loose ones. With wards stacking, "who has warded this combatant" has
+        // no single answer, so everything that has to be right about a
+        // PARTICULAR caster -- Weight of Wool, Shatter's eligibility, the
+        // self-ward grace period -- asks this instead.
+        [Test]
+        public void IsWardedBy_AnswersForOneCasterRatherThanForAnybody()
+        {
+            var lamb = Fighter();
+            var odette = Fighter("Odette");
+            var tank = Fighter("Turtle");
+
+            StatusEffects.ApplyWard(tank.Statuses, 10, 1);      // unsourced, at the head of the order
+            Ward(lamb, tank, 40, turns: 2);
+
+            Assert.IsTrue(StatusEffects.IsWardedBy(tank, lamb));
+            Assert.IsFalse(StatusEffects.IsWardedBy(tank, odette));
+            Assert.AreSame(lamb, StatusEffects.WardedBy(tank), "the first entry with a source at all");
+        }
+
         // Non-positive damage does not touch the pool: nothing hit the shield,
         // so there is nothing to spend on it.
         [Test]
         public void AZeroHit_SpendsNothing()
         {
             var wearer = Fighter();
-            StatusEffects.ApplyWard(wearer.Statuses, 50, 2);
+            StatusEffects.ApplyWard(wearer.Statuses, 50, 1);
 
             Assert.AreEqual(0, StatusEffects.ConsumeWard(wearer, 0).Damage);
             Assert.AreEqual(50, StatusEffects.WardPoints(wearer));
@@ -241,16 +424,16 @@ namespace PrincesPalace.Domain.Tests
 
         // THE GENERIC APPLY REFUSES THIS STATUS OUTRIGHT -- tier 1 of
         // CODE_STANDARDS section 9, the API refusing to express the mistake.
-        // Apply's merge keeps the larger magnitude and the longer duration,
-        // which against a partly-spent pool hands back points a hit already
-        // ate, and it reports nothing to a caller that owes the player a line.
+        // Apply MERGES a second application into the first, which is the exact
+        // opposite of what a ward does, and it would silently turn two
+        // 20-point shields into one.
         [Test]
         public void TheGenericApply_WillNotPutUpAWard()
         {
             var wearer = Fighter();
 
             Assert.Throws<System.ArgumentException>(() =>
-                StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 50, 2));
+                StatusEffects.Apply(wearer.Statuses, StatusEffectType.Shielded, 50, 1));
         }
 
         [Test]
@@ -258,8 +441,9 @@ namespace PrincesPalace.Domain.Tests
         {
             var wearer = Fighter();
 
-            Assert.IsFalse(StatusEffects.ApplyWard(wearer.Statuses, 0, 2));
-            Assert.IsFalse(StatusEffects.ApplyWard(wearer.Statuses, -5, 2));
+            StatusEffects.ApplyWard(wearer.Statuses, 0, 1);
+            StatusEffects.ApplyWard(wearer.Statuses, -5, 1);
+
             Assert.IsFalse(StatusEffects.IsWarded(wearer));
         }
 
@@ -280,6 +464,45 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(0, StatusEffects.WardPoints(Fighter()));
             Assert.AreEqual(0, StatusEffects.WardPoints(null));
+        }
+
+        // ---- the summary the HUD draws -------------------------------------
+
+        [Test]
+        public void SummariseWards_TotalsThePointsAndNamesTheSoonestClock()
+        {
+            var lamb = Fighter();
+            var tank = Fighter("Turtle");
+
+            Ward(lamb, tank, 30, turns: 4);
+            Ward(lamb, tank, 20, turns: 2);
+
+            var summary = StatusEffects.SummariseWards(tank);
+
+            Assert.AreEqual(50, summary.Points);
+            Assert.AreEqual(2, summary.Entries);
+            Assert.AreEqual(2, summary.SoonestTurns);
+            Assert.IsFalse(summary.AllPermanent);
+        }
+
+        [Test]
+        public void SummariseWards_SaysSoWhenNothingIsOnAClock()
+        {
+            var shawn = Fighter();
+            Give(shawn, new TalentEffect(TalentEffectType.WardsNeverExpire, 0));
+            Ward(shawn, shawn, 30, turns: 1);
+
+            var summary = StatusEffects.SummariseWards(shawn);
+
+            Assert.IsTrue(summary.AllPermanent);
+            Assert.AreEqual(0, summary.SoonestTurns, "0 here means nothing is counting down, not that it goes now");
+        }
+
+        [Test]
+        public void SummariseWards_IsEmptyForAnUnwardedCombatant()
+        {
+            Assert.IsFalse(StatusEffects.SummariseWards(Fighter()).Any);
+            Assert.IsFalse(StatusEffects.SummariseWards(null).Any);
         }
     }
 

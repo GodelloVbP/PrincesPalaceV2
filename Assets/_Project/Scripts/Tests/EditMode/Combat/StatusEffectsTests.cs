@@ -353,18 +353,21 @@ namespace PrincesPalace.Domain.Tests
                 "The pool was emptied by the first hit");
         }
 
-        // Re-raising while the shield still stands must not stack -- the same
-        // does-not-stack promise this relic always made, now enforced by
-        // ApplyWard's replacement rule rather than by Apply's merge.
+        // RE-RAISING WHILE THE SHIELD STILL STANDS ADDS TO IT. This test used
+        // to assert the opposite twice over -- first because Apply merged
+        // every status, then because the shield model's first cut kept one
+        // ward per character. Wards stack now (owner, 2026-09-16), and the
+        // relic's "does not stack" promise is held by its once-per-turn lock
+        // instead, which is where a limit on how often it raises belongs.
         [Test]
-        public void ReapplyingAWard_WhileStillUp_DoesNotStack()
+        public void ReapplyingAWard_WhileStillUp_AddsASecondPool()
         {
             var target = MakeCombatant();
             StatusEffects.ApplyWard(target.Statuses, 50, 99);
             StatusEffects.ApplyWard(target.Statuses, 50, 99);
 
-            Assert.AreEqual(1, target.Statuses.Count);
-            Assert.AreEqual(50, StatusEffects.WardPoints(target));
+            Assert.AreEqual(2, target.Statuses.Count);
+            Assert.AreEqual(100, StatusEffects.WardPoints(target));
         }
 
         [Test]

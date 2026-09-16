@@ -1150,17 +1150,13 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (!HasRelic(actor, RelicEffect.MagicalShield)) return;
 
-            // REFUSED against a deeper pool, and silent about it: the relic
-            // raises itself on every qualifying cast with no cost and no
-            // choice, so "it did not replace the ward you spent a turn on" is
-            // correct behaviour rather than news. A skill's own ward says so
-            // (WardOne) because a skill cost something.
-            if (!StatusEffects.ApplyWard(actor.Statuses, FightTuning.MagicalShieldPoints,
-                    FightTuning.MagicalShieldDurationTurns, actor))
-            {
-                return;
-            }
-
+            // ANOTHER ENTRY, never a replacement: wards stack, so a relic
+            // shield raised over a Bulwark adds to it rather than arguing with
+            // it. MagicalShieldDurationTurns rather than the skills' one-turn
+            // default, because this relic's promise is a shield that stands
+            // until something spends it.
+            StatusEffects.ApplyWard(actor.Statuses, FightTuning.MagicalShieldPoints,
+                FightTuning.MagicalShieldDurationTurns, actor);
             AppendMessage($"{actor.Name}'s Magical Shield rises!");
         }
 

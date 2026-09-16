@@ -241,12 +241,20 @@ namespace PrincesPalace.Domain.Tests
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
                 new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 100));
 
-            // Both foes at 1 HP, so Shatter's own RandomLivingEnemy draw cannot
-            // decide whether this test passes -- either body it picks dies, and
-            // the fight is not over either way.
+            // EVERY foe at 1 HP, so Shatter's own RandomLivingEnemy draw cannot
+            // decide whether this test passes: whichever body it picks dies,
+            // one ward is one detonation, and the two it did not pick keep the
+            // fight going.
+            //
+            // The third used to be a 999999-HP tank, which made the claim above
+            // false -- a draw that picked it killed nobody, and the test passed
+            // only because the fixture's RNG stream happened not to. It stopped
+            // happening not to the moment the ward became a free action (one
+            // fewer turn advance is one fewer draw), which is the kind of pass
+            // that is worth replacing rather than re-seeding.
             var (session, encounter) = Fight(hero,
                 Kit(new List<ResolvedSkill> { Skill(SkillEffect.Ward, "Fleece Ward"), Skill(SkillEffect.Shatter, "Shatter") }),
-                Foe("WeakA", 1), Foe("WeakB", 1), Foe("Tank", 999999));
+                Foe("WeakA", 1), Foe("WeakB", 1), Foe("WeakC", 1));
 
             session.CastSkill(0, null);
             session.DrainBeats();
@@ -484,9 +492,15 @@ namespace PrincesPalace.Domain.Tests
 
         // A Ward gets a flatAmount because a ward is a POOL of shield points
         // and a row authoring nothing puts up nothing (AUDIT #152).
+        // A Ward gets a flatAmount because a ward is a POOL of shield points
+        // and a row authoring nothing puts up nothing (AUDIT #152), and
+        // freeAction because it stands one turn and would be ticked away at
+        // the caster's next turn start before Shatter could reach it
+        // (AUDIT #153).
         private static ResolvedSkill Skill(SkillEffect effect, string name, TransformGrant transform = null) =>
             new ResolvedSkill("t_" + name, name, "", "hero", 1, effect, SkillTargeting.Self,
                 0, 0, false, 100, effect == SkillEffect.Ward ? 40 : 0, false, null,
-                SpellPresentation.None, 0, transform: transform);
+                SpellPresentation.None, 0, transform: transform,
+                freeAction: effect == SkillEffect.Ward);
     }
 }

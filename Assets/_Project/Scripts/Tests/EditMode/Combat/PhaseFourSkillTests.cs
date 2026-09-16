@@ -30,7 +30,10 @@ namespace PrincesPalace.Domain.Tests
     // reaches every ward in the game. The owner then decided the pool. So
     // every ward number below is now SHIELD POINTS: Tuck In 5 a Wool (20 at
     // four, 32 once level 26's +3 lands), Bulwark 30% of the caster's own max
-    // health, Prism Ward 20 plus her spell attack, Fleece Ward 50, Brace 60.
+    // health, Prism Ward 20 plus her spell attack, Fleece Ward 50, Brace 20%
+    // of the caster's max health. Wards STACK, and none of the five authors a
+    // `wardTurns`, so all five stand for FightTuning.DefaultWardTurns -- one
+    // of the wearer's own turns.
     // Mend is untouched, and Prism Ward's scaling term came BACK with the
     // model: a spell attack that passes 80 now buys a bigger shield instead of
     // an immunity.
@@ -214,7 +217,16 @@ namespace PrincesPalace.Domain.Tests
             bjorn.PrimaryPool.Gain(1); // 50
             Assert.IsTrue(session.CastSkill(0, bjorn), "50 Fury is exactly the price and must pay it");
             Assert.AreEqual(0, bjorn.PrimaryPool.Current);
-            Assert.IsTrue(StatusEffects.IsWarded(bjorn));
+
+            // THE POOL IS ALREADY GONE BY THE TIME CONTROL RETURNS, and that
+            // is the one-turn clock rather than a cast that did nothing. This
+            // fixture's foe is speed 1 against Bjorn's 10, so the turn comes
+            // straight back to him and his own turn-start tick is what takes
+            // the ward -- which is true of every non-free ward cast in the
+            // game, not of this fixture (AUDIT #153). The cast is what this
+            // test is about; the clock is pinned by
+            // AWardExpiresAfterOneOfTheWearersOwnTurns.
+            StringAssert.Contains("pulls the fleece close", string.Join(" | ", Messages(session)));
         }
 
         // ---- Second Wind ---------------------------------------------------
@@ -359,20 +371,55 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(50, WardPoints(fleeceWard, Hero()));
         }
 
+        // 20% OF THE CASTER'S OWN MAX HEALTH, like Bulwark and for the same
+        // reason: a flat 60 was worth three enemy hits at level 1 and a
+        // rounding error at level 40. Bjorn's authored 260 gives 52.
         [Test]
-        public void BraceIsSixtyShieldPoints()
+        public void BraceIsAFifthOfTheCastersOwnHealth()
         {
             var brace = Authored("placeholder_brawler_ward");
 
             Assert.AreEqual(SkillEffect.Ward, brace.Effect);
-            Assert.AreEqual(60, brace.FlatAmount);
-            Assert.AreEqual(60, WardPoints(brace, Hero()));
+            Assert.AreEqual(20, brace.PercentOfCasterMaxHealth);
+            Assert.AreEqual(0, brace.FlatAmount, "Brace's size is the percentage, not a flat number");
+
+            Assert.AreEqual(52, WardPoints(brace, Hero(health: 260)), "Bjorn's own level-1 bar");
+            Assert.AreEqual(100, WardPoints(brace, Hero(health: 500)), "and this file's fixture hero");
+        }
+
+        // NOT TWO TURNS RUNNING. Brace costs nothing at all -- no mana, no
+        // resource -- so the cooldown is the only thing standing between it
+        // and a shield every single turn, which with wards stacking is a wall
+        // that grows for free.
+        //
+        // TWO, NOT ONE, and the number is the one place this is easy to get
+        // wrong: a cooldown counts from the turn it was CAST on, so 2 means
+        // "turn N, then turn N+2" and 1 means every turn. SkillEntryResolver
+        // refuses 1 outright for exactly that reason. Walked here as the
+        // sequence a player experiences rather than read off the field, which
+        // is what makes this a pin rather than a restatement.
+        [Test]
+        public void BraceCannotBeCastOnTheVeryNextTurn()
+        {
+            var brace = Authored("placeholder_brawler_ward");
+            Assert.AreEqual(2, brace.CooldownTurns);
+
+            var bjorn = Hero(health: 260, pool: 0);
+            var (session, encounter) = Fight(new[] { bjorn }, new[] { Foe() }, Kit(brace));
+            session.Begin();
+
+            Assert.IsTrue(session.CastSkill(0, bjorn), "turn 1 should be castable");
+
+            Assert.IsFalse(session.CastSkill(0, bjorn), "turn 2 is the wait");
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            Assert.IsTrue(session.CastSkill(0, bjorn), "turn 3 should be back");
         }
 
         // THE TALENT SCALES THE POOL. sheep_lamb_ward_1 authors 40, so Fleece
-        // Ward's 50 becomes 70 and Brace's 60 becomes 84 -- and Tuck In's four
-        // Wool become 28. It used to be the LARGER of talent-or-authored, which
-        // meant a 40 talent did nothing at all to a 50 ward.
+        // Ward's 50 becomes 70, and Brace's 52 on Bjorn's own bar becomes 72.
+        // It used to be the LARGER of talent-or-authored, which meant a 40
+        // talent did nothing at all to a 50 ward.
         [Test]
         public void TheWardTalentAddsItsPercentToWhateverTheSkillAuthored()
         {
@@ -383,7 +430,10 @@ namespace PrincesPalace.Domain.Tests
             });
 
             Assert.AreEqual(70, WardPoints(Authored("fleece_ward"), shawn));
-            Assert.AreEqual(84, WardPoints(Authored("placeholder_brawler_ward"), shawn));
+
+            var bjorn = Hero(health: 260);
+            bjorn.Talents = shawn.Talents;
+            Assert.AreEqual(72, WardPoints(Authored("placeholder_brawler_ward"), bjorn));
         }
 
         // WHAT ONE WARD IS WORTH, in one place, so nine assertions above
@@ -495,18 +545,21 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the ward rules, as the PLAN and the code now both state them --
         //
-        // PLAN_PROGRESSION_V2.md section 5 always stated the rule as "one ward
-        // per character, a new ward replaces a smaller one and not a larger
-        // one, absorbs until spent or expired". Phase 4 pinned the first two
-        // halves as real and the third as fiction: a ward was a percentage off
-        // one hit, applied at 999 turns, so nothing absorbed and nothing
-        // expired. All three halves are real now (AUDIT #152, owner 2026-09-16).
+        // PLAN_PROGRESSION_V2.md section 5 stated the rule as "one ward per
+        // character, a new ward replaces a smaller one and not a larger one,
+        // absorbs until spent or expired". Phase 4 pinned the first two halves
+        // as real and the third as fiction: a ward was a percentage off one
+        // hit, applied at 999 turns, so nothing absorbed and nothing expired.
+        //
+        // The absorbing half is real now and the one-ward half is GONE (owner,
+        // 2026-09-16): wards stack, and the shield total is the sum. WardTests
+        // owns the model in full; these are the rules as a CAST produces them.
 
         [Test]
         public void AWardAbsorbsUpToItsPoolAndCarriesTheRestThrough()
         {
             var wearer = Hero(health: 1000);
-            StatusEffects.ApplyWard(wearer.Statuses, 30, 2);
+            StatusEffects.ApplyWard(wearer.Statuses, 30, 1);
 
             Assert.AreEqual(70, StatusEffects.ConsumeWard(wearer, 100).Damage,
                 "30 points off a 100 hit, and 70 reaches health");
@@ -517,7 +570,7 @@ namespace PrincesPalace.Domain.Tests
         public void ASmallHitLeavesThePoolStandingWithLessInIt()
         {
             var wearer = Hero(health: 1000);
-            StatusEffects.ApplyWard(wearer.Statuses, 30, 2);
+            StatusEffects.ApplyWard(wearer.Statuses, 30, 1);
 
             var first = StatusEffects.ConsumeWard(wearer, 12);
             Assert.AreEqual(0, first.Damage, "nothing reached health");
@@ -531,59 +584,61 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, StatusEffects.WardPoints(wearer));
         }
 
+        // A CAST WARD ADDS TO ONE ALREADY STANDING. The relic wards are the
+        // case that matters and the only one a single character can reach in
+        // one turn: they author the whole fight where a skill's ward stands
+        // one turn, so a Tuck In pressed over a Magical Shield is 20 points on
+        // top of 20 rather than an argument about which of them wins.
         [Test]
-        public void OneWardPerCharacterAndTheLargerPoolWins()
+        public void ASkillWardStacksOnTopOfOneAlreadyStanding()
         {
-            var wearer = Hero();
+            var tuckIn = Authored("tuck_in");
+            var shawn = Hero(pool: 0);
+            shawn.SignaturePool = Wool(12);
 
-            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 30, 2));
-            Assert.IsFalse(StatusEffects.ApplyWard(wearer.Statuses, 12, 2), "a smaller ward was allowed in");
+            // The Magical Shield relic's own ward, on its own whole-fight
+            // duration and sourced by nobody, exactly as RaiseMagicalShield
+            // puts it up.
+            StatusEffects.ApplyWard(shawn.Statuses, FightTuning.MagicalShieldPoints,
+                FightTuning.MagicalShieldDurationTurns);
 
-            Assert.AreEqual(1, wearer.Statuses.Count(s => s.Type == StatusEffectType.Shielded),
-                "a second ward stacked rather than replacing");
-            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "a smaller ward overwrote a larger one");
+            var (session, _) = Fight(new[] { shawn }, new[] { Foe() }, Kit(tuckIn));
+            session.Begin();
 
-            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 44, 2));
-            Assert.AreEqual(44, StatusEffects.WardPoints(wearer), "a larger ward failed to replace a smaller one");
+            Assert.IsTrue(session.CastSkill(0, shawn));
 
-            // EQUAL REPLACES rather than refusing, which is what refreshes the
-            // clock on a ward the player recast deliberately.
-            Assert.IsTrue(StatusEffects.ApplyWard(wearer.Statuses, 44, 2), "re-casting the same ward was refused");
+            Assert.AreEqual(2, shawn.Statuses.Count(s => s.Type == StatusEffectType.Shielded),
+                "the cast ward replaced the relic's instead of stacking with it");
+            Assert.AreEqual(40, StatusEffects.WardPoints(shawn),
+                "the relic's 20 and four Wool of Tuck In at 5 points each");
         }
 
-        // TWO OF THE WEARER'S OWN TURNS, counted down by the ordinary
+        // ONE OF THE WEARER'S OWN TURNS, counted down by the ordinary
         // turn-start tick. Nothing here is a special case: Shielded is not in
         // StatusEffects' IsSpentByTheTurn list, so it ages like Poison does.
         [Test]
-        public void AWardExpiresAfterTwoOfTheWearersOwnTurns()
+        public void AWardExpiresAfterOneOfTheWearersOwnTurns()
         {
             var wearer = Hero();
             StatusEffects.ApplyWard(wearer.Statuses, 30, FightTuning.DefaultWardTurns);
 
-            Assert.AreEqual(2, FightTuning.DefaultWardTurns);
+            Assert.AreEqual(1, FightTuning.DefaultWardTurns);
 
             StatusEffects.Tick(wearer);
-            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "gone one turn early");
-
-            StatusEffects.Tick(wearer);
-            Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing after its second turn");
+            Assert.IsFalse(StatusEffects.IsWarded(wearer), "still standing after its one turn");
         }
 
-        // THE GOLDEN FLEECE IS A DURATION, not immunity. WardTests covers what
-        // ConsumeWard does to a permanent pool; this pins the number the
-        // session hands ApplyWard, which is the half that changed.
-        [Test]
-        public void TheGoldenFleeceWardNeverTimesOut()
+        // AND EVERY SHIPPED WARD SKILL TAKES THAT DEFAULT -- none of the five
+        // authors a `wardTurns`, which is the fact the sentence above is only
+        // useful in the presence of.
+        [TestCase("fleece_ward")]
+        [TestCase("tuck_in")]
+        [TestCase("placeholder_brawler_ward")]
+        [TestCase("bear_bulwark")]
+        [TestCase("prism_ward")]
+        public void EveryWardSkillStandsForTheHouseDefault(string id)
         {
-            var wearer = Hero();
-            StatusEffects.ApplyWard(wearer.Statuses, 30, StatusEffects.PermanentWardTurns);
-
-            for (int turn = 0; turn < 10; turn++)
-            {
-                StatusEffects.Tick(wearer);
-            }
-
-            Assert.AreEqual(30, StatusEffects.WardPoints(wearer), "ten turns aged a permanent ward away");
+            Assert.AreEqual(FightTuning.DefaultWardTurns, Authored(id).WardTurns);
         }
 
         // ---- the talent and the authored flag are one rule -----------------

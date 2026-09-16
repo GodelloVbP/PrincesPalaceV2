@@ -692,7 +692,21 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var status in actor.Statuses)
             {
+                // WARDS ARE ONE BADGE, not one each. They stack since the
+                // shield model (StatusEffects' own WARDS header), so a
+                // combatant behind a Bulwark, a Flock share and a relic ward
+                // would otherwise draw three SHD pills that each tell the
+                // player a fraction of what they want to know. Summarised once
+                // below instead.
+                if (status.Type == StatusEffectType.Shielded) continue;
+
                 rows.Add(StatusHud.RowFor(status));
+            }
+
+            var wards = StatusEffects.SummariseWards(actor);
+            if (wards.Any)
+            {
+                rows.Add(StatusHud.WardRow(wards));
             }
 
             // A TRANSFORMATION IS A STATUS -- 2026-09-09, the HUD-column pass.

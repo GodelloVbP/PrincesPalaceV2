@@ -467,7 +467,7 @@ namespace PrincesPalace.Domain.Content
 
             if (raw.wardTurns < 0)
             {
-                error = $"{label}: wardTurns cannot be negative (got {raw.wardTurns}). 0 means the default of two.";
+                error = $"{label}: wardTurns cannot be negative (got {raw.wardTurns}). 0 means the default of one.";
                 return false;
             }
 

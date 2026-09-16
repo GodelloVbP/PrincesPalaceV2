@@ -66,82 +66,99 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- the Fragile Lamb --------------------------------------------------
 
-        // HOW LONG THIS WARD STANDS: the skill's own authored `wardTurns`
-        // (already defaulted to FightTuning.DefaultWardTurns by the resolver),
-        // or forever for The Golden Fleece.
-        //
-        // The capstone changed meaning with the model and it is worth saying
-        // where. It used to be read inside ConsumeWard as "the ward never
-        // pops", which was the only thing "permanent" could mean while a ward
-        // was a percentage spent whole by one hit. Against a shield POOL that
-        // reading is literal immunity, so it means what the node's own text
-        // always said instead -- "they last the fight" -- and the pool still
-        // drains.
         // Gift: Fury is spent by the next SWING, not by a clock, so its
         // duration only has to be long enough that ordinary ticking can never
         // take it first -- the same "generous rather than infinite" trick
-        // every ward in the game used to use.
+        // every ward in the game used to use before wards got real clocks.
         private const int GiftFuryDurationTurns = 999;
 
-        private static int WardTurnsFor(CombatantState caster, ResolvedSkill skill) =>
-            caster != null && caster.Talents.Has(TalentEffectType.WardsNeverExpire)
-                ? StatusEffects.PermanentWardTurns
-                : skill?.WardTurns ?? FightTuning.DefaultWardTurns;
-
-        // Who has already paid the Lamb's engine this turn.
+        // HOW LONG THIS WARD STANDS: the skill's own authored `wardTurns`,
+        // already defaulted to FightTuning.DefaultWardTurns by the resolver,
+        // and nothing else.
         //
-        // The cap is once per warded combatant per turn, and it is one of two
-        // belts holding the same problem: a ward that paid on every hit it
-        // absorbed would return more wool than it cost and the economy would run
-        // backwards. The other belt is that a ward pops on the first hit at all.
+        // THE GOLDEN FLEECE IS NOT READ HERE ANY MORE. It used to hand this a
+        // sentinel duration, which meant the capstone was baked into a ward at
+        // the moment it went up: buying the node did nothing for the wards
+        // already out, and the WEARER's talents were what got asked in the
+        // version before that. It belongs to the CASTER and it is a live
+        // question every tick now -- StatusEffects.NeverExpires owns it.
+        private static int WardTurnsFor(ResolvedSkill skill) =>
+            skill?.WardTurns ?? FightTuning.DefaultWardTurns;
+
+        // Which caster has already been paid for which wearer this turn.
+        //
+        // The cap is once per caster per warded combatant per turn, and it is
+        // the only belt left holding a real problem: a ward that paid on every
+        // hit it absorbed would return more wool than it cost and the economy
+        // would run backwards. It used to be keyed on the WEARER alone, which
+        // was the same thing while only one ward could stand on anybody; wards
+        // stack now, so two casters covering one tank have to be able to be
+        // paid for their own work without paying either of them twice.
         //
         // Cleared when the WARDER's turn begins, which is what makes "per turn"
         // mean a round of his rather than a round of anyone's.
-        private readonly HashSet<CombatantState> _wardPayoutsThisTurn = new HashSet<CombatantState>();
+        private readonly HashSet<(CombatantState caster, CombatantState wearer)> _wardPayoutsThisTurn =
+            new HashSet<(CombatantState caster, CombatantState wearer)>();
 
-        // What a Ward does to one incoming hit: reduce it, pay its caster, heal
-        // its wearer, and start the grace period on a self-ward.
+        // What the wards on a combatant do to one incoming hit: absorb it, pay
+        // whoever put them up, heal the wearer as they break, and start the
+        // grace period on a self-ward that ran out.
         //
         // Called from inside the damage funnel, which is where the existing
         // Shielded consumption already lived -- so every typed and untyped
         // damage path reaches it without any of them knowing about wards.
+        //
+        // WALKS EVERY ENTRY THE HIT TOUCHED, because a hit big enough to reach
+        // through two pools is two casters' work and the engine owes both of
+        // them. StatusEffects.ConsumeWard hands the entries back in drain
+        // order; everything below is per-entry and additive.
         private int ResolveWard(CombatantState target, int damage)
         {
             var outcome = StatusEffects.ConsumeWard(target, damage);
-            var caster = outcome.WardedBy;
-            if (caster == null) return outcome.Damage;
+            if (outcome.Hits.Count == 0) return outcome.Damage;
 
-            // The engine. Paid for CARRYING a ward when struck, not for the ward
-            // breaking -- which is what lets the capstone's never-expiring wards
-            // keep earning instead of silently ending his income the moment he
-            // finishes his tree.
-            int reward = caster.Talents.Best(TalentEffectType.WoolWhenWardedAllyHit);
-            if (reward > 0 && caster.IsAlive && _wardPayoutsThisTurn.Add(target))
+            foreach (var hit in outcome.Hits)
             {
-                GrantSignature(caster, reward);
-                AppendMessage(ReferenceEquals(caster, target)
-                    ? $"{caster.Name}'s own ward takes the blow - the fleece thickens."
-                    : $"{caster.Name}'s ward on {target.Name} is struck - the fleece thickens.");
-            }
+                var caster = hit.Caster;
+                if (caster == null) continue;
 
-            if (outcome.Healed > 0)
-            {
-                AppendMessage($"The ward breaks over {target.Name} and knits {outcome.Healed} back.");
-            }
-            else if (outcome.Broke)
-            {
-                AppendMessage($"The shield over {target.Name} gives way.");
-            }
-
-            // Weight of Wool T3. Only a SELF-ward starts the grace period: the
-            // bonus it protects is the self bonus, and an ally's ward popping
-            // was never worth 2x to begin with.
-            if (ReferenceEquals(caster, target) && !StatusEffects.IsWarded(target))
-            {
-                int grace = caster.Talents.Best(TalentEffectType.WardSelfBonusPersistsTurns);
-                if (grace > 0)
+                // The engine. Paid for a ward of yours TAKING a blow, not for
+                // it breaking -- which is what lets the capstone's
+                // never-expiring wards keep earning instead of silently ending
+                // his income the moment he finishes his tree.
+                int reward = caster.Talents.Best(TalentEffectType.WoolWhenWardedAllyHit);
+                if (reward > 0 && caster.IsAlive && _wardPayoutsThisTurn.Add((caster, target)))
                 {
-                    target.SelfWardGraceTurns = grace;
+                    GrantSignature(caster, reward);
+                    AppendMessage(ReferenceEquals(caster, target)
+                        ? $"{caster.Name}'s own ward takes the blow - the fleece thickens."
+                        : $"{caster.Name}'s ward on {target.Name} is struck - the fleece thickens.");
+                }
+
+                if (hit.Healed > 0)
+                {
+                    AppendMessage($"The ward breaks over {target.Name} and knits {hit.Healed} back.");
+                }
+                else if (hit.Broke)
+                {
+                    AppendMessage($"The shield over {target.Name} gives way.");
+                }
+
+                // Weight of Wool T3. Only a SELF-ward starts the grace period:
+                // the bonus it protects is the self bonus, and an ally's ward
+                // popping was never worth 2x to begin with.
+                //
+                // Asked of THIS caster's own wards rather than of IsWarded,
+                // which now answers for anybody's: a relic ward still standing
+                // must not stop his grace period starting.
+                if (hit.Broke && ReferenceEquals(caster, target)
+                    && !StatusEffects.IsWardedBy(target, caster))
+                {
+                    int grace = caster.Talents.Best(TalentEffectType.WardSelfBonusPersistsTurns);
+                    if (grace > 0)
+                    {
+                        target.SelfWardGraceTurns = grace;
+                    }
                 }
             }
 
@@ -215,8 +232,13 @@ namespace PrincesPalace.Domain.Combat.Session
             return bonus;
         }
 
+        // THROUGH IsWardedBy, not through WardedBy. With wards stacking,
+        // "who has warded this combatant" has no single answer, and asking it
+        // that way meant a free relic ward sitting at the head of the drain
+        // order made Weight of Wool and Shatter both forget the ward the
+        // player had actually paid for.
         private static bool WardedByThisActor(CombatantState wearer, CombatantState caster) =>
-            ReferenceEquals(StatusEffects.WardedBy(wearer), caster);
+            StatusEffects.IsWardedBy(wearer, caster);
 
         // Applies a Ward to the ally the player picked, and to whoever The
         // Flock has widened it to. Returns how many landed, so the caller can
@@ -236,8 +258,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 percentOfCasterMaxHealth: skill.PercentOfCasterMaxHealth);
             if (points <= 0) return 0;
 
-            int turns = WardTurnsFor(caster, skill);
-            int landed = WardOne(caster, wearer, points, turns) ? 1 : 0;
+            int turns = WardTurnsFor(skill);
+            WardOne(caster, wearer, points, turns);
+            int landed = 1;
 
             // The Flock. The spread is a FRACTION OF THE WARD'S OWN pool
             // rather than its own number, so deepening Fleece Ward deepens
@@ -248,15 +271,16 @@ namespace PrincesPalace.Domain.Combat.Session
             int spread = caster.Talents.Best(TalentEffectType.WardSpreadsToAllies);
             if (spread <= 0) return landed;
 
-            // APPLIED AFTER THE FULL WARD, never before: a share landing
-            // first would be replaced by the full pool anyway, but a share
-            // landing on the WEARER would be refused against the pool it was
-            // supposed to be a share of. FlockSpread never yields the wearer,
-            // which is what keeps that from being a rule two call sites have
-            // to remember.
+            // FlockSpread never yields the wearer, so the share can never
+            // land on top of the full ward it is a share of. That mattered
+            // more when wards replaced each other; it is still worth keeping
+            // as one rule in one place rather than a check at two call sites,
+            // because a second pool on the pick would now quietly double what
+            // the cast was worth to them.
             foreach (var other in FlockSpread(caster, wearer))
             {
-                if (WardOne(caster, other, points * spread / 100, turns)) landed++;
+                WardOne(caster, other, points * spread / 100, turns);
+                landed++;
             }
 
             return landed;
@@ -292,39 +316,28 @@ namespace PrincesPalace.Domain.Combat.Session
                 : new[] { caster };
         }
 
-        // Puts one shield pool up, and says whether it landed.
+        // Puts one more shield pool up.
         //
-        // A SMALLER WARD IS REFUSED, not quietly merged: one ward per
-        // character, the bigger pool wins, and the player is told rather than
-        // left to wonder why the number on the badge did not move
-        // (StatusEffects.ApplyWard owns the rule). The Flock's half-strength
-        // share meeting somebody's own full Bulwark is the case this fires on
-        // most, and "left alone" is the right outcome there.
-        //
-        // Mending Fleece does NOT ride a refused ward. The regen is the ward's
-        // rider, and a ward that did not land has nothing to ride.
-        private bool WardOne(CombatantState caster, CombatantState wearer, int points, int turns)
+        // ALWAYS LANDS. Wards stack (owner, 2026-09-16), so there is no
+        // refusal to report and no caller left that has to ask whether there
+        // was -- StatusEffects.ApplyWard owns the rule and it is "add an
+        // entry". The one thing this still does that ApplyWard does not is
+        // floor the pool at 1, so a Flock share of a small ward is a thin
+        // shield rather than nothing.
+        private void WardOne(CombatantState caster, CombatantState wearer, int points, int turns)
         {
-            points = System.Math.Max(1, points);
-
-            int standing = StatusEffects.WardPoints(wearer);
-            if (!StatusEffects.ApplyWard(wearer.Statuses, points, turns, caster))
-            {
-                AppendMessage($"{wearer.Name} is already behind {standing} - the thinner ward finds no room.");
-                return false;
-            }
+            StatusEffects.ApplyWard(wearer.Statuses, System.Math.Max(1, points), turns, caster);
 
             // Mending Fleece. Rides along with the ward rather than being its own
             // cast, so the sustain strand costs no extra action and no extra
             // wool -- it makes the thing he was already doing worth more.
             int regenPercent = caster.Talents.Best(TalentEffectType.WardAlsoAppliesRegen);
-            if (regenPercent <= 0 || wearer.MaxHealth <= 0) return true;
+            if (regenPercent <= 0 || wearer.MaxHealth <= 0) return;
 
             int regenTurns = caster.Talents.Threshold(TalentEffectType.WardAlsoAppliesRegen);
             StatusEffects.Apply(wearer.Statuses, StatusEffectType.Regen,
                 System.Math.Max(1, wearer.MaxHealth * regenPercent / 100),
                 System.Math.Max(1, regenTurns), caster);
-            return true;
         }
 
         // Whether this cast will actually do something, checked BEFORE its cost

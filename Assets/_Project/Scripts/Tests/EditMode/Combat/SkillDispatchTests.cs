@@ -924,6 +924,11 @@ namespace PrincesPalace.Domain.Tests
             hero.Talents = new TalentEffectSet(new[]
             {
                 new TalentEffect(TalentEffectType.WardReductionPercent, 50),
+                // A ward stands one turn and is ticked away at the caster's
+                // next turn start, so a cast that ends the turn leaves nothing
+                // for the card to read. The free action is what keeps the ward
+                // and the next cast in the same turn -- see AUDIT #153.
+                new TalentEffect(TalentEffectType.WardIsFreeAction, 1),
                 new TalentEffect(TalentEffectType.WardDamageBonusSelf, 50),
             });
 

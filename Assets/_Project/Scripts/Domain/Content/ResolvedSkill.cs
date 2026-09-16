@@ -58,8 +58,8 @@ namespace PrincesPalace.Domain.Content
 
         // The two a Ward alone reads -- see RawSkillEntry's own headers.
         // WardTurns is already resolved here: 0 on the raw row becomes
-        // FightTuning.DefaultWardTurns, so nothing downstream has to know
-        // what an unauthored duration means.
+        // FightTuning.DefaultWardTurns (one turn), so nothing downstream has
+        // to know what an unauthored duration means.
         public int PercentOfCasterMaxHealth;
         public int WardTurns;
 

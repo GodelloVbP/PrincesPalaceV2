@@ -75,16 +75,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // ---- wards ------------------------------------------------------------
 
         // HOW LONG A SKILL'S WARD STANDS when its row authors no `wardTurns`
-        // -- two of the WEARER'S own turns, counted down by StatusEffects.
-        // Tick like every other duration in the game.
+        // -- ONE of the WEARER'S own turns, counted down by StatusEffects.Tick
+        // like every other duration in the game.
         //
-        // Two rather than "until something hits it", which is what every ward
+        // One rather than "until something hits it", which is what every ward
         // in this game used to be (they were all applied at 999 turns). A
         // shield POOL survives small hits, so without a clock one Bulwark
         // would stand for the rest of the dungeon and the skill would stop
-        // being a decision about WHEN. See StatusEffects' own WARDS header
-        // for the model this belongs to.
-        public const int DefaultWardTurns = 2;
+        // being a decision about WHEN.
+        //
+        // ONE RATHER THAN TWO, owner 2026-09-16, and it is the number that
+        // makes stacking a decision instead of an accumulator: wards add up
+        // now, so a two-turn window let a free action bank shields faster than
+        // anything could spend them. Every one of the five ward skills takes
+        // this default -- none of them authors `wardTurns` -- and the three
+        // relic wards opt out by authoring the whole fight
+        // (MagicalShieldDurationTurns) instead. See StatusEffects' own WARDS
+        // header for the model this belongs to.
+        public const int DefaultWardTurns = 1;
 
         // 99 turns is "for the rest of the fight" spelled as a duration --
         // the promise the two relic wards make, and deliberately NOT the

@@ -48,14 +48,21 @@ namespace PrincesPalace.Domain.Combat.Session
         private static string DurationPhrase(int turnsRemaining) =>
             turnsRemaining < SentinelTurns ? Plural(turnsRemaining, "turn") : "until it is used";
 
-        // A WARD'S sentinel reads differently, and it is the only status
+        // A WARD'S DURATION READS DIFFERENTLY, and it is the only status
         // whose does. "Until it is used" was exactly right while a ward was
-        // one hit's worth of percentage spent whole by the next blow; a
-        // shield pool is spent gradually, so a permanent one (The Golden
-        // Fleece, and the two relic wards) stands until something empties it
-        // rather than until it is "used".
-        private static string WardDurationPhrase(int turnsRemaining) =>
-            turnsRemaining < SentinelTurns ? Plural(turnsRemaining, "turn") : "for the rest of the fight";
+        // one hit's worth of percentage spent whole by the next blow; a shield
+        // pool is spent gradually, so one that is not on a clock stands until
+        // something empties it rather than until it is "used".
+        //
+        // Two ways to not be on a clock, and they are not the same thing: The
+        // Golden Fleece stops its caster's wards being counted down at all
+        // (StatusEffects.NeverExpires), and the relic wards author a
+        // whole-fight duration that clears SentinelTurns. Both read the same
+        // to a player, so both say the same sentence.
+        private static string WardDurationPhrase(StatusEffects.WardSummary summary) =>
+            summary.AllPermanent || summary.SoonestTurns >= SentinelTurns
+                ? "for the rest of the fight"
+                : Plural(summary.SoonestTurns, "turn");
 
         // Speed's own duration reads differently: TurnsLeft < 0 means "for
         // the rest of the fight" (FightSession.SpeedBuffs' own convention),
@@ -264,12 +271,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     return $"Vulnerable -- {Wrap(positive, $"{status.Magnitude}% more damage taken")}, {duration}";
                 case StatusEffectType.Stun:
                     return $"Stunned -- {Wrap(positive, "turn skipped")}, {duration}";
-                // THE POOL, not a percentage: Magnitude is how many shield
-                // points are LEFT, which is also what the badge counts (see
-                // CounterFor's caller in RowFor).
+                // NEVER REACHED FOR A WARD. Wards stack, so they do not get a
+                // badge each -- RowFor sends Shielded to WardRow, which takes
+                // the whole summary rather than one entry. Kept as a throw
+                // rather than a duplicate of WardTooltip so the two can never
+                // drift into saying different things about the same shield.
                 case StatusEffectType.Shielded:
-                    return $"Shielded -- {Wrap(positive, $"{status.Magnitude} shield")}, "
-                           + WardDurationPhrase(status.TurnsRemaining);
+                    throw new System.InvalidOperationException(
+                        "A ward's badge is built from StatusEffects.SummariseWards, not from one entry -- "
+                        + "see StatusHud.WardRow.");
                 case StatusEffectType.Provoked:
                     return $"Provoked -- {Wrap(positive, $"must attack its provoker, for {status.Magnitude}% less damage to them")}, {duration}";
                 case StatusEffectType.Empowered:
@@ -309,28 +319,57 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- assembling a row --------------------------------------------------
 
-        // A WARD'S BADGE COUNTS POINTS, NOT TURNS, and it is the one row that
-        // does. Every other badge's number answers "how much longer"; a
-        // shield's answers "how much is left", which is the question a player
-        // deciding whether to eat the next hit is actually asking -- and the
-        // only one whose answer moves between two of the wearer's turns. The
-        // duration is still in the tooltip.
+        // ONE BADGE FOR EVERY WARD A COMBATANT CARRIES, and its number is the
+        // TOTAL of the live pools rather than a turn count.
         //
-        // No sentinel branch: a pool is never 90-odd points by accident, and
-        // a ward with points left always has a number worth drawing.
-        private static int CounterForBadge(ActiveStatus status) =>
-            status.Type == StatusEffectType.Shielded
-                ? status.Magnitude
-                : CounterFor(status.TurnsRemaining);
+        // Both halves are the shield model showing through. Wards stack, so a
+        // badge each would be three SHD pills saying 20, 20 and 10 where the
+        // player wants to know they are behind 50. And every other badge's
+        // number answers "how much longer" where a shield's answers "how much
+        // is left", which is the question somebody deciding whether to eat the
+        // next hit is actually asking -- and the only one whose answer moves
+        // between two of the wearer's own turns. The duration is still in the
+        // tooltip, as the SOONEST of the entries, because that is the next
+        // moment the number on the badge changes without anyone being hit.
+        //
+        // No sentinel branch on the counter: a pool is never 90-odd points by
+        // accident, and a ward with points left always has a number worth
+        // drawing.
+        public static FightHudModel.StatusRow WardRow(StatusEffects.WardSummary summary)
+        {
+            string duration = WardDurationPhrase(summary);
+            string across = summary.Entries > 1 ? $" across {summary.Entries} wards" : "";
 
-        public static FightHudModel.StatusRow RowFor(ActiveStatus status) =>
-            new FightHudModel.StatusRow(
+            return new FightHudModel.StatusRow(
+                CodeFor(StatusEffectType.Shielded),
+                SlugFor(StatusEffectType.Shielded),
+                $"Shielded -- {Wrap(true, $"{summary.Points} shield")}{across}, {duration}",
+                true,
+                summary.Points,
+                SortKeyFor(StatusEffectType.Shielded));
+        }
+
+        public static FightHudModel.StatusRow RowFor(ActiveStatus status)
+        {
+            // A LONE WARD ENTRY IS A ONE-ENTRY SUMMARY, so the coverage sweep
+            // that walks every StatusEffectType through this method still gets
+            // an honest row and there is still only one place that words a
+            // shield. StatusRowsFor never comes through here for a ward -- it
+            // summarises the whole list once.
+            if (status.Type == StatusEffectType.Shielded)
+            {
+                return WardRow(new StatusEffects.WardSummary(
+                    status.Magnitude, 1, status.TurnsRemaining, StatusEffects.NeverExpires(status)));
+            }
+
+            return new FightHudModel.StatusRow(
                 CodeFor(status.Type),
                 SlugFor(status.Type),
                 TooltipFor(status),
                 IsPositive(status.Type),
-                CounterForBadge(status),
+                CounterFor(status.TurnsRemaining),
                 SortKeyFor(status.Type));
+        }
 
         // A running transformation as one badge. `displayName` is the form's
         // own name ("Black Ram Mode"), which is what the retired strip said

@@ -346,8 +346,13 @@ namespace PrincesPalace.Domain.Tests
             Give(foe, AlwaysDodge);
 
             // flatAmount 40 -- a ward authors its own pool now.
+            // freeAction on the row rather than through a talent: this
+            // fixture builds its skills directly. Without it the ward is
+            // ticked away at the caster's next turn start, before Shatter can
+            // detonate it -- a ward stands one turn (AUDIT #153).
             var wardSkill = new ResolvedSkill("ward", "Fleece Ward", "", "hero", 1, SkillEffect.Ward,
-                SkillTargeting.Self, 0, 0, false, 100, 40, false, null, SpellPresentation.None, 0);
+                SkillTargeting.Self, 0, 0, false, 100, 40, false, null, SpellPresentation.None, 0,
+                freeAction: true);
             var shatterSkill = new ResolvedSkill("shatter", "Shatter", "", "hero", 1, SkillEffect.Shatter,
                 SkillTargeting.Self, 0, 0, false, 100, 0, false, null, SpellPresentation.None, 0);
 

@@ -101,14 +101,16 @@ namespace PrincesPalace.Domain.Content
 
         // How many of the WEARER'S own turns a Ward stands before it times
         // out. 0, the default, means the house rule -- FightTuning.
-        // DefaultWardTurns, two of them.
+        // DefaultWardTurns, ONE of them -- and 0 is what all five shipped ward
+        // skills author, so the house rule is the only rule in play today.
         //
         // A ward used to be applied at 999 turns by every one of its callers,
         // because it was spent by the first hit that landed and a clock would
         // only ever have taken it away early. A shield pool survives small
-        // hits, so it needs a real duration or a single Bulwark would stand
-        // for the whole dungeon. Meaningless on anything but a Ward.
-        [ContentDoc("How many of the wearer's own turns a Ward stands before expiring; 0 means the default of two.")]
+        // hits AND stacks with the next one, so it needs a real duration or a
+        // free-action ward would bank shields faster than anything could spend
+        // them. Meaningless on anything but a Ward.
+        [ContentDoc("How many of the wearer's own turns a Ward stands before expiring; 0 means the default of one.")]
         public int wardTurns;
 
         // A CAST THAT DOES NOT END THE TURN -- Shawn's Tuck In, and the

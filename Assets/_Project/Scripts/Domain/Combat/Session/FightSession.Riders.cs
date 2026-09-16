@@ -395,14 +395,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // comment for why this is gated on Has() (a flag) rather than a
         // magnitude.
         //
-        // REPLACES rather than stacks -- StatusEffects.ApplyWard's own rule
-        // (one ward per character, the bigger pool wins), so re-triggering it
-        // every turn tops the pool back up to what the wearer's mana is worth
-        // and never compounds. 99 turns is "for the rest of the fight"
-        // spelled as a duration, the same convention the Magical Shield relic
-        // uses (FightTuning.MagicalShieldDurationTurns): this is a standing
-        // property of the armour, not a two-turn window somebody spent a cast
-        // on.
+        // STACKS, like every ward does now, and that is the one thing about
+        // this conversion worth watching: it fires at the top of every one of
+        // the wearer's turns for free, so a hoarded mana pool that is never
+        // spent lays down another RunicWardPointsCap on top of the last one
+        // every round. The cap is what holds it -- see
+        // FightTuning.RunicWardPointsCap -- and the ward it lays down carries
+        // the relic wards' whole-fight duration
+        // (FightTuning.MagicalShieldDurationTurns) rather than the skills'
+        // one-turn default, because this is a standing property of the armour
+        // and not a window somebody spent a cast opening.
         private void ApplyRunicWardConversion(CombatantState actor)
         {
             if (actor == null || actor.CurrentMana <= 0) return;
@@ -428,16 +430,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 Rounding.AwayFromZero(actor.CurrentMana * FightTuning.RunicWardConversionRate));
             if (wardPoints <= 0) return;
 
-            // Refused silently against a deeper pool -- this fires at the top
-            // of every one of the wearer's turns for free, so a line saying
-            // "your own Bulwark is still bigger" every single turn would be
-            // noise rather than information.
-            if (!StatusEffects.ApplyWard(actor.Statuses, wardPoints,
-                    FightTuning.MagicalShieldDurationTurns, actor))
-            {
-                return;
-            }
-
+            StatusEffects.ApplyWard(actor.Statuses, wardPoints,
+                FightTuning.MagicalShieldDurationTurns, actor);
             AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
         }
 

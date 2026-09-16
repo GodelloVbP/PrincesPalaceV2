@@ -143,19 +143,51 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.DoesNotContain("%", row.Tooltip);
         }
 
-        // A PERMANENT WARD SAYS SO rather than counting 999 down, and says it
-        // in the words a pool wants: "until it is used" was right while a ward
-        // was one hit's worth of percentage and is wrong for something spent
-        // gradually.
+        // A WARD THAT IS NOT ON A CLOCK SAYS SO rather than counting a
+        // number down, and says it in the words a pool wants: "until it is
+        // used" was right while a ward was one hit's worth of percentage and
+        // is wrong for something spent gradually. Two ways to get there -- the
+        // capstone, and the relic wards' whole-fight duration -- and they read
+        // the same to a player, so they say the same sentence.
         [Test]
-        public void APermanentWardReadsAsTheRestOfTheFight()
+        public void AWardOffTheClockReadsAsTheRestOfTheFight()
         {
-            var row = StatusHud.RowFor(
-                new ActiveStatus(StatusEffectType.Shielded, 50, StatusEffects.PermanentWardTurns));
+            var shawn = new CombatantState("Shawn", true, 200, 30, 10, 8);
+            shawn.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.WardsNeverExpire, 0),
+            });
 
-            Assert.AreEqual(50, row.Counter, "a permanent ward still shows what is left in it");
-            StringAssert.Contains("for the rest of the fight", row.Tooltip);
-            StringAssert.DoesNotContain("until it is used", row.Tooltip);
+            var capstone = StatusHud.RowFor(new ActiveStatus(StatusEffectType.Shielded, 50, 1, shawn));
+            Assert.AreEqual(50, capstone.Counter, "a permanent ward still shows what is left in it");
+            StringAssert.Contains("for the rest of the fight", capstone.Tooltip);
+            StringAssert.DoesNotContain("until it is used", capstone.Tooltip);
+
+            var relic = StatusHud.RowFor(
+                new ActiveStatus(StatusEffectType.Shielded, 20, FightTuning.MagicalShieldDurationTurns));
+            StringAssert.Contains("for the rest of the fight", relic.Tooltip);
+        }
+
+        // SEVERAL WARDS ARE ONE BADGE, showing the total, with the soonest
+        // clock in the tooltip. Wards stack (owner, 2026-09-16), and three SHD
+        // pills each telling the player a fraction of what they are behind is
+        // the thing that rule would otherwise have cost the HUD.
+        [Test]
+        public void StackedWardsDrawOneBadgeWithTheTotal()
+        {
+            var tank = new CombatantState("Bjorn", true, 300, 30, 10, 8);
+            StatusEffects.ApplyWard(tank.Statuses, 30, 4);
+            StatusEffects.ApplyWard(tank.Statuses, 20, 2);
+
+            var rows = FightHudModel.StatusRowsFor(null, tank)
+                .Where(r => r.Code == StatusHud.CodeFor(StatusEffectType.Shielded))
+                .ToList();
+
+            Assert.AreEqual(1, rows.Count, "one badge per combatant, however many wards are under it");
+            Assert.AreEqual(50, rows[0].Counter);
+            StringAssert.Contains("50 shield", rows[0].Tooltip);
+            StringAssert.Contains("across 2 wards", rows[0].Tooltip);
+            StringAssert.Contains("2 turns", rows[0].Tooltip, "the soonest clock, not the longest");
         }
 
         // Marked must NOT promise a damage effect it doesn't have -- see
@@ -218,14 +250,13 @@ namespace PrincesPalace.Domain.Tests
             Assert.GreaterOrEqual(Marks.MarkDurationTurns, StatusHud.SentinelTurns);
             Assert.GreaterOrEqual(FightTuning.MagicalShieldDurationTurns, StatusHud.SentinelTurns);
 
-            // THE ONLY WARD SENTINEL LEFT is The Golden Fleece's. Ordinary
-            // wards run a real two-turn clock since the shield model (AUDIT
-            // #152) and are covered by the sibling test below; a permanent one
-            // still has to clear the threshold so its badge reads "for the
-            // rest of the fight" rather than counting 999 down.
-            Assert.AreEqual(999, StatusEffects.PermanentWardTurns,
-                "pinned literal -- see StatusEffects' own WARDS header");
-            Assert.GreaterOrEqual(StatusEffects.PermanentWardTurns, StatusHud.SentinelTurns);
+            // NO WARD SENTINEL IS LEFT. Ordinary wards run a real one-turn
+            // clock since the shield model (AUDIT #152) and the three relic
+            // wards ride MagicalShieldDurationTurns, already asserted above.
+            // The Golden Fleece no longer authors a duration at all -- it is
+            // read off the ward's own caster every tick
+            // (StatusEffects.NeverExpires), which is what the sibling test
+            // AWardOffTheClockReadsAsTheRestOfTheFight covers on the badge.
         }
 
         // Every OTHER duration FightTuning authors is a real, tickable
