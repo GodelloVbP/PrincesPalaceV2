@@ -1,6 +1,149 @@
 # Gamepad Navigation — Plan v3
 
-> ## Status: 2026-09-17. Phase 4, item 1 landed (`65ad5325`); items 2-4 sized, not attempted this pass
+> ## Status: 2026-09-18. Phase 4, item 2: segments 1-4 landed as automated PlayMode tests; segments 5-9 sized, not attempted this pass
+>
+> Four commits (`4f3cf2fc`, `d59d0963`, `e1f6cdf7` plus this doc update),
+> each gated on the new classes, `tools/test.ps1 run`, and a full
+> `tools/run_tests_parallel.ps1` before the next -- the shape the previous
+> status block's own sizing note asked for ("item 2 (controller-only) as
+> its own session first"). `Tests/PlayMode/Shared/JourneyFixture.cs` is the
+> one shared mechanism every segment class reuses (scripted `BaseInput`
+> takeover, `PressSubmit`/`PressCancel`/`PressTabNext`/`PressTabPrev`/`Move`,
+> and the three assertion shapes the brief asked for); segments live as
+> separate classes directly under `Tests/PlayMode/Run/` (the area whose own
+> header describes exactly this spine -- a descent, its fights, the
+> reward track, saves -- closer than `Ui`, which is presentation and single
+> screens only).
+>
+> **Segments 1-4, done.** `JourneyToFirstFightTests`: Main Menu -> Play -> an
+> empty save slot -> Hub -> the descent gate -> the relic draft (spent, not
+> skipped -- a fresh save has not drafted one yet) -> Descend -> the Map ->
+> a plain Fight room's own entry node -> the Fight scene, every step through
+> real scene loads (`Navigation.LoadOverride` is never set in this suite,
+> unlike every single-screen gamepad-nav test in this project). The run is
+> seeded (`RunOrchestrator.StartRun`) only AFTER `SaveSlotManager.EnterSlot`,
+> never before -- seeding earlier collides with `EnterSlot`'s own
+> `SettleOnOpening` (AUDIT #117), which ends a run that already exists the
+> instant a slot is opened. The seed is chosen live
+> (`SeedWithAPlainFightAtDepth1Entry`, the same search shape
+> `ShopGamepadNavigationTests` already uses) so the Map's own entry is
+> already a plain Fight room, because this suite never teleports
+> `EventSystem` selection to aim a Move at a specific one -- see segment 7's
+> own note below for why that stays true on the run's SECOND traversal too.
+> `JourneyFightRoundTests`: the verb column moved with the pad (Up then
+> Down, proving the press reaches it rather than merely that ATTACK is
+> already focused), a target hovered and confirmed, the round played with
+> no further input, the literal damage (6) pinned rather than recomputed.
+> `JourneySystemMenuMidFightTests`: Cancel at Root opens the system menu
+> over a live Fight (section 3's own transition case, now proven end to end
+> rather than only at the dispatcher-fixture level
+> `CancelOpensSystemMenuTests` already covers), a Move proves Fight's own
+> branch is inert underneath it, `TabNext` reaches Options, one stepper and
+> one slider row are each adjusted by exactly one step, and Cancel closes
+> back to Fight with selection null and the verb focus untouched.
+> `JourneyFightToHubOnDefeatTests`: Inspect/Return's Rail walked with Move,
+> Submit on Return raises `Dismissed` and loads the Hub for real, gate
+> selected.
+>
+> **Deviation, stated rather than silently reinterpreted: segment 4 reaches
+> the Hub through a deliberate LOSS, not "win it, or flee".**
+> `FightScreen.cs`'s own header on `BuildVerbColumn` records Flee/Run as
+> REMOVED, not hidden -- "it never actually fled a fight... there was no
+> Flee/Run method anywhere in `FightSession` to wire it to" -- so there is
+> no flee verb this suite could press. Winning does not reach the Hub
+> either: `FightController.LeaveFight` is
+> `Navigation.Go(RunManager.HasRun ? Navigation.Map : Navigation.Hub)`, and
+> a win leaves the run standing (`RunOrchestrator.SettleFight` only calls
+> `RunManager.EndRun` on a loss) -- so a won fight's own Continue lands on
+> the Map, which is segment 7's path, not segment 4's. A deliberate loss is
+> the one route this screen actually offers to the Hub, and it is an
+> established, sanctioned pattern in this project's own suite already
+> (`FightSettlementTests`' `WalkInOn`/solo-squad shape), reused here through
+> the pad rather than through `Button.onClick`.
+>
+> **A second stated deviation, load-bearing for every segment after the
+> first: state is RECONSTRUCTED per segment class, not physically read off
+> a prior class's leftover save file**, despite the brief's own "starting
+> from a deterministic state the previous segment ends in... the save state
+> the previous one leaves on disk" framing. NUnit does not guarantee
+> cross-CLASS execution order (only within a fixture), so a segment reading
+> another class's save file would be correct only by accident of whichever
+> order the runner happens to invoke fixture classes in -- a fragility no
+> existing single-screen gamepad-nav test in this project accepts; every one
+> of them sets up its OWN scenario through the orchestrator rather than
+> depending on another test's leftovers, and segments 2-4 follow that same,
+> already-proven shape instead of introducing a new, order-dependent one.
+>
+> **Two bugs found and fixed in this pass, both in the mechanism rather
+> than in a screen, both because a JOURNEY chains presses no single-screen
+> test ever had to:**
+> 1. `NavigationInputModule.ProcessFight`'s own `_fightVerticalArmed` only
+>    re-arms once it reads `|vertical| < 0.5f` -- two Fight-branch `Move`
+>    calls back to back with no neutral frame between them read the second
+>    as still-held. `JourneyFixture.Move` now drives a settle frame at
+>    neutral before returning, once, for every caller.
+> 2. `StandaloneInputModule.AllowMoveEventProcessing` ORs a fresh nonzero
+>    axis read against a REAL-TIME repeat-delay gate with no `BaseInput`
+>    seam (section 10's own "repeat-cadence testing... has to wait real
+>    frames" note, met here from the test-writing side rather than the
+>    production side) -- a single isolated press is always let through, but
+>    a SECOND chained ordinary-context move arriving sooner than Unity's own
+>    0.5s `moveRepeatDelay` after the first is silently dropped. Every
+>    existing single-screen gamepad-nav file in this project sidesteps this
+>    by never chaining two dispatcher moves in one test (their own headers
+>    say so, e.g. `SystemMenuGamepadNavigationTests`' "ONE PRESS PER TEST");
+>    `JourneyFixture.Move` now settles for real time after releasing the
+>    stick, confirmed by a diagnostic wait inserted and then removed once
+>    the cause was named. This is a real cost: each `Move` call now spends
+>    0.6 real seconds, which is why this whole suite runs in single-digit
+>    seconds per class rather than milliseconds -- accepted rather than
+>    chased further, since the alternative (per section 12 item 6) is
+>    hardware-acceptance-only coverage of chained moves, which is less, not
+>    more.
+>
+> **Segments 5-9, sized rather than attempted this pass** -- each is
+> comparable in scope to one of the four already shipped, and the previous
+> status block's own estimate ("several sessions of work... splitting it
+> into [segments 1-4] as one class and [segments 5-9] as a second") is
+> confirmed rather than revised by what actually shipped: four segments
+> plus their shared mechanism and two mechanism-level bugs was a full
+> session on its own.
+> - **Segment 5 (Hub -> Shop)** needs a seed search for a Shop room reached
+>   from the Hub gate's own Map (not the Hub's four buildings --
+>   `HubGamepadNavigationTests`' own button list has no Shop building; the
+>   in-run shop is a Map room, `ShopGamepadNavigationTests`' own fixture
+>   confirms this), then the buy/refuse pair section 2's own verification
+>   note requires (both eligibility shapes).
+> - **Segment 6 (Talents)** is reachable only from the HUB's own
+>   `TalentsBuilding`, which -- unlike Shop -- is between-descents furniture,
+>   not a Map room; reaching it after segment 4's Hub arrival is
+>   straightforward, but investing (or being refused) needs a real,
+>   eligible/ineligible orb state assembled the way
+>   `TalentGamepadNavigationTests` already does.
+> - **Segment 7 (the run's SECOND traversal, Hub -> Map -> a chosen node)**
+>   is the one segment that genuinely needs Move-driven aiming at a
+>   specific room type rather than a chosen entry -- segments 1-4's own
+>   seed-search shortcut does not apply a second time once the player has a
+>   real choice of nodes, which is section 13's own "second fight, same
+>   checklist as the first" bullet, not a repeat of segment 1.
+> - **Segment 8 (victory or defeat, whichever the seed reaches, then the
+>   reward track)** is the one segment needing an actual WIN driven to
+>   completion through the pad (segments 2/3 stop after one round;
+>   segment 4 is a deliberate loss) -- `FightSettlementTests.LevelTheSquadTo`
+>   is the established lever, but reaching the Reckoning through Move/Submit
+>   rather than a direct `_reckoning.Show()` call (`ReckoningGamepadNavigationTests`'
+>   own shortcut) means playing a real, winnable multi-round fight to its
+>   end on the pad first -- itself close to segment 2's own scope, before
+>   the reward-track rail and its claim are reachable at all.
+> - **Segment 9 (System Menu -> Main Menu)** is the smallest of the five,
+>   and depends on wherever segment 8 actually ends (the brief's own "from
+>   wherever segment 8 ends" -- Hub or Map, decided by which of victory or
+>   defeat the seed reaches), so it was left for the same session as 8
+>   rather than built against a guessed starting screen.
+>
+> Recommendation unchanged from the previous status block: segments 5-9 as
+> their own follow-up session, the same gated-commit shape this pass and
+> phase 3a both already used.
 >
 > **Item 1** (`65ad5325`, `AUDIT.md` #160 closed): the dossier's pack cells,
 > equipment slots and ability-score cells, and the Reckoning's offer cards,

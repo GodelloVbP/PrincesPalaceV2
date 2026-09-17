@@ -275,6 +275,31 @@ use `select.Changed +=`, not `=` -- every one of these cells already carries a
 `SelectIndex` from `TooltipFocusRouter.Register` (job 1), and `Changed` is a
 plain multicast `Action` a `=` would have silently stolen from the tooltip.
 
+**Phase 4, item 2, segments 1-4** (`4f3cf2fc`, `d59d0963`, `e1f6cdf7` --
+`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status header has the per-segment
+detail and the two stated deviations): the controller-only journey,
+automated as PlayMode tests through the real production dispatcher rather
+than the manual checklist section 13 used to be the only version of.
+`Tests/PlayMode/Shared/JourneyFixture.cs` is the one shared mechanism --
+scripted `BaseInput` takeover, `PressSubmit`/`PressCancel`/`PressTabNext`/
+`PressTabPrev`/`Move` (Move settles for real time after releasing the
+stick, a fix for a silent drop `StandaloneInputModule.AllowMoveEventProcessing`'s
+own real-time repeat gate causes on a second chained move, found writing
+this suite), `WaitForScene`/`WaitUntil`, and three assertion shapes
+(a literal selected node name, "top is Fight with no selection", a named
+scene transition). Segment classes live directly under `Tests/PlayMode/Run/`:
+`JourneyToFirstFightTests` (Main Menu through the relic draft to the Map's
+own entry Fight room), `JourneyFightRoundTests` (the verb column, a
+confirmed attack, one played round), `JourneySystemMenuMidFightTests`
+(Cancel opening the menu over a live Fight, an Options stepper and slider
+each adjusted once, Cancel back), `JourneyFightToHubOnDefeatTests` (a
+deliberate loss -- there is no flee verb, `FightScreen.cs`'s own
+`BuildVerbColumn` header says so, and a win's own `LeaveFight` goes to the
+Map, not the Hub -- through Defeat's Inspect/Return Rail to the Hub).
+Segments 5-9 (Shop, Talents, the run's second Map traversal, a real win to
+the reward track, System Menu to Main Menu) are sized in the plan's own
+status header, not attempted this pass.
+
 `Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
 of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
 ActivePaneEntry` prefers it and falls back to the generic first-Selectable-in-
