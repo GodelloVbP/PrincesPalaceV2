@@ -9,6 +9,15 @@ namespace PrincesPalace.Domain.UiKit
         ZeroSizeGraphic,     // A6
         InertOverlapAllowance, // A7
         ExclusiveGroupBothActive, // A8
+
+        // Gamepad navigation, plan section 9a. Structural only -- these prove
+        // a declared UiNavDeclaration resolves against the tree it was
+        // declared for, never that stick+Submit actually reaches anything
+        // (that is a PlayMode obligation, section 9b).
+        NavEntryUnresolved,
+        NavGroupMemberUnresolved,
+        NavLinkUnresolved,
+        NavRequiredActionUnresolved,
     }
 
     // One audit failure, with everything needed to act on it without opening

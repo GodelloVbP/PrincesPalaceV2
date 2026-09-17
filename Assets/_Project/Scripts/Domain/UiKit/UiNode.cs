@@ -217,6 +217,16 @@ namespace PrincesPalace.Domain.UiKit
         public string AllowOverlapReason;
         public string AllowOverflowReason;
 
+        // A third escape hatch, gamepad-navigation-shaped (plan section 9a):
+        // a custom actionable control (anything implementing
+        // IPointerClickHandler/IPointerDownHandler/IDragHandler that is not a
+        // Selectable) that is deliberately not stick-reachable. Checked by
+        // UiNavControlsAudit, not UiAudit itself -- that audit needs to see
+        // the actual emitted components, which a Domain-layer node cannot
+        // reference, so the escape hatch lives here (declared alongside every
+        // other one) but is read from the Editor layer.
+        public string AllowUnreachableReason;
+
         // NestedCanvas only. Always written by the emitter alongside
         // overrideSorting, never left at its default -- a nested Canvas
         // ignores sortingOrder entirely without that, which is how v1's
@@ -364,6 +374,12 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode AllowOverflow(string reason)
         {
             AllowOverflowReason = Require(reason, nameof(AllowOverflow));
+            return this;
+        }
+
+        public UiNode AllowUnreachable(string reason)
+        {
+            AllowUnreachableReason = Require(reason, nameof(AllowUnreachable));
             return this;
         }
 

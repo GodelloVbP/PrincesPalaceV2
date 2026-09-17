@@ -107,6 +107,20 @@ public static partial class SceneBuilder
             var tree = screen.BuildTree();
             var result = UiEmitter.Emit(tree, canvas.transform);
 
+            // Gamepad navigation (plan section 9a). CheckNavigable runs
+            // BEFORE any Explicit link is written, same reasoning as
+            // UiEmitter auditing layout before emitting: a bad declaration
+            // is free to catch here and expensive to catch as a runtime
+            // NullReference three screens later. Nav is read only after
+            // BuildTree so its closure sees THIS tree's own node instances.
+            var nav = screen.Nav?.Invoke();
+            var navErrors = UiAudit.CheckNavigable(tree, nav);
+            if (navErrors.Count > 0)
+            {
+                throw new System.Exception(FormatNavAuditFailure(screen.PanelName, navErrors));
+            }
+            UiNavWiring.Apply(nav, result);
+
             screen.Wire?.Invoke(result);
 
             // E1, E4, E3 and F9: measured text, declared-vs-bound counts,
@@ -121,11 +135,33 @@ public static partial class SceneBuilder
             UiCountAudit.Run(screen.PanelName, screen.CountBindings?.Invoke());
             UiWiringSweep.Run(screen.PanelName, result);
             UiBindingAudit.Run(screen.PanelName, result);
+
+            // Needs components Wire just attached (a screen's own custom
+            // actionable controls are typically attached there via
+            // result.Attach<T>), so this runs last of all, not beside
+            // CheckNavigable above.
+            UiNavControlsAudit.Run(screen.PanelName, nav, result);
         }
 
         EditorSceneManager.SaveScene(scene, scenePath);
         EnsureInBuildSettings(scenePath);
         Debug.Log($"[SceneBuilder] built {scenePath} with {screens.Count} screen(s)");
+    }
+
+    // Mirrors UiEmitter.FormatAuditFailure's shape (grouped by message so one
+    // mistake visible at repeated reports still reads as one mistake) --
+    // kept as its own small copy rather than made public across assemblies
+    // for one caller.
+    private static string FormatNavAuditFailure(string screen, IReadOnlyList<UiAuditError> errors)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"[SceneBuilder] FAILED: '{screen}' has {errors.Count} navigation problem(s):");
+        foreach (var group in errors.GroupBy(e => e.Message))
+        {
+            sb.AppendLine($"  [{group.First().Check}]");
+            sb.AppendLine($"    {group.Key}");
+        }
+        return sb.ToString();
     }
 
     private static Camera CreateMainCamera()

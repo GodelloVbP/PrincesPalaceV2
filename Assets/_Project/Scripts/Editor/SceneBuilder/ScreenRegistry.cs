@@ -29,6 +29,15 @@ public sealed class ScreenDef
     // state it -- that pairing is the whole defence against the shipped Store
     // bug, where a strip was sized from one collection and filled from another.
     public Func<IEnumerable<UiCountAudit.Binding>> CountBindings;
+
+    // Gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md section 9a). Read
+    // AFTER BuildTree so a closure over the same screen-local variable BuildTree
+    // populated can hand back a declaration built from THIS tree's own node
+    // instances, never a stale one. Null is the ordinary case in phase 2 --
+    // most screens have not been given a declaration yet, and UiAudit.
+    // CheckNavigable / UiNavControlsAudit / UiNavWiring all treat null as
+    // "not checked", not "checked and empty".
+    public Func<UiNavDeclaration> Nav;
 }
 
 // The ONE list of screens in the game.
