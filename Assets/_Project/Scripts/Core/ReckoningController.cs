@@ -190,6 +190,19 @@ namespace PrincesPalace
         // the reward screen has no business knowing what comes after a fight.
         public System.Action Dismissed;
 
+        // WHO OWNS THE COMPARISON BOX -- the pointer or the selection
+        // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section
+        // 7). OnOfferHover below stays the one show/hide implementation; this
+        // decides which input is allowed to reach it.
+        private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
+
+        // Pushed in Show() once Wire()/Paint() have settled which cards are
+        // on screen, reconfigured when the choice resolves into the summary,
+        // and removed on OnDisable -- Defeat's own PushNavContext header has
+        // the argument for OnDisable rather than a button handler, and it
+        // applies here for the same reason: Continue ends in a scene change.
+        private NavContext _navContext;
+
         private void Start()
         {
             Wire();
@@ -217,10 +230,132 @@ namespace PrincesPalace
                 // because HoverIndex carries a delegate and an index and a
                 // scene serialises neither usefully -- same reason the fight
                 // attaches it to its intent badges.
-                var hover = offerButtons[i].gameObject.AddComponent<HoverIndex>();
+                //
+                // AND IT REPORTS TO THE ROUTER, not to OnOfferHover directly:
+                // the selection path (SelectIndex, added by Register) is the
+                // second caller of that same handler, and which of the two
+                // owns the box is TooltipFocus' decision rather than a race
+                // between two components (job 1).
+                var node = offerButtons[i].gameObject;
+                _tooltips.Register(offerButtons[i], entered => OnOfferHover(index, entered));
+
+                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Index = index;
-                hover.Changed = OnOfferHover;
+                hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
             }
+        }
+
+        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 2) ------
+        //
+        // TWO STATES, one context. The choice phase is a Rail of the cards
+        // actually on screen; the summary it sweeps to is the page tabs plus
+        // Continue. Reconfigured rather than popped and re-pushed, which is
+        // NavContext.Reconfigure's own documented case -- the phase change is
+        // the same screen showing something else, not a modal over it.
+        //
+        // SUBMIT NEEDS NO CODE: an offer card is a real Button, so its
+        // OnSubmit fires the onClick that already calls Take(index) -- one
+        // path for the mouse and the pad, and Take's own `_taken` guard is
+        // what makes it once-only whichever input arrives.
+        private void RefreshNavigation()
+        {
+            var groups = new List<UiNavGroup<Selectable>>();
+            var links = new List<UiNavLink<Selectable>?>();
+            var selectables = new Dictionary<string, object>();
+            object entry = null;
+
+            if (_choosing)
+            {
+                // Only the cards that are up: PaintOffers deactivates the
+                // rest, and a thin content pool really does roll fewer than
+                // ItemOfferTable.OfferCount.
+                var cards = new List<Selectable>();
+                for (int i = 0; i < offerButtons.Length && i < _offers.Count; i++)
+                {
+                    if (offerButtons[i] != null) cards.Add(offerButtons[i]);
+                }
+
+                groups.Add(RuntimeNavWiring.Group("reckoningOffers", UiNavGroupKind.Rail, cards));
+
+                // THE GAMEOBJECT, never the Button. NavContext reads its
+                // entry back through `as GameObject` (it holds an opaque
+                // handle, being engine-free), so a Selectable put here
+                // resolves to null and the dispatcher's own reselection rule
+                // then clears the selection every single frame -- phase 3a
+                // found this once already on Main Menu (`d39d955b`) and it
+                // cost this pass a test run to find again.
+                entry = First(cards)?.gameObject;
+                Declare(selectables, cards);
+            }
+            else
+            {
+                var tabs = new List<Selectable>();
+                for (int i = 0; tabButtons != null && i < tabButtons.Length; i++)
+                {
+                    if (tabButtons[i] != null) tabs.Add(tabButtons[i]);
+                }
+
+                groups.Add(RuntimeNavWiring.Group("reckoningTabs", UiNavGroupKind.Rail, tabs));
+
+                // Continue is the summary's own primary action and its entry:
+                // the tabs are there to be read, and a player who wants them
+                // presses Up. (Not a List with Continue as its last member --
+                // the tabs are a horizontal strip, so Left/Right has to mean
+                // "another page".)
+                foreach (var tab in tabs)
+                {
+                    links.Add(RuntimeNavWiring.Link(tab, UiNavDirection.Down, continueButton));
+                }
+
+                links.Add(RuntimeNavWiring.Link(continueButton, UiNavDirection.Up, First(tabs)));
+
+                entry = continueButton == null ? null : continueButton.gameObject;
+                Declare(selectables, tabs);
+                if (continueButton != null) selectables[continueButton.name] = continueButton.gameObject;
+            }
+
+            RuntimeNavWiring.Apply(groups, links);
+
+            if (_navContext != null)
+            {
+                _navContext.Reconfigure(entry, selectables);
+                return;
+            }
+
+            _navContext = new NavContext(entry, selectables, cancel: HandleCancel);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // CANCEL IS A NO-OP WHILE THERE IS STILL A CHOICE TO MAKE, and that
+        // is the mouse path's own rule rather than a gamepad restriction:
+        // Show() opens on the offers with no Continue and no skip ("you
+        // always take something" -- see its own comment), so there is nothing
+        // for a back press to do and nowhere for it to go. Once the choice is
+        // spent, the summary DOES have a way out, and Cancel takes it -- the
+        // same action Continue's click raises, so the pad is not offered less
+        // than the mouse.
+        private void HandleCancel()
+        {
+            if (_choosing) return;
+
+            Dismissed?.Invoke();
+        }
+
+        private static Selectable First(List<Selectable> members) => members.Count > 0 ? members[0] : null;
+
+        private static void Declare(Dictionary<string, object> selectables, List<Selectable> members)
+        {
+            foreach (var member in members) selectables[member.name] = member.gameObject;
+        }
+
+        private void OnDisable()
+        {
+            _tooltips.Detach();
+
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         // Opened with what the fight paid and what it offers.
@@ -367,6 +502,20 @@ namespace PrincesPalace
             PaintTabs();
             PaintRelics();
             PaintTally();
+
+            // AFTER Paint/PaintOffers, never on OnEnable: which cards exist
+            // is decided by what was just handed in, and a context pushed
+            // before that would declare Selectables that are not on screen
+            // (plan section 2/4, the same rule SystemMenuController's own
+            // PushNavContext states).
+            _tooltips.Attach(NavigationInputModule.Contexts);
+            RefreshNavigation();
+
+            // Selected NOW rather than left to the dispatcher's next-frame
+            // reselection rule, so the screen never draws a frame with the
+            // choice up and nothing focused.
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
+                _navContext?.ResolveSelection() as GameObject);
 
             if (isActiveAndEnabled)
             {
@@ -661,6 +810,17 @@ namespace PrincesPalace
                     summaryPhase.gameObject.SetActive(true);
                 }
             }
+
+            // THE SUMMARY'S OWN GRAPH, now the offers are inert. Without
+            // this the stick would be standing on a card that no longer
+            // answers Submit, with Continue unreachable -- the phase change
+            // moves what is operable, so it has to move the declaration too.
+            // The selection follows on the next Process(): the dispatcher's
+            // reselection rule finds the old card outside the reconfigured
+            // set and resolves this context's new entry (Continue), which is
+            // exactly the case that rule exists for, and the sweep to the
+            // summary covers the frame.
+            RefreshNavigation();
         }
 
         public bool HasTakenAnItem => _taken;
