@@ -2812,14 +2812,32 @@ classes against the bare Main Menu commit (`d39d955b`) reproduces the identical 
 identical messages. Neither test touches Hub, Main Menu, Map, Talent or Shop; both are
 Combat/Stage swing-timing tests, an area this plan does not read or write.
 
-**Most likely trigger, not confirmed**: the Main Menu commit ran `tools/build_content.ps1`
-incidentally (to get a scene rebuild reflecting `ScreenRegistry`'s new
-`MainMenuController.saveSlotController` wiring), which also refreshed `content_stamp.json` and
-closed the previously-reported `ContentFreshnessTests` gap (`214e7ad7`) as a side effect. A
-regenerated `Resources/Content` changing a swing-timing assertion's inputs is the most likely
-explanation, but this was not chased further -- Fight's stage-swing timing is outside every one
-of phase 3a's five screens, and its own area's tests (`combat`) are the right place to
-investigate it, not this register's author mid-navigation-pass.
+**Confirmed pre-existing on main, predates the branch entirely** (phase 3b job 0,
+2026-09-17): the previous entry's "most likely trigger" (the Main Menu commit's incidental
+`build_content.ps1` run) is ruled out. `git checkout f20d76de` -- the gamepad-nav branch's own
+base commit, one commit before `ec81b29f` (phase 3a screen 1, the first commit this whole plan
+made) -- and running `tools/test.ps1 FightPlayableTests,StageFormationTests` there reproduces
+both failures verbatim:
+```
+FAILED: PrincesPalace.PlayModeTests.FightPlayableTests.AStillDrawingSwingCarriesTheFigureAndBringsItBack
+  the attacker never left its mark, so a single-drawing swing showed nothing at all
+  Expected: greater than 1.0f
+  But was:  0.0f
+
+FAILED: PrincesPalace.PlayModeTests.StageFormationTests.AMoveCrossesBeforeTheEnemySwingsAndTheSwingFindsTheNewFront
+  the ogre never swung
+  Expected: greater than or equal to 0
+  But was:  -1
+```
+Same PlayMode totals both times (`Total: 11  Passed: 8  Failed: 2  Skipped: 1`). Since
+`f20d76de` sits before any gamepad-navigation commit -- phase 2 and phase 3a's own content
+rebuilds included -- these two tests were already failing on `main` before this plan touched
+anything; no commit on `gamepad-nav` regenerated content or changed combat code in a way that
+could have introduced this. Confirmed with `git stash push -u` / `git checkout f20d76de` /
+`git checkout gamepad-nav` / `git stash pop` on the main tree (working-tree line count identical
+before and after: 173). Left unfixed -- out of scope for the gamepad-navigation plan; `combat`
+is the area to chase the actual swing-timing regression, and whether it's stale content or a
+real formula bug is still open. Not this plan's call to make.
 
 ### 158. Four Hub-covering modals still do not push their own NavContext
 
