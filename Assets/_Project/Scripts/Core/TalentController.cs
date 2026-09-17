@@ -168,6 +168,10 @@ namespace PrincesPalace
             // and a confirmation dialog is the worst thing to inherit.
             CloseRespec();
 
+            // Pushed BEFORE the first Refresh(), same reason MapController's
+            // own Start() does -- RefreshOrbNavigation (called from Refresh)
+            // reconfigures the pushed context rather than creating it.
+            RegisterNavContext();
             Refresh();
         }
 
@@ -463,6 +467,7 @@ namespace PrincesPalace
             PaintOrbs(unlocked);
             PaintDetail(unlocked);
             PaintMeter(character);
+            RefreshOrbNavigation();
 
             // HIDDEN, not dimmed, when there is nobody to page to.
             //
@@ -948,6 +953,190 @@ namespace PrincesPalace
                 case TalentPage.Refusal.BudgetSpent: return UiStrings.TalentLocked;
                 default: return UiStrings.TalentInvest;
             }
+        }
+
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        //
+        // NOT A GRID. TalentSkeleton is a tree -- a single root, three triples
+        // climbing to a convergence, three more triples climbing to the
+        // capstone (TalentSkeleton.cs's own header) -- and a fixed-width Grid's
+        // row-major indexing has nothing to say about a row of 1 followed by a
+        // row of 3. UiNavSpec has no Graph kind either (UiNavLinkBuilder's own
+        // header: Map's is "entirely explicit links"), so this wires one small
+        // Rail GROUP per triple tier (Left/Right among siblings, wrap -- the
+        // owner default for a Grid-row-shaped thing) plus explicit Up/Down
+        // links between tiers, derived once from TalentSkeleton.Parents/DxSlot
+        // rather than hand-authored: Down is the parent nearest the centre
+        // column when a slot gathers more than one (only the convergence and
+        // the capstone do), Up is the inverse -- the child nearest the centre
+        // column when a slot feeds more than one. Scoped to the CURRENT path's
+        // 21 orbs only: the other two paths' orbs are real, visible Buttons
+        // sitting off-screen mid-slide (OnOrbPressed's own comment), and
+        // wiring them in would let a Move walk into a constellation the
+        // player cannot see.
+        private static readonly int[] _skeletonUpChild;
+        private static readonly int[] _skeletonDownParent;
+        private static readonly List<int>[] _skeletonTiers;
+
+        static TalentController()
+        {
+            int n = TalentSkeleton.SlotCount;
+            _skeletonDownParent = new int[n];
+            _skeletonUpChild = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                _skeletonDownParent[i] = -1;
+                _skeletonUpChild[i] = -1;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                var parents = TalentSkeleton.Parents[i];
+                if (parents.Length == 0) continue;
+
+                int chosen = parents[0];
+                foreach (var p in parents) if (TalentSkeleton.DxSlot[p] == 0) chosen = p;
+                _skeletonDownParent[i] = chosen;
+            }
+
+            var childrenOf = new List<int>[n];
+            for (int i = 0; i < n; i++) childrenOf[i] = new List<int>();
+            for (int i = 0; i < n; i++)
+            {
+                foreach (var p in TalentSkeleton.Parents[i]) childrenOf[p].Add(i);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (childrenOf[i].Count == 0) continue;
+
+                int chosen = childrenOf[i][0];
+                foreach (var c in childrenOf[i]) if (TalentSkeleton.DxSlot[c] == 0) chosen = c;
+                _skeletonUpChild[i] = chosen;
+            }
+
+            var byDepth = new Dictionary<int, List<int>>();
+            for (int i = 0; i < n; i++)
+            {
+                if (!byDepth.TryGetValue(TalentSkeleton.Depth[i], out var list))
+                {
+                    list = new List<int>();
+                    byDepth[TalentSkeleton.Depth[i]] = list;
+                }
+                list.Add(i);
+            }
+
+            _skeletonTiers = byDepth.OrderBy(kv => kv.Key)
+                .Select(kv => kv.Value.OrderBy(s => TalentSkeleton.DxSlot[s]).ToList())
+                .ToArray();
+        }
+
+        // Pushed once in Start(), never popped while this scene is loaded --
+        // Talent is a whole scene (Navigation.Talents), the same base-context
+        // shape Hub/Map/MainMenu each use.
+        private NavContext _navContext;
+
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        private void OnDestroy()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
+        }
+
+        // The SAME path backButton already takes -- found rather than
+        // invented, so a future change to what "leaving Talents" means only
+        // has one call site to update.
+        private void HandleCancel() => Navigation.Go(Navigation.Hub);
+
+        // Called from Refresh() -- every path switch, character switch,
+        // selection change and Kindle all funnel through it already, so this
+        // is the one place a rewire is ever needed, the same shape
+        // MapController.RefreshNavLinks and SystemMenuController.
+        // RefreshNavLinks both use.
+        private void RefreshOrbNavigation()
+        {
+            if (_navContext == null) return;
+
+            int n = TalentScreen.OrbCount;
+            Button OrbAt(int slot)
+            {
+                int index = TalentScreen.OrbIndex(_path, slot);
+                return index >= 0 && index < orbs.Length ? orbs[index] : null;
+            }
+
+            var groups = new List<UiNavGroup<Selectable>>();
+            var links = new List<UiNavLink<Selectable>?>();
+
+            foreach (var tier in _skeletonTiers)
+            {
+                if (tier.Count < 2) continue;
+
+                var members = tier.Select(OrbAt).ToList();
+                var group = RuntimeNavWiring.Group($"talentTier{TalentSkeleton.Depth[tier[0]]}",
+                    UiNavGroupKind.Rail, members);
+                if (group != null) groups.Add(group);
+            }
+
+            for (int slot = 0; slot < n; slot++)
+            {
+                var from = OrbAt(slot);
+                if (from == null) continue;
+
+                if (_skeletonDownParent[slot] >= 0)
+                {
+                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Down, OrbAt(_skeletonDownParent[slot])));
+                }
+
+                if (_skeletonUpChild[slot] >= 0)
+                {
+                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Up, OrbAt(_skeletonUpChild[slot])));
+                }
+            }
+
+            // THE DETAIL ACTIONS, re-resolved here -- overriding the skeleton's
+            // own Down/Up for exactly the selected orb, appended AFTER the
+            // skeleton links so it wins (RuntimeNavWiring.Apply writes links
+            // in order, a later one for the same node+direction replaces the
+            // earlier). Every other orb keeps its ordinary tree Down/Up --
+            // only the orb whose detail is actually on screen gains a way
+            // down into it, and only while investButton is worth reaching:
+            // NOT gated on `investButton.gameObject.activeSelf` here, the
+            // same call RewardTrackController.WireNodes makes for its own
+            // collect button ("DOWN FROM EVERY DISC... Unity never routes a
+            // Move onto an inactive Selectable" -- true here whether or not a
+            // selection exists to begin with, so a hidden or NotAuthored
+            // investButton is simply never reached).
+            if (_selectedSlot >= 0)
+            {
+                var selectedOrb = OrbAt(_selectedSlot);
+                if (selectedOrb != null && investButton != null)
+                {
+                    links.Add(RuntimeNavWiring.Link(selectedOrb, UiNavDirection.Down, investButton));
+                    links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Up, selectedOrb));
+                }
+            }
+
+            RuntimeNavWiring.Apply(groups, links);
+
+            var selectables = new Dictionary<string, object>();
+            for (int slot = 0; slot < n; slot++)
+            {
+                var button = OrbAt(slot);
+                if (button != null) selectables[$"orb{slot}"] = button.gameObject;
+            }
+            if (investButton != null) selectables["invest"] = investButton.gameObject;
+
+            var entry = OrbAt(0)?.gameObject;
+            _navContext.Reconfigure(entry, selectables);
         }
     }
 }
