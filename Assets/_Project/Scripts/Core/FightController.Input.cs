@@ -1192,13 +1192,23 @@ namespace PrincesPalace
 
             if (characterSheetPanel == null) return;
 
+            // GATED ON TOP OF STACK (plan section 4/11), same shape as
+            // Hub's and Map's: a modal that has pushed its own context over
+            // Fight's must not also see C/I land underneath it. Fight's own
+            // _navContext is registered by RegisterNavContext the moment a
+            // session becomes active, so this is meaningful from the first
+            // frame of a real fight.
+            if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
+            {
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
             else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
-            // Escape belongs to SystemMenuController now, because this panel IS
-            // that menu. Closing it here as well would race: Unity does not
-            // order Update between components, so the menu's own handler could
-            // run after this one, see a closed menu and nothing owning Escape,
-            // and reopen it in the same frame the player closed it.
+
+            // Cancel/Escape is not read here at all -- it belongs to the ONE
+            // dispatch point now (NavigationInputModule's Fight branch,
+            // OnBackPressed), not a second poll racing it.
         }
 
         // ---- gamepad / keyboard navigation -------------------------------------

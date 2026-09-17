@@ -63,7 +63,26 @@ namespace PrincesPalace
 
             if (input.GetButtonDown(cancelButton)) topAtStart.Cancel?.Invoke();
 
-            ReselectIfOutsideDeclaredSet(topAtStart);
+            // RE-READ HERE, deliberately -- this is not the same "capture
+            // once" rule Cancel-dispatch above follows, and conflating the
+            // two was a real bug phase 2's own SystemMenu work found. A
+            // Cancel that just POPPED topAtStart (SystemMenu closing back to
+            // the hub) still has a live NavContext instance sitting in
+            // memory with its own Selectables/entry -- reselecting against
+            // THAT stale instance would put its last-selected control right
+            // back as the active selection the same frame Close() cleared
+            // it, because ContainsSelectable/ResolveSelection have no idea
+            // the context is no longer on the stack. Reading the CURRENT top
+            // instead asks the question this rule is actually for: what
+            // does the stack look like NOW, after whatever Cancel/Submit did
+            // this call. Safe for the Fight-becomes-top case test 1 guards
+            // (section 3): a Fight NavContext's own ContainsSelectable/
+            // ResolveSelection are both inert (EmptySelectables, no entry),
+            // so this can only ever resolve to null there, never invoke
+            // MoveFocus/ConfirmFocus -- those stay exclusively behind
+            // IsNonSelecting's branch above, decided from topAtStart same as
+            // ever.
+            ReselectIfOutsideDeclaredSet(Contexts?.Top);
         }
 
         // Five steps, nothing else runs this call -- plan section 3.
@@ -109,13 +128,29 @@ namespace PrincesPalace
         // nulling selection, a mouse click on a Selectable a modal should
         // have blocked (defence in depth; modals already block the raycast,
         // plan section 2), and a stray/programmatic SetSelectedGameObject.
+        //
+        // `top` is the CURRENT top (Contexts?.Top at the point this is
+        // called, not topAtStart -- see the caller's own comment), so a
+        // Cancel that popped the stack down to nothing lands here too: null
+        // is a legitimate answer, meaning nothing declares a set to enforce
+        // right now, not an error.
         private void ReselectIfOutsideDeclaredSet(NavContext top)
         {
+            if (top == null) return;
+
             var current = EventSystem.current.currentSelectedGameObject;
             if (current != null && top.ContainsSelectable(current)) return;
 
+            // NOT guarded on `resolved != null` -- a null resolution is a
+            // legitimate answer here too (section 6's "screen-level
+            // fallback": select nothing), and it has to actually BE applied,
+            // not skipped, or a selection that belonged to a context now
+            // gone (a closed modal's last-selected tab) sits there forever:
+            // `current` just failed ContainsSelectable against the NEW top,
+            // so it is exactly the stale value this rule exists to replace,
+            // never a value worth defending by leaving it alone.
             var resolved = top.ResolveSelection() as GameObject;
-            if (resolved != null) EventSystem.current.SetSelectedGameObject(resolved);
+            EventSystem.current.SetSelectedGameObject(resolved);
         }
     }
 }

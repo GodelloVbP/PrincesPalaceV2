@@ -21,8 +21,8 @@ namespace PrincesPalace.Domain.UiKit
         private static readonly IReadOnlyDictionary<string, object> EmptySelectables =
             new Dictionary<string, object>();
 
-        public object Entry { get; }
-        public IReadOnlyDictionary<string, object> Selectables { get; }
+        public object Entry { get; private set; }
+        public IReadOnlyDictionary<string, object> Selectables { get; private set; }
         public Action Cancel { get; }
         public bool IsNonSelecting { get; }
         public IFightNavigationTarget FightTarget { get; }
@@ -50,6 +50,22 @@ namespace PrincesPalace.Domain.UiKit
         public static NavContext ForFight(IFightNavigationTarget target) => new NavContext(target);
 
         public void Remember(string stableId) => RememberedId = stableId;
+
+        // Map's own case (plan section 4): a context whose navigable set
+        // genuinely changes contents across repaints -- a new floor has
+        // different reachable rooms -- rather than a fixed declared set some
+        // of whose members are hidden. Mutates IN PLACE rather than being
+        // popped and re-pushed, which would either lose this context's place
+        // on the stack (if something sits above it) or, worse, put it back
+        // ON TOP of whatever now sits above it. RememberedId is left alone on
+        // purpose: a repaint that still contains the same id should not
+        // forget what was focused, the ordinary case a runtime repaint is
+        // built for.
+        public void Reconfigure(object entry, IReadOnlyDictionary<string, object> selectables)
+        {
+            Entry = entry;
+            Selectables = selectables ?? EmptySelectables;
+        }
 
         // Remembered node if one is set and still declared, else the entry --
         // one rule for the reselection cases section 4 lists (a background

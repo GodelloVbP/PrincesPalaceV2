@@ -74,7 +74,13 @@ the scale of two metals; WHICH of them a character has collected is
 `Core/CharacterIdentity.LookFor`) · `UiString` ·
 `UiStrings` ·
 `UiSolver` ·
-`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
+`SolvedNode` · `UiAudit` (extended with `CheckNavigable`, the structural half
+of gamepad navigation's audit, plan section 9a) · `UiAuditError` · `UiFrames` ·
+`UiNavSpec.cs` (`UiNavGroup`/`UiNavLink`/`UiRequiredAction`/`UiNavDeclaration`
+— a screen's navigation declaration) · `UiNavLinkBuilder.cs` (the pure
+UiNode-keyed algorithm turning a declaration into each node's four
+neighbours, tested against a fake tree with nothing Unity involved) ·
+`FightSubmenuLayout`
 (`VisibleBottomLine` — `CommandBottom` plus the verb row's own bottom PAINT
 pad, not its rect — is what the submenu frame and the party plate both
 bottom-anchor against, because every `Processed/` kit PNG carries a
@@ -109,8 +115,31 @@ not the stock `StandaloneInputModule`; see `docs/GAMEPAD_NAVIGATION_PLAN.md`
 section 3 for the one-dispatch-point argument and `Domain/UiKit/NavContext.cs`
 + `NavContextStack.cs` for the engine-free stack it reads) ·
 `UiEmitter.cs` · `UiEmitResult.cs` · `ScreenRegistry.cs` ·
-`UiTextFitAudit.cs` (E1) · `UiCountAudit.cs` (E4) · `UiWiringSweep.cs` (E3) ·
+`UiTextFitAudit.cs` (E1) · `UiCountAudit.cs` (E4) · `UiWiringSweep.cs` (E3,
+now skipping fields not DECLARED on the attached controller's own concrete
+type -- `OptionRow : Selectable` is the first controller to inherit a UI
+base class' own serialized surface (`Navigation`, `SpriteState`) that this
+project deliberately leaves at Unity's default) ·
+`UiNavWiring.cs` (writes `Navigation.Explicit` from a resolved
+`UiNavDeclaration` onto the Selectables `UiEmitter` just built) ·
+`UiNavControlsAudit.cs` (plan section 9a's fourth structural rule: a custom
+actionable control that is not a Selectable must sit in a declared nav group
+or carry `AllowUnreachable`) ·
 `ScreenshotTool.cs` · `TmpBootstrap.cs`
+
+Runtime counterpart, for screens embedded inside another screen's tree
+(SystemMenu/Options/RewardTrack/Party -- none has a `ScreenDef` of its own to
+carry a `UiNavDeclaration`): `Core/RuntimeNavWiring.cs` (`Chain`/`Link`, the
+same clamp/wrap algorithm one level down at real Selectables, wired from each
+controller's own `Wire()`/`Refresh()` — `SystemMenuController.cs` for its tab
+Rail, `OptionsController.cs` for its row List, `RewardTrackController.Input.cs`
+for its ribbon Rail) and `Core/OptionRow.cs` (`Selectable` subclass handling
+Left/Right adjustment + hover, replacing the row's old plain Panel +
+`HoverIndex`). `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
+`ISelectHandler`/`IDeselectHandler` rather than pointer enter/exit, reporting
+when the MODULE (not the mouse) puts a node in focus; RewardTrack's ribbon
+nodes are its first user, calling the controller's existing `ScrollTo(level)`
+on select the same way `OnHover` already does on pointer enter.
 
 Plus `Editor/PipelineBuilder.cs`, which generates the URP asset, the Renderer 2D
 and the post-processing profile under `Assets/_Project/Rendering/`.

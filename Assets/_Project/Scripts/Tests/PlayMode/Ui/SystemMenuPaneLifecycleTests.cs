@@ -155,16 +155,16 @@ namespace PrincesPalace.PlayModeTests
 
             // AND THE RUNTIME COMPONENTS ARE NOT STACKED EITHER. This pane's
             // Wire() does not only add listeners -- it AddComponents a
-            // HoverIndex per row and a BarSlider per slider, which an unguarded
-            // re-wire would pile up invisibly until every hover fired four
-            // times.
-            int hovers = options.GetComponentsInChildren<HoverIndex>(includeInactive: true).Length;
+            // BarSlider per slider (OptionRow, gamepad-navigation phase 2
+            // step B, is attached once at BUILD time instead, ScreenRegistry.
+            // WireOptions, precisely so re-wiring on every opening cannot
+            // pile it up the way a runtime AddComponent could), which an
+            // unguarded re-wire would pile up invisibly until every drag
+            // fired four times.
             int sliders = options.GetComponentsInChildren<BarSlider>(includeInactive: true).Length;
 
             yield return Cycle(options.gameObject);
 
-            Assert.AreEqual(hovers, options.GetComponentsInChildren<HoverIndex>(includeInactive: true).Length,
-                "the Options pane grew more HoverIndex components by being opened again");
             Assert.AreEqual(sliders, options.GetComponentsInChildren<BarSlider>(includeInactive: true).Length,
                 "the Options pane grew more BarSlider components by being opened again");
         }

@@ -23,6 +23,15 @@ namespace PrincesPalace
     {
         [SerializeField] internal GameObject[] rowHovers;
 
+        // Attached at build time (ScreenRegistry.WireOptions), one per
+        // RowHovers node -- the ONE component now handling that node's
+        // movement and hover (plan section 7), replacing the old plain
+        // Panel + runtime-added HoverIndex. Parallel to rowHovers rather
+        // than replacing it: rowHovers stays because UiAutoBind already
+        // binds it by name, and Fade() below still wants the plain
+        // GameObject for its Image lookup.
+        [SerializeField] internal OptionRow[] rows;
+
         // Two dense sets, each carrying the GameSettings key its controls drive.
         // Keyed rather than positional because the rows are heterogeneous, and
         // the padded-with-nulls alternative is what UiWiringSweep refused.
@@ -51,17 +60,11 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
+            var allRows = OptionRows.AllRows;
+
             for (int i = 0; rowHovers != null && i < rowHovers.Length; i++)
             {
                 if (rowHovers[i] == null) continue;
-
-                // The hover plate is the thing that covers the whole row, so it
-                // is what listens -- the track and the stepper buttons each
-                // cover only part of it, and a row that only lights under its
-                // control is worse than one that never lights at all.
-                var hover = rowHovers[i].AddComponent<HoverIndex>();
-                hover.Index = i;
-                hover.Changed = OnRowHover;
 
                 // Emitted at its tint and faded to nothing, so raising it is an
                 // alpha change. The design's States table asks for a row TINT,
@@ -72,7 +75,30 @@ namespace PrincesPalace
                 // hoverable while it is invisible.
                 rowHovers[i].SetActive(true);
                 Fade(rowHovers[i], 0f);
+
+                // OptionRow is the ONE component handling this row's movement
+                // and hover now (plan section 7) -- attached at build time
+                // (ScreenRegistry.WireOptions), not runtime-added the way
+                // HoverIndex used to be, since RuntimeNavWiring.Chain below
+                // needs every row's Selectable to already exist.
+                if (rows == null || i >= rows.Length || rows[i] == null) continue;
+                int index = i;
+                rows[index].HoverChanged = entered => Fade(rowHovers[index], entered ? HoverAlpha : 0f);
+
+                if (allRows == null || i >= allRows.Count) continue;
+                string key = allRows[i].Key;
+
+                // Left/Right's meaning depends on the row's KIND, decided
+                // here rather than by OptionRow itself -- it stays a pure
+                // input adapter with no idea what GameSettings or a key is.
+                rows[index].OnLeftRight = allRows[i].Kind == OptionKind.Stepper
+                    ? delta => Step(key, delta)
+                    : delta => SetSlider(key, Mathf.Clamp01(SliderValue(key) + delta * SliderStep));
             }
+
+            // A List group, clamp (plan section 5/7's owner default) -- Up/Down
+            // steps row to row, never wrapping past the first or last card.
+            if (rows != null) RuntimeNavWiring.Chain(rows, horizontal: false, wrap: false);
 
             for (int i = 0; sliderTracks != null && i < sliderTracks.Length; i++)
             {
@@ -88,15 +114,34 @@ namespace PrincesPalace
                 string key = stepperKeys[i];
                 if (stepPrev[i] != null) stepPrev[i].onClick.AddListener(() => Step(key, -1));
                 if (stepNext[i] != null) stepNext[i].onClick.AddListener(() => Step(key, +1));
+
+                // NEVER a navigation target, and never selected by a mouse
+                // click either (plan section 7) -- clicking one still fires
+                // its onClick (independent of the selection side effect
+                // Navigation.Mode.None suppresses), and does nothing to the
+                // row's own remembered focus.
+                SetNoNavigation(stepPrev[i]);
+                SetNoNavigation(stepNext[i]);
             }
 
             if (restoreDefaults != null) restoreDefaults.onClick.AddListener(RestoreDefaults);
         }
 
-        private void OnRowHover(int index, bool entered)
+        // One row's Left/Right press moves a slider by this much -- the
+        // row's own step size, declared once here rather than restated at
+        // its one caller above (docs/CODE_STANDARDS.md section 6).
+        private const float SliderStep = 0.05f;
+
+        // UnityEngine.UI.Navigation spelled out in full: PrincesPalace.
+        // Navigation (the map/graph state type) sits in this same
+        // namespace and would otherwise shadow it -- phase 1's own hazard
+        // list calls this out explicitly.
+        private static void SetNoNavigation(Selectable selectable)
         {
-            if (rowHovers == null || index < 0 || index >= rowHovers.Length) return;
-            Fade(rowHovers[index], entered ? HoverAlpha : 0f);
+            if (selectable == null) return;
+            var nav = selectable.navigation;
+            nav.mode = UnityEngine.UI.Navigation.Mode.None;
+            selectable.navigation = nav;
         }
 
         // The design's row tint, #C8AAE60D, is 5% -- so this is the alpha the

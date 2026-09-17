@@ -30,6 +30,12 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
 
+        // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // section 3/4) -- the job SystemMenuController's own now-deleted Escape
+        // poll used to do independently, racing HubController's. One context,
+        // one Cancel handler, HandleEscape below.
+        [SerializeField] internal SystemMenuController systemMenu;
+
         // THE TEST SEAM FOR THE DESCENT TRANSITION'S OWN CLOCK, the same
         // shape TalentController.MotionSpeedMultiplier already gives its
         // screen. 1 outside a test, so play is unchanged; a test sets it high
@@ -38,6 +44,16 @@ namespace PrincesPalace
         public static float MotionSpeedMultiplier = 1f;
 
         private bool _descending;
+
+        // The hub's own place on the navigation stack (plan section 4) --
+        // pushed once in Start() and never popped while this scene is
+        // loaded, since the hub is not a modal that opens and closes, it is
+        // the scene's own base context. Registered here (not a selectable
+        // set of its own yet -- the hub's buildings are phase 3's rollout)
+        // so its Cancel handler runs through the ONE dispatch point instead
+        // of a raw Update() poll, and so C/I/F1 below can ask "am I still
+        // top" instead of firing under a modal that has since covered them.
+        private NavContext _navContext;
 
         // OnEnable, not Start: the hub is returned to repeatedly -- from a
         // finished fight, from an abandoned run -- and Start fires once. Gold
@@ -132,6 +148,32 @@ namespace PrincesPalace
                 RunManager.EndRun();
                 Navigation.Go(Navigation.MainMenu);
             });
+
+            RegisterNavContext();
+        }
+
+        // Idempotent for the same reason FightController's own
+        // RegisterNavContext is: a second push for a controller that never
+        // torn down would leave a stale entry under the stack no Close()
+        // will ever reach.
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleEscape);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // The hub is a whole scene, not a panel -- OnDestroy, on scene
+        // unload, is where its context actually goes away. Remove, not Pop:
+        // this is the OnDisable/OnDestroy safety net plan section 4 calls
+        // for, not the ordinary top-of-stack case.
+        private void OnDestroy()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         // ---- keyboard ------------------------------------------------------------
@@ -149,6 +191,21 @@ namespace PrincesPalace
         // be the thing that opens it.
         private void Update()
         {
+            // GATED ON TOP OF STACK (plan section 4/11): a modal covering the
+            // hub -- the system menu, the glossary, the relic draft, the
+            // debug menu itself -- must not also see C/I/F1 land underneath
+            // it. None of these three push their own context yet (that is
+            // phase 3's rollout), so "top" here means "nothing else pushed
+            // on top of the hub's own base context" -- which the debug menu,
+            // glossary and relic draft all currently achieve by covering the
+            // hub WITHOUT pushing a context of their own, so this guard is
+            // silent about them today and only actually bites once the
+            // system menu (or a future modal) registers its own.
+            if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
+            {
+                return;
+            }
+
             // F1 for the debug menu, and ONLY in the editor or a development
             // build. Debug.isDebugBuild is true for both and false in a release
             // player, so a shipped build has no key that grants 10,000 gold.
@@ -175,23 +232,30 @@ namespace PrincesPalace
             {
                 ToggleCharacterOverlay(inventory: true);
             }
-            // Only swallowed while something is up, so Escape stays free to
-            // mean something else on the hub itself later. The debug menu is
-            // checked first because it draws over the overlay -- closing the
-            // thing underneath the thing you can see would be a nasty little
-            // surprise.
-            else if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                HandleEscape();
-            }
+
+            // Escape/Cancel no longer read here at all -- it belongs to the
+            // ONE dispatch point now (NavigationInputModule), which calls
+            // this context's Cancel handler (HandleEscape, registered in
+            // RegisterNavContext) once per frame instead of racing
+            // SystemMenuController's own separate poll for the same key.
         }
 
-        // Split from the key read so it can be tested, and so the system menu
-        // can be told that this press is already spoken for.
+        // This IS the hub's NavContext.Cancel handler now (registered in
+        // RegisterNavContext), called once a frame by the ONE dispatch point
+        // rather than raced against a second poll. It used to be split from
+        // its own key read only so it could be tested; that reason is now
+        // also the mechanism -- there is nothing left for a raw Escape read
+        // to do.
         //
-        // NOT the character screen: that panel is the system menu now, and its
-        // own handler owns Escape. Closing it here as well would race with that
-        // handler and could reopen it the same frame.
+        // Closing beats opening, same order the old two-poller race
+        // happened to settle on by luck: debug menu first, since it draws
+        // over everything including the character overlay, then the
+        // glossary. A relic draft in progress REFUSES to hand Escape to the
+        // system menu at all (matching the old escapeConsumers gate
+        // SystemMenuController used to check) -- there is nothing on the
+        // draft itself that Escape closes, so this press is simply spent.
+        // Otherwise, nothing else owns it: open the overarching menu, the
+        // job SystemMenuController's own now-deleted poll used to do.
         public void HandleEscape()
         {
             if (debugMenuPanel != null && debugMenuPanel.activeSelf)
@@ -205,7 +269,12 @@ namespace PrincesPalace
             {
                 SetGlossary(false);
                 EscapeKey.Consume();
+                return;
             }
+
+            if (relicDraft != null && relicDraft.gameObject.activeSelf) return;
+
+            if (systemMenu != null) systemMenu.Open();
         }
 
         // The key read above is deliberately separated from the action here:

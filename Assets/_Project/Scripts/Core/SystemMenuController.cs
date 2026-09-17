@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
 
@@ -30,16 +32,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text goldValue;
         [SerializeField] internal TMP_Text embersValue;
         [SerializeField] internal Button closeButton;
-
-        // Panels that own Escape while they are open.
-        //
-        // Wired per scene rather than found by name: the fight has its reward
-        // screen and the hub its glossary and relic draft, and a second
-        // listener that opened this menu on top of one the player was trying to
-        // close would be a bug reported as "Escape does the wrong thing".
-        [UiOptional("the map has no other Escape-owning panel; the hub has a glossary " +
-                    "and a relic draft, and the fight has its reward screen")]
-        [SerializeField] internal GameObject[] escapeConsumers;
 
         // Whether THIS SCENE is part of a descent. Set at build time: false in
         // the hub, true on the map and in a fight.
@@ -81,6 +73,16 @@ namespace PrincesPalace
         private bool _paused;
 
         private List<int> _visible = new List<int>();
+
+        // Pushed in Open(), popped in Close() -- never OnEnable/OnDisable's
+        // own timing, since content is populated AFTER activation (plan
+        // section 2) and a context pushed before that would declare
+        // Selectables that do not exist yet. The nested-modal shape plan
+        // section 3/4 describes: while this is open it is TOP, so Hub's own
+        // Cancel (which is what opened it) cannot also fire the same frame,
+        // and this context's own Cancel (Close) is what a player's next
+        // Cancel press reaches.
+        private NavContext _navContext;
 
         public bool IsOpen => panel != null && panel.activeSelf;
 
@@ -138,68 +140,20 @@ namespace PrincesPalace
             tabHovers[index].SetShown(show);
         }
 
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape)) HandleEscape();
-        }
-
-        // SPLIT FROM THE KEY READ so it can be tested.
-        //
-        // Legacy Input cannot be pressed headlessly, which is exactly how the
-        // bug this fixes stayed invisible for a whole design pass. Everything
-        // below is reachable from a test; only the one line above is not.
-        public void HandleEscape()
-        {
-            // Closing beats opening: if this menu is already up, Escape is
-            // unambiguously about it.
-            if (IsOpen)
-            {
-                Close();
-                EscapeKey.Consume();
-                return;
-            }
-
-            // Somebody else already acted on this press.
-            //
-            // Not the same question as SomethingElseOwnsEscape below, and both
-            // are needed. That one asks whether a panel is up RIGHT NOW; this
-            // one asks whether one was up a moment ago and has just been closed
-            // by its own handler earlier in the same frame. Without it, Escape
-            // over an open glossary would close the glossary and open this menu
-            // on top of it -- or not, depending on Update order, which is the
-            // worst kind of bug to be handed.
-            if (EscapeKey.ConsumedThisFrame) return;
-
-            if (SomethingElseOwnsEscape()) return;
-
-            Open();
-            EscapeKey.Consume();
-        }
-
-        private bool SomethingElseOwnsEscape()
-        {
-            if (escapeConsumers == null) return false;
-
-            foreach (var consumer in escapeConsumers)
-            {
-                if (consumer != null && consumer.activeInHierarchy) return true;
-            }
-
-            return false;
-        }
-
         public void Open()
         {
             Wire();
             ApplyContext();
             panel.SetShown(true);
             Pause();
+            PushNavContext();
         }
 
         public void Close()
         {
             panel.SetShown(false);
             Resume();
+            PopNavContext();
         }
 
         public void Toggle()
@@ -210,7 +164,114 @@ namespace PrincesPalace
         // Restores the clock even if the object is torn down while open -- a
         // scene change with the menu up would otherwise leave the next scene
         // running at timeScale 0, which looks like a hang and is not one.
-        private void OnDisable() => Resume();
+        // Also the OnDisable/OnDestroy safety net plan section 4 calls for:
+        // an external deactivation (a parent hidden, a scene unload) must
+        // still remove this context wherever it sits.
+        private void OnDisable()
+        {
+            Resume();
+            PopNavContext();
+        }
+
+        // ---- navigation stack ----------------------------------------------
+
+        // Idempotent: Open() can in principle run again against an
+        // already-open menu (nothing currently guards it), and pushing a
+        // second context for the same controller would leave a stale entry
+        // under the stack no Close() will ever reach.
+        private void PushNavContext()
+        {
+            if (_navContext == null)
+            {
+                _navContext = new NavContext(entry: null, selectables: null, cancel: Close);
+                NavigationInputModule.Contexts?.Push(_navContext);
+            }
+
+            RefreshSelectables();
+
+            // Push selects remembered ?? entry IMMEDIATELY (plan section
+            // 4) -- not left for the dispatcher's own next-frame
+            // reselection rule to pick up, which would leave the menu
+            // showing no selection for the one frame between Open() and
+            // the next Process() call.
+            EventSystem.current?.SetSelectedGameObject(_navContext.ResolveSelection() as GameObject);
+        }
+
+        private void PopNavContext()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
+
+            // Nothing to reselect-away-from here: NavigationInputModule's
+            // own post-dispatch rule now reads the CURRENT top (this fix
+            // landed alongside this file, see that method's own comment for
+            // why it has to), so whether Close() ran from Cancel or from a
+            // mouse click on the lintel's own button, the very next
+            // resolution step already asks Hub (or whatever is left on the
+            // stack) what it wants selected -- never this now-removed
+            // context's stale entry.
+        }
+
+        // Rebuilds this context's declared Selectable set and entry from
+        // whatever is CURRENTLY active -- the tab bar plus every Selectable
+        // under the currently-shown pane, walked generically rather than
+        // enumerated per pane. A pane this phase has not given its own
+        // navigation groups (Dossier, Run statistics, Main menu -- phase 3's
+        // rollout) still needs its buttons counted here, or the dispatcher's
+        // own reselection rule (NavigationInputModule.
+        // ReselectIfOutsideDeclaredSet) would force a mouse click on one of
+        // them straight back to the tab bar every single frame -- an
+        // incomplete declared set is not a smaller feature, it is a bug that
+        // fights the player's own mouse.
+        //
+        // Called from PushNavContext (on Open) and from Select (a tab
+        // change swaps which pane is active) -- never from ApplyContext
+        // alone, since that runs on every Open() even when the selected tab
+        // has not changed and Select() already covers that path.
+        private void RefreshSelectables()
+        {
+            if (_navContext == null) return;
+
+            var selectables = new Dictionary<string, object>();
+            var all = panel == null
+                ? System.Array.Empty<Selectable>()
+                : panel.GetComponentsInChildren<Selectable>(includeInactive: true);
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null) selectables[$"s{i}"] = all[i].gameObject;
+            }
+
+            var entry = _selected >= 0 && tabButtons != null && _selected < tabButtons.Length
+                ? TabObject(_selected)
+                : null;
+
+            _navContext.Reconfigure(entry, selectables);
+        }
+
+        // The Down link from the selected tab into its pane's own first
+        // Selectable (plan section 7's "each tab pane's entry as the Down
+        // link from the tab") -- found generically, in hierarchy order,
+        // rather than reached for by name, so this works the same for
+        // Options' rows today as it will for whatever a not-yet-migrated
+        // pane grows tomorrow.
+        private void RefreshPaneDownLink()
+        {
+            if (tabButtons == null || _selected < 0 || _selected >= tabButtons.Length) return;
+
+            var tabButton = tabButtons[_selected];
+            if (tabButton == null) return;
+
+            int paneIndex = SystemMenuTabs.PaneIndexFor(_selected);
+            var activePane = paneIndex >= 0 && panes != null && paneIndex < panes.Length ? panes[paneIndex] : null;
+            var firstSelectable = activePane == null
+                ? null
+                : activePane.GetComponentsInChildren<Selectable>(includeInactive: false).FirstOrDefault();
+
+            RuntimeNavWiring.Link(tabButton, firstSelectable, isDown: true);
+        }
 
         private void Pause()
         {
@@ -336,7 +397,34 @@ namespace PrincesPalace
                 Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun)));
             }
 
+            RefreshTabChain();
             RefreshLintel(inRun);
+        }
+
+        // The tab strip as a Rail group (plan section 5/7), wrap by the
+        // owner's default -- rewired here rather than declared once at
+        // build time because WHICH tabs are visible is exactly what this
+        // method just recomputed, and the five-tab authored layout on disk
+        // is not what a three-tab context actually shows (SystemMenuScreen's
+        // own header explains why the scene can't know that). Only VISIBLE
+        // tabs are chained; a hidden tab's Explicit links are left whatever
+        // they were, which does not matter -- Navigation.Mode.None is not
+        // set on them, but they are also inactive, and Unity never routes a
+        // Move onto an inactive Selectable.
+        private void RefreshTabChain()
+        {
+            if (tabButtons == null) return;
+
+            var visibleButtons = new List<Selectable>(_visible.Count);
+            foreach (int index in _visible)
+            {
+                if (index >= 0 && index < tabButtons.Length && tabButtons[index] != null)
+                {
+                    visibleButtons.Add(tabButtons[index]);
+                }
+            }
+
+            RuntimeNavWiring.Chain(visibleButtons, horizontal: true, wrap: true);
         }
 
         // What each visible tab's label ACTUALLY draws at, in order.
@@ -416,6 +504,9 @@ namespace PrincesPalace
             {
                 tabHovers[_selected].SetShown(false);
             }
+
+            RefreshPaneDownLink();
+            RefreshSelectables();
         }
 
         // ---- small helpers ------------------------------------------------------

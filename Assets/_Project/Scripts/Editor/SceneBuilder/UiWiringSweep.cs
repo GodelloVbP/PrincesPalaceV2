@@ -36,6 +36,24 @@ public static class UiWiringSweep
 
                 if (property.propertyPath == "m_Script") continue;
 
+                // DECLARED-ON-THIS-TYPE ONLY. E3 exists to catch a reference
+                // THIS PROJECT forgot to wire -- not Unity's own framework
+                // defaults on whatever base class an attached controller
+                // happens to extend. OptionRow : Selectable is the first
+                // controller to attach a UI base class with its own serialized
+                // surface (Navigation's four selectOn* links, SpriteState's
+                // four swap sprites) that this project deliberately leaves
+                // at Unity's default -- Navigation is written at RUNTIME
+                // (RuntimeNavWiring.Chain/Link), never at build time, and
+                // nothing here uses sprite-swap transitions at all. Without
+                // this, a Selectable-derived controller could never be
+                // Attach<T>'d at all, which the plan explicitly asks for
+                // (OptionRow, and phase 3's own Party/RewardTrack rows).
+                bool declaredHere = controller.GetType().GetField(property.name,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+                    | BindingFlags.DeclaredOnly) != null;
+                if (!declaredHere) continue;
+
                 if (property.propertyType == SerializedPropertyType.ObjectReference)
                 {
                     if (property.objectReferenceValue == null)

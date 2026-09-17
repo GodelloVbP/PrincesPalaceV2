@@ -118,6 +118,7 @@ namespace PrincesPalace
         {
             Wire();
             Refresh();
+            RegisterNavContext();
         }
 
         private void Wire()
@@ -146,17 +147,47 @@ namespace PrincesPalace
 
         // The same two keys as the hub and the fight, so "what am I wearing" is
         // one gesture wherever the player is standing.
+        // The map's own base context (plan section 4/11), mirroring
+        // HubController's -- pushed once, never popped while this scene is
+        // loaded. No Selectables and no Cancel behaviour of its own yet:
+        // node-button navigation is the Graph group phase 3's rollout gives
+        // Map, and reopening the system menu from here on Cancel is
+        // deferred with Fight's (ScreenRegistry.WireSystemMenu's own
+        // comment) -- this step keeps Map's wiring minimal, as asked. It
+        // exists so C/I below can ask "am I still top" instead of firing
+        // underneath a future modal that covers the map.
+        private NavContext _navContext;
+
         private void Update()
         {
+            if (NavigationInputModule.Contexts != null && !NavigationInputModule.Contexts.IsTop(_navContext))
+            {
+                return;
+            }
+
             if (characterSheetPanel == null) return;
 
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
             else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
-            // Escape belongs to SystemMenuController now, because this panel IS
-            // that menu. Closing it here as well would race: Unity does not
-            // order Update between components, so the menu's own handler could
-            // run after this one, see a closed menu and nothing owning Escape,
-            // and reopen it in the same frame the player closed it.
+
+            // Cancel/Escape is not read here at all any more -- see the
+            // context comment above.
+        }
+
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = new NavContext(entry: null, selectables: null, cancel: null);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        private void OnDestroy()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         // Separated from the key for the reason HubController documents:

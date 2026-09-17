@@ -20,33 +20,28 @@ namespace PrincesPalace.PlayModeTests
     {
         private SystemMenuController _menu;
 
-        // THE BUG THIS EXISTS FOR: the controller used to be attached to the
-        // menu's own modal, which is inactive until the menu opens. So its
-        // Update() did not run while it was closed, and the Escape that is
-        // supposed to OPEN the menu could never fire -- Escape only ever closed
-        // one that something else had already opened.
-        //
-        // It survived a whole design pass listing "Escape opens the menu" as
-        // built, because every test and every screenshot calls Open() directly
-        // and legacy Input cannot be pressed headlessly. Nothing in CI was in a
-        // position to notice, so this checks the PRECONDITION instead: the
-        // thing that listens for Escape has to be running while the menu is
-        // shut.
+        // ADAPTED for gamepad-navigation phase 2, step B: SystemMenuController
+        // no longer polls Escape itself at all -- Open()/Close() are ordinary
+        // method calls, pushing/popping a NavContext (plan section 3/4), so
+        // there is no "is it listening" precondition left to guard. What
+        // still matters, and what these two now check instead: the
+        // controller exists and can be opened from closed in every scene
+        // that carries it, in the shape whatever DOES call Open() (the hub's
+        // own NavContext.Cancel handler today) needs to find.
         [UnityTest]
-        public IEnumerator TheMenuIsListeningWhileItIsClosed()
+        public IEnumerator TheMenuCanBeOpenedFromClosed()
         {
             yield return OpenTheHub();
 
             Assert.IsFalse(_menu.IsOpen, "the menu should start closed");
-            Assert.IsTrue(_menu.isActiveAndEnabled,
-                "SystemMenuController is not running while the menu is closed, so its Update never " +
-                "polls Escape and nothing can open the menu with the keyboard");
+            _menu.Open();
+            Assert.IsTrue(_menu.IsOpen, "Open() should work from a closed state");
         }
 
         // Same precondition, in the two scenes where the menu opens over
         // something that is already using Escape.
         [UnityTest]
-        public IEnumerator TheMenuIsListeningInEverySceneThatCarriesIt()
+        public IEnumerator TheMenuExistsInEverySceneThatCarriesIt()
         {
             foreach (string scene in new[] { "Map", "Fight" })
             {
@@ -56,71 +51,59 @@ namespace PrincesPalace.PlayModeTests
 
                 var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
                 Assert.IsNotNull(menu, $"{scene} has no SystemMenuController");
-                Assert.IsTrue(menu.isActiveAndEnabled,
-                    $"the system menu in {scene} is not listening while closed, so Escape cannot open it");
+                Assert.IsFalse(menu.IsOpen, $"the menu should start closed in {scene}");
+                menu.Open();
+                Assert.IsTrue(menu.IsOpen, $"Open() should work from a closed state in {scene}");
             }
         }
 
-        // ESCAPE, WITH SOMETHING ELSE ALREADY UP.
+        // CANCEL, WITH SOMETHING ELSE ALREADY UP.
         //
-        // The hub closes its glossary on Escape and this menu opens on Escape,
-        // and since the fix that made the menu listen while closed they sit on
-        // the SAME GameObject -- so Unity's Update order between them is
-        // whatever serialization order happens to be. Driven in BOTH orders
-        // here, because "it works" in one order is exactly what this class of
-        // bug looks like right up until it does not.
-        //
-        // Both handlers are split from their key reads precisely so this test
-        // can exist: legacy Input cannot be pressed headlessly.
+        // ADAPTED for gamepad-navigation phase 2, step B (docs/
+        // GAMEPAD_NAVIGATION_PLAN.md): there is no longer a second poller to
+        // race against. HubController.HandleEscape is now the hub's own
+        // NavContext.Cancel handler, called once by the ONE dispatch point
+        // (NavigationInputModule), and it decides itself, serially, whether
+        // to close the glossary or open the menu -- SystemMenuController no
+        // longer has an escape-owning poll of its own at all, so the
+        // "driven in both orders" shape this test used to need to catch a
+        // race is no longer a real scenario. SystemMenuGamepadNavigationTests
+        // covers the dispatcher-driven version of both halves below,
+        // through a scripted Cancel press rather than a direct call.
         [UnityTest]
-        public IEnumerator EscapeOverTheGlossaryDoesNotAlsoOpenTheMenu()
+        public IEnumerator CancelOverTheGlossaryClosesItInstead_AndDoesNotAlsoOpenTheMenu()
         {
             yield return OpenTheHub();
 
             var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
             Assert.IsNotNull(hub, "the hub has no HubController");
 
-            // Hub first.
-            EscapeKey.Reset();
             hub.SetGlossary(true);
             Assert.IsFalse(_menu.IsOpen);
 
             hub.HandleEscape();
-            _menu.HandleEscape();
 
+            Assert.IsFalse(hub.GlossaryIsOpen, "the hub's own Cancel handler should have closed the glossary");
             Assert.IsFalse(_menu.IsOpen,
-                "Escape closed the glossary and opened the system menu on top of it");
-
-            // Menu first, same press.
-            EscapeKey.Reset();
-            hub.SetGlossary(true);
-
-            _menu.HandleEscape();
-            hub.HandleEscape();
-
-            Assert.IsFalse(_menu.IsOpen,
-                "the system menu opened on an Escape that belonged to the glossary");
+                "Cancel closed the glossary and opened the system menu on top of it in the same press");
 
             yield return null;
         }
 
-        // The other half: with nothing else up, Escape must still open it.
-        // A guard that fixed the race by never opening would pass the test
-        // above and be useless.
+        // The other half: with nothing else up, Cancel must still open it.
+        // A guard that fixed the old race by never opening would pass the
+        // test above and be useless.
         [UnityTest]
-        public IEnumerator EscapeWithNothingElseUpOpensTheMenu()
+        public IEnumerator CancelWithNothingElseUpOpensTheMenu()
         {
             yield return OpenTheHub();
-            EscapeKey.Reset();
+
+            var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(hub, "the hub has no HubController");
 
             Assert.IsFalse(_menu.IsOpen);
-            _menu.HandleEscape();
-            Assert.IsTrue(_menu.IsOpen, "Escape did not open the menu when nothing else owned the key");
-
-            // And closes it again on the next press.
-            EscapeKey.Reset();
-            _menu.HandleEscape();
-            Assert.IsFalse(_menu.IsOpen, "Escape did not close the menu it had just opened");
+            hub.HandleEscape();
+            Assert.IsTrue(_menu.IsOpen, "the hub's own Cancel handler did not open the menu when nothing else owned it");
 
             yield return null;
         }

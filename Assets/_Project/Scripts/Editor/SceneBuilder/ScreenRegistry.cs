@@ -129,11 +129,8 @@ public static class ScreenRegistry
                     result.Attach<StageShake>(screen.PartyStage),
                 };
 
-                // The reward screen owns Escape while it is up: opening this
-                // menu over a reckoning the player is trying to dismiss is the
-                // same wrong-thing-on-Escape the consumer list exists to stop.
                 WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
-                    inDescent: true, screen.Reckoning.Root);
+                    inDescent: true);
 
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
 
@@ -830,42 +827,33 @@ public static class ScreenRegistry
     {
         hub.characterOverlayPanel = result.Go(screen.SystemMenu.Root);
 
-        // The hub's overlay, its glossary and its relic draft all sit on
-        // Escape-ish paths already, so each is declared as owning Escape ahead
-        // of the overarching menu.
-        WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
-            inDescent: false, screen.Glossary.Root, screen.Draft.Root);
+        // The hub's own NavContext.Cancel now opens this directly (plan
+        // section 3/4) instead of racing it against a separate Escape poll,
+        // so HubController needs the controller in hand.
+        hub.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
+            inDescent: false);
     }
 
     // The overarching menu's wiring, shared by every scene that carries one.
     //
-    // `escapeConsumers` is the only per-scene difference: the fight and the map
-    // already put the character sheet on Escape, and this menu must not open on
-    // top of a sheet the player is trying to close. Passed in rather than found
-    // by name, so a scene that grows another Escape-owning panel declares it
-    // here instead of the menu guessing.
+    // `escapeConsumers` is gone (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step
+    // B): the menu no longer polls Escape itself at all, so there is nothing
+    // left for a per-scene consumer list to guard. Only the hub currently
+    // reopens it on Cancel (HubController.HandleEscape, now the hub's own
+    // NavContext.Cancel handler) -- the map and the fight lose "Cancel opens
+    // the system menu" via keyboard/gamepad in this commit, a deliberate,
+    // stated scope narrowing rather than an oversight: giving Map and Fight
+    // their own base NavContext with the same wiring is left to whichever
+    // later step gives each of them the rest of their own navigation (Map's
+    // Graph group, Fight's is registered already for its own model).
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
-        bool inDescent, params NodeRef[] escapeConsumers)
+        bool inDescent)
     {
-        // ATTACHED TO THE SCENE ROOT, not to the menu it drives.
-        //
-        // It was on the menu's own modal, which is Inactive until the menu
-        // opens -- so its Update() did not run while the menu was closed, and
-        // the Escape that is supposed to OPEN it could never fire. Escape only
-        // ever closed a menu that something else had already opened.
-        //
-        // That is why it survived a design pass that lists "Escape opens the
-        // menu" as built: every screenshot and every test opens it by calling
-        // Open() directly, and legacy Input cannot be pressed headlessly, so
-        // nothing that runs in CI was ever in a position to notice.
-        //
-        // SystemMenuTests.TheMenuIsListeningWhileItIsClosed pins it now.
         var controller = result.Attach<SystemMenuController>(host);
         UiAutoBind.Bind(result, controller, menu);
 
         controller.panel = result.Go(menu.Root);
-        controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
 
         // Decided here rather than sniffed at runtime: the hub is not a
         // descent, and no state can make it one.
@@ -1026,6 +1014,18 @@ public static class ScreenRegistry
         // The keys themselves are string arrays, not nodes, so they stay here.
         controller.sliderKeys = options.SliderKeys.ToArray();
         controller.stepperKeys = options.StepperKeys.ToArray();
+
+        // OptionRow (plan section 7) attached HERE, at build time, not
+        // runtime-added the way the old HoverIndex was -- UiAutoBind has no
+        // name match for `rows` against `RowHovers` (deliberately: it binds
+        // GameObject/Tmp/Button/Image/Rect by name, never an arbitrary
+        // component type), so this is explicit, the same shape every other
+        // Attach<T> call in this file already is.
+        controller.rows = options.RowHovers.Select(result.Attach<OptionRow>).ToArray();
+
+        // NO CountBindings: rows is built directly off options.RowHovers,
+        // the very list it is meant to agree with, so registering a count
+        // check here would only be comparing that list with itself.
 
         return controller;
     }
