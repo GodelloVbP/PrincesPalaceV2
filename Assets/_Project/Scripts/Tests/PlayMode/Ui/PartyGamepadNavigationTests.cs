@@ -278,5 +278,152 @@ namespace PrincesPalace.PlayModeTests
         private GameObject Halo(int seat) =>
             _menu.GetComponentsInChildren<Transform>(includeInactive: true)
                 .First(t => t.name == $"PartySeat{seat}SelectHalo").gameObject;
+
+        // ---- the links row (plan phase 3, item 3 -- the phase 2 gap named in ----
+        // ---- the plan's own status header) --------------------------------------
+
+        private Button CancelLink() =>
+            _menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .First(b => b.name == "PartyCancelLink");
+
+        private Button BenchLink() =>
+            _menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .First(b => b.name == "PartyBenchLink");
+
+        [UnityTest]
+        public IEnumerator NotCarrying_TheLinksAreHiddenAndUnreachable()
+        {
+            yield return OpenTheParty();
+
+            Assert.IsFalse(CancelLink().gameObject.activeSelf, "fixture: nothing is carried yet");
+            Assert.IsFalse(BenchLink().gameObject.activeSelf);
+
+            // Up from a seat with nothing carried should find no target at
+            // all (the seat rail's own row has nothing above it) rather than
+            // the hidden links -- RefreshNavigation only wires them in when
+            // they are actually shown.
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+
+            _input.Vertical = 1f;
+            yield return DriveFrame();
+            _input.Vertical = 0f;
+
+            Assert.AreEqual(Seat(PartySeat.Rear), EventSystem.current.currentSelectedGameObject,
+                "Up should not have moved onto a hidden, unwired link");
+        }
+
+        // A helper for the three tests below, all starting from the same
+        // "bear picked up from Rear" state -- kept as ONE Submit (not a
+        // shared coroutine chain of Moves) so each test drives exactly one
+        // navigation press of its own from a freshly-selected node, the
+        // same one-press-per-test shape every other file in this family
+        // uses (SystemMenuGamepadNavigationTests' own header on why: a
+        // second directional press soon after a first can fall inside
+        // StandaloneInputModule's own real-time move-repeat window, which
+        // this suite has no control over -- plan section 10's known gap).
+        private IEnumerator PickUpBearFromRear()
+        {
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+            yield return SubmitFrame();
+            Assert.AreEqual("bear", _party.Formation.SelectedId, "fixture: nothing was picked up");
+            Assert.IsTrue(_party.Formation.CanSendToBench, "fixture: this carry should be bench-eligible");
+        }
+
+        [UnityTest]
+        public IEnumerator CarryingFromAnEligibleSeat_RevealsBothLinks()
+        {
+            yield return OpenTheParty();
+            yield return PickUpBearFromRear();
+
+            Assert.IsTrue(CancelLink().gameObject.activeSelf, "carrying should reveal the cancel link");
+            Assert.IsTrue(BenchLink().gameObject.activeSelf, "carrying from an eligible seat should reveal " +
+                "the bench link");
+        }
+
+        [UnityTest]
+        public IEnumerator Up_FromTheSeatRailWhileCarrying_ReachesTheLinksRow()
+        {
+            yield return OpenTheParty();
+            yield return PickUpBearFromRear();
+
+            _input.Vertical = 1f;
+            yield return DriveFrame();
+            _input.Vertical = 0f;
+
+            Assert.AreEqual(CancelLink().gameObject, EventSystem.current.currentSelectedGameObject,
+                "Up from the seat rail while carrying should reach the links row -- cancelLink is the " +
+                "wider-shown of the two and the group's own first member");
+        }
+
+        [UnityTest]
+        public IEnumerator Right_FromCancelLink_ReachesBenchLink()
+        {
+            yield return OpenTheParty();
+            yield return PickUpBearFromRear();
+
+            Select(CancelLink().gameObject);
+            yield return null;
+
+            _input.Horizontal = 1f;
+            yield return DriveFrame();
+            _input.Horizontal = 0f;
+
+            Assert.AreEqual(BenchLink().gameObject, EventSystem.current.currentSelectedGameObject,
+                "the links row is an ordinary Rail -- Right from cancel should reach bench");
+        }
+
+        [UnityTest]
+        public IEnumerator Submit_OnBenchLinkWhileCarrying_BenchesExactlyOnce()
+        {
+            yield return OpenTheParty();
+            yield return PickUpBearFromRear();
+
+            Select(BenchLink().gameObject);
+            yield return null;
+            yield return SubmitFrame();
+
+            Assert.IsNull(_party.Formation.SelectedId, "benching should end the carry");
+            Assert.IsFalse(_party.Formation.SeatIds.Contains("bear"),
+                "Submit on the bench link should bench the carried character exactly once, through the " +
+                "same SendToBench the mouse click calls");
+        }
+
+        [UnityTest]
+        public IEnumerator CarryingFromTheRoster_OnlyCancelIsReachable_NotBench()
+        {
+            yield return OpenTheParty();
+
+            // OWL LEFT BENCHED rather than a fabricated fourth character --
+            // this project's content has exactly three characters (sheep,
+            // bear, owl; ContentDatabase.Characters.Count), which is also
+            // RosterCardCount (HubScreen.Build(ContentDatabase.Characters.
+            // Count)), so there is no fourth card to reach. The roster row
+            // shows every roster member regardless of seating, so leaving
+            // owl out of selectedCharacterIds gives an unseated, reachable
+            // "PartyCard2Button" (roster order is file order: sheep, bear,
+            // owl) without inventing an id the content database has never
+            // heard of.
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "bear" };
+            SaveSlotManager.SaveCurrent();
+            _party.Refresh();
+            yield return null;
+
+            var rosterCard = _menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .First(b => b.name == "PartyCard2Button");
+            Assert.IsTrue(rosterCard.gameObject.activeSelf, "fixture: owl's card should still be populated, " +
+                "just unseated");
+
+            Select(rosterCard.gameObject);
+            yield return null;
+            yield return SubmitFrame();
+            Assert.AreEqual("owl", _party.Formation.SelectedId, "fixture: the roster card was not picked up");
+
+            Assert.IsTrue(CancelLink().gameObject.activeSelf, "carrying should reveal the cancel link");
+            Assert.IsFalse(BenchLink().gameObject.activeSelf,
+                "a roster carry is not a seated one -- CanSendToBench requires SelectedFrom.Kind == Seat");
+        }
     }
 }

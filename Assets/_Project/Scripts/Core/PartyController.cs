@@ -409,16 +409,68 @@ namespace PrincesPalace
         // to be kept agreeing.
         private void WireNavigation()
         {
+            WireSelectHalos(seatButtons, seat => OnSeatSelectionChanged(seat));
+            WireSelectHalos(cardButtons, card => OnCardSelectionChanged(card));
+        }
+
+        // THE LINKS ROW (plan phase 3, item 3 -- the phase 2 gap this plan's
+        // own status header named: "Party's Send-to-bench link is not in a
+        // nav group yet, so benching mid-carry is mouse-only"). cancelLink/
+        // benchLink sit in the header, above both rails, and PaintHeader
+        // (just above whichever caller reaches this) already hides them
+        // outright unless something is being carried -- RuntimeNavWiring.
+        // Group drops a null member but NOT an inactive one, so this filters
+        // to whichever of the two are actually SHOWN right now, same as
+        // every other modal in this family filters its own per-repaint set.
+        // cancelLink is the wider condition (hasSelection) and benchLink's
+        // own CanSendToBench implies it, so whenever benchLink is active,
+        // cancelLink always is too -- `links[0]` below is always cancelLink
+        // when this list is non-empty.
+        //
+        // REBUILT ON EVERY PAINT, alongside the seat/roster rails, in the
+        // SAME Apply call rather than a second one: RuntimeNavWiring.Apply
+        // is AUTHORITATIVE per node (writes all four directions of every
+        // node it resolves), so a second call adding only "seat Up -> links"
+        // would overwrite that seat's Left/Right back to null the moment it
+        // also gained this Up link -- the seat/roster rail groups move here
+        // from WireNavigation (formerly a Wire()-time-only call, run once)
+        // for exactly that reason. WireNavigation above keeps only the
+        // idempotent one-time setup (the SelectIndex halos).
+        //
+        // REACHABLE FROM BOTH RAILS WHILE CARRYING: an explicit Up from
+        // every seat (the row directly under the header) reaches the links,
+        // matching the screen's own vertical layout; the roster already has
+        // its own Up into the seat row (CrossLinks, below), so a card reaches
+        // the links in the same two hops a Move up the screen would take on
+        // the mouse path's own layout. Down from the links returns to seat
+        // column 0, an arbitrary pick the same way Hub's own gate Up-link is
+        // (WireNavigation's header there says why: whichever the header sits
+        // over dead centre gets no better claim than any other column).
+        private void RefreshNavigation()
+        {
+            var links = new List<Selectable>();
+            if (cancelLink != null && cancelLink.gameObject.activeSelf) links.Add(cancelLink);
+            if (benchLink != null && benchLink.gameObject.activeSelf) links.Add(benchLink);
+
+            var allLinks = new List<UiNavLink<Selectable>?>(CrossLinks());
+            if (links.Count > 0)
+            {
+                foreach (var seat in SeatsInVisualOrder())
+                {
+                    if (seat != null) allLinks.Add(RuntimeNavWiring.Link(seat, UiNavDirection.Up, links[0]));
+                }
+
+                allLinks.Add(RuntimeNavWiring.Link(links[0], UiNavDirection.Down, At(seatButtons, SeatAtColumn(0))));
+            }
+
             RuntimeNavWiring.Apply(
                 new[]
                 {
                     RuntimeNavWiring.Group("partySeats", UiNavGroupKind.Rail, SeatsInVisualOrder()),
                     RuntimeNavWiring.Group("partyRoster", UiNavGroupKind.Rail, cardButtons),
+                    RuntimeNavWiring.Group("partyLinks", UiNavGroupKind.Rail, links),
                 },
-                CrossLinks());
-
-            WireSelectHalos(seatButtons, seat => OnSeatSelectionChanged(seat));
-            WireSelectHalos(cardButtons, card => OnCardSelectionChanged(card));
+                allLinks);
         }
 
         // Left-to-right as drawn: column 0 first. Reads the mapping through
@@ -843,6 +895,8 @@ namespace PrincesPalace
                 if (i < _rosterIds.Count) PaintCard(i);
                 else HideCard(i);
             }
+
+            RefreshNavigation();
         }
 
         private void PaintHeader()
