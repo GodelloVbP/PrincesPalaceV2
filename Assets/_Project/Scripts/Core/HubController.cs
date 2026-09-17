@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,6 +30,16 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text currencyLabel;
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
+
+        // Gamepad-focus halos for the four buildings and the gate -- none of
+        // the five is Themed() (Staged()'s own comment: each wears its own
+        // painted art), so none gets ThemedButtonState's free Selected halo
+        // the way mainMenuButton (Themed Silver) does. See SelectHaloPainter.
+        [SerializeField] internal Image talentsSelectHalo;
+        [SerializeField] internal Image principalitySelectHalo;
+        [SerializeField] internal Image characterSheetSelectHalo;
+        [SerializeField] internal Image relicsSelectHalo;
+        [SerializeField] internal Image gateSelectHalo;
 
         // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md
         // section 3/4) -- the job SystemMenuController's own now-deleted Escape
@@ -149,6 +160,7 @@ namespace PrincesPalace
                 Navigation.Go(Navigation.MainMenu);
             });
 
+            WireNavigation();
             RegisterNavContext();
         }
 
@@ -160,8 +172,95 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleEscape);
+            _navContext = new NavContext(entry: StartRunButtonGameObject, selectables: Selectables(), cancel: HandleEscape);
             NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        //
+        // THE HUB'S REAL SHAPE IS FOUR STAGED BUILDINGS AND A GATE, NOT A TAB
+        // BAR. Every one of them sits at its own HubAnchors depth/lateral
+        // plot rather than in a row, so the group below is a 2x2 Grid keyed
+        // to that plot -- far row (Talents/Relics, the -1/+1 lateral pair at
+        // depth .78/.90) over near row (Principality/CharacterSheet, depth
+        // .06/.16) -- with the Grid's own Left/Right wrap and Up/Down
+        // row-stepping, plus three explicit links this shape needs and a
+        // Grid alone cannot express: the near row's Down into the gate (the
+        // "unmistakably primary" action, HubScreen's own comment on why it
+        // is not staged with the rest), the gate's Up back out (tied
+        // arbitrarily to characterSheetButton -- the gate sits dead centre,
+        // equidistant from both columns), and mainMenuButton (a top-left
+        // corner utility, not part of the staged composition at all) reached
+        // from/to talentsButton, the far-left building nearest it on screen.
+        //
+        // ENTRY is the gate, not "the first tab's first control" -- there is
+        // no first tab. It is the screen's own stated primary action.
+        private void WireNavigation()
+        {
+            var talents = talentsButton;
+            var relics = relicsButton;
+            var principality = principalityButton;
+            var characterSheet = characterSheetButton;
+            var gate = startRunButton;
+            var mainMenu = mainMenuButton;
+
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("hubBuildings", UiNavGroupKind.Grid,
+                    new[] { talents, relics, principality, characterSheet }, gridRowLength: 2),
+                new[]
+                {
+                    RuntimeNavWiring.Link(principality, UiNavDirection.Down, gate),
+                    RuntimeNavWiring.Link(characterSheet, UiNavDirection.Down, gate),
+                    RuntimeNavWiring.Link(gate, UiNavDirection.Up, characterSheet),
+                    RuntimeNavWiring.Link(talents, UiNavDirection.Up, mainMenu),
+                    RuntimeNavWiring.Link(mainMenu, UiNavDirection.Down, talents),
+                });
+
+            WireBuildingHalo(talents, talentsSelectHalo);
+            WireBuildingHalo(relics, relicsSelectHalo);
+            WireBuildingHalo(principality, principalitySelectHalo);
+            WireBuildingHalo(characterSheet, characterSheetSelectHalo);
+            WireBuildingHalo(gate, gateSelectHalo);
+            // mainMenuButton is Themed(Silver) -- ThemedButtonState already
+            // draws its own Selected halo, so it gets none of these.
+        }
+
+        private static void WireBuildingHalo(Button button, Image halo)
+        {
+            if (button == null || halo == null) return;
+
+            var select = button.gameObject.GetComponent<SelectIndex>()
+                         ?? button.gameObject.AddComponent<SelectIndex>();
+            select.Index = 0;
+            select.Changed = (_, entered) => SelectHaloPainter.Paint(halo, entered);
+        }
+
+        private GameObject StartRunButtonGameObject => startRunButton != null ? startRunButton.gameObject : null;
+
+        // Every button on this screen this context is willing to hand
+        // selection back to (NavigationInputModule.ReselectIfOutsideDeclaredSet)
+        // -- fixed at Start() because none of these six ever appears or
+        // disappears afterward (unlike SystemMenu's tabs or Map's rooms):
+        // principalityButton stays permanently disabled rather than hidden,
+        // and the other five are always on screen. The debug menu, glossary,
+        // relic draft and character overlay covering the hub without pushing
+        // their own context yet (HandleEscape's own header) is pre-existing,
+        // named debt, not something this pass changes.
+        private Dictionary<string, object> Selectables()
+        {
+            var result = new Dictionary<string, object>();
+            void Add(string id, Button button)
+            {
+                if (button != null) result[id] = button.gameObject;
+            }
+
+            Add("talents", talentsButton);
+            Add("principality", principalityButton);
+            Add("characterSheet", characterSheetButton);
+            Add("relics", relicsButton);
+            Add("gate", startRunButton);
+            Add("mainMenu", mainMenuButton);
+            return result;
         }
 
         // The hub is a whole scene, not a panel -- OnDestroy, on scene

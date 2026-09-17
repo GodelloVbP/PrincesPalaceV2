@@ -52,14 +52,22 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CancelOpensTheMenuFromTheHub_CancelAgainClosesItAndClearsSelection()
+        public IEnumerator CancelOpensTheMenuFromTheHub_CancelAgainClosesItAndRestoresTheGate()
         {
             yield return LoadHub();
 
+            var gate = _hub.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == "StartRunGate");
+
             Assert.IsFalse(_menu.IsOpen, "the menu should start closed");
-            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
-                "nothing should be selected on the hub before anything opens -- the hub declares no " +
-                "selectable set of its own yet (phase 3's rollout)");
+
+            // Phase 3's rollout (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3a,
+            // HubController.WireNavigation): the hub now declares a real
+            // selectable set and an entry, so this is no longer the "nothing
+            // is selected yet" case an earlier draft of this test pinned --
+            // the gate is the screen's own stated primary action.
+            Assert.AreEqual(gate.gameObject, EventSystem.current.currentSelectedGameObject,
+                "the hub's entry (the gate) should be selected as soon as the scene loads");
 
             _input.CancelDown = true;
             yield return DriveFrame();
@@ -76,16 +84,13 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_menu.IsOpen, "a second Cancel should close the menu it just opened");
 
-            // "Hub's remembered node is restored": the hub has no
-            // selectable set of its own to remember a node IN this phase
-            // (its own buildings are phase 3's rollout), so the real claim
-            // provable today is the one that matters for correctness --
-            // closing the menu must not leave its own last-selected tab as
-            // the active EventSystem selection, which is exactly what
+            // Hub's remembered node IS restored now, provably: closing the
+            // menu must land back on the hub's own entry (the gate), not the
+            // menu's last-selected tab and not nothing -- the failure mode
             // SystemMenuController.PopNavContext leaving a stale selection
             // behind would look like.
-            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
-                "the menu's last-selected tab leaked through as the hub's own selection after closing");
+            Assert.AreEqual(gate.gameObject, EventSystem.current.currentSelectedGameObject,
+                "closing the menu should restore the hub's own entry, not leak the menu's last tab or leave nothing selected");
         }
 
         [UnityTest]
