@@ -1,6 +1,11 @@
 # Gamepad Navigation — Plan v3
 
-> **Status: approved 2026-09-17. Phase 1 in progress.**
+> **Status: approved 2026-09-17. Phase 1 landed (`81f1de14`). Phase 2 steps
+> A-C landed 2026-09-17: step A `00bae36d` (nav declarations + Explicit-link
+> generation, opt-in), step B `c8837374` (SystemMenu nested modal + Options
+> row adjustment), step C `da205520` (RewardTrack ribbon as a Rail). Step D
+> (Party) was not attempted -- see `AUDIT.md` #155-156 for what steps B/C
+> narrowed in scope and what step D still needs before it can land safely.**
 >
 > Research base: `docs/GAMEPAD_NAVIGATION_RESEARCH.md`. Draft 1 (screen
 > inventory) and Draft 2 (the rejected gating-on-"am I top" approach this
