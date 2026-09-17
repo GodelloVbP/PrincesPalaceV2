@@ -121,6 +121,10 @@ namespace PrincesPalace.PlayModeTests
 
         private static GameObject Tooltip => Node("ReckoningOfferTooltip");
 
+        private static Image Halo(int index) =>
+            Resources.FindObjectsOfTypeAll<Image>()
+                .FirstOrDefault(im => im.name == $"ReckoningOffer{index}Halo" && im.gameObject.scene.IsValid());
+
         private static TMPro.TMP_Text TooltipText =>
             Resources.FindObjectsOfTypeAll<TMPro.TMP_Text>()
                 .FirstOrDefault(t => t.name == "ReckoningOfferTooltipText" && t.gameObject.scene.IsValid());
@@ -322,6 +326,37 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Tooltip.activeSelf, "the box belongs to the selection, so it follows it");
             Assert.AreNotEqual(before.x, box.anchoredPosition.x,
                 "and it is placed beside the card it moved to, not left behind on the last one");
+        }
+
+        // ---- the selected halo (AUDIT.md #160) ----------------------------------
+
+        [UnityTest]
+        public IEnumerator SelectingAnOffer_BrightensItsOwnHalo()
+        {
+            yield return ShowTheChoice();
+
+            AssertSelected("ReckoningOffer0", "precondition: Show() selects the first card");
+
+            Assert.AreEqual(ThemedButtonState.SelectedGlowAlpha, Halo(0).color.a, 0.001f,
+                "AUDIT.md #160: the entry's own existing rarity halo should read the Selected ratio the " +
+                "moment the screen opens -- brightening what is already there, not a plate behind it " +
+                "(BuildOffer's own NO PLATE note argues against exactly that)");
+        }
+
+        [UnityTest]
+        public IEnumerator MovingTheSelectionOffAnOffer_DimsItsHaloBackAndLightsTheNewOne()
+        {
+            yield return ShowTheChoice();
+
+            float beforeMove = Halo(0).color.a;
+
+            yield return Press(1f, 0f);
+
+            AssertSelected("ReckoningOffer1", "precondition: Right reached the second card");
+            Assert.Less(Halo(0).color.a, beforeMove,
+                "the card the selection left should fall back to its plain rarity glow, not stay lit");
+            Assert.AreEqual(ThemedButtonState.SelectedGlowAlpha, Halo(1).color.a, 0.001f,
+                "and the card it moved to should now carry the Selected brightening");
         }
 
         [UnityTest]

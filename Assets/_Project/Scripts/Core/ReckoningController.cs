@@ -242,7 +242,30 @@ namespace PrincesPalace
                 var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Index = index;
                 hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
+
+                // AUDIT.md #160: the card's own existing halo, brightened
+                // rather than a new plate behind it (BuildOffer's "NO PLATE"
+                // note above the button declaration argues explicitly against
+                // that -- "a gold button frame behind it turned three
+                // treasures into three menu entries"). += , not =: `node`
+                // already carries a SelectIndex from _tooltips.Register just
+                // above, and Changed is a plain multicast Action -- assigning
+                // it here would silently drop the tooltip's own subscription.
+                var select = node.GetComponent<SelectIndex>() ?? node.AddComponent<SelectIndex>();
+                select.Changed += (_, entered) => OnOfferSelectionChanged(entered ? index : -1);
             }
+        }
+
+        // Party's own shape (PartyController.OnSeatSelectionChanged): a
+        // deselect arriving after the NEXT card has already reported itself
+        // selected must not turn that new glow off.
+        private int _selectedOffer = -1;
+
+        private void OnOfferSelectionChanged(int index)
+        {
+            if (index < 0 && _selectedOffer < 0) return;
+            _selectedOffer = index;
+            PaintOffers();
         }
 
         // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 2) ------
@@ -730,11 +753,21 @@ namespace PrincesPalace
                 // part that survives being stood on: the burst's rays clear the
                 // icon, but its core is hidden behind the item, so on its own
                 // the rarity read as a few spikes rather than as a colour.
+                //
+                // AUDIT.md #160: ALSO where the stick is standing. Brightened
+                // to ThemedButtonState's own SelectedGlowAlpha/Scale (the same
+                // ratio every themed Button already answers focus with,
+                // Core/SelectHaloPainter's ratio too) rather than layering a
+                // second visual -- Max, not a replacement, so a rare item's
+                // own brighter rarity glow is never dimmed by gaining focus.
                 if (offerHalos != null && i < offerHalos.Length && offerHalos[i] != null)
                 {
+                    bool selected = i == _selectedOffer;
                     var soft = glow;
-                    soft.a = _taken ? 0.12f : 0.30f;
+                    soft.a = Mathf.Max(_taken ? 0.12f : 0.30f, selected ? ThemedButtonState.SelectedGlowAlpha : 0f);
                     offerHalos[i].color = soft;
+                    offerHalos[i].rectTransform.localScale =
+                        Vector3.one * (selected ? ThemedButtonState.SelectedGlowScale : 1f);
                 }
 
                 // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, a SEPARATE

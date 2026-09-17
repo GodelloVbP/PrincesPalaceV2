@@ -103,6 +103,14 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] slotLabels;
         [SerializeField] internal GameObject[] slotBlockedCaptions;
 
+        // AUDIT.md #160: one halo per NoChrome group with no ThemedButtonState
+        // of its own -- Core/SelectHaloPainter.Paint is the one implementation
+        // this borrows (Hub's buildings, Party's seats/cards), wired below in
+        // WireSelectHalos.
+        [SerializeField] internal Image[] slotHalos;
+        [SerializeField] internal Image[] packCellHalos;
+        [SerializeField] internal Image[] attributeCellHalos;
+
         [SerializeField] internal Button[] attributeCells;
 
         // One "+" per attribute cell, and the label saying how many points are
@@ -280,6 +288,15 @@ namespace PrincesPalace
             AttachHovers(slotCells, OnSlotHover);
             AttachHovers(packCells, OnPackHover);
 
+            // AUDIT.md #160: wired above the lockedForFight guard, same
+            // reasoning as AttachHovers just above it -- the fight's own
+            // locked copy of this sheet still takes Move/Submit (equipping is
+            // what is barred, not looking), so it should still show where the
+            // stick is standing.
+            WireSelectHalos(attributeCells, attributeCellHalos);
+            WireSelectHalos(slotCells, slotHalos);
+            WireSelectHalos(packCells, packCellHalos);
+
             // Clicking equips; clicking a worn slot takes it off. A screen that
             // could only put gear ON would be a trap, so both gestures exist --
             // the same pair the old sheet had.
@@ -383,6 +400,35 @@ namespace PrincesPalace
                 var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Index = index;
                 hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
+            }
+        }
+
+        // AUDIT.md #160: one SelectIndex per cell, each painting its OWN halo
+        // directly -- HubController.WireBuildingHalo's shape, not Party's
+        // shared-int-then-repaint one, because here every cell already owns a
+        // distinct halo of its own (no tracked "which index is lit" state to
+        // keep in sync against a repaint that rebinds what a cell shows).
+        //
+        // += , NOT =. Every one of these three arrays was already run through
+        // AttachHovers a few lines above, which calls TooltipFocusRouter.
+        // Register and that already claims this SAME SelectIndex's Changed
+        // delegate for the tooltip (Core/TooltipFocusRouter.cs:71-72). Changed
+        // is a plain Action field, which IS multicast -- assigning with = here
+        // would silently replace the router's subscription and the tooltip
+        // tests (SelectingAPackCell_ShowsItsPreview and its neighbours) would
+        // stop opening the box the moment this method ran after Register.
+        private static void WireSelectHalos(Button[] cells, Image[] halos)
+        {
+            if (cells == null || halos == null) return;
+
+            for (int i = 0; i < cells.Length && i < halos.Length; i++)
+            {
+                if (cells[i] == null || halos[i] == null) continue;
+
+                var halo = halos[i];
+                var select = cells[i].gameObject.GetComponent<SelectIndex>()
+                             ?? cells[i].gameObject.AddComponent<SelectIndex>();
+                select.Changed += (_, entered) => SelectHaloPainter.Paint(halo, entered);
             }
         }
 

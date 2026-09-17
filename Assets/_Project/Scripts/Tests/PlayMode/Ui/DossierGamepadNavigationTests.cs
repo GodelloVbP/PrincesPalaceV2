@@ -138,6 +138,10 @@ namespace PrincesPalace.PlayModeTests
 
         private static GameObject Tooltip => Node("DossierTooltip");
 
+        private static Image Halo(string name) =>
+            Resources.FindObjectsOfTypeAll<Image>()
+                .FirstOrDefault(im => im.name == name && im.gameObject.scene.IsValid());
+
         private static TMP_Text TooltipTitle =>
             Resources.FindObjectsOfTypeAll<TMP_Text>()
                 .FirstOrDefault(t => t.name == "DossierTooltipTitle" && t.gameObject.scene.IsValid());
@@ -573,6 +577,63 @@ namespace PrincesPalace.PlayModeTests
             // selection from before it closed.
             Assert.IsFalse(Tooltip.activeSelf,
                 "the screen's own context coming off the stack hides its tooltip");
+        }
+
+        // ---- the selected halo (AUDIT.md #160) ----------------------------------
+
+        [UnityTest]
+        public IEnumerator SelectingAPackCell_ShowsItsSelectedHalo()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenThePack();
+
+            Select("DossierPackCell0");
+            yield return null;
+
+            Assert.IsTrue(Halo("DossierPackHalo0").gameObject.activeSelf,
+                "AUDIT.md #160: a NoChrome pack cell carries no ThemedButtonState of its own, so its halo " +
+                "is the only thing that can show focus without the tooltip");
+        }
+
+        [UnityTest]
+        public IEnumerator MovingOffAPackCell_HidesItsSelectedHalo()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenThePack();
+
+            Select("DossierPackCell0");
+            yield return null;
+            Assert.IsTrue(Halo("DossierPackHalo0").gameObject.activeSelf, "precondition: the halo is up");
+
+            // Up out of the window lands on a sort tab (see
+            // MovingOffAPackCellOntoSomethingWithNoTooltip_HidesIt above).
+            yield return Press(0f, 1f);
+
+            Assert.IsFalse(Halo("DossierPackHalo0").gameObject.activeSelf,
+                "the halo belongs to the selection, so it goes when the selection moves away");
+        }
+
+        [UnityTest]
+        public IEnumerator SelectingAnEquipmentSlot_ShowsItsSelectedHalo()
+        {
+            yield return OpenTheCharacterTab();
+            Select("DossierSlotHead");
+            yield return null;
+
+            Assert.IsTrue(Halo("DossierSlotHaloHead").gameObject.activeSelf,
+                "AUDIT.md #160: the loadout's slots are the same NoChrome shape as the pack cells, with the " +
+                "same missing selected-visual");
+        }
+
+        [UnityTest]
+        public IEnumerator SelectingAnAbilityScoreCell_ShowsItsSelectedHalo()
+        {
+            yield return OpenTheCharacterTab();
+            Select("DossierAttrCell0");
+            yield return null;
+
+            Assert.IsTrue(Halo("DossierAttrHalo0").gameObject.activeSelf,
+                "AUDIT.md #160: the ability-score cells are the third NoChrome group this pass covers");
         }
 
         [UnityTest]
