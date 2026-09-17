@@ -1,5 +1,99 @@
 # Gamepad Navigation — Plan v3
 
+> **Status: 2026-09-17. Phase 3b: job 0 plus items 4 and 7 landed. Items 1,
+> 2, 3, 5 and 6 NOT attempted this pass** -- a scope assessment below, not a
+> partial or broken attempt at any of them.
+>
+> Job 0 (`ccdfe2f7`): `AUDIT.md` #157's two Combat/Stage failures
+> (`FightPlayableTests`, `StageFormationTests`) confirmed to predate this
+> whole branch -- `git checkout f20d76de` (the branch's own base, one commit
+> before phase 3a's first) reproduces both failures verbatim, which rules
+> out phase 3a's own "most likely trigger" (Main Menu's incidental
+> `build_content.ps1` run: `f20d76de` predates every content rebuild this
+> plan has done, phase 2's included). Left unfixed, out of scope for this
+> plan; `AUDIT.md` #157 carries the evidence for whoever chases the actual
+> regression in `combat`.
+>
+> Item 7 (`232f310b`): Main Menu's Manage Saves list and its own
+> reset-confirm dialog (`AUDIT.md` #159, closed) join the ONE shared
+> `NavContext` `MainMenuController` already owned for the base menu/save-slot
+> toggle -- four states now (confirm dialog, manage list, save-slot list,
+> base menu, resolved topmost-first since `ResetConfirmPanel` is a SIBLING
+> drawn over `ManageSavesPanel`, not a child of it), `HandleCancel` mirrors
+> the same precedence through `ResetProgressController.Dismiss()`/`GoBack()`
+> (made `internal`, the identical cross-controller shape `RefreshContinue`
+> already used). The confirm dialog's entry is forced to No rather than the
+> Rail's own first member: `HoldToConfirm` (the delete button's hold gesture)
+> is pointer-only -- `IPointerDown/Up/ExitHandler`, no `ISubmitHandler` --
+> so a stray gamepad Submit on Yes is inert either way, but resting the
+> selection highlight on the destructive button the instant the dialog opens
+> is still the wrong default. Caught and fixed while writing the tests: the
+> `OpenSaveSlotPanel` test helper never called `LoadMenu()`, which happened
+> to pass whenever an earlier test left a compatible scene loaded and masked
+> what looked at first like a real bug in the cross-group Down/Up link (a
+> throwaway diagnostic test against the pre-existing, working
+> `WireSaveSlotNavigation` proved the link was never the problem -- the
+> reused `NavigationInputModule`'s own carried-over move-debounce state was).
+>
+> Item 4 (`a1b7e7c7`): Defeat is a standalone modal inside Fight (not a
+> SystemMenu pane), so it gets its own `NavContext` -- pushed in `Show()`
+> once `Wire()` has built the buttons, popped on `OnDisable` rather than
+> from either button's own handler, since both `Dismissed` and
+> `InspectRequested` end in a scene change and a pop hung on the click would
+> double-pop if something else deactivated the GameObject first. Inspect
+> then Return is a Rail (`DefeatScreen`'s own `Place.At` puts Inspect on the
+> left), Cancel raises `Dismissed` the same as Return -- there is no
+> back-out affordance on the mouse path either. Exits is a pane inside
+> `SystemMenuController`, which already declares every Selectable under
+> whichever pane is active as part of its own shared context -- what was
+> missing was an actual Explicit-navigation List (Title, Quit, Abandon only
+> when a descent exists), rebuilt every `ApplyContext()` call. No Cancel
+> claim: the mouse path has no way to back out of an armed exit either.
+> RunStats needed NO CODE CHANGE at all -- checked against the real screen
+> before writing anything (the same "challenge the brief" correction phase
+> 3a's Hub and Talent commits already made): `RunStatsScreen` declares zero
+> Buttons or Selectables, every row is a read-only `TMP_Text`, so "entry on
+> the first" has nothing to apply to.
+>
+> **Items 1, 2, 3, 5 and 6 not attempted, by scope assessment rather than
+> failure.** Each is comparable in size to one of phase 3a's five screens on
+> its own -- this plan's own convention is one screen, one session, one
+> gated commit -- and several need net-new mechanism, not just wiring:
+> - **Item 1 (CharacterDossier)** needs a focus-driven tooltip (no cursor to
+>   anchor to) that must also out-rank hover and force-close on a modal
+>   open, PLUS a runtime screenshot capture pass at up to four aspects to
+>   verify the tooltip never covers the selected item -- a distinct, slow
+>   verification step on top of the wiring itself.
+> - **Item 2 (Reckoning)** has the identical focus-driven tooltip problem as
+>   item 1, on a different screen (`OnOfferHover`'s `entered=true` path).
+> - **Item 3 (the four Hub-covering modals, `AUDIT.md` #158)**: investigated
+>   this pass, and the count is wrong -- `characterOverlayPanel` IS
+>   `SystemMenu.Root` (`HubController.WireCharacterOverlay`'s own comment
+>   confirms it), so the "character overlay" #158 names already has a
+>   `NavContext` via `SystemMenuController` (phase 2 step B). Only
+>   RelicDraft, Glossary and the Debug menu are genuinely unwired, and each
+>   is non-trivial on its own (Glossary: category rail + paged row list +
+>   detail pane; Debug menu: grant buttons + filter rail + paged row list;
+>   RelicDraft: card rail + a dormant pager, and Cancel is a deliberate
+>   no-op by the screen's own design -- "a draft you can navigate around is
+>   not a draft"). Wiring them also means simplifying
+>   `HubController.HandleEscape`, whose debug-menu/glossary-closing branches
+>   become dead code once each modal owns its own Cancel-closing context --
+>   left alone this pass rather than half-refactored. `AUDIT.md` #158 is
+>   updated with this narrower count, not closed.
+> - **Item 5 (SystemMenu shoulder shortcut)** needs a new input axis pair in
+>   `ProjectSettings/InputManager.asset` and a new "read once per frame
+>   through the module" plumbing path in `NavigationInputModule` -- untouched
+>   surface, deserving its own gated pass rather than a bolt-on alongside
+>   four other items.
+> - **Item 6 (Party's Send-to-bench link)** touches `PartyController`, a
+>   phase-2-shipped file with its own carry-state machine; phase 2's own
+>   status header above already flagged this as a known gap, not something
+>   to rush alongside four other items in one sitting.
+>
+> Recommendation: each of items 1/2/3/5/6 as its own follow-up session, the
+> same gated-commit shape this plan already uses.
+
 > **Status: approved 2026-09-17. PHASE 3a COMPLETE** (the first half of
 > phase 3's rollout -- five screens, one commit each, gated green before the
 > next). Phase 1 landed (`81f1de14`). Phase 2: step A `00bae36d` (build-time

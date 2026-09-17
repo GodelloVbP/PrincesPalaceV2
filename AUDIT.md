@@ -2839,7 +2839,7 @@ before and after: 173). Left unfixed -- out of scope for the gamepad-navigation 
 is the area to chase the actual swing-timing regression, and whether it's stale content or a
 real formula bug is still open. Not this plan's call to make.
 
-### 158. Four Hub-covering modals still do not push their own NavContext
+### 158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)
 
 `HubController`'s own pre-existing comment (`Core/HubController.cs`, the `Update()` method's
 gating check) already named this before phase 3a started: the debug menu, the glossary, the
@@ -2852,7 +2852,18 @@ block the raycast). None of the five screens this plan's brief named (Hub, Main 
 Talent, Shop) is one of these four, so this is out of scope for phase 3a rather than a gap in it
 -- named here so it is not silently assumed to already work.
 
-### 159. Main Menu's Manage Saves and reset-confirm modals are mouse-only
+**Corrected, phase 3b, 2026-09-17: the count above is wrong.** `characterOverlayPanel`
+(`Core/HubController.cs`) IS `screen.SystemMenu.Root` --
+`Editor/SceneBuilder/ScreenRegistry.cs`'s `WireCharacterOverlay` assigns it directly, and its own
+comment says so ("The character overlay: a Modal living inside the hub's own tree... The hub's
+own NavContext.Cancel now opens this directly"). The "character overlay" is the same
+`SystemMenuController` instance every other scene shares, which has carried its own `NavContext`
+since phase 2 step B (`c8837374`) -- it is not a fourth un-navigable modal, it was already fixed
+before this finding was written. Only RelicDraftController, GlossaryController and
+DebugMenuController remain genuinely unwired. Not attempted in phase 3b (see
+`docs/GAMEPAD_NAVIGATION_PLAN.md`'s status header for the sizing reasoning); still open.
+
+### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`
 
 `MainMenuController`'s save-slot NavContext (`d39d955b`) covers the base Play/Continue/Exit list
 and the save-slot picker, but deliberately stops there: `ManageSavesButton` (reached and pressed
@@ -2864,3 +2875,12 @@ still works. Scoped out deliberately (the task brief for this screen named only 
 its save slots", not the destructive delete flow behind it) rather than missed; a future pass
 wiring it should follow the same Reconfigure-on-panel-swap shape `MainMenuController.
 RefreshNavigation` already established for the save-slot toggle.
+
+**Fixed in `232f310b`** (phase 3b, item 7): the same shared `NavContext` gained the manage list
+and its confirm dialog as two more `Reconfigure` states (four total now), resolved topmost-first
+since `ResetConfirmPanel` is a sibling drawn over `ManageSavesPanel`, not a child of it. Cancel
+mirrors the same precedence through `ResetProgressController.Dismiss()`/`GoBack()`. The confirm
+dialog's Yes/hold button still has no gamepad-Submit path of its own (`HoldToConfirm` is
+pointer-only), recorded as a deliberate limitation in the commit message rather than chased --
+teaching `NavigationInputModule` a "held button" concept used nowhere else would be out of
+proportion for one destructive-confirm dialog.

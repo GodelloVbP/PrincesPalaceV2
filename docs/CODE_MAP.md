@@ -177,6 +177,19 @@ four un-themed buildings and its gate the same borrowed
 `PaintSelectHalo` already established, without routing Party through it
 (a redundant, no-gain refactor of an already-shipped controller).
 
+**Phase 3b's job 0 plus two items** (`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own
+status header has the rest, not attempted this pass): `MainMenuController.
+RefreshNavigation` extended to four states (confirm dialog, manage-saves
+list, save-slot list, base menu, resolved topmost-first) ·
+`ResetProgressController.Dismiss`/`GoBack` made `internal` for the
+cross-controller Cancel call (`AUDIT.md` #159, closed) ·
+`DefeatController.PushNavContext` (a Rail of two, Inspect then Return,
+pushed in `Show()`/popped on `OnDisable`, Cancel raises `Dismissed` the same
+as Return) · `ExitsController.WireNavigation` (a List -- Title, Quit,
+Abandon only when a descent exists -- rebuilt every `ApplyContext()` call,
+no Cancel claim). `RunStatsController` needed no wiring: it declares zero
+Selectables.
+
 `Core/OptionRow.cs` is a `Selectable` subclass handling Left/Right adjustment
 + hover. `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
 `ISelectHandler`/`IDeselectHandler` rather than pointer enter/exit, reporting
