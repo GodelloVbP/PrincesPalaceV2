@@ -340,6 +340,104 @@ namespace PrincesPalace.PlayModeTests
                 "top of the column the way the pager's right arrow does when the pack is shut");
         }
 
+        // ---- the spells panel, which also covers column A while it is open ------
+        // ---- (AUDIT.md #161) -----------------------------------------------------
+
+        private IEnumerator OpenTheSpells()
+        {
+            _dossier.ShowSpells(true);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Submit_OnSpellsRow_OpensThePanelWithItsEntrySelected()
+        {
+            yield return OpenTheCharacterTab();
+
+            Select("DossierSpellsRow");
+            yield return null;
+
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+
+            Assert.IsTrue(_dossier.IsSpellsShown, "fixture: Submit on the row should have opened the panel");
+            AssertSelected("DossierSpellSlot0",
+                "opening the panel should land on its own entry -- the first spell slot for a character " +
+                "whose pool reads books (the shipped roster's first squad member does) -- ShowSpells's own " +
+                "explicit reselect on the opening edge, since the dispatcher's own next-frame rule never " +
+                "fires here (SpellsRow stays 'declared' to SystemMenuController even hidden behind the panel)");
+        }
+
+        [UnityTest]
+        public IEnumerator Up_FromTheFirstSlot_ReachesTheSpellsCloseButton()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenTheSpells();
+            Select("DossierSpellSlot0");
+
+            yield return Press(0f, 1f);
+
+            AssertSelected("DossierSpellsClose",
+                "this pane does not claim Cancel any more than the pack does, so the panel's own Close " +
+                "button is the only way back out of it on a stick -- exactly as it is for the mouse");
+        }
+
+        [UnityTest]
+        public IEnumerator Close_OnTheSpellsPanel_ReturnsSelectionToTheRow()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenTheSpells();
+            Select("DossierSpellsClose");
+            yield return null;
+
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(_dossier.IsSpellsShown, "fixture: Submit on Close should have closed the panel");
+            AssertSelected("DossierSpellsRow",
+                "closing the panel should hand selection straight back to the row that opened it -- " +
+                "ShowSpells's own explicit reselect on the closing edge, the same reason the opening edge " +
+                "needs one");
+        }
+
+        [UnityTest]
+        public IEnumerator Cancel_WhileTheSpellsPanelIsOpen_ClosesTheWholeMenu()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenTheSpells();
+            Select("DossierSpellSlot0");
+            yield return null;
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(_menu.IsOpen,
+                "the spells panel does not claim Cancel any more than the pack does -- Cancel closes the " +
+                "whole menu, matching Cancel_FromInsideTheDossier_ClosesTheMenu's project-wide claim rather " +
+                "than a special case for this one panel");
+        }
+
+        [UnityTest]
+        public IEnumerator TheColumnARowsAreUnreachableWhileTheSpellsPanelIsOpen()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenTheSpells();
+
+            Select("DossierSpellsClose");
+            yield return null;
+
+            // Up from the panel's own top control should stay inside the
+            // panel's graph (there is nowhere above Close) rather than
+            // reaching a column-A row that Move should not be able to see --
+            // DeclareSpells never declares dossierRows/dossierRoster at all
+            // while this state is active, the same way DeclarePack does not.
+            yield return Press(0f, 1f);
+
+            AssertSelected("DossierSpellsClose",
+                "Close has nothing above it in this state -- a Move that somehow reached a column-A row " +
+                "instead would mean the rows were still wired in underneath the panel");
+        }
+
         // ---- the tooltip, focus-driven (job 1) ----------------------------------
 
         [UnityTest]

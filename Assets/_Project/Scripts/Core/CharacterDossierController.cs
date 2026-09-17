@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
@@ -458,7 +459,14 @@ namespace PrincesPalace
             // And the right file out to the scores' own left column.
             PairAcross(links, rightFile, ColumnOf(scores, 0), UiNavDirection.Right, UiNavDirection.Left);
 
+            // THREE STATES, not two -- AUDIT.md #161's fix. DossierSpellsPanel
+            // is the same shape as DossierPackPanel (an opaque Image over the
+            // whole of column A, opened by SpellsRow), so it gets the same
+            // "cover it, own the graph while covered" treatment: checked
+            // before falling back to the column-A rows, exactly the way pack
+            // already is, so the two can never both be considered.
             if (IsPackShown) DeclarePack(groups, links, leftFile);
+            else if (IsSpellsShown) DeclareSpells(groups, links, leftFile);
             else DeclareColumnARows(groups, links, leftFile);
 
             RuntimeNavWiring.Apply(groups, links);
@@ -532,6 +540,86 @@ namespace PrincesPalace
             }
 
             PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
+        // Column A while the spells panel covers it (AUDIT.md #161). Same
+        // shape as DeclarePack immediately above -- Close standing at the
+        // top of the column, the covered controls declared as the reachable
+        // groups, a spine handing off to the loadout -- but ONE column, not
+        // a grid: BuildSpellsPanel draws the three spell slots and the
+        // unassigned-book rows in a single vertical stack (no second axis),
+        // so both are Lists rather than one of them being forced into a
+        // Grid shape the layout does not have.
+        //
+        // CLOSE IS IN THE GRAPH for the identical reason DeclarePack's own
+        // Close is: this pane does not claim Cancel any more than the pack
+        // does (Cancel_FromInsideTheDossier_ClosesTheMenu pins that
+        // project-wide, for the dossier as a whole), so the panel's own
+        // button is the only way back out on a stick, exactly as it is for
+        // the mouse.
+        private void DeclareSpells(List<UiNavGroup<Selectable>> groups,
+            List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
+        {
+            var slots = Present(spellSlots);
+            var rows = Present(unassignedRows);
+
+            groups.Add(RuntimeNavWiring.Group("dossierSpellSlots", UiNavGroupKind.List, slots));
+            groups.Add(RuntimeNavWiring.Group("dossierUnassigned", UiNavGroupKind.List, rows, wrap: UiNavWrap.Clamp));
+
+            var close = (Selectable)spellsCloseButton;
+
+            // TOP TO BOTTOM, as drawn: Close sits above the slots band,
+            // which sits above the unassigned-rows band (BuildSpellsPanel's
+            // own vertical stack, top to bottom). Either band can be empty
+            // (no slots for a character whose pool refuses books; no
+            // unassigned books at all), so the links skip a missing one
+            // rather than pointing at null.
+            var firstBelowClose = First(slots) ?? First(rows);
+            if (firstBelowClose != null) links.Add(RuntimeNavWiring.Link(close, UiNavDirection.Down, firstBelowClose));
+
+            if (slots.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(slots[0], UiNavDirection.Up, close));
+                if (rows.Count > 0)
+                {
+                    links.Add(RuntimeNavWiring.Link(slots[slots.Count - 1], UiNavDirection.Down, rows[0]));
+                    links.Add(RuntimeNavWiring.Link(rows[0], UiNavDirection.Up, slots[slots.Count - 1]));
+                }
+            }
+            else if (rows.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(rows[0], UiNavDirection.Up, close));
+            }
+
+            // And out to the loadout, the same "one representative per row"
+            // spine shape DeclarePack's own spine uses, off Close at the top
+            // of the column -- there is only one column here, unlike the
+            // pack's grid, so the whole panel hands off through whichever
+            // single control sits at each spine position rather than one per
+            // pack row.
+            var spine = new List<Selectable>();
+            if (close != null) spine.Add(close);
+            spine.AddRange(slots);
+            spine.AddRange(rows);
+
+            PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
+        // The panel's own entry, same rule DeclareColumnARows/DeclarePack's
+        // callers effectively get for free from Move alone -- but opening
+        // via Submit needs it stated explicitly (ShowSpells's own header
+        // says why): the first spell slot if the character can hold any,
+        // else the first unassigned book row, else Close, so a character
+        // with neither still lands somewhere real rather than nowhere.
+        private Selectable SpellsEntry()
+        {
+            var slots = Present(spellSlots);
+            if (slots.Count > 0) return slots[0];
+
+            var rows = Present(unassignedRows);
+            if (rows.Count > 0) return rows[0];
+
+            return spellsCloseButton;
         }
 
         private const int PackColumns = 2;
@@ -707,6 +795,10 @@ namespace PrincesPalace
         private int _selectedUnassignedRow = -1;
         private List<string> _unassignedSnapshot = new List<string>();
 
+        // Read by SheetPanel and now by RefreshNavigation's own three-way
+        // branch, same shape and same reason IsPackShown already has.
+        public bool IsSpellsShown => spellsPanel != null && spellsPanel.activeSelf;
+
         public void ShowSpells(bool open)
         {
             spellsPanel.SetShown(open);
@@ -718,6 +810,24 @@ namespace PrincesPalace
             }
 
             RefreshSpells();
+
+            // EXPLICIT, on both edges -- the dispatcher's own next-frame
+            // reselection rule (NavigationInputModule.
+            // ReselectIfOutsideDeclaredSet) never fires here to do this for
+            // free: it only acts once the CURRENT selection has fallen
+            // OUTSIDE the top context's declared Selectables, and
+            // SystemMenuController.RefreshSelectables declares EVERY
+            // Selectable under the whole panel regardless of visibility, so
+            // SpellsRow (now hidden behind the panel) still counts as
+            // "declared" and that rule stays silent. A Submit that opened
+            // this panel must not leave the player standing on a row they
+            // can no longer see or reach; Close must hand it straight back.
+            // (DossierPackPanel has the identical latent gap -- ShowPack
+            // does not do this either -- left alone here: no test today
+            // depends on it, and fixing an unrelated, unrequested control
+            // is a separate change from wiring this one.)
+            if (open) EventSystem.current?.SetSelectedGameObject(SpellsEntry()?.gameObject);
+            else if (spellsRow != null) EventSystem.current?.SetSelectedGameObject(spellsRow.gameObject);
         }
 
         private void ToggleSpells() => ShowSpells(spellsPanel != null && !spellsPanel.activeSelf);
@@ -928,6 +1038,17 @@ namespace PrincesPalace
                     }
                 }
             }
+
+            // WHICH SLOTS AND ROWS ARE ACTIVE changed above (a character
+            // swap, a book placed, a row (de)selected does not resize either
+            // list, but ShowSpells opening/closing the panel does), so the
+            // links do too -- the same "one method every path goes through"
+            // rule BindPackWindow's own call states for the pack. Runs
+            // regardless of which state RefreshNavigation resolves to
+            // (AUDIT.md #161's fix reads IsSpellsShown itself), so a
+            // pack-open repaint that reaches this via Refresh() harmlessly
+            // recomputes a declaration DeclarePack's own branch will win.
+            RefreshNavigation();
         }
 
         private void Step(int by)
