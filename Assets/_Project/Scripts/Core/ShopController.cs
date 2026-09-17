@@ -113,7 +113,13 @@ namespace PrincesPalace
             _refusal = default;
             if (packRoot != null) packRoot.SetActive(false);
 
+            RegisterNavContext();
             Paint();
+        }
+
+        private void OnDisable()
+        {
+            PopNavContext();
         }
 
         private void Wire()
@@ -269,7 +275,7 @@ namespace PrincesPalace
             }
 
             RunOrchestrator.LeaveShop();
-            gameObject.SetActive(false);
+            gameObject.SetActive(false); // triggers OnDisable's PopNavContext
             Finished?.Invoke();
         }
 
@@ -370,6 +376,7 @@ namespace PrincesPalace
 
             PaintDetail(run);
             PaintPack();
+            RefreshNavigation();
         }
 
         private void PaintSection(int section, Button[] cards, Image[] icons, IconEntry[] art,
@@ -628,5 +635,232 @@ namespace PrincesPalace
             return RunOrchestrator.CurrentShopStock
                 .FirstOrDefault(e => e != null && e.section == section && e.index == index);
         }
+
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        //
+        // A MODAL, not a whole-scene base context (Hub/Map/Talent/MainMenu's
+        // shape) -- pushed on Open(), popped on the real Leave() and, as the
+        // OnDisable/OnDestroy safety net plan section 4 calls for, on ANY
+        // deactivation this class did not initiate itself.
+        //
+        // ONE CONTEXT, reconfigured between the shelf and the pack modal --
+        // NavContext.Reconfigure's own documented case (Map's runtime rewrite,
+        // MainMenuController's own save-slot toggle): the navigable set
+        // genuinely changes contents, it is not a fixed set with members
+        // hidden.
+        private NavContext _navContext;
+
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        private void PopNavContext()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
+        }
+
+        // Pack open: Cancel closes it, the same job PackCloseButton already
+        // does. Pack closed: Cancel is the SAME two-press arm/confirm
+        // ShopLeaveButton already is -- Leave() itself, not a copy of its
+        // logic, so a future change to what leaving costs has one call site.
+        private void HandleCancel()
+        {
+            if (_packOpen) ClosePack();
+            else Leave();
+        }
+
+        // Called from the end of Paint() -- every selection, purchase,
+        // reroll, pack toggle and page step already funnels through it, the
+        // same shape MapController.RefreshNavLinks and TalentController.
+        // RefreshOrbNavigation both use.
+        private void RefreshNavigation()
+        {
+            if (_navContext == null) return;
+
+            if (_packOpen) RefreshPackNavigation();
+            else RefreshShelfNavigation();
+        }
+
+        // THE BUY GRID is Gear alone (GearColumns == 2, the only section laid
+        // out as an actual rectangle -- ShopScreen.cs's own header on why:
+        // "its cards sit in a 2-wide grid because the panel spans two
+        // columns"). Relic and Book are each a single narrow column, so they
+        // are Lists, not Grids. Cross-links between the three shelves and
+        // into the actions column are positional and clamped, the same shape
+        // PartyController.CrossLinks already uses between seats and cards.
+        private const int GearColumns = 2;
+
+        private void RefreshShelfNavigation()
+        {
+            var relic = Present(relicCards);
+            var book = Present(bookCards);
+            var gear = Present(gearCards);
+            var actions = Present(new[] { buyButton, packButton, leaveButton });
+
+            var groups = new List<UiNavGroup<Selectable>>();
+            void AddGroup(string id, UiNavGroupKind kind, List<Button> members, int gridRowLength = 1)
+            {
+                var group = RuntimeNavWiring.Group(id, kind, members, gridRowLength);
+                if (group != null) groups.Add(group);
+            }
+
+            AddGroup("shopRelic", UiNavGroupKind.List, relic);
+            AddGroup("shopBook", UiNavGroupKind.List, book);
+            AddGroup("shopGear", UiNavGroupKind.Grid, gear, GearColumns);
+            AddGroup("shopActions", UiNavGroupKind.List, actions);
+
+            var links = new List<UiNavLink<Selectable>?>();
+            void Link(Button from, UiNavDirection dir, Button to) => links.Add(RuntimeNavWiring.Link(from, dir, to));
+
+            // Relic <-> Book, row for row (both are 3 long today; clamped to
+            // whichever is shorter if that ever changes).
+            for (int i = 0; i < relic.Count && i < book.Count; i++)
+            {
+                Link(relic[i], UiNavDirection.Right, book[i]);
+                Link(book[i], UiNavDirection.Left, relic[i]);
+            }
+
+            // Each shelf's own reroll, off its first card -- the same "one
+            // detail action, one override link" shape TalentController uses
+            // for InvestButton, except these three are always visible so the
+            // link is unconditional rather than selection-gated.
+            LinkRerollAbove(relic, relicReroll, links);
+            LinkRerollAbove(book, bookReroll, links);
+            LinkRerollAbove(gear, gearReroll, links);
+
+            // Down from the bottom of each narrow shelf into Gear's top row
+            // (Relic is the left column, Book the right -- ShopScreen's own
+            // "Row 1: RELICS, SPELL BOOKS" / "Row 2: GEAR" comment).
+            if (relic.Count > 0 && gear.Count > 0)
+            {
+                Link(relic[relic.Count - 1], UiNavDirection.Down, gear[0]);
+                Link(gear[0], UiNavDirection.Up, relic[relic.Count - 1]);
+            }
+            if (book.Count > 0 && gear.Count > 1)
+            {
+                Link(book[book.Count - 1], UiNavDirection.Down, gear[1]);
+                Link(gear[1], UiNavDirection.Up, book[book.Count - 1]);
+            }
+
+            // Gear's right column into the actions list -- fixed to the
+            // second card (the top-right cell), the simplest stable target
+            // regardless of which cell a player is actually standing on,
+            // matching Map's own "one arbitrary, stated tie-break" precedent
+            // for its gate's Up link.
+            if (gear.Count > 1 && actions.Count > 0)
+            {
+                Link(gear[1], UiNavDirection.Right, actions[0]);
+                Link(actions[0], UiNavDirection.Left, gear[1]);
+            }
+
+            RuntimeNavWiring.Apply(groups, links);
+
+            var selectables = new Dictionary<string, object>();
+            void Declare(List<Button> buttons, string prefix)
+            {
+                for (int i = 0; i < buttons.Count; i++) selectables[$"{prefix}{i}"] = buttons[i].gameObject;
+            }
+            Declare(relic, "relic");
+            Declare(book, "book");
+            Declare(gear, "gear");
+            Declare(actions, "action");
+
+            // Entry: the first buy card -- ShopGearCard0, not the first
+            // relic/book row. The buy grid is this screen's stated primary
+            // surface (plan's own phrasing for this screen).
+            var entry = gear.Count > 0 ? gear[0].gameObject : null;
+            _navContext.Reconfigure(entry, selectables);
+        }
+
+        private static void LinkRerollAbove(List<Button> cards, Button reroll, List<UiNavLink<Selectable>?> links)
+        {
+            if (cards.Count == 0 || reroll == null) return;
+
+            links.Add(RuntimeNavWiring.Link(cards[0], UiNavDirection.Up, reroll));
+            links.Add(RuntimeNavWiring.Link(reroll, UiNavDirection.Down, cards[0]));
+        }
+
+        // THE PAGED ROW: PackPrevButton/PackNextButton, a two-member Rail
+        // (wrap -- trivial at two members, but stated rather than special-
+        // cased away). Sell buttons (disable-on-ineligible, PaintPack's own
+        // `packSellOneButtons[i].interactable = sellPrice > 0`, line 553's
+        // original position) reach the pager and PackCloseButton via
+        // explicit links -- Explicit still passes Move through a
+        // non-interactable cell, Button.OnSubmit no-ops there, no
+        // skip-on-Move, the exact rule this file's own header already
+        // states for this line.
+        private void RefreshPackNavigation()
+        {
+            var rows = new List<Button>();
+            var rails = new List<UiNavLink<Selectable>?>();
+
+            for (int i = 0; i < packRows.Length; i++)
+            {
+                if (packRows[i] == null || !packRows[i].activeSelf) continue;
+
+                var one = At(packSellOneButtons, i);
+                var all = At(packSellAllButtons, i);
+                if (one == null) continue;
+
+                rows.Add(one);
+                if (all != null && all.gameObject.activeSelf)
+                {
+                    rails.Add(RuntimeNavWiring.Link(one, UiNavDirection.Right, all));
+                    rails.Add(RuntimeNavWiring.Link(all, UiNavDirection.Left, one));
+                }
+            }
+
+            var groups = new List<UiNavGroup<Selectable>>();
+            var rowGroup = RuntimeNavWiring.Group("shopPackRows", UiNavGroupKind.List, rows);
+            if (rowGroup != null) groups.Add(rowGroup);
+
+            var pagerButtons = Present(new[] { packPrevButton, packNextButton });
+            var pagerGroup = RuntimeNavWiring.Group("shopPackPager", UiNavGroupKind.Rail, pagerButtons);
+            if (pagerGroup != null) groups.Add(pagerGroup);
+
+            if (rows.Count > 0 && pagerButtons.Count > 0)
+            {
+                rails.Add(RuntimeNavWiring.Link(rows[rows.Count - 1], UiNavDirection.Down, pagerButtons[0]));
+                rails.Add(RuntimeNavWiring.Link(pagerButtons[0], UiNavDirection.Up, rows[rows.Count - 1]));
+            }
+
+            if (packCloseButton != null)
+            {
+                var closeTarget = pagerButtons.Count > 0 ? pagerButtons[pagerButtons.Count - 1]
+                    : rows.Count > 0 ? rows[rows.Count - 1] : null;
+                if (closeTarget != null)
+                {
+                    rails.Add(RuntimeNavWiring.Link(closeTarget, UiNavDirection.Down, packCloseButton));
+                    rails.Add(RuntimeNavWiring.Link(packCloseButton, UiNavDirection.Up, closeTarget));
+                }
+            }
+
+            RuntimeNavWiring.Apply(groups, rails);
+
+            var selectables = new Dictionary<string, object>();
+            for (int i = 0; i < rows.Count; i++) selectables[$"row{i}"] = rows[i].gameObject;
+            for (int i = 0; i < pagerButtons.Count; i++) selectables[$"pager{i}"] = pagerButtons[i].gameObject;
+            if (packCloseButton != null) selectables["close"] = packCloseButton.gameObject;
+
+            // Entry: the first visible row's sell button, or PackCloseButton
+            // when the bag is empty (packEmptyHint's own case) and there is
+            // nothing else in this modal to stand on.
+            var entry = rows.Count > 0 ? rows[0].gameObject
+                : packCloseButton != null ? packCloseButton.gameObject : null;
+            _navContext.Reconfigure(entry, selectables);
+        }
+
+        private static List<Button> Present(IEnumerable<Button> buttons) =>
+            (buttons ?? System.Array.Empty<Button>()).Where(b => b != null).ToList();
+
+        private static Button At(Button[] array, int index) =>
+            array != null && index >= 0 && index < array.Length ? array[index] : null;
     }
 }
