@@ -19,10 +19,6 @@ namespace PrincesPalace
     // them do, and the ones that DO matter are then invisible.
     public partial class RewardTrackController
     {
-        // How far one arrow press moves. A whole pitch, so the rail steps node
-        // to node -- the wheel is what sweeps across them.
-        private const float ArrowStep = RewardTrackLayout.NodePitch;
-
         private RailScroll _railScroll;
         private BarSlider _ribbonSeek;
 
@@ -63,6 +59,43 @@ namespace PrincesPalace
                             ?? dots[i].gameObject.AddComponent<HoverIndex>();
                 hover.Index = level;
                 hover.Changed = OnHover;
+
+                // Selecting a node is a distinct action from hovering it
+                // (plan section 7): the module drives this one through
+                // Move alone, calling the same ScrollTo(level) a mouse
+                // hover already triggers through OnHover above -- one
+                // input (Move) moves selection, selection alone drives the
+                // reveal, so there is no second poll left to double-drive
+                // it the way the deleted raw LeftArrow/RightArrow poll
+                // (formerly PollKeys, see Update() below) used to risk.
+                var select = dots[i].gameObject.GetComponent<SelectIndex>()
+                             ?? dots[i].gameObject.AddComponent<SelectIndex>();
+                select.Index = level;
+                select.Changed = (lvl, entered) => { if (entered) ScrollTo(lvl); };
+            }
+
+            // A Rail group (plan section 5), wrap by the owner's default --
+            // Left/Right steps disc to disc. Built ONCE: unlike Map's
+            // runtime-varying node set, every one of these hundred discs
+            // exists and is active for the life of the panel (WireNodes'
+            // own header: "a hundred discs", never toggled), so there is
+            // nothing here that a later Refresh() needs to rebuild.
+            RuntimeNavWiring.Chain(dots, horizontal: true, wrap: true);
+
+            // The collect button is a required action, reachable from the
+            // rail (plan section 7/9a) -- Down from EVERY disc, not just
+            // one, since claiming what is owed is not tied to which disc
+            // happens to be focused. Harmless alongside the Rail's own
+            // Left/Right: Chain never touches Up/Down. Eligibility itself
+            // (hide-on-owed-zero, plan section 6) stays exactly where it
+            // already lived -- PaintCollectButton's own SetActive call,
+            // untouched by this.
+            if (collectButton != null)
+            {
+                foreach (var dot in dots)
+                {
+                    RuntimeNavWiring.Link(dot, collectButton, isDown: true);
+                }
             }
         }
 
@@ -239,28 +272,19 @@ namespace PrincesPalace
         // also the right shape: the ambient cues are four lines of arithmetic
         // over Time.time, and four coroutines that never finish would be four
         // objects doing the same work with more ceremony.
+        // The raw LeftArrow/RightArrow poll that used to live here is gone
+        // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step C: "deleted
+        // outright, not gated") -- keyboard arrow support survives for
+        // free, because the stock "Horizontal" axis already binds
+        // left/right (InputManager.asset), now driving ordinary Selectable
+        // navigation across the Rail WireNodes just wired instead of a
+        // second, raw pixel-scroll poll racing it. Selecting a disc reveals
+        // it through the exact same ScrollTo(level) a mouse hover already
+        // calls (SelectIndex.Changed, wired in WireNodes) -- one input
+        // (Move) drives selection, selection alone drives the reveal.
         private void Update()
         {
-            PollKeys();
             Animate();
-        }
-
-        private void PollKeys()
-        {
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) Step(-ArrowStep);
-            else if (Input.GetKeyDown(KeyCode.RightArrow)) Step(ArrowStep);
-        }
-
-        private void Step(float pixels)
-        {
-            if (content == null || viewport == null) return;
-
-            CancelGlide();
-
-            // NEGATED, because the content slides opposite to the direction the
-            // eye travels: pressing right walks forward along the track, which
-            // pulls the rail left.
-            SetScroll(content.anchoredPosition.x - pixels);
         }
     }
 }
