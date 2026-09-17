@@ -1,6 +1,7 @@
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
@@ -180,11 +181,35 @@ namespace PrincesPalace
         // reference that a slot load could leave pointing at nothing.
         public void ShowFor(string characterId) => _characterId = characterId;
 
+        // Told by whoever opened this panel how to hand selection back --
+        // this controller has no idea a DossierTrackRow exists (the same
+        // reasoning ReckoningController.Dismissed/DefeatController.Dismissed
+        // already use for their own exits). Assigned fresh on every open by
+        // CharacterDossierController.ShowTrack.
+        public System.Action Closed;
+
         private void OnEnable()
         {
             Wire();
             Refresh();
             BeginFlyIn();
+
+            // A REAL PAD GAP, found while driving this screen end to end
+            // through the dispatcher (docs/GAMEPAD_NAVIGATION_PLAN.md phase
+            // 4, item 2, segment 8): nothing here ever selected anything, so
+            // opening this panel with a Submit press left the pad standing
+            // on the row that just got covered, with no dispatcher rule to
+            // rescue it (SystemMenuController.RefreshSelectables declares
+            // every Selectable under the whole pane regardless of
+            // visibility, so a hidden row still counts as "declared" and the
+            // reselect-if-outside-the-set rule stays silent -- the identical
+            // mechanism ShowSpells' own fix comment already names).
+            // WireNodes (called from Wire(), above) has already declared the
+            // ribbon Rail by this point, so its own entry exists to select.
+            if (dots != null && dots.Length > 0 && dots[0] != null)
+            {
+                EventSystem.current?.SetSelectedGameObject(dots[0].gameObject);
+            }
         }
 
         private void OnDisable()
@@ -212,6 +237,15 @@ namespace PrincesPalace
             // character who gained eight levels while this was shut should be
             // flown to, not ignited eight times -- see the guard in Refresh.
             _painted = false;
+
+            // THE OTHER HALF of the open-side fix above: whatever closed this
+            // (the button, or the safety net below covering an external
+            // deactivation) hands selection back to whichever row opened it.
+            // Fired from OnDisable rather than only from Close() itself, the
+            // same "safety net" shape this project's NavContext stack uses
+            // (docs/GAMEPAD_NAVIGATION_PLAN.md section 4) -- a scene unload
+            // or a parent hidden must not strand the callback unset either.
+            Closed?.Invoke();
         }
 
         private void Close() => gameObject.SetActive(false);

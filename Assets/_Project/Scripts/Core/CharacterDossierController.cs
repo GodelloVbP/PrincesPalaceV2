@@ -1520,6 +1520,20 @@ namespace PrincesPalace
                 {
                     trackScreen.ShowFor(squad[_index].definitionId);
                 }
+
+                // THE HANDOFF BACK, since the panel's own controller has no
+                // idea trackRow exists (DossierPackPanel's identical gap,
+                // ShowSpells' own fix comment: "ShowPack does not do this
+                // either -- left alone here"). Segment 8 of docs/
+                // GAMEPAD_NAVIGATION_PLAN.md's journey found this same gap
+                // live on the track row specifically -- reachable by a real
+                // Submit press with nothing selected once inside, which
+                // strands the pad rather than merely reading as untidy. The
+                // panel selects its OWN entry on open (RewardTrackController.
+                // OnEnable); this is the other half, assigned fresh each open
+                // so it always points at THIS row rather than whichever one
+                // last opened the panel.
+                trackScreen.Closed = () => EventSystem.current?.SetSelectedGameObject(trackRow?.gameObject);
             }
 
             // SetActive rather than a toggle: the row is a door in, and the
