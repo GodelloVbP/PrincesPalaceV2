@@ -151,6 +151,32 @@ to collect), `PartyController.WireNavigation` (seats as a Rail in VISUAL
 column order -- seat 0 is the front rank and is drawn on the right -- plus the
 roster Rail and the clamped positional links between them).
 
+**Phase 3a's five** (`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status header
+has the per-screen deviations): `HubController.WireNavigation` (the four
+staged buildings as a 2x2 Grid keyed to `HubAnchors`' own depth/lateral
+signs, not a tab bar -- there isn't one; entry is the gate) ·
+`MainMenuController.RefreshNavigation` (one context reconfigured between the
+base Play/Continue/Exit List and the save-slot modal's own List+Rail,
+called from `Start()`/`RefreshContinue()`/the Play and Close handlers) ·
+`MapController.RefreshNavLinks` (Map's Graph -- no group at all, explicit
+Left/Right/Up/Down links off `RunManager.Choices()`, rewired every
+`Refresh()`; entry is the current node's first reachable choice, never
+current itself, since `PaintNode` never makes current's own button
+interactable) · `TalentController.RefreshOrbNavigation` (one small Rail
+group per `TalentSkeleton` tier -- the skeleton is a tree, a row of 1 then
+rows of 3, not a fixed-width Grid -- plus explicit parent/child links
+derived once from `TalentSkeleton.Parents`/`DxSlot` in a static
+constructor; `InvestButton` is reached by overriding the SELECTED orb's own
+Down link, re-resolved every `Refresh()`) · `ShopController.
+RefreshShelfNavigation`/`RefreshPackNavigation` (Gear is the only real
+2-wide Grid -- Relic/Book are single-column Lists cross-linked row for row
+-- reconfigured between the shelf and the pack modal the same way Main
+Menu's own save-slot toggle is). `Core/SelectHaloPainter.cs` gives Hub's
+four un-themed buildings and its gate the same borrowed
+`ThemedButtonState.SelectedGlowAlpha`/`Scale` ratio Party's own
+`PaintSelectHalo` already established, without routing Party through it
+(a redundant, no-gain refactor of an already-shipped controller).
+
 `Core/OptionRow.cs` is a `Selectable` subclass handling Left/Right adjustment
 + hover. `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
 `ISelectHandler`/`IDeselectHandler` rather than pointer enter/exit, reporting
@@ -164,7 +190,17 @@ active pane (`INavCancelClaim`) before running the context's own handler --
 nothing else up, Cancel opens the system menu from the hub
 (`HubController.HandleEscape`), the map (`MapController.HandleCancel`) and the
 fight at `MenuDepth.Root` (`FightController.OnBackPressed`), all three through
-`SystemMenuController.OpenOnCancel`.
+`SystemMenuController.OpenOnCancel`. `TalentController.HandleCancel` takes the
+same `Navigation.Go(Navigation.Hub)` path `TalentBackButton` already does.
+`MainMenuController.HandleCancel` is context-sensitive -- closes the save-slot
+modal if it is open, otherwise a deliberate no-op, since the main menu is
+where the game starts and there is nowhere else to go back to.
+`ShopController.HandleCancel` is context-sensitive too -- closes the pack
+modal if it is open, otherwise calls `Leave()` itself (the same two-press
+arm/confirm `ShopLeaveButton` already needs), and its `NavContext` is pushed
+on `Open()`/popped on `Leave()`/`OnDisable()` rather than a whole-scene base
+context, since Shop is a modal panel inside the Map scene, not a scene of its
+own.
 
 Plus `Editor/PipelineBuilder.cs`, which generates the URP asset, the Renderer 2D
 and the post-processing profile under `Assets/_Project/Rendering/`.

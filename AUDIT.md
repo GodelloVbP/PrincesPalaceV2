@@ -2792,3 +2792,57 @@ needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this sa
 ### ~~155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad~~ - fixed in `4eab048b`: one shared open path (`SystemMenuController.OpenOnCancel`) called from the hub's, the map's and the fight's own Cancel handlers -- Fight hangs it on `MenuDepth.Root`, the only depth where its own `Back()` consumes nothing; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~156. Party (gamepad-navigation phase 2, step D) was not attempted~~ - closed in `467770ef`: seats and roster cards are navigable Rails, Submit is the Button's own onClick (so pick-up and drop go through the same `ClickSeat`/`ClickCard` the mouse uses), and the missing per-pane Cancel seam is `INavCancelClaim` -- the active pane gets first refusal on the press, Party claims it while carrying, nothing else implements it; the visual capture found that Party has no mouse-hover treatment at all, which is an owner call recorded in the plan's status header; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+
+## Findings from gamepad-navigation phase 3a, 2026-09-17
+
+### 157. Two Combat/Stage tests fail on this tree, unrelated to phase 3a's own changes
+
+Found while gating the Map screen commit (`7a16ce67`) of phase 3a's rollout:
+`FightPlayableTests.AStillDrawingSwingCarriesTheFigureAndBringsItBack`
+(`Tests/PlayMode/Combat/FightPlayableTests.cs:168`, "the attacker never left its mark, so a
+single-drawing swing showed nothing at all", expected greater than 1.0f, got 0.0f) and
+`StageFormationTests.AMoveCrossesBeforeTheEnemySwingsAndTheSwingFindsTheNewFront`
+(`Tests/PlayMode/Combat/StageFormationTests.cs:191`, "the ogre never swung", expected >= 0, got
+-1) both fail, consistently and identically, across four separate `tools/run_tests_parallel.ps1`/
+`tools/test.ps1` invocations.
+
+**Verified not caused by this plan's own changes**: `git stash`-ing every phase-3a file
+(`MapController.cs`, the Map/CancelOpensSystemMenuTests test files) and re-running the same two
+classes against the bare Main Menu commit (`d39d955b`) reproduces the identical two failures with
+identical messages. Neither test touches Hub, Main Menu, Map, Talent or Shop; both are
+Combat/Stage swing-timing tests, an area this plan does not read or write.
+
+**Most likely trigger, not confirmed**: the Main Menu commit ran `tools/build_content.ps1`
+incidentally (to get a scene rebuild reflecting `ScreenRegistry`'s new
+`MainMenuController.saveSlotController` wiring), which also refreshed `content_stamp.json` and
+closed the previously-reported `ContentFreshnessTests` gap (`214e7ad7`) as a side effect. A
+regenerated `Resources/Content` changing a swing-timing assertion's inputs is the most likely
+explanation, but this was not chased further -- Fight's stage-swing timing is outside every one
+of phase 3a's five screens, and its own area's tests (`combat`) are the right place to
+investigate it, not this register's author mid-navigation-pass.
+
+### 158. Four Hub-covering modals still do not push their own NavContext
+
+`HubController`'s own pre-existing comment (`Core/HubController.cs`, the `Update()` method's
+gating check) already named this before phase 3a started: the debug menu, the glossary, the
+relic draft and the character overlay all cover the hub without registering a context of their
+own. Phase 3a wired Hub's own building/gate navigation (`ec81b29f`) but did not touch any of the
+four modals -- while any one of them is open, the hub's own `NavContext` (buildings, gate,
+`MainMenuButton`) is STILL top of stack, so a stick Move would walk the hub's buildings
+underneath whichever modal is covering them. Mouse/click users are unaffected (the modals already
+block the raycast). None of the five screens this plan's brief named (Hub, Main Menu, Map,
+Talent, Shop) is one of these four, so this is out of scope for phase 3a rather than a gap in it
+-- named here so it is not silently assumed to already work.
+
+### 159. Main Menu's Manage Saves and reset-confirm modals are mouse-only
+
+`MainMenuController`'s save-slot NavContext (`d39d955b`) covers the base Play/Continue/Exit list
+and the save-slot picker, but deliberately stops there: `ManageSavesButton` (reached and pressed
+via Submit like any other wired control) switches to `ManageSavesPanel`, and neither that panel
+nor its own `ResetConfirmPanel`/hold-to-delete dialog declares any Selectables or a Cancel
+handler. A controller-only player who presses Submit on Manage Saves can reach the panel but has
+no stick-driven way back out of it (no Cancel, no Move target) -- mouse/`CloseManageSavesButton`
+still works. Scoped out deliberately (the task brief for this screen named only "Main Menu and
+its save slots", not the destructive delete flow behind it) rather than missed; a future pass
+wiring it should follow the same Reconfigure-on-panel-swap shape `MainMenuController.
+RefreshNavigation` already established for the save-slot toggle.

@@ -1,24 +1,59 @@
 # Gamepad Navigation — Plan v3
 
-> **Status: approved 2026-09-17. PHASE 2 COMPLETE.** Phase 1 landed
-> (`81f1de14`). Phase 2: step A `00bae36d` (build-time nav declarations --
-> since deleted, see step E), step B `c8837374` (SystemMenu nested modal +
-> Options row adjustment), step C `da205520` (RewardTrack ribbon as a Rail),
-> step E `6c3eb085` (ONE navigation model: the build-time declaration path
-> deleted, `UiNavLinkBuilder` made generic, `RuntimeNavWiring` reduced to a
-> thin adapter -- section 9 has the decision and its evidence), step F
-> `4eab048b` (Cancel opens the system menu on the map and in the fight again,
-> `AUDIT.md` #155), step D `467770ef` (Party: seats/cards as navigable Rails,
-> selection-driven carrying, a pane's first refusal on Cancel, and the visual
-> acceptance capture, `AUDIT.md` #156).
+> **Status: approved 2026-09-17. PHASE 3a COMPLETE** (the first half of
+> phase 3's rollout -- five screens, one commit each, gated green before the
+> next). Phase 1 landed (`81f1de14`). Phase 2: step A `00bae36d` (build-time
+> nav declarations -- since deleted, see step E), step B `c8837374`
+> (SystemMenu nested modal + Options row adjustment), step C `da205520`
+> (RewardTrack ribbon as a Rail), step E `6c3eb085` (ONE navigation model:
+> the build-time declaration path deleted, `UiNavLinkBuilder` made generic,
+> `RuntimeNavWiring` reduced to a thin adapter -- section 9 has the decision
+> and its evidence), step F `4eab048b` (Cancel opens the system menu on the
+> map and in the fight again, `AUDIT.md` #155), step D `467770ef` (Party:
+> seats/cards as navigable Rails, selection-driven carrying, a pane's first
+> refusal on Cancel, and the visual acceptance capture, `AUDIT.md` #156).
 >
-> **Two things phase 2 leaves for the owner, both found rather than assumed:**
+> **Two things phase 2 left for the owner, both found rather than assumed:**
 > (1) the Party capture shows THREE states, not four -- Party's slots have no
 > mouse-hover treatment at all (no `Hovers()`, no `HoverIndex`, no
 > `ThemedButtonState`), so "can hover be told from selection" cannot be
 > answered there until a hover channel exists (section 8/12.2);
 > (2) Party's Send-to-bench link is not in a nav group yet, so benching
-> mid-carry is mouse-only -- phase 3's rollout.
+> mid-carry is mouse-only -- still open, not touched by phase 3a.
+>
+> **Phase 3a: five screens, five commits, each gated on `tools/test.ps1`
+> (new classes, then the screen's existing area) and
+> `tools/run_tests_parallel.ps1 -BuildScenes` before the next.**
+> `ec81b29f` (Hub -- corrected the brief's own "4-tab hub bar" against the
+> real screen, which is four staged buildings and a gate; a 2x2 Grid keyed to
+> `HubAnchors`' own depth/lateral signs, plus a `SelectHaloPainter` helper for
+> the four un-themed buildings and the gate), `d39d955b` (Main Menu and its
+> save slots -- one `NavContext` reconfigured between the base menu and the
+> save-slot modal; found and fixed a real bug, `NavContext.Entry` read back
+> through `as GameObject` silently failing when handed a `Button` instead of
+> its `.gameObject`), `7a16ce67` (Map as a Graph -- `UiNavSpec` has no Graph
+> kind, so this is explicit links only off `RunManager.Choices()`, rewired
+> every `Refresh()`), `49b4ab49` (Talent's orbs as a tree -- corrected the
+> brief's own "Grid with row length" against `TalentSkeleton`'s real shape, a
+> row of 1 then rows of 3; small per-tier Rail groups plus explicit
+> parent/child links derived once from the skeleton), `46d9daec` (Shop, a
+> modal context reconfigured between the shelf and the pack, Gear alone is
+> the real 2-wide grid). `AUDIT.md` #157-#159 name what phase 3a found and
+> deliberately left: two pre-existing Combat/Stage test failures verified
+> unrelated (A/B'd via `git stash`), four Hub-covering modals that still do
+> not push their own context, and Main Menu's Manage Saves/reset-confirm
+> flow left mouse-only.
+>
+> **Deviations from this document's own screen briefs, all forced by the
+> real screen rather than chosen:** Hub has no tab bar (section 12's own
+> "hub bar" framing does not describe `HubScreen`'s actual four-buildings-
+> and-a-gate composition); Talent's orbs are a tree, not a fixed-width Grid
+> (`TalentSkeleton`'s row-of-1-then-rows-of-3 shape cannot be expressed by
+> `row = i / cols`); Main Menu's Cancel closes the save-slot modal when it is
+> open rather than being a no-op everywhere (a stick user with no mouse would
+> otherwise be unable to back out of a panel they could open). Each is
+> explained in its own commit message and in `AUDIT.md` where it leaves
+> something open.
 >
 > Research base: `docs/GAMEPAD_NAVIGATION_RESEARCH.md`. Draft 1 (screen
 > inventory) and Draft 2 (the rejected gating-on-"am I top" approach this
@@ -503,6 +538,16 @@ behavioural tests for each pass; a human plays all four with no mouse.
 **3 — rollout.** Remaining screens, `CheckNavigable` (a) strengthened and
 (b) behavioural tests written alongside each. *Gate*: every screen has both
 kinds of proof, not structural alone.
+
+**3a — done** (`ec81b29f`, `d39d955b`, `7a16ce67`, `49b4ab49`, `46d9daec`):
+Hub, Main Menu + save slots, Map, Talent, Shop — this section's own status
+header has the per-screen summary and the deviations each one forced.
+**3b — not started**: whatever screens phase 3's own inventory still lists
+beyond these five (Dossier, RunStats/Exits, Options' remaining rows,
+Reckoning/Defeat, Fight's own verb menu if not already covered by phase
+1/2) — check `docs/GAMEPAD_NAVIGATION_RESEARCH.md`'s screen inventory
+against this file's status header for what is left, rather than assuming
+"rollout" is finished because 3a is.
 
 **4 — full journeys.** Controller-only and mouse-only passes across the
 whole game, including system menu mid-fight (§3's transition case) and a
