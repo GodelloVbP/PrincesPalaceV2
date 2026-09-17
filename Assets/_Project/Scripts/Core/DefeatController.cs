@@ -38,6 +38,15 @@ namespace PrincesPalace
         private bool _wired;
         private Coroutine _animation;
 
+        // Pushed once per Show() (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b),
+        // popped on OnDisable rather than on either button's own handler:
+        // both Dismissed and InspectRequested end in a scene change
+        // (LeaveFight / Navigation.Go(Hub)), and OnDisable is what actually
+        // fires when that change tears this screen down -- a pop hung on
+        // the click instead would double-pop if something else also
+        // deactivated this GameObject first.
+        private NavContext _navContext;
+
         // Raised when the player leaves. An event rather than a Navigation call
         // for the same reason FightController.FightEnded is one: the screen has
         // no business knowing what comes after a run.
@@ -68,11 +77,55 @@ namespace PrincesPalace
             gameObject.SetActive(true);
             Wire();
             Paint();
+            PushNavContext();
 
             if (_animation != null) StopCoroutine(_animation);
 
             if (isActiveAndEnabled) _animation = StartCoroutine(PlayIn());
             else if (frame != null) frame.localScale = Vector3.one;
+        }
+
+        // Inspect then Return, left to right (DefeatScreen's own Place.At
+        // layout) -- a Rail, wrap by the owner default, entry on the first.
+        // Guarded so a second Show() (there is no known caller today, but
+        // nothing stops one) reconfigures rather than double-pushing.
+        private void PushNavContext()
+        {
+            var members = new List<Button>();
+            if (inspectButton != null) members.Add(inspectButton);
+            if (returnButton != null) members.Add(returnButton);
+
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("defeatButtons", UiNavGroupKind.Rail, members));
+
+            object entry = members.Count > 0 ? members[0].gameObject : null;
+            var selectables = new Dictionary<string, object>();
+            foreach (var member in members) selectables[member.name] = member.gameObject;
+
+            if (_navContext != null)
+            {
+                _navContext.Reconfigure(entry, selectables);
+                return;
+            }
+
+            // Cancel does what Return does -- there is no back-out affordance
+            // on the mouse path either, only leave or inspect, so Cancel
+            // spends itself on the same "leave" action Return's own click
+            // handler raises.
+            _navContext = new NavContext(entry, selectables, cancel: () => Dismissed?.Invoke());
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // Never OnEnable: Show() is the one place this context is pushed
+        // (it needs Wire()'s buttons to already exist), and OnDisable is
+        // what actually fires when either button's own handler tears this
+        // screen down (LeaveFight / Navigation.Go(Hub) both end in a scene
+        // change) -- see PushNavContext's own header.
+        private void OnDisable()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         private void Paint()

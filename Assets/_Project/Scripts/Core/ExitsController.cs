@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -145,14 +146,54 @@ namespace PrincesPalace
             abandonCard.SetShown(withAbandon);
             separator.SetShown(withAbandon);
 
-            if (exitBlocks == null) return;
-
-            for (int i = 0; i < exitBlocks.Length; i++)
+            if (exitBlocks != null)
             {
-                if (exitBlocks[i] == null) continue;
-                exitBlocks[i].anchoredPosition =
-                    new Vector2(0f, ExitsLayout.ExitBlockCentreY(i, withAbandon));
+                for (int i = 0; i < exitBlocks.Length; i++)
+                {
+                    if (exitBlocks[i] == null) continue;
+                    exitBlocks[i].anchoredPosition =
+                        new Vector2(0f, ExitsLayout.ExitBlockCentreY(i, withAbandon));
+                }
             }
+
+            WireNavigation(withAbandon);
+        }
+
+        // A List, clamp (the owner default) -- Title then Quit, top to
+        // bottom (ExitsLayout's own index order, matching ExitIndexTitle/
+        // ExitIndexQuit), plus the abandon hold as a third row only when the
+        // descent it would end still exists -- the same "walk what's
+        // ACTUALLY active" rule every other pane in this family follows.
+        // Rebuilt every ApplyContext call (OnEnable, and whenever the
+        // abandon card's presence could have changed), not once at Wire
+        // time, since withAbandon is exactly what ApplyContext just
+        // recomputed.
+        //
+        // No Cancel claim here (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b,
+        // AUDIT.md #159's sibling note): the mouse path has no way to back
+        // out of an armed exit either, other than waiting out ArmSeconds or
+        // pressing the other exit -- so falling through to
+        // SystemMenuController's own Cancel (closing the whole menu) is
+        // "whatever the mouse path allows", not a gap.
+        private void WireNavigation(bool withAbandon)
+        {
+            var rows = new List<Button>();
+            if (exitButtons != null)
+            {
+                foreach (var button in exitButtons)
+                {
+                    if (button != null) rows.Add(button);
+                }
+            }
+
+            // abandonHold has no onClick (HoldToConfirm is pointer-only, see
+            // Wire()'s own comment) -- reachable and selectable via gamepad
+            // like every other control here, but a stray Submit on it is
+            // inert either way, the same documented gap AUDIT.md #159's
+            // Manage Saves confirm dialog has for the identical reason.
+            if (withAbandon && abandonHold != null) rows.Add(abandonHold);
+
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("exitRows", UiNavGroupKind.List, rows));
         }
 
         // ---- the two-press exits ---------------------------------------------------
