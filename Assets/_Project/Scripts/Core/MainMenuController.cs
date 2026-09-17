@@ -43,6 +43,14 @@ namespace PrincesPalace
         // UiAutoBind has a typed lookup for.
         [SerializeField] internal SaveSlotController saveSlotController;
 
+        // Cross-controller, same reasoning as saveSlotController above: the
+        // Manage Saves list and its own reset-confirm dialog (AUDIT.md #159)
+        // join the same shared NavContext rather than getting one of their
+        // own -- Reconfigure already handles a screen whose navigable set
+        // changes shape across more than two states (this makes four:
+        // base menu, save-slot list, manage-saves list, confirm dialog).
+        [SerializeField] internal ResetProgressController resetProgressController;
+
         // -1 means nothing to continue into. Set by RefreshContinue, read by
         // the button's own click handler so the two can never disagree about
         // which slot "Continue" means.
@@ -141,13 +149,34 @@ namespace PrincesPalace
         }
 
         // No submenu depth and no previous screen to return to -- the main
-        // menu is where the game STARTS. Closing the save-slot modal is the
-        // one thing Cancel has to spend itself on here; with that modal
-        // closed there really is nowhere else to go, so the press is a
-        // deliberate no-op rather than a stand-in for a Back this screen
-        // does not have.
+        // menu is where the game STARTS. Closing whichever modal is
+        // topmost is the one thing Cancel has to spend itself on here;
+        // with everything closed there really is nowhere else to go, so
+        // the press is a deliberate no-op rather than a stand-in for a
+        // Back this screen does not have.
+        //
+        // Checked topmost-first (AUDIT.md #159): the confirm dialog can be
+        // active WHILE the manage-saves panel underneath it still is too
+        // (ResetConfirmPanel is a sibling drawn over ManageSavesPanel, not
+        // a child that goes with it), so testing manage-open before
+        // confirm-open would send Cancel to the wrong layer.
         private void HandleCancel()
         {
+            if (resetProgressController != null && resetProgressController.IsConfirmOpen)
+            {
+                // Dismiss(), not a raw SetActive -- it also clears the
+                // pending slot and cancels any hold in progress, the same
+                // state ConfirmNoButton's own click already resets.
+                resetProgressController.Dismiss();
+                return;
+            }
+
+            if (resetProgressController != null && resetProgressController.gameObject.activeSelf)
+            {
+                resetProgressController.GoBack();
+                return;
+            }
+
             if (saveSlotPanel != null && saveSlotPanel.activeSelf)
             {
                 saveSlotPanel.SetActive(false);
@@ -156,16 +185,45 @@ namespace PrincesPalace
         }
 
         // Rebuilds the declared set and entry from whichever surface is
-        // showing right now -- the base Play/Continue/Exit list, or the
-        // save-slot modal's own rows -- the same "walk what's ACTUALLY
-        // active" shape SystemMenuController.RefreshSelectables uses for its
-        // own tab/pane split.
-        private void RefreshNavigation()
+        // showing right now -- the base Play/Continue/Exit list, the
+        // save-slot modal, the manage-saves list, or its own confirm
+        // dialog -- the same "walk what's ACTUALLY active" shape
+        // SystemMenuController.RefreshSelectables uses for its own
+        // tab/pane split. Public, not private: ResetProgressController and
+        // SaveSlotController both reach back here through
+        // GetComponentInParent after their own panel toggles, the same
+        // cross-controller shape RefreshContinue already uses.
+        public void RefreshNavigation()
         {
             if (_navContext == null) return;
 
-            bool slotsOpen = saveSlotPanel != null && saveSlotPanel.activeSelf;
-            var entryButton = slotsOpen ? WireSaveSlotNavigation() : WireMainMenuNavigation();
+            bool confirmOpen = resetProgressController != null && resetProgressController.IsConfirmOpen;
+            bool manageOpen = !confirmOpen && resetProgressController != null &&
+                resetProgressController.gameObject.activeSelf;
+            bool slotsOpen = !confirmOpen && !manageOpen && saveSlotPanel != null && saveSlotPanel.activeSelf;
+
+            Button entryButton;
+            IEnumerable<Button> group;
+            if (confirmOpen)
+            {
+                entryButton = WireConfirmNavigation();
+                group = ConfirmSelectables();
+            }
+            else if (manageOpen)
+            {
+                entryButton = WireManageNavigation();
+                group = ManageSelectables();
+            }
+            else if (slotsOpen)
+            {
+                entryButton = WireSaveSlotNavigation();
+                group = SaveSlotSelectables();
+            }
+            else
+            {
+                entryButton = WireMainMenuNavigation();
+                group = MainMenuSelectables();
+            }
 
             // NavContext.Entry is read back through `as GameObject`
             // (NavigationInputModule.ReselectIfOutsideDeclaredSet) -- a
@@ -174,7 +232,6 @@ namespace PrincesPalace
             object entry = entryButton != null ? entryButton.gameObject : null;
 
             var selectables = new Dictionary<string, object>();
-            var group = slotsOpen ? SaveSlotSelectables() : MainMenuSelectables();
             foreach (var selectable in group)
             {
                 if (selectable != null) selectables[selectable.name] = selectable.gameObject;
@@ -261,6 +318,78 @@ namespace PrincesPalace
                 links);
 
             return slots.Count > 0 ? slots[0] : footer.Count > 0 ? footer[0] : null;
+        }
+
+        // The delete column (a List, top to bottom, matching
+        // ManageSavesColumn's own layout) plus Back, reached by an explicit
+        // Down/Up pair off the last row -- the same cross-surface link
+        // WireSaveSlotNavigation uses for its own slots/footer split. Back
+        // gets no group of its own: a Rail/List of one has no internal
+        // neighbour to link (UiNavLinkBuilder.BuildGroup's own single-member
+        // guard), so unlike the save-slot footer (two buttons, a real Rail)
+        // a bare group here would do nothing but state the obvious.
+        private IEnumerable<Button> ManageSelectables()
+        {
+            if (resetProgressController == null) yield break;
+
+            if (resetProgressController.deleteButtons != null)
+            {
+                foreach (var delete in resetProgressController.deleteButtons)
+                {
+                    if (delete != null) yield return delete;
+                }
+            }
+
+            if (resetProgressController.backButton != null) yield return resetProgressController.backButton;
+        }
+
+        private Button WireManageNavigation()
+        {
+            if (resetProgressController == null) return null;
+
+            var deletes = (resetProgressController.deleteButtons ?? System.Array.Empty<Button>())
+                .Where(b => b != null).ToList();
+            var footer = new List<Button>();
+            if (resetProgressController.backButton != null) footer.Add(resetProgressController.backButton);
+
+            var links = new List<UiNavLink<Selectable>?>();
+            if (deletes.Count > 0 && footer.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(deletes[deletes.Count - 1], UiNavDirection.Down, footer[0]));
+                links.Add(RuntimeNavWiring.Link(footer[0], UiNavDirection.Up, deletes[deletes.Count - 1]));
+            }
+
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("manageDeletes", UiNavGroupKind.List, deletes),
+                links);
+
+            return deletes.Count > 0 ? deletes[0] : footer.Count > 0 ? footer[0] : null;
+        }
+
+        // Yes then No, left to right (ResetConfirmButtons' own Row order) --
+        // a Rail, wrap by the owner default. Entry is forced to No rather
+        // than following the Rail's own first member: the destructive
+        // button needs a HELD press to do anything at all (HoldToConfirm is
+        // pointer-only, see its own header -- a stray gamepad Submit on Yes
+        // is inert either way), but SelectHaloPainter still paints whatever
+        // is selected, and resting that highlight on the delete button the
+        // instant this dialog opens is the wrong default regardless.
+        private IEnumerable<Button> ConfirmSelectables()
+        {
+            if (resetProgressController == null) yield break;
+            if (resetProgressController.confirmYesButton != null) yield return resetProgressController.confirmYesButton;
+            if (resetProgressController.confirmNoButton != null) yield return resetProgressController.confirmNoButton;
+        }
+
+        private Button WireConfirmNavigation()
+        {
+            if (resetProgressController == null) return null;
+
+            var members = ConfirmSelectables().ToList();
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("resetConfirmButtons", UiNavGroupKind.Rail, members));
+
+            if (resetProgressController.confirmNoButton != null) return resetProgressController.confirmNoButton;
+            return members.Count > 0 ? members[0] : null;
         }
     }
 }

@@ -44,6 +44,14 @@ namespace PrincesPalace
 
         private HoldToConfirm _hold;
 
+        // AUDIT.md #159: read by MainMenuController.RefreshNavigation to
+        // tell which of the four shared-NavContext surfaces is showing --
+        // confirmPanel is a SIBLING drawn over this whole screen, not a
+        // child of it, so "am I active" and "is my confirm open" are two
+        // separate questions the caller cannot answer from gameObject.activeSelf
+        // alone.
+        internal bool IsConfirmOpen => confirmPanel != null && confirmPanel.activeSelf;
+
         // How long the delete has to be held. Matches ExitsScreen's own
         // abandon-hold -- the only other irreversible action in the game --
         // so a player who has already learned that gesture once does not have
@@ -80,11 +88,7 @@ namespace PrincesPalace
 
             confirmNoButton.onClick.AddListener(Dismiss);
 
-            backButton.onClick.AddListener(() =>
-            {
-                gameObject.SetActive(false);
-                saveSlotPanel.SetActive(true);
-            });
+            backButton.onClick.AddListener(GoBack);
 
             Refresh();
         }
@@ -135,6 +139,11 @@ namespace PrincesPalace
             // a component two hops away.
             _hold?.Cancel();
             SetFill(0f);
+
+            // AUDIT.md #159: the confirm dialog joins MainMenuController's
+            // shared NavContext, so opening it (same as GoBack/Dismiss below)
+            // has to say so.
+            GetComponentInParent<MainMenuController>()?.RefreshNavigation();
         }
 
         private void ConfirmDelete()
@@ -172,14 +181,38 @@ namespace PrincesPalace
             SetFill(0f);
 
             Refresh();
+            GetComponentInParent<MainMenuController>()?.RefreshNavigation();
         }
 
-        private void Dismiss()
+        // Internal, not private: MainMenuController.HandleCancel calls this
+        // directly for a Cancel press while the confirm dialog is open
+        // (AUDIT.md #159) -- the same button ConfirmNoButton's own onClick
+        // already calls, so a gamepad Cancel and a mouse click on No leave
+        // identical state.
+        internal void Dismiss()
         {
             _pendingSlot = -1;
             confirmPanel.SetActive(false);
             _hold?.Cancel();
             SetFill(0f);
+            GetComponentInParent<MainMenuController>()?.RefreshNavigation();
+        }
+
+        // Internal for the same reason as Dismiss above: MainMenuController.
+        // HandleCancel calls this directly for a Cancel press while the
+        // manage-saves list itself (not its confirm dialog) is topmost.
+        internal void GoBack()
+        {
+            // Looked up BEFORE deactivating, not after: GetComponentInParent
+            // starting from an already-inactive GameObject is exactly the
+            // hazard this class's own header warns about elsewhere (a
+            // runtime lookup instead of a wired delegate), and ConfirmDelete
+            // already establishes the safe order -- reach the parent first,
+            // change activation second.
+            var menu = GetComponentInParent<MainMenuController>();
+            gameObject.SetActive(false);
+            saveSlotPanel.SetActive(true);
+            menu?.RefreshNavigation();
         }
 
         // See HoldFillMath's own header for why sizeDelta rather than anchors.

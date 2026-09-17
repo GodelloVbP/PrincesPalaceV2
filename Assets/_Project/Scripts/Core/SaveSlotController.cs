@@ -49,6 +49,11 @@ namespace PrincesPalace
 
             manageSavesButton.onClick.AddListener(() =>
             {
+                // Looked up BEFORE deactivating -- ResetProgressController.GoBack's
+                // own comment states why: GetComponentInParent starting from an
+                // already-inactive GameObject is not a lookup to trust.
+                var menu = GetComponentInParent<MainMenuController>();
+
                 // THIS panel hides itself rather than staying open behind
                 // Manage Saves. The two screens ask two different questions of
                 // the same five rows -- "which do I play" against "which do I
@@ -56,6 +61,9 @@ namespace PrincesPalace
                 // which one a click was answering.
                 gameObject.SetActive(false);
                 managePanel.SetActive(true);
+
+                // AUDIT.md #159: Manage Saves joins the shared NavContext now.
+                menu?.RefreshNavigation();
             });
 
             Refresh();

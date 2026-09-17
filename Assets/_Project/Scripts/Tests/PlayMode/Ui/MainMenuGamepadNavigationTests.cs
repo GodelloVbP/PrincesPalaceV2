@@ -258,5 +258,127 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(Find("PlayButton").gameObject, EventSystem.current.currentSelectedGameObject,
                 "closing the panel should restore the base menu's own entry");
         }
+
+        // ---- Manage Saves / reset-confirm (AUDIT.md #159) -------------------
+        //
+        // Same shared NavContext as the tests above, reconfigured across two
+        // more surfaces -- MainMenuController.RefreshNavigation's own header
+        // states the four-state shape this exercises.
+
+        private IEnumerator OpenSaveSlotPanel()
+        {
+            yield return LoadMenu();
+
+            EventSystem.current.SetSelectedGameObject(Find("PlayButton").gameObject);
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null; // reselection onto Slot0Button
+        }
+
+        private IEnumerator OpenManageSaves()
+        {
+            yield return OpenSaveSlotPanel();
+            EventSystem.current.SetSelectedGameObject(Find("ManageSavesButton").gameObject);
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null; // reselection onto ResetSlot0DeleteButton
+        }
+
+        [UnityTest]
+        public IEnumerator EntryIsFirstDeleteButton_WhenManageSavesOpens()
+        {
+            yield return OpenManageSaves();
+
+            Assert.AreEqual(Find("ResetSlot0DeleteButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "opening Manage Saves should move the entry onto its first delete row");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromLastDeleteButton_ReachesBack()
+        {
+            yield return OpenManageSaves();
+
+            int lastSlot = SaveSystem.SlotCount - 1;
+            var lastDelete = Find($"ResetSlot{lastSlot}DeleteButton");
+            EventSystem.current.SetSelectedGameObject(lastDelete.gameObject);
+            yield return null;
+
+            yield return Move(-1f);
+            Assert.AreEqual(Find("CloseManageSavesButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "Down from the last delete row should reach Back, the explicit inter-group link");
+        }
+
+        [UnityTest]
+        public IEnumerator Submit_OnADeleteButton_OpensTheConfirmDialog_WithNoAsEntry()
+        {
+            SeedASave(0);
+            yield return OpenManageSaves();
+
+            EventSystem.current.SetSelectedGameObject(Find("ResetSlot0DeleteButton").gameObject);
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+
+            var confirmPanel = Resources.FindObjectsOfTypeAll<Transform>()
+                .Select(t => t.gameObject).FirstOrDefault(go => go.name == "ResetConfirmPanel" && go.scene.IsValid());
+            Assert.IsNotNull(confirmPanel, "no ResetConfirmPanel in the scene");
+            Assert.IsTrue(confirmPanel.activeSelf, "Submit on a delete row should open the confirm dialog, same as a click");
+
+            yield return null; // reselection onto the confirm dialog's entry
+
+            Assert.AreEqual(Find("ResetConfirmNoButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "the confirm dialog's entry should be No, not the destructive Yes/hold button");
+        }
+
+        [UnityTest]
+        public IEnumerator CancelInsideTheConfirmDialog_DismissesIt_WithoutDeleting()
+        {
+            SeedASave(0);
+            yield return OpenManageSaves();
+
+            EventSystem.current.SetSelectedGameObject(Find("ResetSlot0DeleteButton").gameObject);
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+            yield return null; // reselection onto ResetConfirmNoButton
+
+            var confirmPanel = Resources.FindObjectsOfTypeAll<Transform>()
+                .Select(t => t.gameObject).FirstOrDefault(go => go.name == "ResetConfirmPanel" && go.scene.IsValid());
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(confirmPanel.activeSelf, "Cancel inside the confirm dialog should dismiss it, same as ResetConfirmNoButton");
+            Assert.IsTrue(SaveSystem.SlotExists(0), "dismissing the confirm dialog through Cancel must not delete the slot");
+
+            yield return null; // reselection back onto the manage-saves list
+
+            Assert.AreEqual(Find("ResetSlot0DeleteButton").gameObject, EventSystem.current.currentSelectedGameObject,
+                "dismissing the confirm dialog should restore the manage-saves list's own entry");
+        }
+
+        [UnityTest]
+        public IEnumerator CancelInsideManageSaves_ReturnsToTheSaveSlotList()
+        {
+            yield return OpenManageSaves();
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
+            var managePanel = Resources.FindObjectsOfTypeAll<Transform>()
+                .Select(t => t.gameObject).FirstOrDefault(go => go.name == "ManageSavesPanel" && go.scene.IsValid());
+            var saveSlotPanel = Resources.FindObjectsOfTypeAll<Transform>()
+                .Select(t => t.gameObject).FirstOrDefault(go => go.name == "SaveSlotPanel" && go.scene.IsValid());
+
+            Assert.IsFalse(managePanel.activeSelf, "Cancel inside Manage Saves should close it, same as CloseManageSavesButton");
+            Assert.IsTrue(saveSlotPanel.activeSelf, "Cancel inside Manage Saves should return to the save-slot list underneath it");
+
+            yield return null; // reselection back onto the save-slot list
+
+            Assert.AreEqual(Find("Slot0Button").gameObject, EventSystem.current.currentSelectedGameObject,
+                "returning from Manage Saves should restore the save-slot list's own entry");
+        }
     }
 }

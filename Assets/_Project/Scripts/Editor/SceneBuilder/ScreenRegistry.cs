@@ -445,6 +445,10 @@ public static class ScreenRegistry
                 reset.confirmFill = result.Rect(screen.ResetConfirmYesFill);
                 reset.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
                 reset.backButton = result.Button(screen.CloseManageSavesButton);
+                // Cross-controller, same reasoning as menu.saveSlotController
+                // above (AUDIT.md #159): the confirm dialog joins the one
+                // shared NavContext MainMenuController owns.
+                menu.resetProgressController = reset;
 
                 // NOT subscribing SaveSlotController.Refresh to a C# event here.
                 // This Wire step runs at BUILD time and delegates do not
