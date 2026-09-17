@@ -1,5 +1,118 @@
 # Gamepad Navigation — Plan v3
 
+> ## Status: 2026-09-17. Phase 3 ROLLOUT COMPLETE -- items 1-4 landed
+>
+> `ccb1b08d` (item 1, `AUDIT.md` #158 closed), `a61fc412` (item 2, the
+> shoulder shortcut), `c16b1dc3` (item 3, Party's Send-to-bench/Cancel
+> links), `7ea33bca` (item 4, `AUDIT.md` #161 closed). Every screen this
+> plan's own inventory named for phase 3 now has both a build-time control
+> inventory and a runtime behavioural proof (section 9's own "the build
+> proves the inventory, runtime proves operability" split) -- the sizing
+> assessment in the status block below this one, written before this pass
+> started, is superseded by what actually shipped, item by item.
+>
+> **Item 1** (`ccb1b08d`): the three genuinely unwired Hub modals (AUDIT
+> #158's corrected count) each push their own `NavContext` now, rebuilt at
+> the end of every repaint rather than once at open -- `RelicDraftController.
+> RefreshNavigation` (the offer cards as a wrapping Rail, Descend an
+> explicit Down/Up pair since a Rail alone has nothing below it),
+> `GlossaryController.RefreshNavigation` (two vertical Lists side by side --
+> the category rail and the row list both read as columns off
+> `RailX`/`RailTop`/`RailPitch`, not one of them mis-declared a Rail because
+> the audit's own prose called it "the rail"), `DebugMenuController.
+> RefreshNavigation` (currency/filter Rails, the row List, the pager Rail,
+> chained top to bottom by explicit links). `HubController.HandleEscape` is
+> simplified to just `SystemMenuController.OpenOnCancel(systemMenu)`: each
+> modal's own context now sits above the hub's while open, so the
+> dispatcher never reaches the hub's handler at all until nothing else is
+> up. **Deviation, stated rather than silently followed**: the brief said
+> "Cancel closes them" for all three; RelicDraft's Cancel is a deliberate
+> no-op instead (`cancel: null`), matching the screen's own already-stated
+> design ("a draft you can navigate around is not a draft") and
+> `AUDIT.md` #158's own investigation before this pass -- making it close
+> would let a player leave without `RunOrchestrator.FinishDraft` ever
+> running, re-offering the same draft on the next hub visit. One
+> pre-existing test encoded the removed branch and was adapted rather than
+> left red: `SystemMenuTests.CancelOverTheGlossaryClosesItInstead_...` is
+> now `HandleEscapeNoLongerKnowsAboutTheGlossary_ItOnlyEverOpensTheMenu`,
+> pointed at the narrower claim that survives (`HandleEscape` no longer
+> touches the glossary at all); the real "does Cancel close the glossary in
+> play" claim moved to `GlossaryGamepadNavigationTests`, driven through the
+> real dispatcher.
+>
+> **Item 2** (`a61fc412`): the SystemMenu tab strip's shoulder shortcut.
+> `ProjectSettings/InputManager.asset` gains `TabPrev` (Q / joystick button
+> 4) and `TabNext` (E / joystick button 5), read once a frame by
+> `NavigationInputModule` through `input` (never `UnityEngine.Input`
+> directly) and offered to `topAtStart` the same way Cancel is. A context
+> opts in through a new `Domain/UiKit/INavTabStrip.cs` interface, reached
+> via `NavContext`'s own optional `tabStrip` provider -- the identical
+> "ask at press time, not once" shape `INavCancelClaim`'s own `_claimant`
+> already uses, so a context built without one (every context but
+> SystemMenu's) answers null and the press is silently absorbed.
+> `SystemMenuController.StepTab` is the one implementor: it steps
+> `_visible` in SLOT space rather than `_selected` by +-1 (a raw index step
+> would walk a hidden run-only tab on a three- or four-tab context),
+> through the SAME `Select(index)` each tab's own `onClick` calls, and
+> lands selection INSIDE the new pane's own entry (`ActivePaneEntry`,
+> falling back to the tab button when the pane has nothing selectable) --
+> one press is a shortcut for the Move-to-tab + Submit + Move-down dance
+> those three inputs would otherwise take, not merely a faster way to reach
+> the tab button. The strip itself stays an ordinary wrapping Rail
+> alongside it, untouched.
+>
+> **Item 3** (`c16b1dc3`): Party's Send-to-bench and Cancel links, the
+> phase 2 gap this plan's own status header named. `cancelLink`/`benchLink`
+> join a third Rail, `partyLinks`, filtered every repaint to whichever of
+> the two is actually shown (`PaintHeader` already hides them outright on
+> the right conditions); reachable from the seat rail by an explicit Up,
+> and from the roster in the same two hops a Move up the screen already
+> takes (the roster's own existing Up into the seat row, unchanged).
+> Benching mid-carry needed no new dispatch code -- `benchLink.onClick`
+> already called `SendToBench`, so becoming reachable and reaching Submit
+> was the whole fix. Structural move, not new mechanism:
+> `PartyController.WireNavigation`'s own `RuntimeNavWiring.Apply` call
+> (previously run once from `Wire()`) is now `RefreshNavigation`, called at
+> the end of every `Paint()` alongside the seat/roster rails in the SAME
+> `Apply` call -- `RuntimeNavWiring.Apply` is authoritative per node, so a
+> second, later call adding only the new Up link would have erased those
+> rails' own Left/Right the instant a seat also gained it.
+>
+> **Item 4** (`7ea33bca`, `AUDIT.md` #161 closed): the dossier's spell-books
+> panel, wired like the pack. `RefreshNavigation`'s two-way branch
+> (`IsPackShown`/else) becomes three-way (`IsPackShown` / `IsSpellsShown` /
+> else); `DeclareSpells` mirrors `DeclarePack` -- the three spell slots and
+> the unassigned-book rows as two Lists (one column, not a Grid: the panel
+> draws both bands in a single vertical stack), Close at the top and
+> reachable for the identical reason DeclarePack's own Close is (this pane
+> does not claim Cancel either). `RefreshSpells` now calls
+> `RefreshNavigation()` at its own end -- it never had before, which is
+> AUDIT #161's literal bug: the panel's opening/closing never touched the
+> graph at all. **Deviation, found while wiring**: neither `ShowPack` nor
+> the old `ShowSpells` ever explicitly reselected on open/close, and the
+> dispatcher's own next-frame rule cannot cover it here --
+> `SystemMenuController.RefreshSelectables` declares every Selectable under
+> the whole panel regardless of visibility, so a row hidden behind a panel
+> it just opened still reads as "declared" and the rule stays silent.
+> `ShowSpells` now explicitly selects the panel's own entry on open and
+> `SpellsRow` on close; `ShowPack`'s identical, older gap is left alone --
+> untested today, and fixing an unrequested control is a separate change.
+> The brief's "Cancel or Close returns to the row" is resolved against the
+> pack's own already-proven precedent: this pane does not claim Cancel, so
+> Cancel closes the whole menu (matching `Cancel_FromInsideTheDossier_
+> ClosesTheMenu`, proven project-wide for the dossier already); it is Close
+> specifically that returns to the row, and both halves are pinned rather
+> than only the one the phrase's ambiguity could have hidden.
+>
+> **Every gate green except the two pre-existing AUDIT.md #157 failures**,
+> reproduced identically before this pass touched anything (job 0's own
+> A/B, unchanged). No screen tree changed in items 1, 3 or 4; item 2's
+> `ProjectSettings/InputManager.asset` change triggered a `-BuildScenes`
+> run whose regenerated scenes differed from main only by reassigned
+> `fileID`s (insertions == deletions exactly in every one) and were
+> reverted rather than committed.
+
+
 > ## Status: 2026-09-17. Phase 3b items 1 and 2 landed, plus the tooltip mechanism both needed
 >
 > `914c249e` (job 1, the mechanism, and item 1, CharacterDossier) and

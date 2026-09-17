@@ -207,6 +207,52 @@ the moment one is taken, so the declaration has to move with the phase;
 Cancel is a no-op while the choice stands and `Dismissed` on the summary,
 matching what the mouse path offers in each phase).
 
+**Phase 3's rollout, items 1-4** (`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own
+status header has the per-item shas and deviations): `RelicDraftController.
+RefreshNavigation`/`GlossaryController.RefreshNavigation`/`DebugMenuController.
+RefreshNavigation` (`AUDIT.md` #158, closed -- the three Hub-covering modals
+that never pushed their own `NavContext`): the offer cards as a wrapping Rail
+with Descend an explicit Down/Up pair and Cancel a deliberate no-op ("a draft
+you can navigate around is not a draft") · two vertical Lists (the category
+rail, the row list) linked category<->first-row and pager<->Close, Cancel
+closing · four Rails/Lists (currency, filter, the row list, the pager)
+chained top to bottom by explicit links, Cancel closing.
+`HubController.HandleEscape` is simplified to just
+`SystemMenuController.OpenOnCancel` now that each modal's own context sits
+above the hub's while open.
+
+`Core/NavigationInputModule.cs`'s shoulder shortcut (item 2,
+`ProjectSettings/InputManager.asset`'s new `TabPrev`/`TabNext` axes): offered
+to `topAtStart` the same way Cancel is, through a new
+`Domain/UiKit/INavTabStrip.cs` interface a context opts into via
+`NavContext`'s own optional `tabStrip` provider (the `_claimant` shape,
+reused). `SystemMenuController.StepTab` is the one implementor -- steps
+`_visible` in SLOT space (not `_selected` by +-1, which would walk a hidden
+run-only tab), through the SAME `Select(index)` each tab's own click calls,
+landing on the new pane's own entry (`ActivePaneEntry`) rather than merely
+the tab button.
+
+`PartyController.RefreshNavigation` (item 3, the phase 2 gap named in this
+plan's own status header): `cancelLink`/`benchLink` join a third Rail,
+`partyLinks`, filtered to whichever is actually shown; reachable from the
+seat rail by an explicit Up, and from the roster in two hops through the
+seats' own existing Up-link. Moved from a `Wire()`-time-only call to
+`Paint()`'s own end, alongside the seat/roster rails in the SAME `Apply`
+call -- `RuntimeNavWiring.Apply` is authoritative per node, so a second call
+adding only the new Up link would have erased those rails' own Left/Right.
+
+`CharacterDossierController.RefreshNavigation` (item 4, `AUDIT.md` #161,
+closed): a THIRD state alongside the loadout/pack pair above --
+`DossierSpellsPanel` is the same opaque-cover shape as the pack, so
+`DeclareSpells` mirrors `DeclarePack`: the three spell slots and the
+unassigned-book rows as two Lists (one column, not a grid), Close at the top
+and reachable (this pane does not claim Cancel either). `ShowSpells` now
+explicitly reselects on both the opening and closing edge -- the
+dispatcher's own next-frame rule cannot do it here, since
+`SystemMenuController.RefreshSelectables` declares every Selectable under
+the whole panel regardless of visibility, so a row hidden behind a panel it
+just opened still counts as "declared".
+
 `Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
 of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
 ActivePaneEntry` prefers it and falls back to the generic first-Selectable-in-
@@ -254,6 +300,15 @@ nothing else up, Cancel opens the system menu from the hub
 fight at `MenuDepth.Root` (`FightController.OnBackPressed`), all three through
 `SystemMenuController.OpenOnCancel`. `TalentController.HandleCancel` takes the
 same `Navigation.Go(Navigation.Hub)` path `TalentBackButton` already does.
+Three of phase 3's own modals (item 1) answer it a third way: `cancel: null`
+on `RelicDraftController`'s own `NavContext` makes the press a deliberate
+no-op ("a draft you can navigate around is not a draft") rather than a
+claim or a fall-through, while `GlossaryController`/`DebugMenuController`
+both wire it straight to their own `Close()`, same as their mouse-path
+Close button. The dossier's pack and spells panels (item 4) claim nothing
+either -- Cancel there still reaches `SystemMenuController.Close`, closing
+the whole menu, and the panel's own Close button is the only way back out
+on a stick, exactly as it is for the mouse.
 `MainMenuController.HandleCancel` is context-sensitive -- closes the save-slot
 modal if it is open, otherwise a deliberate no-op, since the main menu is
 where the game starts and there is nowhere else to go back to.

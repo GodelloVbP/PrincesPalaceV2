@@ -2839,7 +2839,7 @@ before and after: 173). Left unfixed -- out of scope for the gamepad-navigation 
 is the area to chase the actual swing-timing regression, and whether it's stale content or a
 real formula bug is still open. Not this plan's call to make.
 
-### 158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)
+### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`
 
 `HubController`'s own pre-existing comment (`Core/HubController.cs`, the `Update()` method's
 gating check) already named this before phase 3a started: the debug menu, the glossary, the
@@ -2862,6 +2862,17 @@ since phase 2 step B (`c8837374`) -- it is not a fourth un-navigable modal, it w
 before this finding was written. Only RelicDraftController, GlossaryController and
 DebugMenuController remain genuinely unwired. Not attempted in phase 3b (see
 `docs/GAMEPAD_NAVIGATION_PLAN.md`'s status header for the sizing reasoning); still open.
+
+**Fixed in `ccb1b08d`** (phase 3, item 1): each of the three pushes its own `NavContext` now,
+rebuilt at the end of every repaint (`RelicDraftController.RefreshNavigation`, `GlossaryController.
+RefreshNavigation`, `DebugMenuController.RefreshNavigation`) rather than declared once at open, so
+paging, a new draft round or a filter change all keep the declared set matching what is on screen.
+`HubController.HandleEscape` is simplified to just `SystemMenuController.OpenOnCancel(systemMenu)`
+now that each modal's own context sits above the hub's while open -- the debug-menu/glossary/
+relic-draft priority branches it used to run are dead code once nothing can reach them. RelicDraft's
+Cancel is a deliberate no-op (`cancel: null`) rather than a close, matching the screen's own stated
+design ("a draft you can navigate around is not a draft") over the brief's literal "Cancel closes
+them" -- closing it would let a player leave without `RunOrchestrator.FinishDraft` ever running.
 
 ### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`
 
@@ -2912,7 +2923,7 @@ the mechanism is one call per surface. Not applied here unasked: on the Reckonin
 glow behind cards whose own design note argues against exactly that, which is a visual decision
 belonging to the owner rather than a wiring gap. The pictures are the ask.
 
-### 161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it
+### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`
 
 `CharacterDossierController.RefreshNavigation` (`914c249e`) declares two states -- pack open and
 pack shut -- because `DossierPackPanel` is an opaque Image over the whole of column A and the
@@ -2931,3 +2942,17 @@ third `RefreshNavigation` branch keyed on `spellsPanel.activeSelf`, plus `Spells
 the graph for the same reason `DossierPackClose` is in it (this pane does not claim Cancel).
 `RewardTrackController`'s panel, the dossier's other column-A door, is NOT affected: its own
 ribbon and collect button are already wired (phase 2 step C, `da205520`).
+
+**Fixed in `7ea33bca`** (phase 3, item 4): `RefreshNavigation` is a third state exactly as this
+finding predicted -- `DeclareSpells`, keyed on the new `IsSpellsShown`, mirrors `DeclarePack`
+(the three spell slots and the unassigned-book rows as two Lists, `SpellsCloseButton` in the
+graph). `RefreshSpells` now calls `RefreshNavigation()` at its own end, which is the literal bug
+this finding named: opening or closing the panel never touched the graph at all before this,
+regardless of which state `RefreshNavigation`'s own branch would otherwise have resolved to.
+Found while wiring, not predicted here: neither `ShowPack` nor the old `ShowSpells` ever
+explicitly reselected on open/close, and the dispatcher's own next-frame reselection rule cannot
+paper over it -- `SystemMenuController.RefreshSelectables` declares every Selectable under the
+whole panel regardless of visibility, so a row hidden behind a panel it just opened still reads
+as "declared" and the rule stays silent. `ShowSpells` now selects explicitly on both edges;
+`ShowPack`'s identical, older gap is left alone -- untested today, and fixing an unrequested
+control is a separate change from wiring this one.
