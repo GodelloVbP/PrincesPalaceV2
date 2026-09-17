@@ -189,7 +189,19 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheMap();
 
+            // Phase 3a's rollout (docs/GAMEPAD_NAVIGATION_PLAN.md,
+            // MapController.RefreshNavLinks): the map now declares a real
+            // Graph -- explicit links only, off RunManager.Choices() -- so
+            // this is no longer the "nothing to remember" case an earlier
+            // draft of this test pinned. Seed 4242's entry is its current
+            // node's first reachable choice, MapNode3 (depth 1, slot 0) --
+            // literal, pinned the same way MapGamepadNavigationTests pins it.
+            var entry = GameObject.Find("MapNode3");
+            Assert.IsNotNull(entry, "seed 4242 should still produce a choice at depth 1, slot 0");
+
             Assert.IsFalse(_menu.IsOpen, "the menu should start closed on the map");
+            Assert.AreEqual(entry, EventSystem.current.currentSelectedGameObject,
+                "the map's own entry should be selected as soon as it loads");
 
             yield return CancelFrame();
 
@@ -202,15 +214,11 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_menu.IsOpen, "a second Cancel should close the menu it just opened");
 
-            // "The map's remembered node is restored": the map declares no
-            // Selectable set of its own yet (its Graph group is phase 3's
-            // rollout), so what its context remembers is nothing -- and the
-            // claim that actually matters for correctness is the one the
-            // hub's own version of this test makes: closing must not leave
-            // the menu's last-selected tab sitting there as the map's
-            // selection.
-            Assert.IsNull(EventSystem.current.currentSelectedGameObject,
-                "the menu's last-selected tab leaked through as the map's own selection after closing");
+            // The map's remembered node IS restored now, provably: closing
+            // the menu must land back on the map's own entry, not the menu's
+            // last-selected tab and not nothing.
+            Assert.AreEqual(entry, EventSystem.current.currentSelectedGameObject,
+                "closing the menu should restore the map's own entry, not leak the menu's last tab or leave nothing selected");
         }
     }
 }

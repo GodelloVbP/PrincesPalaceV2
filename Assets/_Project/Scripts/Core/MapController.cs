@@ -117,8 +117,12 @@ namespace PrincesPalace
         private void Start()
         {
             Wire();
-            Refresh();
+            // Pushed BEFORE the first Refresh(): RefreshNavLinks (called from
+            // Refresh) reconfigures _navContext rather than creating it, so a
+            // Refresh with no context yet to reconfigure would silently wire
+            // nothing on the very first paint.
             RegisterNavContext();
+            Refresh();
         }
 
         private void Wire()
@@ -239,6 +243,7 @@ namespace PrincesPalace
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
                 if (pendingBookLabel != null) pendingBookLabel.gameObject.SetActive(false);
+                RefreshNavLinks(null, null);
                 return;
             }
 
@@ -309,6 +314,79 @@ namespace PrincesPalace
                 PlaceWalker(current);
                 FollowCurrent(MapLayout.ColumnX(current.Depth));
             }
+
+            RefreshNavLinks(current, RunManager.Choices());
+        }
+
+        // ---- gamepad navigation: the Graph shape (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // phase 3, section 5's "Graph (Map, links from MapController.
+        // Refresh())") -------------------------------------------------------
+        //
+        // UiNavSpec has no Graph enum member -- UiNavLinkBuilder's own header
+        // already says why: "Map's Graph shape has no groups at all and is
+        // entirely this loop [Links]". So this is EXPLICIT LINKS ONLY, no
+        // RuntimeNavWiring.Group at all, run through the builder's existing
+        // inter-group link mechanism rather than a new code path.
+        //
+        // The edges ARE RunManager.Choices() (`:245` above, the same call
+        // this method already made for `reachable`): current -> its first
+        // choice via Right (deeper is rightward, MapLayout's own column
+        // convention), each further choice reached by stepping Down from the
+        // one before it (choices at one transition differ only in Slot, which
+        // is vertical -- MapLayout.ClearingRowY's own ordering, ascending
+        // Slot is top-to-bottom on screen), and Left from every choice back
+        // to current. No wrap: an owner call already settled this ("Map
+        // follows reachability", plan section 12.3) -- there is nothing to
+        // wrap TO, since a leg's branching factor is whatever the generator
+        // gave it this transition.
+        //
+        // Entry is the current node's first reachable choice, not current
+        // itself: current's own button is never interactable (isReachable is
+        // false for it, PaintNode's own `button.interactable = isReachable`),
+        // so selecting it would land on a Submit that does nothing.
+        private void RefreshNavLinks(DescentNode current, IReadOnlyList<DescentNode> choices)
+        {
+            if (_navContext == null) return;
+
+            if (current == null || choices == null || choices.Count == 0)
+            {
+                // Screen-level fallback (plan section 6): nothing to select,
+                // Cancel stays live through the context's own Cancel handler.
+                _navContext.Reconfigure(entry: null, selectables: null);
+                return;
+            }
+
+            var ordered = choices.OrderBy(n => n.Slot).ToList();
+            var currentButton = ButtonFor(current);
+            var choiceButtons = ordered.Select(ButtonFor).Where(b => b != null).ToList();
+
+            var links = new System.Collections.Generic.List<UiNavLink<Selectable>?>();
+            if (choiceButtons.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(currentButton, UiNavDirection.Right, choiceButtons[0]));
+                links.Add(RuntimeNavWiring.Link(choiceButtons[0], UiNavDirection.Left, currentButton));
+
+                for (int i = 1; i < choiceButtons.Count; i++)
+                {
+                    links.Add(RuntimeNavWiring.Link(choiceButtons[i - 1], UiNavDirection.Down, choiceButtons[i]));
+                    links.Add(RuntimeNavWiring.Link(choiceButtons[i], UiNavDirection.Left, currentButton));
+                }
+            }
+
+            RuntimeNavWiring.Apply(System.Array.Empty<UiNavGroup<Selectable>>(), links);
+
+            var selectables = new System.Collections.Generic.Dictionary<string, object>();
+            if (currentButton != null) selectables["current"] = currentButton.gameObject;
+            for (int i = 0; i < choiceButtons.Count; i++) selectables[$"choice{i}"] = choiceButtons[i].gameObject;
+
+            _navContext.Reconfigure(entry: choiceButtons.Count > 0 ? choiceButtons[0].gameObject : null, selectables);
+        }
+
+        private Button ButtonFor(DescentNode node)
+        {
+            if (node == null) return null;
+            int index = MapLayout.IndexFor(node.Depth, node.Slot);
+            return index >= 0 && index < nodeButtons.Length ? nodeButtons[index] : null;
         }
 
         // Which of the five a room is in. Order matters: a cleared room the
