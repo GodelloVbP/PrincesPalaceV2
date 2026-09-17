@@ -1,11 +1,24 @@
 # Gamepad Navigation — Plan v3
 
-> **Status: approved 2026-09-17. Phase 1 landed (`81f1de14`). Phase 2 steps
-> A-C landed 2026-09-17: step A `00bae36d` (nav declarations + Explicit-link
-> generation, opt-in), step B `c8837374` (SystemMenu nested modal + Options
-> row adjustment), step C `da205520` (RewardTrack ribbon as a Rail). Step D
-> (Party) was not attempted -- see `AUDIT.md` #155-156 for what steps B/C
-> narrowed in scope and what step D still needs before it can land safely.**
+> **Status: approved 2026-09-17. PHASE 2 COMPLETE.** Phase 1 landed
+> (`81f1de14`). Phase 2: step A `00bae36d` (build-time nav declarations --
+> since deleted, see step E), step B `c8837374` (SystemMenu nested modal +
+> Options row adjustment), step C `da205520` (RewardTrack ribbon as a Rail),
+> step E `6c3eb085` (ONE navigation model: the build-time declaration path
+> deleted, `UiNavLinkBuilder` made generic, `RuntimeNavWiring` reduced to a
+> thin adapter -- section 9 has the decision and its evidence), step F
+> `4eab048b` (Cancel opens the system menu on the map and in the fight again,
+> `AUDIT.md` #155), step D `467770ef` (Party: seats/cards as navigable Rails,
+> selection-driven carrying, a pane's first refusal on Cancel, and the visual
+> acceptance capture, `AUDIT.md` #156).
+>
+> **Two things phase 2 leaves for the owner, both found rather than assumed:**
+> (1) the Party capture shows THREE states, not four -- Party's slots have no
+> mouse-hover treatment at all (no `Hovers()`, no `HoverIndex`, no
+> `ThemedButtonState`), so "can hover be told from selection" cannot be
+> answered there until a hover channel exists (section 8/12.2);
+> (2) Party's Send-to-bench link is not in a nav group yet, so benching
+> mid-carry is mouse-only -- phase 3's rollout.
 >
 > Research base: `docs/GAMEPAD_NAVIGATION_RESEARCH.md`. Draft 1 (screen
 > inventory) and Draft 2 (the rejected gating-on-"am I top" approach this

@@ -74,12 +74,17 @@ the scale of two metals; WHICH of them a character has collected is
 `Core/CharacterIdentity.LookFor`) · `UiString` ·
 `UiStrings` ·
 `UiSolver` ·
-`SolvedNode` · `UiAudit` (extended with `CheckNavigable`, the structural half
-of gamepad navigation's audit, plan section 9a) · `UiAuditError` · `UiFrames` ·
-`UiNavSpec.cs` (`UiNavGroup`/`UiNavLink`/`UiRequiredAction`/`UiNavDeclaration`
-— a screen's navigation declaration) · `UiNavLinkBuilder.cs` (the pure
-UiNode-keyed algorithm turning a declaration into each node's four
-neighbours, tested against a fake tree with nothing Unity involved) ·
+`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` ·
+`UiNavSpec.cs` (`UiNavGroup<T>`/`UiNavLink<T>`/`UiNavDeclaration<T>` — the
+shape of a navigable surface, GENERIC over what a node is) ·
+`UiNavLinkBuilder.cs` (the ONE algorithm turning a declaration into each
+node's four neighbours — generic for the same reason, so Domain stays
+engine-free while `Core/RuntimeNavWiring.cs` feeds it real `Selectable`s;
+tested against fake nodes with nothing Unity involved) ·
+`NavContext.cs`/`NavContextStack.cs`/`INavCancelClaim.cs` (the context stack
+`NavigationInputModule` reads, and a pane's optional first refusal on a
+Cancel press — `NavContext.RaiseCancel` is the one place that precedence
+lives) ·
 `FightSubmenuLayout`
 (`VisibleBottomLine` — `CommandBottom` plus the verb row's own bottom PAINT
 pad, not its rect — is what the submenu frame and the party plate both
@@ -120,26 +125,46 @@ now skipping fields not DECLARED on the attached controller's own concrete
 type -- `OptionRow : Selectable` is the first controller to inherit a UI
 base class' own serialized surface (`Navigation`, `SpriteState`) that this
 project deliberately leaves at Unity's default) ·
-`UiNavWiring.cs` (writes `Navigation.Explicit` from a resolved
-`UiNavDeclaration` onto the Selectables `UiEmitter` just built) ·
-`UiNavControlsAudit.cs` (plan section 9a's fourth structural rule: a custom
-actionable control that is not a Selectable must sit in a declared nav group
-or carry `AllowUnreachable`) ·
+`UiNavControlsAudit.cs` (the build-time structural rule that survived phase
+2's unification: a custom actionable control -- an `IPointerClickHandler`/
+`IPointerDownHandler`/`IDragHandler` on a node carrying NO `Selectable` --
+must declare `AllowUnreachable("reason")`; a screen's emitted component set
+is fixed by the build, which is why this one is answerable there and the
+declaration half is not) ·
 `ScreenshotTool.cs` · `TmpBootstrap.cs`
 
-Runtime counterpart, for screens embedded inside another screen's tree
-(SystemMenu/Options/RewardTrack/Party -- none has a `ScreenDef` of its own to
-carry a `UiNavDeclaration`): `Core/RuntimeNavWiring.cs` (`Chain`/`Link`, the
-same clamp/wrap algorithm one level down at real Selectables, wired from each
-controller's own `Wire()`/`Refresh()` — `SystemMenuController.cs` for its tab
-Rail, `OptionsController.cs` for its row List, `RewardTrackController.Input.cs`
-for its ribbon Rail) and `Core/OptionRow.cs` (`Selectable` subclass handling
-Left/Right adjustment + hover, replacing the row's old plain Panel +
-`HoverIndex`). `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
+**Navigation is wired at RUNTIME, not at scene-build time** (phase 2 step E's
+decision, `docs/GAMEPAD_NAVIGATION_PLAN.md` section 9): the navigable set is a
+runtime fact everywhere -- which tabs a context shows, whether anything is
+owed, which seats are occupied, which rooms are reachable -- so a build-time
+`Navigation.Explicit` write would be overwritten before first use. There is no
+`ScreenDef.Nav`, no `UiNavWiring` and no `UiAudit.CheckNavigable`.
+
+`Core/RuntimeNavWiring.cs` is the ONE adapter: it filters nulls, calls
+`UiNavLinkBuilder.Build`, and writes the resulting `Navigation.Explicit`. It
+is authoritative -- `Apply` writes all four directions of every node it
+resolved -- so each surface passes its whole shape in one call:
+`SystemMenuController.RefreshNavLinks` (the visible tab Rail plus the selected
+tab's Down link into its pane), `OptionsController.Wire` (the row List),
+`RewardTrackController.WireNodes` (the ribbon Rail plus every disc's Down link
+to collect), `PartyController.WireNavigation` (seats as a Rail in VISUAL
+column order -- seat 0 is the front rank and is drawn on the right -- plus the
+roster Rail and the clamped positional links between them).
+
+`Core/OptionRow.cs` is a `Selectable` subclass handling Left/Right adjustment
++ hover. `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
 `ISelectHandler`/`IDeselectHandler` rather than pointer enter/exit, reporting
 when the MODULE (not the mouse) puts a node in focus; RewardTrack's ribbon
-nodes are its first user, calling the controller's existing `ScrollTo(level)`
-on select the same way `OnHover` already does on pointer enter.
+calls `ScrollTo(level)` from it, and Party lights each slot's `SelectHalo`
+from it at `ThemedButtonState`'s own Selected alpha/scale.
+
+**Cancel** reaches `NavContext.RaiseCancel`, which offers the press to the
+active pane (`INavCancelClaim`) before running the context's own handler --
+`PartyController` claims it while carrying, nothing else implements it. With
+nothing else up, Cancel opens the system menu from the hub
+(`HubController.HandleEscape`), the map (`MapController.HandleCancel`) and the
+fight at `MenuDepth.Root` (`FightController.OnBackPressed`), all three through
+`SystemMenuController.OpenOnCancel`.
 
 Plus `Editor/PipelineBuilder.cs`, which generates the URP asset, the Renderer 2D
 and the post-processing profile under `Assets/_Project/Rendering/`.

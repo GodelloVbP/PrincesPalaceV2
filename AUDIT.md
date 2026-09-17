@@ -2789,62 +2789,6 @@ needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this sa
 
 ## Findings from gamepad-navigation phase 2, 2026-09-17
 
-### 155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad
+### ~~155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad~~ - fixed in `4eab048b`: one shared open path (`SystemMenuController.OpenOnCancel`) called from the hub's, the map's and the fight's own Cancel handlers -- Fight hangs it on `MenuDepth.Root`, the only depth where its own `Back()` consumes nothing; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-Phase 2 step B deleted `SystemMenuController`'s own raw `Input.GetKeyDown(KeyCode.Escape)`
-poll (it independently opened the menu in every scene that carried it, racing each scene's
-own Escape handling -- exactly the double-drive shape `docs/GAMEPAD_NAVIGATION_PLAN.md`
-section 1 argues against) and replaced it with the hub's own `NavContext.Cancel` handler
-(`HubController.HandleEscape`, now called once by `NavigationInputModule`). Only the hub
-got that replacement wired. The map and the fight both carry a `SystemMenuController` too
-(`ScreenRegistry.WireSystemMenu`'s three call sites), but neither registers a base
-`NavContext` whose `Cancel` opens it the way the hub's does -- `MapController`'s new
-`RegisterNavContext` passes `cancel: null`, and `FightController`'s own context (already
-registered in phase 1) has never opened the system menu at all, since Fight's own Cancel
-means `OnBackPressed` (`_menu.Back()`), a different verb entirely.
-
-**Net effect**: a player on the map or mid-fight can still open the system menu by mouse
-(if a HUD button calls `SystemMenuController.Open()` there) but not by pressing Cancel with
-nothing else up, which they previously could (via the now-deleted poll, racing or not).
-This is a stated, deliberate scope narrowing for step B, not an oversight -- see
-`ScreenRegistry.WireSystemMenu`'s own comment -- but it is a real, player-visible
-behaviour change and belongs here until it's closed. Closing it needs Map and Fight each
-to decide what "nothing else owns Cancel" means for their own screen (Map: probably just
-opens it, mirroring the hub; Fight: has to fit alongside `OnBackPressed`'s existing
-submenu-depth semantics, which is the harder design question and the reason this was not
-done inline).
-
-### 156. Party (gamepad-navigation phase 2, step D) was not attempted
-
-Steps A (nav declarations + Explicit-link generation), B (SystemMenu nested modal +
-Options) and C (RewardTrack) landed; step D (Party's seats/cards as navigable groups,
-selection-driven Carrying, the visual acceptance capture) did not, on a considered
-call rather than running out of a mechanical budget.
-
-**What was checked.** `PartyFormation.ClickSeat`/`ClickCard`
-(`Domain/Party/PartyFormation.cs:197,282`) are already the SAME method for both halves
-of the interaction -- called with nothing selected, they pick up; called with
-something already selected, they resolve against whatever was clicked (swap, drop,
-cancel-on-reclick) -- so Submit-on-a-selected-Button, which fires that Button's own
-onClick for free once seats/cards are ordinary navigable Selectables, likely drives
-the WHOLE Carrying interaction with no new dispatch code at all. `PartyController`'s
-`OnEndDrag`-driven `IndexOfButton` resolution (`PartyController.cs:511-550`) the plan
-names is the MOUSE-DRAG path specifically, a second, parallel interaction mode --
-not the one a keyboard/gamepad Submit needs to go through.
-
-**What still needs solving, and is not small.** Cancel. The plan asks for "Cancel
-calls `Formation.Cancel()` then reselects the source" while Carrying, but an ordinary
-Cancel press from ANY of Options/RewardTrack/Party's shared pane today reaches exactly
-one handler -- `SystemMenuController`'s own `_navContext.Cancel`, fixed to `Close` at
-push time (step B) -- because all three tabs share ONE `NavContext` (Options' own
-Cancel-closes-the-whole-menu behaviour, proven by
-`SystemMenuGamepadNavigationTests.CancelInsideOptions_PopsExactlyOneLayer`, is exactly
-this). Party needs its Cancel to mean "cancel the carry" WHILE Carrying and only mean
-"close the menu" once back in Browsing -- a per-pane Cancel override the current
-one-Cancel-per-context design has no seam for. That seam (an active pane offered first
-refusal on Cancel, falling through to the menu's own Close when it declines) is real,
-new design work, not a mechanical extension of step B/C's pattern, and is why this was
-not attempted inline. The visual acceptance capture (plan section 8: a live Unity
-Editor session driving `tools/screenshot.ps1 -Runtime`, four simultaneous UI states,
-someone actually looking at the picture) was not reached for the same reason -- there
-was nothing built yet to capture.
+### ~~156. Party (gamepad-navigation phase 2, step D) was not attempted~~ - closed in `467770ef`: seats and roster cards are navigable Rails, Submit is the Button's own onClick (so pick-up and drop go through the same `ClickSeat`/`ClickCard` the mouse uses), and the missing per-pane Cancel seam is `INavCancelClaim` -- the active pane gets first refusal on the press, Party claims it while carrying, nothing else implements it; the visual capture found that Party has no mouse-hover treatment at all, which is an owner call recorded in the plan's status header; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`

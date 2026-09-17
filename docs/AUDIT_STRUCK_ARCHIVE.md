@@ -784,3 +784,69 @@ special case in a model that deliberately has none), a short duration on the rel
 drains as fast as it fills, or a ceiling on total shield points. Left standing so the call is made
 rather than discovered.
 
+
+## Findings from gamepad-navigation phase 2, 2026-09-17
+
+### 155. Map and Fight lost "Cancel opens the system menu" via keyboard/gamepad - fixed in `4eab048b`
+
+Phase 2 step B deleted `SystemMenuController`'s own raw `Input.GetKeyDown(KeyCode.Escape)`
+poll (it independently opened the menu in every scene that carried it, racing each scene's
+own Escape handling -- exactly the double-drive shape `docs/GAMEPAD_NAVIGATION_PLAN.md`
+section 1 argues against) and replaced it with the hub's own `NavContext.Cancel` handler
+(`HubController.HandleEscape`, now called once by `NavigationInputModule`). Only the hub
+got that replacement wired. The map and the fight both carry a `SystemMenuController` too
+(`ScreenRegistry.WireSystemMenu`'s three call sites), but neither registers a base
+`NavContext` whose `Cancel` opens it the way the hub's does -- `MapController`'s new
+`RegisterNavContext` passes `cancel: null`, and `FightController`'s own context (already
+registered in phase 1) has never opened the system menu at all, since Fight's own Cancel
+means `OnBackPressed` (`_menu.Back()`), a different verb entirely.
+
+**Net effect**: a player on the map or mid-fight can still open the system menu by mouse
+(if a HUD button calls `SystemMenuController.Open()` there) but not by pressing Cancel with
+nothing else up, which they previously could (via the now-deleted poll, racing or not).
+This is a stated, deliberate scope narrowing for step B, not an oversight -- see
+`ScreenRegistry.WireSystemMenu`'s own comment -- but it is a real, player-visible
+behaviour change and belongs here until it's closed. Closing it needs Map and Fight each
+to decide what "nothing else owns Cancel" means for their own screen (Map: probably just
+opens it, mirroring the hub; Fight: has to fit alongside `OnBackPressed`'s existing
+submenu-depth semantics, which is the harder design question and the reason this was not
+done inline).
+
+**How it was closed.** `SystemMenuController.OpenOnCancel(menu)` is the one open path the hub's `HandleEscape`, the map's new `HandleCancel` and the fight's `OnBackPressed` all call. Fight's root case was the design question this finding named: `FightMenuState.Back()` returns false at `MenuDepth.Root` and only there, so a false is exactly "Cancel with nothing else up" and the previous `if (!_menu.Back()) return;` was spending that press on nothing. Submenu, element-list and target-pick Cancel behaviour is untouched.
+
+### 156. Party (gamepad-navigation phase 2, step D) was not attempted - closed in `467770ef`
+
+Steps A (nav declarations + Explicit-link generation), B (SystemMenu nested modal +
+Options) and C (RewardTrack) landed; step D (Party's seats/cards as navigable groups,
+selection-driven Carrying, the visual acceptance capture) did not, on a considered
+call rather than running out of a mechanical budget.
+
+**What was checked.** `PartyFormation.ClickSeat`/`ClickCard`
+(`Domain/Party/PartyFormation.cs:197,282`) are already the SAME method for both halves
+of the interaction -- called with nothing selected, they pick up; called with
+something already selected, they resolve against whatever was clicked (swap, drop,
+cancel-on-reclick) -- so Submit-on-a-selected-Button, which fires that Button's own
+onClick for free once seats/cards are ordinary navigable Selectables, likely drives
+the WHOLE Carrying interaction with no new dispatch code at all. `PartyController`'s
+`OnEndDrag`-driven `IndexOfButton` resolution (`PartyController.cs:511-550`) the plan
+names is the MOUSE-DRAG path specifically, a second, parallel interaction mode --
+not the one a keyboard/gamepad Submit needs to go through.
+
+**What still needs solving, and is not small.** Cancel. The plan asks for "Cancel
+calls `Formation.Cancel()` then reselects the source" while Carrying, but an ordinary
+Cancel press from ANY of Options/RewardTrack/Party's shared pane today reaches exactly
+one handler -- `SystemMenuController`'s own `_navContext.Cancel`, fixed to `Close` at
+push time (step B) -- because all three tabs share ONE `NavContext` (Options' own
+Cancel-closes-the-whole-menu behaviour, proven by
+`SystemMenuGamepadNavigationTests.CancelInsideOptions_PopsExactlyOneLayer`, is exactly
+this). Party needs its Cancel to mean "cancel the carry" WHILE Carrying and only mean
+"close the menu" once back in Browsing -- a per-pane Cancel override the current
+one-Cancel-per-context design has no seam for. That seam (an active pane offered first
+refusal on Cancel, falling through to the menu's own Close when it declines) is real,
+new design work, not a mechanical extension of step B/C's pattern, and is why this was
+not attempted inline. The visual acceptance capture (plan section 8: a live Unity
+Editor session driving `tools/screenshot.ps1 -Runtime`, four simultaneous UI states,
+someone actually looking at the picture) was not reached for the same reason -- there
+was nothing built yet to capture.
+
+**How it was closed.** The Cancel seam this finding called "real, new design work" is `INavCancelClaim`: the active pane is offered the press first (`NavContext.RaiseCancel`), Party claims it while carrying, and Options and RewardTrack decline by not implementing the interface. The finding's own reading of `ClickSeat`/`ClickCard` proved right and is what shipped -- Submit is the Button's own `onClick`, so no new dispatch code exists for the carry at all, and the plan's `IndexOfButton`-fed-by-selection route was deliberately NOT taken (it would have made Submit and a mouse click mean different things on a roster card). The visual capture ran and found the fourth state has nothing to draw: Party's slots carry no hover treatment of any kind.
