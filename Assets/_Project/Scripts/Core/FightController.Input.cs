@@ -2,9 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -19,6 +21,26 @@ namespace PrincesPalace
         // What a click is allowed to do at all. One question, one place.
         private bool CanAct => _session != null && !_session.IsOver && _session.IsPlayerTurn && !_isBusy;
 
+        // Fight has no EventSystem selection, ever (plan section 4) -- the
+        // dispatcher's null-assert (NavigationInputModule.ProcessFight) is
+        // what actually makes Move/Submit inert, but Navigation.Mode.None
+        // stays a defensive second layer against a stray click landing a
+        // selection anyway (Selectable.OnPointerDown only calls
+        // SetSelectedGameObject when navigation.mode != Navigation.Mode.None).
+        //
+        // UnityEngine.UI.Navigation, fully qualified -- this file's own
+        // namespace (PrincesPalace) already owns a Navigation (Navigation.cs,
+        // the scene-load helper), and a bare "Navigation" here resolves to
+        // THAT one before the `using UnityEngine.UI;` candidate.
+        private static void NoNavigation(Selectable selectable)
+        {
+            if (selectable == null) return;
+
+            var nav = selectable.navigation;
+            nav.mode = UnityEngine.UI.Navigation.Mode.None;
+            selectable.navigation = nav;
+        }
+
         private void WireInput()
         {
             if (_wired) return;
@@ -28,6 +50,7 @@ namespace PrincesPalace
             {
                 int index = i;
                 verbButtons[i].onClick.AddListener(() => OnVerbPressed(index));
+                NoNavigation(verbButtons[i]);
             }
 
             for (int i = 0; i < submenuRows.Length; i++)
@@ -35,6 +58,7 @@ namespace PrincesPalace
                 int index = i;
                 submenuRows[i].onClick.AddListener(() => OnRowPressed(index));
                 AddHover(submenuRows[i].gameObject, index);
+                NoNavigation(submenuRows[i]);
             }
 
             for (int i = 0; i < enemyPlates.Length; i++)
@@ -42,6 +66,7 @@ namespace PrincesPalace
                 int index = i;
                 enemyPlates[i].onClick.AddListener(() => OnEnemyPressed(index));
                 AddEnemyHover(enemyPlates[i].gameObject, index);
+                NoNavigation(enemyPlates[i]);
             }
 
             // THE SAME HANDLER FROM THE FIGURE ITSELF. Two ways to name the
@@ -56,6 +81,7 @@ namespace PrincesPalace
 
                     int index = i;
                     enemyHitAreas[i].onClick.AddListener(() => OnEnemyPressed(index));
+                    NoNavigation(enemyHitAreas[i]);
                 }
             }
 
@@ -76,6 +102,7 @@ namespace PrincesPalace
 
                     int index = i;
                     pcPlates[i].onClick.AddListener(() => OnAllyPlatePressed(index));
+                    NoNavigation(pcPlates[i]);
                 }
             }
 
@@ -87,12 +114,16 @@ namespace PrincesPalace
 
                     int slot = i;
                     partyHitAreas[i].onClick.AddListener(() => OnAllyFigurePressed(slot));
+                    NoNavigation(partyHitAreas[i]);
                 }
             }
 
             submenuBackButton.onClick.AddListener(OnBackPressed);
+            NoNavigation(submenuBackButton);
             if (targetCancelButton != null) targetCancelButton.onClick.AddListener(OnBackPressed);
+            NoNavigation(targetCancelButton);
             continueButton.onClick.AddListener(OnContinuePressed);
+            NoNavigation(continueButton);
         }
 
         // Selection-by-hover is deliberate: it makes the detail column feel
@@ -1150,7 +1181,6 @@ namespace PrincesPalace
             RescueAStrandedTurn();
             RescueAStalledEnemyTurn();
             TryForcedFirstAction();
-            PollGamepadNavigation();
 
             // ABOVE the characterSheetPanel guard below, and that placement
             // is the point: the sheet being unwired is a reason not to read
@@ -1180,20 +1210,17 @@ namespace PrincesPalace
         // nobody asked for. Confirming calls the exact same OnVerbPressed/
         // OnRowPressed/OnEnemyPressed a click already does.
         //
-        // LEGACY Input, matching every other key this file reads (see
-        // ToggleCharacterSheet's own "legacy Input cannot be simulated
-        // headlessly" comment) -- untestable for the same reason and by the
-        // same design: the logic every one of these calls into is already
-        // tested directly (FightMenuStateTests, the click handlers' own
-        // callers), so this is thin glue reading an axis, not a second copy
-        // of a rule that could disagree with the first.
-        //
-        // Vertical/Horizontal/Submit/Cancel are Unity's own default-mapped
-        // axes -- already wired to a joystick's stick and D-pad in this
-        // project's InputManager.asset, so this needed no project-settings
-        // change to reach a controller, only the code that reads them.
+        // The axis/button READ used to live here too (PollGamepadNavigation,
+        // called from this file's own Update()). It moved verbatim into
+        // NavigationInputModule's Fight branch (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // section 3) -- Draft 2's gating-on-"am I top" approach could not
+        // stop two readers from each independently, correctly, seeing
+        // themselves as authorized in the same frame; one dispatch point
+        // reading the axis once is the structural fix. MoveFocus/
+        // ConfirmFocus/OnBackPressed themselves are UNCHANGED and stay
+        // internal/private-tested directly, exactly as FightGamepadNavigationTests
+        // and AllyTargetPickerTests already do.
         private int _focusedVerb;
-        private bool _verticalAxisArmed = true;
 
         // Read-only window for GamepadNavigationTests -- the field itself
         // stays private because nothing outside this file ever needs to SET
@@ -1201,23 +1228,58 @@ namespace PrincesPalace
         // press would.
         public int FocusedVerbForTest => _focusedVerb;
 
-        private void PollGamepadNavigation()
+        // The dispatcher's Fight target, reached only through the interface
+        // (plan section 3) -- MoveFocus/ConfirmFocus/OnBackPressed stay
+        // public/private exactly as before, called directly by every
+        // existing test; these three explicit members exist only to
+        // reinstate PollGamepadNavigation's own busy guard, which the
+        // dispatcher itself has no reason to know about (Fight's model, not
+        // the dispatch mechanism, owns "is this action legal right now").
+        void IFightNavigationTarget.MoveFocus(int delta)
         {
             if (_session == null || _isBusy) return;
+            MoveFocus(delta);
+        }
 
-            float vertical = Input.GetAxisRaw("Vertical");
-            if (Mathf.Abs(vertical) < 0.5f)
-            {
-                _verticalAxisArmed = true;
-            }
-            else if (_verticalAxisArmed)
-            {
-                _verticalAxisArmed = false;
-                MoveFocus(vertical > 0f ? -1 : 1);
-            }
+        void IFightNavigationTarget.ConfirmFocus()
+        {
+            if (_session == null || _isBusy) return;
+            ConfirmFocus();
+        }
 
-            if (Input.GetButtonDown("Submit")) ConfirmFocus();
-            if (Input.GetButtonDown("Cancel")) OnBackPressed();
+        void IFightNavigationTarget.OnBackPressed()
+        {
+            if (_session == null || _isBusy) return;
+            OnBackPressed();
+        }
+
+        // Pushed once per scene load, the moment a session becomes active --
+        // the same "_session != null" half of PollGamepadNavigation's own
+        // guard, just moved from a per-frame check to a one-time
+        // registration. Idempotent: Bind() can in principle run more than
+        // once against a live controller (a rebind), and pushing a second
+        // Fight context for the same controller would leave a stale entry
+        // under the stack no Close() will ever reach.
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = NavContext.ForFight(this);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // Fight is a whole scene (docs/CODE_MAP.md), not a panel toggled by
+        // Open()/Close() -- so OnDestroy, fired when the scene unloads, is
+        // where "the session ends" actually happens. Remove, not Pop: this
+        // is the OnDisable/OnDestroy safety net plan section 4 calls for,
+        // not the ordinary top-of-stack case, so it must not assume Fight is
+        // still on top when the scene goes down.
+        private void OnDestroy()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         public static int Wrap(int value, int count) => count <= 0 ? 0 : ((value % count) + count) % count;

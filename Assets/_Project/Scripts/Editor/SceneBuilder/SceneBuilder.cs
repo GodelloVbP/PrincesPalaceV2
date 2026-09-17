@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using PrincesPalace;
 using PrincesPalace.Domain.UiKit;
 
 // Scene generation, v2.
@@ -206,7 +207,12 @@ public static partial class SceneBuilder
 
     private static void CreateEventSystem()
     {
-        new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        // NavigationInputModule, not the stock StandaloneInputModule -- the
+        // one dispatch point for gamepad/keyboard UI input project-wide
+        // (docs/GAMEPAD_NAVIGATION_PLAN.md section 3). It subclasses
+        // StandaloneInputModule rather than replacing it, so mouse/click
+        // behaviour is unchanged.
+        new GameObject("EventSystem", typeof(EventSystem), typeof(NavigationInputModule));
     }
 
     private static void EnsureInBuildSettings(string scenePath)

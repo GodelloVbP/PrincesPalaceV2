@@ -104,7 +104,11 @@ plus typed handles (`MainMenuScreen`, `MainMenuAmbience`).
 **`Editor/SceneBuilder/` — the only code that touches GameObjects:**
 
 `SceneBuilder.cs` (camera, global Volume, canvas, EventSystem, sprite loading,
-`BuildAllScenes`) · `UiEmitter.cs` · `UiEmitResult.cs` · `ScreenRegistry.cs` ·
+`BuildAllScenes` — `CreateEventSystem` attaches `Core/NavigationInputModule.cs`,
+not the stock `StandaloneInputModule`; see `docs/GAMEPAD_NAVIGATION_PLAN.md`
+section 3 for the one-dispatch-point argument and `Domain/UiKit/NavContext.cs`
++ `NavContextStack.cs` for the engine-free stack it reads) ·
+`UiEmitter.cs` · `UiEmitResult.cs` · `ScreenRegistry.cs` ·
 `UiTextFitAudit.cs` (E1) · `UiCountAudit.cs` (E4) · `UiWiringSweep.cs` (E3) ·
 `ScreenshotTool.cs` · `TmpBootstrap.cs`
 
@@ -491,7 +495,7 @@ are plain logic; only the PAINTING needs Unity.
 | `Domain/.../FightMenuState.cs` | the five menu edges, the selection, the mana preview |
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else |
-| `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place |
+| `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) |
 | `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends |
 | `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |

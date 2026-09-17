@@ -20,7 +20,11 @@ namespace PrincesPalace
     // Bound by direct field assignment from ScreenRegistry.Fight(), so a
     // mistyped name is a compile error rather than a silently null field --
     // v1 wired 330 of these through reflection over strings.
-    public partial class FightController : MonoBehaviour
+    // IFightNavigationTarget is implemented explicitly, in FightController.Input.cs
+    // -- MoveFocus/ConfirmFocus/OnBackPressed themselves stay public/private
+    // exactly as before, called directly by every existing test; see that
+    // file for why the interface exists at all.
+    public partial class FightController : MonoBehaviour, IFightNavigationTarget
     {
         // ---- the stage ---------------------------------------------------------
 
@@ -500,6 +504,11 @@ namespace PrincesPalace
         private bool _isBusy;
         private bool _wired;
 
+        // This controller's own entry on NavigationInputModule's stack --
+        // null until RegisterNavContext runs (FightController.Input.cs),
+        // which is what makes that registration idempotent.
+        private NavContext _navContext;
+
         public void Bind(FightSession session, EncounterClass encounterClass,
                          IReadOnlyList<SatchelStack> satchel = null)
         {
@@ -518,6 +527,11 @@ namespace PrincesPalace
             WireInput();
             WirePlayback();
             ResetStagePresentation();
+
+            // The session existing IS what "Fight is active" meant to the
+            // old PollGamepadNavigation guard (_session != null) -- so this
+            // is where the dispatcher learns Fight is on the stack.
+            RegisterNavContext();
 
             // Once-per-fight voice lines are once per FIGHT, so the spent list
             // has to be cleared when a new one starts.
