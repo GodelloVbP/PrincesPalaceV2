@@ -274,7 +274,7 @@ namespace PrincesPalace
 
             if (relicDraft != null && relicDraft.gameObject.activeSelf) return;
 
-            if (systemMenu != null) systemMenu.Open();
+            SystemMenuController.OpenOnCancel(systemMenu);
         }
 
         // The key read above is deliberately separated from the action here:

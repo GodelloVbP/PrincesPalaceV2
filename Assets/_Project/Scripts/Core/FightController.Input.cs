@@ -767,7 +767,26 @@ namespace PrincesPalace
 
         private void OnBackPressed()
         {
-            if (!_menu.Back()) return;
+            // THE ROOT CASE IS NOT "NOTHING HAPPENS" (AUDIT.md #155).
+            // FightMenuState.Back() returns false at MenuDepth.Root and only
+            // there -- a submenu, an element list and a target pick each step
+            // back one level and return true -- so a false here is exactly
+            // "Cancel with nothing else up", which on every other screen
+            // opens the system menu. It does here too now, through the same
+            // one path the hub and the map take.
+            //
+            // Ordering is not a hazard: opening pushes the menu's own context
+            // above Fight's, so the dispatcher's next call runs the menu's
+            // branch, not Fight's (topAtStart is captured once per call,
+            // plan section 3). The busy guard still sits in front of this --
+            // IFightNavigationTarget.OnBackPressed refuses while _isBusy --
+            // so Cancel mid-playback opens nothing, same as it confirms
+            // nothing.
+            if (!_menu.Back())
+            {
+                SystemMenuController.OpenOnCancel(systemMenu);
+                return;
+            }
 
             // The stick's ally cursor belongs to one open pick and to nothing
             // else. Left set, a later pick would open with the stick already

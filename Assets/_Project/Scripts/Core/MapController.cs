@@ -149,14 +149,18 @@ namespace PrincesPalace
         // one gesture wherever the player is standing.
         // The map's own base context (plan section 4/11), mirroring
         // HubController's -- pushed once, never popped while this scene is
-        // loaded. No Selectables and no Cancel behaviour of its own yet:
-        // node-button navigation is the Graph group phase 3's rollout gives
-        // Map, and reopening the system menu from here on Cancel is
-        // deferred with Fight's (ScreenRegistry.WireSystemMenu's own
-        // comment) -- this step keeps Map's wiring minimal, as asked. It
-        // exists so C/I below can ask "am I still top" instead of firing
-        // underneath a future modal that covers the map.
+        // loaded. No Selectables yet (node-button navigation is the Graph
+        // group phase 3's rollout gives Map), but its Cancel is live: with
+        // nothing else up, Cancel opens the system menu, exactly as it does
+        // on the hub and exactly as the deleted Escape poll used to do here
+        // (AUDIT.md #155). It also lets C/I below ask "am I still top"
+        // instead of firing underneath a modal that covers the map.
         private NavContext _navContext;
+
+        // The overarching menu this screen's Cancel opens, assigned by
+        // ScreenRegistry.WireMap from the same WireSystemMenu call that
+        // builds it -- the hub holds its copy the same way.
+        [SerializeField] internal SystemMenuController systemMenu;
 
         private void Update()
         {
@@ -178,9 +182,17 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: null);
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
+
+        // Map's Cancel, called once a frame by the ONE dispatch point when
+        // this context is top. The map has nothing of its own to back out of
+        // -- there is no submenu depth here the way there is in a fight --
+        // so "nothing else owns this press" is the whole of it, and the menu
+        // opens. Once it IS open its own context sits above this one, so a
+        // second Cancel reaches the menu's Close, never this.
+        private void HandleCancel() => SystemMenuController.OpenOnCancel(systemMenu);
 
         private void OnDestroy()
         {

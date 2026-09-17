@@ -509,6 +509,12 @@ namespace PrincesPalace
         // which is what makes that registration idempotent.
         private NavContext _navContext;
 
+        // The overarching menu Cancel opens from the ROOT of the fight menu
+        // (OnBackPressed, FightController.Input.cs) -- assigned by
+        // ScreenRegistry.WireFight from the same WireSystemMenu call that
+        // builds it, the way the hub and the map hold their copies.
+        [SerializeField] internal SystemMenuController systemMenu;
+
         public void Bind(FightSession session, EncounterClass encounterClass,
                          IReadOnlyList<SatchelStack> satchel = null)
         {

@@ -120,7 +120,9 @@ public static class ScreenRegistry
                     result.Attach<StageShake>(screen.PartyStage),
                 };
 
-                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
+                // Held, not discarded: the fight's Cancel at MenuDepth.Root
+                // opens this (FightController.OnBackPressed, AUDIT.md #155).
+                fight.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
                     inDescent: true);
 
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
@@ -563,7 +565,9 @@ public static class ScreenRegistry
                 // changing gear between rooms is supposed to happen.
                 map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
+                // Held, not discarded: the map's own NavContext.Cancel opens
+                // this (MapController.HandleCancel, AUDIT.md #155).
+                map.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
                     inDescent: true);
 
                 // The painted room icons. Bound here rather than in the
@@ -829,14 +833,14 @@ public static class ScreenRegistry
     //
     // `escapeConsumers` is gone (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step
     // B): the menu no longer polls Escape itself at all, so there is nothing
-    // left for a per-scene consumer list to guard. Only the hub currently
-    // reopens it on Cancel (HubController.HandleEscape, now the hub's own
-    // NavContext.Cancel handler) -- the map and the fight lose "Cancel opens
-    // the system menu" via keyboard/gamepad in this commit, a deliberate,
-    // stated scope narrowing rather than an oversight: giving Map and Fight
-    // their own base NavContext with the same wiring is left to whichever
-    // later step gives each of them the rest of their own navigation (Map's
-    // Graph group, Fight's is registered already for its own model).
+    // left for a per-scene consumer list to guard. Every scene that carries
+    // one now reopens it on Cancel through ONE path
+    // (SystemMenuController.OpenOnCancel) from its own context's Cancel
+    // handler -- the hub's HandleEscape, the map's HandleCancel, and the
+    // fight's OnBackPressed at MenuDepth.Root, which is the only depth where
+    // Fight's own Back() has nothing to consume (AUDIT.md #155, closed in
+    // phase 2 step F). Each caller therefore needs the controller in hand,
+    // which is why this returns it.
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
         bool inDescent)

@@ -140,6 +140,25 @@ namespace PrincesPalace
             tabHovers[index].SetShown(show);
         }
 
+        // THE ONE PATH "Cancel with nothing else up" TAKES, from the hub,
+        // the map and the fight alike (AUDIT.md #155).
+        //
+        // Static and null-tolerant on purpose. Its three callers each hold
+        // this controller as a [SerializeField] a fixture scene may never
+        // wire, and each would otherwise write its own null check and its
+        // own already-open guard -- three copies of one rule, which is the
+        // exact shape the deleted Escape poll had and the reason #155
+        // happened when that poll went away and only the hub got a
+        // replacement. Returns whether it opened, for a caller that has
+        // something else to do when it did not.
+        public static bool OpenOnCancel(SystemMenuController menu)
+        {
+            if (menu == null || menu.IsOpen) return false;
+
+            menu.Open();
+            return true;
+        }
+
         public void Open()
         {
             Wire();
