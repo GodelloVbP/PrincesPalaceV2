@@ -23,4 +23,23 @@ namespace PrincesPalace.Domain.UiKit
     {
         bool ClaimCancel();
     }
+
+    // FIRST -- and only -- OFFER OF A TAB-STEP PRESS: the shoulder-button
+    // shortcut docs/GAMEPAD_NAVIGATION_PLAN.md section 7's "Tabs" contract
+    // asks for (plan phase 3, item 2). Same shape as INavCancelClaim right
+    // above it and for the identical reason: a context declares this by
+    // implementing it, and a context that does not (every one but
+    // SystemMenu's) simply never sees the press -- NavContext.RaiseTabStep
+    // no-ops when its own tab-strip provider is null, so nothing has to
+    // remember to check "am I a tab strip" at the call site.
+    //
+    // Contract: StepTab moves the selection ONE step, wrapping, in the
+    // given direction (-1 previous tab, +1 next), through the SAME
+    // Select(index) the strip's own tab Buttons call on click -- never a
+    // second "what is the next tab" computation, or the shoulder and the
+    // mouse could disagree about where wrap lands.
+    public interface INavTabStrip
+    {
+        void StepTab(int direction);
+    }
 }

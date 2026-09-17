@@ -259,5 +259,83 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, GameSettings.ResolutionIndex,
                 "Navigation.Mode.None must not also suppress the button's own click");
         }
+
+        // ---- the shoulder shortcut (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3, item 2) ----
+        //
+        // TabPrev/TabNext (ProjectSettings/InputManager.asset's own two new
+        // button axes) are offered to whichever context is top the same way
+        // Cancel is (NavigationInputModule.Process()), and only a context
+        // that implements INavTabStrip acts on them -- SystemMenuController.
+        // StepTab is the only implementor, and it steps through the SAME
+        // Select(index) each tab's own Button.onClick calls, so a shoulder
+        // press and a click can never disagree about which tab is next.
+
+        private static Transform PaneNamed(SystemMenuController menu, string key) =>
+            menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .First(t => t.name == "SystemPane" + key);
+
+        [UnityTest]
+        public IEnumerator TabNext_FromTheDefaultTab_SwitchesToPartyAndSelectsItsPaneEntry()
+        {
+            yield return LoadHub();
+
+            _menu.Open();
+            yield return null;
+
+            // Fixture check: DefaultFor(inRun: false) is CharacterInventory,
+            // out of the hub's own four visible tabs (CharacterInventory,
+            // Party, Options, MainMenu -- FloorMap/RunStats are RunOnly).
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.CharacterInventory), _menu.SelectedIndex,
+                "fixture: the menu should open on CharacterInventory outside a run");
+
+            _input.TabNextDown = true;
+            yield return DriveFrame();
+
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.Party), _menu.SelectedIndex,
+                "one TabNext press should step the tab strip to Party, the next VISIBLE tab");
+
+            var selected = EventSystem.current.currentSelectedGameObject;
+            Assert.IsNotNull(selected, "the shoulder shortcut should leave something selected, not nothing");
+            Assert.IsTrue(selected.transform.IsChildOf(PaneNamed(_menu, "Party")),
+                "the shoulder shortcut should land INSIDE the new pane (its own entry), the same place a " +
+                "Move-to-tab + Submit + Move-down dance would eventually reach in three presses instead of one");
+        }
+
+        [UnityTest]
+        public IEnumerator TabPrev_FromTheDefaultTab_WrapsToTheLastVisibleTab()
+        {
+            yield return LoadHub();
+
+            _menu.Open();
+            yield return null;
+
+            _input.TabPrevDown = true;
+            yield return DriveFrame();
+
+            Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu), _menu.SelectedIndex,
+                "TabPrev from the first visible tab should wrap to the last one (MainMenu, out of the hub's " +
+                "own four visible tabs) -- the owner default every other group in this project wraps by");
+        }
+
+        [UnityTest]
+        public IEnumerator ShoulderPress_WithNoTabStripContextOnTop_DoesNothing()
+        {
+            yield return LoadHub();
+
+            var gate = _hub.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .First(b => b.name == "StartRunGate");
+            yield return null;
+
+            Assert.IsFalse(_menu.IsOpen, "fixture: the menu should start closed, so the hub's own " +
+                "(non-tab-strip) context is top");
+
+            _input.TabNextDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(_menu.IsOpen, "a shoulder press should not open the menu on its own");
+            Assert.AreEqual(gate.gameObject, EventSystem.current.currentSelectedGameObject,
+                "a shoulder press with no INavTabStrip context on top should be silently absorbed " +
+                "(NavContext.RaiseTabStep's own no-op), not move selection off the hub's entry");
+        }
     }
 }

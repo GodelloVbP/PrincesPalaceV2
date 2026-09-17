@@ -17,7 +17,7 @@ namespace PrincesPalace
     // generated once, so the build authors every tab at its five-tab position
     // and this re-applies SystemMenuLayout for whichever set is showing. The
     // arithmetic is still in exactly one place. See SystemMenuScreen's header.
-    public class SystemMenuController : MonoBehaviour
+    public class SystemMenuController : MonoBehaviour, INavTabStrip
     {
         [SerializeField] internal GameObject panel;
         [SerializeField] internal Button[] tabButtons;
@@ -224,8 +224,13 @@ namespace PrincesPalace
                 // RewardTrack simply do not implement the interface, so they
                 // are the unclaimed case by construction rather than by a
                 // check somebody has to remember to write.
+                // tabStrip: () => this, not a claimant-shaped lookup -- this
+                // controller IS the one INavTabStrip this context ever has,
+                // unlike ActivePaneCancelClaim's "ask whichever pane is
+                // active right now" (NavContext's own header on why the
+                // shape still stays a function).
                 _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
-                    claimant: ActivePaneCancelClaim);
+                    claimant: ActivePaneCancelClaim, tabStrip: () => this);
                 NavigationInputModule.Contexts?.Push(_navContext);
             }
 
@@ -541,6 +546,40 @@ namespace PrincesPalace
 
             if (goldValue != null) goldValue.SetContent($"GOLD  {save?.Gold ?? 0}");
             if (embersValue != null) embersValue.SetContent($"EMBERS  {save?.EmberTotal() ?? 0}");
+        }
+
+        // THE SHOULDER SHORTCUT (INavTabStrip, plan phase 3 item 2) --
+        // wraps through the SAME _visible list RefreshNavLinks' own Rail
+        // wires and the SAME Select(index) each tab Button's onClick calls,
+        // never a second "what is the next tab" computation (this
+        // interface's own header on why). _visible is INDICES into
+        // SystemMenuTabs.All, not slot positions, so the step is taken in
+        // slot space (0..VisibleTabs.Count-1) and translated back --
+        // stepping _selected directly by +-1 would walk hidden tabs between
+        // two visible ones on a three-tab context.
+        public void StepTab(int direction)
+        {
+            if (_visible.Count == 0) return;
+
+            int slot = _visible.IndexOf(_selected);
+            if (slot < 0) slot = 0;
+
+            int next = ((slot + direction) % _visible.Count + _visible.Count) % _visible.Count;
+            Select(_visible[next]);
+
+            // LANDS INSIDE THE NEW PANE, not merely on its tab -- the
+            // shoulder is a shortcut for the Move-to-tab + Submit +
+            // Move-down-into-pane dance those three inputs would otherwise
+            // take (plan section 7), so one press should leave the player
+            // ready to act on the new pane's own content. Same lookup
+            // ApplyContext's own tab-Down link uses (INavPaneEntry first,
+            // else the first active Selectable in tree order); falls back
+            // to the tab button itself when the pane declares nothing
+            // selectable at all (RunStats today), so selection is never
+            // left dangling on a pane with nothing to enter.
+            var entry = ActivePaneEntry();
+            var target = entry != null ? entry.gameObject : SelectedTabButton()?.gameObject;
+            if (target != null) EventSystem.current?.SetSelectedGameObject(target);
         }
 
         public void Select(SystemMenuTab tab) => Select(SystemMenuTabs.IndexOf(tab));

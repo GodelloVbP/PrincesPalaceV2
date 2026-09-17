@@ -37,6 +37,14 @@ namespace PrincesPalace
         // is enough because at most one Fight context can be top at a time.
         private bool _fightVerticalArmed = true;
 
+        // ProjectSettings/InputManager.asset's own two new button axes
+        // (plan phase 3, item 2): TabPrev binds Q and joystick button 4,
+        // TabNext binds E and joystick button 5 -- named constants so a
+        // future rebind touches one file rather than a string repeated at
+        // every call site (ScriptedBaseInput's own test double included).
+        private const string TabPrevButton = "TabPrev";
+        private const string TabNextButton = "TabNext";
+
         protected override void Awake()
         {
             base.Awake();
@@ -66,6 +74,16 @@ namespace PrincesPalace
             // character spends this press putting them back rather than
             // closing the menu around the player.
             if (input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
+
+            // THE SHOULDER SHORTCUT (plan section 7's "Tabs" contract,
+            // phase 3 item 2), offered the same way and off the same
+            // topAtStart -- a context with no tab strip (INavTabStrip)
+            // absorbs this silently (NavContext.RaiseTabStep's own no-op).
+            // Read through `input`, never UnityEngine.Input directly, same
+            // seam every other value this dispatcher reads goes through
+            // (plan section 2).
+            if (input.GetButtonDown(TabPrevButton)) topAtStart.RaiseTabStep(-1);
+            else if (input.GetButtonDown(TabNextButton)) topAtStart.RaiseTabStep(1);
 
             // RE-READ HERE, deliberately -- this is not the same "capture
             // once" rule Cancel-dispatch above follows, and conflating the

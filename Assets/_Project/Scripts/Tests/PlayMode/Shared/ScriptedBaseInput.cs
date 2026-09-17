@@ -26,6 +26,12 @@ namespace PrincesPalace.PlayModeTests
         public bool SubmitDown;
         public bool CancelDown;
 
+        // The shoulder-shortcut axes (docs/GAMEPAD_NAVIGATION_PLAN.md phase
+        // 3, item 2; ProjectSettings/InputManager.asset's own TabPrev/
+        // TabNext). One-frame edges, same as Submit/Cancel above.
+        public bool TabPrevDown;
+        public bool TabNextDown;
+
         public override Vector2 mousePosition => MousePosition;
         public override bool mousePresent => true;
 
@@ -44,6 +50,8 @@ namespace PrincesPalace.PlayModeTests
         {
             if (buttonName == "Submit") return SubmitDown;
             if (buttonName == "Cancel") return CancelDown;
+            if (buttonName == "TabPrev") return TabPrevDown;
+            if (buttonName == "TabNext") return TabNextDown;
             return false;
         }
 
@@ -53,6 +61,8 @@ namespace PrincesPalace.PlayModeTests
             MouseButton0Up = false;
             SubmitDown = false;
             CancelDown = false;
+            TabPrevDown = false;
+            TabNextDown = false;
         }
     }
 }
