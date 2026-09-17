@@ -120,6 +120,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SeatMonogramPlates = new List<NodeRef>();
         public List<NodeRef> SeatMonogramLetters = new List<NodeRef>();
         public List<NodeRef> SeatGlows = new List<NodeRef>();
+
+        // THE GAMEPAD-SELECTION HALO, one per seat and (below) one per card.
+        // A FOURTH visual channel, separate from the three this screen
+        // already had (occupied glow, selected/destination gold ring,
+        // unselectable wash), because EventSystem selection is a fourth
+        // thing: where the stick is standing, which is not "who is picked
+        // up" and not "where they could go". Inactive at build time -- it is
+        // shown, scaled and lit by PartyController at ThemedButtonState's own
+        // Selected ratios (plan section 7's candidate treatment), never at a
+        // number invented here.
+        public List<NodeRef> SeatSelectHalos = new List<NodeRef>();
         public List<NodeRef> SeatNames = new List<NodeRef>();
         public List<NodeRef> SeatRoles = new List<NodeRef>();
         public List<NodeRef> SeatRings = new List<NodeRef>();
@@ -149,6 +160,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> CardRings = new List<NodeRef>();
         public List<NodeRef> CardSelectedTags = new List<NodeRef>();
         public List<NodeRef> CardWashes = new List<NodeRef>();
+        public List<NodeRef> CardSelectHalos = new List<NodeRef>();
 
         public static PartyScreen Build(PartyInputs inputs)
         {
@@ -344,6 +356,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(glow);
             screen.SeatGlows.Add(glow);
 
+            // BEHIND EVERYTHING, and the full size of the slot rather than
+            // the ground glow's footprint: scaled past its own edges at
+            // selection time it reads as a halo all the way around the slot,
+            // which is what distinguishes it at a glance from the gold RING
+            // (a sharp rim, meaning the model's own selection) drawn over the
+            // top of the same slot.
+            var selectHalo = Ui.Sprite(stem + "SelectHalo", "proc:radial_glow",
+                    Place.At(0f, 0f),
+                    UiSize.Fixed(PartyLayout.ColumnWidth, PartyLayout.ColumnButtonHeight))
+                .Coloured(RingGold)
+                .Inactive()
+                .AsDecor();
+            button.Children.Add(selectHalo);
+            screen.SeatSelectHalos.Add(selectHalo);
+
             // NO BAKED SPRITE -- P3 loads a stance from Resources/Characters/
             // <id> and activates this; until then it stays off, because an
             // Image with no sprite renders as a filled rectangle (the same
@@ -496,6 +523,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var button = Ui.Button(stem + "Button", UiString.Runtime, size, 15, Place.At(x, y))
                 .NoChrome();
+
+            // Same fourth channel as the seats', same reasoning -- declared
+            // FIRST so it draws behind the card's own wash, art and rings.
+            var selectHalo = Ui.Sprite(stem + "SelectHalo", "proc:radial_glow",
+                    Place.At(0f, 0f), UiSize.Fixed(PartyLayout.CardWidth, PartyLayout.CardHeight))
+                .Coloured(RingGold)
+                .Inactive()
+                .AsDecor();
+            button.Children.Add(selectHalo);
+            screen.CardSelectHalos.Add(selectHalo);
 
             var wash = Ui.Solid(stem + "Wash", DimWash, size, Place.At(0f, 0f)).AsDecor().Inactive();
             button.Children.Add(wash);

@@ -33,11 +33,21 @@ namespace PrincesPalace.Domain.UiKit
         // rebuild remembering a reference could not.
         public string RememberedId { get; private set; }
 
-        public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel)
+        // The active pane's optional first refusal on a Cancel press
+        // (INavCancelClaim). A FUNCTION, not a stored claimant, because
+        // WHICH pane is active changes while this one context stays pushed
+        // -- the menu's tab strip swaps panes underneath it -- so anything
+        // captured once would be answering for the wrong pane by the time a
+        // press arrived.
+        private readonly Func<INavCancelClaim> _claimant;
+
+        public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel,
+            Func<INavCancelClaim> claimant = null)
         {
             Entry = entry;
             Selectables = selectables ?? EmptySelectables;
             Cancel = cancel;
+            _claimant = claimant;
         }
 
         private NavContext(IFightNavigationTarget fightTarget)
@@ -50,6 +60,20 @@ namespace PrincesPalace.Domain.UiKit
         public static NavContext ForFight(IFightNavigationTarget target) => new NavContext(target);
 
         public void Remember(string stableId) => RememberedId = stableId;
+
+        // CANCEL RESOLUTION, IN ONE PLACE -- the dispatcher calls this, never
+        // Cancel directly, so the precedence is stated once here rather than
+        // at every caller: the active pane is offered the press first, and
+        // only a pane that declines (or is absent) lets the context's own
+        // Cancel run. See INavCancelClaim for why a pane answers per press
+        // instead of setting a flag.
+        public void RaiseCancel()
+        {
+            var claimant = _claimant?.Invoke();
+            if (claimant != null && claimant.ClaimCancel()) return;
+
+            Cancel?.Invoke();
+        }
 
         // Map's own case (plan section 4): a context whose navigable set
         // genuinely changes contents across repaints -- a new floor has

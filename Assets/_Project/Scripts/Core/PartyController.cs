@@ -24,7 +24,7 @@ namespace PrincesPalace
     // reference, the lock flag, each seat badge's own text label, the drag
     // sources and the toast's own fader, none of which UiAutoBind's five
     // typed lookups can reach).
-    public class PartyController : MonoBehaviour
+    public class PartyController : MonoBehaviour, INavCancelClaim
     {
         // ---- header -----------------------------------------------------------
         [SerializeField] internal TMP_Text banner;
@@ -52,6 +52,7 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] seatNames;
         [SerializeField] internal TMP_Text[] seatRoles;
         [SerializeField] internal GameObject[] seatRings;
+        [SerializeField] internal Image[] seatSelectHalos;
         [SerializeField] internal GameObject[] seatScrims;
         [SerializeField] internal TMP_Text[] seatScrimCaptions;
 
@@ -91,6 +92,7 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] cardRings;
         [SerializeField] internal GameObject[] cardSelectedTags;
         [SerializeField] internal GameObject[] cardWashes;
+        [SerializeField] internal Image[] cardSelectHalos;
         [SerializeField] internal PartyDragSource[] cardDragSources;
 
         // ---- P4: the one reusable drag ghost, and the roster's own drop zone ----
@@ -199,7 +201,7 @@ namespace PrincesPalace
                     int seat = i;
                     seatButtons[i].onClick.AddListener(() =>
                     {
-                        if (Time.frameCount == _dragResolvedFrame) return;
+                        if (IgnoreClick()) return;
                         ClickSeat(seat);
                     });
                 }
@@ -213,7 +215,7 @@ namespace PrincesPalace
                     int index = i;
                     cardButtons[i].onClick.AddListener(() =>
                     {
-                        if (Time.frameCount == _dragResolvedFrame) return;
+                        if (IgnoreClick()) return;
                         ClickCardAt(index);
                     });
                 }
@@ -227,7 +229,7 @@ namespace PrincesPalace
                     int index = i;
                     cardTitles[i].onClick.AddListener(() =>
                     {
-                        if (Time.frameCount == _dragResolvedFrame) return;
+                        if (IgnoreClick()) return;
                         CycleTitle(index);
                     });
                 }
@@ -237,6 +239,7 @@ namespace PrincesPalace
             if (benchLink != null) benchLink.onClick.AddListener(SendToBench);
 
             WireDragSources();
+            WireNavigation();
 
             if (dragGhost != null)
             {
@@ -367,6 +370,222 @@ namespace PrincesPalace
             Formation = new PartyFormation(roster, seats, mode, save.EffectiveMaxSquadSize(), _ => false);
 
             Paint();
+        }
+
+        // A CLICK IS IGNORED FOR TWO REASONS, and they are different ones.
+        // _dragResolvedFrame is the click-suppression seam (see its own
+        // header): the pointer-up that ENDS a drag must not also count as a
+        // click. _dragging is the gamepad half, added with the navigation
+        // wiring below -- a Submit press landing while a mouse drag is still
+        // in flight would commit the carry twice, once through the drag's own
+        // EndDrag and once through this listener, against two different
+        // destinations (the pointer's and the selection's).
+        private bool IgnoreClick() => Time.frameCount == _dragResolvedFrame || _dragging;
+
+        // ---- gamepad navigation (plan section 8) --------------------------------
+        //
+        // TWO GROUPS AND ONE LINK BETWEEN THEM. Seats are a Rail, and their
+        // rail order is VISUAL order, not seat order: seat 0 is the front
+        // rank and the front rank is drawn on the RIGHT (PartyLayout.
+        // VisualColumnForSeat, "matching the fight stage's own
+        // party-left/enemy-right orientation"), so a Rail built in seat order
+        // would send Right leftwards across the screen. That mapping is read
+        // through the one function allowed to own it rather than restated
+        // here. The roster is a Rail too -- one row of cards, already in
+        // visual order. The cross-group link is positional and clamped: Down
+        // from the seat in visual column c reaches card c (or the last card,
+        // if the roster is shorter), and Up from card j reaches the seat in
+        // visual column j (or the last column). That keeps a Move roughly
+        // under the thumb it came from without either group having to know
+        // the other's length.
+        //
+        // SUBMIT NEEDS NO CODE AT ALL, which is the whole reason seats and
+        // cards being real Buttons is the design. A Button's OnSubmit fires
+        // its own onClick, so Submit IS ClickSeat/ClickCardAt -- and
+        // PartyFormation.ClickSeat/ClickCard are already both halves of the
+        // interaction: called with nothing carried they pick up, called with
+        // something carried they resolve it (place, swap, move, or cancel on
+        // a re-click). One path for the mouse and the pad, not two that have
+        // to be kept agreeing.
+        private void WireNavigation()
+        {
+            RuntimeNavWiring.Apply(
+                new[]
+                {
+                    RuntimeNavWiring.Group("partySeats", UiNavGroupKind.Rail, SeatsInVisualOrder()),
+                    RuntimeNavWiring.Group("partyRoster", UiNavGroupKind.Rail, cardButtons),
+                },
+                CrossLinks());
+
+            WireSelectHalos(seatButtons, seat => OnSeatSelectionChanged(seat));
+            WireSelectHalos(cardButtons, card => OnCardSelectionChanged(card));
+        }
+
+        // Left-to-right as drawn: column 0 first. Reads the mapping through
+        // PartyLayout rather than reversing the array by hand, so a later
+        // change of orientation moves this with it.
+        private List<Selectable> SeatsInVisualOrder()
+        {
+            var ordered = new List<Selectable>();
+            for (int column = 0; column < PartySeat.Count; column++)
+            {
+                ordered.Add(At(seatButtons, SeatAtColumn(column)));
+            }
+
+            return ordered;
+        }
+
+        // VisualColumnForSeat is its own inverse (SeatCount - 1 - i), but
+        // saying so here is cheaper to read than working it out at three call
+        // sites -- and it stays correct if that mapping ever stops being
+        // symmetric.
+        private static int SeatAtColumn(int column)
+        {
+            for (int seat = 0; seat < PartySeat.Count; seat++)
+            {
+                if (PartyLayout.VisualColumnForSeat(seat) == column) return seat;
+            }
+
+            return -1;
+        }
+
+        private IEnumerable<UiNavLink<Selectable>?> CrossLinks()
+        {
+            int cards = cardButtons?.Length ?? 0;
+            if (seatButtons == null || seatButtons.Length == 0 || cards == 0) yield break;
+
+            for (int column = 0; column < PartySeat.Count; column++)
+            {
+                var seat = At(seatButtons, SeatAtColumn(column));
+                if (seat == null) continue;
+
+                yield return RuntimeNavWiring.Link(
+                    seat, UiNavDirection.Down, cardButtons[Mathf.Min(column, cards - 1)]);
+            }
+
+            for (int j = 0; j < cards; j++)
+            {
+                var seat = At(seatButtons, SeatAtColumn(Mathf.Min(j, PartySeat.Count - 1)));
+                yield return RuntimeNavWiring.Link(cardButtons[j], UiNavDirection.Up, seat);
+            }
+        }
+
+        // SelectIndex, not a new component: RewardTrack's ribbon already
+        // needed "tell me when the module selects this indexed thing", and
+        // this is the same question (da205520). Added at runtime for the
+        // reason that file's own header gives -- it carries a delegate and an
+        // integer, and a scene cannot serialise the first.
+        private void WireSelectHalos(Button[] buttons, System.Action<int> changed)
+        {
+            for (int i = 0; buttons != null && i < buttons.Length; i++)
+            {
+                if (buttons[i] == null) continue;
+
+                var select = buttons[i].gameObject.GetComponent<SelectIndex>()
+                             ?? buttons[i].gameObject.AddComponent<SelectIndex>();
+                select.Index = i;
+                select.Changed = (index, entered) => changed(entered ? index : -1);
+            }
+        }
+
+        // WHERE THE STICK IS STANDING -- a fourth state, distinct from the
+        // three the model already paints (occupied, carried/destination,
+        // unselectable). -1 is "nowhere", which is the mouse-only case.
+        private int _navSelectedSeat = -1;
+        private int _navSelectedCard = -1;
+
+        private void OnSeatSelectionChanged(int seat)
+        {
+            // A deselect arriving after the NEXT node has already reported
+            // itself selected must not turn that new halo off -- so a
+            // deselect only clears when something is actually lit.
+            if (seat < 0 && _navSelectedSeat < 0) return;
+            _navSelectedSeat = seat;
+            PaintSelectHalos();
+        }
+
+        private void OnCardSelectionChanged(int card)
+        {
+            if (card < 0 && _navSelectedCard < 0) return;
+            _navSelectedCard = card;
+            PaintSelectHalos();
+        }
+
+        private void PaintSelectHalos()
+        {
+            for (int i = 0; seatSelectHalos != null && i < seatSelectHalos.Length; i++)
+            {
+                PaintSelectHalo(At(seatSelectHalos, i), i == _navSelectedSeat);
+            }
+
+            for (int i = 0; cardSelectHalos != null && i < cardSelectHalos.Length; i++)
+            {
+                PaintSelectHalo(At(cardSelectHalos, i), i == _navSelectedCard);
+            }
+        }
+
+        // THE NUMBERS ARE THEMEDBUTTONSTATE'S OWN, not new ones (plan section
+        // 7/8): a themed Button already answers EventSystem focus with
+        // SelectedGlowAlpha at SelectedGlowScale -- a halo grown past the
+        // control's own edges rather than merely a brighter ring the same
+        // size as it. Party's seats and cards are NoChrome() buttons with no
+        // ThemedButtonState to do it for them, so they borrow that ratio
+        // rather than invent a second one.
+        private static void PaintSelectHalo(Image halo, bool selected)
+        {
+            if (halo == null) return;
+
+            halo.gameObject.SetShown(selected);
+            if (!selected) return;
+
+            var colour = halo.color;
+            halo.color = new Color(colour.r, colour.g, colour.b, ThemedButtonState.SelectedGlowAlpha);
+            halo.rectTransform.localScale = Vector3.one * ThemedButtonState.SelectedGlowScale;
+        }
+
+        // ---- Cancel, claimed (INavCancelClaim, plan section 8) -------------------
+        //
+        // THE PANE ANSWERS PER PRESS, and claims only one it actually spends:
+        // carrying somebody, Cancel puts them back and selection returns to
+        // where they were picked up from, so the next Move starts where the
+        // player left off rather than wherever the cursor had wandered.
+        // Carrying nobody, this declines and SystemMenuController's own
+        // Cancel (Close) runs -- the behaviour every other pane has.
+        bool INavCancelClaim.ClaimCancel()
+        {
+            if (Formation == null || Formation.SelectedId == null) return false;
+
+            // READ BEFORE CANCELLING: Formation.Cancel() clears the very
+            // selection this asks about.
+            var source = CarrySourceObject();
+
+            Cancel();
+            if (source != null) EventSystem.current?.SetSelectedGameObject(source);
+            return true;
+        }
+
+        private GameObject CarrySourceObject()
+        {
+            if (Formation == null || Formation.SelectedId == null) return null;
+
+            if (Formation.SelectedFrom.IsSeat)
+            {
+                return At(seatButtons, Formation.SelectedFrom.SeatIndex)?.gameObject;
+            }
+
+            int index = _rosterIds.IndexOf(Formation.SelectedId);
+            return At(cardButtons, index)?.gameObject;
+        }
+
+        // A CARRY IS A TRANSACTION, AND LEAVING ENDS IT. Closing the menu,
+        // selecting another tab or changing scene mid-carry would otherwise
+        // leave the model holding a selection nothing on screen still
+        // explains -- the banner and the bench link would come back mid-carry
+        // on the next open. One rule here covers all three exits rather than
+        // each of them having to remember.
+        private void OnDisable()
+        {
+            if (Formation != null && Formation.SelectedId != null) Cancel();
         }
 
         // ---- commands -----------------------------------------------------------

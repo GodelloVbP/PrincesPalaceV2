@@ -1,0 +1,282 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+using PrincesPalace;
+using PrincesPalace.Domain.Party;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace.PlayModeTests
+{
+    // Step D's behavioural gate (docs/GAMEPAD_NAVIGATION_PLAN.md section 8,
+    // AUDIT.md #156): the Party pane carried and dropped on stick + Submit +
+    // Cancel alone, through the REAL dispatcher on the real Hub scene.
+    //
+    // WHAT THIS DOES NOT DO, deliberately: it never calls ClickSeat,
+    // Formation.Drop or ClaimCancel directly. SystemMenuPartyTests already
+    // pins the model's own rules that way; what is new here is whether a
+    // press reaches them, which only the module can answer.
+    public class PartyGamepadNavigationTests
+    {
+        private string _root;
+        private ScriptedBaseInput _input;
+        private SystemMenuController _menu;
+        private PartyController _party;
+
+        [SetUp]
+        public void UseAThrowawaySaveRoot()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "pp-party-pad-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+            SaveSystem.RootOverride = _root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            Navigation.LoadOverride = _ => { };
+        }
+
+        [TearDown]
+        public void Restore()
+        {
+            TestGlobals.ResetAll();
+            SaveSystem.RootOverride = null;
+            Time.timeScale = 1f;
+            if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
+        private IEnumerator OpenTheParty()
+        {
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "owl", "sheep", "bear" };
+
+            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
+            Assert.IsNotNull(module, "the Hub scene's EventSystem is not running NavigationInputModule");
+            EventSystem.current = module.GetComponent<EventSystem>();
+            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
+            module.inputOverride = _input;
+
+            _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_menu, "the hub carries no SystemMenuController");
+            _menu.Open();
+            _menu.Select(SystemMenuTab.Party);
+            yield return null;
+
+            _party = Object.FindAnyObjectByType<PartyController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_party, "the hub carries no PartyController");
+        }
+
+        private IEnumerator DriveFrame()
+        {
+            yield return null;
+            _input.ClearOneFrameFlags();
+        }
+
+        private IEnumerator SubmitFrame()
+        {
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+        }
+
+        private IEnumerator CancelFrame()
+        {
+            _input.CancelDown = true;
+            yield return DriveFrame();
+        }
+
+        // A Move press, then the axis back to centre -- StandaloneInputModule
+        // treats a held axis as a repeat, and a repeat is timing this suite
+        // has no control over (plan section 10).
+        private IEnumerator MoveRightFrame()
+        {
+            _input.Horizontal = 1f;
+            yield return DriveFrame();
+            _input.Horizontal = 0f;
+            yield return DriveFrame();
+        }
+
+        // SEAT INDEX, NOT SCREEN COLUMN -- seat 0 is the front rank and is
+        // drawn on the RIGHT (PartyLayout.VisualColumnForSeat), so "Right
+        // from Rear" below lands on Middle, not on Front. The rail is built
+        // in visual order for exactly this reason; these tests pin that.
+        private GameObject Seat(int index) =>
+            _menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .First(t => t.name == $"PartySeat{index}Button").gameObject;
+
+        private void Select(GameObject go)
+        {
+            EventSystem.current.SetSelectedGameObject(go);
+        }
+
+        // ---- carry, move, drop ------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator SubmitPicksUp_MoveRelocatesTheCandidate_SubmitDropsOnWhatIsSelected()
+        {
+            yield return OpenTheParty();
+
+            Assert.AreEqual("sheep", _party.Formation.SeatIds[PartySeat.Middle], "fixture: seats not as authored");
+            Assert.AreEqual("bear", _party.Formation.SeatIds[PartySeat.Rear]);
+
+            // REAR is the LEFTMOST column, so one Right press steps to
+            // MIDDLE -- a plain step along the rail, no wrap involved.
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+
+            yield return SubmitFrame();
+
+            Assert.AreEqual("bear", _party.Formation.SelectedId,
+                "Submit on a selected seat should pick its occupant up -- the Button's own OnSubmit runs the " +
+                "same onClick a mouse click does, which is ClickSeat");
+
+            // ORDINARY Selectable.OnMove relocates the candidate: the seats
+            // are a Rail, so Right steps to the next seat. Nothing in Party
+            // handles Move at all -- that is the point of the seats being
+            // real Buttons.
+            yield return MoveRightFrame();
+
+            Assert.AreEqual(Seat(PartySeat.Middle), EventSystem.current.currentSelectedGameObject,
+                "a Move while carrying should walk the seat rail, not commit anything");
+            Assert.AreEqual("bear", _party.Formation.SelectedId, "the Move committed the carry by itself");
+
+            yield return SubmitFrame();
+
+            // THE DESTINATION IS THE SELECTION, resolved through the seat the
+            // module was standing on -- a swap, exactly as the same two
+            // clicks would have produced.
+            Assert.AreEqual("bear", _party.Formation.SeatIds[PartySeat.Middle],
+                "the drop did not swap through the seat the selection was standing on");
+            Assert.AreEqual("sheep", _party.Formation.SeatIds[PartySeat.Rear]);
+            Assert.IsNull(_party.Formation.SelectedId, "the carry should be over once it is dropped");
+        }
+
+        // ---- Cancel, claimed and unclaimed -----------------------------------------
+
+        [UnityTest]
+        public IEnumerator CancelWhileCarrying_PutsThemBack_ReselectsTheSource_AndLeavesTheMenuOpen()
+        {
+            yield return OpenTheParty();
+
+            Select(Seat(PartySeat.Middle));
+            yield return null;
+            yield return SubmitFrame();
+            Assert.AreEqual("sheep", _party.Formation.SelectedId, "fixture: nothing was picked up");
+
+            // Walk away from the source first, so "reselects the source" is a
+            // real claim rather than "the selection never moved". Right from
+            // MIDDLE is FRONT, the rightmost column.
+            yield return MoveRightFrame();
+            Assert.AreEqual(Seat(PartySeat.Front), EventSystem.current.currentSelectedGameObject);
+
+            yield return CancelFrame();
+
+            Assert.IsNull(_party.Formation.SelectedId, "Cancel while carrying should put the carried one back");
+            Assert.IsTrue(_menu.IsOpen,
+                "Cancel spent on the carry must NOT also close the menu -- the pane claimed that press " +
+                "(INavCancelClaim), so SystemMenu's own Close never runs");
+            Assert.AreEqual(Seat(PartySeat.Middle), EventSystem.current.currentSelectedGameObject,
+                "selection should return to the seat the carry started from, not stay where it wandered to");
+            Assert.AreEqual("sheep", _party.Formation.SeatIds[PartySeat.Middle],
+                "nobody should have moved seats");
+        }
+
+        [UnityTest]
+        public IEnumerator CancelWhileNotCarrying_ClosesTheMenu()
+        {
+            yield return OpenTheParty();
+
+            Select(Seat(PartySeat.Front));
+            yield return null;
+            Assert.IsNull(_party.Formation.SelectedId, "fixture: something was already carried");
+
+            yield return CancelFrame();
+
+            Assert.IsFalse(_menu.IsOpen,
+                "with nothing carried the pane declines the press and the context's own Cancel (Close) runs " +
+                "-- the behaviour every other pane has");
+        }
+
+        [UnityTest]
+        public IEnumerator ClosingTheMenuMidCarry_CancelsTheCarryRatherThanKeepingIt()
+        {
+            yield return OpenTheParty();
+
+            Select(Seat(PartySeat.Front));
+            yield return null;
+            yield return SubmitFrame();
+            Assert.AreEqual("owl", _party.Formation.SelectedId, "fixture: nothing was picked up");
+
+            _menu.Close();
+            yield return null;
+
+            Assert.IsNull(_party.Formation.SelectedId,
+                "leaving the pane mid-carry must end the transaction -- reopening would otherwise show a " +
+                "banner and a bench link for a carry the player cannot see");
+        }
+
+        // ---- the drag guard ---------------------------------------------------------
+
+        // A MOUSE DRAG IN FLIGHT OWNS THE GESTURE. Without the _dragging half
+        // of PartyController.IgnoreClick, a Submit press landing mid-drag
+        // would resolve the same carry a second time, against the selection
+        // instead of the pointer.
+        [UnityTest]
+        public IEnumerator SubmitDuringAMouseDrag_IsIgnored()
+        {
+            yield return OpenTheParty();
+
+            var front = Seat(PartySeat.Front);
+            var drag = front.GetComponent<PartyDragSource>();
+            Assert.IsNotNull(drag, "the seat button carries no PartyDragSource");
+
+            drag.OnBeginDrag(new PointerEventData(EventSystem.current)
+            {
+                pointerCurrentRaycast = new RaycastResult { gameObject = front },
+            });
+            Assert.AreEqual("owl", _party.Formation.SelectedId, "fixture: the drag did not pick anybody up");
+
+            // Submit on a DIFFERENT seat, which would otherwise drop there.
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+            yield return SubmitFrame();
+
+            Assert.AreEqual("owl", _party.Formation.SelectedId,
+                "the Submit resolved a carry the mouse still had in flight");
+            Assert.AreEqual("owl", _party.Formation.SeatIds[PartySeat.Front],
+                "the Submit moved somebody mid-drag");
+            Assert.AreEqual("bear", _party.Formation.SeatIds[PartySeat.Rear]);
+        }
+
+        // ---- the selection halo -----------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator TheSelectedSeatLightsItsOwnHalo_AndOnlyThatOne()
+        {
+            yield return OpenTheParty();
+
+            Select(Seat(PartySeat.Rear));
+            yield return null;
+
+            Assert.IsTrue(Halo(PartySeat.Rear).activeSelf, "the selected seat's halo is not lit");
+            Assert.IsFalse(Halo(PartySeat.Middle).activeSelf, "an unselected seat's halo is lit");
+
+            yield return MoveRightFrame();
+
+            Assert.IsFalse(Halo(PartySeat.Rear).activeSelf, "the halo stayed behind on the old selection");
+            Assert.IsTrue(Halo(PartySeat.Middle).activeSelf, "the halo did not follow the selection");
+        }
+
+        private GameObject Halo(int seat) =>
+            _menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .First(t => t.name == $"PartySeat{seat}SelectHalo").gameObject;
+    }
+}

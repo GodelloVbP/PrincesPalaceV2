@@ -202,7 +202,15 @@ namespace PrincesPalace
         {
             if (_navContext == null)
             {
-                _navContext = new NavContext(entry: null, selectables: null, cancel: Close);
+                // Cancel is Close -- UNLESS the active pane claims the press
+                // first (INavCancelClaim, plan section 8): Party carrying a
+                // character means Cancel puts them back down, and only a
+                // pane with nothing open lets this Close run. Options and
+                // RewardTrack simply do not implement the interface, so they
+                // are the unclaimed case by construction rather than by a
+                // check somebody has to remember to write.
+                _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
+                    claimant: ActivePaneCancelClaim);
                 NavigationInputModule.Contexts?.Push(_navContext);
             }
 
@@ -314,11 +322,25 @@ namespace PrincesPalace
 
         private Selectable ActivePaneEntry()
         {
-            int paneIndex = SystemMenuTabs.PaneIndexFor(_selected);
-            var activePane = paneIndex >= 0 && panes != null && paneIndex < panes.Length ? panes[paneIndex] : null;
+            var activePane = ActivePane();
             return activePane == null
                 ? null
                 : activePane.GetComponentsInChildren<Selectable>(includeInactive: false).FirstOrDefault();
+        }
+
+        private GameObject ActivePane()
+        {
+            int paneIndex = SystemMenuTabs.PaneIndexFor(_selected);
+            return paneIndex >= 0 && panes != null && paneIndex < panes.Length ? panes[paneIndex] : null;
+        }
+
+        // Asked at the moment of the press, never cached: which pane is
+        // active changes under this one context every time a tab is selected
+        // (NavContext's own comment on why the claimant is a function).
+        private INavCancelClaim ActivePaneCancelClaim()
+        {
+            var activePane = ActivePane();
+            return activePane == null ? null : activePane.GetComponentInChildren<INavCancelClaim>();
         }
 
         private void Pause()

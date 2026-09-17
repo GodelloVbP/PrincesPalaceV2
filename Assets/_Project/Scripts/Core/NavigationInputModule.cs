@@ -61,7 +61,11 @@ namespace PrincesPalace
             // Fight" branch.
             if (topAtStart == null) return;
 
-            if (input.GetButtonDown(cancelButton)) topAtStart.Cancel?.Invoke();
+            // RaiseCancel, not Cancel: the active pane gets first refusal
+            // (NavContext.RaiseCancel / INavCancelClaim) -- Party carrying a
+            // character spends this press putting them back rather than
+            // closing the menu around the player.
+            if (input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
 
             // RE-READ HERE, deliberately -- this is not the same "capture
             // once" rule Cancel-dispatch above follows, and conflating the
