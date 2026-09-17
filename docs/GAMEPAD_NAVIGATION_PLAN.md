@@ -1,6 +1,61 @@
 # Gamepad Navigation — Plan v3
 
-> ## Status: 2026-09-17. Phase 3 ROLLOUT COMPLETE -- items 1-4 landed
+> ## Status: 2026-09-17. Phase 4, item 1 landed (`65ad5325`); items 2-4 sized, not attempted this pass
+>
+> **Item 1** (`65ad5325`, `AUDIT.md` #160 closed): the dossier's pack cells,
+> equipment slots and ability-score cells, and the Reckoning's offer cards,
+> now carry a selected-visual -- see `AUDIT.md` #160's own resolution
+> paragraph and `docs/CODE_MAP.md`'s phase 4 entry for the mechanism.
+> Narrower than the brief that opened this item: the pack's sort tabs and the
+> pack/spells Close buttons turned out to already answer focus for free
+> (`.ThemedPlate()`/`.Themed()` already wires a `ThemedButtonState`), found by
+> reading `UiEmitter.WireThemedButton` before wiring a redundant halo behind
+> an already-themed button. Verified by re-running the existing
+> `DossierTooltipCaptureTests`/`ReckoningTooltipCaptureTests` capture classes
+> rather than writing new ones -- the hole was in what those pictures showed,
+> not in what they covered.
+>
+> **Items 2-4 (the full journeys), sized rather than attempted this pass.**
+> Real research, not a guess: `Core/Navigation.cs`'s `Go(scene)` calls
+> `SceneManager.LoadScene` -- SYNCHRONOUS, not `LoadSceneAsync` -- unless a
+> test has set `LoadOverride` (every existing single-screen gamepad test sets
+> it to a no-op specifically so IT does not have to cross a scene boundary).
+> Only five scenes exist at all (`Navigation.MainMenu/Hub/Fight/Map/Talents`);
+> Shop, Party, RewardTrack, Reckoning, Defeat, SystemMenu, the Dossier,
+> Glossary, the debug menu and RelicDraft are all panels inside one of those
+> five, not scene loads -- so a controller-only journey crosses far fewer real
+> scene boundaries than its own prose suggests, and each one, left
+> un-stubbed, resolves in the same frame a Submit press does. That makes "one
+> PlayMode test through the real dispatcher, start to finish" architecturally
+> reachable rather than the section 11 concern it reads as at first -- the
+> genuine cost is not scene-crossing plumbing, it is standing up a REAL fight
+> to a resolvable state (a seeded encounter, a full round of enemy AI,
+> `IFightNavigationTarget`'s own non-selecting dispatcher branch) and a real
+> shop/talent economy (an eligible purchase AND a refused one, per section
+> 2's own verification note that both eligibility shapes exist) inside the
+> same test, chained through two fights, a defeat-or-victory branch and a
+> reward-track claim, with every step asserting a literal state and no step
+> touching a mouse or a controller method directly -- section 10's own
+> "growing with each screen" scale, applied to the whole game at once rather
+> than one screen. That is several sessions of work by this plan's own
+> established rate (one screen, one session, phase 3a's own convention), not
+> one sitting bolted onto item 1's -- attempting it in the time left over
+> from item 1 would have meant shipping thousands of lines of new
+> integration test with at most one or two real Unity runs behind them, on a
+> repo whose own standing rule is that a weakened assertion is worse than an
+> absent one. Recommendation: item 2 (controller-only) as its own session
+> first, splitting it into MainMenu -> Hub -> Map -> Fight (first fight,
+> mid-fight system menu, flee-or-finish) as one PlayMode test class and
+> Hub -> Shop/Talents -> Map -> second fight -> Reckoning/Defeat -> reward
+> track -> SystemMenu -> quit as a second, each starting from the save state
+> the previous one leaves on disk (`SaveSystem.RootOverride`, the same
+> throwaway-root shape every test in this family already uses) rather than
+> the same save state existing in the same in-memory scene -- items 3 (the
+> mouse-only regression, sharing item 2's assertions) and 4 (the mixed-input
+> pass, section 3/6's rules) follow once item 2's own shape exists to share
+> from and drive against. Section 12.7 below has the manual checklist an
+> owner can walk on real hardware today, independent of whether the
+> automated version of it exists yet.
 >
 > `ccb1b08d` (item 1, `AUDIT.md` #158 closed), `a61fc412` (item 2, the
 > shoulder shortcut), `c16b1dc3` (item 3, Party's Send-to-bench/Cancel
@@ -898,3 +953,85 @@ No effort estimates.
 5. **Party pick-up depth**: Submit-to-pick-up/drop only, unchanged default.
 6. **Repeat-cadence testing gap** (§10): accept hardware-acceptance-only,
    or invest in a real-time PlayMode wait despite the speed/flakiness cost.
+
+## 13. How to play-test on a pad
+
+Section 12 item 4's answer, stated once here rather than left as a bare
+recommendation: an Xbox pad (or Xbox Cloud/XInput-compatible) and a
+DualSense or DualShock, both over USB first -- Bluetooth adds its own
+latency and drop-out class of bug that is worth a second pass once the
+mapping itself is confirmed correct, not the first thing to debug against.
+Legacy Input Manager reads a generic "joystick" axis layout, so no
+per-controller code exists to differ between the two; the point of testing
+both is confirming the OS/driver layer maps them onto that layout the same
+way, not exercising different game code.
+
+**Getting a controller into the game**: either play from the Editor with a
+controller plugged in (Unity's own Input Manager reads it with no extra
+setup -- `ProjectSettings/InputManager.asset`'s axes are already generic
+joystick bindings, not per-device), or make a build (`File > Build Settings`
+in the Editor, or `tools/`'s own build path if one exists by the time this
+is read -- check `docs/WORKFLOW.md` for the current one, since this plan
+does not own the build pipeline) and run it standalone, which is closer to
+what a player's machine actually does (no Editor window stealing focus, no
+Editor-only input quirks). Either way, confirm the pad is seen before
+walking the checklist: open Options (any screen, System Menu's own tab) and
+press a stick direction -- if selection moves, the module is reading the
+pad.
+
+**The journey checklist.** This is section 11 phase 4 item 2's own journey
+list, unimplemented as an automated test as of this status header (see the
+header's own sizing note) but walkable by hand today -- every step should be
+reachable on stick + Submit + Cancel alone, with no mouse touch at any
+point, and the halo from phase 4 item 1 should mark the selected control on
+the dossier and the Reckoning at every step that reaches them:
+
+- [ ] Main Menu: stick to Play (or Continue, if a save exists), Submit.
+- [ ] New Descent (or an empty save slot): stick to a slot, Submit --
+      lands in the Hub.
+- [ ] Hub: stick to the descent gate, Submit -- reaches the Map (or starts
+      the run's first fight directly, depending on what a fresh run does;
+      follow whichever the game actually does rather than assuming).
+- [ ] Map: stick to a reachable node, Submit -- enters the first fight.
+- [ ] Fight: stick through the verb menu to Attack (or a Skill, if one is
+      off cooldown), Submit; stick to a target, Submit; let the round play
+      with no further input and confirm it resolves on its own.
+- [ ] Mid-fight: Cancel opens the System Menu over the fight (§3's own
+      transition case -- confirm Fight's own menu depth is unmoved when you
+      leave the System Menu again). Stick to Options, Submit; stick to a
+      row, Left/Right to adjust it; Cancel back out to the fight.
+- [ ] Finish or flee the fight the way the game allows on this screen
+      (check the verb menu for a Flee/Retreat verb, or simply let the fight
+      resolve to victory/defeat) -- confirm the stick reaches whichever one
+      the mouse could.
+- [ ] Victory: the Reckoning opens -- stick across the offer cards (confirm
+      the halo/brightened glow marks the selected one, phase 4 item 1),
+      Submit to take one; stick to Continue on the summary, Submit -- back
+      to the Hub or the Map, whichever the game returns to.
+- [ ] Hub: stick to the Shop building (if unlocked this run), Submit; stick
+      through the shelf, Submit on an item -- confirm either a purchase
+      completes or a refusal is shown (both are real states, per §2's own
+      verification note that Shop has both eligibility shapes); Cancel or
+      the pack's own Close control to back out.
+- [ ] Hub: stick to the Talents building, Submit -- reaches the Talents
+      scene; stick through the tree, Submit to invest a point (or confirm a
+      refusal if none are eligible); Cancel back to the Hub.
+- [ ] Map: stick to the next reachable node, Submit -- second fight, same
+      checklist as the first.
+- [ ] Defeat (deliberately lose one run, or force it in a debug build if
+      the game has a shortcut for it): stick to Inspect then Return, or
+      whichever the Defeat screen offers, Submit.
+- [ ] Reward Track (System Menu's own tab, or wherever a level-up routes
+      to it): stick along the rail, confirm the ribbon reveals as selection
+      moves rather than needing a hover; Submit to collect anything owed.
+- [ ] System Menu: stick across every tab (Character & Inventory, Party,
+      Options, Main Menu) with the shoulder buttons (`TabPrev`/`TabNext`,
+      phase 3 item 2) as well as Move; confirm each tab's own entry is
+      selected on arrival.
+- [ ] Main Menu / Quit: from the System Menu's own Main Menu tab, Submit to
+      leave the run, or reach Quit if the build offers one on this screen.
+
+Anything on this list that a controller cannot reach, or that requires the
+mouse to recover from, is a real finding -- record it the way `AUDIT.md`
+records every other gap this plan has found, with the exact step and what
+happened instead of what was expected.

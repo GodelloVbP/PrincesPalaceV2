@@ -253,6 +253,28 @@ dispatcher's own next-frame rule cannot do it here, since
 the whole panel regardless of visibility, so a row hidden behind a panel it
 just opened still counts as "declared".
 
+**Phase 4, item 1** (`65ad5325`, `AUDIT.md` #160 closed): the dossier's pack
+cells, equipment slots and ability-score cells, and the Reckoning's offer
+cards, gain a selected-visual -- the four gamepad_phase3 captures #160 cited
+never showed WHERE the stick stood, only that a tooltip was open. The three
+dossier groups are `.NoChrome()` with no `ThemedButtonState` of their own, so
+each cell gets its OWN `Core/SelectHaloPainter.cs` halo now
+(`CharacterDossierScreen.PackCellHalos`/`SlotHalos`/`AttributeCellHalos`,
+wired in `CharacterDossierController.WireSelectHalos`) -- Hub's per-button
+shape, not Party's shared-index-then-repaint one, since nothing here needs a
+tracked "which index is lit" state. The pack's sort tabs and the pack/spells
+Close buttons were named in the brief too but turned out to already answer
+`ISelectHandler` focus for free (`.ThemedPlate()`/`.Themed()` already wires a
+`ThemedButtonState`, `UiEmitter.WireThemedButton`), so they were left alone --
+a second halo behind an already-themed button would have been a duplicate
+treatment. The Reckoning gets no new node at all: `ReckoningScreen.BuildOffer`
+carries its own "NO PLATE" design note, so `ReckoningController.PaintOffers`
+brightens the card's EXISTING rarity halo to
+`Max(rarity alpha, ThemedButtonState.SelectedGlowAlpha)` instead. Both wirings
+use `select.Changed +=`, not `=` -- every one of these cells already carries a
+`SelectIndex` from `TooltipFocusRouter.Register` (job 1), and `Changed` is a
+plain multicast `Action` a `=` would have silently stolen from the tooltip.
+
 `Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
 of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
 ActivePaneEntry` prefers it and falls back to the generic first-Selectable-in-

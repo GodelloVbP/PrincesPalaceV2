@@ -2898,7 +2898,7 @@ proportion for one destructive-confirm dialog.
 
 ## Findings from gamepad-navigation phase 3b items 1 and 2, 2026-09-17
 
-### 160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing
+### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`
 
 Both screens wired this pass (`914c249e`, `9c26de94`) are now fully operable on stick + Submit
 + Cancel, and on both of them the only feedback that a control has focus is the tooltip the
@@ -2922,6 +2922,23 @@ themed ratio through a plain Image -- and Hub's four buildings and its gate alre
 the mechanism is one call per surface. Not applied here unasked: on the Reckoning it would put a
 glow behind cards whose own design note argues against exactly that, which is a visual decision
 belonging to the owner rather than a wiring gap. The pictures are the ask.
+
+**Fixed in `65ad5325`** (phase 4, item 1). Each of the three genuinely `.NoChrome()` dossier
+groups (pack cells, equipment slots, ability-score cells) gets its own `Core/SelectHaloPainter.cs`
+halo, wired through the `SelectIndex` these cells already carry from `TooltipFocusRouter.Register`
+(job 1) -- `+=` on `Changed`, not `=`, since that delegate was already claimed for the tooltip.
+**Narrower than this finding's own "none of them has a ThemedButtonState" read**: re-checking
+`UiEmitter.WireThemedButton` and `ThemedButtonState.UpdateGlow` while wiring these three found
+that the pack's sort tabs and the pack/spells Close buttons (not named above, but named in the
+phase 4 brief) are `.ThemedPlate()`/`.Themed()` and DO already carry a `ThemedButtonState`, which
+already answers `ISelectHandler` focus with `SelectedGlowAlpha`/`Scale` for free -- so they were
+left alone rather than given a redundant second halo. The Reckoning took the smaller fix this
+finding itself anticipated: no new node, `PaintOffers` brightens the card's own existing rarity
+halo to `Max(rarity alpha, SelectedGlowAlpha)` instead of a plate, honouring `BuildOffer`'s own
+"NO PLATE" note. Re-captured via the same two capture test classes this finding cites
+(`DossierTooltipCaptureTests`, `ReckoningTooltipCaptureTests` -- no new capture test needed, the
+hole was in what the existing pictures showed) into `tools/screenshots/gamepad_phase4/`; the halo
+and the brightened glow are visibly the selected control in every shot.
 
 ### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`
 
