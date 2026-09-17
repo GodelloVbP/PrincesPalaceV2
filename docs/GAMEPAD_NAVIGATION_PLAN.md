@@ -1,5 +1,123 @@
 # Gamepad Navigation — Plan v3
 
+> ## Status: 2026-09-18. Phase 4, item 2 COMPLETE: segments 5-9 landed, joining segments 1-4 from the previous pass
+>
+> `cd311629` (segments 5-6), `695e97ff` (segment 7), `0fa3b05a` (segment 8,
+> plus a real bug found and fixed), `f1b92b9f` (segment 9) -- each gated on
+> its own new class(es), the `ui`/`run` areas, and a full
+> `tools/run_tests_parallel.ps1` before the next, the same shape segments
+> 1-4 and phase 3a both already used. Every segment class lives directly
+> under `Tests/PlayMode/Run/`, extends the shared `JourneyFixture`, and
+> drives only through `ScriptedBaseInput` -- the one rule every class in
+> this family follows.
+>
+> **Segment 5 (`JourneyHubToShopTests`), deviated and stated rather than
+> followed past what is real**: the brief's own "Hub -> Shop... navigate to
+> the shop building from the hub entry" does not describe this game -- the
+> Hub has no Shop building at all (`HubController.WireNavigation`'s own
+> four staged buildings are Talents, Relics, Principality,
+> CharacterSheet). The in-run shop is a MAP ROOM, so this segment is Hub ->
+> gate -> the relic draft (spent, same as segment 1) -> Map -> a Shop
+> room's own entry (seeded to depth 1's own slot, the same shape as
+> segment 1's `SeedWithAPlainFightAtDepth1Entry`) -> Submit walks there and
+> opens the shop as a panel over the Map, no scene load. Both eligibility
+> shapes against the same card, in the brief's own order: refused a gold
+> short (painted, gold unchanged), then bought once affordable (gold down
+> by exactly its price). Cancel-Cancel leaves back onto the same Map, never
+> "the hub" -- there is no path from this shop straight there, on the pad
+> or the mouse.
+>
+> **Segment 6 (`JourneyHubToTalentsTests`)** is the Hub's own real Talents
+> building, reached through three declared links off the gate (Up ->
+> CharacterSheetBuilding, Left -> PrincipalityBuilding, Up ->
+> TalentsBuilding -- the Grid's own row-stepping plus
+> `HubController.WireNavigation`'s own explicit pair). Deviated from the
+> brief's own "refused on an unauthored one": which slot a character's
+> tree has no content for (`TalentPage.Refusal.NotAuthored`) is a fact
+> about content, not structure, and not stable to pin against whichever
+> character or authored talents happen to exist. The refusal proven
+> instead is `PrerequisiteMissing` (a tier-1 orb before its root is
+> unlocked), guaranteed by `TalentPage.Evaluate`'s own ordering regardless
+> of content. Two separate reconstructed journeys, not one chained
+> session: investing the root removes the very `PrerequisiteMissing`
+> condition the refused case needs, and there is no dispatcher-proven way
+> back from `InvestButton` onto the tree short of a Cancel that would
+> leave the screen.
+>
+> **Segment 7 (`JourneyMapChosenNodeTests`), deviated from "the run's
+> second traversal"**: reaching a real second fight would mean playing the
+> first to a win through the pad first, which is segment 8's own scope --
+> doing that again here to reach the same KIND of decision a second time
+> would duplicate that cost for no new claim. What the sizing note
+> actually asks for is the property segment 1 deliberately sidesteps
+> ("there is no independent way for this segment to steer Move presses
+> toward one otherwise"), so this is the map's first real decision point,
+> seeded (live search, never pinned) so a plain Fight room sits at a slot
+> OTHER than the entry -- reachable only by moving past it, proving the
+> selection actually landed on the CHOSEN node before Submit, not the
+> entry segment 1's own shortcut always accepts.
+>
+> **Segment 8 (`JourneyVictoryToRewardScreensTests`), deviated from "fight
+> victory -> reward track"**: that phrase names one screen, but the real
+> game has two. The instant a fight is won, `FightController.OpenReckoning`
+> shows the Reckoning (an item pick) -- that is what section 13's own
+> Victory bullet ("Move along... Submit to take one... Continue")
+> describes. The reward track (`RewardTrackController`, "Move along its
+> rail... ScrollTo... literal level... Submit collect if owed" -- language
+> only a level rail fits) is a different screen, reached from the System
+> Menu's own Character & Inventory tab, never opened automatically by a
+> win (grepped: nothing in `FightController`/`FightBootstrap` calls it).
+> Both are proven, as two journeys in one class: the fight-to-Reckoning
+> path is one continuous pad session (`LevelTheSquadTo(90)` makes a
+> floor-1 room a certain win, played with a literal round cap on top of
+> the usual real-time deadline, then take-or-skip the offer, Continue
+> lands on the Map since the run is still standing after a win); the
+> reward track is reconstructed separately from the Hub with a
+> level/claimed state built to owe something, since crediting that debt
+> DURING the pad-driven fight would mean pinning an exact
+> experience-to-level threshold this file has no business asserting.
+>
+> **A real bug found and fixed, in the mechanism, same commit**: driving
+> `DossierTrackRow`'s own Submit through the real dispatcher left the pad
+> standing on the row that had just been covered by the panel it opened,
+> with nothing to Move onto -- `SystemMenuController.RefreshSelectables`
+> declares every Selectable under the whole pane regardless of visibility,
+> so the hidden row still counted as "declared" and the
+> reselect-if-outside-the-set rule stayed silent. The identical mechanism,
+> and the identical fix shape, `ShowSpells` already applies to itself
+> (`AUDIT.md` #161) -- whose own comment named `ShowPack`'s twin gap as
+> "left alone here... a separate change", and it turns out
+> `RewardTrackController`'s own panel had the same untreated gap. Fixed
+> rather than routed around: `RewardTrackController.OnEnable` now selects
+> its own ribbon's first dot (it already declares that Rail in `Wire()`,
+> it just never selected into it); a new public `Closed` callback,
+> assigned fresh by `CharacterDossierController.ShowTrack` on every open,
+> hands selection back to `DossierTrackRow` when the panel closes (fired
+> from `OnDisable`, the same safety-net shape this project's
+> `NavContextStack` already uses). `ShowPack`'s own identical gap is left
+> alone, matching the precedent its sibling fix already set -- fixing an
+> unrequested control is a separate change.
+>
+> **Segment 9 (`JourneySystemMenuToMainMenuTests`)**, the smallest of the
+> five: reconstructed from the Hub directly rather than chained onto
+> segment 8's own class (the same cross-class-order reason every segment
+> in this suite reconstructs its own precondition). Cancel opens the menu
+> on its default tab; one `TabPrev` wraps from the first visible tab
+> straight to the last one, MainMenu, landing inside its pane on
+> `ExitTitle`; Submit arms Title, a second Submit fires it (`EndRun` -- a
+> no-op outside a run -- then `Navigation.Go(MainMenu)`, a real scene
+> load). Lands on the Main Menu's own entry with exactly one `NavContext`
+> left on the stack, proving the exit did not strand the hub's or the
+> menu's own context underneath.
+>
+> Every gate green: each new class, the `ui` and `run` areas, and a full
+> `tools/run_tests_parallel.ps1` after every commit -- no regressions from
+> either the five new segment classes or the `RewardTrackController`/
+> `CharacterDossierController` fix. Phase 4 item 2 is complete: Main Menu
+> through a full descent, a fight won and lost, both reward screens, the
+> shop, the talent tree, and back out to the Main Menu, entirely through
+> the real production dispatcher.
+
 > ## Status: 2026-09-18. Phase 4, item 2: segments 1-4 landed as automated PlayMode tests; segments 5-9 sized, not attempted this pass
 >
 > Four commits (`4f3cf2fc`, `d59d0963`, `e1f6cdf7` plus this doc update),

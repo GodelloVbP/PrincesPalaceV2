@@ -296,9 +296,44 @@ each adjusted once, Cancel back), `JourneyFightToHubOnDefeatTests` (a
 deliberate loss -- there is no flee verb, `FightScreen.cs`'s own
 `BuildVerbColumn` header says so, and a win's own `LeaveFight` goes to the
 Map, not the Hub -- through Defeat's Inspect/Return Rail to the Hub).
-Segments 5-9 (Shop, Talents, the run's second Map traversal, a real win to
-the reward track, System Menu to Main Menu) are sized in the plan's own
-status header, not attempted this pass.
+**Segments 5-9** (`cd311629`, `695e97ff`, `0fa3b05a`, `f1b92b9f` --
+`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status header has the per-segment
+detail and every stated deviation), completing phase 4 item 2:
+`JourneyHubToShopTests` (the Map's own Shop room, not a Hub building --
+both eligibility shapes against the same card, Cancel-Cancel back onto the
+Map), `JourneyHubToTalentsTests` (the Hub's real Talents building, a
+`PrerequisiteMissing` refusal in place of the brief's own unstable
+"unauthored" one, two reconstructed journeys rather than one chained
+session), `JourneyMapChosenNodeTests` (a genuine Move-driven pick among
+reachable nodes, seeded so a Fight room sits past the entry -- the
+property segment 1's own single-choice seed cannot exercise),
+`JourneyVictoryToRewardScreensTests` (a real pad-driven win via
+`LevelTheSquadTo(90)`, capped rounds, then the Reckoning -- not "the
+reward track", a different screen the brief's own phrase conflated with
+it -- and the reward track itself, reconstructed separately from the Hub;
+found and fixed a real bug in the same commit, below),
+`JourneySystemMenuToMainMenuTests` (Cancel, one `TabPrev` wrap to the
+Main Menu tab, Submit-Submit through `ExitTitle`'s arm/fire).
+
+**The bug segment 8 found**: `RewardTrackController`'s own panel never
+selected anything on open and never handed selection back on close --
+driving `DossierTrackRow`'s Submit through the real dispatcher left the
+pad standing on a now-hidden row with nothing to Move onto, the identical
+gap `ShowSpells`' own AUDIT #161 fix already named as living on
+`ShowPack` too ("left alone here... a separate change"), just not yet
+found on the reward track's own row. Fixed in the same shape:
+`RewardTrackController.OnEnable` now selects its ribbon's own first dot
+(the Rail it already declares in `Wire()`); a new `Closed` callback,
+assigned fresh by `CharacterDossierController.ShowTrack` on every open,
+hands selection back to `DossierTrackRow` when the panel closes (fired
+from `OnDisable`, the same safety-net shape `NavContextStack` already
+uses). `ShowPack`'s own identical gap is left alone, matching the
+precedent its sibling fix already set.
+
+Phase 4 item 2 is now complete end to end -- Main Menu through a full
+descent, a fight won and lost, both reward screens, the shop, the talent
+tree, and back out to the Main Menu, entirely through the real production
+dispatcher.
 
 `Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
 of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
