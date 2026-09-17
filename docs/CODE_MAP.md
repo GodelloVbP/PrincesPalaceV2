@@ -190,12 +190,61 @@ Abandon only when a descent exists -- rebuilt every `ApplyContext()` call,
 no Cancel claim). `RunStatsController` needed no wiring: it declares zero
 Selectables.
 
+**Phase 3b's items 1 and 2** (`914c249e`, `9c26de94`):
+`CharacterDossierController.RefreshNavigation` (TWO states -- the pack panel
+is an opaque Image over the whole of column A, so the nav rows underneath it
+leave the graph while it is up, Shop's shelf/pack shape. Groups: the
+loadout's two DRAWN files as Lists, paired across by
+`DossierLayout.SlotTop`'s own table rather than by list position (the left
+file has two slots above the right file's first entry); the ability scores as
+a three-wide Grid and the pack window as a two-wide Grid, both declared
+CLAMPED rather than the owner's wrap-a-row default, because a group that
+hands off sideways cannot also wrap sideways; the pack's sort tabs as a Rail.
+Its entry is the first equipment slot, declared through `Core/INavPaneEntry`)
+· `ReckoningController.RefreshNavigation` (one context reconfigured between
+the offer Rail and the summary's tabs-plus-Continue -- the offers go inert
+the moment one is taken, so the declaration has to move with the phase;
+Cancel is a no-op while the choice stands and `Dismissed` on the summary,
+matching what the mouse path offers in each phase).
+
+`Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
+of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
+ActivePaneEntry` prefers it and falls back to the generic first-Selectable-in-
+tree-order for a pane that does not implement it. The dossier is the first
+implementer (tree order there is the roster pager, not the loadout). Note
+`SystemMenuController.Open()` calls `RefreshNavLinks` a second time after the
+panel is shown: `ApplyContext`'s own call runs with the panel still hidden,
+where every `GetComponentInChildren` lookup sees nothing, so the selected
+tab's Down-into-its-pane link used to be null until the player changed tab.
+
 `Core/OptionRow.cs` is a `Selectable` subclass handling Left/Right adjustment
 + hover. `Core/SelectIndex.cs` is `HoverIndex`'s selection-side twin --
 `ISelectHandler`/`IDeselectHandler` rather than pointer enter/exit, reporting
 when the MODULE (not the mouse) puts a node in focus; RewardTrack's ribbon
 calls `ScrollTo(level)` from it, and Party lights each slot's `SelectHalo`
 from it at `ThemedButtonState`'s own Selected alpha/scale.
+
+**Tooltips are shown by the pointer AND by the selection, through one path
+per screen** (`docs/GAMEPAD_NAVIGATION_PLAN.md` section 7, phase 3b job 1).
+`Domain/UiKit/TooltipFocus.cs` owns the precedence and nothing else: focus
+outranks hover, a pointer leaving a node the stick stands on changes nothing,
+a selection leaving hands the box back to the pointer if it is on that same
+node, and a stale leave (the EventSystem reporting a deselect after the next
+node's select) is ignored. Engine-free, one test per rule.
+`Core/TooltipFocusRouter.cs` is its Core adapter -- the node -> "you were
+entered/left" delegate map, the `SelectIndex` per node, and the force-close
+that fires when `NavContextStack.Changed` says Top is no longer what it was
+when the box opened (one comparison for both "a modal went up over the
+screen" and "the screen's own context was popped"; the dossier could not use
+anything else, its context belonging to `SystemMenuController`). Each screen
+keeps ONE show/hide implementation -- `CharacterDossierController`'s three
+hover handlers and `ReckoningController.OnOfferHover` -- and both inputs are
+callers of it. `Domain/UiKit/TooltipPlacement.cs` places the box beside its
+anchor, flipped when the preferred side would overflow, under or over the
+anchor when neither side has room, and clamped-and-overlapping only as a
+stated last resort neither shipped screen can reach: a focus-driven tooltip
+has no cursor to be moved off the thing it covers. `Core/TooltipFit.cs` is
+the separate "grow the box to fit its body" half.
 
 **Cancel** reaches `NavContext.RaiseCancel`, which offers the press to the
 active pane (`INavCancelClaim`) before running the context's own handler --

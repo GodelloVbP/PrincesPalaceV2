@@ -1,5 +1,124 @@
 # Gamepad Navigation — Plan v3
 
+> ## Status: 2026-09-17. Phase 3b items 1 and 2 landed, plus the tooltip mechanism both needed
+>
+> `914c249e` (job 1, the mechanism, and item 1, CharacterDossier) and
+> `9c26de94` (item 2, the Reckoning). Items 3, 5 and 6 remain not
+> attempted -- the block below has the sizing assessment for each, and
+> nothing in it has changed.
+>
+> **Job 1, tooltips on focus (section 7's "Tooltips" contract).** Two
+> screens showed a tooltip on pointer hover only, and a stick has no
+> cursor. The shape deliberately NOT taken was a second show/hide path per
+> screen driven by selection: two callers with no arbiter disagree the
+> moment both a hover and a selection exist, which is the ordinary state of
+> a player who touches the mouse once and goes back to the pad -- the
+> mouse's "exited" would close a box the stick is holding open, and each
+> screen would grow its own copy of the arbitration. So the precedence is
+> decided once, in `Domain/UiKit/TooltipFocus.cs` (engine-free, one test
+> per rule), each screen keeps ONE show/hide implementation, and selection
+> is a second caller of it through `Core/TooltipFocusRouter.cs` (the
+> node -> delegate map, the `SelectIndex`, the force-close; it decides no
+> rule). `NavContextStack` gained a `Changed` event so a modal pushed above
+> force-closes and a popped context hides -- ONE comparison against "what
+> was Top when this box opened", which is also the only form the dossier
+> could use, its context belonging to `SystemMenuController`. An event,
+> never a poll: gating readers on a per-frame question is Draft 2's
+> rejected approach (section 1).
+>
+> `TooltipPlacement.Beside` never lands on its own subject now. It used to
+> clamp a box with room on neither side back inside the panel and accept
+> covering the anchor as "the lesser evil" -- defensible for a hover (move
+> the mouse and it goes), wrong for focus, where nothing moves it. Beside,
+> flipped, then UNDER or OVER the anchor, and only then
+> clamped-and-overlapping as a stated last resort neither shipped screen
+> can reach. Every case that fits beside is bit-identical to before, which
+> is why the three existing cases and both real-geometry walks are
+> unchanged. It takes the anchor's HEIGHT now (a box cannot be placed clear
+> of a rect whose height it was never told); all three call sites pass it.
+>
+> **Deviation, stated rather than buried:** the brief said "compute against
+> the canvas rect". The placement still computes against each screen's own
+> painted interior (the dossier pane's `HalfWidth`/`HalfHeight`, the
+> Reckoning's `ContentHalfWidth`/`ContentTop`/`ContentBottom`), both
+> strictly inside the canvas. Using the canvas would let a tooltip hang off
+> the panel it belongs to and onto the scene behind it, which is what those
+> insets exist to prevent -- and what `UiAudit`'s containment check would
+> then have to be told to allow.
+>
+> **Item 1, CharacterDossier.** Four groups -- the loadout's two DRAWN files
+> (not `EquipmentSlots.All`'s declaration order, which interleaves them),
+> the ability scores as a three-wide Grid, the pack window as a two-wide
+> Grid, its sort tabs as a Rail -- plus explicit inter-group links, rewired
+> on every repaint. Two states, not one declaration with holes:
+> `DossierPackPanel` is an opaque Image over the whole of column A, so
+> while it is up the mouse cannot reach the nav rows underneath and neither
+> should a Move (Shop's shelf/pack reconfigure, same reason). Four
+> additions the brief did not name and the screen needs: the column-A nav
+> rows and the roster pager (without them the pack group is unreachable at
+> all -- `packRow` is its only door -- and a pad could not change
+> character); the pack's own Close button (this pane does not claim Cancel,
+> so Close is the only way out, exactly as for the mouse);
+> `Core/INavPaneEntry` so the Character tab's Down lands on the first
+> equipment slot rather than on the roster pager, which is what "the first
+> active Selectable in tree order" resolved to; and a re-call of
+> `SystemMenuController.RefreshNavLinks` after the panel is shown --
+> `ApplyContext`'s own call runs while the panel is still hidden and
+> `ActivePaneEntry` resolves through `GetComponentInChildren`, so the
+> selected tab's Down-into-its-pane link was silently null on EVERY first
+> open (pre-existing, found only because a pane finally declared an entry
+> worth reaching). The Skills row is deliberately left out of the graph: it
+> carries no `onClick`, so a Move onto it would be a Submit that does
+> nothing.
+>
+> The two files are paired by DRAWN ROW, off `DossierLayout.SlotTop` -- the
+> same table `SlotAt` and `LeaderAt` read. Pairing by list position was the
+> first version and a test caught it: the left file has two slots above the
+> right file's first entry, so Torso paired with Shoes, three body rows
+> down.
+>
+> Both Grid groups are declared CLAMPED against section 12.3's
+> wrap-a-Grid-row default, as one rule rather than two special cases: a
+> group that hands off sideways to its neighbour cannot also wrap sideways,
+> or Left out of column 0 would have to mean two things. A group with
+> nowhere to go still wraps (the Reckoning's offer Rail does).
+>
+> **Item 2, the Reckoning.** One context, two states, pushed in `Show()`
+> once `PaintOffers` has settled which cards exist and removed on
+> `OnDisable` (Defeat's argument, same reason: Continue ends in a scene
+> change). The offers are a wrapping Rail of the cards actually up; Submit
+> needs no code, a card being a real Button whose `OnSubmit` fires the
+> `onClick` that already calls `Take(index)`, with `Take`'s own `_taken`
+> guard making it once-only whichever input arrives. The SUMMARY is wired
+> too, which the brief did not ask for and the screen cannot do without:
+> once an offer is taken every card goes non-interactable, so leaving the
+> declaration on the offers would strand a pad with nothing that answers
+> Submit and Continue unreachable. Cancel is per phase, checked against the
+> mouse path rather than assumed: a documented no-op while the choice
+> stands (`Show()` opens on the offers with no Continue and no skip), and
+> `Dismissed` on the summary, which is exactly what Continue's click
+> raises.
+>
+> Found by the tests rather than by reading, and worth recording because
+> phase 3a hit it too (`d39d955b`): a context's entry must be the
+> GameObject, never the Button. `NavContext` holds an opaque handle and
+> reads it back through `as GameObject`, so a `Selectable` resolves to null
+> and the dispatcher then clears the selection every frame.
+>
+> **The captures** (item 1's own gate: "verified by a runtime capture, not
+> just asserted") are in `tools/screenshots/gamepad_phase3/` -- four
+> dossier shots, one per corner cell of the pack window, and one Reckoning
+> shot with the middle card selected. Every one asserts NO OVERLAP between
+> the placed box and its own subject in WORLD space inside the capture test
+> itself, so the assertion is the gate and the picture is for the owner.
+> Two things the pictures show that the assertions do not cover, both
+> filed rather than waved off: the box clears its own subject but not its
+> SIBLINGS (it covers the pack's other column, the pack's Close button, and
+> the Reckoning's third card), and nothing in any shot says which control
+> has focus -- `AUDIT.md` #160, which is section 12.2's open owner call
+> arriving on two more screens. `AUDIT.md` #161 records the dossier's
+> spell-books panel as the one column-A state still mouse-only.
+
 > **Status: 2026-09-17. Phase 3b: job 0 plus items 4 and 7 landed. Items 1,
 > 2, 3, 5 and 6 NOT attempted this pass** -- a scope assessment below, not a
 > partial or broken attempt at any of them.
@@ -55,8 +174,10 @@
 > Buttons or Selectables, every row is a read-only `TMP_Text`, so "entry on
 > the first" has nothing to apply to.
 >
-> **Items 1, 2, 3, 5 and 6 not attempted, by scope assessment rather than
-> failure.** Each is comparable in size to one of phase 3a's five screens on
+> **Items 1, 2, 3, 5 and 6 not attempted IN THAT PASS, by scope assessment
+> rather than failure** -- items 1 and 2 have since landed (`914c249e`,
+> `9c26de94`; the status block at the top of this file), and the sizing
+> below is what that pass was scoped from. Each is comparable in size to one of phase 3a's five screens on
 > its own -- this plan's own convention is one screen, one session, one
 > gated commit -- and several need net-new mechanism, not just wiring:
 > - **Item 1 (CharacterDossier)** needs a focus-driven tooltip (no cursor to

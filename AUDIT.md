@@ -2884,3 +2884,50 @@ dialog's Yes/hold button still has no gamepad-Submit path of its own (`HoldToCon
 pointer-only), recorded as a deliberate limitation in the commit message rather than chased --
 teaching `NavigationInputModule` a "held button" concept used nowhere else would be out of
 proportion for one destructive-confirm dialog.
+
+## Findings from gamepad-navigation phase 3b items 1 and 2, 2026-09-17
+
+### 160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing
+
+Both screens wired this pass (`914c249e`, `9c26de94`) are now fully operable on stick + Submit
++ Cancel, and on both of them the only feedback that a control has focus is the tooltip the
+focus opens. The controls themselves carry no selected treatment at all: the dossier's slot
+cells, ability-score cells and pack cells are `.NoChrome()` (two of them with `Hovers(1.02f)`,
+which is a POINTER scale), and the Reckoning's offer cards are `.NoChrome()` with a deliberate
+"NO PLATE" note in `Domain/UiKit/Screens/ReckoningScreen.cs` -- a themed plate behind each card
+is recorded there as the mistake that "turned three treasures into three menu entries". So none
+of them has a `ThemedButtonState`, and `ThemedButtonState.SelectedGlowAlpha`/`Scale` -- the ratio
+every themed Button answers focus with -- reaches none of them.
+
+Seen in the capture pass, not deduced: `tools/screenshots/gamepad_phase3/
+Reckoning_selected_tooltip.png` has the MIDDLE card selected and nothing in the picture says so.
+The four `Dossier_tooltip_*.png` shots have the same hole.
+
+This is `docs/GAMEPAD_NAVIGATION_PLAN.md` section 12.2's open owner call (the selected-visual
+treatment is "a candidate pending the visual capture, not approved") arriving on two more
+screens, and the same shape Party's own capture already raised for its slots. `Core/
+SelectHaloPainter.cs` exists for exactly this case -- an un-themed focusable borrowing the
+themed ratio through a plain Image -- and Hub's four buildings and its gate already use it, so
+the mechanism is one call per surface. Not applied here unasked: on the Reckoning it would put a
+glow behind cards whose own design note argues against exactly that, which is a visual decision
+belonging to the owner rather than a wiring gap. The pictures are the ask.
+
+### 161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it
+
+`CharacterDossierController.RefreshNavigation` (`914c249e`) declares two states -- pack open and
+pack shut -- because `DossierPackPanel` is an opaque Image over the whole of column A and the
+mouse cannot reach what it covers. `DossierSpellsPanel` is the same shape (same column, same
+opaque ground, opened by `SpellsRow`) and got neither: its three spell slots and five unassigned
+rows are in `SystemMenuController`'s declared Selectable set (so a mouse click on one sticks, and
+the dispatcher will not fight it) but nothing links INTO them, so no Move can reach them --
+and, the other way round, column A's own nav rows keep their links while the spells panel covers
+them, so a stick can walk onto and Submit a row the mouse cannot click.
+
+Deliberately out of scope rather than missed: this pass's brief named the equipment slots,
+ability scores, pack items and pack sort tabs, and the spells panel is a third state of column A
+with its own selection model (`_selectedUnassignedRow`, a slot/row pairing that PressSlot and
+SelectUnassigned resolve between them) -- comparable in size to the pack itself. The fix is a
+third `RefreshNavigation` branch keyed on `spellsPanel.activeSelf`, plus `SpellsCloseButton` in
+the graph for the same reason `DossierPackClose` is in it (this pane does not claim Cancel).
+`RewardTrackController`'s panel, the dossier's other column-A door, is NOT affected: its own
+ribbon and collect button are already wired (phase 2 step C, `da205520`).
