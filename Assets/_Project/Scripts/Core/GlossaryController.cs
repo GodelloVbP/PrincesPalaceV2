@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -50,6 +51,12 @@ namespace PrincesPalace
         private int _selectedRow = -1;
         private bool _wired;
 
+        // Pushed at the end of every Paint() (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // phase 3, AUDIT.md #158), popped on OnDisable -- the panel toggling
+        // off is the only way this screen closes, mouse or Cancel alike (see
+        // Close() below).
+        private NavContext _navContext;
+
         // ALL SIX CATEGORIES, built once per open. Switching category is then
         // pure indexing rather than six content sweeps and two full
         // achievement-fact gathers per click.
@@ -89,8 +96,14 @@ namespace PrincesPalace
 
             prevPageButton.onClick.AddListener(() => StepPage(-1));
             nextPageButton.onClick.AddListener(() => StepPage(1));
-            closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+            closeButton.onClick.AddListener(Close);
         }
+
+        // ONE implementation, shared by the Close button's own click and
+        // this context's Cancel handler -- a lambda duplicated on both would
+        // be the two-copies-of-one-rule docs/CODE_STANDARDS.md section 10
+        // forbids the moment either one changed.
+        private void Close() => gameObject.SetActive(false);
 
         private void SelectCategory(int index)
         {
@@ -186,6 +199,86 @@ namespace PrincesPalace
             }
 
             PaintDetail(page);
+            RefreshNavigation();
+        }
+
+        // TWO LISTS SIDE BY SIDE, not one -- the category rail is vertical
+        // (RailX/RailTop/RailPitch, GlossaryScreen's own layout) and so is
+        // the row list, so both are UiNavGroupKind.List rather than one of
+        // them being mis-declared a Rail because AUDIT.md's prose calls it
+        // "the rail". Rebuilt every Paint() because which ROWS are present
+        // changes with the page and the category; the category list itself
+        // never does (GlossaryCatalog.Categories is fixed), so it is passed
+        // in full every time rather than filtered.
+        //
+        // The pager buttons are never hidden (GlossaryController never
+        // calls SetActive on either -- StepPage's own ClampPage just
+        // no-ops past either end), so they need no per-repaint filtering
+        // either, unlike the rows they sit under.
+        private void RefreshNavigation()
+        {
+            var activeRows = rows?.Where(r => r != null && r.gameObject.activeSelf).ToList()
+                              ?? new List<Button>();
+
+            var links = new List<UiNavLink<Selectable>?>
+            {
+                RuntimeNavWiring.Link(SelectedCategoryButton(), UiNavDirection.Right,
+                    activeRows.Count > 0 ? activeRows[0] : null),
+                RuntimeNavWiring.Link(activeRows.Count > 0 ? activeRows[0] : null, UiNavDirection.Left,
+                    SelectedCategoryButton()),
+                RuntimeNavWiring.Link(activeRows.Count > 0 ? activeRows[activeRows.Count - 1] : null,
+                    UiNavDirection.Down, prevPageButton),
+                RuntimeNavWiring.Link(prevPageButton, UiNavDirection.Up,
+                    activeRows.Count > 0 ? activeRows[activeRows.Count - 1] : null),
+                RuntimeNavWiring.Link(prevPageButton, UiNavDirection.Down, closeButton),
+                RuntimeNavWiring.Link(nextPageButton, UiNavDirection.Down, closeButton),
+                RuntimeNavWiring.Link(closeButton, UiNavDirection.Up, prevPageButton),
+            };
+
+            RuntimeNavWiring.Apply(
+                new[]
+                {
+                    RuntimeNavWiring.Group("glossaryCategories", UiNavGroupKind.List, categoryButtons),
+                    RuntimeNavWiring.Group("glossaryRows", UiNavGroupKind.List, activeRows, wrap: UiNavWrap.Clamp),
+                    RuntimeNavWiring.Group("glossaryPager", UiNavGroupKind.Rail,
+                        new[] { prevPageButton, nextPageButton }),
+                },
+                links);
+
+            var selectables = new Dictionary<string, object>();
+            foreach (var button in categoryButtons ?? System.Array.Empty<Button>())
+            {
+                if (button != null) selectables[button.name] = button.gameObject;
+            }
+            foreach (var row in activeRows) selectables[row.name] = row.gameObject;
+            if (prevPageButton != null) selectables[prevPageButton.name] = prevPageButton.gameObject;
+            if (nextPageButton != null) selectables[nextPageButton.name] = nextPageButton.gameObject;
+            if (closeButton != null) selectables[closeButton.name] = closeButton.gameObject;
+
+            object entry = SelectedCategoryButton() != null ? SelectedCategoryButton().gameObject
+                : closeButton != null ? closeButton.gameObject : (object)null;
+
+            if (_navContext != null)
+            {
+                _navContext.Reconfigure(entry, selectables);
+                return;
+            }
+
+            _navContext = new NavContext(entry, selectables, cancel: Close);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        private Button SelectedCategoryButton() =>
+            categoryButtons != null && _category >= 0 && _category < categoryButtons.Length
+                ? categoryButtons[_category]
+                : null;
+
+        private void OnDisable()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         private void PaintDetail(IReadOnlyList<GlossaryEntry> page)

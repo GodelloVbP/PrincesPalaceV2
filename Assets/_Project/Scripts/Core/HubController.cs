@@ -341,38 +341,21 @@ namespace PrincesPalace
 
         // This IS the hub's NavContext.Cancel handler now (registered in
         // RegisterNavContext), called once a frame by the ONE dispatch point
-        // rather than raced against a second poll. It used to be split from
-        // its own key read only so it could be tested; that reason is now
-        // also the mechanism -- there is nothing left for a raw Escape read
-        // to do.
+        // rather than raced against a second poll.
         //
-        // Closing beats opening, same order the old two-poller race
-        // happened to settle on by luck: debug menu first, since it draws
-        // over everything including the character overlay, then the
-        // glossary. A relic draft in progress REFUSES to hand Escape to the
-        // system menu at all (matching the old escapeConsumers gate
-        // SystemMenuController used to check) -- there is nothing on the
-        // draft itself that Escape closes, so this press is simply spent.
-        // Otherwise, nothing else owns it: open the overarching menu, the
-        // job SystemMenuController's own now-deleted poll used to do.
+        // SIMPLIFIED (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3, AUDIT.md
+        // #158): the debug menu, the glossary and the relic draft each push
+        // their own NavContext now (RelicDraftController/GlossaryController/
+        // DebugMenuController), so while any of them is open it -- not the
+        // hub -- is top of stack, and this handler never runs at all; the
+        // dispatcher calls THEIR context's own Cancel instead (Close for the
+        // first two, a deliberate no-op for the draft -- see
+        // RelicDraftController.RefreshNavigation's own header). What is left
+        // here is exactly the one thing that was never one of those three
+        // branches: open the overarching menu, the job SystemMenuController's
+        // own now-deleted poll used to do.
         public void HandleEscape()
         {
-            if (debugMenuPanel != null && debugMenuPanel.activeSelf)
-            {
-                SetDebugMenu(false);
-                EscapeKey.Consume();
-                return;
-            }
-
-            if (glossaryPanel != null && glossaryPanel.activeSelf)
-            {
-                SetGlossary(false);
-                EscapeKey.Consume();
-                return;
-            }
-
-            if (relicDraft != null && relicDraft.gameObject.activeSelf) return;
-
             SystemMenuController.OpenOnCancel(systemMenu);
         }
 

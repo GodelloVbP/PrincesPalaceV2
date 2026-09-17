@@ -59,19 +59,29 @@ namespace PrincesPalace.PlayModeTests
 
         // CANCEL, WITH SOMETHING ELSE ALREADY UP.
         //
-        // ADAPTED for gamepad-navigation phase 2, step B (docs/
-        // GAMEPAD_NAVIGATION_PLAN.md): there is no longer a second poller to
-        // race against. HubController.HandleEscape is now the hub's own
-        // NavContext.Cancel handler, called once by the ONE dispatch point
-        // (NavigationInputModule), and it decides itself, serially, whether
-        // to close the glossary or open the menu -- SystemMenuController no
-        // longer has an escape-owning poll of its own at all, so the
-        // "driven in both orders" shape this test used to need to catch a
-        // race is no longer a real scenario. SystemMenuGamepadNavigationTests
-        // covers the dispatcher-driven version of both halves below,
-        // through a scripted Cancel press rather than a direct call.
+        // RE-ADAPTED for gamepad-navigation phase 3, item 1 (docs/
+        // GAMEPAD_NAVIGATION_PLAN.md, AUDIT.md #158): this used to be
+        // HubController.HandleEscape's own job -- a priority branch that
+        // checked the glossary/debug-menu/relic-draft panels itself and
+        // closed whichever was open before ever considering the system
+        // menu. That branch is gone now that GlossaryController (and
+        // DebugMenuController, and RelicDraftController) push their OWN
+        // NavContext on open: while the glossary is up it, not the hub, is
+        // top of the stack, so the real dispatcher calls the GLOSSARY's own
+        // Cancel handler (GlossaryController.Close) and never reaches
+        // HandleEscape at all -- GlossaryGamepadNavigationTests'
+        // Cancel_ClosesTheGlossary_AndTheGateIsReselected proves that
+        // through the real dispatcher, the only place this claim can still
+        // be tested honestly.
+        //
+        // What is left for THIS file to pin is narrower and still real:
+        // HandleEscape itself no longer knows the glossary exists, so
+        // calling it directly no longer closes a glossary a caller happened
+        // to switch on by hand -- it only ever opens the system menu, full
+        // stop. A regression that resurrected the old branch (or a new one
+        // like it) would fail this by closing the glossary here too.
         [UnityTest]
-        public IEnumerator CancelOverTheGlossaryClosesItInstead_AndDoesNotAlsoOpenTheMenu()
+        public IEnumerator HandleEscapeNoLongerKnowsAboutTheGlossary_ItOnlyEverOpensTheMenu()
         {
             yield return OpenTheHub();
 
@@ -83,9 +93,10 @@ namespace PrincesPalace.PlayModeTests
 
             hub.HandleEscape();
 
-            Assert.IsFalse(hub.GlossaryIsOpen, "the hub's own Cancel handler should have closed the glossary");
-            Assert.IsFalse(_menu.IsOpen,
-                "Cancel closed the glossary and opened the system menu on top of it in the same press");
+            Assert.IsTrue(hub.GlossaryIsOpen,
+                "HandleEscape should no longer special-case the glossary -- that panel closes through its " +
+                "own NavContext.Cancel now, never through the hub's handler directly");
+            Assert.IsTrue(_menu.IsOpen, "HandleEscape's only remaining job is opening the system menu");
 
             yield return null;
         }

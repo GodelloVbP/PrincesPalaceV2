@@ -73,6 +73,14 @@ namespace PrincesPalace
         private int _selected = -1;
         private bool _wired;
 
+        // Pushed the first time Paint() runs after Open() (docs/
+        // GAMEPAD_NAVIGATION_PLAN.md phase 3, AUDIT.md #158), reconfigured
+        // on every later Paint() so paging/a new round always matches what
+        // is actually on screen, and popped on OnDisable -- the draft's own
+        // Close() is what deactivates this GameObject, whichever of
+        // Commit()'s two exits got there.
+        private NavContext _navContext;
+
         // The run's seed, held so a later round can re-roll from it. The ROUND
         // is not held -- it is derived from run.relicIds.Count, so it survives
         // a reload; see Roll().
@@ -234,6 +242,68 @@ namespace PrincesPalace
                     cardHalos[i].color = soft;
                 }
             }
+
+            RefreshNavigation();
+        }
+
+        // THE CARDS AS A RAIL, WRAPPING -- entry on the first, Descend
+        // reached by an explicit Down/Up pair since it sits below the row
+        // rather than in it. Rebuilt on every Paint() rather than once in
+        // Open(), because which cards are PRESENT changes under this (a
+        // shorter last page, a later round with a smaller pool) and
+        // RuntimeNavWiring.Apply is authoritative -- a stale card left in
+        // the group would still answer a Move once it went inactive.
+        //
+        // Cancel is a DELIBERATE NO-OP, not wired to Close() -- this file's
+        // own header says why ("a draft you can navigate around is not a
+        // draft") and HubController.HandleEscape used to enforce the same
+        // rule by refusing to hand Escape to the system menu at all while a
+        // draft was up. There is no close affordance on the mouse path
+        // either, only Descend, so a Cancel press here is simply spent.
+        private void RefreshNavigation()
+        {
+            var active = cards?.Where(c => c != null && c.gameObject.activeSelf).ToList()
+                         ?? new List<Button>();
+
+            var links = new List<UiNavLink<Selectable>?>();
+            foreach (var card in active)
+            {
+                links.Add(RuntimeNavWiring.Link(card, UiNavDirection.Down, descendButton));
+            }
+            if (active.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(descendButton, UiNavDirection.Up, active[0]));
+            }
+
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("relicCards", UiNavGroupKind.Rail, active), links);
+
+            var selectables = new Dictionary<string, object>();
+            foreach (var card in active) selectables[card.name] = card.gameObject;
+            if (descendButton != null) selectables[descendButton.name] = descendButton.gameObject;
+
+            object entry = active.Count > 0 ? active[0].gameObject
+                : descendButton != null ? descendButton.gameObject : (object)null;
+
+            if (_navContext != null)
+            {
+                _navContext.Reconfigure(entry, selectables);
+                return;
+            }
+
+            _navContext = new NavContext(entry, selectables, cancel: null);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        // Close() is the one place this GameObject deactivates (both
+        // Commit() exits route through it), so this is the OnDisable/
+        // OnDestroy safety net plan section 4 calls for, same shape every
+        // other modal in this family uses.
+        private void OnDisable()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         private void Commit()

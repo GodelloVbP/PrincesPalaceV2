@@ -57,6 +57,11 @@ namespace PrincesPalace
         private bool _wired;
         private IReadOnlyList<DebugItem> _filtered = new List<DebugItem>();
 
+        // Pushed at the end of every Refresh() (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // phase 3, AUDIT.md #158), popped on OnDisable -- Close() below is
+        // the only way this screen shuts, mouse or Cancel alike.
+        private NavContext _navContext;
+
         private void Start()
         {
             Wire();
@@ -75,7 +80,7 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
-            closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+            closeButton.onClick.AddListener(Close);
 
             giveGoldButton.onClick.AddListener(() => Give(CurrencyType.Gold, GoldGrant));
             giveEmbersButton.onClick.AddListener(() => GiveEmbers(EmberGrant));
@@ -98,6 +103,10 @@ namespace PrincesPalace
         }
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
+
+        // ONE implementation, shared by the Close button's own click and
+        // this context's Cancel handler.
+        private void Close() => gameObject.SetActive(false);
 
         // ---- granting -------------------------------------------------------------
 
@@ -201,6 +210,86 @@ namespace PrincesPalace
 
                 rowLabels[i].Set(UiStrings.DebugRow, page[i].Tier, page[i].Name);
             }
+
+            RefreshNavigation();
+        }
+
+        // FOUR GROUPS, LINKED TOP TO BOTTOM by their real screen position
+        // (DebugMenuScreen's own Place.At y-coordinates: currency row at
+        // 348, filters at 276, the row list from 210 down, the pager
+        // beneath it) -- "the Debug menu's buttons as a List" names the
+        // main content, the row list, and the currency/filter/pager rows
+        // still need to be reachable, so they are chained in with explicit
+        // links the way Hub's utility corner and RelicDraft's Descend
+        // button are, rather than folded into one group that would have to
+        // pretend three different row shapes are the same group. Rebuilt
+        // every Refresh() because which ROWS are present changes with the
+        // filter and the page; the other three rows never do.
+        private void RefreshNavigation()
+        {
+            var activeRows = rowButtons?.Where(r => r != null && r.gameObject.activeSelf).ToList()
+                             ?? new List<Button>();
+
+            var currency = new[] { giveGoldButton, giveEmbersButton, giveOneEmberButton };
+            var firstFilter = filterButtons != null && filterButtons.Length > 0 ? filterButtons[0] : null;
+
+            var links = new List<UiNavLink<Selectable>?>
+            {
+                RuntimeNavWiring.Link(giveGoldButton, UiNavDirection.Down, firstFilter),
+                RuntimeNavWiring.Link(firstFilter, UiNavDirection.Up, giveGoldButton),
+                RuntimeNavWiring.Link(firstFilter, UiNavDirection.Down,
+                    activeRows.Count > 0 ? activeRows[0] : null),
+                RuntimeNavWiring.Link(activeRows.Count > 0 ? activeRows[0] : null, UiNavDirection.Up, firstFilter),
+                RuntimeNavWiring.Link(activeRows.Count > 0 ? activeRows[activeRows.Count - 1] : null,
+                    UiNavDirection.Down, prevPageButton),
+                RuntimeNavWiring.Link(prevPageButton, UiNavDirection.Up,
+                    activeRows.Count > 0 ? activeRows[activeRows.Count - 1] : null),
+                RuntimeNavWiring.Link(prevPageButton, UiNavDirection.Down, closeButton),
+                RuntimeNavWiring.Link(nextPageButton, UiNavDirection.Down, closeButton),
+                RuntimeNavWiring.Link(closeButton, UiNavDirection.Up, prevPageButton),
+            };
+
+            RuntimeNavWiring.Apply(
+                new[]
+                {
+                    RuntimeNavWiring.Group("debugCurrency", UiNavGroupKind.Rail, currency),
+                    RuntimeNavWiring.Group("debugFilters", UiNavGroupKind.Rail, filterButtons),
+                    RuntimeNavWiring.Group("debugRows", UiNavGroupKind.List, activeRows, wrap: UiNavWrap.Clamp),
+                    RuntimeNavWiring.Group("debugPager", UiNavGroupKind.Rail,
+                        new[] { prevPageButton, nextPageButton }),
+                },
+                links);
+
+            var selectables = new Dictionary<string, object>();
+            foreach (var button in currency) if (button != null) selectables[button.name] = button.gameObject;
+            foreach (var button in filterButtons ?? System.Array.Empty<Button>())
+            {
+                if (button != null) selectables[button.name] = button.gameObject;
+            }
+            foreach (var row in activeRows) selectables[row.name] = row.gameObject;
+            if (prevPageButton != null) selectables[prevPageButton.name] = prevPageButton.gameObject;
+            if (nextPageButton != null) selectables[nextPageButton.name] = nextPageButton.gameObject;
+            if (closeButton != null) selectables[closeButton.name] = closeButton.gameObject;
+
+            object entry = giveGoldButton != null ? giveGoldButton.gameObject
+                : closeButton != null ? closeButton.gameObject : (object)null;
+
+            if (_navContext != null)
+            {
+                _navContext.Reconfigure(entry, selectables);
+                return;
+            }
+
+            _navContext = new NavContext(entry, selectables, cancel: Close);
+            NavigationInputModule.Contexts?.Push(_navContext);
+        }
+
+        private void OnDisable()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
         }
 
         // Read fresh each Refresh rather than cached at Start.
