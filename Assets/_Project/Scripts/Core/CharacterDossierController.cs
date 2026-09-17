@@ -20,7 +20,7 @@ namespace PrincesPalace
     // uses, never from a second computation -- a sheet that recomputed its own
     // figures would eventually disagree with the battle, and the player would be
     // right either way.
-    public class CharacterDossierController : MonoBehaviour
+    public class CharacterDossierController : MonoBehaviour, INavPaneEntry
     {
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text subLine;
@@ -214,11 +214,24 @@ namespace PrincesPalace
         // carries.
         private bool _canHoldSpellBooks = true;
 
+        // WHO OWNS THE ONE TOOLTIP BOX -- the pointer or the selection
+        // (Core/TooltipFocusRouter, docs/GAMEPAD_NAVIGATION_PLAN.md section
+        // 7). The three hover handlers below stay the ONE show/hide
+        // implementation per surface; this decides which of them a given
+        // pointer or focus event is allowed to reach.
+        private readonly TooltipFocusRouter _tooltips = new TooltipFocusRouter();
+
         private void OnEnable()
         {
             Wire();
             Refresh();
+
+            // The stack is replaced on every scene load, so the subscription
+            // is per-enable rather than per-Wire (which runs once).
+            _tooltips.Attach(NavigationInputModule.Contexts);
         }
+
+        private void OnDisable() => _tooltips.Detach();
 
         private void Wire()
         {
@@ -259,20 +272,10 @@ namespace PrincesPalace
 
             // The attribute link, driven from hover AND from the button itself,
             // so a controller player reaches it too -- the handover asks for
-            // that explicitly and it is one line here.
-            if (attributeCells != null)
-            {
-                for (int i = 0; i < attributeCells.Length; i++)
-                {
-                    if (attributeCells[i] == null) continue;
-
-                    int cell = i;
-                    var hover = attributeCells[i].gameObject.AddComponent<HoverIndex>();
-                    hover.Index = cell;
-                    hover.Changed = OnAttributeHover;
-                }
-            }
-
+            // that explicitly and it is one line here. (It was a hand-rolled
+            // copy of AttachHovers' own loop until the selection path needed
+            // registering on all three surfaces; there is one loop now.)
+            AttachHovers(attributeCells, OnAttributeHover);
             AttachHovers(slotCells, OnSlotHover);
             AttachHovers(packCells, OnPackHover);
 
@@ -356,7 +359,15 @@ namespace PrincesPalace
             }
         }
 
-        private static void AttachHovers(Button[] buttons, System.Action<int, bool> changed)
+        // THE POINTER IS ONE CALLER OF `changed`, NOT `changed` ITSELF -- the
+        // whole of job 1's shape on this screen. A HoverIndex (the mouse) and
+        // a SelectIndex (the module, added by Register) both report into
+        // TooltipFocusRouter, which decides which of them may call the
+        // handler: focus outranks hover, and a pointer leaving a node the
+        // stick is standing on changes nothing. Three surfaces, one
+        // arbitration, and each handler below is still the only place that
+        // screen's tooltip is built.
+        private void AttachHovers(Button[] buttons, System.Action<int, bool> changed)
         {
             if (buttons == null) return;
 
@@ -365,16 +376,309 @@ namespace PrincesPalace
                 if (buttons[i] == null) continue;
 
                 int index = i;
-                var hover = buttons[i].gameObject.AddComponent<HoverIndex>();
+                var node = buttons[i].gameObject;
+                _tooltips.Register(buttons[i], entered => changed(index, entered));
+
+                var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Index = index;
-                hover.Changed = changed;
+                hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
             }
         }
+
+        // ---- navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3b, item 1) -------
+        //
+        // FOUR GROUPS AND THE LINKS BETWEEN THEM, rewired at runtime like
+        // every other surface in this phase (RuntimeNavWiring's own header
+        // has the argument): which pack cells hold anything is a function of
+        // the bag and the scroll offset, and whether the pack is open decides
+        // what column A even is.
+        //
+        // TWO STATES, not one declaration with holes -- the same shape Shop
+        // reconfigures between its shelf and its pack modal, and for the same
+        // reason: DossierPackPanel is an opaque Image over the whole of
+        // column A, so while it is up the mouse cannot reach the nav rows
+        // underneath it and neither should a Move. The rows keep whatever
+        // links they last had, which is harmless because nothing links INTO
+        // them in the open state.
+
+        // THE PANE'S ENTRY (INavPaneEntry): the first equipment slot. The
+        // generic answer SystemMenuController would otherwise use is the
+        // first Selectable in tree order, which here is the roster pager
+        // beside the name -- a paging arrow, not what the pane is about.
+        public Selectable NavEntry => Cell(slotCells, 0);
+
+        // THE TWO ALIGNED FILES THE PAPERDOLL IS DRAWN IN, top to bottom,
+        // read off DossierLayout.SlotGeometry's own table rather than
+        // restated as a second opinion about where a slot sits: Head is
+        // centred above the figure and everything below it alternates left
+        // file / right file down the body. This is the order a Move steps in,
+        // so it has to be the drawn order and not EquipmentSlots.All's
+        // declaration order (which interleaves the two files).
+        private static readonly EquipmentSlot[] LeftFile =
+        {
+            EquipmentSlot.Head, EquipmentSlot.Necklace, EquipmentSlot.Torso,
+            EquipmentSlot.Gloves, EquipmentSlot.Legs,
+        };
+
+        private static readonly EquipmentSlot[] RightFile =
+        {
+            EquipmentSlot.Weapon1, EquipmentSlot.Weapon2, EquipmentSlot.Shoes,
+        };
+
+        private void RefreshNavigation()
+        {
+            var leftFile = FileCells(LeftFile);
+            var rightFile = FileCells(RightFile);
+            var scores = Present(attributeCells);
+
+            var groups = new List<UiNavGroup<Selectable>>
+            {
+                RuntimeNavWiring.Group("dossierSlotsLeft", UiNavGroupKind.List, leftFile),
+                RuntimeNavWiring.Group("dossierSlotsRight", UiNavGroupKind.List, rightFile),
+
+                // CLAMPED, against the owner's wrap-a-Grid-row default (plan
+                // section 12.3), and the same reason applies to the pack grid
+                // below: this group hands off SIDEWAYS to its neighbour
+                // (Left out of column 0 reaches the loadout), and a row that
+                // also wraps would have to answer Left twice. A group that is
+                // the last one on its axis wraps; one with somewhere to go
+                // does not.
+                RuntimeNavWiring.Group("dossierScores", UiNavGroupKind.Grid, scores,
+                    gridRowLength: ScoreColumns, wrap: UiNavWrap.Clamp),
+            };
+
+            var links = new List<UiNavLink<Selectable>?>();
+
+            // The loadout's two files, paired by body row: Torso beside
+            // Weapon 1, Gloves beside Weapon 2, Legs beside Shoes -- and the
+            // two slots above the right file's first entry (Head, Necklace)
+            // clamp onto it rather than dead-ending.
+            PairFilesByBodyRow(links);
+
+            // And the right file out to the scores' own left column.
+            PairAcross(links, rightFile, ColumnOf(scores, 0), UiNavDirection.Right, UiNavDirection.Left);
+
+            if (IsPackShown) DeclarePack(groups, links, leftFile);
+            else DeclareColumnARows(groups, links, leftFile);
+
+            RuntimeNavWiring.Apply(groups, links);
+        }
+
+        // Column A as the player meets it with the pack closed: the roster
+        // pager (a Rail of two, hidden entirely for a one-character squad)
+        // over the three live nav rows. The Skills row is deliberately NOT
+        // here -- it carries no onClick at all (there is no skillsRow field
+        // for the binder to fill), so a Move that landed on it would be a
+        // Submit that does nothing.
+        private void DeclareColumnARows(List<UiNavGroup<Selectable>> groups,
+            List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
+        {
+            var pager = Present(new[] { prevCharacterButton, nextCharacterButton });
+            var rows = Present(new[] { spellsRow, trackRow, packRow });
+
+            groups.Add(RuntimeNavWiring.Group("dossierRoster", UiNavGroupKind.Rail, pager));
+            groups.Add(RuntimeNavWiring.Group("dossierRows", UiNavGroupKind.List, rows));
+
+            // The pager sits at the top of the column and the rows at its
+            // foot, with the portrait between them; Down/Up bridges the gap.
+            foreach (var arrow in pager) links.Add(RuntimeNavWiring.Link(arrow, UiNavDirection.Down, First(rows)));
+            links.Add(RuntimeNavWiring.Link(First(rows), UiNavDirection.Up, First(pager)));
+
+            // Out to the loadout. The pager's own representative in the
+            // handoff is its RIGHT arrow, which is the control physically
+            // nearest column B.
+            var spine = new List<Selectable>();
+            if (pager.Count > 0) spine.Add(pager[pager.Count - 1]);
+            spine.AddRange(rows);
+
+            PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
+        // Column A while the pack covers it: the three sort tabs as a Rail
+        // under the panel's own Close button, over a 2-wide grid of whatever
+        // cells currently hold an item.
+        //
+        // CLOSE IS IN THE GRAPH, and it has to be: this pane does not claim
+        // Cancel (that is SystemMenuController's, and it closes the whole
+        // menu), so the panel's own button is the only way back out of the
+        // pack -- exactly as it is for the mouse.
+        private void DeclarePack(List<UiNavGroup<Selectable>> groups,
+            List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
+        {
+            var tabs = Present(packSortTabs);
+            var cells = BoundPackCells();
+
+            groups.Add(RuntimeNavWiring.Group("dossierPackTabs", UiNavGroupKind.Rail, tabs));
+            groups.Add(RuntimeNavWiring.Group("dossierPack", UiNavGroupKind.Grid, cells,
+                gridRowLength: PackColumns, wrap: UiNavWrap.Clamp));
+
+            var close = (Selectable)packCloseButton;
+
+            foreach (var tab in tabs) links.Add(RuntimeNavWiring.Link(tab, UiNavDirection.Up, close));
+            links.Add(RuntimeNavWiring.Link(close, UiNavDirection.Down, First(tabs)));
+
+            // The tabs onto the first row of cells, paired by column.
+            PairAcross(links, tabs, Row(cells, 0), UiNavDirection.Down, UiNavDirection.Up);
+
+            // And out to the loadout, off the rightmost cell of each row --
+            // with Close standing at the top of the column the way the
+            // pager's right arrow does when the pack is shut.
+            var spine = new List<Selectable>();
+            if (close != null) spine.Add(close);
+            for (int row = 0; row * PackColumns < cells.Count; row++)
+            {
+                var members = Row(cells, row);
+                if (members.Count > 0) spine.Add(members[members.Count - 1]);
+            }
+
+            PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
+        private const int PackColumns = 2;
+        private const int ScoreColumns = 3;
+
+        // NOT BY POSITION IN THE TWO LISTS -- that was the first version of
+        // this and it was wrong in a way only the test caught: the left file
+        // has two slots above the right file's first entry, so index 2
+        // (Torso) paired with index 2 (Shoes), three body rows down. The
+        // files are paired by the slot's own DRAWN ROW instead, off
+        // DossierLayout.SlotTop -- the same table SlotAt and LeaderAt read,
+        // so a slot that moves takes its neighbour with it rather than
+        // leaving a stale pairing behind. Nearest row rather than equal:
+        // Head and Necklace have no opposite number and clamp onto the
+        // topmost one that does.
+        private void PairFilesByBodyRow(List<UiNavLink<Selectable>?> links)
+        {
+            foreach (var slot in LeftFile)
+            {
+                links.Add(RuntimeNavWiring.Link(SlotCell(slot), UiNavDirection.Right,
+                    SlotCell(NearestRow(RightFile, slot))));
+            }
+
+            foreach (var slot in RightFile)
+            {
+                links.Add(RuntimeNavWiring.Link(SlotCell(slot), UiNavDirection.Left,
+                    SlotCell(NearestRow(LeftFile, slot))));
+            }
+        }
+
+        private static EquipmentSlot NearestRow(EquipmentSlot[] file, EquipmentSlot to)
+        {
+            var best = file[0];
+            float bestGap = Mathf.Abs(DossierLayout.SlotTop(best) - DossierLayout.SlotTop(to));
+
+            for (int i = 1; i < file.Length; i++)
+            {
+                float gap = Mathf.Abs(DossierLayout.SlotTop(file[i]) - DossierLayout.SlotTop(to));
+                if (gap >= bestGap) continue;
+
+                best = file[i];
+                bestGap = gap;
+            }
+
+            return best;
+        }
+
+        private Selectable SlotCell(EquipmentSlot slot) =>
+            Cell(slotCells, System.Array.IndexOf(EquipmentSlots.All, slot));
+
+        // PAIRED BY POSITION IN THE TWO LISTS, clamped where one is shorter
+        // -- PartyController.CrossLinks' own Mathf.Min(column, cards - 1)
+        // rule, turned sideways. Reversible everywhere except at the clamp,
+        // which is where two columns of different lengths cannot be: a Right
+        // off the fifth slot into a three-entry column and back again lands
+        // on the third, and there is no honest alternative to that.
+        private static void PairAcross(List<UiNavLink<Selectable>?> links,
+            IReadOnlyList<Selectable> from, IReadOnlyList<Selectable> to,
+            UiNavDirection toward, UiNavDirection back)
+        {
+            if (from == null || to == null || from.Count == 0 || to.Count == 0) return;
+
+            for (int i = 0; i < from.Count; i++)
+            {
+                links.Add(RuntimeNavWiring.Link(from[i], toward, to[System.Math.Min(i, to.Count - 1)]));
+            }
+
+            for (int j = 0; j < to.Count; j++)
+            {
+                links.Add(RuntimeNavWiring.Link(to[j], back, from[System.Math.Min(j, from.Count - 1)]));
+            }
+        }
+
+        // The cells the window has actually bound to an item, which is what a
+        // Move may land on. An empty cell stays active and clickable (the
+        // mouse has always been free to click one, and EquipFromPack refuses
+        // it), but a stick walking into a blank square with nothing to show
+        // reads as the navigation being broken rather than as the pack being
+        // short.
+        private List<Selectable> BoundPackCells()
+        {
+            var cells = new List<Selectable>();
+            if (packCells == null) return cells;
+
+            int bound = _bag.Count - _scroll;
+            for (int i = 0; i < packCells.Length && i < bound; i++)
+            {
+                if (packCells[i] != null) cells.Add(packCells[i]);
+            }
+
+            return cells;
+        }
+
+        private static List<Selectable> Row(List<Selectable> cells, int row)
+        {
+            var members = new List<Selectable>();
+            for (int i = row * PackColumns; i < cells.Count && i < (row + 1) * PackColumns; i++)
+            {
+                members.Add(cells[i]);
+            }
+
+            return members;
+        }
+
+        private static List<Selectable> ColumnOf(List<Selectable> grid, int column)
+        {
+            var members = new List<Selectable>();
+            for (int i = column; i < grid.Count; i += ScoreColumns) members.Add(grid[i]);
+            return members;
+        }
+
+        private List<Selectable> FileCells(EquipmentSlot[] file)
+        {
+            var cells = new List<Selectable>();
+            foreach (var slot in file)
+            {
+                var cell = SlotCell(slot);
+                if (cell != null) cells.Add(cell);
+            }
+
+            return cells;
+        }
+
+        // Everything present AND active in a fixed-length authored array --
+        // the pager is deactivated for a one-character squad, and a fixture
+        // scene can leave any of these unbound.
+        private static List<Selectable> Present(Button[] buttons)
+        {
+            var present = new List<Selectable>();
+            for (int i = 0; buttons != null && i < buttons.Length; i++)
+            {
+                if (buttons[i] != null && buttons[i].gameObject.activeSelf) present.Add(buttons[i]);
+            }
+
+            return present;
+        }
+
+        private static Selectable First(List<Selectable> members) => members.Count > 0 ? members[0] : null;
+
+        private static Selectable Cell(Button[] cells, int index) =>
+            cells != null && index >= 0 && index < cells.Length ? cells[index] : null;
 
         public void ShowPack(bool open)
         {
             packPanel.SetShown(open);
             if (packChevron != null) packChevron.SetContent(open ? "<" : ">");
+            RefreshNavigation();
         }
 
         // Read by SheetPanel so I/C can tell "already showing what was asked
@@ -883,6 +1187,14 @@ namespace PrincesPalace
 
             RefreshSortMarkers();
             RefreshScrollThumb();
+
+            // WHICH CELLS A MOVE MAY LAND ON changed with the window, so the
+            // links do too. Here rather than in Refresh() because this is the
+            // one method every path that moves the window goes through --
+            // Refresh, a sort, a wheel, a drag of the thumb -- and the roster
+            // pager's own visibility (the other thing the declaration reads)
+            // is settled before Refresh ever reaches RefreshPack.
+            RefreshNavigation();
         }
 
         private void RefreshSortMarkers()
@@ -1713,7 +2025,7 @@ namespace PrincesPalace
 
             const float Margin = 8f;
             var at = TooltipPlacement.Beside(
-                local.x, local.y, near.rect.width,
+                local.x, local.y, near.rect.width, near.rect.height,
                 self.sizeDelta.x, self.sizeDelta.y,
                 interiorLeft: -DossierLayout.HalfWidth + Margin,
                 interiorRight: DossierLayout.HalfWidth - Margin,

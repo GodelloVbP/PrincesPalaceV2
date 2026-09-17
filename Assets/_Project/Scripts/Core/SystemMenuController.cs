@@ -164,6 +164,21 @@ namespace PrincesPalace
             Wire();
             ApplyContext();
             panel.SetShown(true);
+
+            // AGAIN, NOW THE PANEL IS ACTUALLY ACTIVE. ApplyContext's own
+            // RefreshNavLinks call ran one line above this, while `panel` was
+            // still hidden -- and ActivePaneEntry resolves through
+            // GetComponentInChildren, which sees nothing under an inactive
+            // hierarchy. So the selected tab's Down-into-its-pane link was
+            // silently null on every first open, and only appeared once the
+            // player clicked a different tab (Select's own RefreshNavLinks,
+            // which does run with the panel up). The rail itself was never
+            // affected -- tabButtons are passed in by reference, not found by
+            // a component walk -- which is why this went unnoticed until a
+            // pane declared an entry worth reaching. Apply is authoritative,
+            // so a second call costs one rewrite and cannot conflict.
+            RefreshNavLinks();
+
             Pause();
             PushNavContext();
         }
@@ -320,12 +335,23 @@ namespace PrincesPalace
         private Selectable SelectedTabButton() =>
             tabButtons != null && _selected >= 0 && _selected < tabButtons.Length ? tabButtons[_selected] : null;
 
+        // THE PANE'S OWN ANSWER FIRST (INavPaneEntry), then the generic one.
+        // The generic one -- first active Selectable in hierarchy order -- is
+        // the tree's order rather than the screen's subject, which is right
+        // for a pane this phase has not reached (it still gets reached) and
+        // wrong for one that knows what it is about: the dossier's first
+        // Selectable is the roster pager, not the loadout. See
+        // INavPaneEntry's own header.
         private Selectable ActivePaneEntry()
         {
             var activePane = ActivePane();
-            return activePane == null
-                ? null
-                : activePane.GetComponentsInChildren<Selectable>(includeInactive: false).FirstOrDefault();
+            if (activePane == null) return null;
+
+            var declared = activePane.GetComponentInChildren<INavPaneEntry>();
+            var entry = declared?.NavEntry;
+            if (entry != null) return entry;
+
+            return activePane.GetComponentsInChildren<Selectable>(includeInactive: false).FirstOrDefault();
         }
 
         private GameObject ActivePane()

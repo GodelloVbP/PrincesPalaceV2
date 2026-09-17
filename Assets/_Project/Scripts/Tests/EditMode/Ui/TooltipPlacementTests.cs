@@ -21,11 +21,18 @@ namespace PrincesPalace.Domain.Tests
         private const float Bottom = -300f;
         private const float Top = 300f;
 
+        // anchorHeight defaults to 100, matching the square-ish anchor the
+        // original cases were written against -- it is read only by the
+        // never-overlap fallback (a box placed under or over its anchor has
+        // to know how tall the anchor is), so the cases that resolve beside
+        // the anchor are unaffected by it.
         private static UiVec Place(float anchorX, float anchorY, float anchorWidth,
                                    float w = 200f, float h = 200f,
                                    float left = Left, float right = Right,
-                                   float bottom = Bottom, float top = Top) =>
-            TooltipPlacement.Beside(anchorX, anchorY, anchorWidth, w, h, left, right, bottom, top);
+                                   float bottom = Bottom, float top = Top,
+                                   float anchorHeight = 100f) =>
+            TooltipPlacement.Beside(anchorX, anchorY, anchorWidth, anchorHeight,
+                w, h, left, right, bottom, top);
 
         [Test]
         public void WithRoomOnTheRight_ItOpensToTheRight()
@@ -62,6 +69,76 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(at.X + 200f, 300f, "right edge inside");
         }
 
+        // ---- and it never lands on its subject (gamepad phase 3b, job 1) -----
+        //
+        // The three cases above pin "beside", "flipped" and "inside". This
+        // group pins the rule added for the focus-driven path, where the
+        // player has no cursor to move off a box that covers the thing it
+        // describes: no side has room, so it goes UNDER the anchor rather
+        // than being clamped on top of it.
+
+        [Test]
+        public void WithRoomOnNeitherSide_ItGoesUnderTheAnchorRatherThanOverIt()
+        {
+            // Same geometry as the case above: a 400-wide box beside a
+            // 700-wide anchor needs 0 +/- 564, and the walls are at +/-300.
+            // Under it is anchorY - (14 + 50 + 100) = -164, whose bottom edge
+            // (-264) still clears the floor at -300.
+            var at = Place(anchorX: 0f, anchorY: 0f, anchorWidth: 700f, anchorHeight: 100f,
+                           w: 400f, left: -300f, right: 300f);
+
+            Assert.AreEqual(0f, at.X, 0.01f, "centred on the anchor, since neither side has room");
+            Assert.AreEqual(-164f, at.Y, 0.01f, "under the anchor: -(14 gap + 50 half-anchor + 100 half-tooltip)");
+            Assert.LessOrEqual(at.Y + 100f, -50f, "and its top edge is below the anchor's bottom edge");
+        }
+
+        [Test]
+        public void WithNoRoomBelowEither_ItGoesOverTheAnchor()
+        {
+            // The floor is raised to -160, so the under-the-anchor answer
+            // (-164, bottom edge -264) no longer fits and over it must be
+            // taken: +164, top edge 264, against a ceiling at 300.
+            var at = Place(anchorX: 0f, anchorY: 0f, anchorWidth: 700f, anchorHeight: 100f,
+                           w: 400f, h: 200f, left: -300f, right: 300f, bottom: -160f, top: 300f);
+
+            Assert.AreEqual(164f, at.Y, 0.01f);
+            Assert.GreaterOrEqual(at.Y - 100f, 50f, "its bottom edge is above the anchor's top edge");
+        }
+
+        // The whole rule in one assertion, over a grid of anchor positions
+        // rather than one sample: for every cell of a 3x2 block in a box only
+        // just big enough to hold the tooltip beside it, the box clears the
+        // cell it belongs to on one axis or the other.
+        [Test]
+        public void AcrossAWholeBlockOfAnchors_TheBoxAlwaysClearsItsOwnAnchor()
+        {
+            const float AnchorW = 130f;
+            const float AnchorH = 86f;
+            const float TipW = 300f;
+            const float TipH = 480f;
+            const float L = -792f, R = 792f, B = -394f, T = 394f;
+
+            for (int column = 0; column < 3; column++)
+            {
+                for (int row = 0; row < 2; row++)
+                {
+                    float ax = 426f + column * 133f;
+                    float ay = 300f - row * AnchorH;
+
+                    var at = TooltipPlacement.Beside(ax, ay, AnchorW, AnchorH,
+                        TipW, TipH, L, R, B, T);
+
+                    bool clearsX = System.Math.Abs(at.X - ax) >= (AnchorW + TipW) * 0.5f;
+                    bool clearsY = System.Math.Abs(at.Y - ay) >= (AnchorH + TipH) * 0.5f;
+
+                    Assert.IsTrue(clearsX || clearsY,
+                        $"the box at column {column}, row {row} overlaps the anchor it describes");
+                    Assert.GreaterOrEqual(at.X - TipW * 0.5f, L, "left edge inside");
+                    Assert.LessOrEqual(at.X + TipW * 0.5f, R, "right edge inside");
+                }
+            }
+        }
+
         [Test]
         public void NearTheTop_ItSlidesDownRatherThanLeavingThePanel()
         {
@@ -93,6 +170,15 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- against the Reckoning's real geometry ---------------------------
 
+        // ReckoningScreen.CardHeight is private to the screen that draws it,
+        // and a copy of it would be a second opinion about a number this file
+        // has no business owning. It is read only by the under/over fallback,
+        // which neither case below reaches -- both assert the tooltip lands
+        // BESIDE its card, which is the whole point of them -- so a stand-in
+        // is honest here in a way a pinned copy would not be.
+        private const float OfferCardHeight = 300f;
+
+
         // The screen this was written for, at the row every player below level
         // 50 actually sees. All three cards have to land somewhere legal, and
         // the outer two are the ones the old "a lot of arithmetic for no gain"
@@ -107,7 +193,7 @@ namespace PrincesPalace.Domain.Tests
             for (int i = 0; i < 3; i++)
             {
                 var at = TooltipPlacement.Beside(
-                    OfferRowLayout.CardX(i, 3), 0f, OfferRowLayout.CardWidth(3),
+                    OfferRowLayout.CardX(i, 3), 0f, OfferRowLayout.CardWidth(3), OfferCardHeight,
                     ReckoningScreen.TooltipWidth, ReckoningScreen.TooltipHeight,
                     -ReckoningScreen.ContentHalfWidth + Margin,
                     ReckoningScreen.ContentHalfWidth - Margin,
@@ -138,7 +224,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 float cardX = OfferRowLayout.CardX(i, 3);
                 var at = TooltipPlacement.Beside(
-                    cardX, 0f, OfferRowLayout.CardWidth(3),
+                    cardX, 0f, OfferRowLayout.CardWidth(3), OfferCardHeight,
                     ReckoningScreen.TooltipWidth, ReckoningScreen.TooltipHeight,
                     -ReckoningScreen.ContentHalfWidth + Margin,
                     ReckoningScreen.ContentHalfWidth - Margin,

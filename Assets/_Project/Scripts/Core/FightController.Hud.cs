@@ -2102,8 +2102,14 @@ namespace PrincesPalace
 
             const float Margin = 8f;
             var interior = parent.rect;
+
+            // The WIDTH above is the whole badge row's span (so the box
+            // clears every badge, not just the hovered one); the height is
+            // the one badge's, which is the row's too -- they are a single
+            // line of equal-height chips. Only the never-overlap fallback
+            // reads it (TooltipPlacement.Beside's own header).
             var at = TooltipPlacement.Beside(
-                anchorXInParent, anchorLocal.y, anchorWidth,
+                anchorXInParent, anchorLocal.y, anchorWidth, anchor.rect.height,
                 tooltipRect.rect.width, tooltipRect.rect.height,
                 interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
                 interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);

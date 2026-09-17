@@ -324,7 +324,7 @@ namespace PrincesPalace
             // prevent.
             const float Margin = 8f;
             var at = TooltipPlacement.Beside(
-                card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x,
+                card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x, card.sizeDelta.y,
                 ReckoningScreen.TooltipWidth, self.sizeDelta.y,
                 interiorLeft: -ReckoningScreen.ContentHalfWidth + Margin,
                 interiorRight: ReckoningScreen.ContentHalfWidth - Margin,
