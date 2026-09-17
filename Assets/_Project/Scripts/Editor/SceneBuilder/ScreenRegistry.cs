@@ -420,6 +420,12 @@ public static class ScreenRegistry
                 // every column of it is still written out below.
                 var slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
                 UiAutoBind.Bind(result, slots, screen);
+                // Cross-controller: MainMenuController owns the one NavContext
+                // this scene shares between its own buttons and the slot list
+                // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3a) -- not auto-bound,
+                // since SaveSlotController is not one of UiAutoBind's five
+                // typed lookups.
+                menu.saveSlotController = slots;
                 slots.slotNumbers = screen.ChooseCards.Select(c => result.Tmp(c.Number)).ToArray();
                 slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
                 slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();

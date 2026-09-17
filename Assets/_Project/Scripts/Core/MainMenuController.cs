@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,14 +35,34 @@ namespace PrincesPalace
         // be positioned on its own to avoid leaving a gap-shaped hole.
         [SerializeField] internal Button continueButton;
 
+        // Cross-controller: the two controllers this screen splits between
+        // (Play/Exit/Continue here, the slot list itself on SaveSlotController)
+        // share ONE NavContext, owned here (docs/GAMEPAD_NAVIGATION_PLAN.md
+        // phase 3a, screen 2). Assigned by ScreenRegistry's MainMenu Wire step,
+        // not auto-bound: SaveSlotController is not one of the five types
+        // UiAutoBind has a typed lookup for.
+        [SerializeField] internal SaveSlotController saveSlotController;
+
         // -1 means nothing to continue into. Set by RefreshContinue, read by
         // the button's own click handler so the two can never disagree about
         // which slot "Continue" means.
         private int _continueSlot = -1;
 
+        // Pushed once in Start(), never popped while this scene is loaded --
+        // the main menu is a whole scene, not a modal, the same shape Hub's
+        // own base context uses. RECONFIGURED (never re-pushed) every time
+        // the save-slot panel opens or closes, since NavContext.Reconfigure
+        // is exactly Map's own case: one context whose navigable set changes
+        // contents, not a fixed set with some members hidden.
+        private NavContext _navContext;
+
         private void Start()
         {
-            playButton.onClick.AddListener(() => Toggle(saveSlotPanel));
+            playButton.onClick.AddListener(() =>
+            {
+                Toggle(saveSlotPanel);
+                RefreshNavigation();
+            });
             // Settled BEFORE the process goes away. Quitting is not
             // continuing the run, so it ends it, and ending it is what pays out
             // what the run earned -- quitting straight to the desktop would
@@ -52,7 +74,11 @@ namespace PrincesPalace
                 // second quit and one of the two had to be the door. See Navigation.
                 Navigation.Quit();
             });
-            closeSaveSlotButton.onClick.AddListener(() => saveSlotPanel.SetActive(false));
+            closeSaveSlotButton.onClick.AddListener(() =>
+            {
+                saveSlotPanel.SetActive(false);
+                RefreshNavigation();
+            });
 
             continueButton.onClick.AddListener(() =>
             {
@@ -62,6 +88,7 @@ namespace PrincesPalace
             });
 
             RefreshContinue();
+            RegisterNavContext();
         }
 
         // Recomputes whether Continue has anything to continue, and what it
@@ -79,8 +106,161 @@ namespace PrincesPalace
 
             var label = continueButton.GetComponentInChildren<TMP_Text>(includeInactive: true);
             label.Set(UiStrings.ContinueSlot, _continueSlot + 1);
+
+            // Continue can appear or vanish out from under an already-pushed
+            // context (a save deleted through Manage Saves while its own
+            // panel sits on top) -- reconfigure rather than assume Start()
+            // already saw the final answer.
+            RefreshNavigation();
         }
 
         private static void Toggle(GameObject panel) => panel.SetActive(!panel.activeSelf);
+
+        // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
+        //
+        // ONE CONTEXT FOR THE WHOLE SCENE, reconfigured rather than pushed a
+        // second time whenever the save-slot modal opens or closes -- exactly
+        // NavContext.Reconfigure's own documented case (Map's runtime graph
+        // rewrite): the navigable set genuinely changes CONTENTS, it is not a
+        // fixed set with some members hidden.
+        private void RegisterNavContext()
+        {
+            if (_navContext != null) return;
+
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            NavigationInputModule.Contexts?.Push(_navContext);
+            RefreshNavigation();
+        }
+
+        private void OnDestroy()
+        {
+            if (_navContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_navContext);
+            _navContext = null;
+        }
+
+        // No submenu depth and no previous screen to return to -- the main
+        // menu is where the game STARTS. Closing the save-slot modal is the
+        // one thing Cancel has to spend itself on here; with that modal
+        // closed there really is nowhere else to go, so the press is a
+        // deliberate no-op rather than a stand-in for a Back this screen
+        // does not have.
+        private void HandleCancel()
+        {
+            if (saveSlotPanel != null && saveSlotPanel.activeSelf)
+            {
+                saveSlotPanel.SetActive(false);
+                RefreshNavigation();
+            }
+        }
+
+        // Rebuilds the declared set and entry from whichever surface is
+        // showing right now -- the base Play/Continue/Exit list, or the
+        // save-slot modal's own rows -- the same "walk what's ACTUALLY
+        // active" shape SystemMenuController.RefreshSelectables uses for its
+        // own tab/pane split.
+        private void RefreshNavigation()
+        {
+            if (_navContext == null) return;
+
+            bool slotsOpen = saveSlotPanel != null && saveSlotPanel.activeSelf;
+            var entryButton = slotsOpen ? WireSaveSlotNavigation() : WireMainMenuNavigation();
+
+            // NavContext.Entry is read back through `as GameObject`
+            // (NavigationInputModule.ReselectIfOutsideDeclaredSet) -- a
+            // Button reference there would fail that cast silently and
+            // leave selection null forever, so it is converted here, once.
+            object entry = entryButton != null ? entryButton.gameObject : null;
+
+            var selectables = new Dictionary<string, object>();
+            var group = slotsOpen ? SaveSlotSelectables() : MainMenuSelectables();
+            foreach (var selectable in group)
+            {
+                if (selectable != null) selectables[selectable.name] = selectable.gameObject;
+            }
+
+            // No forced SetSelectedGameObject here, deliberately -- unlike
+            // PushNavContext's first-open case, an ordinary Reconfigure must
+            // not clobber a selection that is STILL declared (a Continue
+            // label refresh must not knock focus off of Exit). Whatever the
+            // player had selected either survives (still in the new set) or
+            // fails NavigationInputModule.ReselectIfOutsideDeclaredSet's own
+            // check next frame and falls back to this entry then -- the same
+            // one-frame-later resolution SystemMenuController.Select relies
+            // on for its own tab-to-pane swap.
+            _navContext.Reconfigure(entry, selectables);
+        }
+
+        // Continue (when shown) sits above Play/Exit, top to bottom on
+        // screen (MainMenuScreen's own comment: "Continue sits ABOVE the
+        // column") -- a List, clamp (the owner default for List), no wrap:
+        // there is nothing below Exit or above Continue to step onto.
+        private IEnumerable<Button> MainMenuSelectables()
+        {
+            if (continueButton != null && continueButton.gameObject.activeSelf) yield return continueButton;
+            yield return playButton;
+            yield return exitButton;
+        }
+
+        private Button WireMainMenuNavigation()
+        {
+            var members = MainMenuSelectables().ToList();
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("mainMenuButtons", UiNavGroupKind.List, members));
+            return members.Count > 0 ? members[0] : null;
+        }
+
+        // The slot column (a List, top to bottom, matching SaveSlotColumn's
+        // own Ui.Column) plus the footer row (a Rail: ManageSaves then
+        // Cancel, matching SaveSlotFooter's own Ui.Row) -- linked together
+        // by one explicit Down/Up pair off the last slot, the inter-group
+        // jump neither group's own order can express.
+        private IEnumerable<Button> SaveSlotSelectables()
+        {
+            if (saveSlotController == null) yield break;
+
+            if (saveSlotController.slotButtons != null)
+            {
+                foreach (var slot in saveSlotController.slotButtons)
+                {
+                    if (slot != null) yield return slot;
+                }
+            }
+
+            if (saveSlotController.manageSavesButton != null) yield return saveSlotController.manageSavesButton;
+            // closeSaveSlotButton lives on THIS controller, not
+            // SaveSlotController -- it is the same button MainMenuController
+            // already wires in Start() (Cancel(), above, reaches the
+            // identical SetActive(false)).
+            if (closeSaveSlotButton != null) yield return closeSaveSlotButton;
+        }
+
+        private Button WireSaveSlotNavigation()
+        {
+            if (saveSlotController == null) return null;
+
+            var slots = (saveSlotController.slotButtons ?? System.Array.Empty<Button>())
+                .Where(b => b != null).ToList();
+            var footer = new List<Button>();
+            if (saveSlotController.manageSavesButton != null) footer.Add(saveSlotController.manageSavesButton);
+            if (closeSaveSlotButton != null) footer.Add(closeSaveSlotButton);
+
+            var links = new List<UiNavLink<Selectable>?>();
+            if (slots.Count > 0 && footer.Count > 0)
+            {
+                links.Add(RuntimeNavWiring.Link(slots[slots.Count - 1], UiNavDirection.Down, footer[0]));
+                links.Add(RuntimeNavWiring.Link(footer[0], UiNavDirection.Up, slots[slots.Count - 1]));
+            }
+
+            RuntimeNavWiring.Apply(
+                new[]
+                {
+                    RuntimeNavWiring.Group("saveSlots", UiNavGroupKind.List, slots),
+                    RuntimeNavWiring.Group("saveSlotFooter", UiNavGroupKind.Rail, footer),
+                },
+                links);
+
+            return slots.Count > 0 ? slots[0] : footer.Count > 0 ? footer[0] : null;
+        }
     }
 }
