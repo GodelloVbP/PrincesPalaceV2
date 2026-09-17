@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Progression;
@@ -75,28 +76,24 @@ namespace PrincesPalace
             }
 
             // A Rail group (plan section 5), wrap by the owner's default --
-            // Left/Right steps disc to disc. Built ONCE: unlike Map's
-            // runtime-varying node set, every one of these hundred discs
-            // exists and is active for the life of the panel (WireNodes'
-            // own header: "a hundred discs", never toggled), so there is
-            // nothing here that a later Refresh() needs to rebuild.
-            RuntimeNavWiring.Chain(dots, horizontal: true, wrap: true);
-
-            // The collect button is a required action, reachable from the
-            // rail (plan section 7/9a) -- Down from EVERY disc, not just
-            // one, since claiming what is owed is not tied to which disc
-            // happens to be focused. Harmless alongside the Rail's own
-            // Left/Right: Chain never touches Up/Down. Eligibility itself
-            // (hide-on-owed-zero, plan section 6) stays exactly where it
-            // already lived -- PaintCollectButton's own SetActive call,
-            // untouched by this.
-            if (collectButton != null)
-            {
-                foreach (var dot in dots)
-                {
-                    RuntimeNavWiring.Link(dot, collectButton, isDown: true);
-                }
-            }
+            // Left/Right steps disc to disc -- plus the collect button as
+            // every disc's Down link, in ONE authoritative pass (RuntimeNav
+            // Wiring.Apply writes all four directions of every node it
+            // resolves, so the rail and the links have to arrive together).
+            //
+            // DOWN FROM EVERY DISC, not from one distinguished disc: claiming
+            // what is owed is not tied to which disc happens to be focused.
+            // Eligibility itself (hide-on-owed-zero, plan section 6) stays
+            // exactly where it already lived -- PaintCollectButton's own
+            // SetActive call, untouched by this.
+            //
+            // Built ONCE: unlike Map's runtime-varying node set, every one of
+            // these hundred discs exists and is active for the life of the
+            // panel (WireNodes' own header: "a hundred discs", never
+            // toggled), so there is nothing here a later Refresh() rebuilds.
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("rewardTrackRibbon", UiNavGroupKind.Rail, dots),
+                dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Down, collectButton)));
         }
 
         private void WireRail()

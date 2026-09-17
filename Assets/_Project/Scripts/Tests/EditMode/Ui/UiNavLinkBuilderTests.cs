@@ -5,9 +5,11 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // The pure-C# proof docs/GAMEPAD_NAVIGATION_PLAN.md section 9a calls for:
-    // the link-builder algorithm against a fake tree, no scene, no Selectable
-    // -- UiNavWiring (Editor) and the -BuildScenes diff test both read the
-    // exact same UiNavLinkBuilder.Build this file pins.
+    // the link-builder algorithm against fake nodes, no scene, no Selectable.
+    // The builder is generic over what a node is, so this file drives it with
+    // UiNodes while production drives the same Build() with live Selectables
+    // through RuntimeNavWiring -- one algorithm, pinned once here and
+    // exercised through the adapter in RuntimeNavWiringTests (PlayMode).
     public class UiNavLinkBuilderTests
     {
         private static UiNode Btn(string name) => Ui.Button(name, UiString.FromContent(name), new UiVec(100f, 40f), 18);
@@ -18,8 +20,8 @@ namespace PrincesPalace.Domain.Tests
         public void List_ClampsAtBothEnds_AndStepsInDeclaredOrder()
         {
             var a = Btn("A"); var b = Btn("B"); var c = Btn("C");
-            var group = new UiNavGroup("rows", UiNavGroupKind.List, new[] { a, b, c });
-            var nav = new UiNavDeclaration(a, new[] { group });
+            var group = new UiNavGroup<UiNode>("rows", UiNavGroupKind.List, new[] { a, b, c });
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -41,8 +43,8 @@ namespace PrincesPalace.Domain.Tests
         public void Rail_WrapsAtBothEnds()
         {
             var a = Btn("A"); var b = Btn("B"); var c = Btn("C");
-            var group = new UiNavGroup("ribbon", UiNavGroupKind.Rail, new[] { a, b, c });
-            var nav = new UiNavDeclaration(a, new[] { group });
+            var group = new UiNavGroup<UiNode>("ribbon", UiNavGroupKind.Rail, new[] { a, b, c });
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -55,8 +57,8 @@ namespace PrincesPalace.Domain.Tests
         public void Rail_CanBeForcedToClamp()
         {
             var a = Btn("A"); var b = Btn("B");
-            var group = new UiNavGroup("ribbon", UiNavGroupKind.Rail, new[] { a, b }, wrap: UiNavWrap.Clamp);
-            var nav = new UiNavDeclaration(a, new[] { group });
+            var group = new UiNavGroup<UiNode>("ribbon", UiNavGroupKind.Rail, new[] { a, b }, wrap: UiNavWrap.Clamp);
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -71,8 +73,8 @@ namespace PrincesPalace.Domain.Tests
         {
             // 5 members, 3 columns: row0 = [0,1,2] (full), row1 = [3,4] (partial).
             var nodes = Enumerable.Range(0, 5).Select(i => Btn($"N{i}")).ToArray();
-            var group = new UiNavGroup("orbs", UiNavGroupKind.Grid, nodes, gridRowLength: 3);
-            var nav = new UiNavDeclaration(nodes[0], new[] { group });
+            var group = new UiNavGroup<UiNode>("orbs", UiNavGroupKind.Grid, nodes, gridRowLength: 3);
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -97,8 +99,8 @@ namespace PrincesPalace.Domain.Tests
         public void Grid_ColumnWithNoRowAbove_HasNoUpLink()
         {
             var nodes = Enumerable.Range(0, 5).Select(i => Btn($"N{i}")).ToArray();
-            var group = new UiNavGroup("orbs", UiNavGroupKind.Grid, nodes, gridRowLength: 3);
-            var nav = new UiNavDeclaration(nodes[0], new[] { group });
+            var group = new UiNavGroup<UiNode>("orbs", UiNavGroupKind.Grid, nodes, gridRowLength: 3);
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -114,9 +116,9 @@ namespace PrincesPalace.Domain.Tests
         public void ExplicitLink_OverridesWhatTheGroupComputed()
         {
             var a = Btn("A"); var b = Btn("B"); var footer = Btn("Footer");
-            var group = new UiNavGroup("rows", UiNavGroupKind.List, new[] { a, b });
-            var nav = new UiNavDeclaration(a, new[] { group },
-                links: new[] { new UiNavLink(b, UiNavDirection.Down, footer) });
+            var group = new UiNavGroup<UiNode>("rows", UiNavGroupKind.List, new[] { a, b });
+            var nav = new UiNavDeclaration<UiNode>(new[] { group },
+                links: new[] { new UiNavLink<UiNode>(b, UiNavDirection.Down, footer) });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 
@@ -131,8 +133,8 @@ namespace PrincesPalace.Domain.Tests
         public void SingleMemberGroup_LinksToNothing_NotToItself()
         {
             var only = Btn("Only");
-            var group = new UiNavGroup("lonely", UiNavGroupKind.Rail, new[] { only });
-            var nav = new UiNavDeclaration(only, new[] { group });
+            var group = new UiNavGroup<UiNode>("lonely", UiNavGroupKind.Rail, new[] { only });
+            var nav = new UiNavDeclaration<UiNode>(new[] { group });
 
             var resolved = UiNavLinkBuilder.Build(nav);
 

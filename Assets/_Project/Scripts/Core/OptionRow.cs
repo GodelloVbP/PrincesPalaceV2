@@ -11,7 +11,7 @@ namespace PrincesPalace
     // Left/Right adjusts the row's own bound value and consumes the event
     // without calling base.OnMove; Up/Down calls base.OnMove unchanged, which
     // is ordinary Unity row-to-row navigation over whatever Explicit chain
-    // OptionsController.Wire set up (RuntimeNavWiring.Chain, clamp).
+    // OptionsController.Wire set up (RuntimeNavWiring, a List group, clamp).
     //
     // OnLeftRight is the ONLY thing this component knows how to do -- it does
     // not know GameSettings, a key, or even whether it is a Slider or a

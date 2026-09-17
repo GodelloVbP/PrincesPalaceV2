@@ -79,7 +79,7 @@ namespace PrincesPalace
                 // OptionRow is the ONE component handling this row's movement
                 // and hover now (plan section 7) -- attached at build time
                 // (ScreenRegistry.WireOptions), not runtime-added the way
-                // HoverIndex used to be, since RuntimeNavWiring.Chain below
+                // HoverIndex used to be, since RuntimeNavWiring.Apply below
                 // needs every row's Selectable to already exist.
                 if (rows == null || i >= rows.Length || rows[i] == null) continue;
                 int index = i;
@@ -98,7 +98,7 @@ namespace PrincesPalace
 
             // A List group, clamp (plan section 5/7's owner default) -- Up/Down
             // steps row to row, never wrapping past the first or last card.
-            if (rows != null) RuntimeNavWiring.Chain(rows, horizontal: false, wrap: false);
+            RuntimeNavWiring.Apply(RuntimeNavWiring.Group("optionsRows", UiNavGroupKind.List, rows));
 
             for (int i = 0; sliderTracks != null && i < sliderTracks.Length; i++)
             {

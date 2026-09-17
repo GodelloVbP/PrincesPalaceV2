@@ -2,27 +2,29 @@ using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.UiKit
 {
-    // Turns a UiNavDeclaration into the four-directional neighbour every
-    // declared node resolves to. Pure C#, no scene, no Selectable -- the seam
-    // both UiNavWiring's Navigation.Explicit pass (Editor, real scene) and
-    // UiAudit.CheckNavigable's build-fidelity diff (a -BuildScenes test) read
-    // from, so the ALGORITHM is testable against a fake tree with nothing
-    // Unity involved (plan section 9a).
+    // THE ONE PLACE a group declaration becomes per-node neighbours. Pure C#,
+    // no scene, no Selectable -- generic over what a node is (UiNavSpec's own
+    // header explains why), so the same algorithm serves a Domain UiNode tree
+    // and Core's live UnityEngine.UI.Selectables without either the algorithm
+    // or Domain's engine-free boundary bending (docs/CODE_STANDARDS.md
+    // sections 1 and 10). RuntimeNavWiring is a thin adapter over this, not a
+    // second implementation of it.
     public static class UiNavLinkBuilder
     {
         // One node's resolved neighbours. Any of the four may be null -- no
         // link that direction, which Navigation.Explicit leaves unset.
-        public sealed class NavLinkTargets
+        public sealed class NavLinkTargets<TNode> where TNode : class
         {
-            public UiNode Up;
-            public UiNode Down;
-            public UiNode Left;
-            public UiNode Right;
+            public TNode Up;
+            public TNode Down;
+            public TNode Left;
+            public TNode Right;
         }
 
-        public static IReadOnlyDictionary<UiNode, NavLinkTargets> Build(UiNavDeclaration nav)
+        public static IReadOnlyDictionary<TNode, NavLinkTargets<TNode>> Build<TNode>(UiNavDeclaration<TNode> nav)
+            where TNode : class
         {
-            var result = new Dictionary<UiNode, NavLinkTargets>();
+            var result = new Dictionary<TNode, NavLinkTargets<TNode>>();
             if (nav == null) return result;
 
             foreach (var group in nav.Groups)
@@ -31,28 +33,30 @@ namespace PrincesPalace.Domain.UiKit
             }
 
             // Explicit links are laid down AFTER every group's own defaults,
-            // so a screen can override or extend what its groups computed --
+            // so a surface can override or extend what its groups computed --
             // Map's Graph shape has no groups at all and is entirely this
-            // loop, rewritten by MapController.Refresh() at runtime.
+            // loop.
             foreach (var link in nav.Links)
             {
-                Get(result, link.From).Set(link.Direction, link.To);
+                Set(Get(result, link.From), link.Direction, link.To);
             }
 
             return result;
         }
 
-        private static NavLinkTargets Get(Dictionary<UiNode, NavLinkTargets> result, UiNode node)
+        private static NavLinkTargets<TNode> Get<TNode>(Dictionary<TNode, NavLinkTargets<TNode>> result, TNode node)
+            where TNode : class
         {
             if (!result.TryGetValue(node, out var links))
             {
-                links = new NavLinkTargets();
+                links = new NavLinkTargets<TNode>();
                 result[node] = links;
             }
             return links;
         }
 
-        private static void Set(this NavLinkTargets links, UiNavDirection dir, UiNode to)
+        private static void Set<TNode>(NavLinkTargets<TNode> links, UiNavDirection dir, TNode to)
+            where TNode : class
         {
             switch (dir)
             {
@@ -63,7 +67,8 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        private static void BuildGroup(UiNavGroup group, Dictionary<UiNode, NavLinkTargets> result)
+        private static void BuildGroup<TNode>(UiNavGroup<TNode> group, Dictionary<TNode, NavLinkTargets<TNode>> result)
+            where TNode : class
         {
             var members = group.Members;
             int count = members.Count;
@@ -88,8 +93,8 @@ namespace PrincesPalace.Domain.UiKit
             {
                 var links = Get(result, members[i]);
 
-                UiNode prev = null;
-                UiNode next = null;
+                TNode prev = null;
+                TNode next = null;
                 if (wrap)
                 {
                     prev = members[(i - 1 + count) % count];
@@ -114,7 +119,9 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        private static void BuildGrid(UiNavGroup group, Dictionary<UiNode, NavLinkTargets> result, bool wrapRows)
+        private static void BuildGrid<TNode>(UiNavGroup<TNode> group,
+            Dictionary<TNode, NavLinkTargets<TNode>> result, bool wrapRows)
+            where TNode : class
         {
             var members = group.Members;
             int count = members.Count;
@@ -132,7 +139,8 @@ namespace PrincesPalace.Domain.UiKit
                 // Left/Right NEVER cross into a neighbouring row, wrap or
                 // not -- that would step diagonally, which is not what a
                 // Grid's two axes mean. Owner default (section 12.3): wrap
-                // within a row.
+                // within a row, and a SHORT last row wraps within its own
+                // length (rowLen), not the full column count.
                 if (rowLen > 1)
                 {
                     if (wrapRows)

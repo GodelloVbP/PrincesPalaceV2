@@ -382,39 +382,74 @@ this is the point to add a fifth visual channel (e.g. a border colour
 distinct from all three glow tiers) rather than tune the existing numbers
 further.
 
-## 9. Audit
+## 9. Audit, and the one navigation model
 
-**Split, per the review — a structural claim and a behavioural claim are
-different things, and Draft 2 conflated them.**
+**Revised 2026-09-17, phase 2 step E, against what step A actually built.**
+Step A declared navigation on `ScreenDef.Nav` and wrote
+`Navigation.Explicit` at scene-build time (`UiNavWiring`), audited by
+`UiAudit.CheckNavigable`. Steps B and C then found that no screen could
+use it and added a second, runtime path (`RuntimeNavWiring`) with its own
+copy of the prev/next math. Two implementations of one rule is what
+`docs/CODE_STANDARDS.md` section 10 forbids, so the two were collapsed
+into one:
 
-**(a) Structural, build-time** (extends `CheckNavigable` over the same
-`SolvedNode`-level declared data, `UiAudit.cs:62-394`): every **nonempty**
-ordinary context declares an entry (not "two-plus focusables" — a screen
-with exactly one required, focusable action and no entry now fails too);
-every declared required action names both a node and the state(s) it must
-be reachable in; every declared group link resolves to a node that exists;
-**generated `Navigation.Explicit` links equal the declared links** — a new
-test run under `-BuildScenes` diffing the emitted scene's actual
-`Selectable.navigation` against the declared graph, since a build-time
-audit over `SolvedNode` alone (Draft 2's design) cannot see what
-`UiEmitter` actually wired; custom actionable controls are found by
-walking the tree for **any** component implementing
-`IPointerClickHandler`/`IPointerDownHandler`/`IDragHandler` that is not
-itself a `Selectable` — not only `HoverIndex` by name, closing the review's
-"not a complete inventory" point.
+**The decision: runtime wiring is the only path; the build-time
+declaration path is deleted.** The navigable set is a runtime fact on
+every surface this phase touches, so a build-time write would be correct
+for no frame a player ever sees:
 
-**(b) Behavioural, runtime PlayMode** (this is what actually proves an
-action is operable, which structural reachability does not): for each
-declared required action, a test drives the production dispatcher (§3's
-scripted `BaseInput`) from the context's entry to that action, **in the
-state the action requires** — Options' adjustment with no Button target,
-Party's drop with the model in Carrying, Talent's invest with an eligible
-slot selected. Structural (a) proves the graph is complete and matches
-what was built; only (b) proves stick+Submit+Cancel actually reaches and
-executes the action. The intent statement (§1) is narrowed accordingly:
-`UiAudit` guarantees graph completeness and build fidelity, not
-operability — operability is a PlayMode obligation, enumerated per screen
-in phase 3 (§11).
+- SystemMenu's tab strip — the scene carries five tabs, a context shows
+  three, recomputed in `ApplyContext` (`SystemMenuScreen`'s own header:
+  the scene cannot know which).
+- RewardTrack — the collect button is hidden whenever nothing is owed
+  (`PaintCollectButton`), so the rail's Down target exists or does not by
+  save state.
+- Party — which seats are occupied, and whether a carry is in progress,
+  decide what a Move should reach.
+- Map — `MapController.Refresh()` recomputes the reachable set per floor
+  (section 4 already said so).
+
+Every one of those rewires on its own repaint, so build-time links are
+overwritten before first use. `ScreenDef.Nav`, `UiNavWiring` and
+`UiAudit.CheckNavigable` are therefore deleted rather than kept for a
+consumer that does not exist; nothing lost with them had a reader
+(`UiNavDeclaration.Entry` duplicated `NavContext.Entry`, which is what
+actually gets selected on push; `UiRequiredAction` was read only by
+`CheckNavigable`).
+
+**One declaration shape, one builder.** `UiNavSpec`'s types are now
+generic over what a node is (`UiNavGroup<TNode>`, `UiNavLink<TNode>`,
+`UiNavDeclaration<TNode>`) and `UiNavLinkBuilder.Build<TNode>` is the ONE
+implementation of List/Rail/Grid + wrap/clamp + inter-group links. Domain
+stays engine-free (it never inspects `TNode`), and `RuntimeNavWiring` is a
+thin adapter: it feeds live `Selectable`s in and writes the resulting
+`Navigation.Explicit` out, computing nothing itself. It is
+**authoritative** — `Apply` writes all four directions of every node its
+declaration resolved — so each surface passes its whole shape in one call
+rather than dribbling one axis per call and depending on what the last
+call left behind.
+
+**(a) Structural, build-time — what survives.** `UiNavControlsAudit`, and
+it is no longer opt-in. A screen's emitted component set is fixed by the
+build, so "this thing answers a click, carries no `Selectable`, and nobody
+said why no stick can reach it" is answerable there and nowhere else; the
+fix is `AllowUnreachable("reason")` on the node or making it a real
+Selectable wired into a group. Its limits are stated rather than hidden:
+most custom actionable components in this project (`BarSlider`,
+`HoldToConfirm`, `ListScroll`, `RailScroll`) are `AddComponent`'d by their
+controller at runtime where no build-time scan sees them, so today it
+fires on the build-time `Attach<T>` path only — the path that grows. A
+GameObject that IS a Selectable is exempt wholesale: whatever else sits on
+it is reached through that Selectable, not around it.
+
+**(b) Behavioural, runtime PlayMode** — unchanged, and now carrying the
+whole load that (a) used to share: for each required action, a test drives
+the production dispatcher (section 3's scripted `BaseInput`) from the
+context's entry to that action, in the state the action requires — Options'
+adjustment with no Button target, Party's drop with the model in Carrying,
+Talent's invest with an eligible slot selected. The intent statement
+(section 1) narrows accordingly: the build proves the control inventory,
+runtime proves operability.
 
 ## 10. Test strategy
 

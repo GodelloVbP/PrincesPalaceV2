@@ -44,7 +44,7 @@ public static class UiWiringSweep
                 // surface (Navigation's four selectOn* links, SpriteState's
                 // four swap sprites) that this project deliberately leaves
                 // at Unity's default -- Navigation is written at RUNTIME
-                // (RuntimeNavWiring.Chain/Link), never at build time, and
+                // (RuntimeNavWiring.Apply), never at build time, and
                 // nothing here uses sprite-swap transitions at all. Without
                 // this, a Selectable-derived controller could never be
                 // Attach<T>'d at all, which the plan explicitly asks for

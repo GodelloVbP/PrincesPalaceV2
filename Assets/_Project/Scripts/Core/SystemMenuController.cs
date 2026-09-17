@@ -251,26 +251,55 @@ namespace PrincesPalace
             _navContext.Reconfigure(entry, selectables);
         }
 
-        // The Down link from the selected tab into its pane's own first
-        // Selectable (plan section 7's "each tab pane's entry as the Down
-        // link from the tab") -- found generically, in hierarchy order,
-        // rather than reached for by name, so this works the same for
-        // Options' rows today as it will for whatever a not-yet-migrated
-        // pane grows tomorrow.
-        private void RefreshPaneDownLink()
+        // THE WHOLE TAB SURFACE, in one authoritative pass: the visible
+        // tabs as a Rail group (plan section 5/7, wrap by the owner's
+        // default) plus the selected tab's Down link into its pane's own
+        // first Selectable ("each tab pane's entry as the Down link from the
+        // tab"), found generically in hierarchy order rather than reached
+        // for by name, so Options' rows today and whatever a not-yet-migrated
+        // pane grows tomorrow both get it for free.
+        //
+        // ONE CALL FOR BOTH, because RuntimeNavWiring.Apply writes all four
+        // directions of every node it resolves -- the rail and the link are
+        // two halves of the same declaration, not two passes that have to
+        // trust what the other left behind.
+        //
+        // Rewired here rather than declared once at build time because WHICH
+        // tabs are visible is a runtime fact ApplyContext has just
+        // recomputed, and the five-tab authored layout on disk is not what a
+        // three-tab context shows (SystemMenuScreen's own header explains why
+        // the scene cannot know that). Only VISIBLE tabs are chained; a
+        // hidden tab's Explicit links are left whatever they were, which does
+        // not matter -- it is inactive, and Unity never routes a Move onto an
+        // inactive Selectable.
+        private void RefreshNavLinks()
         {
-            if (tabButtons == null || _selected < 0 || _selected >= tabButtons.Length) return;
+            if (tabButtons == null) return;
 
-            var tabButton = tabButtons[_selected];
-            if (tabButton == null) return;
+            var visibleButtons = new List<Selectable>(_visible.Count);
+            foreach (int index in _visible)
+            {
+                if (index >= 0 && index < tabButtons.Length && tabButtons[index] != null)
+                {
+                    visibleButtons.Add(tabButtons[index]);
+                }
+            }
 
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("systemMenuTabs", UiNavGroupKind.Rail, visibleButtons),
+                new[] { RuntimeNavWiring.Link(SelectedTabButton(), UiNavDirection.Down, ActivePaneEntry()) });
+        }
+
+        private Selectable SelectedTabButton() =>
+            tabButtons != null && _selected >= 0 && _selected < tabButtons.Length ? tabButtons[_selected] : null;
+
+        private Selectable ActivePaneEntry()
+        {
             int paneIndex = SystemMenuTabs.PaneIndexFor(_selected);
             var activePane = paneIndex >= 0 && panes != null && paneIndex < panes.Length ? panes[paneIndex] : null;
-            var firstSelectable = activePane == null
+            return activePane == null
                 ? null
                 : activePane.GetComponentsInChildren<Selectable>(includeInactive: false).FirstOrDefault();
-
-            RuntimeNavWiring.Link(tabButton, firstSelectable, isDown: true);
         }
 
         private void Pause()
@@ -397,34 +426,8 @@ namespace PrincesPalace
                 Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun)));
             }
 
-            RefreshTabChain();
+            RefreshNavLinks();
             RefreshLintel(inRun);
-        }
-
-        // The tab strip as a Rail group (plan section 5/7), wrap by the
-        // owner's default -- rewired here rather than declared once at
-        // build time because WHICH tabs are visible is exactly what this
-        // method just recomputed, and the five-tab authored layout on disk
-        // is not what a three-tab context actually shows (SystemMenuScreen's
-        // own header explains why the scene can't know that). Only VISIBLE
-        // tabs are chained; a hidden tab's Explicit links are left whatever
-        // they were, which does not matter -- Navigation.Mode.None is not
-        // set on them, but they are also inactive, and Unity never routes a
-        // Move onto an inactive Selectable.
-        private void RefreshTabChain()
-        {
-            if (tabButtons == null) return;
-
-            var visibleButtons = new List<Selectable>(_visible.Count);
-            foreach (int index in _visible)
-            {
-                if (index >= 0 && index < tabButtons.Length && tabButtons[index] != null)
-                {
-                    visibleButtons.Add(tabButtons[index]);
-                }
-            }
-
-            RuntimeNavWiring.Chain(visibleButtons, horizontal: true, wrap: true);
         }
 
         // What each visible tab's label ACTUALLY draws at, in order.
@@ -505,7 +508,7 @@ namespace PrincesPalace
                 tabHovers[_selected].SetShown(false);
             }
 
-            RefreshPaneDownLink();
+            RefreshNavLinks();
             RefreshSelectables();
         }
 

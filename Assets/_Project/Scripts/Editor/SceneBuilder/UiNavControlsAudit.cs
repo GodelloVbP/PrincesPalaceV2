@@ -5,37 +5,38 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
 
-// Gamepad navigation, plan section 9a's fourth structural rule: a custom
-// actionable control -- anything implementing IPointerClickHandler,
-// IPointerDownHandler or IDragHandler that is NOT itself a Selectable -- must
-// either sit inside a declared nav group or carry AllowUnreachable("reason").
-// A Selectable (Button, Toggle, Scrollbar...) is already reachable through
-// the ordinary stick+Submit path and is exempt by construction; this check
-// exists for everything else -- "not only HoverIndex by name", closing the
-// review's "not a complete inventory" point the plan cites.
+// Gamepad navigation, plan section 9a's structural rule that survives phase
+// 2's unification: a custom actionable control -- anything implementing
+// IPointerClickHandler, IPointerDownHandler or IDragHandler on a GameObject
+// that carries NO Selectable -- must declare, on its own UiNode, why it is
+// not stick-reachable (AllowUnreachable("reason")).
 //
-// Lives in the Editor layer, not UiAudit, because it needs to see the actual
-// emitted GameObjects and their Unity components -- something a Domain-layer
-// UiNode can never reference (docs/CODE_STANDARDS.md section 1). UiAudit's
-// CheckNavigable covers the structural rules that only need the declared
-// UiNavDeclaration; this one needs the built result too, the same reason
-// UiWiringSweep and UiBindingAudit are Editor-side rather than Domain-side.
+// WHY THIS ONE IS STILL A BUILD-TIME CHECK when the declaration half is not
+// (RuntimeNavWiring's header has the full argument): what it inventories is
+// not which nodes are navigable right now -- that is a runtime fact -- but
+// WHICH CONTROLS A SCREEN EMITTED AT ALL. A screen's emitted component set is
+// fixed by the build, so "this thing answers a click but no stick can reach
+// it, and nobody said why" is answerable here and nowhere else.
 //
-// OPT-IN FOR PHASE 2, same as UiAudit.CheckNavigable: `nav == null` returns
-// clean, so an undeclared screen does not fail the build. Phase 3 removes
-// the opt-in once every screen has a declaration.
+// NO LONGER OPT-IN. It used to return clean whenever the screen had no
+// UiNavDeclaration, which was every screen, always -- a check that never ran.
+// Its own vacuity is worth stating plainly rather than hiding
+// (docs/CODE_STANDARDS.md section 8): most of this project's custom
+// actionable components (BarSlider, HoldToConfirm, ListScroll, RailScroll)
+// are AddComponent'd by their controller at RUNTIME, where no build-time scan
+// can see them, so today this fires on the build-time Attach<T> path only.
+// That is the path that grows: every new custom control wired in a screen's
+// own Wire step lands here and has to say something.
+//
+// A GAMEOBJECT THAT IS ITSELF A SELECTABLE IS EXEMPT WHOLESALE, not merely
+// "its Selectable component is skipped". A Button is reachable by stick by
+// construction, and whatever else sits on it (ThemedButtonState's pointer
+// handlers, PartyDragSource's drag handlers) is reached through that same
+// Button, not around it.
 public static class UiNavControlsAudit
 {
-    public static void Run(string screenName, UiNavDeclaration nav, UiEmitResult result)
+    public static void Run(string screenName, UiEmitResult result)
     {
-        if (nav == null) return;
-
-        var declared = new HashSet<UiNode>();
-        foreach (var group in nav.Groups)
-        {
-            foreach (var member in group.Members) declared.Add(member);
-        }
-
         var problems = new List<string>();
 
         foreach (var pair in result.Objects)
@@ -43,16 +44,17 @@ public static class UiNavControlsAudit
             var node = pair.Key;
             var go = pair.Value;
             if (go == null) continue;
-            if (declared.Contains(node)) continue;
             if (node.AllowUnreachableReason != null) continue;
+            if (go.GetComponent<Selectable>() != null) continue;
 
             if (!HasCustomActionableComponent(go)) continue;
 
             problems.Add(
                 $"'{node.Name}' carries a custom actionable component (IPointerClickHandler/IPointerDownHandler/" +
-                "IDragHandler, not a Selectable) but is not a member of any declared nav group. " +
-                "Fix by: adding it to the group it belongs in; or, if it is genuinely not meant to be " +
-                "stick-reachable, declaring AllowUnreachable(\"reason\") on its UiNode.");
+                "IDragHandler) on a node that is not a Selectable, so no stick or keyboard can reach it. " +
+                "Fix by: making it a real Selectable and wiring it into its screen's own nav groups " +
+                "(RuntimeNavWiring); or, if it is genuinely not meant to be stick-reachable, declaring " +
+                "AllowUnreachable(\"reason\") on its UiNode.");
         }
 
         if (problems.Count == 0) return;
@@ -68,7 +70,6 @@ public static class UiNavControlsAudit
         foreach (var component in go.GetComponents<Component>())
         {
             if (component == null) continue; // a missing-script slot, not this check's business
-            if (component is Selectable) continue;
 
             if (component is IPointerClickHandler || component is IPointerDownHandler || component is IDragHandler)
             {
