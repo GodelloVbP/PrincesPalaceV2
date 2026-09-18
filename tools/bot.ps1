@@ -142,6 +142,15 @@ $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
 
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path;
+# try/finally does not introduce a new variable scope in PowerShell, so
+# nothing else in this script changes.
+Start-FocusGuard
+try {
+
 $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $ProductLeaf = ($ProjectLeaf -replace "[^A-Za-z0-9]", "")
@@ -446,3 +455,7 @@ Write-Host "Report: $(Join-Path $MainOutDir "report.html")"
 Write-Host "Offers: $(Join-Path $MainOutDir "offers.html")"
 
 exit $reportExit
+
+} finally {
+    Stop-FocusGuard
+}

@@ -224,16 +224,36 @@ Triage order, cheapest first:
 ## 8. Test-run decision table
 
 Every Unity launch in `tools/` goes through `Start-UnityQuiet` in
-`tools/unity_path.ps1` -- never `Start-Process` on `Unity.exe` directly. That
-one function is what stops a headless run or a runtime capture from stealing
-the foreground window (the owner's standing complaint, fixed 2026-09-18): a
-launch that passes `-nographics` never creates a window at all, and one that
-needs a real graphics device (a runtime/graphics capture, or the interactive
-Editor behind `preview.ps1 -Launch`) is started minimized and kept there for
-its whole lifetime by a foreground-guard watchdog. `tools/focus_check.ps1`
-proves this from outside the launched process tree; run it after touching any
-launch site. A new script that calls `Start-Process` on `Unity.exe` on its own
-regresses this silently -- route it through `Start-UnityQuiet` instead.
+`tools/unity_path.ps1` -- never `Start-Process` on `Unity.exe` directly. A
+first version of this (2026-09-18, commit `241f9b22`) assumed `-nographics`
+meant no window could ever appear and skipped guarding that path entirely;
+the owner's report after it shipped was "still does it". Measuring with
+`tools/focus_check.ps1` (extended to log every foreground change, not just
+whether one happened) found batchmode Unity.exe grabbing the foreground for
+over a second EVEN WITH `-nographics` -- so the fix does not live in how
+Unity is launched at all. It lives one level up: every `tools/` entry point
+that can spawn a window anywhere in its process tree (`run_tests_parallel.ps1`,
+`test.ps1`, `screenshot.ps1`, `preview.ps1`, `graphics_tests.ps1`,
+`build_content.ps1`, `bot.ps1`) calls `Start-FocusGuard` from
+`tools/unity_path.ps1` near its own top and `Stop-FocusGuard` in a matching
+`finally`. The guard records whatever window was foreground when the script
+started, then a background watchdog rebuilds the script's full descendant
+process tree (via `CreateToolhelp32Snapshot`, cheap enough to do on every
+200ms poll -- an earlier attempt throttled this to once a second over WMI and
+measured a process that spawned and grabbed focus inside that same second
+going uncaught for up to a full second) and hands focus straight back the
+moment ANY window in that tree -- Unity's included, `-nographics` or not, and
+whatever else the tree spawns -- becomes foreground. `Start-UnityQuiet` itself
+now only starts Unity minimized and does nothing else; restoring focus if
+that window grabs it anyway is the tree guard's job, not a per-launch one, so
+one mechanism covers every launch site instead of each needing its own.
+`tools/focus_check.ps1` proves this from OUTSIDE the launched process tree,
+with its own independent P/Invoke calls, logging pid/process
+name/parent/title for every foreground change it sees; run it after touching
+any launch site or the guard itself. A new script that spawns a Unity (or
+any other) window without calling `Start-FocusGuard` at its own entry is back
+to the pre-2026-09-18 unguarded behavior -- wire it in the same way the seven
+scripts above do.
 
 | Situation | Command |
 |---|---|

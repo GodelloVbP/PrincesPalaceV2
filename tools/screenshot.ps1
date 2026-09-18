@@ -30,10 +30,11 @@ param(
 # Assets/_Project/Scripts/Editor/SceneBuilder/ScreenRegistry.cs - the same list
 # that builds the scenes.
 #
-# Does NOT pass -nographics: a screenshot needs a real graphics device. That
-# also means it launches through Start-UnityQuiet's windowed path (see
-# tools/unity_path.ps1) rather than the headless one, so the window this opens
-# gets minimized and never steals focus.
+# Does NOT pass -nographics: a screenshot needs a real graphics device.
+# Start-UnityQuiet (tools/unity_path.ps1) starts it minimized either way now;
+# Start-FocusGuard, called near the top of this script, is what hands focus
+# back if that window (or anything else in this script's process tree) grabs
+# it anyway.
 #
 # Success is checked by whether the EXPECTED PNG exists, NOT by $proc.ExitCode -
 # that property is unreliable through the Start-Process -PassThru pattern
@@ -89,6 +90,15 @@ $ProjectParent = Split-Path $SourceProject -Parent
 $TestProject = Join-Path $ProjectParent "$ProjectLeaf-TestRunner"
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
+
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path;
+# try/finally does not introduce a new variable scope in PowerShell, so
+# nothing else in this script changes.
+Start-FocusGuard
+try {
 
 # BEFORE the sync and before Unity boots. ScreenshotTool already rejects an
 # unknown panel properly - it names every valid one and exits 1 - but that
@@ -315,3 +325,7 @@ if ($missing.Count -gt 0) {
 }
 
 $produced | ForEach-Object { Write-Host "  $($_.FullName)" }
+
+} finally {
+    Stop-FocusGuard
+}

@@ -78,6 +78,21 @@ $ErrorActionPreference = "Stop"
 
 $Project = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
+# Hoisted from inside Start-Editor (below) to script scope: Start-FocusGuard
+# needs to run at the top of the script, once, regardless of which mode ends
+# up calling Start-Editor or Get-UnityExe, and a function defined here is
+# visible to every function in this file the same way it was when
+# Start-Editor dot-sourced it locally.
+. (Join-Path $PSScriptRoot "unity_path.ps1")
+
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path;
+# try/finally does not introduce a new variable scope in PowerShell, so
+# nothing else in this script (including every function below) changes.
+Start-FocusGuard
+try {
 
 # --- the Editor-open route --------------------------------------------------
 #
@@ -536,13 +551,16 @@ function Invoke-PreviewCapture {
 }
 
 function Start-Editor {
-    . (Join-Path $PSScriptRoot "unity_path.ps1")
     $exe = Get-UnityExe
     $log = Join-Path $Project "Temp\preview_editor.log"
     # No -batchmode at all: this IS the interactive Editor, for -Launch to play
-    # a fight in. Start-UnityQuiet's windowed path applies here too -- record
-    # the caller's foreground window, open minimized, and keep it from
-    # stealing focus for as long as this Editor session stays open.
+    # a fight in. Start-UnityQuiet opens it minimized; Start-FocusGuard (called
+    # once at script scope, above) is what hands focus back for as long as
+    # THIS SCRIPT keeps running -- which, for -Launch, is only until the
+    # request this script sends is handed off, not the whole Editor session.
+    # The guard steps out of the way once this process exits, which is what
+    # lets the user actually drive the Editor afterwards instead of having it
+    # minimize itself every time they click into it.
     [void](Start-UnityQuiet -FilePath $exe -ArgumentList @("-projectPath", "`"$Project`"", "-logFile", "`"$log`""))
     Write-Host "started the Editor; its log will be $log"
 }
@@ -595,3 +613,7 @@ Write-Host "  -Enemy <id> -Launch [-Formation lone|full]   build, then play a fi
 Write-Host "  -Spell <id> [-Element <type>] [-Launch]   build, then cast that spell once and photograph the impact"
 Write-Host "  -Character <id> [-Launch]       build, then photograph them on the map, in the dossier and in a fight"
 exit 2
+
+} finally {
+    Stop-FocusGuard
+}

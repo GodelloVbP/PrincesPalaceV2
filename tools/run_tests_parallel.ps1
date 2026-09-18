@@ -56,6 +56,15 @@ $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path,
+# including the various "exit 1"s below; try/finally does not introduce a new
+# variable scope in PowerShell, so nothing else in this script changes.
+Start-FocusGuard
+try {
+
 # Shares discovery, areas and the structural gate with tools/test.ps1, so the
 # gate below checks against the exact same definitions a slice would use.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
@@ -642,3 +651,7 @@ foreach ($runner in $Runners) {
 if ($allPassed) { Write-Host "`nAll tests passed."; exit 0 }
 Write-Host "`nSome tests failed."
 exit 1
+
+} finally {
+    Stop-FocusGuard
+}

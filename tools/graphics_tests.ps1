@@ -31,6 +31,15 @@ if ($Label -ne "") { $env:PP_CAPTURE_LABEL = $Label }
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
 
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path;
+# try/finally does not introduce a new variable scope in PowerShell, so
+# nothing else in this script changes.
+Start-FocusGuard
+try {
+
 $Project = Split-Path $PSScriptRoot -Parent
 $Target = (Split-Path $Project -Parent) + "\" + (Split-Path $Project -Leaf) + "-TestRunner"
 Write-Host "target: $Target"
@@ -75,9 +84,9 @@ $unityArgs = @(
 
 # Start-UnityQuiet (tools/unity_path.ps1) + WaitForExit, the same shape
 # run_tests_parallel.ps1 and screenshot.ps1 use, and NOT the call operator
-# this used to be. No -nographics above means this launches through
-# Start-UnityQuiet's windowed path -- minimized, foreground-guarded for as
-# long as Unity is alive. "& Unity.exe" came back
+# this used to be. (Unity starts minimized either way now; Start-FocusGuard,
+# called near the top of this script, hands focus back for as long as this
+# script's process tree is alive if that window grabs it anyway.) "& Unity.exe" came back
 # while the run was still writing: a capture copied straight after it had 37
 # of its 42 frames and no timing.json, and the results XML was read while it
 # was half-written, which the [xml] cast turned into a failure on a run whose
@@ -124,3 +133,7 @@ Write-Host "All graphics tests passed."
 # is not zero on a passing batchmode run -- so tools/static_pilot_qa.ps1 threw
 # away a capture that had in fact succeeded.
 exit 0
+
+} finally {
+    Stop-FocusGuard
+}

@@ -99,6 +99,15 @@ $RunnerProduct = $ProjectLeaf -replace '[^A-Za-z0-9]',''
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path,
+# including the many "exit N"s below; try/finally does not introduce a new
+# variable scope in PowerShell, so nothing else in this script changes.
+Start-FocusGuard
+try {
+
 $RunnerFor = @{
     EditMode = @{ Path = (Join-Path $ProjectParent "$ProjectLeaf-TestRunner");  Product = "${RunnerProduct}TestRunner" }
     PlayMode = @{ Path = (Join-Path $ProjectParent "$ProjectLeaf-TestRunner2"); Product = "${RunnerProduct}TestRunner2" }
@@ -752,3 +761,7 @@ if ($allPassed) {
 
 Write-Host "`nSome tests failed."
 exit 1
+
+} finally {
+    Stop-FocusGuard
+}

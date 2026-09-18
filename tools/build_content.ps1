@@ -29,6 +29,15 @@ $Project = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
+# Process-tree focus guard, for this script's WHOLE run -- see
+# Start-FocusGuard's header in tools/unity_path.ps1 for why this replaced a
+# per-Unity-launch watchdog. Everything from here to the end of the file is
+# wrapped in try/finally so Stop-FocusGuard runs on every exit path;
+# try/finally does not introduce a new variable scope in PowerShell, so
+# nothing else in this script changes.
+Start-FocusGuard
+try {
+
 $lock = Get-UnityLockState -ProjectRoot $Project
 if ($lock.Held) {
     $who = if ($lock.HolderPid) { "pid $($lock.HolderPid)" } else { "a Unity.exe whose project could not be read" }
@@ -108,3 +117,7 @@ Write-Host ("content built in {0:N1}s -- Assets/_Project/Resources/Content is cu
 # passing batchmode Unity is not zero, and a wrapper reading it would throw
 # away a build that succeeded.
 exit 0
+
+} finally {
+    Stop-FocusGuard
+}
