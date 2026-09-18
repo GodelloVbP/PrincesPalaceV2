@@ -1,4 +1,62 @@
-# Gamepad Navigation — Plan v3
+# Gamepad Navigation -- Plan v3
+
+> ## Status: 2026-09-18. HARDWARE ROUND 1 COMPLETE. Section 12 item 4 has been answered by an owner play-test on a real controller, and all six of its findings are fixed
+>
+> This is the first entry in this document written from something a pad actually did rather than
+> from reading code, and it is worth saying what that bought: **four of the six were defects no
+> test in this project could have caught, because every one of them was a gap between the real
+> scene and the fixtures the tests build.** The suite was green throughout. It still is.
+>
+> | # | The owner's words | Root cause | Commit |
+> |---|---|---|---|
+> | 1 | "I found no way to move in the talent screen." | Three of the Talents entry's four directions were unset and Back was still `Navigation.Mode.Automatic`. The stick worked, in one direction of four, on a screen with no focus visual to say so. | `f990021e` |
+> | 2 | Relics -> Right went to Talents, not Character Sheet | The hub was a 2x2 Grid keyed on `HubAnchors` depth/lateral signs. Those are a STAGING fact; the composition on screen is a horseshoe, and Grid row-wrap sent Right off Relics across the whole screen. | `a9f89ebe` |
+> | 3 | "The joystick only is wonky... it feels almost random." | The ordinary branch had no press edge at all and deferred to `StandaloneInputModule`, whose repeat DELAY is never armed by a stick resting near its own dead zone -- so it repeated at the bare rate, ten selections a second, untouched. | `f6672a26` |
+> | 4 | "Arrow buttons should work as well as joystick." | The D-pad was bound to nothing: an Xbox pad reports its hat on the 6th and 7th joystick axes and `InputManager.asset` had only the left stick's two. Keyboard arrows were already fine and are now pinned. | `4b9f3ece` |
+> | 5 | "Back (B) should not close a screen but take you back first." | The dossier could stack a level on itself (the reward track, the pack, the books) and had no `INavCancelClaim` at all, so one Back press ran SystemMenu's `Close` and spent three levels. | `9dd9ca36` |
+> | 6 | "No intuitive navigating [in] the character sheets screen" | `CharacterDossierController.PairAcross` paired two groups by LIST INDEX, a rule correct only when they are already aligned across the crossed axis. Four of five cross-group edges landed 150-190 units from what the eye expected. | `12fc7385` |
+>
+> **The method that found items 1 and 6, recorded because it is reusable and reading the code was
+> not enough for either.** Both were measured on the REAL path -- `Hub -> building -> Submit`,
+> through `JourneyFixture`'s own scene loads -- with a throwaway diagnostic that dumped every
+> declared link and the world centre of its owner, then deleted. Item 1's four-direction dump ruled
+> out every one of the brief's other candidate causes in the same run (the context IS pushed, the
+> top IS selecting, the entry IS selected on arrival, the module IS the subclass). Item 6's position
+> dump is what turned "feels wrong" into "188 units, past a control 2 units away".
+>
+> **Two costs and one unknown are carried as open owner calls rather than closed quietly:**
+> - **`AUDIT.md` #167** -- item 3's armed edge means a held stick no longer auto-repeats AT ALL.
+>   That is a real loss on the reward track's rail and the dossier's pack. Predictable-and-slower
+>   beat unpredictable in the owner's own report; whether it still does after living with it is the
+>   owner's call, and the entry states what rebuilding repeat on top of the edge would cost.
+> - **`AUDIT.md` #166** -- item 4's bindings are correct for an Xbox pad on Windows BY
+>   DOCUMENTATION and verified on no hardware at all. Whether axes 6 and 7 are the hat, whether up
+>   reads positive, and the DualSense entirely, all need the pad in hand. The test file says so in
+>   its own header rather than implying coverage it does not have.
+> - **Item 6 is half a fix.** "No obvious selectors" is the other half and belongs with the shared
+>   arrow marker, not here -- the same gap item 1 hit on the talent orbs, and the same one
+>   `AUDIT.md` #160 opened. A Move that goes to the right place is still a Move nobody can see.
+>
+> **Two deviations, both stated in their own commits and repeated here so the deviations register
+> below stays complete:**
+> 1. **The hub's ring is authored in the owner's stated order, not by screen x** (item 2). The two
+>    expectations they gave are not both satisfiable by x order -- by x, the thing left of the gate
+>    is Talents, not Principality. Where the heuristic and the owner's own words disagree the words
+>    win, and the one hop that is not x-ordered is the price.
+> 2. **Nothing on this screen is fully reversible across columns** (item 6). Three left-file slots
+>    are nearest the same score cell and only one of them can be what that cell steps back to. Two
+>    columns of different lengths cannot be a bijection.
+>
+> **Three existing tests and three existing assertions were ADAPTED, never relaxed**, each because
+> it pinned behaviour this round rejected: the 2x2 hub grid, Cancel closing the menu from a pane
+> (twice, in the pad journey and its mouse twin), and three index-paired dossier edges. Every one
+> is named in its own commit message with what it now asks instead.
+>
+> Every commit gated on its own classes, the `ui` and `run` areas, and a full
+> `tools/run_tests_parallel.ps1` before the next -- `-BuildScenes` on item 4, whose regenerated
+> scenes were NOT committed (normalising fileIDs and anchors away left zero differing lines in all
+> five, so the whole diff was renumbering). No gate was red at any commit, and the three
+> `AUDIT.md` #157/#165 flakes passed on every run in this round.
 
 > ## Status: 2026-09-18. PHASE 4 COMPLETE except hardware acceptance (owner, section 12 item 4). The two mechanism-level items the previous pass left open are closed
 >
@@ -1400,7 +1458,11 @@ No effort estimates.
 3. **Wrap/clamp defaults** (§5): wrap Rail/Grid-row, clamp List, Map
    follows reachability.
 4. **Hardware list**: recommend Xbox + DualSense/DualShock on the shipping
-   platform.
+   platform. **ROUND 1 DONE** (2026-09-18, this file's own top status
+   header): played on a real controller, six findings, all six fixed. What
+   this item still wants is a SECOND pass -- the six fixes themselves have
+   not been played, and the D-pad bindings item 4 added are verified on no
+   hardware at all (`AUDIT.md` #166). The DualSense half is untouched.
 5. **Party pick-up depth**: Submit-to-pick-up/drop only, unchanged default.
 6. **Repeat-cadence testing gap** (§10): accept hardware-acceptance-only,
    or invest in a real-time PlayMode wait despite the speed/flakiness cost.

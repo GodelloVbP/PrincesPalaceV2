@@ -3215,3 +3215,52 @@ unrelated change in `ui`/`run`, the class lives in `combat`, and changing a test
 deserves its own gated pass rather than a drive-by. Recorded so the next person who sees it does not
 spend the afternoon looking for a real regression in the pop animation, which is where the message
 points and is not where the problem is.
+
+### 166. The D-pad bindings are correct for one controller by documentation, and unverified on any
+
+Hardware round 1 item 4 bound the D-pad by adding a Joystick Axis entry on the 6th axis to
+`Horizontal` and one on the 7th to `Vertical` in `ProjectSettings/InputManager.asset`, which is
+the Xbox-on-Windows mapping for the hat. `GamepadAxisBindingTests` pins the entries, pins the
+zero-based `axis:` reading against the left stick's own two entries, and pins that the dispatcher
+reads those two axis names -- all of which are facts about this repository and all of which it can
+check.
+
+Three things it cannot, stated here rather than asserted around:
+
+1. **That axes 6 and 7 really are the hat on the owner's own Xbox pad.** Unity's legacy input maps
+   a controller's axes through the platform driver; a different pad, or a different driver, can
+   number them differently. The failure mode is specific and worth recognising: if the entries land
+   on the trigger axis instead, the stick will behave normally and a trigger pull will move the
+   selection.
+2. **That up on the hat reads positive.** The new `Vertical` entry carries `invert: 0` while the
+   left stick's carries `invert: 1`, because the stick's raw Y is negative when pushed up and the
+   hat is documented as the other way round. If up and down come out swapped on the pad, flipping
+   `invert` on that one entry is the whole fix.
+3. **The DualSense, at all.** It is documented as reporting the same two axes under Windows in
+   Unity's legacy system, but nothing in this repository can confirm that and the test file says so
+   in its own header rather than implying coverage it does not have. It needs the pad in hand.
+
+Not a defect and not fixable from here -- it is the part of item 4 that only the owner's own
+hardware can close, and it belongs beside section 12 item 4's standing hardware-acceptance call
+rather than inside it.
+
+### 167. A held stick no longer repeats at all, which is a real loss on a long list
+
+Hardware round 1 item 3 (`f6672a26`) answered "the joystick only is wonky... it feels almost
+random" by giving the ordinary dispatcher branch the same armed edge the Fight branch already had:
+a press counts once and does not count again until the stick has been back below
+`NavigationInputModule.MoveThreshold`. That commit states the cost rather than hiding it, and this
+records it as a live owner call rather than leaving it in a commit message nobody greps.
+
+What changed: before, a held stick auto-repeated, badly -- an off-centre rest position repeated at
+ten selections a second because it never armed Unity's own 0.5s repeat DELAY, which is the whole of
+what the owner reported. Now it does not repeat at all. On the reward track's rail and the dossier's
+pack window that means one flick per step, and on a long rail that is a lot of flicks.
+
+The fork, if the owner wants repeat back: hold-to-repeat can be rebuilt on top of the armed edge
+rather than instead of it -- arm on the crossing, then re-fire on a real-time cadence the module
+owns itself, rather than deferring to `StandaloneInputModule`'s machinery, whose repeat gate is what
+misbehaved. That is a new mechanism with its own test cost (section 10's own note that
+repeat-cadence testing has to wait real frames), not a flag, so it is not done speculatively.
+Predictable-and-slower beat unpredictable in the owner's own report; whether it still does after
+living with it is the owner's call.
