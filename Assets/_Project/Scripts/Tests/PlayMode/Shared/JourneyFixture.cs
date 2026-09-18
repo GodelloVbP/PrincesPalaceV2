@@ -169,8 +169,46 @@ namespace PrincesPalace.PlayModeTests
         protected IEnumerator MoveMouseTo(GameObject node)
         {
             Assert.IsNotNull(node, "MoveMouseTo given a null node -- the target was never found in the scene");
-            yield return MoveMouseToWorldPoint(((RectTransform)node.transform).position);
+            yield return MoveMouseToWorldPoint(WorldCentreOf((RectTransform)node.transform));
         }
+
+        // THE RECT'S CENTRE, NOT ITS TRANSFORM POSITION -- and the difference
+        // is AUDIT.md #162's whole root cause, so this is not a tidy-up.
+        //
+        // `RectTransform.position` is the PIVOT, which is only the centre when
+        // the pivot happens to be (0.5, 0.5). The Hub's own gate is pivoted
+        // (0.5, 0) -- rect (x:-310, y:0, w:620, h:620), pivot flat on the
+        // bottom edge, because the building is placed by the ground it stands
+        // on -- so aiming at `position` put the pointer exactly on that rect's
+        // yMin boundary, where `Rect.Contains` answers true only because yMin
+        // is the inclusive edge. localPt read back (0.000, 0.000): a knife
+        // edge, not a click.
+        //
+        // What tipped it over was the pointer's own arrival. `MoveMouseTo`'s
+        // frame fires OnPointerEnter, ButtonPressAnimator starts lerping the
+        // button up to HoverScale, and the sub-pixel shift that puts in the
+        // pivot's screen position (measured: 78.320 -> 78.323 at a 0.333
+        // canvas scale) moves the frozen pointer to localPt (0.009, -0.009) --
+        // BELOW yMin -- on the very next frame, which is the frame that
+        // carries MouseButton0Down. GraphicRaycaster then finds nothing at
+        // all, the press lands on no target, and the release has no
+        // pointerPress to match, so the Button's own onClick never fires and
+        // the test sees a screen that simply did not react.
+        //
+        // Batch size decided which way the coin fell because the size of that
+        // first hover step is `Time.deltaTime`-driven: a loaded run's longer
+        // frame steps the lerp far enough to move the pivot a measurable
+        // fraction of a pixel, while the same test alone steps it too little
+        // to leave the edge. Hence "fails in every big batch, passes alone" --
+        // never a race this suite could have waited out, and never anything
+        // the production dispatcher did wrong.
+        //
+        // The centre is what the fixture's own contract already claimed to aim
+        // at ("over `node`'s own world rect centre"), and it is what a mouse
+        // player aims at. It is also robust by construction: the centre of a
+        // rect is interior to it for any pivot, so no control's pivot
+        // convention can put this pointer on a boundary again.
+        private static Vector3 WorldCentreOf(RectTransform rect) => rect.TransformPoint(rect.rect.center);
 
         // TWO FRAMES, not one -- PartyGamepadVisualCaptureTests' own
         // HoverCard is the precedent this file found the hard way it had
@@ -207,7 +245,12 @@ namespace PrincesPalace.PlayModeTests
         // its own inverse, not a separate approximation of it.
         protected static Vector3 WorldPointAtFraction(RectTransform rect, float t)
         {
-            var local = new Vector3(rect.rect.xMin + Mathf.Clamp01(t) * rect.rect.width, 0f, 0f);
+            // y is rect.center.y, not 0, for the same reason MoveMouseTo aims
+            // at the rect centre: local y == 0 is the PIVOT's row, which is
+            // the rect's own edge on anything not pivoted at 0.5. Identical
+            // for a vertically-centred pivot (rect.center.y is then 0), and
+            // correct rather than lucky for anything else.
+            var local = new Vector3(rect.rect.xMin + Mathf.Clamp01(t) * rect.rect.width, rect.rect.center.y, 0f);
             return rect.TransformPoint(local);
         }
 
