@@ -112,18 +112,95 @@ namespace PrincesPalace
             // memory with its own Selectables/entry -- reselecting against
             // THAT stale instance would put its last-selected control right
             // back as the active selection the same frame Close() cleared
-            // it, because ContainsSelectable/ResolveSelection have no idea
+            // it, because ContainsSelectable/SelectionFor have no idea
             // the context is no longer on the stack. Reading the CURRENT top
             // instead asks the question this rule is actually for: what
             // does the stack look like NOW, after whatever Cancel/Submit did
             // this call. Safe for the Fight-becomes-top case test 1 guards
             // (section 3): a Fight NavContext's own ContainsSelectable/
-            // ResolveSelection are both inert (EmptySelectables, no entry),
-            // so this can only ever resolve to null there, never invoke
-            // MoveFocus/ConfirmFocus -- those stay exclusively behind
+            // RememberedSelectable are both inert (EmptySelectables, no
+            // entry), so this can only ever resolve to null there, never
+            // invoke MoveFocus/ConfirmFocus -- those stay exclusively behind
             // IsNonSelecting's branch above, decided from topAtStart same as
             // ever.
-            ReselectIfOutsideDeclaredSet(Contexts?.Top, selectedBeforeDispatch);
+            var topAtEnd = Contexts?.Top;
+            ReselectIfOutsideDeclaredSet(topAtEnd, selectedBeforeDispatch);
+
+            // FOCUS MEMORY IS THE DISPATCHER'S JOB, not each screen's (plan
+            // sections 4 and 6, AUDIT.md #163's second half). Before this,
+            // NavContext.Remember was called from nowhere at all, so
+            // "remembered ?? entry" was only ever entry and a context popped
+            // and re-entered always landed on its entry rather than where the
+            // player left it.
+            //
+            // Recorded HERE, after the reselection rule above has settled the
+            // frame, so what gets remembered is the selection this context
+            // actually ends the call with -- never a mid-call value a
+            // click nulled and this rule then restored. Recorded against
+            // topAtEnd, the same context the reselection was resolved
+            // against: a Submit that just pushed a modal remembers the
+            // modal's own entry on the MODAL, and leaves the screen
+            // underneath remembering where its focus was.
+            RememberSelection(topAtEnd);
+        }
+
+        // THE ONE PLACE section 4's "remembered ?? entry" is decided.
+        //
+        // NavContext states the half it can (RememberedSelectable: the
+        // remembered node if its id is still declared) and deliberately not
+        // the half it cannot -- whether that node is still usable is an
+        // engine question, and a Domain type has no business asking it
+        // (docs/CODE_STANDARDS.md section 1). Hidden or destroyed both fall
+        // back to the entry: Talent's invest button and RewardTrack's collect
+        // button are the two controls in this project that genuinely vanish
+        // on a state change, and a remembered selection pointing at one of
+        // them after it went away is a focus the player cannot see and cannot
+        // move off.
+        //
+        // `remembered != null` is Unity's own null, which is the destroyed
+        // case -- a GameObject destroyed by a repaint is still a live managed
+        // reference in the Selectables dictionary, so this comparison, not a
+        // pattern match, is what catches it.
+        public static GameObject SelectionFor(NavContext context)
+        {
+            if (context == null) return null;
+
+            var remembered = context.RememberedSelectable() as GameObject;
+            if (Usable(remembered)) return remembered;
+
+            return context.Entry as GameObject;
+        }
+
+        // SHOWN AND NOT DESTROYED -- the one engine-level question every
+        // selection decision above asks, in one place.
+        //
+        // `go != null` is Unity's own operator on purpose, not a pattern
+        // match or ReferenceEquals: a GameObject destroyed by a repaint is
+        // still a live managed reference wherever a dictionary or a captured
+        // local holds it, and this comparison is the only one that reports it
+        // as gone.
+        private static bool Usable(GameObject go) => go != null && go.activeInHierarchy;
+
+        // A null selection is NOT forgetting. A frame that ends with nothing
+        // selected is either Fight's own steady state or section 6's
+        // screen-level fallback (every node in the entry's group gone), and in
+        // both cases the last node this context did hold is still the right
+        // answer for when it is entered again -- overwriting it with "nothing"
+        // would turn every transient empty frame into an erased memory.
+        //
+        // A selection this context does not declare is not forgotten either:
+        // IdOf answers null and nothing is written. That is the case of a
+        // screen whose own context sits under a modal while something else
+        // owns the selection.
+        private static void RememberSelection(NavContext top)
+        {
+            if (top == null || top.IsNonSelecting) return;
+
+            var current = EventSystem.current.currentSelectedGameObject;
+            if (current == null) return;
+
+            var id = top.IdOf(current);
+            if (id != null) top.Remember(id);
         }
 
         // Five steps, nothing else runs this call -- plan section 3.
@@ -179,8 +256,18 @@ namespace PrincesPalace
         {
             if (top == null) return;
 
+            // USABLE, not merely non-null and declared. A node that was
+            // hidden or destroyed while it held the focus is still a member
+            // of the declared set (a controller declares what it owns, not
+            // what happens to be on screen -- SystemMenuController.
+            // RefreshSelectables says so in its own header), so the old
+            // membership-only test left the focus standing on a control the
+            // player can neither see nor move off. Plan section 6 already
+            // states the rule this closes: "if the focused node vanishes
+            // mid-session: the group's next-nearest eligible node, or the
+            // entry if none remain."
             var current = EventSystem.current.currentSelectedGameObject;
-            if (current != null && top.ContainsSelectable(current)) return;
+            if (Usable(current) && top.ContainsSelectable(current)) return;
 
             // PREFER WHAT WAS SELECTED A MOMENT AGO, if the SAME top context
             // still declares it -- item 4's own mixed-input finding (see
@@ -192,13 +279,13 @@ namespace PrincesPalace
             // DebugMenuGamepadNavigationTests' own pinned claim, still true
             // here -- the popped context's last-selected row is never a
             // member of the NEW top's declared set) or PUSHED fresh over
-            // (a modal's own entry is chosen by ResolveSelection below, not
+            // (a modal's own entry is chosen by SelectionFor below, not
             // by whatever the screen underneath happened to have selected).
             // It only fires for the one case those two are not: the SAME
             // context, still top, whose current selection was nulled by a
             // click that never replaced it with anything -- a background
             // click, or a click on a Navigation.Mode.None Selectable.
-            if (selectedBeforeDispatch != null && top.ContainsSelectable(selectedBeforeDispatch))
+            if (Usable(selectedBeforeDispatch) && top.ContainsSelectable(selectedBeforeDispatch))
             {
                 EventSystem.current.SetSelectedGameObject(selectedBeforeDispatch);
                 return;
@@ -212,7 +299,13 @@ namespace PrincesPalace
             // `current` just failed ContainsSelectable against the NEW top,
             // so it is exactly the stale value this rule exists to replace,
             // never a value worth defending by leaving it alone.
-            var resolved = top.ResolveSelection() as GameObject;
+            //
+            // SelectionFor, not NavContext's own half of it: this is the pop
+            // path as well as the push path (a Cancel that closed a modal
+            // lands here with the screen underneath as `top`), and both want
+            // the same answer -- where that context left off if it is still
+            // there to go back to, its entry otherwise.
+            var resolved = SelectionFor(top);
             EventSystem.current.SetSelectedGameObject(resolved);
         }
     }

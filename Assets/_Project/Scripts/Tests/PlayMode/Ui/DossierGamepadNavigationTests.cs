@@ -138,6 +138,19 @@ namespace PrincesPalace.PlayModeTests
 
         private static GameObject Tooltip => Node("DossierTooltip");
 
+        // The same box, found whether or not it is active -- Node is
+        // GameObject.Find, which sees only the active hierarchy, so it answers
+        // null the moment the menu's panel goes down and takes the box with
+        // it. The box's OWN activeSelf flag is the only thing that can tell
+        // "this tooltip was closed" from "the panel it lives in went away",
+        // and reading it while the menu is shut needs an inactive-inclusive
+        // lookup -- the same shape Halo above already uses for the same
+        // reason.
+        private static GameObject TooltipEvenWhileHidden =>
+            Resources.FindObjectsOfTypeAll<Transform>()
+                .FirstOrDefault(t => t.name == "DossierTooltip" && t.gameObject.scene.IsValid())
+                ?.gameObject;
+
         private static Image Halo(string name) =>
             Resources.FindObjectsOfTypeAll<Image>()
                 .FirstOrDefault(im => im.name == name && im.gameObject.scene.IsValid());
@@ -552,8 +565,28 @@ namespace PrincesPalace.PlayModeTests
             NavigationInputModule.Contexts.Remove(modal);
         }
 
+        // RENAMED AND SPLIT IN TWO when focus memory landed (AUDIT.md #163),
+        // rather than left red or quietly relaxed. What this used to assert
+        // was that the box is still down AFTER the menu is reopened, on the
+        // stated grounds that "left set, the box would simply reappear with
+        // the menu, describing a selection from before it closed". That
+        // reasoning was sound while a reopened menu could only ever land on
+        // its entry; it is not any more. The dispatcher now restores this
+        // screen's remembered focus on reopen, so the cell IS selected again,
+        // and a box describing the selected cell is the tooltip doing exactly
+        // what section 7 says it does -- following focus -- not a stale flag
+        // surviving a close.
+        //
+        // So both halves are pinned instead of the one the old sequence could
+        // see: the force-close itself (the box's own flag, read while the
+        // menu is shut, which is the claim that was always the point), and
+        // the reopen, whose box is now required to come back WITH the focus
+        // it describes. The second half would have hidden a real regression
+        // if it had simply been deleted -- a box coming back with no
+        // selection behind it is still wrong, and asserting the selection
+        // alongside it is what tells the two apart.
         [UnityTest]
-        public IEnumerator ClosingTheMenu_DropsTheTooltipRatherThanLeavingItToComeBack()
+        public IEnumerator ClosingTheMenu_DropsTheTooltip_AndReopeningBringsItBackWithTheFocusItDescribes()
         {
             yield return OpenTheCharacterTab();
             yield return OpenThePack();
@@ -565,18 +598,25 @@ namespace PrincesPalace.PlayModeTests
             _menu.Close();
             yield return null;
 
+            // activeSelf, NOT activeInHierarchy: hiding the menu's panel
+            // makes the box inactive in the hierarchy whatever else happens,
+            // so only its own flag can tell "the tooltip was closed" from
+            // "the panel it lives in went away and took it along".
+            var box = TooltipEvenWhileHidden;
+            Assert.IsNotNull(box, "fixture: the dossier drew no tooltip box at all");
+            Assert.IsFalse(box.activeSelf,
+                "the screen's own context coming off the stack hides its tooltip -- its own flag, not " +
+                "merely its parent's");
+
             _menu.Open();
             _menu.Select(0);
             yield return null;
 
-            // activeSelf, NOT activeInHierarchy: hiding the menu's panel
-            // makes the box inactive in the hierarchy whatever else happens,
-            // so only its own flag can tell "the tooltip was closed" from
-            // "the panel it lives in went away and took it along". Left set,
-            // the box would simply reappear with the menu, describing a
-            // selection from before it closed.
-            Assert.IsFalse(Tooltip.activeSelf,
-                "the screen's own context coming off the stack hides its tooltip");
+            AssertSelected("DossierPackCell0",
+                "reopening the menu should restore this screen's remembered focus (plan section 4's push " +
+                "rule), which is what makes the box below correct rather than stale");
+            Assert.IsTrue(box.activeSelf,
+                "the box follows focus, so focus landing back on the cell brings its tooltip back with it");
         }
 
         // ---- the selected halo (AUDIT.md #160) ----------------------------------

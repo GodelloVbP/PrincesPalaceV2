@@ -188,9 +188,21 @@ namespace PrincesPalace.PlayModeTests
 
             yield return null;
 
+            // THE CLAIM SURVIVES FOCUS MEMORY LANDING (AUDIT.md #163), and
+            // the reason is worth stating rather than leaving the old
+            // parenthetical to rot: this used to read "HubController never
+            // calls NavContext.Remember, so there is no per-node memory to
+            // restore, only Entry", which was true of the mechanism and is
+            // no longer -- NavigationInputModule now records the hub's own
+            // focus every frame. The gate is still the right answer here, and
+            // now for a stronger reason than an absent feature: nothing in
+            // this test ever moves off the gate, so the gate IS what the hub
+            // remembers, and memory and entry agree. A test that wanted to
+            // tell the two apart would have to Move first, which is
+            // FocusMemoryGamepadNavigationTests' own job.
             Assert.AreEqual(gate, EventSystem.current.currentSelectedGameObject,
-                "closing the menu should fall back to the hub's own entry (the gate) -- HubController never " +
-                "calls NavContext.Remember, so there is no per-node memory to restore, only Entry");
+                "closing the menu should land back on the gate -- the hub's remembered node, which is " +
+                "also its entry, since nothing in this test moved the selection off it");
         }
     }
 }

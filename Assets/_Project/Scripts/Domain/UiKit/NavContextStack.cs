@@ -32,11 +32,28 @@ namespace PrincesPalace.Domain.UiKit
 
         public bool IsTop(NavContext context) => context != null && ReferenceEquals(Top, context);
 
+        public bool Contains(NavContext context) => context != null && _stack.Contains(context);
+
         public void Push(NavContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
             _stack.Add(context);
             Changed?.Invoke();
+        }
+
+        // PUSH A CONTEXT THAT MAY ALREADY BE HERE, which is what a modal that
+        // can be re-opened needs: its NavContext now outlives its time on the
+        // stack (it carries the screen's focus memory across visits, plan
+        // section 4), so "create it once, put it back every time it opens" is
+        // the shape its controller wants, and a plain Push would stack a
+        // second copy of the same context the second time round. A no-op when
+        // it is already here -- including when it is already TOP, which is a
+        // repaint calling this again, not a re-open.
+        public void PushIfAbsent(NavContext context)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (_stack.Contains(context)) return;
+            Push(context);
         }
 
         // Pops whatever is currently on top -- the ordinary Close() path,

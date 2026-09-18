@@ -538,7 +538,7 @@ namespace PrincesPalace
             // reselection rule, so the screen never draws a frame with the
             // choice up and nothing focused.
             UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
-                _navContext?.ResolveSelection() as GameObject);
+                NavigationInputModule.SelectionFor(_navContext));
 
             if (isActiveAndEnabled)
             {

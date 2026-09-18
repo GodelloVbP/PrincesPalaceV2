@@ -652,10 +652,12 @@ namespace PrincesPalace
 
         private void RegisterNavContext()
         {
-            if (_navContext != null) return;
+            if (_navContext == null) _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
-            NavigationInputModule.Contexts?.Push(_navContext);
+            // PushIfAbsent, not Push: this context outlives its time on the
+            // stack now (see PopNavContext), so re-entering the shop puts the
+            // SAME instance back rather than building a new one.
+            NavigationInputModule.Contexts?.PushIfAbsent(_navContext);
         }
 
         private void PopNavContext()
@@ -663,7 +665,14 @@ namespace PrincesPalace
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);
-            _navContext = null;
+            // _navContext is NOT nulled. It carries this screen's focus
+            // memory (plan section 4: "remembered focus by stable id"), and a
+            // modal that can be re-opened has to survive being closed for
+            // that memory to mean anything -- a context recreated on the next
+            // open would land on its entry every single time, which is the
+            // whole of AUDIT.md #163's second half. What leaves is its place
+            // on the stack; what stays is the controller's own record of
+            // where the player was.
         }
 
         // Pack open: Cancel closes it, the same job PackCloseButton already

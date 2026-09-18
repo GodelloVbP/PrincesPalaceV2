@@ -231,8 +231,14 @@ namespace PrincesPalace
                 // shape still stays a function).
                 _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
                     claimant: ActivePaneCancelClaim, tabStrip: () => this);
-                NavigationInputModule.Contexts?.Push(_navContext);
             }
+
+            // PushIfAbsent, not Push: this context outlives its time on the
+            // stack now (see PopNavContext), so re-opening the menu puts the
+            // SAME instance -- and the focus memory it carries -- back on the
+            // stack rather than building a fresh one that could only ever
+            // land on its entry.
+            NavigationInputModule.Contexts?.PushIfAbsent(_navContext);
 
             RefreshSelectables();
 
@@ -240,8 +246,13 @@ namespace PrincesPalace
             // 4) -- not left for the dispatcher's own next-frame
             // reselection rule to pick up, which would leave the menu
             // showing no selection for the one frame between Open() and
-            // the next Process() call.
-            EventSystem.current?.SetSelectedGameObject(_navContext.ResolveSelection() as GameObject);
+            // the next Process() call. Through the dispatcher's own
+            // SelectionFor, so this push resolves memory by exactly the rule
+            // the reselection step would have applied a frame later -- the
+            // hidden/destroyed fallback included, which matters here because
+            // a pane can hide the very control the last visit left focused
+            // (RewardTrack's collect button).
+            EventSystem.current?.SetSelectedGameObject(NavigationInputModule.SelectionFor(_navContext));
         }
 
         private void PopNavContext()
@@ -249,8 +260,14 @@ namespace PrincesPalace
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);
-            _navContext = null;
 
+            // _navContext is NOT nulled. It carries this screen's focus
+            // memory (plan section 4: "remembered focus by stable id"), and
+            // the menu is re-opened constantly -- a context recreated on the
+            // next Open() would land on its entry every single time, which
+            // is the whole of AUDIT.md #163's second half. What leaves is its
+            // place on the stack; what stays is where the player was.
+            //
             // Nothing to reselect-away-from here: NavigationInputModule's
             // own post-dispatch rule now reads the CURRENT top (this fix
             // landed alongside this file, see that method's own comment for

@@ -110,30 +110,47 @@ namespace PrincesPalace.Domain.UiKit
             Selectables = selectables ?? EmptySelectables;
         }
 
-        // Remembered node if one is set and still declared, else the entry --
-        // one rule for the reselection cases section 4 lists (a background
-        // click, a stray SetSelectedGameObject, a context just pushed with
-        // nothing remembered yet). Null is a legal answer: an ordinary
-        // context whose whole group emptied has nothing to reselect either
-        // (section 6's screen-level-fallback case) -- the caller decides
-        // what a null resolution means for its own selection call, this
-        // class only ever states what is declared.
-        public object ResolveSelection()
+        // WHAT THIS CONTEXT REMEMBERS, if the id it remembered is still one
+        // of the nodes it declares -- else null.
+        //
+        // This is deliberately only HALF of section 4's "remembered ?? entry"
+        // rule. The other half needs to know whether the remembered node is
+        // still usable (shown, not destroyed), which is an engine question
+        // this class cannot ask and must not pretend to
+        // (docs/CODE_STANDARDS.md section 1), so the whole rule is stated
+        // once in NavigationInputModule.SelectionFor and never a second time
+        // here. Null is a legal answer at both halves: a context whose whole
+        // group emptied has nothing to reselect (section 6's screen-level
+        // fallback).
+        //
+        // The id, not a reference, is what survives: a repaint can destroy
+        // and rebuild the node declared under a given id (Map's rooms, the
+        // debug menu's rows) and the id still names the right control.
+        public object RememberedSelectable()
         {
             if (RememberedId != null && Selectables.TryGetValue(RememberedId, out var remembered)) return remembered;
-            return Entry;
+            return null;
         }
 
-        public bool ContainsSelectable(object handle)
+        // WHICH ID A HANDLE IS DECLARED UNDER, or null if this context does
+        // not declare it at all. The dispatcher needs this to record focus
+        // memory -- it holds the selected GameObject and has to turn it back
+        // into the stable id this context stores (plan section 4, "remembered
+        // focus by stable id") -- and ContainsSelectable is the same walk
+        // asking a narrower question, so it is expressed in terms of this
+        // one rather than duplicating the comparison.
+        public string IdOf(object handle)
         {
-            if (handle == null) return false;
+            if (handle == null) return null;
 
-            foreach (var value in Selectables.Values)
+            foreach (var pair in Selectables)
             {
-                if (Equals(value, handle)) return true;
+                if (Equals(pair.Value, handle)) return pair.Key;
             }
 
-            return false;
+            return null;
         }
+
+        public bool ContainsSelectable(object handle) => IdOf(handle) != null;
     }
 }

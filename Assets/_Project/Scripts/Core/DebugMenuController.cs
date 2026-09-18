@@ -274,14 +274,14 @@ namespace PrincesPalace
             object entry = giveGoldButton != null ? giveGoldButton.gameObject
                 : closeButton != null ? closeButton.gameObject : (object)null;
 
-            if (_navContext != null)
-            {
-                _navContext.Reconfigure(entry, selectables);
-                return;
-            }
+            if (_navContext == null) _navContext = new NavContext(entry, selectables, cancel: Close);
+            else _navContext.Reconfigure(entry, selectables);
 
-            _navContext = new NavContext(entry, selectables, cancel: Close);
-            NavigationInputModule.Contexts?.Push(_navContext);
+            // PushIfAbsent, not Push: this context outlives its time on the
+            // stack now (see OnDisable), so re-opening the menu puts the SAME
+            // instance back rather than building a new one, and a repaint
+            // while it is already top must not stack a second copy.
+            NavigationInputModule.Contexts?.PushIfAbsent(_navContext);
         }
 
         private void OnDisable()
@@ -289,7 +289,14 @@ namespace PrincesPalace
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);
-            _navContext = null;
+            // _navContext is NOT nulled. It carries this screen's focus
+            // memory (plan section 4: "remembered focus by stable id"), and a
+            // modal that can be re-opened has to survive being closed for
+            // that memory to mean anything -- a context recreated on the next
+            // open would land on its entry every single time, which is the
+            // whole of AUDIT.md #163's second half. What leaves is its place
+            // on the stack; what stays is the controller's own record of
+            // where the player was.
         }
 
         // Read fresh each Refresh rather than cached at Start.
