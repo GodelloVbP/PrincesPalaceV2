@@ -339,8 +339,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Press(0f, 1f);
 
             AssertSelected("DossierPackClose",
-                "this pane does not claim Cancel (that closes the whole menu), so the panel's own Close " +
-                "button is the only way back out of the pack -- exactly as it is for the mouse");
+                "Close stays in the graph even now that Cancel steps back a level for free -- it is the " +
+                "mouse's own way out of the pack, and a Move has to be able to reach it");
         }
 
         [UnityTest]
@@ -395,8 +395,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Press(0f, 1f);
 
             AssertSelected("DossierSpellsClose",
-                "this pane does not claim Cancel any more than the pack does, so the panel's own Close " +
-                "button is the only way back out of it on a stick -- exactly as it is for the mouse");
+                "Close stays in the graph for the identical reason the pack's does -- it is the mouse's " +
+                "own way out of the books, reachable by a Move as well as by a click");
         }
 
         [UnityTest]
@@ -417,8 +417,14 @@ namespace PrincesPalace.PlayModeTests
                 "needs one");
         }
 
+        // ADAPTED, NOT RELAXED. This test used to assert that Cancel inside
+        // the books panel closed the whole menu, on the reasoning that the
+        // pane claimed nothing. The hardware play-test rejected exactly that
+        // ("Back (B) should not close a screen but take you back first"), so
+        // the claim is inverted and the test keeps asking the same question:
+        // what does one Cancel press cost from in here?
         [UnityTest]
-        public IEnumerator Cancel_WhileTheSpellsPanelIsOpen_ClosesTheWholeMenu()
+        public IEnumerator Cancel_WhileTheSpellsPanelIsOpen_ClosesThePanelAndReturnsToItsRow()
         {
             yield return OpenTheCharacterTab();
             yield return OpenTheSpells();
@@ -428,10 +434,58 @@ namespace PrincesPalace.PlayModeTests
             _input.CancelDown = true;
             yield return DriveFrame();
 
+            Assert.IsFalse(_dossier.IsSpellsShown, "Cancel should have closed the books panel");
+            Assert.IsTrue(_menu.IsOpen, "and must not have taken the menu down with it");
+            AssertSelected("DossierSpellsRow", "the press costs exactly one level: back to the row that opened it");
+        }
+
+        [UnityTest]
+        public IEnumerator Cancel_WhileThePackIsOpen_ClosesThePackAndReturnsToItsRow()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenThePack();
+            Select("DossierPackCell0");
+            yield return null;
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(_dossier.IsPackShown, "Cancel should have closed the pack");
+            Assert.IsTrue(_menu.IsOpen, "and must not have taken the menu down with it");
+            AssertSelected("DossierPackRow", "the press costs exactly one level: back to the row that opened it");
+        }
+
+        // THE OWNER'S OWN EXAMPLE, end to end: "reward track to character
+        // sheet screen". Two presses, two levels, in that order -- and the
+        // second one is what proves the claim is per-level rather than a flat
+        // "the dossier never closes the menu".
+        [UnityTest]
+        public IEnumerator Cancel_FromTheRewardTrack_ReturnsToItsRow_AndOnlyTheNextCancelClosesTheMenu()
+        {
+            yield return OpenTheCharacterTab();
+
+            Select("DossierTrackRow");
+            yield return null;
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+
+            var panel = Node("RewardTrackPanel");
+            Assert.IsNotNull(panel, "fixture: the dossier drew no reward track panel");
+            Assert.IsTrue(panel.activeSelf, "fixture: Submit on the track row should have opened the panel");
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(panel.activeSelf, "the first Cancel should close the reward track");
+            Assert.IsTrue(_menu.IsOpen, "and leave the character sheet standing behind it");
+            AssertSelected("DossierTrackRow", "with the row that opened it selected, ready to be pressed again");
+
+            _input.CancelDown = true;
+            yield return DriveFrame();
+
             Assert.IsFalse(_menu.IsOpen,
-                "the spells panel does not claim Cancel any more than the pack does -- Cancel closes the " +
-                "whole menu, matching Cancel_FromInsideTheDossier_ClosesTheMenu's project-wide claim rather " +
-                "than a special case for this one panel");
+                "only from the pane's base level does Cancel close the menu -- with nothing left to step " +
+                "back out of, the dossier declines the press and SystemMenu's own Close runs");
         }
 
         [UnityTest]
@@ -687,7 +741,9 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
 
             Assert.IsFalse(_menu.IsOpen,
-                "the dossier does not claim Cancel -- it is SystemMenuController's, and it closes the menu");
+                "the dossier claims Cancel one LEVEL at a time, not one PANE at a time -- with no panel " +
+                "open there is nothing to step back out of, so the press falls through to SystemMenu's " +
+                "own Close exactly as it always did");
         }
     }
 }

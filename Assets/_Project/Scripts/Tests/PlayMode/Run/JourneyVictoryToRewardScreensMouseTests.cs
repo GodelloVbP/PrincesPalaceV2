@@ -279,9 +279,30 @@ namespace PrincesPalace.PlayModeTests
                 "clicking the collect button should claim through the earned level, exactly once");
             Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            yield return PressCancel(); // no click equivalent -- neither panel claims Cancel, so this is the mouse's own ESC again
+            // ADAPTED, NOT RELAXED, alongside its pad twin: hardware round 1
+            // item 5 replaced "Cancel closes the whole menu from any pane"
+            // with "Cancel steps back exactly one level", and the reward
+            // track is the owner's own worked example of it. Still
+            // PressCancel and not a click -- the panel's Close button is the
+            // mouse's own way out and is already covered on the pad path;
+            // what is being proven here is that the ESC a mouse player still
+            // has costs them the same one level it costs a pad player.
+            //
+            // Held before the press for the same reason the pad twin holds
+            // it: Node() cannot find a deactivated object.
+            var trackPanel = Node("RewardTrackPanel");
+            Assert.IsNotNull(trackPanel, "the reward track panel is not in this scene");
 
-            Assert.IsFalse(menu.IsOpen, "Cancel should close the whole menu -- the track panel has no nested context");
+            yield return PressCancel();
+
+            Assert.IsFalse(trackPanel.activeSelf, "the first Cancel should close the reward track");
+            Assert.IsTrue(menu.IsOpen, "and leave the character sheet standing behind it");
+
+            yield return PressCancel();
+
+            Assert.IsFalse(menu.IsOpen,
+                "only from the pane's base level does Cancel close the menu -- with the track shut there " +
+                "is nothing left for the dossier to claim the press for");
         }
     }
 }

@@ -202,7 +202,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ScrollsAndCollectsExactlyOnce_CancelReturnsToTheHub()
+        public IEnumerator ReachingTheRewardTrack_ThroughTheSystemMenu_ScrollsAndCollectsExactlyOnce_CancelStepsBackOneLevelAtATime()
         {
             SaveSlotManager.EnterSlot(0);
 
@@ -280,13 +280,35 @@ namespace PrincesPalace.PlayModeTests
                 "Submit on the collect button should claim through the earned level, exactly once");
             Assert.AreNotEqual(before, character0.claimedTrackLevel, "the claim should actually have happened");
 
-            // Neither the track panel nor the dossier claims Cancel (the
-            // same "this pane does not claim Cancel" rule the pack and
-            // spells panels already state) -- one press closes the whole
-            // menu, back to the hub.
+            // ADAPTED, NOT RELAXED. This used to assert that one Cancel from
+            // inside the track closed the whole menu, on the "this pane does
+            // not claim Cancel" rule the pack and spells panels then shared.
+            // The hardware play-test rejected exactly that behaviour, naming
+            // this exact screen pair: "Back (B) should not close a screen but
+            // take you back first (e.g. reward track to character sheet
+            // screen)." The question is the one this test always asked -- what
+            // does one Cancel press cost from in here -- and the answer is now
+            // one level rather than three.
+            //
+            // Node() is GameObject.Find, which sees only active objects, so
+            // the panel is held BEFORE the press that deactivates it.
+            var trackPanel = Node("RewardTrackPanel");
+            Assert.IsNotNull(trackPanel, "the reward track panel is not in this scene");
+
             yield return PressCancel();
 
-            Assert.IsFalse(menu.IsOpen, "Cancel should close the whole menu -- the track panel has no nested context");
+            Assert.IsFalse(trackPanel.activeSelf, "the first Cancel should close the reward track");
+            Assert.IsTrue(menu.IsOpen, "and leave the character sheet standing behind it");
+            AssertSelectedName("DossierTrackRow",
+                "with the row that opened the track selected again, ready to be pressed a second time");
+
+            // And the second press, which is what proves the claim is per
+            // LEVEL rather than a flat "the dossier never closes the menu".
+            yield return PressCancel();
+
+            Assert.IsFalse(menu.IsOpen,
+                "only from the pane's base level does Cancel close the menu -- with nothing left to step " +
+                "back out of, the dossier declines the press and SystemMenu's own Close runs");
             AssertSelectedName("StartRunGate", "closing the menu should restore the hub's own entry, the gate");
         }
     }

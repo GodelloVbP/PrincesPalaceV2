@@ -21,7 +21,7 @@ namespace PrincesPalace
     // uses, never from a second computation -- a sheet that recomputed its own
     // figures would eventually disagree with the battle, and the player would be
     // right either way.
-    public class CharacterDossierController : MonoBehaviour, INavPaneEntry
+    public class CharacterDossierController : MonoBehaviour, INavPaneEntry, INavCancelClaim
     {
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text subLine;
@@ -552,10 +552,12 @@ namespace PrincesPalace
         // under the panel's own Close button, over a 2-wide grid of whatever
         // cells currently hold an item.
         //
-        // CLOSE IS IN THE GRAPH, and it has to be: this pane does not claim
-        // Cancel (that is SystemMenuController's, and it closes the whole
-        // menu), so the panel's own button is the only way back out of the
-        // pack -- exactly as it is for the mouse.
+        // CLOSE IS IN THE GRAPH. It used to be the ONLY way out on a stick,
+        // because this pane claimed no Cancel at all; ClaimCancel below now
+        // steps back out of the pack for free (hardware round 1 item 5), and
+        // Close stays anyway -- it is the mouse's own way out, drawn on the
+        // panel, and a control the eye can see has to be a control a Move can
+        // reach.
         private void DeclarePack(List<UiNavGroup<Selectable>> groups,
             List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
         {
@@ -598,11 +600,9 @@ namespace PrincesPalace
         // Grid shape the layout does not have.
         //
         // CLOSE IS IN THE GRAPH for the identical reason DeclarePack's own
-        // Close is: this pane does not claim Cancel any more than the pack
-        // does (Cancel_FromInsideTheDossier_ClosesTheMenu pins that
-        // project-wide, for the dossier as a whole), so the panel's own
-        // button is the only way back out on a stick, exactly as it is for
-        // the mouse.
+        // Close is, and with the identical correction: Cancel now steps back
+        // out of this panel too, and Close remains because it is drawn on the
+        // panel for the mouse and must therefore be reachable by a Move.
         private void DeclareSpells(List<UiNavGroup<Selectable>> groups,
             List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
         {
@@ -813,6 +813,77 @@ namespace PrincesPalace
             packPanel.SetShown(open);
             if (packChevron != null) packChevron.SetContent(open ? "<" : ">");
             RefreshNavigation();
+
+            // EXPLICIT ON BOTH EDGES, the gap ShowSpells' own comment named as
+            // "left alone here... a separate change" and hardware round 1
+            // item 5 has now asked for: the dispatcher's reselection rule
+            // cannot do this for free, because
+            // SystemMenuController.RefreshSelectables declares every
+            // Selectable under the whole pane regardless of visibility, so
+            // PackRow -- now hidden behind the panel covering it -- still
+            // counts as declared and the rule stays silent.
+            if (open) EventSystem.current?.SetSelectedGameObject(PackEntry());
+            else if (packRow != null) EventSystem.current?.SetSelectedGameObject(packRow.gameObject);
+        }
+
+        // The panel's own entry: its Close button, which DeclarePack already
+        // puts at the head of the column. Not the first bound cell -- a pack
+        // with nothing in it has no cells at all, and Close is the one control
+        // this panel always has.
+        private GameObject PackEntry()
+        {
+            var cells = BoundPackCells();
+            if (cells.Count > 0 && cells[0] != null) return cells[0].gameObject;
+            return packCloseButton != null ? packCloseButton.gameObject : null;
+        }
+
+        // ---- Cancel, claimed one level at a time (INavCancelClaim) ----------
+        //
+        // HARDWARE PLAY-TEST ROUND 1, ITEM 5: "Back (B) should not close a
+        // screen but take you back first (e.g. reward track to character
+        // sheet screen)."
+        //
+        // Before this, Cancel anywhere inside this pane ran SystemMenu's own
+        // Close and took the whole menu down, so a player who had opened the
+        // reward track from a row, or the pack, or the books, lost three
+        // levels to one press and had to walk all the way back in.
+        //
+        // The seam is the one PartyController already uses while carrying a
+        // character, and generalising it is deliberately NOT a per-panel flag:
+        // this method answers at the moment of the press, so nothing has to
+        // remember to set or clear anything, and a pane with no level open
+        // simply says false and lets SystemMenu close as it always did. The
+        // panels are tested innermost first -- only one of the three can be
+        // open at a time (the track row is only reachable with column A's
+        // rows showing, which means neither the pack nor the books are), but
+        // stating the order costs nothing and means a future fourth level
+        // cannot quietly invert it.
+        bool INavCancelClaim.ClaimCancel()
+        {
+            if (trackPanel != null && trackPanel.activeSelf)
+            {
+                // Deactivating is the whole of it: RewardTrackController's own
+                // OnDisable fires the Closed callback ShowTrack assigned, and
+                // that is what hands selection back to DossierTrackRow. Going
+                // through the panel rather than reaching for the controller's
+                // private Close keeps one implementation of "the track shuts".
+                trackPanel.SetActive(false);
+                return true;
+            }
+
+            if (IsPackShown)
+            {
+                ShowPack(false);
+                return true;
+            }
+
+            if (IsSpellsShown)
+            {
+                ShowSpells(false);
+                return true;
+            }
+
+            return false;
         }
 
         // Read by SheetPanel so I/C can tell "already showing what was asked
