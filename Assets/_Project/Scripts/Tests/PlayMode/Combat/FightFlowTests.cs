@@ -179,24 +179,26 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(attackState, "Verb0 should be a themed button (ThemedPlate(Crimson))");
             Assert.IsNotNull(skillState, "Verb1 should be a themed button (ThemedPlate(Violet))");
 
-            // Resting: nothing is OPEN (Branch == None, ActiveVerbIndex -1),
-            // but gamepad focus defaults to index 0 -- the same verb the
-            // menu's own recommendation happens to be -- so `highlighted`
-            // is already true for ATTACK before anything is ever pressed.
-            // Open, not Primary, is the state that actually paints at rest;
-            // Primary only shows once focus or an open branch moves
-            // elsewhere while index 0 stays neither.
-            Assert.AreEqual(ThemedMenuState.Open, attackState.CurrentMenuState);
+            // ADAPTED, NOT RELAXED (hardware round 1's visual pass). This
+            // assertion used to read `Open` here, and its own comment stated
+            // the defect in full while calling it the design: "gamepad focus
+            // defaults to index 0 ... so `highlighted` is already true for
+            // ATTACK before anything is ever pressed". That is what the owner
+            // saw on a real pad -- "attack is always seeming to be hovered
+            // over ... makes it difficult to notice if you hover/select it"
+            // -- and RefreshVerbs no longer paints Open off _focusedVerb at
+            // all. Resting, nothing is open, so ATTACK is exactly what its
+            // index makes it: the recommended default.
+            Assert.AreEqual(ThemedMenuState.Primary, attackState.CurrentMenuState);
             Assert.AreEqual(ThemedMenuState.Idle, skillState.CurrentMenuState);
 
             Click("Verb1");
 
-            // SKILL's own branch open (ActiveVerbIndex 1) makes ATTACK
-            // neither the open verb NOR the default gamepad focus (the
-            // `active < 0 && ...` clause only ever applies while nothing is
-            // open) -- so it falls all the way through to i == 0, its
-            // Primary/recommended-default colouring, exactly as it read
-            // VerbIdlePrimary before this migration.
+            // SKILL's own branch open (ActiveVerbIndex 1) leaves ATTACK
+            // neither the open verb nor anything else, so it falls through to
+            // i == 0, its Primary/recommended-default colouring -- unchanged
+            // by the pass above, and the reason this half of the test still
+            // reads exactly as it did.
             Assert.AreEqual(ThemedMenuState.Primary, attackState.CurrentMenuState);
             Assert.AreEqual(ThemedMenuState.Open, skillState.CurrentMenuState);
         }
@@ -204,13 +206,22 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator OpenVerbGlowsWithAHaloLargerThanItsPlate()
         {
-            // Item 1 of the 2026-09-03 handoff: Selected (SetMenuState Open,
-            // here Verb0 at rest per the test above it) grows the glow rect
-            // past the plate's own edges instead of only brightening in
-            // place - a halo, not a same-size ring.
+            // Item 1 of the 2026-09-03 handoff: Selected (SetMenuState Open)
+            // grows the glow rect past the plate's own edges instead of only
+            // brightening in place - a halo, not a same-size ring.
+            //
+            // ADAPTED, NOT RELAXED (hardware round 1's visual pass). This
+            // used to read Verb0 AT REST, on the strength of the test above
+            // it having pinned ATTACK as Open before anything was pressed --
+            // which was the defect, not the feature. A verb has to actually
+            // be OPEN now to be in the Open state, so the test opens one: the
+            // claim about the halo's geometry is untouched, only the way this
+            // test reaches an open verb.
             yield return LoadFight();
 
-            var attackState = Named("Verb0").GetComponent<ThemedButtonState>();
+            Click("Verb1");
+
+            var attackState = Named("Verb1").GetComponent<ThemedButtonState>();
             Assert.AreEqual(ThemedMenuState.Open, attackState.CurrentMenuState);
 
             // The fade/scale coroutines are event-driven and unscaled-time

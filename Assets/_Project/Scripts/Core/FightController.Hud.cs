@@ -197,20 +197,37 @@ namespace PrincesPalace
             int active = _menu.ActiveVerbIndex;
             for (int i = 0; i < verbButtons.Length; i++)
             {
-                // Gamepad focus shares the branch-open tint rather than
-                // growing a fourth colour -- the two are mutually
-                // exclusive in practice (focus only means anything while
-                // nothing is open yet), so one look serves both "this is
-                // what Submit presses" and "this is what is open".
-                bool highlighted = i == active || (active < 0 && i == _focusedVerb);
-
+                // OPEN MEANS OPEN. It used to also mean "the pad's focus is
+                // here", via `active < 0 && i == _focusedVerb`, and that one
+                // clause is the whole of the owner's hardware finding:
+                // "attack is always seeming to be hovered over (not a gamepad
+                // bug) and makes it difficult to notice if you hover/select
+                // it."
+                //
+                // _focusedVerb is 0 from the moment the controller wakes and
+                // is never -1 -- Fight's model keeps a focused verb at all
+                // times by design, because Submit has to have something to
+                // press. So at rest, with no branch open, `highlighted` was
+                // unconditionally true for index 0, and ATTACK wore the
+                // branch-is-open plate before the player had touched
+                // anything. The two states were never "mutually exclusive in
+                // practice" as the old comment claimed; one of them was just
+                // always on.
+                //
+                // Pad focus is the marker's job now (Core/FocusMarker.cs),
+                // and this is a DRAWING change only: _focusedVerb, MoveFocus
+                // and ConfirmFocus are untouched, and so are their direct-
+                // call tests.
+                //
                 // THEMED VERBS drive ThemedButtonState.SetMenuState (through
                 // ApplySelection) instead of targetGraphic.color -- Open/
                 // Primary/Idle is the same three-way distinction this method
                 // has always made, just painted on Glow/Plate instead of a
                 // flat Image tint. Every verb is themed today, so there is no
-                // unthemed fallback left to keep.
-                var verbState = highlighted ? ThemedMenuState.Open
+                // unthemed fallback left to keep. Hover and press are
+                // ThemedButtonState's own, driven by the pointer, and are not
+                // touched here at all.
+                var verbState = i == active ? ThemedMenuState.Open
                     : i == 0 ? ThemedMenuState.Primary
                     : ThemedMenuState.Idle;
                 ThemedButtonState.ApplySelection(verbButtons[i], verbState != ThemedMenuState.Idle, verbState);
