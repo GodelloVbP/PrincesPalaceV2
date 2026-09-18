@@ -351,7 +351,7 @@ foreach ($shard in $shardList) {
     if ($Career) { $unityArgs += @("-botCareer", "1") }
 
     Write-Host "  shard $($shard.Index): seeds $($shard.Seed)..$($shard.Seed + $shard.Runs - 1) in $($shard.Path)"
-    $shard.Process = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow
+    $shard.Process = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
 }
 
 # ---- wait, sampling memory on the way ----------------------------------------

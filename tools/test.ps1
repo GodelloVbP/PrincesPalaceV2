@@ -664,7 +664,7 @@ foreach ($platform in $platforms) {
     $runLogPath = Join-Path $runner.Path "test-run-$platform.log"
     if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
 
-    $procs[$platform] = Start-Process -FilePath $UnityExe -ArgumentList @(
+    $procs[$platform] = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-nographics", "-silent-crashes",
         "-projectPath", "`"$($runner.Path)`"",
         "-runTests", "-testPlatform", $platform,
@@ -672,7 +672,7 @@ foreach ($platform in $platforms) {
         "-testResults", "`"$resultsPath`"",
         "-logFile", "`"$runLogPath`"",
         "-buildTarget", "StandaloneWindows64"
-    ) -PassThru -NoNewWindow
+    )
 }
 
 $procs.Values | Wait-Process -Timeout 1800

@@ -30,11 +30,15 @@ param(
 # Assets/_Project/Scripts/Editor/SceneBuilder/ScreenRegistry.cs - the same list
 # that builds the scenes.
 #
-# Does NOT pass -nographics: a screenshot needs a real graphics device.
+# Does NOT pass -nographics: a screenshot needs a real graphics device. That
+# also means it launches through Start-UnityQuiet's windowed path (see
+# tools/unity_path.ps1) rather than the headless one, so the window this opens
+# gets minimized and never steals focus.
 #
 # Success is checked by whether the EXPECTED PNG exists, NOT by $proc.ExitCode -
-# that property is unreliable through this Start-Process -PassThru -NoNewWindow
-# pattern and has come back empty on runs that demonstrably succeeded.
+# that property is unreliable through the Start-Process -PassThru pattern
+# Start-UnityQuiet wraps and has come back empty on runs that demonstrably
+# succeeded.
 #
 # "Expected", emphatically, and that word is the whole of AUDIT #43. This used to
 # ask whether the output directory contained ANY png, so five leftovers from an
@@ -162,7 +166,7 @@ if ($Runtime) {
     if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
 
     Write-Host "Capturing the RUNNING game to $runtimeOut ..."
-    $proc = Start-Process -FilePath $UnityExe -ArgumentList @(
+    $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-silent-crashes",
         "-projectPath", "`"$TestProject`"",
         "-runTests", "-testPlatform", "PlayMode",
@@ -170,7 +174,7 @@ if ($Runtime) {
         "-testResults", "`"$resultsPath`"",
         "-logFile", "`"$logPath`"",
         "-buildTarget", "StandaloneWindows64"
-    ) -PassThru -NoNewWindow
+    )
 
     if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
         Write-Host "Timed out after ${TimeoutSeconds}s - killing Unity (PID $($proc.Id))."
@@ -239,11 +243,11 @@ if ($All) {
     Write-Host "Capturing $Panel to $outPath ..."
 }
 
-$proc = Start-Process -FilePath $UnityExe -ArgumentList (@(
+$proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList (@(
     "-batchmode", "-silent-crashes",
     "-projectPath", "`"$TestProject`"",
     "-logFile", "`"$logPath`""
-) + $unityArgs) -PassThru -NoNewWindow
+) + $unityArgs)
 
 if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
     Write-Host "Timed out after ${TimeoutSeconds}s - killing Unity (PID $($proc.Id))."

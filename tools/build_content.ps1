@@ -63,7 +63,7 @@ $unityArgs = @(
 
 $start = Get-Date
 Write-Host "building content in $Project ..."
-$proc = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow
+$proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
 if (-not $proc.WaitForExit(900 * 1000)) {
     Write-Host "Unity did not exit within 15 minutes; killing it"
     $proc.Kill()

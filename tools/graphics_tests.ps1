@@ -73,15 +73,18 @@ $unityArgs = @(
     "-logFile", "`"$log`""
 )
 
-# Start-Process + WaitForExit, the same shape run_tests_parallel.ps1 and screenshot.ps1
-# use, and NOT the call operator this used to be. "& Unity.exe" came back
+# Start-UnityQuiet (tools/unity_path.ps1) + WaitForExit, the same shape
+# run_tests_parallel.ps1 and screenshot.ps1 use, and NOT the call operator
+# this used to be. No -nographics above means this launches through
+# Start-UnityQuiet's windowed path -- minimized, foreground-guarded for as
+# long as Unity is alive. "& Unity.exe" came back
 # while the run was still writing: a capture copied straight after it had 37
 # of its 42 frames and no timing.json, and the results XML was read while it
 # was half-written, which the [xml] cast turned into a failure on a run whose
 # every test had passed. Waiting on the process itself makes both files
 # complete by construction; the XML poll below stays as a belt for the
 # moment Unity has been seen to exit a beat before the file lands.
-$proc = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow
+$proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
 if (-not $proc.WaitForExit(1800 * 1000)) {
     Write-Host "Unity did not exit within 30 minutes; killing it"
     $proc.Kill()

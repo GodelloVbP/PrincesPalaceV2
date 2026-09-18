@@ -404,7 +404,7 @@ if ($BuildContent -or $BuildScenesHere) {
             "-logFile", "`"$log`""
         ) + $phase.Extra + @("-quit")
 
-        $proc = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow
+        $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
         $proc | Wait-Process -Timeout 900
         Stamp "unity boot: $($phase.Method)"
 
@@ -568,14 +568,14 @@ foreach ($runner in $Runners) {
     $resultsPath = Join-Path $runner.Path "test-results-$($runner.Platform).xml"
     if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
 
-    $procs[$runner.Platform] = Start-Process -FilePath $UnityExe -ArgumentList @(
+    $procs[$runner.Platform] = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-nographics", "-silent-crashes",
         "-projectPath", "`"$($runner.Path)`"",
         "-runTests", "-testPlatform", $runner.Platform,
         "-testResults", "`"$resultsPath`"",
         "-logFile", "`"$(Join-Path $runner.Path "test-run-$($runner.Platform).log")`"",
         "-buildTarget", "StandaloneWindows64"
-    ) -PassThru -NoNewWindow
+    )
 }
 
 $TestTimeoutSeconds = 1800

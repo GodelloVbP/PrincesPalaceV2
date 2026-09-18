@@ -223,6 +223,18 @@ Triage order, cheapest first:
 
 ## 8. Test-run decision table
 
+Every Unity launch in `tools/` goes through `Start-UnityQuiet` in
+`tools/unity_path.ps1` -- never `Start-Process` on `Unity.exe` directly. That
+one function is what stops a headless run or a runtime capture from stealing
+the foreground window (the owner's standing complaint, fixed 2026-09-18): a
+launch that passes `-nographics` never creates a window at all, and one that
+needs a real graphics device (a runtime/graphics capture, or the interactive
+Editor behind `preview.ps1 -Launch`) is started minimized and kept there for
+its whole lifetime by a foreground-guard watchdog. `tools/focus_check.ps1`
+proves this from outside the launched process tree; run it after touching any
+launch site. A new script that calls `Start-Process` on `Unity.exe` on its own
+regresses this silently -- route it through `Start-UnityQuiet` instead.
+
 | Situation | Command |
 |---|---|
 | Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng` — each one a FOLDER under `Tests/EditMode/` and `Tests/PlayMode/`, so a test's area is simply where its file sits; `-List` shows every class with its area, marking each `[D]` or `[U]` for its host) |

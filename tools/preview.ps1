@@ -539,7 +539,11 @@ function Start-Editor {
     . (Join-Path $PSScriptRoot "unity_path.ps1")
     $exe = Get-UnityExe
     $log = Join-Path $Project "Temp\preview_editor.log"
-    Start-Process -FilePath $exe -ArgumentList @("-projectPath", "`"$Project`"", "-logFile", "`"$log`"") | Out-Null
+    # No -batchmode at all: this IS the interactive Editor, for -Launch to play
+    # a fight in. Start-UnityQuiet's windowed path applies here too -- record
+    # the caller's foreground window, open minimized, and keep it from
+    # stealing focus for as long as this Editor session stays open.
+    [void](Start-UnityQuiet -FilePath $exe -ArgumentList @("-projectPath", "`"$Project`"", "-logFile", "`"$log`""))
     Write-Host "started the Editor; its log will be $log"
 }
 
