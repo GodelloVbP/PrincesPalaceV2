@@ -1,5 +1,67 @@
 # Gamepad Navigation — Plan v3
 
+> ## Status: 2026-09-18. PHASE 4 COMPLETE except hardware acceptance (owner, section 12 item 4). The two mechanism-level items the previous pass left open are closed
+>
+> `bd6f80af` (AUDIT.md #162, struck) and `fd7c8984` (AUDIT.md #163's second half, struck) --
+> the two things the status block below this one recorded as unresolved. Neither needed a new
+> feature; both were a rule this document already stated and the code did not implement.
+>
+> **AUDIT.md #162 was not a race, a leak, or the synchronous-load-inside-Process theory the
+> previous pass left as the one thing it had not tested.** It was a knife edge in the test
+> harness, and naming it took five instrumented reproductions of `tools/test.ps1 run` rather
+> than another theory: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at
+> `RectTransform.position`, which is the PIVOT, not the rect centre its own comment claimed.
+> The Hub's gate is pivoted (0.5, 0) -- rect (x:-310, y:0, w:620, h:620), pivot flat on the
+> bottom edge, because a building is placed by the ground it stands on -- so the pointer sat
+> exactly on that rect's `yMin`, inside only because `Rect.Contains` is inclusive there. The
+> pointer's own arrival then tipped it out: `OnPointerEnter` starts `ButtonPressAnimator`
+> lerping the button up to `HoverScale`, and the sub-pixel shift that puts in the pivot's
+> screen position moves the frozen pointer below `yMin` on the very next frame -- the frame
+> carrying `MouseButton0Down`. `GraphicRaycaster` then finds nothing, the press lands on no
+> target, and the Button's `onClick` never fires. Batch size decided it because the size of
+> that first hover step is `Time.deltaTime`-driven, which is the whole of "fails in every big
+> batch, never alone". Fixed at the aim point (`rect.TransformPoint(rect.rect.center)`, interior
+> to a rect for every pivot), not with a wait and not by touching an assertion. AUDIT.md #162
+> carries the frame-by-frame evidence and the list of what was measured as sane at the failing
+> frame.
+>
+> **Sections 4 and 6's "focus memory" was never implemented at all**, which AUDIT.md #163's
+> first half had already noticed in passing ("grepped, `NavContext.Remember` is called
+> nowhere") and left standing. It is now the dispatcher's job:
+> `NavigationInputModule.Process` records the top context's settled selection as that
+> context's remembered id every frame, so no screen calls `Remember` and no screen can forget
+> to. Three model-level things had to change with it, and they are worth reading before
+> assuming a context's lifetime is what it looks like:
+> 1. **A context destroyed on close can never satisfy "Push selects remembered ?? entry".**
+>    SystemMenu, the debug menu, the glossary and the shop each built a fresh `NavContext` per
+>    open. Their contexts now outlive their time ON THE STACK -- created once, put back with the
+>    new `NavContextStack.PushIfAbsent`, removed but not discarded on close. The other seven
+>    contexts are one-per-scene or one-per-fight and are untouched.
+> 2. **"Remembered if still valid" means usable, not declared.** A controller declares what it
+>    owns, not what is on screen, so the whole rule now lives once in
+>    `NavigationInputModule.SelectionFor` and `NavContext.ResolveSelection` is gone rather than
+>    left beside it.
+> 3. **Section 6's "if the focused node vanishes mid-session" was specified and unimplemented.**
+>    The reselection rule tested non-null and declared, so hiding the control that held the
+>    focus left focus on something the player can neither see nor move off.
+>
+> `FocusMemoryGamepadNavigationTests` is the new class (the Hub's pop case, the System Menu's
+> cross-visit case, a hidden remembered node falling back to entry), all three through the real
+> dispatcher. **Two existing tests were adapted rather than relaxed, both stated in
+> `fd7c8984`'s own message**: `DebugMenuGamepadNavigationTests`' pinned claim passes unchanged
+> and only its reason was stale, while `DossierGamepadNavigationTests`' tooltip-on-close test
+> genuinely changed behaviour and is renamed -- a reopened menu now restores the remembered
+> cell, and a box describing the selected cell is section 7's tooltip following focus rather
+> than a stale flag surviving a close.
+>
+> **A third, unrelated flake found while gating this and filed rather than waved off**:
+> AUDIT.md #165, a `combat` test whose own wait loop can exit at a value its own assertion
+> rejects (a `float` literal against a `double` tolerance, 4.7e-8 apart). Not fixed here -- it
+> is another area's arithmetic and deserves its own pass.
+>
+> **Section 12's open owner calls are UNCHANGED by this pass**, and section 12 item 4 (hardware
+> acceptance on a real pad) remains the one thing this plan cannot automate.
+
 > ## Status: 2026-09-18. PHASE 4 COMPLETE except hardware acceptance (owner, section 12 item 4)
 >
 > Items 3 and 4 landed this pass, joining item 1 (halos) and item 2 (the nine journey segments)

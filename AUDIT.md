@@ -2976,7 +2976,7 @@ control is a separate change from wiring this one.
 
 ## Findings from gamepad-navigation phase 4, items 3 and 4, 2026-09-18
 
-### 162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone
+### ~~162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone~~ -- fixed in `bd6f80af`: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at the target's PIVOT rather than its rect centre, which on the Hub's gate (pivot 0.5/0, rect y:0) is the rect's own inclusive bottom edge, and the hover scale-up the pointer's own arrival starts then shifts that edge a fraction of a pixel away from the frozen pointer before the MouseDown frame arrives.
 
 `JourneyToFirstFightMouseTests.MainMenuToNewGame_ThroughTheHubGateAndTheDraft_ReachesTheFirstFight_MouseOnly`
 ("clicking the gate never opened the relic draft on a run that has not drafted one yet", expected
@@ -3051,6 +3051,45 @@ than assuming `WaitForScene` plus a flat settle is enough), and reproduce with
 `tools/test.ps1 run` (341 tests, ~140s) rather than the full ~450s gate -- it reproduces there too
 and is far cheaper to iterate against.
 
+**RESOLVED, and the synchronous-load theory above was wrong.** Five instrumented reproductions of
+`tools/test.ps1 run` (a temporary per-frame dump of `EventSystem.current`, the active scene, the
+context stack, a fresh `RaycastAll` at the pointer, and the target's own rect geometry -- all
+removed again) put the whole mechanism on the record:
+
+```
+frame N   localPt=(0.000, 0.000)  contains=True   hits=1 <StartRunGate>
+frame N+1 localPt=(0.009,-0.009)  contains=False  hits=0      <- the MouseDown frame
+frame N+2 localPt=(0.010,-0.010)  contains=False  hits=0      <- the MouseUp frame
+```
+
+`MoveMouseTo` aimed at `((RectTransform)node.transform).position`, which is the PIVOT and equals
+the centre only at pivot (0.5, 0.5). `StartRunGate` is pivoted (0.5, 0) -- rect
+(x:-310, y:0, w:620, h:620), pivot flat on the bottom edge, because a building is placed by the
+ground it stands on -- so the pointer sat exactly on `yMin`, inside only because `Rect.Contains` is
+inclusive there. The `MoveMouseTo` frame then fires `OnPointerEnter`, `ButtonPressAnimator` starts
+lerping the button toward `HoverScale`, and the sub-pixel shift that puts in the pivot's screen
+position (measured 78.320 -> 78.323 at a 0.333 canvas scale) moves the frozen pointer 0.009 canvas
+units BELOW `yMin` on the very next frame -- the frame carrying `MouseButton0Down`.
+`GraphicRaycaster` finds nothing, the press lands on no target, the release has no `pointerPress`
+to match, and the Button's `onClick` never fires.
+
+Batch size decided which way the coin fell because that first hover step is
+`Time.deltaTime`-driven: a loaded run's longer frame moves the pivot a measurable fraction of a
+pixel, the same test alone moves it too little to leave the edge. So "needs a large batch but not a
+specific one" was the symptom of a knife edge, not of leaked state -- which is also why every
+theory above about a predecessor, a settle time or a scene load from inside `Process()` could be
+ruled out one after another without getting closer. Everything those theories suspected was
+measured as sane at the failing frame: `EventSystem.current` was the Hub's own and focused, one
+EventSystem alive, one context on the stack, the gate interactable, the module never deactivated.
+
+Fixed at the aim point: `MoveMouseTo` now aims at `rect.TransformPoint(rect.rect.center)`, which is
+what that fixture's own contract already claimed and what a mouse player aims at, and is robust by
+construction -- a rect's centre is interior to it for every pivot. `WorldPointAtFraction`'s local y
+gets the same correction for the same reason (it was 0, the pivot's row). Identical for anything
+already pivoted (0.5, 0.5), so the other eight mouse files and the mixed-input file are
+bit-identical. Three consecutive `tools/test.ps1 run` runs green plus a full
+`tools/run_tests_parallel.ps1`.
+
 ### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change
 
 Found writing item 4's own mixed-input pass, rule (e): `OptionsController.cs`'s own comment on
@@ -3087,6 +3126,45 @@ click on the Hub, a click through a System Menu modal, and a mouse click on an O
 button, each restoring the pre-click selection in the same frame rather than falling back to
 Entry.
 
+**THE CROSS-VISIT HALF, the one the paragraph above deliberately left standing, is fixed in
+`fd7c8984`**: `NavContext.Remember` is now called -- by `NavigationInputModule.Process`, once, for
+every context, after the post-dispatch reselection has settled the frame -- so a context popped or
+re-entered lands where the player left it rather than on its entry. Three things needed fixing
+before "remembered ?? entry" could mean anything, each a model problem rather than a missing line:
+
+1. **A context destroyed on close can never satisfy "Push selects remembered".** SystemMenu, the
+   debug menu, the glossary and the shop each built a fresh `NavContext` on every open and nulled
+   the field on every close. Their contexts now outlive their time ON THE STACK (created once, put
+   back with the new `NavContextStack.PushIfAbsent`, removed but not discarded on close). The other
+   seven are one-per-scene or one-per-fight and are untouched -- nothing re-enters them without a
+   scene load, which resets the stack anyway.
+2. **"Still valid" had to mean usable, not declared.** A controller declares what it owns, not what
+   is on screen, so a hidden or destroyed node is still a member of its context's set. The whole
+   rule now lives once in `NavigationInputModule.SelectionFor` (remembered if shown and alive, else
+   entry); `NavContext` keeps only the half it can answer engine-free (`RememberedSelectable`), and
+   `NavContext.ResolveSelection` is gone rather than left beside it.
+3. **The same gap on the CURRENT selection**, which plan section 6 already specified and nothing
+   implemented ("if the focused node vanishes mid-session... the entry if none remain"):
+   `ReselectIfOutsideDeclaredSet`'s early-out tested non-null and declared, so hiding the control
+   that held the focus left the focus on something the player can neither see nor move off.
+
+Proven by `FocusMemoryGamepadNavigationTests` (the Hub's pop case, the System Menu's cross-visit
+case, and a remembered node hidden after the fact falling back to entry), all three through the
+real dispatcher. Two existing tests were adapted rather than relaxed, both because they encoded the
+absence of memory -- `DebugMenuGamepadNavigationTests`' own pinned claim passes unchanged and only
+its reason was stale (nothing in it moves off the gate, so memory and entry agree, and both
+readings hold), while `DossierGamepadNavigationTests`' tooltip-on-close test genuinely changed
+behaviour and is renamed to say so: a reopened menu now restores the remembered cell, and a box
+describing the selected cell is section 7's tooltip following focus rather than a stale flag
+surviving.
+
+**One limitation stated rather than hidden**: `SystemMenuController` keys its declared set by
+position (`s0`, `s1`, ... off a hierarchy walk) rather than by name the way the debug menu and the
+glossary do. That is stable across a close and a reopen, so the memory above is correct there, but
+a pane that rebuilt its rows between visits would restore focus to the same POSITION rather than
+the same control. Left alone deliberately -- a name-keyed set is a change to what that screen
+declares, with its own duplicate-name risk for runtime-instantiated rows.
+
 ### 164. A scripted mouse cannot reliably reach a dot scrolled out of the reward track's own masked viewport
 
 Found writing item 3's own mouse-only regression for phase 4 item 2 segment 8 (the reward track).
@@ -3111,3 +3189,29 @@ do -- nothing production-facing is wrong here, this is a test-harness capability
 `PartyGamepadVisualCaptureTests`' own already-stated hedge on the same raycast technique
 ("whether a scripted pointer resolves against this scene's ScreenSpaceCamera canvas is not this
 capture's own claim").
+
+### 165. `FightTeardownLifecycleTests.TwoPopsOnOneBadgeLeaveItAtItsRestScale` can exit its own wait at a value its own assertion rejects
+
+Seen once under a full `tools/run_tests_parallel.ps1` (2026-09-18) and not reproduced since,
+including on an immediate re-run of the same gate. Not a behaviour bug and not related to whatever
+change is in flight when it fires -- the numbers are an off-by-one-float inside the test itself:
+
+```
+the badge never reached its rest scale
+Expected: 1.0d +/- 0.0010000000474974513d
+But was:  1.0010000467300415d
+```
+
+The wait loop exits once `rect.localScale.x > 1.001f` is false, and `1.001f` widened to double is
+`1.0010000467300415`; the assertion that follows allows `1.0 +/- 0.001d`, which is
+`1.0010000000474975`. The float literal is the larger of the two by 4.7e-8, so there is a sliver of
+values the loop treats as settled and the assertion treats as unsettled, and the pop's own lerp
+lands in it whenever a loaded run's frame timing puts it there. Nothing about the badge, the pop or
+the teardown is wrong when this fires.
+
+The fix is to make the two agree -- one tolerance, read by both, rather than a `float` literal in
+the loop and a `double` tolerance in the assertion. Not done here: this was found while gating an
+unrelated change in `ui`/`run`, the class lives in `combat`, and changing a test's own arithmetic
+deserves its own gated pass rather than a drive-by. Recorded so the next person who sees it does not
+spend the afternoon looking for a real regression in the pop animation, which is where the message
+points and is not where the problem is.
