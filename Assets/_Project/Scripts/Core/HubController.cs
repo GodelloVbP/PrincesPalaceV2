@@ -179,19 +179,56 @@ namespace PrincesPalace
         // ---- gamepad navigation (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3) --------
         //
         // THE HUB'S REAL SHAPE IS FOUR STAGED BUILDINGS AND A GATE, NOT A TAB
-        // BAR. Every one of them sits at its own HubAnchors depth/lateral
-        // plot rather than in a row, so the group below is a 2x2 Grid keyed
-        // to that plot -- far row (Talents/Relics, the -1/+1 lateral pair at
-        // depth .78/.90) over near row (Principality/CharacterSheet, depth
-        // .06/.16) -- with the Grid's own Left/Right wrap and Up/Down
-        // row-stepping, plus three explicit links this shape needs and a
-        // Grid alone cannot express: the near row's Down into the gate (the
-        // "unmistakably primary" action, HubScreen's own comment on why it
-        // is not staged with the rest), the gate's Up back out (tied
-        // arbitrarily to characterSheetButton -- the gate sits dead centre,
-        // equidistant from both columns), and mainMenuButton (a top-left
-        // corner utility, not part of the staged composition at all) reached
-        // from/to talentsButton, the far-left building nearest it on screen.
+        // BAR -- and, since the hardware play-test, not a 2x2 Grid either.
+        //
+        // The Grid this replaces was keyed on each building's HubAnchors
+        // depth/lateral signs (far row Talents/Relics over near row
+        // Principality/CharacterSheet). Those signs are a STAGING fact, not a
+        // screen-position fact, and on screen the composition they produce is
+        // a horseshoe, not two rows -- captured and measured rather than
+        // reasoned about, tools/screenshots/HubPanel.png, canvas centres:
+        //
+        //     MainMenuButton        x -830  y  480   (top-left corner chrome)
+        //     TalentsBuilding       x -349  y  328
+        //     RelicsBuilding        x  295  y  357
+        //     PrincipalityBuilding  x -673  y   98
+        //     CharacterSheetBuilding x 628  y  121
+        //     StartRunGate          x    0  y -160   (dead centre, largest)
+        //
+        // The Grid's row wrap is what the owner actually hit: Relics and
+        // Talents were row-mates, so Right off Relics wrapped the whole way
+        // across the screen to Talents instead of continuing to Character
+        // Sheet, which is the nearest thing to its right by a long way.
+        //
+        // LEFT/RIGHT IS NOW ONE WRAPPING RING over the five staged controls,
+        // authored in the owner's own stated order rather than derived:
+        //
+        //     Talents <-> Principality <-> Gate <-> Relics <-> CharacterSheet
+        //
+        // so Left off the gate reaches Principality and Left again reaches
+        // Talents, and Right off Relics reaches CharacterSheet -- the two
+        // expectations the play-test stated, both pinned literally in
+        // HubGamepadNavigationTests.
+        //
+        // DEVIATION, STATED RATHER THAN QUIETLY RESOLVED: those two
+        // expectations are not both satisfiable by plain screen-x order.
+        // By x, the thing left of the gate is Talents (-349), not
+        // Principality (-673), so an x-ordered ring answers the Relics
+        // complaint and contradicts the gate one. Where the heuristic and the
+        // owner's own words disagree the words win, and the one hop that is
+        // not x-ordered (Talents <-> Principality, the two buildings on the
+        // left arm) is the price. Reversing it is one edit to the array
+        // below.
+        //
+        // UP/DOWN IS THE COLUMN each control stands in, top to bottom by
+        // screen y, clamped at both ends: a vertical Move never crosses the
+        // gate's own axis, which is what a single y-ordered list of all six
+        // would have made it do (Relics down to Talents is 20px of y and
+        // 645px of x -- a sideways jump wearing a vertical press).
+        // MainMenuButton stays out of the ring: it is corner chrome, not part
+        // of the composition, and it is already the leftmost thing on screen,
+        // so Left/Right off it have nowhere to go. It keeps its column link
+        // to Talents, the building nearest it, exactly as before.
         //
         // ENTRY is the gate, not "the first tab's first control" -- there is
         // no first tab. It is the screen's own stated primary action.
@@ -205,15 +242,33 @@ namespace PrincesPalace
             var mainMenu = mainMenuButton;
 
             RuntimeNavWiring.Apply(
-                RuntimeNavWiring.Group("hubBuildings", UiNavGroupKind.Grid,
-                    new[] { talents, relics, principality, characterSheet }, gridRowLength: 2),
                 new[]
                 {
-                    RuntimeNavWiring.Link(principality, UiNavDirection.Down, gate),
+                    RuntimeNavWiring.Group("hubRing", UiNavGroupKind.Rail,
+                        new[] { talents, principality, gate, relics, characterSheet }),
+
+                    // Left arm, top to bottom: the corner button, the far
+                    // building, the near one, and the gate at the foot.
+                    RuntimeNavWiring.Group("hubLeftColumn", UiNavGroupKind.List,
+                        new[] { mainMenu, talents, principality, gate }),
+
+                    // Right arm, top to bottom. Two members only -- its foot
+                    // reaches the gate through the explicit link below rather
+                    // than by being a third member, because the gate already
+                    // belongs to the left arm and a node can only have one Up.
+                    RuntimeNavWiring.Group("hubRightColumn", UiNavGroupKind.List,
+                        new[] { relics, characterSheet }),
+                },
+                new[]
+                {
+                    // Down off the right arm's foot still lands on the gate,
+                    // so the primary action is one press away from both arms.
+                    // Its twin (gate Up -> CharacterSheet) is deliberately NOT
+                    // restored: Up off the gate now means the left arm, and a
+                    // direction that means two things is what the old
+                    // "arbitrarily tied to characterSheetButton" comment was
+                    // apologising for.
                     RuntimeNavWiring.Link(characterSheet, UiNavDirection.Down, gate),
-                    RuntimeNavWiring.Link(gate, UiNavDirection.Up, characterSheet),
-                    RuntimeNavWiring.Link(talents, UiNavDirection.Up, mainMenu),
-                    RuntimeNavWiring.Link(mainMenu, UiNavDirection.Down, talents),
                 });
 
             WireBuildingHalo(talents, talentsSelectHalo);

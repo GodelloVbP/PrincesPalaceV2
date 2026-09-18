@@ -73,10 +73,11 @@ namespace PrincesPalace.PlayModeTests
         // BEFORE base.Process() runs and ReselectIfOutsideDeclaredSet
         // prefers THAT over Entry whenever the same top context still
         // declares it -- which is exactly and only this same-context case.
-        // The Hub's own Grid is the fixture: gate -> Up ->
-        // CharacterSheetBuilding (explicit link) -> Left ->
-        // PrincipalityBuilding (same row, JourneyHubToTalentsTests' own
-        // pinned claim).
+        // The Hub's own ring is the fixture: gate -> Up ->
+        // PrincipalityBuilding (the left arm above it) -> Left ->
+        // TalentsBuilding (the ring's next member,
+        // HubGamepadNavigationTests' own pinned claim). It was the 2x2 Grid
+        // until the hardware play-test rejected that shape.
         [UnityTest]
         public IEnumerator BackgroundClick_RestoresTheRememberedNodeSameFrame_NextMoveAdvancesToTheLiteralNeighbour()
         {
@@ -93,20 +94,20 @@ namespace PrincesPalace.PlayModeTests
             // first, not just the two engine frames TakeOverInput's own callers
             // already pay.
             yield return new WaitForSecondsRealtime(0.5f);
-            yield return MoveUp(); // gate -> CharacterSheetBuilding
-            AssertSelectedName("CharacterSheetBuilding", "fixture: Up from the gate should reach CharacterSheetBuilding");
+            yield return MoveUp(); // gate -> PrincipalityBuilding, the left arm above it
+            AssertSelectedName("PrincipalityBuilding", "fixture: Up from the gate should reach PrincipalityBuilding");
 
             yield return ClickBackground();
 
-            AssertSelectedName("CharacterSheetBuilding",
+            AssertSelectedName("PrincipalityBuilding",
                 "a background click nulls selection via PointerInputModule's own DeselectIfSelectionChanged, but " +
                 "the dispatcher must restore what was selected a moment ago in the SAME Process() call -- nothing " +
                 "should have crossed a frame boundary null, and it must not have fallen back to Entry either");
 
-            yield return MoveLeft(); // the row's own next member, not a stale selection from before the click
+            yield return MoveLeft(); // the ring's own next member, not a stale selection from before the click
 
-            AssertSelectedName("PrincipalityBuilding",
-                "the next Move should advance to the literal Grid neighbour of the RESTORED selection -- if the " +
+            AssertSelectedName("TalentsBuilding",
+                "the next Move should advance to the literal ring neighbour of the RESTORED selection -- if the " +
                 "restore above had left a stale reference behind, this Move would prove it by landing somewhere else");
         }
 

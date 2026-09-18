@@ -82,14 +82,11 @@ namespace PrincesPalace.PlayModeTests
 
             AssertSelectedName("StartRunGate", "the gate is the hub's own stated primary action and entry");
 
-            yield return MoveUp(); // gate -> CharacterSheetBuilding (explicit link)
-            AssertSelectedName("CharacterSheetBuilding", "Up from the gate should reach CharacterSheetBuilding");
+            yield return MoveUp(); // gate -> PrincipalityBuilding, the left arm above it
+            AssertSelectedName("PrincipalityBuilding", "Up from the gate should reach PrincipalityBuilding");
 
-            yield return MoveLeft(); // near row, col1 -> col0 (Grid)
-            AssertSelectedName("PrincipalityBuilding", "Left across the near row should reach PrincipalityBuilding");
-
-            yield return MoveUp(); // Grid row-stepping, same column -> far row
-            AssertSelectedName("TalentsBuilding", "Up from Principality's own column should reach TalentsBuilding");
+            yield return MoveUp(); // further up the same arm
+            AssertSelectedName("TalentsBuilding", "Up again should reach TalentsBuilding");
 
             yield return PressSubmit(); // Navigation.Go(Talents), a REAL scene load
             yield return WaitForScene("Talents", 5f, "Submit on TalentsBuilding should load the Talents scene");

@@ -28,12 +28,14 @@ namespace PrincesPalace.PlayModeTests
     // a press, which would prove the mechanism against itself rather than
     // against what a player does.
     //
-    // ONE PRESS PER STEP, deliberately: the ordinary-context Move gate
+    // ONE PRESS PER STEP wherever it is enough, and JourneyFixture's own
+    // real-time settle where it is not: the ordinary-context Move gate
     // (StandaloneInputModule.AllowMoveEventProcessing's own real-time
     // moveRepeatDelay, JourneyFixture.Move's own header) silently drops a
-    // second chained Move inside 0.5s, so every test here takes at most one
-    // Move and reaches everything else by Submit, Cancel or the tab
-    // shoulder -- none of which read that gate.
+    // second chained Move inside 0.5s. Move below pays that settle once for
+    // every caller rather than each test rediscovering the drop; everything
+    // else here is reached by Submit, Cancel or the tab shoulder, none of
+    // which read that gate.
     public class FocusMemoryGamepadNavigationTests
     {
         private string _root;
@@ -88,6 +90,8 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             _input.Horizontal = 0f;
             _input.Vertical = 0f;
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return DriveFrame();
         }
 
         private IEnumerator PressSubmit()
@@ -133,12 +137,17 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(gate, EventSystem.current.currentSelectedGameObject,
                 "fixture: the hub opens on its own entry, the gate");
 
-            // Up from the gate is CharacterSheetBuilding -- WireNavigation's
-            // own explicit return link, pinned literally by
-            // HubGamepadNavigationTests.Up_FromTheGate_ReachesCharacterSheet.
-            yield return Move(0f, 1f);
+            // Two Rights off the gate is CharacterSheetBuilding -- the hub's
+            // own ring, pinned literally by
+            // HubGamepadNavigationTests.TheWholeRing_RightThenLeft. It used to
+            // be one Up, until the hardware play-test rejected the 2x2 Grid
+            // that made it one; Up off the gate means the left arm now, whose
+            // first stop (PrincipalityBuilding) is permanently disabled and so
+            // could not open anything to pop.
+            yield return Move(1f, 0f);
+            yield return Move(1f, 0f);
             Assert.AreEqual(characterSheet, EventSystem.current.currentSelectedGameObject,
-                "fixture: one Up off the gate should stand on CharacterSheetBuilding");
+                "fixture: two Rights off the gate should stand on CharacterSheetBuilding");
 
             // Submit opens the character overlay, which IS SystemMenu.Root
             // (HubController.WireCharacterOverlay's own comment), so this
