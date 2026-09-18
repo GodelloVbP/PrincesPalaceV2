@@ -144,16 +144,12 @@ namespace PrincesPalace.PlayModeTests
         // it. The box's OWN activeSelf flag is the only thing that can tell
         // "this tooltip was closed" from "the panel it lives in went away",
         // and reading it while the menu is shut needs an inactive-inclusive
-        // lookup -- the same shape Halo above already uses for the same
-        // reason.
+        // lookup -- the same inactive-inclusive shape Node above cannot
+        // give, since GameObject.Find sees only the active hierarchy.
         private static GameObject TooltipEvenWhileHidden =>
             Resources.FindObjectsOfTypeAll<Transform>()
                 .FirstOrDefault(t => t.name == "DossierTooltip" && t.gameObject.scene.IsValid())
                 ?.gameObject;
-
-        private static Image Halo(string name) =>
-            Resources.FindObjectsOfTypeAll<Image>()
-                .FirstOrDefault(im => im.name == name && im.gameObject.scene.IsValid());
 
         private static TMP_Text TooltipTitle =>
             Resources.FindObjectsOfTypeAll<TMP_Text>()
@@ -690,10 +686,20 @@ namespace PrincesPalace.PlayModeTests
                 "the box follows focus, so focus landing back on the cell brings its tooltip back with it");
         }
 
-        // ---- the selected halo (AUDIT.md #160) ----------------------------------
+        // ---- where the stick is standing ----------------------------------------
+        //
+        // ADAPTED, NOT RELAXED (hardware round 1's visual pass). These two
+        // were SelectingAPackCell_ShowsItsSelectedHalo and
+        // MovingOffAPackCell_HidesItsSelectedHalo, asserting
+        // DossierPackHalo0's activeSelf -- AUDIT.md #160's answer to "a
+        // NoChrome cell answers gamepad focus with nothing at all". The owner
+        // played this screen on a pad and the answer did not work: "a player
+        // can't see where they're going in the character sheets screen: no
+        // obvious selectors". The halos are gone; the claim is unchanged and
+        // now asks it of Core/FocusMarker.cs.
 
         [UnityTest]
-        public IEnumerator SelectingAPackCell_ShowsItsSelectedHalo()
+        public IEnumerator SelectingAPackCell_PutsTheFocusMarkerOnIt()
         {
             yield return OpenTheCharacterTab();
             yield return OpenThePack();
@@ -701,57 +707,66 @@ namespace PrincesPalace.PlayModeTests
             Select("DossierPackCell0");
             yield return null;
 
-            Assert.IsTrue(Halo("DossierPackHalo0").gameObject.activeSelf,
-                "AUDIT.md #160: a NoChrome pack cell carries no ThemedButtonState of its own, so its halo " +
-                "is the only thing that can show focus without the tooltip");
+            Assert.IsTrue(NavigationInputModule.Marker.IsShown, "the marker is not drawn at all");
+            Assert.AreSame(Node("DossierPackCell0").transform, NavigationInputModule.Marker.Target,
+                "the marker is not on the selected cell");
         }
 
         [UnityTest]
-        public IEnumerator MovingOffAPackCell_HidesItsSelectedHalo()
+        public IEnumerator MovingOffAPackCell_TakesTheFocusMarkerWithIt()
         {
             yield return OpenTheCharacterTab();
             yield return OpenThePack();
 
             Select("DossierPackCell0");
             yield return null;
-            Assert.IsTrue(Halo("DossierPackHalo0").gameObject.activeSelf, "precondition: the halo is up");
+            Assert.AreSame(Node("DossierPackCell0").transform, NavigationInputModule.Marker.Target,
+                "precondition: the marker is on the cell");
 
             // Up out of the window lands on a sort tab (see
             // MovingOffAPackCellOntoSomethingWithNoTooltip_HidesIt above).
             yield return Press(0f, 1f);
 
-            Assert.IsFalse(Halo("DossierPackHalo0").gameObject.activeSelf,
-                "the halo belongs to the selection, so it goes when the selection moves away");
+            Assert.AreNotSame(Node("DossierPackCell0").transform, NavigationInputModule.Marker.Target,
+                "the marker belongs to the selection, so it goes when the selection moves away");
+            Assert.AreSame(EventSystem.current.currentSelectedGameObject.transform,
+                NavigationInputModule.Marker.Target,
+                "and it lands on whatever the Move actually selected");
         }
 
+        // ADAPTED for the same reason the pair above it were: these two asked
+        // DossierSlotHaloHead and DossierAttrHalo0 for their activeSelf, and
+        // AUDIT.md #160's three per-group halos are gone. All three groups on
+        // this screen now answer focus the same way as each other and as
+        // every other screen.
+
         [UnityTest]
-        public IEnumerator SelectingAnEquipmentSlot_ShowsItsSelectedHalo()
+        public IEnumerator SelectingAnEquipmentSlot_PutsTheFocusMarkerOnIt()
         {
             yield return OpenTheCharacterTab();
             Select("DossierSlotHead");
             yield return null;
 
-            Assert.IsTrue(Halo("DossierSlotHaloHead").gameObject.activeSelf,
-                "AUDIT.md #160: the loadout's slots are the same NoChrome shape as the pack cells, with the " +
-                "same missing selected-visual");
+            Assert.AreSame(Node("DossierSlotHead").transform, NavigationInputModule.Marker.Target,
+                "the loadout's slots are the same NoChrome shape as the pack cells and get the same marker");
         }
 
         [UnityTest]
-        public IEnumerator SelectingAnAbilityScoreCell_ShowsItsSelectedHalo()
+        public IEnumerator SelectingAnAbilityScoreCell_PutsTheFocusMarkerOnIt()
         {
             yield return OpenTheCharacterTab();
             Select("DossierAttrCell0");
             yield return null;
 
-            Assert.IsTrue(Halo("DossierAttrHalo0").gameObject.activeSelf,
-                "AUDIT.md #160: the ability-score cells are the third NoChrome group this pass covers");
+            Assert.AreSame(Node("DossierAttrCell0").transform, NavigationInputModule.Marker.Target,
+                "the ability-score cells are the third group, answered by the same one marker");
         }
 
         // ---- the ring, pinned literally (hardware round 1, item 6) ---------------
         //
         // "A player can't see where they're going in the character sheets
         // screen: no obvious selectors and no intuitive navigating, apart from
-        // the equipped gear selector." The selectors are another pass's job.
+        // the equipped gear selector." The selectors are the marker above.
         // This is the navigation half, and the defect behind it was
         // CharacterDossierController.PairAcross pairing two groups by LIST
         // INDEX -- a rule that is only correct when the two lists are already

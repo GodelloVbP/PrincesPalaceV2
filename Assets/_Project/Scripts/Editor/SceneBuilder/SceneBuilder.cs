@@ -100,7 +100,7 @@ public static partial class SceneBuilder
         var camera = CreateMainCamera();
         CreateGlobalVolume();
         var canvas = CreateCanvas(camera);
-        CreateEventSystem();
+        CreateEventSystem(canvas);
 
         foreach (var screen in screens)
         {
@@ -210,14 +210,57 @@ public static partial class SceneBuilder
         return canvas;
     }
 
-    private static void CreateEventSystem()
+    private static void CreateEventSystem(Canvas canvas)
     {
         // NavigationInputModule, not the stock StandaloneInputModule -- the
         // one dispatch point for gamepad/keyboard UI input project-wide
         // (docs/GAMEPAD_NAVIGATION_PLAN.md section 3). It subclasses
         // StandaloneInputModule rather than replacing it, so mouse/click
         // behaviour is unchanged.
-        new GameObject("EventSystem", typeof(EventSystem), typeof(NavigationInputModule));
+        var go = new GameObject("EventSystem", typeof(EventSystem), typeof(NavigationInputModule));
+        go.GetComponent<NavigationInputModule>().focusMarker = CreateFocusMarker(canvas);
+    }
+
+    // THE ONE PAD-FOCUS INDICATOR, as a scene root fixture rather than a node
+    // in any screen tree (Core/FocusMarker.cs's own header has the full
+    // argument, including why the two alternatives were rejected). It belongs
+    // to the dispatcher, so it is built beside the EventSystem and wired
+    // straight into it -- no NodeRef, no per-screen binding, nothing for a
+    // screen to forget.
+    //
+    // PARENTED TO THE CANVAS AND LAST, which is what "drawn above everything"
+    // means in uGUI; FocusMarker re-asserts both every frame, because the
+    // screens emitted after this call become later siblings.
+    private static FocusMarker CreateFocusMarker(Canvas canvas)
+    {
+        var go = new GameObject(FocusMarker.ObjectName, typeof(RectTransform), typeof(Image), typeof(FocusMarker));
+
+        var rect = (RectTransform)go.transform;
+        rect.SetParent(canvas.transform, worldPositionStays: false);
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(FocusMarkerPlacement.Size, FocusMarkerPlacement.Size);
+        rect.anchoredPosition = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.sprite = LoadSpriteByKey("proc:focus_arrow");
+        image.preserveAspect = true;
+        image.color = ColorUtility.TryParseHtmlString(FocusMarker.Tint, out var tint) ? tint : Color.white;
+
+        // NEVER A CLICK TARGET. It sits on top of the control it points at by
+        // construction, so a raycastable marker would swallow the press meant
+        // for that control -- the same bug FightController's own enemy hit
+        // areas already record once ("left live it is a rectangle over the
+        // battlefield eating clicks").
+        image.raycastTarget = false;
+
+        // Off until the dispatcher has something to point at. FocusMarker.Awake
+        // asserts this again at runtime so a stale serialized `true` cannot
+        // ship a marker frozen in the middle of a screen.
+        image.enabled = false;
+
+        return go.GetComponent<FocusMarker>();
     }
 
     private static void EnsureInBuildSettings(string scenePath)

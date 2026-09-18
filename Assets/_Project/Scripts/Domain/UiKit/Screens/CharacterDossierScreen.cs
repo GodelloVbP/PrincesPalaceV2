@@ -101,12 +101,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackCounts = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
 
-        // AUDIT.md #160: a NoChrome cell carries no ThemedButtonState, so it
-        // answers gamepad focus with nothing at all -- Core/SelectHaloPainter's
-        // shape (Hub's four buildings, Party's seats/cards), one halo per cell
-        // rather than a themed plate, which BuildPack's own "the item is the
-        // object" framing never asked for.
-        public List<NodeRef> PackCellHalos = new List<NodeRef>();
+        // NO PER-CELL FOCUS HALOS ON THIS SCREEN ANY MORE. Three groups
+        // carried one each (the pack cells here, the paperdoll's slots, the
+        // ability-score cells) -- AUDIT.md #160's answer to "a NoChrome cell
+        // answers gamepad focus with nothing at all". It was the right
+        // problem and the wrong shape: the owner played it on a pad and
+        // reported "a player can't see where they're going in the character
+        // sheets screen: no obvious selectors", because a soft radial glow
+        // the same footprint as a cell, over an icon and a name, is not a
+        // selector -- it is a tint. Core/FocusMarker.cs's arrow is, and it is
+        // the same arrow on every screen.
 
         // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, inset within the
         // icon's own bounds (see BuildPack's own comment on why) rather than
@@ -136,10 +140,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SlotRiftGlows = new List<NodeRef>();
         public List<NodeRef> SlotBlockedCaptions = new List<NodeRef>();
 
-        // AUDIT.md #160: see PackCellHalos' own comment -- the paperdoll's
-        // slots are the second NoChrome group with no selected-visual at all.
-        public List<NodeRef> SlotHalos = new List<NodeRef>();
-
         // Six cells, filled highest-first at runtime -- which attribute lands
         // in which cell is a per-character question, so the nodes stay generic.
         public List<NodeRef> AttributeCells = new List<NodeRef>();
@@ -148,9 +148,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> AttributePluses = new List<NodeRef>();
         public List<NodeRef> AttributeMinuses = new List<NodeRef>();
         public NodeRef UnspentPoints;
-
-        // AUDIT.md #160: the third NoChrome group -- the ability-score cells.
-        public List<NodeRef> AttributeCellHalos = new List<NodeRef>();
 
         // Indexed by SheetStats.Derived.
         public List<NodeRef> StatRows = new List<NodeRef>();
@@ -578,27 +575,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 button.Children.Add(name);
                 button.Children.Add(count);
 
-                // AUDIT.md #160 -- SelectHaloPainter's shape, same footprint as
-                // the cell itself (Core/SelectHaloPainter.cs's own header: a
-                // halo grown past the control's edges at SelectedGlowScale, not
-                // a same-size ring). Added LAST so it paints over the icon/name
-                // the way Hub's own building halo does -- proc:radial_glow is a
-                // soft falloff, not a solid fill, so the art underneath still
-                // reads through it.
-                var halo = Ui.Sprite($"DossierPackHalo{i}", "proc:radial_glow",
-                        Place.At(0f, 0f), UiSize.Fixed(cellW, cellH))
-                    .Coloured("#FFE0A8")
-                    .Inactive()
-                    .AsDecor();
-                button.Children.Add(halo);
-
                 PackCells.Add(button);
                 PackIcons.Add(icon);
                 PackRiftGlows.Add(riftGlow);
                 PackRarityTicks.Add(tick);
                 PackNames.Add(name);
                 PackCounts.Add(count);
-                PackCellHalos.Add(halo);
                 children.Add(button);
             }
 
@@ -936,17 +918,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 cell.Children.Add(edge);
             }
 
-            // AUDIT.md #160 -- same shape as the pack cell halo above, full
-            // footprint of the socket, added last so it sits over the empty-
-            // border rim too.
-            var halo = Ui.Sprite($"DossierSlotHalo{key}", "proc:radial_glow",
-                    new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize), Place.At(0f, 0f))
-                .Coloured("#FFE0A8")
-                .Inactive()
-                .AsDecor();
-            cell.Children.Add(halo);
-            SlotHalos.Add(halo);
-
             // INSIDE the socket, along its bottom edge.
             //
             // Under the box it spent vertical room the box needed; beside it,
@@ -1043,30 +1014,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .NoChrome()
                     .Inactive();
 
-                // AUDIT.md #160 -- the third NoChrome group. Sized to the same
-                // shrunk rect the cell itself uses (minus the shared-edge
-                // trim), so the halo cannot overlap the sibling cell next
-                // door the way the full CellWidth would.
-                var halo = Ui.Sprite($"DossierAttrHalo{i}",
-                        "proc:radial_glow",
-                        new UiVec(DossierLayout.AttributeCellWidth - 2f, DossierLayout.AttributeCellHeight - 2f),
-                        Place.At(0f, 0f))
-                    .Coloured("#FFE0A8")
-                    .Inactive()
-                    .AsDecor();
-
                 cell.Children.Add(value);
                 cell.Children.Add(keyLabel);
                 cell.Children.Add(plus);
                 cell.Children.Add(minus);
-                cell.Children.Add(halo);
 
                 AttributeCells.Add(cell);
                 AttributeValues.Add(value);
                 AttributeKeys.Add(keyLabel);
                 AttributePluses.Add(plus);
                 AttributeMinuses.Add(minus);
-                AttributeCellHalos.Add(halo);
                 yield return cell;
             }
 

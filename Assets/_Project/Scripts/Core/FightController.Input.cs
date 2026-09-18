@@ -1282,6 +1282,77 @@ namespace PrincesPalace
             OnBackPressed();
         }
 
+        // WHERE THE FOCUS MARKER GOES ON THIS SCREEN (hardware round 1's
+        // visual pass; Core/FocusMarker.cs has the whole argument). Fight is
+        // the one screen with no EventSystem selection to read -- ProcessFight
+        // asserts it null every frame on purpose -- so the dispatcher asks the
+        // model instead, and this is the model's answer.
+        //
+        // READ-ONLY. Every index below was already kept and already moved by
+        // MoveFocus/ConfirmFocus; nothing here writes anything, and the direct-
+        // call tests those three have (FightGamepadNavigationTests,
+        // AllyTargetPickerTests) are untouched by it.
+        //
+        // NULL WHILE BUSY, explicitly rather than by relying on the verb
+        // column being hidden: at Target depth a beat can resolve with an
+        // enemy plate still on screen, and a marker sitting on a target the
+        // player can no longer pick is worse than no marker.
+        object IFightNavigationTarget.FocusedElement => FocusedElement();
+
+        // internal, same seam FocusedVerbForTest already opens -- a PlayMode
+        // test asserts which literal node the marker is on without having to
+        // reach through the explicit interface implementation.
+        internal GameObject FocusedElement()
+        {
+            if (_session == null || _isBusy) return null;
+
+            switch (_menu.Depth)
+            {
+                case MenuDepth.Root:
+                    return NodeAt(verbButtons, _focusedVerb);
+
+                case MenuDepth.Element:
+                case MenuDepth.Sub:
+                    // Clamped to the rows actually built, not to the row
+                    // count: CurrentRows can be longer than submenuRows (the
+                    // column truncates and says so in its own hint), and a
+                    // selection past the last built row has no node.
+                    return NodeAt(submenuRows, _menu.RowSelection);
+
+                case MenuDepth.Target:
+                    if (_menu.Side == TargetSide.Allies)
+                    {
+                        if (_hoveredAllyIndex >= 0) return NodeAt(pcPlates, _hoveredAllyIndex);
+
+                        // NOTHING HOVERED YET points at what Submit would
+                        // actually press, which ConfirmFocus already defines
+                        // as the first candidate -- the same rule, read off
+                        // the same helper, so the arrow can never point at one
+                        // plate while Submit hits another.
+                        var pickable = PickableAllyPlates();
+                        return pickable.Count > 0 ? NodeAt(pcPlates, pickable[0]) : null;
+                    }
+
+                    if (_hoveredEnemyIndex >= 0) return NodeAt(enemyPlates, _hoveredEnemyIndex);
+
+                    var enemies = Enemies;
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        if (enemies[i].IsAlive) return NodeAt(enemyPlates, i);
+                    }
+
+                    return null;
+            }
+
+            return null;
+        }
+
+        private static GameObject NodeAt(Button[] nodes, int index)
+        {
+            if (nodes == null || index < 0 || index >= nodes.Length) return null;
+            return nodes[index] == null ? null : nodes[index].gameObject;
+        }
+
         // Pushed once per scene load, the moment a session becomes active --
         // the same "_session != null" half of PollGamepadNavigation's own
         // guard, just moved from a per-frame check to a one-time

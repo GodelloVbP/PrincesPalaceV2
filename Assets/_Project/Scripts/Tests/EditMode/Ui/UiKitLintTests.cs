@@ -115,13 +115,24 @@ namespace PrincesPalace.Domain.Tests
                 .Where(h => Path.GetFileName(h.File) == "SceneBuilder.cs")
                 .ToList();
 
-            // Camera, GlobalVolume, Canvas, EventSystem. Raised from 3 when the
-            // post-processing Volume was added - deliberately a NUMBER that has
-            // to be edited, so growing the allowance is a visible decision
-            // rather than something that drifts.
-            Assert.LessOrEqual(sites.Count, 4,
-                "SceneBuilder may create the camera, the global Volume, the canvas and the EventSystem, and nothing " +
-                "else - every widget goes through UiEmitter.\n" + Describe(sites));
+            // Camera, GlobalVolume, Canvas, EventSystem, FocusMarker. Raised
+            // from 3 when the post-processing Volume was added and from 4 for
+            // the focus marker (hardware round 1's visual pass) - deliberately
+            // a NUMBER that has to be edited, so growing the allowance is a
+            // visible decision rather than something that drifts.
+            //
+            // THE FIFTH IS THE ONE THAT NEEDS ARGUING, because unlike the
+            // other four it has a rect and it draws. Core/FocusMarker.cs's own
+            // header carries the full case; the short form is that it belongs
+            // to the DISPATCHER rather than to any screen, so it has no tree
+            // to be emitted into, and the two alternatives are worse in ways
+            // this file's own rule above names: creating it at runtime puts a
+            // second rect preamble in Core (exactly what that rule exists to
+            // stop), and putting it in every screen tree is eleven NodeRefs
+            // and eleven overlap exemptions for one object.
+            Assert.LessOrEqual(sites.Count, 5,
+                "SceneBuilder may create the camera, the global Volume, the canvas, the EventSystem and the " +
+                "focus marker, and nothing else - every widget goes through UiEmitter.\n" + Describe(sites));
         }
 
         [Test]

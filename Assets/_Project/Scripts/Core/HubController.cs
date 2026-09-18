@@ -31,16 +31,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
 
-        // Gamepad-focus halos for the four buildings and the gate -- none of
-        // the five is Themed() (Staged()'s own comment: each wears its own
-        // painted art), so none gets ThemedButtonState's free Selected halo
-        // the way mainMenuButton (Themed Silver) does. See SelectHaloPainter.
-        [SerializeField] internal Image talentsSelectHalo;
-        [SerializeField] internal Image principalitySelectHalo;
-        [SerializeField] internal Image characterSheetSelectHalo;
-        [SerializeField] internal Image relicsSelectHalo;
-        [SerializeField] internal Image gateSelectHalo;
-
         // The overarching menu Cancel now opens (docs/GAMEPAD_NAVIGATION_PLAN.md
         // section 3/4) -- the job SystemMenuController's own now-deleted Escape
         // poll used to do independently, racing HubController's. One context,
@@ -271,23 +261,18 @@ namespace PrincesPalace
                     RuntimeNavWiring.Link(characterSheet, UiNavDirection.Down, gate),
                 });
 
-            WireBuildingHalo(talents, talentsSelectHalo);
-            WireBuildingHalo(relics, relicsSelectHalo);
-            WireBuildingHalo(principality, principalitySelectHalo);
-            WireBuildingHalo(characterSheet, characterSheetSelectHalo);
-            WireBuildingHalo(gate, gateSelectHalo);
-            // mainMenuButton is Themed(Silver) -- ThemedButtonState already
-            // draws its own Selected halo, so it gets none of these.
-        }
-
-        private static void WireBuildingHalo(Button button, Image halo)
-        {
-            if (button == null || halo == null) return;
-
-            var select = button.gameObject.GetComponent<SelectIndex>()
-                         ?? button.gameObject.AddComponent<SelectIndex>();
-            select.Index = 0;
-            select.Changed = (_, entered) => SelectHaloPainter.Paint(halo, entered);
+            // NOTHING PAINTS PAD FOCUS ON THIS SCREEN ANY MORE. The five
+            // WireBuildingHalo calls that used to stand here are gone with
+            // the halos themselves (hardware round 1: "the selector on the
+            // start descent is huge and looks weird" -- a glow sized to a
+            // 620x620 gate is a 620x620 selector). Core/FocusMarker.cs, the
+            // one arrow, is the whole answer now and needs no wiring from
+            // any screen: it reads the settled selection straight off the
+            // dispatcher.
+            //
+            // mainMenuButton is Themed(Silver) and keeps ThemedButtonState's
+            // own hover and pressed states, untouched by this -- what it
+            // never had was a SEPARATE halo of this shape.
         }
 
         private GameObject StartRunButtonGameObject => startRunButton != null ? startRunButton.gameObject : null;

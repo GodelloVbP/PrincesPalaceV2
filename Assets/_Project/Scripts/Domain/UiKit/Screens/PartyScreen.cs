@@ -122,15 +122,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SeatGlows = new List<NodeRef>();
 
         // THE GAMEPAD-SELECTION HALO, one per seat and (below) one per card.
-        // A FOURTH visual channel, separate from the three this screen
-        // already had (occupied glow, selected/destination gold ring,
-        // unselectable wash), because EventSystem selection is a fourth
-        // thing: where the stick is standing, which is not "who is picked
-        // up" and not "where they could go". Inactive at build time -- it is
-        // shown, scaled and lit by PartyController at ThemedButtonState's own
-        // Selected ratios (plan section 7's candidate treatment), never at a
-        // number invented here.
-        public List<NodeRef> SeatSelectHalos = new List<NodeRef>();
+        // THE FOURTH CHANNEL IS NO LONGER DRAWN HERE. A gold radial glow at
+        // ThemedButtonState's Selected ratio used to sit behind every seat
+        // and every card, shown when the stick stood on it -- plan section
+        // 8's own "candidate treatment, not a verified solution; the owner
+        // reviews the picture". The owner reviewed it on hardware and the
+        // verdict was "the gold halo (e.g. in party screen) is way too
+        // strong". It is replaced, not tuned: Core/FocusMarker.cs draws one
+        // arrow beside the focused slot, on this screen and every other.
+        //
+        // The three channels this screen actually owns are untouched -- the
+        // occupied glow, the gold selection/destination ring, and the
+        // unselectable wash. Only the borrowed fourth is gone, which is why
+        // "which slot Submit will hit" is now the arrow's job and "which
+        // slots are legal" stays the ring's.
         public List<NodeRef> SeatNames = new List<NodeRef>();
         public List<NodeRef> SeatRoles = new List<NodeRef>();
         public List<NodeRef> SeatRings = new List<NodeRef>();
@@ -160,7 +165,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> CardRings = new List<NodeRef>();
         public List<NodeRef> CardSelectedTags = new List<NodeRef>();
         public List<NodeRef> CardWashes = new List<NodeRef>();
-        public List<NodeRef> CardSelectHalos = new List<NodeRef>();
 
         public static PartyScreen Build(PartyInputs inputs)
         {
@@ -356,21 +360,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(glow);
             screen.SeatGlows.Add(glow);
 
-            // BEHIND EVERYTHING, and the full size of the slot rather than
-            // the ground glow's footprint: scaled past its own edges at
-            // selection time it reads as a halo all the way around the slot,
-            // which is what distinguishes it at a glance from the gold RING
-            // (a sharp rim, meaning the model's own selection) drawn over the
-            // top of the same slot.
-            var selectHalo = Ui.Sprite(stem + "SelectHalo", "proc:radial_glow",
-                    Place.At(0f, 0f),
-                    UiSize.Fixed(PartyLayout.ColumnWidth, PartyLayout.ColumnButtonHeight))
-                .Coloured(RingGold)
-                .Inactive()
-                .AsDecor();
-            button.Children.Add(selectHalo);
-            screen.SeatSelectHalos.Add(selectHalo);
-
             // NO BAKED SPRITE -- P3 loads a stance from Resources/Characters/
             // <id> and activates this; until then it stays off, because an
             // Image with no sprite renders as a filled rectangle (the same
@@ -523,16 +512,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var button = Ui.Button(stem + "Button", UiString.Runtime, size, 15, Place.At(x, y))
                 .NoChrome();
-
-            // Same fourth channel as the seats', same reasoning -- declared
-            // FIRST so it draws behind the card's own wash, art and rings.
-            var selectHalo = Ui.Sprite(stem + "SelectHalo", "proc:radial_glow",
-                    Place.At(0f, 0f), UiSize.Fixed(PartyLayout.CardWidth, PartyLayout.CardHeight))
-                .Coloured(RingGold)
-                .Inactive()
-                .AsDecor();
-            button.Children.Add(selectHalo);
-            screen.CardSelectHalos.Add(selectHalo);
 
             var wash = Ui.Solid(stem + "Wash", DimWash, size, Place.At(0f, 0f)).AsDecor().Inactive();
             button.Children.Add(wash);

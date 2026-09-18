@@ -32,6 +32,63 @@ namespace PrincesPalace
         // remembering a context pushed by the one it replaced.
         public static NavContextStack Contexts { get; private set; }
 
+        // ---- the one pad-focus visual (hardware round 1, the owner's visual
+        // ---- findings; Core/FocusMarker.cs has the argument) -------------------
+        //
+        // THE SOURCE OF TRUTH FOR "WHAT HAS FOCUS" IS THIS CLASS, because it
+        // is already the one place that settles the selection every frame
+        // (ReselectIfOutsideDeclaredSet) and the one place that drives Fight's
+        // own focus model (ProcessFight). Every screen used to answer this
+        // question for itself with a halo of its own, three screens did not
+        // answer it at all, and no two of the answers looked alike.
+        //
+        // The marker itself is a scene root fixture SceneBuilder builds
+        // beside this EventSystem (Core/FocusMarker.cs's own header argues
+        // why it is neither a runtime object nor a screen-tree node), and
+        // this is the wire between them. Null is a supported state, not a
+        // broken one: a PlayMode fixture that stands up its own EventSystem
+        // by hand has no marker, and every call below is then a no-op.
+
+        // WHICH DEVICE MOVED THE FOCUS LAST. The marker is a PAD affordance:
+        // a mouse click selects the control it lands on, and an arrow jumping
+        // to wherever the pointer last clicked is noise on a screen the player
+        // is driving with the pointer.
+        //
+        // Static and NOT reset on scene load, deliberately -- this is a fact
+        // about the player's hands, not about a scene. Resetting it in Awake
+        // would show a mouse player the marker on every screen's entry control
+        // for the frames between the load and their next mouse move, on every
+        // transition. Tests reset it through TestGlobals.ResetAll.
+        //
+        // Starts TRUE so that a pad player who has not yet pressed anything on
+        // a freshly launched game still sees where the focus is; the first
+        // mouse movement of a mouse player's session clears it and it stays
+        // clear.
+        public static bool LastInputWasPad { get; private set; } = true;
+
+        // The control the marker is pointing at this frame, or null. Exposed
+        // for the tests, which assert against the literal node rather than
+        // against the marker's own arithmetic.
+        public static RectTransform FocusTarget { get; private set; }
+
+        [SerializeField] internal FocusMarker focusMarker;
+
+        // The marker belonging to the CURRENT scene's dispatcher. Static for
+        // the same reason Contexts is (one EventSystem per scene, one scene
+        // loaded at a time), and set from the serialized field in Awake so a
+        // reloaded scene replaces the previous scene's destroyed one rather
+        // than keeping a fake-null reference to it.
+        public static FocusMarker Marker { get; private set; }
+
+        private Vector2 _lastMousePosition;
+        private bool _mousePositionKnown;
+
+        public static void ResetInputDeviceForTests()
+        {
+            LastInputWasPad = true;
+            FocusTarget = null;
+        }
+
         // The Fight branch's own debounce state, moved verbatim from the
         // deleted FightController.Input.cs PollGamepadNavigation. One field
         // is enough because at most one Fight context can be top at a time.
@@ -84,11 +141,14 @@ namespace PrincesPalace
         {
             base.Awake();
             Contexts = new NavContextStack();
+            Marker = focusMarker;
         }
 
         public override void Process()
         {
             var topAtStart = Contexts?.Top;
+
+            TrackInputDevice();
 
             if (topAtStart != null && topAtStart.IsNonSelecting)
             {
@@ -127,7 +187,16 @@ namespace PrincesPalace
             // in phase 1): base.Process() alone, nothing else reads this
             // frame's input. Plan section 3, last bullet of the "top is not
             // Fight" branch.
-            if (topAtStart == null) return;
+            //
+            // The marker still updates before returning. A screen with no
+            // NavContext is still a screen a pad can move around -- Unity's
+            // own Explicit links do the moving there -- and "no context" is
+            // not "no focus".
+            if (topAtStart == null)
+            {
+                ShowFocusOn(EventSystem.current.currentSelectedGameObject);
+                return;
+            }
 
             // RaiseCancel, not Cancel: the active pane gets first refusal
             // (NavContext.RaiseCancel / INavCancelClaim) -- Party carrying a
@@ -183,6 +252,80 @@ namespace PrincesPalace
             // modal's own entry on the MODAL, and leaves the screen
             // underneath remembering where its focus was.
             RememberSelection(topAtEnd);
+
+            // LAST, off the settled selection -- the same value
+            // RememberSelection just recorded, so the marker and the memory
+            // can never disagree about what this frame focused.
+            ShowFocusOn(EventSystem.current.currentSelectedGameObject);
+        }
+
+        // WHICH DEVICE IS DRIVING, read once a frame off the same `input`
+        // seam every other value in this class goes through (plan section 2),
+        // so ScriptedBaseInput can prove it.
+        //
+        // PAD WINS A TIE. A frame carrying both a pointer movement and a
+        // stick past the threshold is a player with a hand on the pad, and
+        // the sub-pixel drift a real mouse produces while sitting still is
+        // exactly the kind of thing that would otherwise flicker the marker
+        // off mid-Move.
+        //
+        // The axis is read here as a LEVEL rather than waiting for a
+        // dispatched Move, on purpose: the ordinary branch's armed edge
+        // (_moveArmed) can swallow a press the player definitely made, and a
+        // marker that only appears on presses the gate accepted would be
+        // invisible for exactly the frames the player is wondering where the
+        // focus went.
+        private void TrackInputDevice()
+        {
+            var mouse = input.mousePosition;
+            if (_mousePositionKnown && (mouse - _lastMousePosition).sqrMagnitude > 0.01f)
+            {
+                LastInputWasPad = false;
+            }
+
+            _lastMousePosition = mouse;
+            _mousePositionKnown = true;
+
+            if (input.GetMouseButtonDown(0)) LastInputWasPad = false;
+
+            float horizontal = input.GetAxisRaw(horizontalAxis);
+            float vertical = input.GetAxisRaw(verticalAxis);
+            if (horizontal * horizontal + vertical * vertical >= MoveThreshold * MoveThreshold)
+            {
+                LastInputWasPad = true;
+            }
+
+            if (input.GetButtonDown(submitButton) || input.GetButtonDown(cancelButton)
+                || input.GetButtonDown(TabPrevButton) || input.GetButtonDown(TabNextButton))
+            {
+                LastInputWasPad = true;
+            }
+        }
+
+        // THE ONE PLACE THE MARKER IS TOLD ANYTHING. Both branches end here,
+        // with whatever each of them calls focus: an EventSystem selection in
+        // the ordinary branch, Fight's own focused element in the other.
+        //
+        // A scene with no marker (a hand-built PlayMode EventSystem) still
+        // records FocusTarget -- the fact of what has focus is the
+        // dispatcher's, and only the drawing of it needs the fixture.
+        private void ShowFocusOn(GameObject focused)
+        {
+            var rect = LastInputWasPad && focused != null && focused.activeInHierarchy
+                ? focused.transform as RectTransform
+                : null;
+
+            FocusTarget = rect;
+
+            if (Marker == null) return;
+
+            if (rect == null)
+            {
+                Marker.Hide();
+                return;
+            }
+
+            Marker.PointAt(rect);
         }
 
         // READ ONCE A FRAME, BEFORE base.Process() DISPATCHES ANYTHING.
@@ -325,7 +468,11 @@ namespace PrincesPalace
             base.Process();
 
             var target = top.FightTarget;
-            if (target == null) return;
+            if (target == null)
+            {
+                ShowFocusOn(null);
+                return;
+            }
 
             float vertical = input.GetAxisRaw(verticalAxis);
             if (Mathf.Abs(vertical) < MoveThreshold)
@@ -340,6 +487,17 @@ namespace PrincesPalace
 
             if (input.GetButtonDown(submitButton)) target.ConfirmFocus();
             if (input.GetButtonDown(cancelButton)) target.OnBackPressed();
+
+            // AFTER the three, so the marker lands on wherever this frame's
+            // press left the focus rather than a frame behind it -- a Submit
+            // that opens the Skill submenu moves the focus from a verb to a
+            // row in the same call.
+            //
+            // FightTarget.FocusedElement, not EventSystem selection: Fight
+            // asserts the selection null every frame by construction (see the
+            // top of this method), so the EventSystem has nothing to say here
+            // and never will. Fight's own model is the only thing that knows.
+            ShowFocusOn(target.FocusedElement as GameObject);
         }
 
         // The ordinary-context twin of the Fight branch's null-assert --

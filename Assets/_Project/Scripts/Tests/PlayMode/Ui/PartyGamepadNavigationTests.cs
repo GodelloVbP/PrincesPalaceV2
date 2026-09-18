@@ -256,28 +256,34 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("bear", _party.Formation.SeatIds[PartySeat.Rear]);
         }
 
-        // ---- the selection halo -----------------------------------------------------
+        // ---- where the stick is standing --------------------------------------------
+        //
+        // ADAPTED, NOT RELAXED (hardware round 1's visual pass). This test
+        // used to be TheSelectedSeatLightsItsOwnHalo_AndOnlyThatOne and
+        // asserted PartySeat<n>SelectHalo's activeSelf. Those halos are gone
+        // -- the owner played the screen on a pad and reported "the gold halo
+        // (e.g. in party screen) is way too strong" -- and the claim they
+        // were making is now made about the one arrow every screen shares.
+        // Same two steps, same two seats, same "and only that one": it is the
+        // indicator that changed, not what is being asked of it.
 
         [UnityTest]
-        public IEnumerator TheSelectedSeatLightsItsOwnHalo_AndOnlyThatOne()
+        public IEnumerator TheFocusMarkerStandsOnTheSelectedSeat_AndFollowsAMoveOffIt()
         {
             yield return OpenTheParty();
 
             Select(Seat(PartySeat.Rear));
             yield return null;
 
-            Assert.IsTrue(Halo(PartySeat.Rear).activeSelf, "the selected seat's halo is not lit");
-            Assert.IsFalse(Halo(PartySeat.Middle).activeSelf, "an unselected seat's halo is lit");
+            Assert.IsTrue(NavigationInputModule.Marker.IsShown, "the marker is not drawn at all");
+            Assert.AreSame(Seat(PartySeat.Rear).transform, NavigationInputModule.Marker.Target,
+                "the marker is not on the selected seat");
 
             yield return MoveRightFrame();
 
-            Assert.IsFalse(Halo(PartySeat.Rear).activeSelf, "the halo stayed behind on the old selection");
-            Assert.IsTrue(Halo(PartySeat.Middle).activeSelf, "the halo did not follow the selection");
+            Assert.AreSame(Seat(PartySeat.Middle).transform, NavigationInputModule.Marker.Target,
+                "the marker did not follow the selection");
         }
-
-        private GameObject Halo(int seat) =>
-            _menu.GetComponentsInChildren<Transform>(includeInactive: true)
-                .First(t => t.name == $"PartySeat{seat}SelectHalo").gameObject;
 
         // ---- the links row (plan phase 3, item 3 -- the phase 2 gap named in ----
         // ---- the plan's own status header) --------------------------------------

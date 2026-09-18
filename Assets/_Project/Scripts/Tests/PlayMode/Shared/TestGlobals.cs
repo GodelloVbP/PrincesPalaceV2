@@ -69,6 +69,17 @@ namespace PrincesPalace.PlayModeTests
             // as true and the menu silently declines to open.
             EscapeKey.Reset();
 
+            // THE SECOND GLOBAL THE LINT CANNOT SEE, same shape as EscapeKey
+            // above: NavigationInputModule.LastInputWasPad is written by
+            // PRODUCTION during a test (TrackInputDevice, every frame the
+            // dispatcher runs) and by no test file, so there is nothing for
+            // GlobalStateLintTests to scan. It deliberately survives a scene
+            // load -- which device the player's hands are on is not a
+            // property of a scene -- and that is exactly what makes it leak
+            // between tests: a fixture that moved the scripted mouse hands
+            // the next one a focus marker that refuses to draw.
+            NavigationInputModule.ResetInputDeviceForTests();
+
             // THE CLOCK, which no test writes on purpose and several stop by
             // accident. The system menu pauses by setting this to zero, so any
             // fixture that opens it -- or opens the character sheet, which IS

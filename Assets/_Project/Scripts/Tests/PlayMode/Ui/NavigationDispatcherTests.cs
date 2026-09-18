@@ -53,6 +53,13 @@ namespace PrincesPalace.PlayModeTests
             }
 
             public void OnBackPressed() => OnBackPressedCalls++;
+
+            // The focus marker's own source in the Fight branch (hardware
+            // round 1's visual pass). This stub has no scene and therefore no
+            // element to point at -- null is the interface's own "nothing to
+            // point at" answer, and it is what keeps this fixture's claims
+            // about the three CALLS unaffected by the marker existing.
+            public object FocusedElement => null;
         }
 
         [UnitySetUp]

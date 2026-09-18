@@ -52,7 +52,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] seatNames;
         [SerializeField] internal TMP_Text[] seatRoles;
         [SerializeField] internal GameObject[] seatRings;
-        [SerializeField] internal Image[] seatSelectHalos;
         [SerializeField] internal GameObject[] seatScrims;
         [SerializeField] internal TMP_Text[] seatScrimCaptions;
 
@@ -92,7 +91,6 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] cardRings;
         [SerializeField] internal GameObject[] cardSelectedTags;
         [SerializeField] internal GameObject[] cardWashes;
-        [SerializeField] internal Image[] cardSelectHalos;
         [SerializeField] internal PartyDragSource[] cardDragSources;
 
         // ---- P4: the one reusable drag ghost, and the roster's own drop zone ----
@@ -407,10 +405,17 @@ namespace PrincesPalace
         // something carried they resolve it (place, swap, move, or cancel on
         // a re-click). One path for the mouse and the pad, not two that have
         // to be kept agreeing.
+        // NOTHING LEFT TO WIRE. This method used to attach a SelectIndex to
+        // every seat and card so each could paint its own gold halo when the
+        // stick landed on it; hardware round 1 retired that halo outright
+        // ("the gold halo (e.g. in party screen) is way too strong") in
+        // favour of the one arrow Core/FocusMarker.cs draws for every screen.
+        //
+        // KEPT AS AN EMPTY, CALLED METHOD rather than deleted, because it is
+        // the named place this screen's navigation wiring goes and the next
+        // thing that needs one should land here rather than in Start().
         private void WireNavigation()
         {
-            WireSelectHalos(seatButtons, seat => OnSeatSelectionChanged(seat));
-            WireSelectHalos(cardButtons, card => OnCardSelectionChanged(card));
         }
 
         // THE LINKS ROW (plan phase 3, item 3 -- the phase 2 gap this plan's
@@ -520,79 +525,6 @@ namespace PrincesPalace
                 var seat = At(seatButtons, SeatAtColumn(Mathf.Min(j, PartySeat.Count - 1)));
                 yield return RuntimeNavWiring.Link(cardButtons[j], UiNavDirection.Up, seat);
             }
-        }
-
-        // SelectIndex, not a new component: RewardTrack's ribbon already
-        // needed "tell me when the module selects this indexed thing", and
-        // this is the same question (da205520). Added at runtime for the
-        // reason that file's own header gives -- it carries a delegate and an
-        // integer, and a scene cannot serialise the first.
-        private void WireSelectHalos(Button[] buttons, System.Action<int> changed)
-        {
-            for (int i = 0; buttons != null && i < buttons.Length; i++)
-            {
-                if (buttons[i] == null) continue;
-
-                var select = buttons[i].gameObject.GetComponent<SelectIndex>()
-                             ?? buttons[i].gameObject.AddComponent<SelectIndex>();
-                select.Index = i;
-                select.Changed = (index, entered) => changed(entered ? index : -1);
-            }
-        }
-
-        // WHERE THE STICK IS STANDING -- a fourth state, distinct from the
-        // three the model already paints (occupied, carried/destination,
-        // unselectable). -1 is "nowhere", which is the mouse-only case.
-        private int _navSelectedSeat = -1;
-        private int _navSelectedCard = -1;
-
-        private void OnSeatSelectionChanged(int seat)
-        {
-            // A deselect arriving after the NEXT node has already reported
-            // itself selected must not turn that new halo off -- so a
-            // deselect only clears when something is actually lit.
-            if (seat < 0 && _navSelectedSeat < 0) return;
-            _navSelectedSeat = seat;
-            PaintSelectHalos();
-        }
-
-        private void OnCardSelectionChanged(int card)
-        {
-            if (card < 0 && _navSelectedCard < 0) return;
-            _navSelectedCard = card;
-            PaintSelectHalos();
-        }
-
-        private void PaintSelectHalos()
-        {
-            for (int i = 0; seatSelectHalos != null && i < seatSelectHalos.Length; i++)
-            {
-                PaintSelectHalo(At(seatSelectHalos, i), i == _navSelectedSeat);
-            }
-
-            for (int i = 0; cardSelectHalos != null && i < cardSelectHalos.Length; i++)
-            {
-                PaintSelectHalo(At(cardSelectHalos, i), i == _navSelectedCard);
-            }
-        }
-
-        // THE NUMBERS ARE THEMEDBUTTONSTATE'S OWN, not new ones (plan section
-        // 7/8): a themed Button already answers EventSystem focus with
-        // SelectedGlowAlpha at SelectedGlowScale -- a halo grown past the
-        // control's own edges rather than merely a brighter ring the same
-        // size as it. Party's seats and cards are NoChrome() buttons with no
-        // ThemedButtonState to do it for them, so they borrow that ratio
-        // rather than invent a second one.
-        private static void PaintSelectHalo(Image halo, bool selected)
-        {
-            if (halo == null) return;
-
-            halo.gameObject.SetShown(selected);
-            if (!selected) return;
-
-            var colour = halo.color;
-            halo.color = new Color(colour.r, colour.g, colour.b, ThemedButtonState.SelectedGlowAlpha);
-            halo.rectTransform.localScale = Vector3.one * ThemedButtonState.SelectedGlowScale;
         }
 
         // ---- Cancel, claimed (INavCancelClaim, plan section 8) -------------------

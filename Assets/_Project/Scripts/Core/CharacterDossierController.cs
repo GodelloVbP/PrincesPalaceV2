@@ -103,14 +103,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] slotLabels;
         [SerializeField] internal GameObject[] slotBlockedCaptions;
 
-        // AUDIT.md #160: one halo per NoChrome group with no ThemedButtonState
-        // of its own -- Core/SelectHaloPainter.Paint is the one implementation
-        // this borrows (Hub's buildings, Party's seats/cards), wired below in
-        // WireSelectHalos.
-        [SerializeField] internal Image[] slotHalos;
-        [SerializeField] internal Image[] packCellHalos;
-        [SerializeField] internal Image[] attributeCellHalos;
-
         [SerializeField] internal Button[] attributeCells;
 
         // One "+" per attribute cell, and the label saying how many points are
@@ -293,9 +285,18 @@ namespace PrincesPalace
             // locked copy of this sheet still takes Move/Submit (equipping is
             // what is barred, not looking), so it should still show where the
             // stick is standing.
-            WireSelectHalos(attributeCells, attributeCellHalos);
-            WireSelectHalos(slotCells, slotHalos);
-            WireSelectHalos(packCells, packCellHalos);
+            // THE THREE WireSelectHalos CALLS THAT STOOD HERE ARE GONE
+            // (hardware round 1: "a player can't see where they're going in
+            // the character sheets screen: no obvious selectors" -- a soft
+            // glow the size of a cell was never going to be one). The arrow
+            // Core/FocusMarker.cs draws needs nothing from this screen.
+            //
+            // The SelectIndex components those calls used to create are
+            // still created, by AttachHovers/TooltipFocusRouter.Register a
+            // few lines above -- the tooltip rides the same component and is
+            // untouched by this. That is also why the halo subscription was
+            // a `+=` rather than a `=`, and why removing it is a removal
+            // rather than a replacement.
 
             // Clicking equips; clicking a worn slot takes it off. A screen that
             // could only put gear ON would be a trap, so both gestures exist --
@@ -400,35 +401,6 @@ namespace PrincesPalace
                 var hover = node.GetComponent<HoverIndex>() ?? node.AddComponent<HoverIndex>();
                 hover.Index = index;
                 hover.Changed = (_, entered) => _tooltips.Pointer(node, entered);
-            }
-        }
-
-        // AUDIT.md #160: one SelectIndex per cell, each painting its OWN halo
-        // directly -- HubController.WireBuildingHalo's shape, not Party's
-        // shared-int-then-repaint one, because here every cell already owns a
-        // distinct halo of its own (no tracked "which index is lit" state to
-        // keep in sync against a repaint that rebinds what a cell shows).
-        //
-        // += , NOT =. Every one of these three arrays was already run through
-        // AttachHovers a few lines above, which calls TooltipFocusRouter.
-        // Register and that already claims this SAME SelectIndex's Changed
-        // delegate for the tooltip (Core/TooltipFocusRouter.cs:71-72). Changed
-        // is a plain Action field, which IS multicast -- assigning with = here
-        // would silently replace the router's subscription and the tooltip
-        // tests (SelectingAPackCell_ShowsItsPreview and its neighbours) would
-        // stop opening the box the moment this method ran after Register.
-        private static void WireSelectHalos(Button[] cells, Image[] halos)
-        {
-            if (cells == null || halos == null) return;
-
-            for (int i = 0; i < cells.Length && i < halos.Length; i++)
-            {
-                if (cells[i] == null || halos[i] == null) continue;
-
-                var halo = halos[i];
-                var select = cells[i].gameObject.GetComponent<SelectIndex>()
-                             ?? cells[i].gameObject.AddComponent<SelectIndex>();
-                select.Changed += (_, entered) => SelectHaloPainter.Paint(halo, entered);
             }
         }
 

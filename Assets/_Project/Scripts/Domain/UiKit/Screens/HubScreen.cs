@@ -37,19 +37,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef StartRunCaption;
         public NodeRef World;
 
-        // Gamepad-focus halos for the four buildings and the gate
-        // (docs/GAMEPAD_NAVIGATION_PLAN.md phase 3 rollout, section 7/8's
-        // ThemedButtonState ratio borrowed the same way Party's seats/cards
-        // borrow it below). None of these five buttons is Themed() -- every
-        // one wears its own painted art (Staged()'s own comment on why
-        // Theme.HasValue is never set here) -- so none gets ThemedButtonState's
-        // free Selected halo the way MainMenuButton (Themed Silver) does.
-        // MainMenuButton therefore has no halo of its own in this list.
-        public NodeRef TalentsSelectHalo;
-        public NodeRef PrincipalitySelectHalo;
-        public NodeRef CharacterSheetSelectHalo;
-        public NodeRef RelicsSelectHalo;
-        public NodeRef GateSelectHalo;
+        // NO GAMEPAD-FOCUS HALOS HERE ANY MORE (hardware round 1, the
+        // owner's visual findings; Core/FocusMarker.cs's own header). This
+        // screen carried five -- one per building plus the gate -- each a
+        // radial glow sized to the control it sat behind, which is why the
+        // owner's verdict on the gate's was "the selector on the start
+        // descent is huge and looks weird": the gate is 620x620, so its
+        // selector was too. The one arrow marker replaces all five and is
+        // the same size on every screen by construction.
 
         // The character overlay lives in the hub permanently and hidden.
         // Declared LAST so it draws over everything it dims.
@@ -94,11 +89,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var characterSheet = screen.Staged("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", HubAnchors.CharacterSheet);
             var principality = screen.Staged("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", HubAnchors.Principality);
 
-            screen.RelicsSelectHalo = relics.Halo;
-            screen.TalentsSelectHalo = talents.Halo;
-            screen.CharacterSheetSelectHalo = characterSheet.Halo;
-            screen.PrincipalitySelectHalo = principality.Halo;
-
             // The gate STANDS ON THE TERRACE, feet on the path, while everything
             // else floats out over the drop. Its caption is a declared node of
             // its own rather than the emitter's auto-label, because the
@@ -119,14 +109,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             gate.SpriteKey = $"{HubArtRoot}/gate/f0.png";
             screen.BuildingArt.Add((gate, "Hub/gate"));
             gate.Children.Add(gateCaption);
-
-            var gateHalo = Ui.Sprite("StartRunGateSelectHalo", "proc:radial_glow",
-                    Place.At(0f, 0f), UiSize.Fixed(HubAnchors.GateSize, HubAnchors.GateSize))
-                .Coloured(FightHudPalette.BorderGold)
-                .Inactive()
-                .AsDecor();
-            gate.Children.Add(gateHalo);
-            screen.GateSelectHalo = gateHalo;
 
             screen.TalentsButton = talents.Button;
             screen.PrincipalityButton = principality.Button;
@@ -248,12 +230,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
+        // Node AND Button, still two fields for one object: Node is the tree
+        // node the caller goes on to hang children off, Button is the
+        // NodeRef the screen binds. The Halo third member went with the
+        // halos themselves (see this file's own note above the declarations).
         private readonly struct BuildingNodes
         {
             public readonly UiNode Node;
             public readonly NodeRef Button;
-            public readonly NodeRef Halo;
-            public BuildingNodes(UiNode node, NodeRef button, NodeRef halo) { Node = node; Button = button; Halo = halo; }
+            public BuildingNodes(UiNode node, NodeRef button) { Node = node; Button = button; }
         }
 
         // A building is a button wearing its art, staged at depth.
@@ -304,19 +289,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             button.Children.Add(plate);
 
-            // Full footprint of the button, the same "past its own edges"
-            // shape Party's own SelectHalo uses (PartyScreen.cs) rather than
-            // a ring the size of the art -- see that file's comment on why a
-            // halo grown past the control reads distinctly from a themed
-            // button's own tighter glow.
-            var halo = Ui.Sprite($"{name}SelectHalo", "proc:radial_glow",
-                    Place.At(0f, 0f), UiSize.Fixed(size, size))
-                .Coloured(FightHudPalette.BorderGold)
-                .Inactive()
-                .AsDecor();
-            button.Children.Add(halo);
-
-            return new BuildingNodes(button, button, halo);
+            return new BuildingNodes(button, button);
         }
     }
 }

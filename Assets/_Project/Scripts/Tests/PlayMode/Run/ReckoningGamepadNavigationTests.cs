@@ -328,23 +328,36 @@ namespace PrincesPalace.PlayModeTests
                 "and it is placed beside the card it moved to, not left behind on the last one");
         }
 
-        // ---- the selected halo (AUDIT.md #160) ----------------------------------
+        // ---- where the stick is standing, and what the halo means now -----------
+        //
+        // ADAPTED, NOT RELAXED (hardware round 1's visual pass). These were
+        // SelectingAnOffer_BrightensItsOwnHalo and
+        // MovingTheSelectionOffAnOffer_DimsItsHaloBackAndLightsTheNewOne, and
+        // they pinned AUDIT.md #160's decision to say focus with the card's
+        // existing RARITY halo, Maxed up to ThemedButtonState's Selected
+        // ratio. The cost of that is visible in the numbers the old test
+        // asserted: a focused Common card read at alpha 1.0 while an
+        // unfocused Legendary read at 0.30, so the channel that is supposed
+        // to say how good an item is said instead which card the stick was
+        // on. One meaning per channel: the halo is rarity, the arrow is
+        // focus.
 
         [UnityTest]
-        public IEnumerator SelectingAnOffer_BrightensItsOwnHalo()
+        public IEnumerator SelectingAnOffer_PutsTheFocusMarkerOnIt_AndLeavesItsRarityHaloAlone()
         {
             yield return ShowTheChoice();
 
             AssertSelected("ReckoningOffer0", "precondition: Show() selects the first card");
 
-            Assert.AreEqual(ThemedButtonState.SelectedGlowAlpha, Halo(0).color.a, 0.001f,
-                "AUDIT.md #160: the entry's own existing rarity halo should read the Selected ratio the " +
-                "moment the screen opens -- brightening what is already there, not a plate behind it " +
-                "(BuildOffer's own NO PLATE note argues against exactly that)");
+            Assert.AreSame(Node("ReckoningOffer0").transform, NavigationInputModule.Marker.Target,
+                "the marker should stand on the card the screen opened focused");
+
+            Assert.AreEqual(0.30f, Halo(0).color.a, 0.001f,
+                "an untaken card's halo is its plain rarity glow -- being focused must not brighten it");
         }
 
         [UnityTest]
-        public IEnumerator MovingTheSelectionOffAnOffer_DimsItsHaloBackAndLightsTheNewOne()
+        public IEnumerator MovingTheSelectionOffAnOffer_MovesTheMarker_AndNeitherHaloChanges()
         {
             yield return ShowTheChoice();
 
@@ -353,10 +366,10 @@ namespace PrincesPalace.PlayModeTests
             yield return Press(1f, 0f);
 
             AssertSelected("ReckoningOffer1", "precondition: Right reached the second card");
-            Assert.Less(Halo(0).color.a, beforeMove,
-                "the card the selection left should fall back to its plain rarity glow, not stay lit");
-            Assert.AreEqual(ThemedButtonState.SelectedGlowAlpha, Halo(1).color.a, 0.001f,
-                "and the card it moved to should now carry the Selected brightening");
+            Assert.AreSame(Node("ReckoningOffer1").transform, NavigationInputModule.Marker.Target,
+                "the marker should have followed the Move");
+            Assert.AreEqual(beforeMove, Halo(0).color.a, 0.001f,
+                "the card the selection left never carried a focus brightening to lose");
         }
 
         [UnityTest]

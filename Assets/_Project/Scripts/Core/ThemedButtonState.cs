@@ -263,12 +263,26 @@ namespace PrincesPalace
             }
         }
 
-        // Selected = the menu explicitly opened this button's branch, made it
-        // the recommended default, or real focus (gamepad/keyboard) landed on
-        // it via ISelectHandler - a mouse hover alone is NOT Selected, it
-        // stays the plain FocusGlowAlpha ring UpdateGlow already gave it.
+        // Selected = the MENU explicitly opened this button's branch or made
+        // it the recommended default. Nothing else.
+        //
+        // _isSelected -- real gamepad/keyboard focus via ISelectHandler --
+        // USED TO BE A THIRD MEMBER OF THIS OR, and was removed by hardware
+        // round 1's visual pass. It was the themed half of the same thing
+        // Hub's, Party's and the Dossier's hand-rolled halos were doing:
+        // a second pad-focus indicator, drawn differently on every screen
+        // that had one and not at all on the three that did not. There is one
+        // now, Core/FocusMarker.cs, and it is the only one.
+        //
+        // WHAT FOCUS STILL GETS is the plain FocusGlowAlpha ring, at the
+        // control's own size, shared with hover -- see UpdateGlow below,
+        // where _isSelected is still read. A focused control should still
+        // read as live; what it should not do is wear a grown halo that says
+        // the same thing the arrow beside it already says, twice, in a
+        // vocabulary that also means "this branch is open" on the fight
+        // screen.
         private bool IsSelectedHalo =>
-            Interactable && (_menuState == ThemedMenuState.Open || _menuState == ThemedMenuState.Primary || _isSelected);
+            Interactable && (_menuState == ThemedMenuState.Open || _menuState == ThemedMenuState.Primary);
 
         private void UpdateGlow()
         {
