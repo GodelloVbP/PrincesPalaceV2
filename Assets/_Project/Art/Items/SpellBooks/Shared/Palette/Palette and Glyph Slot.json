@@ -1,0 +1,61 @@
+{
+  "palette": {
+    "physical": "#bac0bd",
+    "fire": "#ed4b1a",
+    "ice": "#65d4ef",
+    "nature": "#61943c",
+    "poison": "#a9bb38",
+    "arcane": "#b34bd2",
+    "earth": "#936039",
+    "water": "#24558f",
+    "wind": "#c9e9e4",
+    "lightning": "#f6d92c",
+    "void": "#241d32"
+  },
+  "slot": {
+    "cx": 638.0595503143885,
+    "cy": 574.6404309283226,
+    "bounds": [
+      433,
+      75,
+      1104,
+      1237
+    ]
+  },
+  "spells": [
+    [
+      "mud_burst",
+      [
+        "earth"
+      ]
+    ],
+    [
+      "frost_flare",
+      [
+        "fire",
+        "ice"
+      ]
+    ],
+    [
+      "cinderfault",
+      [
+        "fire",
+        "nature"
+      ]
+    ],
+    [
+      "lightning_bolt",
+      [
+        "lightning"
+      ]
+    ]
+  ],
+  "masterSize": [
+    1254,
+    1254
+  ],
+  "iconSizes": [
+    512,
+    48
+  ]
+}

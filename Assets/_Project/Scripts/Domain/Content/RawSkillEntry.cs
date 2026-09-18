@@ -18,6 +18,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Flavor text shown to the player; read by no formula.")]
         public string description = "";
 
+        [ContentDoc("Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in.")]
+        public string iconPath = "";
+
         // Which character this belongs to. Required: a skill with no owner
         // would be offered to everyone, and the whole point of this content
         // type is that a kit is a character's own.

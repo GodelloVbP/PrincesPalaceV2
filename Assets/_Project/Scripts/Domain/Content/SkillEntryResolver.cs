@@ -620,6 +620,8 @@ namespace PrincesPalace.Domain.Content
 
             if (!SpellLayerRules.TryCheck(label, raw.vfx, out error)) return false;
 
+            if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
+
             if (!TryResolveElements(raw, label, instances, out var elements, out error))
             {
                 return false;
@@ -652,7 +654,7 @@ namespace PrincesPalace.Domain.Content
                 poolTiers,
                 raw.placeholder, raw.placeholderNote ?? "",
                 raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction,
-                raw.percentOfCasterMaxHealth, raw.wardTurns);
+                raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "");
             error = null;
             return true;
         }

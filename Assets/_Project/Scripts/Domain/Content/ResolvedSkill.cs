@@ -153,6 +153,12 @@ namespace PrincesPalace.Domain.Content
         public string SummonEnemyId = "";
         public int SummonCap;
 
+        // See RawSkillEntry.iconPath. Empty for every skill but a bookOnly
+        // one today; ArtPathConvention.EditorBaked, so nothing here loads it
+        // at runtime -- ScreenRegistry bakes it into an IconEntry[] the way
+        // it already does for items and relics.
+        public string IconPath = "";
+
         // WHERE THIS SKILL CAN BE AIMED. See RawSkillEntry.meleeReach /
         // reachSlots for the two authored spellings, and Reach for why the
         // KIND matters and not only the mask.
@@ -382,8 +388,11 @@ namespace PrincesPalace.Domain.Content
             bool freeAction = false,
             // APPENDED LAST OF ALL AGAIN (the shield model, phase 5), for the
             // same positional-argument reason every block above gives.
-            int percentOfCasterMaxHealth = 0, int wardTurns = 0)
+            int percentOfCasterMaxHealth = 0, int wardTurns = 0,
+            // APPENDED LAST OF ALL AGAIN (spell book art), same reason.
+            string iconPath = "")
         {
+            IconPath = iconPath ?? "";
             ResourceSpendCap = resourceSpendCap;
             SpendsAllPrimary = spendsAllPrimary;
             PercentOfMaxHealthPerPoint = percentOfMaxHealthPerPoint;

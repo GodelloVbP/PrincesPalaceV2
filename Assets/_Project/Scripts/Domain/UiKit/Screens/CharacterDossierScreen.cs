@@ -82,6 +82,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SpellSlots = new List<NodeRef>();
         public List<NodeRef> SpellSlotNames = new List<NodeRef>();
         public List<NodeRef> SpellSlotSelections = new List<NodeRef>();
+        public List<NodeRef> SpellSlotIcons = new List<NodeRef>();
 
         // Stands in the band the three slots occupy, for a character whose
         // pool refuses books. Exactly one of the two is ever on screen; see
@@ -697,19 +698,47 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
+                // The book's glyph, left-aligned in the slot -- the book art
+                // carries the glyph baked in (README/PLAN_SPELL_BOOK_ART.md),
+                // so this is the whole icon and needs no separate glyph
+                // overlay the way an item slot's riftGlow does. Sized to fit
+                // inside the 56px slot with room above/below; the name label
+                // below is shifted right by the same margin so the two never
+                // really overlap (UiAudit refuses an overlap that is not
+                // explicitly AllowOverlap'd on a non-decor pair).
+                const float iconSize = 44f;
+                const float iconMargin = 8f;
+                const float iconGap = 8f;
+                float iconX = -DossierLayout.ContentAWidth * 0.5f + iconMargin + iconSize * 0.5f;
+
+                var icon = Ui.Sprite($"DossierSpellSlot{i}Icon", null,
+                        new UiVec(iconSize, iconSize), Place.At(iconX, 0f))
+                    .Inactive()
+                    .AsDecor();
+
+                // Right of the icon, not centred -- the original centred
+                // label spanned nearly the full slot width, which the icon
+                // now sits under.
+                float nameRightEdge = DossierLayout.ContentAWidth * 0.5f - 12f;
+                float nameLeftEdge = iconX + iconSize * 0.5f + iconGap;
+                float nameWidth = nameRightEdge - nameLeftEdge;
+                float nameX = (nameLeftEdge + nameRightEdge) * 0.5f;
+
                 var name = Ui.Label($"DossierSpellSlot{i}Name", UiString.Runtime,
-                        new UiVec(DossierLayout.ContentAWidth - 24f, 24f), 16, Text,
-                        Place.At(0f, 0f)).AsDecor();
+                        new UiVec(nameWidth, 24f), 16, Text,
+                        Place.At(nameX, 0f)).AsDecor();
 
                 var slot = Ui.Button($"DossierSpellSlot{i}", UiString.Runtime,
                         new UiVec(DossierLayout.ContentAWidth, slotHeight), 1, Place.At(cx, y))
                     .NoChrome()
-                    .AllowOverlap("the selection tint and the name sit inside their own slot by construction");
+                    .AllowOverlap("the selection tint, the icon and the name sit inside their own slot by construction");
                 slot.Children.Add(selection);
+                slot.Children.Add(icon);
                 slot.Children.Add(name);
 
                 SpellSlots.Add(slot);
                 SpellSlotSelections.Add(selection);
+                SpellSlotIcons.Add(icon);
                 SpellSlotNames.Add(name);
                 children.Add(slot);
             }

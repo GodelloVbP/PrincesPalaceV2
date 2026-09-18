@@ -41,13 +41,19 @@
     },
     {
       "id": "mud_burst",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book.png",
       "bookOnly": true,
       "displayName": "Mud Burst",
       "description": "The bog answers. It arrives wearing whatever it picked up on the way.",
       "characterId": "sheep",
       "effect": "DamageSingle",
       "manaCost": 8,
-      "flatAmount": 6,
+      "damageInstances": [
+        {
+          "type": "Earth",
+          "amount": 6
+        }
+      ],
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 25,
       "statusDuration": 2,
@@ -65,6 +71,7 @@
     },
     {
       "id": "frost_flare",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Frost Flare/Frost Flare - Spell Book.png",
       "bookOnly": true,
       "displayName": "Frost Flare",
       "description": "Burns and freezes in the same breath. Something out there hates one half of it.",
@@ -93,6 +100,7 @@
     },
     {
       "id": "cinderfault",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell Book.png",
       "bookOnly": true,
       "displayName": "Cinderfault",
       "description": "One crack runs the length of the floor, and everything standing on it finds out what is underneath.",
@@ -147,6 +155,7 @@
     },
     {
       "id": "lightning_bolt",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt - Spell Book.png",
       "bookOnly": true,
       "displayName": "Lightning Bolt",
       "description": "A single white line from the ceiling to whatever is standing under it.",

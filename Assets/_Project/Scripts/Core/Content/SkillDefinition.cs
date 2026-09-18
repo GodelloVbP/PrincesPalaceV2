@@ -53,6 +53,12 @@ namespace PrincesPalace.Content
         // every other definition at the lookup that finds it.
         public string id => data != null ? data.Id : "";
 
+        // Passthrough for the same reason `id` is one -- ScreenRegistry bakes
+        // icon art off content definitions by reading `.iconPath` uniformly
+        // across Items/Relics/Skills, and a definition that reads through
+        // `.Data.IconPath` instead would be the one exception in that sweep.
+        public string iconPath => data != null ? data.IconPath : "";
+
         // Listed by the authored order ContentBuilder stamped on it.
         // Resources.LoadAll returns filename order, not authoring order — the
         // same trap Characters/Enemies/Upgrades/Talents/Items all guard

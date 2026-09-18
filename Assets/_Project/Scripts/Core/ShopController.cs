@@ -32,13 +32,14 @@ namespace PrincesPalace
         [SerializeField] internal Button buyButton;
         [SerializeField] internal Button packButton;
 
-        // The card art, and the two lookup tables it comes from. Items and
-        // relics author an iconPath; skills do not, so a book card's slot is
-        // painted from a null table and ItemIcons.Apply hides the Image --
-        // which is the same graceful-degradation path a gear card with no
-        // authored art already takes, not a special case for books.
+        // The card art, and the three lookup tables it comes from. A skill
+        // with no authored iconPath (most skills, still, since only the four
+        // book spells carry art) hides its Image via ItemIcons.Apply's own
+        // graceful-degradation path -- not a special case for books, the
+        // same one a gear card with no art already takes.
         [SerializeField] internal IconEntry[] itemArt;
         [SerializeField] internal IconEntry[] relicArt;
+        [SerializeField] internal IconEntry[] skillArt;
 
         [SerializeField] internal Button gearReroll;
         [SerializeField] internal TMP_Text gearRerollLabel;
@@ -369,7 +370,7 @@ namespace PrincesPalace
 
             PaintSection(ShopStock.GearSection, gearCards, gearIcons, itemArt, gearNames, gearMetas,
                 gearPrices, gearReroll, gearRerollLabel);
-            PaintSection(ShopStock.BookSection, bookCards, bookIcons, null, bookNames, bookMetas,
+            PaintSection(ShopStock.BookSection, bookCards, bookIcons, skillArt, bookNames, bookMetas,
                 bookPrices, bookReroll, bookRerollLabel);
             PaintSection(ShopStock.RelicSection, relicCards, relicIcons, relicArt, relicNames, relicMetas,
                 relicPrices, relicReroll, relicRerollLabel);

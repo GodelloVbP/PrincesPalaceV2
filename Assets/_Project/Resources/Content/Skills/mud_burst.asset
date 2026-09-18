@@ -31,9 +31,11 @@ MonoBehaviour:
     PercentOfCasterMaxHealth: 0
     WardTurns: 1
     Power: 0
-    FlatAmount: 6
+    FlatAmount: 0
     IgnoresDefense: 0
-    DamageInstances: []
+    DamageInstances:
+    - type: 6
+      amount: 6
     Vfx:
       path: Spells/mud_burst
       seconds: 0.65
@@ -106,6 +108,7 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book.png
     Reach:
       Kind: 0
       RankMask: 0

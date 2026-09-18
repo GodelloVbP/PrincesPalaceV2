@@ -152,6 +152,7 @@ MonoBehaviour:
     WindupStance: victory
     SummonEnemyId: 
     SummonCap: 0
+    IconPath: 
     Reach:
       Kind: 0
       RankMask: 0

@@ -93,8 +93,6 @@ namespace PrincesPalace.Domain.Tests
         // of this file and should be a CountBinding or a comment instead.
         private static readonly HashSet<string> KnownOffenders = new HashSet<string>
         {
-            "WireShop:shop.itemArt",
-            "WireShop:shop.relicArt",
             "WireShop:shop.gearIcons",
             "WireShop:shop.gearNames",
             "WireShop:shop.gearMetas",

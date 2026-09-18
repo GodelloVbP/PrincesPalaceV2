@@ -110,6 +110,8 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Frost Flare/Frost Flare - Spell
+      Book.png
     Reach:
       Kind: 0
       RankMask: 0

@@ -204,6 +204,8 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell
+      Book.png
     Reach:
       Kind: 0
       RankMask: 0

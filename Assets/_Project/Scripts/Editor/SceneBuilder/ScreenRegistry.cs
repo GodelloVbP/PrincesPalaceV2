@@ -627,12 +627,14 @@ public static class ScreenRegistry
         var shop = result.Attach<ShopController>(screen.Root);
         UiAutoBind.Bind(result, shop, screen);
 
-        // Item and relic art, baked as parallel arrays. Resolved here rather
-        // than at runtime because Resources loading and AssetDatabase are
-        // different worlds and only the builder has the second one -- the same
-        // arrangement the relic draft and the Reckoning's offers already use.
-        // Skills author no iconPath, so a book card gets no table and
-        // ItemIcons.Apply hides its slot.
+        // Item, relic and skill art, baked as parallel arrays. Resolved here
+        // rather than at runtime because Resources loading and AssetDatabase
+        // are different worlds and only the builder has the second one --
+        // the same arrangement the relic draft and the Reckoning's offers
+        // already use. A skill with no authored iconPath (every non-book
+        // skill today) is filtered out here the same way, and ItemIcons.Apply
+        // hides its slot at paint time -- not a special case for books, the
+        // same graceful path a gear card with no art already takes.
         shop.itemArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
             .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
@@ -643,6 +645,19 @@ public static class ScreenRegistry
             .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
             .ToArray();
 
+        shop.skillArt = ContentDatabase.Skills
+            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
+
+        // NO CountBindings for itemArt/relicArt/skillArt above. Each is a
+        // lookup TABLE keyed by content id, filtered down to whichever
+        // catalogue entries authored an iconPath -- there is no UI array of
+        // the same length to check it against, unlike gearCards/bookCards/
+        // relicCards below, which each pair one button per ShopStock slot.
+        // E4 exists to catch a strip sized off one collection and filled
+        // from another; a table with no paired strip has nothing for it to
+        // compare.
         shop.gearCards = screen.GearCards.Select(c => result.Button(c.Button)).ToArray();
         shop.gearIcons = screen.GearCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.gearNames = screen.GearCards.Select(c => result.Tmp(c.Name)).ToArray();
@@ -1146,11 +1161,19 @@ public static class ScreenRegistry
         // scene build had an empty plate and nothing short of -BuildScenes
         // filled it. portraitPath is Resources-relative now and
         // CharacterPortraits loads it by id at the moment the dossier draws.
+        // Items plus book-only skills, in one table -- the same Items+Relics
+        // concat-then-select shape WireGlossary already uses. A skill's
+        // iconPath carries the glyph baked into the book art, so the spell
+        // slots read off the same table rather than a second one.
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
+            .Select(i => (i.id, i.iconPath))
+            .Concat(ContentDatabase.Skills
+                .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
+                .Select(i => (i.id, i.iconPath)))
             .ToList();
         controller.icons = withArt
-            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .Select(a => new IconEntry(a.Item1, SceneBuilder.LoadSpriteByKey(a.Item2)))
             .ToArray();
 
         return controller;

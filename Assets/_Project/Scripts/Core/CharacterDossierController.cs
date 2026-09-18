@@ -63,6 +63,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] spellSlots;
         [SerializeField] internal TMP_Text[] spellSlotNames;
         [SerializeField] internal Image[] spellSlotSelections;
+        [SerializeField] internal Image[] spellSlotIcons;
         [SerializeField] internal TMP_Text spellsNoBooksLine;
         [SerializeField] internal GameObject unassignedEmptyHint;
         [SerializeField] internal Button[] unassignedRows;
@@ -1177,6 +1178,16 @@ namespace PrincesPalace
                             var definition = ContentDatabase.GetSkill(skillId);
                             spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.Data.DisplayName ?? skillId);
                         }
+                    }
+
+                    // ItemIcons.Apply already hides the Image for a null/empty
+                    // id (Find's own IsNullOrEmpty guard) -- an empty slot's
+                    // skillId is exactly that, so the empty case needs no
+                    // separate branch here, the same graceful path a shop
+                    // card's no-offer icon already takes.
+                    if (spellSlotIcons != null && i < spellSlotIcons.Length)
+                    {
+                        ItemIcons.Apply(spellSlotIcons[i], icons, skillId);
                     }
 
                     // A green preview when the currently selected book would

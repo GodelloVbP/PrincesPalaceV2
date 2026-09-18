@@ -109,6 +109,7 @@ MonoBehaviour:
     WindupStance: overhead
     SummonEnemyId: 
     SummonCap: 0
+    IconPath: 
     Reach:
       Kind: 1
       RankMask: 1

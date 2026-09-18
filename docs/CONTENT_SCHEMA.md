@@ -191,6 +191,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; written into save files and never renamed once used. |  |
 | `displayName` | string | (none -- required) | The name shown on the skill's own button. |  |
 | `description` | string | `""` | Flavor text shown to the player; read by no formula. |  |
+| `iconPath` | string | `""` | Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
 | `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle |
