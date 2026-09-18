@@ -1086,6 +1086,86 @@ namespace PrincesPalace
                 if (group != null) groups.Add(group);
             }
 
+            // THE SCREEN'S OWN CHROME, WHICH WAS NOT IN THE GRAPH AT ALL
+            // (hardware play-test round 1, item 1: "I found no way to move in
+            // the talent screen"). Measured rather than guessed: on the real
+            // Hub -> Talents path the entry orb's four links read
+            // up=Orb0_2, down=null, left=null, right=null -- three of the four
+            // stick directions dead on arrival, and prevPath/nextPath/
+            // prevCharacter/nextCharacter/respec/back reachable by mouse only
+            // (TalentBackButton was still sitting on Navigation.Mode.Automatic,
+            // the scene-build default, because nothing ever declared it).
+            //
+            // AUTHORED FROM WHERE THE CONTROLS ACTUALLY ARE, the same rule the
+            // Hub's own links now follow: the sky fills the left of the screen
+            // with the path arrows flanking it at its own edges
+            // (ConstellationLayout.ArrowLeftX/ArrowRightX), the panel column
+            // stands down the right (PanelCentreX) with the character pager at
+            // its head and Invest/Respec at its foot, and Back sits in the
+            // top-left corner outside the sky. So: sideways off the tree
+            // reaches an arrow, sideways off the right arrow reaches the panel,
+            // and Back hangs above the left arrow -- one hop each, no
+            // teleports.
+            var characterPager = RuntimeNavWiring.Group("talentCharacterPager", UiNavGroupKind.Rail,
+                new[] { (Selectable)prevCharacterButton, nextCharacterButton }, wrap: UiNavWrap.Clamp);
+            if (characterPager != null) groups.Add(characterPager);
+
+            // Top to bottom on screen (PanelActionY -320, PanelRespecY -459).
+            var panelActions = RuntimeNavWiring.Group("talentPanelActions", UiNavGroupKind.List,
+                new[] { (Selectable)investButton, respecButton });
+            if (panelActions != null) groups.Add(panelActions);
+
+            // Every orb in a ONE-WIDE tier (the root, the convergence, the
+            // capstone) sits in the sky's centre column, so what lies left and
+            // right of it is the pair of arrows flanking the sky -- a tier of
+            // three keeps its own Rail's Left/Right instead, wrap included
+            // (TalentGamepadNavigationTests pins that wrap and it is unchanged).
+            //
+            // The arrows are never hidden, only greyed at the ends of the line
+            // (Refresh's own `prevPathButton.interactable = CanStep(...)`), so
+            // a Move onto one always lands: Unity's own Selectable.Navigate
+            // tests IsActive, not IsInteractable. Focus resting on a greyed
+            // arrow is exactly what a mouse hovering it already gets, and Right
+            // off it comes straight back.
+            foreach (var tier in _skeletonTiers)
+            {
+                if (tier.Count != 1) continue;
+
+                var lone = OrbAt(tier[0]);
+                if (lone == null) continue;
+
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, prevPathButton));
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, nextPathButton));
+            }
+
+            // BOTH ARROWS COME BACK TO THE ROOT, stated once here rather than
+            // tracked per visit: which orb you stepped off is state, the root
+            // is this screen's own declared entry, and one convention beats a
+            // remembered one nobody can predict. Back hangs above the left
+            // arrow because that is where it is drawn.
+            var rootOrb = OrbAt(0);
+            links.Add(RuntimeNavWiring.Link(prevPathButton, UiNavDirection.Right, rootOrb));
+            links.Add(RuntimeNavWiring.Link(prevPathButton, UiNavDirection.Up, backButton));
+            links.Add(RuntimeNavWiring.Link(backButton, UiNavDirection.Down, prevPathButton));
+            links.Add(RuntimeNavWiring.Link(nextPathButton, UiNavDirection.Left, rootOrb));
+
+            // THREE DOORS INTO THE PANEL FROM THE RIGHT ARROW, each in the
+            // direction that thing actually sits: the character pager at the
+            // panel's head is up-right, Invest is level with the arrow, Respec
+            // is down at its foot. Hidden ones (Respec until something is
+            // earned, the pager while there is one character, Invest until an
+            // orb is selected) are simply never reached -- the same "Unity
+            // never routes a Move onto an inactive Selectable" this method
+            // already relies on for investButton.
+            links.Add(RuntimeNavWiring.Link(nextPathButton, UiNavDirection.Up, nextCharacterButton));
+            links.Add(RuntimeNavWiring.Link(nextPathButton, UiNavDirection.Right, investButton));
+            links.Add(RuntimeNavWiring.Link(nextPathButton, UiNavDirection.Down, respecButton));
+            links.Add(RuntimeNavWiring.Link(prevCharacterButton, UiNavDirection.Left, nextPathButton));
+            links.Add(RuntimeNavWiring.Link(prevCharacterButton, UiNavDirection.Down, investButton));
+            links.Add(RuntimeNavWiring.Link(nextCharacterButton, UiNavDirection.Down, investButton));
+            links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Left, nextPathButton));
+            links.Add(RuntimeNavWiring.Link(respecButton, UiNavDirection.Left, nextPathButton));
+
             for (int slot = 0; slot < n; slot++)
             {
                 var from = OrbAt(slot);
@@ -1134,6 +1214,22 @@ namespace PrincesPalace
                 if (button != null) selectables[$"orb{slot}"] = button.gameObject;
             }
             if (investButton != null) selectables["invest"] = investButton.gameObject;
+
+            // The chrome joins the declared set for the same reason it joined
+            // the graph: a node the dispatcher cannot name is a node it takes
+            // the focus away from again on the very next frame
+            // (NavigationInputModule.ReselectIfOutsideDeclaredSet).
+            void Declare(string id, Button button)
+            {
+                if (button != null) selectables[id] = button.gameObject;
+            }
+
+            Declare("prevPath", prevPathButton);
+            Declare("nextPath", nextPathButton);
+            Declare("prevCharacter", prevCharacterButton);
+            Declare("nextCharacter", nextCharacterButton);
+            Declare("respec", respecButton);
+            Declare("back", backButton);
 
             var entry = OrbAt(0)?.gameObject;
             _navContext.Reconfigure(entry, selectables);

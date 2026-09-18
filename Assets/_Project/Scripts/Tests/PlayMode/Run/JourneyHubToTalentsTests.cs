@@ -169,5 +169,80 @@ namespace PrincesPalace.PlayModeTests
 
             yield return CancelBackToTheHub();
         }
+
+        // HARDWARE PLAY-TEST ROUND 1, ITEM 1: "I found no way to move in the
+        // talent screen." Driven on the REAL Hub -> Talents building -> Submit
+        // path (the hand-built TalentGamepadNavigationTests fixture passed
+        // throughout, and still does -- the gap was never the fixture, it was
+        // that three of the entry orb's four directions had no link at all and
+        // the screen's own chrome was never declared: measured on this exact
+        // path before the fix, Orb0_0 read up=Orb0_2, down=null, left=null,
+        // right=null, and TalentBackButton was still on the scene-build
+        // default Navigation.Mode.Automatic).
+        //
+        // Literal node names, one ring, every direction off the entry.
+        [UnityTest]
+        public IEnumerator EveryDirectionOffTheEntryOrbGoesSomewhere_AndTheChromeIsReachable()
+        {
+            yield return ReachTalentsFromTheHub();
+
+            // Up/Down: the tree, unchanged -- the one axis that already worked.
+            yield return MoveUp();
+            AssertSelectedName("Orb0_2", "Up from the root should still reach the centre tier-1 stone");
+            yield return MoveDown();
+            AssertSelectedName("Orb0_0", "Down should follow the skeleton back to the root");
+
+            // Selecting the root is what puts a live control in the panel at
+            // all: investButton is SetShown(false) until an orb is selected,
+            // and respecButton until something has been earned, so a pad
+            // arriving on this screen has an empty column to its right until
+            // it presses something. That is the screen's own design, not a
+            // nav gap -- Refresh's own PaintInvestButton decides it.
+            yield return PressSubmit();
+            Assert.IsTrue(Node("InvestButton").activeInHierarchy,
+                "selecting the root should reveal InvestButton");
+
+            // Right: off the sky's centre column onto the arrow flanking it,
+            // then on into the panel column down the right of the screen.
+            yield return MoveRight();
+            AssertSelectedName("NextPathButton",
+                "Right from a one-wide tier orb should reach the arrow drawn at the sky's right edge");
+
+            yield return MoveRight();
+            AssertSelectedName("InvestButton",
+                "Right from the right-hand arrow should reach the panel's own action, level with it");
+
+            yield return MoveLeft();
+            AssertSelectedName("NextPathButton", "Left from the panel action should come back to the arrow");
+
+            yield return MoveUp();
+            AssertSelectedName("NextCharacterButton",
+                "up-right of the arrow is the panel's head, where the character pager is drawn");
+
+            yield return MoveLeft();
+            AssertSelectedName("PrevCharacterButton", "the character pager is a clamped Rail of two");
+
+            yield return MoveLeft();
+            AssertSelectedName("NextPathButton", "Left off the pager's left end should come back to the arrow");
+
+            yield return MoveLeft();
+            AssertSelectedName("Orb0_0",
+                "Left from the right-hand arrow returns to the root, this screen's own declared entry");
+
+            // Left: the other arrow, and Back in the corner above it.
+            yield return MoveLeft();
+            AssertSelectedName("PrevPathButton",
+                "Left from a one-wide tier orb should reach the arrow drawn at the sky's left edge");
+
+            yield return MoveUp();
+            AssertSelectedName("TalentBackButton",
+                "Back sits in the top-left corner above the left arrow, and was outside the graph entirely before this");
+
+            yield return MoveDown();
+            AssertSelectedName("PrevPathButton", "Down from Back should come back to the left arrow");
+
+            yield return MoveRight();
+            AssertSelectedName("Orb0_0", "Right from the left-hand arrow returns to the root");
+        }
     }
 }
