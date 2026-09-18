@@ -233,11 +233,26 @@ namespace PrincesPalace.PlayModeTests
             yield return MoveDown(); // the tab's own Down lands on the first equipment slot, Head
             AssertSelectedName("DossierSlotHead", "the tab bar's Down should land on the first equipment slot");
 
-            yield return MoveDown(); // Head -> Necklace, the left file's own next row
-            AssertSelectedName("DossierSlotNecklace", "Down should step the left file row to row");
+            // RE-PATHED, not relaxed, by hardware round 1 item 6: this used to
+            // be Down then one Left, because index pairing sent Necklace's
+            // Left 188 units down the screen to the reward-track row. Now that
+            // a sideways press keeps the player's height, Left from anywhere
+            // in the top half of the loadout reaches the roster pager, which
+            // is what is actually beside it -- so the route to a nav row is
+            // down column A, which is where the nav rows are.
+            //
+            // The pager is NOT in this journey's graph: it is hidden for a
+            // squad that has nobody else to page to, so the whole of column A
+            // here is the three nav rows and Head's nearest neighbour among
+            // them is the topmost. DossierGamepadNavigationTests' own ring
+            // walks the pager case, on a save that has one.
+            yield return MoveLeft(); // Head hands off to column A at the nearest control it has
+            AssertSelectedName("DossierSpellsRow",
+                "Left from the loadout should reach the nearest column-A control, which with no roster " +
+                "pager drawn is the first nav row");
 
-            yield return MoveLeft(); // Necklace pairs across to the dossier's own rows group at trackRow
-            AssertSelectedName("DossierTrackRow", "Left from Necklace should reach the reward-track row");
+            yield return MoveDown(); // and the rows are a List, top to bottom as drawn
+            AssertSelectedName("DossierTrackRow", "Down should step the nav rows to the reward-track row");
 
             yield return PressSubmit(); // ShowTrack() -- opens the panel over column A
             yield return null;

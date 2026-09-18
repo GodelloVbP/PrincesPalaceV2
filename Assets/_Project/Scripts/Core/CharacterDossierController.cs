@@ -716,27 +716,117 @@ namespace PrincesPalace
         private Selectable SlotCell(EquipmentSlot slot) =>
             Cell(slotCells, System.Array.IndexOf(EquipmentSlots.All, slot));
 
-        // PAIRED BY POSITION IN THE TWO LISTS, clamped where one is shorter
-        // -- PartyController.CrossLinks' own Mathf.Min(column, cards - 1)
-        // rule, turned sideways. Reversible everywhere except at the clamp,
-        // which is where two columns of different lengths cannot be: a Right
-        // off the fifth slot into a three-entry column and back again lands
-        // on the third, and there is no honest alternative to that.
+        // PAIRED BY WHERE THE CONTROLS ACTUALLY ARE ON SCREEN, not by their
+        // position in the two lists.
+        //
+        // HARDWARE PLAY-TEST ROUND 1, ITEM 6: "a player can't see where
+        // they're going in the character sheets screen: no obvious selectors
+        // and no intuitive navigating." The selectors are another pass's job.
+        // This is the other half, and it was a real defect rather than a
+        // matter of taste.
+        //
+        // What this replaced was PartyController.CrossLinks' own
+        // Mathf.Min(column, cards - 1) rule, turned sideways -- pair index i
+        // with index i, clamp where one list is shorter. That rule carries an
+        // UNSTATED PRECONDITION: that the two lists are already aligned across
+        // the axis being crossed. It is true for Party, whose seats and roster
+        // cards are drawn in matching rows. It is false for every use of it on
+        // this screen, because column A and the loadout have completely
+        // different vertical extents, and the result is what the owner
+        // reported. Measured off the solved layout rather than guessed at:
+        //
+        //     column A            the loadout
+        //     pager   y  114      Head      y  260
+        //     Spells  y  -67      Necklace  y  121
+        //     Track   y -123      Torso     y   30
+        //     Pack    y -235      Gloves    y  -65
+        //                         Legs      y -160
+        //
+        // Index pairing sent Spells (y -67) Right to Necklace (y 121), 188
+        // units up the screen, past Gloves sitting 2 units away from it. Track
+        // and Pack were out by 153 and 170. Coming back was equally wrong in
+        // the other direction, and the right file's handoff into the ability
+        // scores had the same fault: Weapon 1 crossed to the TOP score cell
+        // when the bottom one was 86 units nearer.
+        //
+        // The rule instead is the one a player is actually applying: a
+        // sideways press keeps your height and a vertical press keeps your
+        // column, so the target is the nearest member of the other group along
+        // the axis PERPENDICULAR to the press. That subsumes index pairing --
+        // where two lists genuinely are row-aligned it picks the same partners
+        // -- so there is one rule here rather than a second one beside it.
+        //
+        // It is NOT fully reversible, and that is a property of the screen
+        // rather than of this rule: two columns of different lengths cannot be
+        // a bijection. Three left-file slots are nearest to the same score
+        // cell; only one of them can be what that cell steps back to.
+        //
+        // The rect's CENTRE in world space, never RectTransform.position,
+        // which is the PIVOT -- the distinction AUDIT.md #162 cost five
+        // instrumented reproductions to name. Nothing on this screen is
+        // pivoted off-centre today; reading the centre means nothing has to
+        // stay that way.
         private static void PairAcross(List<UiNavLink<Selectable>?> links,
             IReadOnlyList<Selectable> from, IReadOnlyList<Selectable> to,
             UiNavDirection toward, UiNavDirection back)
         {
             if (from == null || to == null || from.Count == 0 || to.Count == 0) return;
 
+            bool horizontal = toward == UiNavDirection.Left || toward == UiNavDirection.Right;
+
             for (int i = 0; i < from.Count; i++)
             {
-                links.Add(RuntimeNavWiring.Link(from[i], toward, to[System.Math.Min(i, to.Count - 1)]));
+                links.Add(RuntimeNavWiring.Link(from[i], toward, NearestAcross(to, from[i], horizontal)));
             }
 
             for (int j = 0; j < to.Count; j++)
             {
-                links.Add(RuntimeNavWiring.Link(to[j], back, from[System.Math.Min(j, from.Count - 1)]));
+                links.Add(RuntimeNavWiring.Link(to[j], back, NearestAcross(from, to[j], horizontal)));
             }
+        }
+
+        // The member of `candidates` closest to `of` along the axis a press in
+        // this direction does NOT travel along: a Left/Right press is answered
+        // by the nearest control at the same height, an Up/Down press by the
+        // nearest one in the same column. Strictly less-than, so a tie keeps
+        // the earlier candidate and the declaration order still decides
+        // something rather than being silently unstable.
+        private static Selectable NearestAcross(IReadOnlyList<Selectable> candidates,
+            Selectable of, bool horizontal)
+        {
+            if (of == null) return null;
+
+            Vector2 anchor = CentreOf(of);
+            Selectable best = null;
+            float bestGap = float.MaxValue;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (candidates[i] == null) continue;
+
+                Vector2 centre = CentreOf(candidates[i]);
+                float gap = Mathf.Abs(horizontal ? centre.y - anchor.y : centre.x - anchor.x);
+                if (gap >= bestGap) continue;
+
+                best = candidates[i];
+                bestGap = gap;
+            }
+
+            return best;
+        }
+
+        // WORLD SPACE, and the rect's centre rather than its pivot. World
+        // because these groups live under different parents (column A's frame,
+        // the mannequin stage, column C) and a local position means nothing
+        // across them; the centre because a pivot is free to sit on an edge
+        // and this screen's arithmetic must not depend on nobody ever moving
+        // one.
+        private static Vector2 CentreOf(Selectable control)
+        {
+            var rect = control.transform as RectTransform;
+            if (rect == null) return control.transform.position;
+
+            return rect.TransformPoint(rect.rect.center);
         }
 
         // The cells the window has actually bound to an item, which is what a

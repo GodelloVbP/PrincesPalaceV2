@@ -242,16 +242,25 @@ namespace PrincesPalace.PlayModeTests
                 "the two files are paired by body row -- Torso is drawn level with Weapon 1");
         }
 
+        // ADAPTED, NOT RELAXED (hardware round 1, item 6). This expected
+        // DossierAttrCell0 while the index-pairing rule was in force -- Weapon
+        // 1 is the first member of the right file and cell 0 is the first
+        // member of the scores' left column, so index pairing put them
+        // together. On screen they are 196 units apart vertically and cell 3
+        // is 132, so the press was travelling further than it had to in order
+        // to reach a control that is not the nearest one. Same claim, the
+        // right target.
         [UnityTest]
-        public IEnumerator RightFromTheFirstWeaponSlot_ReachesTheFirstAbilityScore()
+        public IEnumerator RightFromTheFirstWeaponSlot_ReachesTheNearestAbilityScore()
         {
             yield return OpenTheCharacterTab();
             Select("DossierSlotWeapon1");
 
             yield return Press(1f, 0f);
 
-            AssertSelected("DossierAttrCell0",
-                "the loadout's right file hands off to the scores' own left column");
+            AssertSelected("DossierAttrCell3",
+                "the loadout's right file hands off to whichever member of the scores' left column sits " +
+                "nearest it, which is the BOTTOM one -- the whole score block is drawn above the right file");
         }
 
         [UnityTest]
@@ -539,9 +548,17 @@ namespace PrincesPalace.PlayModeTests
             // Up out of the window lands on a sort tab, which has no tooltip
             // of its own -- so this is "the selection moved away", not "it
             // moved to another describable thing".
+            //
+            // Sort tab ONE, not zero, since hardware round 1 item 6 made a
+            // cross-group handoff pick the nearest control on the axis the
+            // press does not travel along. The cells are 140 units wide and
+            // the tabs 63, so tabs 0 and 1 BOTH sit over cell 0; the nearest
+            // by centre is tab 1 (28 units) rather than tab 0 (35). Either is
+            // "directly above", and this test's own claim -- the box goes when
+            // the selection leaves the window -- is indifferent to which.
             yield return Press(0f, 1f);
 
-            AssertSelected("DossierPackSort0", "precondition: Up out of the window reaches the sort tabs");
+            AssertSelected("DossierPackSort1", "precondition: Up out of the window reaches the sort tabs");
             Assert.IsFalse(Tooltip.activeSelf,
                 "the box belongs to the selected node, so it goes when the selection does");
         }
@@ -728,6 +745,184 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(Halo("DossierAttrHalo0").gameObject.activeSelf,
                 "AUDIT.md #160: the ability-score cells are the third NoChrome group this pass covers");
+        }
+
+        // ---- the ring, pinned literally (hardware round 1, item 6) ---------------
+        //
+        // "A player can't see where they're going in the character sheets
+        // screen: no obvious selectors and no intuitive navigating, apart from
+        // the equipped gear selector." The selectors are another pass's job.
+        // This is the navigation half, and the defect behind it was
+        // CharacterDossierController.PairAcross pairing two groups by LIST
+        // INDEX -- a rule that is only correct when the two lists are already
+        // aligned across the axis being crossed, which on this screen none of
+        // them are. That method's own comment carries the measured
+        // before-and-after.
+        //
+        // Every expectation below is a literal node name, checked against the
+        // solved layout rather than derived from the arithmetic the production
+        // code uses -- a test that recomputed the pairing would pass whatever
+        // the pairing did (CLAUDE.md gotcha 5). The heights they encode, in
+        // canvas units off the dossier's own centre:
+        //
+        //     column A            the loadout          the scores
+        //     pager     y   49    Head       y  159    cells 0/1/2  y 182
+        //     Spells    y  -87    Necklace   y   54    cells 3/4/5  y 118
+        //     Track     y -129    Torso      y  -14
+        //     Pack      y -213    Gloves     y  -85
+        //                         Legs       y -156
+
+        // One press, then the real-time settle the module's own repeat gate
+        // needs before it will let another through -- JourneyFixture's own
+        // 0.6s, for the reason that file documents at length. Selection is
+        // placed first so each edge is asserted from a known start rather than
+        // walked to, which keeps a failure pointing at the edge that broke.
+        private IEnumerator Step(string from, float horizontal, float vertical)
+        {
+            Select(from);
+            yield return null;
+            yield return Press(horizontal, vertical);
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return DriveFrame();
+        }
+
+        [UnityTest]
+        public IEnumerator TheLoadoutsLeftFileHandsOffToWhateverInColumnAIsLevelWithIt()
+        {
+            yield return OpenTheCharacterTab();
+
+            yield return Step("DossierSlotHead", -1f, 0f);
+            AssertSelected("DossierNextCharacter", "Head (159) is level with nothing in column A but the pager (49)");
+
+            yield return Step("DossierSlotNecklace", -1f, 0f);
+            AssertSelected("DossierNextCharacter", "Necklace (54) sits 5 units off the pager");
+
+            yield return Step("DossierSlotTorso", -1f, 0f);
+            AssertSelected("DossierNextCharacter",
+                "Torso (-14) is 63 from the pager and 73 from the Spells row -- the pager, narrowly");
+
+            yield return Step("DossierSlotGloves", -1f, 0f);
+            AssertSelected("DossierSpellsRow",
+                "Gloves (-85) sits 2 units off the Spells row, which is what index pairing sent it 170 past");
+
+            yield return Step("DossierSlotLegs", -1f, 0f);
+            AssertSelected("DossierTrackRow", "Legs (-156) is nearest the reward-track row (-129)");
+        }
+
+        [UnityTest]
+        public IEnumerator ColumnAHandsBackToTheLoadoutAtItsOwnHeight()
+        {
+            yield return OpenTheCharacterTab();
+
+            yield return Step("DossierNextCharacter", 1f, 0f);
+            AssertSelected("DossierSlotNecklace", "the pager (49) is level with Necklace (54), not with Head");
+
+            yield return Step("DossierSpellsRow", 1f, 0f);
+            AssertSelected("DossierSlotGloves", "the Spells row (-87) is level with Gloves (-85)");
+
+            yield return Step("DossierTrackRow", 1f, 0f);
+            AssertSelected("DossierSlotLegs", "the reward-track row (-129) is nearest Legs (-156)");
+
+            yield return Step("DossierPackRow", 1f, 0f);
+            AssertSelected("DossierSlotLegs",
+                "the Pack row (-213) is below the whole left file, so it clamps onto its lowest slot -- two " +
+                "rows reaching the same slot is the honest answer when one column is longer than the other");
+        }
+
+        [UnityTest]
+        public IEnumerator TheColumnARowsAreAListInTheOrderTheyAreDrawn()
+        {
+            yield return OpenTheCharacterTab();
+
+            yield return Step("DossierNextCharacter", 0f, -1f);
+            AssertSelected("DossierSpellsRow", "Down off the pager enters the nav rows at the top one");
+
+            yield return Step("DossierSpellsRow", 0f, -1f);
+            AssertSelected("DossierTrackRow", "and the rows step in drawn order");
+
+            yield return Step("DossierTrackRow", 0f, -1f);
+            AssertSelected("DossierPackRow",
+                "Skills is deliberately absent from the graph -- it carries no onClick, so a Move onto it " +
+                "would be a Submit that does nothing");
+
+            yield return Step("DossierPackRow", 0f, -1f);
+            AssertSelected("DossierPackRow", "the foot of the column clamps rather than wrapping to its head");
+        }
+
+        [UnityTest]
+        public IEnumerator TheLoadoutIsWalkedInBodyOrder_DownTheLeftFileAndAcrossByRow()
+        {
+            yield return OpenTheCharacterTab();
+
+            yield return Step("DossierSlotHead", 0f, -1f);
+            AssertSelected("DossierSlotNecklace", "the left file steps down the BODY, not down a declaration list");
+
+            yield return Step("DossierSlotTorso", 1f, 0f);
+            AssertSelected("DossierSlotWeapon1", "Torso and Weapon 1 are drawn on the same body row");
+
+            yield return Step("DossierSlotGloves", 1f, 0f);
+            AssertSelected("DossierSlotWeapon2", "Gloves and Weapon 2 likewise");
+
+            yield return Step("DossierSlotLegs", 1f, 0f);
+            AssertSelected("DossierSlotShoes", "and Legs with Shoes at the foot of both files");
+
+            yield return Step("DossierSlotHead", 1f, 0f);
+            AssertSelected("DossierSlotWeapon1",
+                "Head has no opposite number and clamps onto the topmost slot that does");
+        }
+
+        [UnityTest]
+        public IEnumerator TheRightFileHandsOffToTheNearestScoreCell_WhichIsAlwaysTheBottomRow()
+        {
+            yield return OpenTheCharacterTab();
+
+            yield return Step("DossierSlotWeapon1", 1f, 0f);
+            AssertSelected("DossierAttrCell3", "the score block is drawn entirely ABOVE the right file");
+
+            yield return Step("DossierSlotShoes", 1f, 0f);
+            AssertSelected("DossierAttrCell3", "so every member of that file reaches its lowest-left cell");
+
+            yield return Step("DossierAttrCell3", -1f, 0f);
+            AssertSelected("DossierSlotWeapon1", "and the nearest slot coming back is the file's topmost");
+
+            yield return Step("DossierAttrCell0", -1f, 0f);
+            AssertSelected("DossierSlotWeapon1", "the top-left cell reaches the same slot -- it is still the nearest");
+        }
+
+        [UnityTest]
+        public IEnumerator ThePackWindowIsWalkedInReadingOrderAndHandsOffAtItsOwnHeight()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenThePack();
+
+            yield return Step("DossierPackCell0", 1f, 0f);
+            AssertSelected("DossierPackCell1", "a two-wide Grid steps across its own row first");
+
+            yield return Step("DossierPackClose", 1f, 0f);
+            AssertSelected("DossierSlotHead",
+                "Close stands at the head of the covered column and is level with the loadout's first slot");
+
+            yield return Step("DossierPackCell1", 1f, 0f);
+            AssertSelected("DossierSlotNecklace", "and the window's right-hand column hands off at its own height");
+        }
+
+        [UnityTest]
+        public IEnumerator TheBooksPanelIsOneColumnAndHandsOffAtItsOwnHeight()
+        {
+            yield return OpenTheCharacterTab();
+            yield return OpenTheSpells();
+
+            yield return Step("DossierSpellsClose", 0f, -1f);
+            AssertSelected("DossierSpellSlot0", "Close sits above the slots band, as drawn");
+
+            yield return Step("DossierSpellSlot0", 0f, -1f);
+            AssertSelected("DossierSpellSlot1", "and the slots are a single vertical stack, not a grid");
+
+            yield return Step("DossierSpellSlot2", 1f, 0f);
+            AssertSelected("DossierSlotTorso", "the lowest slot (11) is level with Torso (-14)");
+
+            yield return Step("DossierSlotNecklace", -1f, 0f);
+            AssertSelected("DossierSpellSlot1", "and Necklace (54) comes back to the slot level with it (59)");
         }
 
         [UnityTest]
