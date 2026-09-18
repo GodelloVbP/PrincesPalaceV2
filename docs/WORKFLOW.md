@@ -231,28 +231,63 @@ the owner's report after it shipped was "still does it". Measuring with
 `tools/focus_check.ps1` (extended to log every foreground change, not just
 whether one happened) found batchmode Unity.exe grabbing the foreground for
 over a second EVEN WITH `-nographics` -- so the fix does not live in how
-Unity is launched at all. It lives one level up: every `tools/` entry point
-that can spawn a window anywhere in its process tree (`run_tests_parallel.ps1`,
-`test.ps1`, `screenshot.ps1`, `preview.ps1`, `graphics_tests.ps1`,
-`build_content.ps1`, `bot.ps1`) calls `Start-FocusGuard` from
-`tools/unity_path.ps1` near its own top and `Stop-FocusGuard` in a matching
-`finally`. The guard records whatever window was foreground when the script
-started, then a background watchdog rebuilds the script's full descendant
-process tree (via `CreateToolhelp32Snapshot`, cheap enough to do on every
-200ms poll -- an earlier attempt throttled this to once a second over WMI and
-measured a process that spawned and grabbed focus inside that same second
-going uncaught for up to a full second) and hands focus straight back the
-moment ANY window in that tree -- Unity's included, `-nographics` or not, and
-whatever else the tree spawns -- becomes foreground. `Start-UnityQuiet` itself
-now only starts Unity minimized and does nothing else; restoring focus if
-that window grabs it anyway is the tree guard's job, not a per-launch one, so
-one mechanism covers every launch site instead of each needing its own.
-`tools/focus_check.ps1` proves this from OUTSIDE the launched process tree,
-with its own independent P/Invoke calls, logging pid/process
-name/parent/title for every foreground change it sees; run it after touching
-any launch site or the guard itself. A new script that spawns a Unity (or
-any other) window without calling `Start-FocusGuard` at its own entry is back
-to the pre-2026-09-18 unguarded behavior -- wire it in the same way the seven
+Unity is launched at all. A second pass (commit `a065d230`, same day) fixed
+that by RESTORING focus fast instead of preventing the steal: every `tools/`
+entry point that can spawn a window anywhere in its process tree
+(`run_tests_parallel.ps1`, `test.ps1`, `screenshot.ps1`, `preview.ps1`,
+`graphics_tests.ps1`, `build_content.ps1`, `bot.ps1`) calls
+`Start-FocusGuard` from `tools/unity_path.ps1` near its own top and
+`Stop-FocusGuard` in a matching `finally`. The guard records whatever window
+was foreground when the script started, then a background watchdog rebuilds
+the script's full descendant process tree (via `CreateToolhelp32Snapshot`,
+cheap enough to do on every 200ms poll -- an earlier attempt throttled this
+to once a second over WMI and measured a process that spawned and grabbed
+focus inside that same second going uncaught for up to a full second) and
+hands focus straight back the moment ANY window in that tree becomes
+foreground. That closed the gap to ~200ms, and the owner still noticed it.
+
+A THIRD pass (2026-09-18, same day) removed the flicker instead of
+shortening it, for the one launch shape that can afford to: `-nographics`
+needs no real display, so `Start-UnityQuiet` now runs it on its own Windows
+desktop object (`WinSta0\PPHeadless`, created once per script run via the
+`CreateDesktop` API) rather than the interactive one. A window belongs to
+exactly one desktop, and only a window station's *active* desktop is ever
+what the user sees or can alt-tab into -- a window on a different desktop in
+the same station cannot become foreground on the real screen at all, so there
+is nothing left for the tree guard to restore. Verified with
+`tools/focus_check.ps1 -Mode Command` driving `test.ps1 NavigationDispatcherTests`,
+`test.ps1 ui` (176s of PlayMode, 47 Unity-hosted classes) and the full
+`run_tests_parallel.ps1` gate: zero foreground changes logged in any of the
+three, not merely a fast restore. `Start-FocusGuard`/`Stop-FocusGuard` are
+UNCHANGED and still cover every launch site -- windowed launches
+(`screenshot.ps1 -Runtime`, `preview.ps1 -Launch`, `graphics_tests.ps1`)
+genuinely need the interactive desktop's graphics device and stay on the
+tree-restore guard exactly as before, and any `-nographics` launch where
+`CreateDesktop` fails (logged, not silent) falls back to the same minimized
+launch on the interactive desktop that the tree guard was already restoring
+focus from. `Stop-FocusGuard` closes the desktop handle.
+
+One more thing this pass found and had to work around: wrapping the
+launched pid with `Process.GetProcessById` (the obvious way to get a
+`System.Diagnostics.Process` back from a raw `CreateProcess` call) leaves
+`.ExitCode` permanently broken -- .NET Framework throws "Process was not
+started by this object" for any Process obtained that way, because it gates
+on a private `associated` flag that only `Process.Start()` sets, and
+`bot.ps1` reads `.ExitCode` on exactly this kind of object. The fix
+(`tools/unity_path.ps1`'s `DesktopLauncher.AdoptProcess`) calls the same two
+private methods (`SetProcessHandle`/`SetProcessId`) that `Process.Start()`
+itself calls right after its own internal `CreateProcess`, so the result is
+indistinguishable from a normally-started process -- `.ExitCode`,
+`Wait-Process` (which needs a real `Process`, not a lookalike), all of it.
+
+`tools/focus_check.ps1` proves all of this from OUTSIDE the launched process
+tree, with its own independent P/Invoke calls, logging pid/process
+name/parent/title for every foreground change it sees, and is itself passive
+-- it never starts a program or opens a window of its own; it only launches
+and watches whatever command it was pointed at. Run it after touching any
+launch site or either guard. A new script that spawns a Unity (or any other)
+window without calling `Start-FocusGuard` at its own entry is back to the
+pre-2026-09-18 unguarded behavior -- wire it in the same way the seven
 scripts above do.
 
 | Situation | Command |

@@ -72,27 +72,312 @@ function Get-UnityExe {
 # can, because the fix does not have to live in how Unity is started.
 #
 # So this function no longer tries to tell a headless launch apart from a
-# windowed one, and it no longer runs its own watchdog. It always starts
-# Unity minimized (belt) and leaves winning back any foreground it grabs
-# anyway to Start-FocusGuard below (suspenders) -- ONE mechanism covering the
-# whole calling script's process tree for its whole run, rather than one
-# watchdog per launch that only ever knew about its own $proc.Id. A script
-# that calls this function without having called Start-FocusGuard first is
-# back to the pre-2026-09-18 unguarded behavior for as long as that window
-# stays foreground -- every current caller in tools/ calls it, so don't add a
-# new Unity launch site that skips it.
+# windowed one for the RESTORE side -- Start-FocusGuard below still covers the
+# whole calling script's process tree for its whole run, one mechanism instead
+# of a watchdog per launch. But a -nographics launch has a second, stronger
+# option a windowed one does not: it needs no real display, so it can run on a
+# Windows desktop object OTHER than the interactive one, where there is
+# nothing for its window to steal focus FROM in the first place -- restoring
+# focus fast is no longer good enough if the owner can still see the flicker,
+# and putting the window somewhere the owner is not looking removes the
+# flicker rather than shortening it. See Get-HeadlessDesktop below for the
+# mechanism and its fallback.
 function Start-UnityQuiet {
     param(
         [Parameter(Mandatory = $true)][string]$FilePath,
         [Parameter(Mandatory = $true)][string[]]$ArgumentList
     )
 
+    if ($ArgumentList -contains "-nographics") {
+        $desktopName = Get-HeadlessDesktop
+        if ($desktopName) {
+            $proc = Start-ProcessOnDesktop -FilePath $FilePath -ArgumentList $ArgumentList -Desktop $desktopName
+            if ($proc) { return $proc }
+            Write-Host "Start-UnityQuiet: launch on '$desktopName' did not come up -- falling back to the minimized launch on the interactive desktop for this call."
+        }
+    }
+
     # -NoNewWindow (what every call used before 2026-09-08) only suppresses a
     # NEW CONSOLE window, which does nothing for Unity.exe (a GUI-subsystem
     # app, headless or not) -- its own window still opens and can still
     # activate, -nographics included. -WindowStyle Minimized is the flag that
-    # actually applies to a GUI app's initial window.
+    # actually applies to a GUI app's initial window. This is the fallback
+    # path (no real display, or the headless desktop above could not be
+    # created/used) -- Start-FocusGuard is what keeps IT from stealing focus.
     return (Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -PassThru -WindowStyle Minimized)
+}
+
+# --- Headless desktop: give -nographics Unity nowhere to steal focus FROM --
+#
+# A Windows window station (WinSta0 for the interactive session) can hold
+# more than one desktop object. Every window belongs to exactly one desktop,
+# and only the window station's currently-ACTIVE desktop is ever what the
+# user sees or can be alt-tabbed into -- a window created on a different
+# desktop in the same station cannot become foreground on the real screen at
+# all, whether or not it tries. That is the actual fix for "batchmode Unity
+# still flickers the foreground for a second even with -nographics and even
+# with a 200ms restore guard": stop restoring focus fast, and instead never
+# hand batchmode Unity a desktop the owner is looking at. -nographics is what
+# makes this available -- no real display is needed, so which desktop the
+# process's (invisible, D3D-less) window lives on has no visible-output cost,
+# unlike screenshot.ps1/preview.ps1's windowed launches, which genuinely need
+# the interactive desktop's graphics device and stay on Start-FocusGuard's
+# tree-restore approach untouched.
+#
+# One desktop object, named so a second concurrent tools/ session (see
+# docs/WORKFLOW.md's parallel-session rules) finds the SAME one rather than
+# creating a competing object: CreateDesktop returns a handle to an existing
+# desktop of the given name instead of erroring, so two sessions sharing this
+# machine share this desktop safely -- each holds its own handle, and one
+# session's Close-HeadlessDesktop does not touch the other's launches, which
+# hold their own reference via their own child processes.
+#
+# Created LAZILY and ONCE PER SCRIPT RUN, not once per launch -- several
+# tools/ scripts launch Unity more than once in a run (run_tests_parallel.ps1's
+# two platforms, bot.ps1's shards), and there is no reason to repeat a
+# CreateDesktop call, or repeat logging its failure, for each one.
+# $script:HeadlessDesktopAttempted, not just checking the handle for null,
+# is what makes a FAILED attempt sticky too -- a desktop that could not be
+# created a moment ago will not succeed on the next launch in the same run
+# either, so retrying per-launch would only repeat the same failure and spam
+# the same warning N times.
+$script:HeadlessDesktopHandle = $null
+$script:HeadlessDesktopAttempted = $false
+$script:HeadlessDesktopName = "PPHeadless"
+
+if (-not ("PP.HeadlessDesktop.NativeMethods" -as [type])) {
+    Add-Type -Namespace PP.HeadlessDesktop -Name NativeMethods -MemberDefinition @"
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern IntPtr CreateDesktop(string lpszDesktop, IntPtr lpszDevice, IntPtr pDevmode, uint dwFlags, uint dwDesiredAccess, IntPtr lpsa);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool CloseDesktop(IntPtr hDesktop);
+"@
+}
+
+# STARTUPINFO/PROCESS_INFORMATION/CreateProcess -- kept in a separate
+# -TypeDefinition block (not -MemberDefinition, which cannot declare a
+# struct type) the same way Start-FocusGuard's own job script block declares
+# PROCESSENTRY32 below. System.Diagnostics.Process/Start-Process has no way
+# to set a child's desktop -- that field only exists on the raw Win32
+# STARTUPINFO CreateProcess takes, so this is the one launch site in tools/
+# that has to drop to CreateProcess directly instead.
+#
+# THE WHOLE CALL LIVES INSIDE THIS COMPILED TYPE, not just the DllImport
+# declarations -- measured (2026-09-18), not assumed. Building the STARTUPINFO
+# with `New-Object`, mutating it from PowerShell, and passing it across a
+# `[ref]` to CreateProcess reliably came back Win32 error 123
+# (ERROR_INVALID_NAME) even for the simplest possible call ("cmd.exe" /c "exit
+# 0", no desktop set at all). Moving the identical struct construction and the
+# same CreateProcess call inside a compiled C# method and only crossing the
+# PowerShell/.NET boundary with a plain string in and a small result object
+# out made the exact same call succeed every time. This is a known rough edge
+# in PowerShell's interop with mutable-struct-by-reference P/Invoke signatures
+# (the struct's string fields need marshaling PowerShell's own dynamic
+# invocation does not reproduce correctly), not a bug in the call shape
+# itself -- so DesktopLauncher.Launch below is the actual seam, and
+# Start-ProcessOnDesktop is a thin PowerShell wrapper around it that never
+# touches STARTUPINFO directly.
+#
+# SECOND, SEPARATE PITFALL, ALSO MEASURED: wrapping the launched pid with
+# Process.GetProcessById(pid) -- what the resulting object was ORIGINALLY
+# built with here -- does return a real Process object, and .Id/.HasExited/
+# .Refresh()/.WaitForExit() all work on it. But .ExitCode does not: .NET
+# Framework's Process.ExitCode throws "Process was not started by this
+# object, so requested information cannot be determined" for any Process
+# obtained via GetProcessById rather than Process.Start(), because it gates
+# on a private `associated` flag that only Start() sets. bot.ps1 reads
+# .ExitCode on exactly this kind of object (its shard error report), so this
+# is not a corner this project can leave broken. The fix is
+# AdoptProcess below: it calls the same two private methods
+# (SetProcessHandle/SetProcessId) that Process.Start() itself calls right
+# after ITS OWN internal CreateProcess call, on a blank `new Process()`,
+# using a Microsoft.Win32.SafeHandles.SafeProcessHandle built from our raw
+# handle. The result is indistinguishable from one Start() would have
+# produced -- Associated included -- so .ExitCode works, and SafeHandle's own
+# finalizer (ownsHandle: true) closes the raw handle when the Process object
+# is garbage collected, so this file has no handles of its own left to track
+# or close.
+if (-not ("PP.HeadlessDesktop.DesktopLauncher" -as [type])) {
+    Add-Type -TypeDefinition @"
+using System;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+
+namespace PP.HeadlessDesktop {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    internal struct STARTUPINFO {
+        public int cb;
+        public string lpReserved;
+        public string lpDesktop;
+        public string lpTitle;
+        public int dwX;
+        public int dwY;
+        public int dwXSize;
+        public int dwYSize;
+        public int dwXCountChars;
+        public int dwYCountChars;
+        public int dwFillAttribute;
+        public int dwFlags;
+        public short wShowWindow;
+        public short cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PROCESS_INFORMATION {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public int dwProcessId;
+        public int dwThreadId;
+    }
+
+    internal static class ProcessNativeMethods {
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        internal static extern bool CreateProcess(
+            string lpApplicationName,
+            StringBuilder lpCommandLine,
+            IntPtr lpProcessAttributes,
+            IntPtr lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll")]
+        internal static extern bool CloseHandle(IntPtr hObject);
+    }
+
+    // Plain data PowerShell reads back with ordinary property access -- no
+    // struct, no [ref], nothing PowerShell's marshaling has to reproduce.
+    public class DesktopLaunchResult {
+        public bool Success;
+        public Process Process;
+        public int Win32Error;
+    }
+
+    public static class DesktopLauncher {
+        public static DesktopLaunchResult Launch(string commandLine, string desktop)
+        {
+            var result = new DesktopLaunchResult();
+
+            var si = new STARTUPINFO();
+            si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+            si.lpDesktop = desktop;
+            si.dwFlags = 0x00000001;   // STARTF_USESHOWWINDOW
+            si.wShowWindow = 0;        // SW_HIDE -- never displayed regardless, belt and suspenders
+
+            const uint CREATE_NO_WINDOW = 0x08000000;
+            var cmdLineBuffer = new StringBuilder(commandLine, 32768);
+
+            PROCESS_INFORMATION pi;
+            bool ok = ProcessNativeMethods.CreateProcess(
+                null, cmdLineBuffer, IntPtr.Zero, IntPtr.Zero, false,
+                CREATE_NO_WINDOW, IntPtr.Zero, null, ref si, out pi);
+
+            if (!ok) {
+                result.Success = false;
+                result.Win32Error = Marshal.GetLastWin32Error();
+                return result;
+            }
+
+            ProcessNativeMethods.CloseHandle(pi.hThread);
+            result.Success = true;
+            result.Process = AdoptProcess(pi.dwProcessId, pi.hProcess);
+            return result;
+        }
+
+        // See this Add-Type block's header comment for why this exists:
+        // Process.GetProcessById(pid) leaves .ExitCode permanently broken.
+        // This reproduces exactly what Process.Start() does internally after
+        // its own CreateProcess call, so the result is Associated the same
+        // way, with no functional gap versus a normally-started process.
+        private static Process AdoptProcess(int pid, IntPtr rawHandle)
+        {
+            var handle = new SafeProcessHandle(rawHandle, true);
+            var process = new Process();
+            var setHandle = typeof(Process).GetMethod("SetProcessHandle", BindingFlags.NonPublic | BindingFlags.Instance);
+            var setId = typeof(Process).GetMethod("SetProcessId", BindingFlags.NonPublic | BindingFlags.Instance);
+            setHandle.Invoke(process, new object[] { handle });
+            setId.Invoke(process, new object[] { pid });
+            return process;
+        }
+    }
+}
+"@
+}
+
+# Returns "WinSta0\PPHeadless" once the desktop object exists (creating it on
+# the first call), or $null if it could not be created -- callers treat $null
+# as "fall back to the minimized interactive-desktop launch", never as a
+# reason to stop the launch entirely. GENERIC_ALL, not a hand-picked list of
+# the individual DESKTOP_* rights: desktop objects define a GENERIC_MAPPING
+# the same way most securable objects do, and GENERIC_ALL is what every other
+# example of creating a desktop for a child process to run on uses.
+function Get-HeadlessDesktop {
+    if ($script:HeadlessDesktopAttempted) {
+        if ($script:HeadlessDesktopHandle) { return "WinSta0\$($script:HeadlessDesktopName)" }
+        return $null
+    }
+    $script:HeadlessDesktopAttempted = $true
+
+    $GENERIC_ALL = 0x10000000
+    $handle = [PP.HeadlessDesktop.NativeMethods]::CreateDesktop($script:HeadlessDesktopName, [IntPtr]::Zero, [IntPtr]::Zero, 0, $GENERIC_ALL, [IntPtr]::Zero)
+    if ($handle -eq [IntPtr]::Zero) {
+        $err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        Write-Host "Start-UnityQuiet: CreateDesktop('$($script:HeadlessDesktopName)') failed (Win32 error $err) -- headless launches this run will use the minimized interactive-desktop fallback instead."
+        return $null
+    }
+
+    $script:HeadlessDesktopHandle = $handle
+    return "WinSta0\$($script:HeadlessDesktopName)"
+}
+
+function Close-HeadlessDesktop {
+    if ($script:HeadlessDesktopHandle) {
+        [void][PP.HeadlessDesktop.NativeMethods]::CloseDesktop($script:HeadlessDesktopHandle)
+        $script:HeadlessDesktopHandle = $null
+    }
+}
+
+# Start-ProcessOnDesktop -- thin PowerShell wrapper around
+# DesktopLauncher.Launch. Every current caller of Start-UnityQuiet uses the
+# returned object as a System.Diagnostics.Process: .Id, .HasExited,
+# .Refresh(), .WaitForExit()/.WaitForExit(ms), .ExitCode, and piping it
+# through the Wait-Process cmdlet (which specifically requires a real Process
+# instance, not a duck-typed lookalike -- ruling out a custom wrapper object
+# as a fix for anything below). DesktopLauncher.Launch's AdoptProcess already
+# produces exactly that, fully functional, so there is nothing left to adapt
+# here beyond building the command line and surfacing a failure.
+function Start-ProcessOnDesktop {
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList,
+        [Parameter(Mandatory = $true)][string]$Desktop
+    )
+
+    # Start-Process -ArgumentList (string[]) joins with a single space to
+    # build ProcessStartInfo.Arguments before handing off to CreateProcess
+    # itself -- every ArgumentList built in tools/ already double-quotes its
+    # own path-bearing elements for exactly that reason, so reproducing the
+    # same join here reconstructs the identical command line CreateProcess
+    # would otherwise have been given via Start-Process.
+    $cmdLine = "`"$FilePath`" " + ($ArgumentList -join " ")
+
+    $result = [PP.HeadlessDesktop.DesktopLauncher]::Launch($cmdLine, $Desktop)
+    if (-not $result.Success) {
+        Write-Host "Start-UnityQuiet: CreateProcess on '$Desktop' failed (Win32 error $($result.Win32Error))."
+        return $null
+    }
+
+    return $result.Process
 }
 
 # --- Start-FocusGuard / Stop-FocusGuard: the process-TREE focus guard ------
@@ -373,8 +658,16 @@ namespace PP.FocusGuardEntryJob {
 }
 
 function Stop-FocusGuard {
-    if (-not $script:FocusGuardJob) { return }
-    Stop-Job -Job $script:FocusGuardJob -ErrorAction SilentlyContinue
-    Remove-Job -Job $script:FocusGuardJob -Force -ErrorAction SilentlyContinue
-    $script:FocusGuardJob = $null
+    if ($script:FocusGuardJob) {
+        Stop-Job -Job $script:FocusGuardJob -ErrorAction SilentlyContinue
+        Remove-Job -Job $script:FocusGuardJob -Force -ErrorAction SilentlyContinue
+        $script:FocusGuardJob = $null
+    }
+    # Always attempted, even when the job above was never started -- a script
+    # that called Get-HeadlessDesktop (via Start-UnityQuiet) without ever
+    # calling Start-FocusGuard would otherwise leak the handle. Every current
+    # caller pairs the two, but this does not rely on that staying true.
+    # No-op when nothing was ever created (Close-HeadlessDesktop checks the
+    # handle itself).
+    Close-HeadlessDesktop
 }
