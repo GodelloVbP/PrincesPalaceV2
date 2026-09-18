@@ -1,6 +1,134 @@
 # Gamepad Navigation — Plan v3
 
-> ## Status: 2026-09-18. Phase 4, item 2 COMPLETE: segments 5-9 landed, joining segments 1-4 from the previous pass
+> ## Status: 2026-09-18. PHASE 4 COMPLETE except hardware acceptance (owner, section 12 item 4)
+>
+> Items 3 and 4 landed this pass, joining item 1 (halos) and item 2 (the nine journey segments)
+> from the two passes before it. Nine mouse-only regression classes
+> (`Tests/PlayMode/Run/Journey*MouseTests.cs`, one per item 2 segment) replay every segment with
+> the mouse only, sharing item 2's own assertion helpers (`AssertSelectedName`,
+> `AssertFightIsTopWithNoSelection`, `AssertTopIsNotFight`, `Node`, `WaitForScene`, `WaitUntil`) --
+> none of them copied, all of them called, per this pass's own brief. One new mixed-input class
+> (`JourneyMixedInputTests.cs`) proves section 3's reselection rule and section 6's eligibility
+> invariants with both devices touched in the same test, rule (a) through (g). Every gate green
+> except two new tests that fail only under the full `run_tests_parallel.ps1` run and never alone
+> or per-area (AUDIT.md #162, investigated at length, not resolved -- see its own writeup for what
+> was ruled out) and the two pre-existing Combat/Stage failures AUDIT.md #157 already covers.
+>
+> **Item 3, the mouse-only regression.** `JourneyFixture.cs` gained the pointer half of its own
+> contract: `MoveMouseTo`/`Click`/`ClickBackground`/`SettleMouseAt`/`WorldPointAtFraction`/
+> `ClickWorldPoint`, all going through `ScriptedBaseInput.MousePosition`/`MouseButton0Down`/`Up`
+> the same seam the pad half already used, positioned via `RectTransformUtility.WorldToScreenPoint`
+> against the scene's own root Canvas (every scene this project builds is `ScreenSpaceCamera`, per
+> `SceneBuilder.cs` -- `PartyGamepadVisualCaptureTests`' own `HoverCard` is the precedent this
+> reuses rather than the Overlay-only shortcut `NavigationDispatcherTests`' synthetic fixture gets
+> away with). Every Move-then-Submit walk in a pad segment collapses to one `Click` on the final
+> control in its mouse twin -- a pointer aims at what it wants directly, it does not walk a graph
+> to it -- and entry selection right after a screen opens is never asserted in the mouse files
+> (this pass's own brief: a mouse player has clicked nothing yet, so there is no entry to assert);
+> what carries over instead is model state and the visible result, the same claims the pad files
+> make about what commits, resolves and loads.
+>
+> **Two deviations item 3 forced, not guessed past:**
+> 1. **"Cancel opens the menu" has no click target on any screen this plan touches** -- Hub's own
+>    `mainMenuButton` is a DIFFERENT shortcut (`RunManager.EndRun(); Navigation.Go(MainMenu)`,
+>    straight to the title, bypassing the menu entirely), not an "open the system menu" button.
+>    Every mouse file keeps `PressCancel()` for this one action, on the stated grounds that a
+>    mouse player still has a keyboard and the legacy Input Manager's Cancel button is bound to
+>    Escape either way -- the brief's own allowance ("the mouse uses the ESC/X control").
+> 2. **A reward-track dot's onClick is not the mouse equivalent of a pad Move onto it.**
+>    `RewardTrackController.Input.cs`'s own `Press(level)` COLLECTS a level already owed rather
+>    than merely centring it ("a waiting node collects; anything else glides", that file's own
+>    header) -- a pad `Move` only ever selects (`SelectIndex`, never `Press`), so it can never
+>    collect by accident, and a click can. `JourneyVictoryToRewardScreensMouseTests` hovers
+>    (`HoverIndex`, the same `ScrollTo` call a pad selection makes) rather than clicks, and
+>    exercises the actual click-collects path deliberately, on the collect button, separately.
+>
+> **A real, previously-unproven mechanism bug found doing this, item 4's own rule (e) is where it
+> surfaced but item 3's own tests hit its symptom too (AUDIT.md #163, fixed in the same pass):**
+> `NavigationInputModule`'s post-dispatch reselection rule fell back to `NavContext.Entry` on
+> EVERY null selection, because `NavContext.Remember` is called nowhere in this project -- correct
+> for the cross-context case (`DebugMenuGamepadNavigationTests`' own pinned claim, a Cancel that
+> pops a modal), silently wrong for the same-context case a plain background click or a click on a
+> `Navigation.Mode.None` stepper button produces (`PointerInputModule.DeselectIfSelectionChanged`
+> nulls the PREVIOUS selection based on `ISelectHandler` ancestry, which `Navigation.Mode.None`
+> does nothing to prevent -- it only stops the CLICKED target from being reselected, per
+> `OptionsController.cs`'s own, now-corrected comment). Fixed by capturing selection before
+> `base.Process()` runs and preferring it over `Entry` whenever the SAME top context still
+> declares it -- AUDIT.md #163 has the full argument for why this cannot regress the cross-context
+> case it leaves alone.
+>
+> **Item 4, the mixed-input pass.** `JourneyMixedInputTests.cs`, one class, rules (a) through (g),
+> each its own test, each asserting literal state: (a) a background click on the Hub restores the
+> pre-click selection in the same frame, a following Move reaches the literal Grid neighbour; (b)
+> a mouse click through a System Menu modal over Fight fires nothing behind it
+> (`FocusedVerbForTest`/enemy HP unchanged), a following pad Submit arms the modal's own selected
+> control exactly once (`ExitsController.ArmedIndex`); (c) selecting a Dossier pack cell then
+> hovering another with the mouse leaves the tooltip describing the SELECTED item, both while
+> hovering and after the mouse leaves entirely (section 7's focus-over-pointer rule, on a real
+> screen with a real `TooltipFocusRouter`, not the Domain-level `TooltipFocus` unit tests alone);
+> (d) picking up a Party seat with the pad then starting a real mouse drag (`PartyDragSource`'s own
+> `IBeginDragHandler`, crossed via a scripted press-then-move-while-held rather than a direct
+> method call) on another seat cancels the first carry and begins a new one, selection landing on
+> the seat the drag actually started from; (e) is where AUDIT.md #163 was found -- a pad-selected
+> Options stepper row survives a mouse click on its own Next button (value steps once, focus
+> stays on the row), and a following pad Right adjusts the same row; (f) a shoulder-button frame
+> over a context with no `INavTabStrip` (the Hub) selects nothing and changes nothing, the no-op
+> `NavContext.RaiseTabStep` was already built for; (g) a mouse click on a Fight verb plate fires
+> its `onClick`, selection is null the very next frame (Fight's own unconditional assert), and one
+> following stick frame moves Fight's own hover focus exactly once.
+>
+> **AUDIT.md #164 (open, not a production bug)**: a scripted mouse cannot reach a reward-track dot
+> scrolled outside the rail's own masked viewport -- a test-harness capability gap, matching
+> `PartyGamepadVisualCaptureTests`' own already-stated hedge on the identical technique.
+>
+> **Section 12's open owner calls are UNCHANGED by this pass** -- items 3 and 4 proved existing
+> behaviour under a second and a mixed input mode, they did not answer any of the six standing
+> design questions. Item 4 (hardware: Xbox + DualSense/DualShock) remains the one thing this whole
+> plan cannot automate, and section 13's own checklist is the walk-it-by-hand form of the same
+> nine segments item 2 through 4 now also prove in CI.
+>
+> ## The deviations register, every phase, consolidated in one place
+>
+> Pulled from each phase's own status entry below rather than left scattered -- read this list
+> before assuming a screen's behaviour matches this document's own prose literally; several
+> screens turned out not to match the brief that was written before anyone read their code.
+>
+> 1. **Hub has no tab bar** (phase 3a) -- four staged buildings and a gate, not a tab strip.
+> 2. **Talent's orbs are a tree, not a fixed-width Grid** (phase 3a) -- `TalentSkeleton`'s row-of-1-
+>    then-rows-of-3 shape cannot be expressed by `row = i / cols`.
+> 3. **Main Menu's Cancel closes the save-slot modal instead of being a no-op everywhere** (phase
+>    3a) -- a stick user with no mouse would otherwise be unable to back out of a panel they opened.
+> 4. **Job 1's tooltip placement computes against each screen's own painted interior, not the
+>    canvas** (phase 3b) -- the brief said canvas; using it would let a tooltip hang off the panel
+>    it belongs to and onto the scene behind it.
+> 5. **RelicDraft's Cancel is a deliberate no-op, not "closes them" like the other two Hub modals**
+>    (phase 3b item 3, four modals corrected to three) -- "a draft you can navigate around is not a
+>    draft," and closing it would let `RunOrchestrator.FinishDraft` never run.
+> 6. **Segment 5 (Hub -> Shop) is Hub -> gate -> the draft -> Map -> a Shop room, never a Hub
+>    building** (phase 4 item 2) -- the Hub has no Shop building; the in-run shop is a Map room.
+> 7. **Segment 6's refused talent case is PrerequisiteMissing, not the brief's own NotAuthored**
+>    (phase 4 item 2) -- which slot has no authored talent is a fact about content, not a stable
+>    thing to pin; PrerequisiteMissing is guaranteed by `TalentPage.Evaluate`'s own ordering.
+> 8. **Segment 7 is the map's FIRST real decision point, not literally "the run's second
+>    traversal"** (phase 4 item 2) -- reaching a genuine second fight would duplicate segment 8's
+>    own cost (a full pad-driven win) for no new claim; the property actually asked for (Move-driven
+>    aiming past the entry) does not need a second traversal to exercise.
+> 9. **Segment 8 proves TWO reward screens, not the one the brief's phrase names** -- the Reckoning
+>    (opened automatically by a win) and the reward track (a different screen, reached from the
+>    System Menu, never opened automatically -- grepped, nothing in `FightController`/
+>    `FightBootstrap` calls it).
+> 10. **Every journey segment reconstructs its own precondition rather than reading a prior
+>     class's leftover save** (phase 4 item 2, stated once, applies to all nine) -- NUnit does not
+>     guarantee cross-class execution order.
+> 11. **Segment 4 reaches the Hub through a deliberate LOSS, not "win it, or flee"** (phase 4 item
+>     2) -- Flee/Run was removed from `FightScreen.cs` outright, and a won fight's own Continue
+>     leads to the Map (a run still standing), not the Hub.
+> 12. **Item 3's mouse files never assert entry selection right after a screen opens** (phase 4
+>     item 3) -- a mouse player has clicked nothing yet; see this header's own item 3 section.
+> 13. **A reward-track dot's click is not the mouse equivalent of a pad Move onto it** (phase 4
+>     item 3) -- clicking can COLLECT a waiting level; selecting (pad or hover) only ever scrolls.
+>
+> ### Item 2 detail, carried over unchanged from its own landing (below)
 >
 > `cd311629` (segments 5-6), `695e97ff` (segment 7), `0fa3b05a` (segment 8,
 > plus a real bug found and fixed), `f1b92b9f` (segment 9) -- each gated on

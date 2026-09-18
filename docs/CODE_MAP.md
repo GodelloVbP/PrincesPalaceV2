@@ -335,6 +335,42 @@ descent, a fight won and lost, both reward screens, the shop, the talent
 tree, and back out to the Main Menu, entirely through the real production
 dispatcher.
 
+**Phase 4, items 3 and 4** (`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status
+header has the full per-rule detail, every deviation, and the consolidated
+deviations register across every phase): PHASE 4 COMPLETE except hardware
+acceptance.
+
+`Tests/PlayMode/Shared/JourneyFixture.cs` gained the pointer half of its own
+contract for item 3: `MoveMouseTo`/`Click`/`ClickBackground`/`SettleMouseAt`
+(two frames, not one -- `PartyGamepadVisualCaptureTests`' own `HoverCard` is
+the precedent for why)/`WorldPointAtFraction`/`ClickWorldPoint`, positioned
+via `RectTransformUtility.WorldToScreenPoint` against the scene's own root
+Canvas (`RootCanvas()`, scoped to `SceneManager.GetActiveScene()` -- a fix in
+its own right, see below). Nine mouse-only classes replay item 2's own nine
+segments with the mouse only, one file each, same names as their pad
+originals plus `Mouse`: `JourneyToFirstFightMouseTests`,
+`JourneyFightRoundMouseTests`, `JourneySystemMenuMidFightMouseTests`,
+`JourneyFightToHubOnDefeatMouseTests`, `JourneyHubToShopMouseTests`,
+`JourneyHubToTalentsMouseTests`, `JourneyMapChosenNodeMouseTests`,
+`JourneyVictoryToRewardScreensMouseTests`,
+`JourneySystemMenuToMainMenuMouseTests` -- all under `Tests/PlayMode/Run/`,
+all sharing item 2's own assertion helpers rather than restating them.
+
+`Tests/PlayMode/Run/JourneyMixedInputTests.cs` is item 4: one class, rules
+(a) through (g), each its own test. Found and fixed in the SAME pass
+(`AUDIT.md` #163): `NavigationInputModule`'s post-dispatch reselection rule
+fell back to `NavContext.Entry` on every null selection, silently wrong for
+a same-context click (a background click, or a click on a
+`Navigation.Mode.None` Selectable like an Options stepper button) that
+deselects without replacing -- fixed by capturing selection before
+`base.Process()` runs and preferring it over `Entry` whenever the same top
+context still declares it. Two more findings, left open rather than forced
+(`AUDIT.md` #162, #164): two mouse tests fail only under the full
+`run_tests_parallel.ps1` run and nowhere else (investigated at length, not
+resolved), and a scripted mouse cannot reach a reward-track dot scrolled
+outside the rail's own masked viewport (a test-harness gap, not a production
+bug).
+
 `Core/INavPaneEntry.cs` is how a SystemMenu pane names its own entry, asked
 of the ACTIVE pane the same way `INavCancelClaim` is: `SystemMenuController.
 ActivePaneEntry` prefers it and falls back to the generic first-Selectable-in-
