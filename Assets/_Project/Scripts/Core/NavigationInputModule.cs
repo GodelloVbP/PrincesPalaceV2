@@ -37,6 +37,41 @@ namespace PrincesPalace
         // is enough because at most one Fight context can be top at a time.
         private bool _fightVerticalArmed = true;
 
+        // HOW FAR THE STICK HAS TO GO BEFORE A PRESS COUNTS, for BOTH
+        // branches. The Fight branch has always had an armed edge of its own
+        // at this value; the ordinary branch had none and simply let
+        // StandaloneInputModule's analog repeat machinery decide, which is
+        // two answers to one question and is what the hardware play-test
+        // found ("the joystick only is wonky... it feels almost random").
+        public const float MoveThreshold = 0.5f;
+
+        // THE ORDINARY BRANCH'S OWN ARMED EDGE -- one flick, one Move.
+        //
+        // What the stock path did instead, measured against this project's
+        // own ProjectSettings/InputManager.asset (joystick Horizontal/
+        // Vertical, type Joystick Axis, dead 0.19) and uGUI's own source:
+        // BaseInputModule.DetermineMoveDirection answers None below a
+        // magnitude of 0.6 and SendMoveEventToSelectedObject then sets
+        // m_ConsecutiveMoveCount = 0 WITHOUT touching m_PrevActionTime. So a
+        // stick whose rest position creeps across that 0.6 line -- any worn
+        // or slightly off-centre pad, since 0.19 is all the dead zone it gets
+        // before the module sees it -- never accumulates a consecutive move,
+        // never arms the 0.5s repeat DELAY, and therefore repeats at the bare
+        // 1/inputActionsPerSecond rate, ten selections a second, off a stick
+        // nobody is touching. That is the "almost random" the owner saw, and
+        // it is also why one deliberate flick could produce two Moves: hold
+        // the stick past 0.5s and the repeat delay expires mid-flick.
+        //
+        // The rule here is the one the Fight branch already shipped: the
+        // press has to return below MoveThreshold before another one counts.
+        // COST, STATED RATHER THAN HIDDEN: a held stick no longer auto-
+        // repeats at all. That is a real loss on a long list (the reward
+        // track's rail, the dossier's pack) and it is reversible -- but
+        // predictable-and-slower beat unpredictable in the owner's own
+        // report, and one rule across both branches beats two.
+        private bool _moveArmed = true;
+        private bool _movePassesThisFrame;
+
         // ProjectSettings/InputManager.asset's own two new button axes
         // (plan phase 3, item 2): TabPrev binds Q and joystick button 4,
         // TabNext binds E and joystick button 5 -- named constants so a
@@ -57,9 +92,15 @@ namespace PrincesPalace
 
             if (topAtStart != null && topAtStart.IsNonSelecting)
             {
+                // Fight drives its own armed edge below and never wants
+                // base.Process()'s move dispatch, whose target is null there
+                // anyway -- so the ordinary gate stays shut for this call.
+                _movePassesThisFrame = false;
                 ProcessFight(topAtStart);
                 return;
             }
+
+            UpdateMoveGate();
 
             // CAPTURED BEFORE base.Process() RUNS -- phase 4 item 4's own
             // mixed-input pass found that this is load-bearing, not
@@ -142,6 +183,66 @@ namespace PrincesPalace
             // modal's own entry on the MODAL, and leaves the screen
             // underneath remembering where its focus was.
             RememberSelection(topAtEnd);
+        }
+
+        // READ ONCE A FRAME, BEFORE base.Process() DISPATCHES ANYTHING.
+        //
+        // It has to be here rather than inside the GetAxisEventData override
+        // below, because the frames that RE-ARM the gate are exactly the
+        // frames base.Process() never reaches that override on: a neutral
+        // stick makes SendMoveEventToSelectedObject return at its own
+        // "movement is approximately zero" guard, and a move the real-time
+        // repeat gate refuses returns before it too. Asking the axes
+        // ourselves, unconditionally, is the only reading that sees every
+        // frame.
+        //
+        // Through `input`, never UnityEngine.Input -- the same seam every
+        // other value this dispatcher reads goes through (plan section 2),
+        // which is what makes ScriptedBaseInput able to prove this at all.
+        private void UpdateMoveGate()
+        {
+            float horizontal = input.GetAxisRaw(horizontalAxis);
+            float vertical = input.GetAxisRaw(verticalAxis);
+
+            // sqrMagnitude against the squared threshold, the SAME comparison
+            // BaseInputModule.DetermineMoveDirection makes, so the frame this
+            // says "far enough" is exactly the frame that resolves to a real
+            // MoveDirection rather than None -- never one that arms the gate
+            // and then dispatches nothing.
+            if (horizontal * horizontal + vertical * vertical < MoveThreshold * MoveThreshold)
+            {
+                _moveArmed = true;
+                _movePassesThisFrame = false;
+                return;
+            }
+
+            _movePassesThisFrame = _moveArmed;
+        }
+
+        // WHERE THE GATE IS ACTUALLY SPENT. BaseInputModule's own virtual,
+        // called by StandaloneInputModule.SendMoveEventToSelectedObject and
+        // by nothing else -- so overriding it is how this module says "not
+        // this frame" without reimplementing the whole move path or
+        // switching eventSystem.sendNavigationEvents off and taking Submit
+        // down with it.
+        //
+        // _moveArmed is cleared HERE and not in UpdateMoveGate, deliberately:
+        // by the time this runs, base has already cleared its own real-time
+        // repeat gate, so this is the first point at which a Move is
+        // certainly about to be dispatched. Clearing it a step earlier would
+        // spend one flick on a press the repeat gate then swallowed, and the
+        // player would have to centre the stick and try again for no visible
+        // reason.
+        //
+        // MoveThreshold is passed down in place of the caller's own 0.6 so
+        // there is ONE number in this file rather than Unity's and ours
+        // disagreeing about the same edge.
+        protected override AxisEventData GetAxisEventData(float x, float y, float moveDeadZone)
+        {
+            if (!_movePassesThisFrame) return base.GetAxisEventData(0f, 0f, moveDeadZone);
+
+            _moveArmed = false;
+            return base.GetAxisEventData(x, y, MoveThreshold);
         }
 
         // THE ONE PLACE section 4's "remembered ?? entry" is decided.
@@ -227,7 +328,7 @@ namespace PrincesPalace
             if (target == null) return;
 
             float vertical = input.GetAxisRaw(verticalAxis);
-            if (Mathf.Abs(vertical) < 0.5f)
+            if (Mathf.Abs(vertical) < MoveThreshold)
             {
                 _fightVerticalArmed = true;
             }
