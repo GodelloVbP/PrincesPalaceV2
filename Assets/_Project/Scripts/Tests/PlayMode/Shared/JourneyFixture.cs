@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -125,6 +127,129 @@ namespace PrincesPalace.PlayModeTests
         protected IEnumerator MoveDown() => Move(0f, -1f);
         protected IEnumerator MoveLeft() => Move(-1f, 0f);
         protected IEnumerator MoveRight() => Move(1f, 0f);
+
+        // ---- pointer helpers (phase 4 item 3 -- the mouse-only regression) -----
+        //
+        // The scene's own root Canvas, freshly looked up rather than cached:
+        // TakeOverInput is called again after every real scene load (this
+        // file's own header on why), and a cached Canvas reference from the
+        // PREVIOUS scene would be Unity's fake-null the moment that scene
+        // unloads -- the same MissingReferenceException trap WaitForScene's
+        // own comment warns about for a controller reference.
+        //
+        // FILTERED TO THE ACTIVE SCENE explicitly, not just `isRootCanvas` --
+        // found flaky under the full run_tests_parallel.ps1 gate (never
+        // under a single-class or single-area slice): several PlayMode
+        // fixtures elsewhere in this project build their OWN throwaway
+        // Canvas by hand (NavigationDispatcherTests' own SetUp, for one) and
+        // free it with a plain `Object.Destroy`, which Unity defers to the
+        // END of the frame rather than performing immediately -- a bare
+        // `FindObjectsByType<Canvas>` run early in the very next test can
+        // still see that pending-destroy instance for one frame, and
+        // `.isRootCanvas` is true for a bare constructed Canvas exactly the
+        // same as for a scene's real one, so `FirstOrDefault` had no way to
+        // tell them apart. Scoping to `SceneManager.GetActiveScene()` does.
+        private static Canvas RootCanvas()
+        {
+            var active = SceneManager.GetActiveScene();
+            return UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(c => c.isRootCanvas && c.gameObject.scene == active);
+        }
+
+        // Screen-space position over `node`'s own world rect centre, through
+        // the SAME conversion PartyGamepadVisualCaptureTests' own HoverCard
+        // already uses against a real production canvas: every scene this
+        // project builds is ScreenSpaceCamera (SceneBuilder.cs), never
+        // Overlay, so a RectTransform's world position has to be projected
+        // through the canvas's own worldCamera to land where
+        // GraphicRaycaster's ray would actually hit it -- a bare
+        // `(Vector2)rect.position` is only correct for Overlay, which is
+        // NavigationDispatcherTests' own synthetic fixture canvas, not any
+        // real scene this suite drives.
+        protected IEnumerator MoveMouseTo(GameObject node)
+        {
+            Assert.IsNotNull(node, "MoveMouseTo given a null node -- the target was never found in the scene");
+            yield return MoveMouseToWorldPoint(((RectTransform)node.transform).position);
+        }
+
+        // TWO FRAMES, not one -- PartyGamepadVisualCaptureTests' own
+        // HoverCard is the precedent this file found the hard way it had
+        // dropped: "one for the module to raycast the new position, one for
+        // whatever the hover changed to have been laid out and drawn." A
+        // single frame is enough for a CLICK (Click's own Down/Up pair
+        // already spans two calls), but a hover that drives a downstream
+        // repaint -- RewardTrackController's own ScrollTo-on-hover,
+        // section 7's "the SAME call a mouse hover already triggers" -- can
+        // still be mid-layout on the very frame OnPointerEnter fires.
+        protected IEnumerator SettleMouseAt(GameObject node)
+        {
+            yield return MoveMouseTo(node);
+            yield return DriveFrame();
+        }
+
+        // The general form MoveMouseTo(node) is built on -- an explicit world
+        // point rather than a node's own rect centre, for the one caller that
+        // needs a PRECISE fraction along a track (BarSlider's own click-sets-
+        // value contract, item 4 rule (e)/segment 3's slider adjustment) rather
+        // than whatever a whole node's centre happens to land on.
+        protected IEnumerator MoveMouseToWorldPoint(Vector3 worldPoint)
+        {
+            var canvas = RootCanvas();
+            Assert.IsNotNull(canvas, "the scene has no root Canvas to project the pointer through");
+            Input.MousePosition = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldPoint);
+            yield return DriveFrame();
+        }
+
+        // A world point at horizontal fraction `t` (0 = left edge, 1 = right
+        // edge) along `rect`'s own width, at its vertical centre -- BarSlider.
+        // Set reads the click's LOCAL x back out through this exact same
+        // ScreenPointToLocalPointInRectangle/rect.width arithmetic, so this is
+        // its own inverse, not a separate approximation of it.
+        protected static Vector3 WorldPointAtFraction(RectTransform rect, float t)
+        {
+            var local = new Vector3(rect.rect.xMin + Mathf.Clamp01(t) * rect.rect.width, 0f, 0f);
+            return rect.TransformPoint(local);
+        }
+
+        // One frame down, one frame up -- real mouse timing, not both edges
+        // in the same Process() call (unlike NavigationDispatcherTests' own
+        // synthetic-fixture shortcut): a Button's OnPointerClick only fires
+        // once GetMouseButtonUp lands on the same target GetMouseButtonDown
+        // pressed, and nothing in this suite needs the click to resolve
+        // before the up-frame anyway.
+        protected IEnumerator Click(GameObject node)
+        {
+            yield return MoveMouseTo(node);
+            Input.MouseButton0Down = true;
+            yield return DriveFrame();
+            Input.MouseButton0Up = true;
+            yield return DriveFrame();
+        }
+
+        // Click at an explicit world point rather than a node's own centre --
+        // BarSlider's own click-sets-value contract (see WorldPointAtFraction).
+        protected IEnumerator ClickWorldPoint(Vector3 worldPoint)
+        {
+            yield return MoveMouseToWorldPoint(worldPoint);
+            Input.MouseButton0Down = true;
+            yield return DriveFrame();
+            Input.MouseButton0Up = true;
+            yield return DriveFrame();
+        }
+
+        // A background click -- nothing this project draws puts a raycast
+        // target this close to the corner (every decorative full-screen
+        // Image is AsDecor(), raycastTarget false; docs/GAMEPAD_NAVIGATION_
+        // PLAN.md section 2's own modal-dimmer note is the one exception,
+        // and no modal is ever placed here). Used by item 4's rule (a).
+        protected IEnumerator ClickBackground()
+        {
+            Input.MousePosition = new Vector2(5f, 5f);
+            Input.MouseButton0Down = true;
+            yield return DriveFrame();
+            Input.MouseButton0Up = true;
+            yield return DriveFrame();
+        }
 
         // Polls rather than counting frames -- several transitions this
         // journey crosses (HubController's descent zoom/fade, a Map walk's
