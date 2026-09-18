@@ -113,7 +113,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator TheMarkerIsTheLastChildOfTheRootCanvas_WhichIsWhatDrawnOnTopMeansInUGui()
+        public IEnumerator TheMarkerIsTheLastChildOfItsTargetsOwnCanvas_WhichIsWhatDrawnOnTopMeansInUGui()
         {
             yield return LoadHub();
 
@@ -122,8 +122,15 @@ namespace PrincesPalace.PlayModeTests
 
             var canvas = parent.GetComponent<Canvas>();
             Assert.IsNotNull(canvas, "the marker's parent is not a Canvas");
-            Assert.IsTrue(canvas.isRootCanvas, "the marker hangs off a nested canvas, so a later sibling of "
-                                               + "that canvas would draw over it");
+
+            // THE TARGET'S OWN CANVAS, not necessarily the root one. A nested
+            // Canvas with overrideSorting draws over every root-canvas child
+            // however late a sibling it is (FightScreen's FightHud, order
+            // 1000) -- so "root canvas, last sibling" is not "on top", and
+            // pinning it that way would pin the bug the Reckoning capture
+            // found.
+            Assert.AreSame(Marker.Target.GetComponentInParent<Canvas>(), canvas,
+                "the marker must share the canvas its target is drawn on");
 
             Assert.AreEqual(parent.childCount - 1, Marker.transform.GetSiblingIndex(),
                 "uGUI draws later siblings on top, so the marker has to be the last one");

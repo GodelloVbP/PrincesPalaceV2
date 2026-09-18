@@ -2898,7 +2898,15 @@ proportion for one destructive-confirm dialog.
 
 ## Findings from gamepad-navigation phase 3b items 1 and 2, 2026-09-17
 
-### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`
+### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`, REOPENED BY HARDWARE AND CLOSED DIFFERENTLY in `ce405df9`
+
+`65ad5325`'s halos were exactly what this entry asked for and the owner rejected them on a
+real pad: "a player can't see where they're going in the character sheets screen: no obvious
+selectors". A soft radial glow the same footprint as a cell, sitting under an icon and a
+name, is a tint rather than a selector. The halos are gone along with every other one in the
+project; `Core/FocusMarker.cs` is the one answer now, on this screen and on the other ten.
+The original finding below is left standing because its reasoning about WHY these controls
+had nothing is still correct -- it is the remedy that changed.
 
 Both screens wired this pass (`914c249e`, `9c26de94`) are now fully operable on stick + Submit
 + Cancel, and on both of them the only feedback that a control has focus is the tooltip the
@@ -3264,3 +3272,88 @@ misbehaved. That is a new mechanism with its own test cost (section 10's own not
 repeat-cadence testing has to wait real frames), not a flag, so it is not done speculatively.
 Predictable-and-slower beat unpredictable in the owner's own report; whether it still does after
 living with it is the owner's call.
+
+## Findings from hardware round 1's visual pass, 2026-09-18
+
+### 168. The pad-focus indicator was five indicators and three absences, and its size was a property of the control
+
+The owner's play-test produced four complaints that read as four bugs on four screens -- "the
+selector on the start descent is huge and looks weird", "the gold halo (e.g. in party screen) is
+way too strong", "a player can't see where they're going in the character sheets screen: no obvious
+selectors", and the talent tree having no visible focus at all. They are one defect.
+
+Every one of those screens had grown its own answer to "where is the pad standing": Hub's five
+building halos, Party's seat and card halos (plan section 8's own "candidate treatment, not a
+verified solution"), the dossier's three per-group halos (#160 above), the Reckoning's rarity halo
+brightened to double duty, and `ThemedButtonState`'s `_isSelected` arm for anything themed. Three
+screens -- Talents, Options and Fight -- had nothing.
+
+**Why no amount of tuning could have worked**, which is the part worth keeping: every halo was a
+radial glow SIZED TO THE CONTROL it sat behind, so its apparent size was a property of the control
+rather than of the indicator. On a 620x620 gate it is a 620-unit bloom; on a Party seat it is a
+slab of gold; over a dossier cell's icon and name it is a tint. No pair of numbers is small on the
+first and visible on the last. A marker of FIXED size beside the control is the same size
+everywhere by construction, which is the property the halo could not have at any setting.
+
+Fixed in `ce405df9` (`Core/FocusMarker.cs`, `Domain/UiKit/FocusMarkerPlacement.cs`, driven from
+`NavigationInputModule.ShowFocusOn`). `Core/SelectHaloPainter.cs` had no callers left and is
+deleted.
+
+### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`
+
+"Attack is always seeming to be hovered over (not a gamepad bug) and makes it difficult to notice
+if you hover/select it." `FightController.Hud.RefreshVerbs` computed
+`highlighted = i == active || (active < 0 && i == _focusedVerb)` and painted `ThemedMenuState.Open`
+for anything highlighted. `_focusedVerb` is 0 from the moment the controller wakes and is never -1
+-- Fight's model keeps a focused verb at all times because Submit has to have something to press --
+so with no branch open the second clause was unconditionally true for index 0.
+
+Worth recording as a class rather than an instance: the code's own comment asserted the two states
+were "mutually exclusive in practice", and `FightFlowTests` had written the SAME wrong belief into
+an assertion with a comment explaining it ("`highlighted` is already true for ATTACK before
+anything is ever pressed"). A green suite pinned the defect. What caught it was a person holding a
+controller.
+
+Drawing only; `_focusedVerb`, `MoveFocus` and `ConfirmFocus` are untouched.
+
+### 170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong
+
+Not a defect in shipped code -- it is a defect the capture pass caught in the marker itself before
+it shipped, recorded because the reasoning is reusable. The first implementation parented the
+marker to `canvas.rootCanvas` and made it the last sibling, on the ordinary uGUI rule that later
+siblings draw on top. `FightScreen` wraps its whole HUD in `Ui.NestedCanvas("FightHud", 1000)` with
+`overrideSorting`, so every root-canvas child draws UNDER all of it however late a sibling it is.
+
+The symptom is the one worth recognising: the Reckoning's marker reported itself shown, at the
+right coordinates, with the right target -- and was nowhere in the picture. No assertion in this
+project could have caught that; the capture did. The rule is now "the target's own nearest canvas,
+last sibling", which cannot be wrong for the reason that a canvas covering the marker covers the
+control it points at too.
+
+### 171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169
+
+#169 removed the open-branch plate from the resting verb column. What remains on ATTACK is
+`ThemedMenuState.Primary` -- the recommended-default gold ring it has always had, from
+`i == 0` and nothing else -- which is visible in `tools/screenshots/gamepad_visuals/
+marker_fight_verb.png` as a warm glow the other three verbs do not have.
+
+That is the intended design of the verb column and it was not touched by this pass. But the owner's
+complaint was about what ATTACK LOOKS LIKE at rest, and half of what it looks like is still there.
+If the ring is what read as "hovered" rather than the plate, the fix is to drop Primary from the
+verb column entirely and let the hotkey number carry "this is the default" -- a one-line change in
+`RefreshVerbs`, not a mechanism. Not done unasked: a recommended action is a real thing to signal
+and removing it is a design decision, not a bug fix.
+
+### 172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control
+
+`FocusMarkerPlacement.EdgeFor` puts the marker to the LEFT of anything wider than 1.8:1 and ABOVE
+everything else. That is one rule for every screen, computed from the rect, and it cannot drift --
+the alternative, an edge declared per control, would be roughly a hundred new declarations each of
+which can be forgotten or contradict its neighbour.
+
+The cost, visible in the captures: on Talents the arrow lands on top of the orb's own name label
+(`marker_talents_orb.png`), and on the Reckoning it sits under the "CHOOSE ONE" heading
+(`marker_reckoning_card.png`). Both are legible and neither is wrong, but a control whose label
+hangs above it would be better served by a marker to its left. If the owner wants that, the
+proportionate change is an opt-out on the kit node (a `UiNode.FocusEdge` hint the emitter carries
+through), not a table of exceptions in `FocusMarkerPlacement`.

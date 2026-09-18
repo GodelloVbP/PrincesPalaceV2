@@ -1,5 +1,99 @@
 # Gamepad Navigation -- Plan v3
 
+> ## Status: 2026-09-18. HARDWARE ROUND 1, VISUAL HALF COMPLETE. The owner's four visual findings were one defect, and section 12 item 2's open call is answered by replacement rather than by tuning
+>
+> The round's navigation half is the status block below this one: six findings, all fixed, the pad
+> going where it should. This is the other half of the same play-test -- what the pad LOOKS like
+> when it gets there -- and it is a shorter story because the complaints turned out to be one defect
+> wearing six faces.
+>
+> | # | The owner's words | Root cause | Commit |
+> |---|---|---|---|
+> | 1 | "The selector on the start descent is huge and looks weird." | Every halo was a radial glow SIZED TO THE CONTROL, so its apparent size was a property of the control rather than of the indicator. The Hub's gate is 620x620. | `ce405df9` |
+> | 2 | "The gold halo (e.g. in party screen) is way too strong." | The same halo, at `ThemedButtonState.SelectedGlowAlpha` (1.0) behind a Party seat. Section 8 called this "a candidate treatment, not a verified solution -- the owner reviews the picture". They did. | `ce405df9` |
+> | 3 | "A player can't see where they're going in the character sheets screen: no obvious selectors." | `AUDIT.md` #160's own remedy: a soft glow the same footprint as a cell, under an icon and a name, which is a tint rather than a selector. | `ce405df9` |
+> | 4 | The talent tree has no visible focus at all (and neither did Options or Fight). | Three screens never grew a halo, because a halo was something each screen had to add for itself. | `ce405df9` |
+> | 5 | "There is no proper selector. Maybe we can make a small hovering arrow for the thing you're targeting with gamepad?" | Fight has no EventSystem selection by design (section 3), so no screen-level treatment could ever have reached it. | `ce405df9` |
+> | 6 | "Attack is always seeming to be hovered over (not a gamepad bug) and makes it difficult to notice if you hover/select it." | `RefreshVerbs` painted `ThemedMenuState.Open` off `_focusedVerb`, which is 0 from wake and never -1. `AUDIT.md` #169. | `0995736b` |
+>
+> **ONE INDICATOR, and why tuning was never going to close items 1-3.** A glow scaled to the
+> control it sits behind cannot be small on a 620-unit gate AND visible over a 96-unit orb: no pair
+> of numbers satisfies both, because the quantity that varies is not one of the two being tuned. A
+> marker of FIXED size beside the control is the same size everywhere by construction.
+> `Core/FocusMarker.cs` is that marker, `Domain/UiKit/FocusMarkerPlacement.cs` is its arithmetic
+> (EditMode, literal rects), and `NavigationInputModule.ShowFocusOn` is the only thing that drives
+> it. No screen wires it and no screen can forget to.
+>
+> **Section 12 item 2 is ANSWERED, not merely progressed.** "The `ThemedButtonState` ratio is a
+> candidate pending the visual capture, not approved" -- the capture was taken, the owner played it,
+> and the answer was no. The ratio is retired as a focus visual everywhere it was used: Hub's five,
+> Party's two groups, the dossier's three, the Reckoning's brightening, and
+> `ThemedButtonState._isSelected`'s own arm of `IsSelectedHalo`. `Core/SelectHaloPainter.cs` had no
+> callers left and is deleted. Section 8's four-state Party question survives in a different form
+> and is re-captured: the gold ring says which slots are LEGAL, several at once, and the arrow says
+> which one Submit will resolve on.
+>
+> **What Fight needed that no other screen did.** The dispatcher holds Fight's EventSystem selection
+> at null every frame (section 3), so there is no selection for a marker to read.
+> `IFightNavigationTarget.FocusedElement` is the model's own answer, read-only over `_focusedVerb`,
+> `_menu.RowSelection` and the two hover indices -- every one of which `MoveFocus` and `ConfirmFocus`
+> already maintained. Those three methods are untouched, and so are the direct-call tests that drive
+> them. At Target depth it answers the HIT AREA over the figure rather than the plate in the corner,
+> because the thing being targeted is the monster.
+>
+> **A defect a green suite had pinned, recorded because the mechanism is the point.** Item 6's
+> `highlighted` clause carried a comment asserting the two states were "mutually exclusive in
+> practice", and `FightFlowTests` had written the same wrong belief into an assertion WITH a comment
+> explaining it. Nothing was failing. What caught it was a person holding a controller -- the same
+> lesson the navigation half's own status header records about its items 1 and 6.
+>
+> **Two deviations from the brief, both stated in their commits and repeated here.**
+> 1. **The edge hint is DERIVED from the control's aspect, not carried from the source of truth.**
+>    The brief asked the module to hand the marker "a RectTransform plus an edge hint". An authored
+>    hint means roughly a hundred new per-control declarations, each forgettable and each able to
+>    contradict its neighbour; the control's own shape already answers the question. One rule,
+>    computed, cannot drift. Its cost is real and is `AUDIT.md` #172.
+> 2. **The arrow is a baked `proc:` sprite, not two rotated `Solid` squares.** The brief offered the
+>    squares as the no-new-art route. At 26 units a chevron built from two rectangles is about a
+>    third corners. A baked PNG from `ProceduralSpriteBaker` IS this project's no-new-art route --
+>    generated by a tool anyone can re-run, committed, diffable -- and is where every other shape a
+>    flat uGUI `Image` cannot draw already lives.
+>
+> **Where the marker lives, after two rejected shapes.** Runtime creation put a second rect preamble
+> in `Core/`, which `UiKitLintTests.OnlyTheEmitterMayCreateGameObjects` exists to prevent. A node in
+> every screen tree would be eleven `NodeRef`s, eleven bindings and eleven `UiAudit` overlap
+> exemptions for an object whose job is to sit on top of what it points at. It is a scene ROOT
+> FIXTURE instead, beside the camera, the Volume, the canvas and the EventSystem, and that lint's own
+> bounded number was raised 4 -> 5 -- which is that lint's stated mechanism for making the allowance
+> a visible decision rather than a drift.
+>
+> **Seven existing tests were ADAPTED, never relaxed**, each named in its own commit with what it
+> asks instead: Party's seat-halo test, the dossier's four halo tests and the Reckoning's two
+> brightening tests all made a claim about an indicator that no longer exists and now make the same
+> claim about the marker; `FightFlowTests`' two verb-state assertions changed because the behaviour
+> they pinned was the defect. The Reckoning pair additionally pins that focus does NOT touch the
+> rarity alpha, which is a real behaviour change -- a focused Common used to read at 1.0 while an
+> unfocused Legendary read at 0.30.
+>
+> **A defect the CAPTURES caught and no assertion could have** (`AUDIT.md` #170): the marker first
+> parented to the root canvas as the last sibling, which is the ordinary uGUI rule and is wrong here
+> -- `FightScreen` wraps its HUD in `Ui.NestedCanvas("FightHud", 1000)` with `overrideSorting`, so
+> every root-canvas child draws under all of it. The Reckoning's marker reported itself shown, at the
+> right coordinates, with the right target, and was nowhere in the picture. It attaches to its
+> TARGET's own canvas now.
+>
+> **Eight pictures for the owner**, in `tools/screenshots/gamepad_visuals/`, produced by
+> `tools/screenshot.ps1 -Runtime -RuntimeFilter FocusMarkerVisualCaptureTests` and copied out before
+> the next runtime capture wipes that directory. Three open owner calls come with them and are in
+> `AUDIT.md` rather than decided here: #171 (ATTACK still wears the Primary ring at rest, which is
+> half of what "looks hovered" was), #172 (the derived edge, and the two places it collides with a
+> label) and #160's own re-strike.
+>
+> Every commit gated on its own classes, the `ui` and `combat` areas, and a full
+> `tools/run_tests_parallel.ps1` -- `-BuildScenes` on `ce405df9`, whose regenerated scenes WERE
+> committed: they differ by far more than fileIDs (the marker fixture in all five, thirteen halo
+> nodes gone). No gate was red at any commit, and the three known flakes passed on every run.
+
 > ## Status: 2026-09-18. HARDWARE ROUND 1 COMPLETE. Section 12 item 4 has been answered by an owner play-test on a real controller, and all six of its findings are fixed
 >
 > This is the first entry in this document written from something a pad actually did rather than
@@ -1454,7 +1548,12 @@ No effort estimates.
    on `sound`/`music` too, retiring `OptionKind.Slider`.
 2. **Selected-visual treatment** (§7/§8): the `ThemedButtonState` ratio is
    a candidate pending the visual capture, not approved — review the
-   four-state screenshot before treating it as done.
+   four-state screenshot before treating it as done. **ANSWERED 2026-09-18**, by
+   this file's own top status header: the capture was taken, the owner
+   played it on hardware, and the answer was no. The ratio is retired as a
+   focus visual project-wide and `Core/FocusMarker.cs` replaces it. What is
+   still open is narrower and lives in `AUDIT.md` rather than here -- #171
+   (ATTACK's Primary ring at rest) and #172 (the derived edge hint).
 3. **Wrap/clamp defaults** (§5): wrap Rail/Grid-row, clamp List, Map
    follows reachability.
 4. **Hardware list**: recommend Xbox + DualSense/DualShock on the shipping

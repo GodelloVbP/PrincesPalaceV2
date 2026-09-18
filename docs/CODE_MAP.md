@@ -118,7 +118,9 @@ plus typed handles (`MainMenuScreen`, `MainMenuAmbience`).
 `BuildAllScenes` — `CreateEventSystem` attaches `Core/NavigationInputModule.cs`,
 not the stock `StandaloneInputModule`; see `docs/GAMEPAD_NAVIGATION_PLAN.md`
 section 3 for the one-dispatch-point argument and `Domain/UiKit/NavContext.cs`
-+ `NavContextStack.cs` for the engine-free stack it reads) ·
++ `NavContextStack.cs` for the engine-free stack it reads; `CreateFocusMarker`
+builds the FIFTH scene root fixture, `Core/FocusMarker.cs`, and wires it into
+that module) ·
 `UiEmitter.cs` · `UiEmitResult.cs` · `ScreenRegistry.cs` ·
 `UiTextFitAudit.cs` (E1) · `UiCountAudit.cs` (E4) · `UiWiringSweep.cs` (E3,
 now skipping fields not DECLARED on the attached controller's own concrete
@@ -171,11 +173,23 @@ Down link, re-resolved every `Refresh()`) · `ShopController.
 RefreshShelfNavigation`/`RefreshPackNavigation` (Gear is the only real
 2-wide Grid -- Relic/Book are single-column Lists cross-linked row for row
 -- reconfigured between the shelf and the pack modal the same way Main
-Menu's own save-slot toggle is). `Core/SelectHaloPainter.cs` gives Hub's
-four un-themed buildings and its gate the same borrowed
-`ThemedButtonState.SelectedGlowAlpha`/`Scale` ratio Party's own
-`PaintSelectHalo` already established, without routing Party through it
-(a redundant, no-gain refactor of an already-shipped controller).
+Menu's own save-slot toggle is).
+
+**WHERE THE PAD'S FOCUS IS SHOWN, one implementation for every screen**
+(hardware round 1's visual pass): `Core/FocusMarker.cs`, a small arrow beside
+the focused control, positioned by `Domain/UiKit/FocusMarkerPlacement.cs` and
+driven from `Core/NavigationInputModule.ShowFocusOn` alone. No screen wires it
+and no screen can forget to. Fight is the one screen that has to answer for
+itself, through `IFightNavigationTarget.FocusedElement`, because the dispatcher
+holds its EventSystem selection at null every frame by design.
+
+`Core/SelectHaloPainter.cs` is GONE, with the five Hub halos, Party's seat and
+card halos, the dossier's three per-group halos and the Reckoning's focus
+brightening -- each of them a per-screen answer to the same question, and each
+rejected by the owner's own play-test on hardware. `ThemedButtonState` keeps
+its hover and pressed states and still gives focus the plain `FocusGlowAlpha`
+ring; what it no longer does is grow the `SelectedGlowScale` halo for focus,
+which now means only "this branch is open" (Fight's verb column).
 
 **Phase 3b's job 0 plus two items** (`docs/GAMEPAD_NAVIGATION_PLAN.md`'s own
 status header has the rest, not attempted this pass): `MainMenuController.

@@ -1322,29 +1322,78 @@ namespace PrincesPalace
                 case MenuDepth.Target:
                     if (_menu.Side == TargetSide.Allies)
                     {
-                        if (_hoveredAllyIndex >= 0) return NodeAt(pcPlates, _hoveredAllyIndex);
+                        int plate = _hoveredAllyIndex;
+                        if (plate < 0)
+                        {
+                            // NOTHING HOVERED YET points at what Submit would
+                            // actually press, which ConfirmFocus already
+                            // defines as the first candidate -- the same rule,
+                            // read off the same helper, so the arrow can never
+                            // point at one thing while Submit hits another.
+                            var pickable = PickableAllyPlates();
+                            if (pickable.Count == 0) return null;
+                            plate = pickable[0];
+                        }
 
-                        // NOTHING HOVERED YET points at what Submit would
-                        // actually press, which ConfirmFocus already defines
-                        // as the first candidate -- the same rule, read off
-                        // the same helper, so the arrow can never point at one
-                        // plate while Submit hits another.
-                        var pickable = PickableAllyPlates();
-                        return pickable.Count > 0 ? NodeAt(pcPlates, pickable[0]) : null;
+                        return AllyFigureOrPlate(plate);
                     }
 
-                    if (_hoveredEnemyIndex >= 0) return NodeAt(enemyPlates, _hoveredEnemyIndex);
+                    if (_hoveredEnemyIndex >= 0) return EnemyFigureOrPlate(_hoveredEnemyIndex);
 
                     var enemies = Enemies;
                     for (int i = 0; i < enemies.Count; i++)
                     {
-                        if (enemies[i].IsAlive) return NodeAt(enemyPlates, i);
+                        if (enemies[i].IsAlive) return EnemyFigureOrPlate(i);
                     }
 
                     return null;
             }
 
             return null;
+        }
+
+        // THE FIGURE ON THE BATTLEFIELD, not the plate in the corner.
+        //
+        // The owner asked for "a small hovering arrow for the thing you're
+        // targeting", and while a target is being chosen the thing being
+        // targeted is the monster, not its HUD readout twenty rows away at
+        // the top of the screen. The hit areas exist for exactly this window
+        // -- RefreshEnemyPlates shows them only while picking ("the figure is
+        // a target only while one is being chosen") -- so asking for one and
+        // taking the plate when it is not up is the same question answered
+        // for both states rather than a special case for one.
+        private GameObject EnemyFigureOrPlate(int index)
+        {
+            var figure = NodeAt(enemyHitAreas, index);
+            return figure != null && figure.activeInHierarchy ? figure : NodeAt(enemyPlates, index);
+        }
+
+        // THE ALLY SIDE'S TWO ARRAYS ARE NOT INDEXED THE SAME WAY, which is
+        // why this is six lines and its enemy twin is one. partyHitAreas is
+        // indexed by STAGE SLOT (a slot belongs to one character for the whole
+        // fight) and pcPlates by PLATE (the party list, which reorders on
+        // every Move) -- FightScreen.PartyHitAreas' own header says so and
+        // calls the difference the point. The bridge is the combatant itself,
+        // through the two lookups the controller already owns for exactly
+        // this: PartyMemberOnPlate and PartyMemberInSlot, which is what
+        // OnAllyPlatePressed and OnAllyFigurePressed each use to resolve their
+        // own click.
+        private GameObject AllyFigureOrPlate(int plate)
+        {
+            var member = PartyMemberOnPlate(plate);
+            if (member != null && partyHitAreas != null)
+            {
+                for (int slot = 0; slot < partyHitAreas.Length; slot++)
+                {
+                    if (!ReferenceEquals(PartyMemberInSlot(slot), member)) continue;
+
+                    var figure = NodeAt(partyHitAreas, slot);
+                    if (figure != null && figure.activeInHierarchy) return figure;
+                    break;
+                }
+            }
+
+            return NodeAt(pcPlates, plate);
         }
 
         private static GameObject NodeAt(Button[] nodes, int index)

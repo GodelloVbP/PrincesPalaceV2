@@ -180,7 +180,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AtTargetDepth_TheMarkerStandsOnTheEnemyPlateSubmitWouldHit()
+        public IEnumerator AtTargetDepth_TheMarkerStandsOnTheEnemyFigureSubmitWouldHit()
         {
             yield return LoadFight();
             yield return BindARealEncounter();
@@ -191,16 +191,22 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(Node("TargetPrompt"),
                 "precondition: the Submit reached Target depth (the prompt is only shown while targeting)");
 
-            // Nothing hovered yet: FocusedElement answers the plate
+            // THE FIGURE, not the plate. The owner asked for an arrow on
+            // "the thing you're targeting", and the thing being targeted is
+            // the monster on the battlefield, not its readout at the top of
+            // the screen. EnemyHitArea<n> is the rect over that figure and is
+            // shown only while a target is being picked.
+            //
+            // Nothing hovered yet: FocusedElement answers whatever
             // ConfirmFocus would actually press, which is the first living
-            // enemy. The two read the same helper on purpose, so the arrow
-            // can never point at one plate while Submit hits another.
-            Assert.AreSame(Node("EnemyPlate0").transform, Marker.Target,
-                "with nothing hovered, the marker sits where Submit would land");
+            // enemy. The two read the same rule on purpose, so the arrow can
+            // never point at one enemy while Submit hits another.
+            Assert.AreSame(Node("EnemyHitArea0").transform, Marker.Target,
+                "with nothing hovered, the marker sits on the figure Submit would land on");
 
             yield return Move(1f);
 
-            Assert.AreSame(Node("EnemyPlate1").transform, Marker.Target,
+            Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "and a stick press walks it along the rack");
         }
     }

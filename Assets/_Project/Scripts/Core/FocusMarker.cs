@@ -125,7 +125,7 @@ namespace PrincesPalace
                 return;
             }
 
-            AttachTo(canvas.rootCanvas);
+            AttachTo(canvas);
 
             var canvasRect = (RectTransform)_canvas.transform;
             var box = BoxIn(canvasRect, _target);
@@ -143,10 +143,20 @@ namespace PrincesPalace
             _image.enabled = true;
         }
 
-        // DRAWN ABOVE EVERYTHING, which in uGUI means "last child of the root
-        // canvas" -- there is no z-order to set. Re-asserted on every reparent
-        // rather than once at creation, because a screen that builds a modal
-        // after this marker was created would otherwise draw over it.
+        // DRAWN ABOVE EVERYTHING THE TARGET IS DRAWN WITH, which in uGUI
+        // means "last child of the target's OWN canvas". Re-asserted every
+        // frame rather than once, because a screen that opens a panel after
+        // this marker attached would otherwise draw over it.
+        //
+        // THE TARGET'S NEAREST CANVAS, NOT THE ROOT ONE, and the difference is
+        // not theoretical: FightScreen wraps its whole HUD in
+        // Ui.NestedCanvas("FightHud", 1000) with overrideSorting, so anything
+        // parented to the root canvas draws UNDER all of it however late a
+        // sibling it is. The first capture run caught it -- the Reckoning's
+        // marker reported itself shown, at the right coordinates, and was
+        // nowhere in the picture. Sharing the target's canvas is the rule that
+        // cannot be wrong: a canvas that covers the marker covers the control
+        // it points at too.
         private void AttachTo(Canvas canvas)
         {
             if (ReferenceEquals(_canvas, canvas) && _rect.parent == canvas.transform)
