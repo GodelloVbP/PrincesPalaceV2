@@ -61,6 +61,25 @@ namespace PrincesPalace
                 return;
             }
 
+            // CAPTURED BEFORE base.Process() RUNS -- phase 4 item 4's own
+            // mixed-input pass found that this is load-bearing, not
+            // defensive. PointerInputModule.DeselectIfSelectionChanged nulls
+            // the CURRENT selection the instant a click's `currentOverGo`
+            // resolves to anything without an ISelectHandler ancestor
+            // matching it -- and that includes a click that lands on
+            // nothing (a background click, section 3/6's own "(a)") AND a
+            // click on a Navigation.Mode.None Selectable (the stepper
+            // buttons, section 7's own contract: "does nothing to the row's
+            // own remembered focus"). Mode.None only stops the CLICKED
+            // target from being reselected (Selectable.OnPointerDown's own
+            // guard) -- it does nothing to stop the PREVIOUS selection from
+            // being deselected first, which is a real gap the mouse-only
+            // and mixed-input tests actually exercising a raycasted click
+            // (rather than calling a handler directly) were the first to
+            // catch. See ReselectIfOutsideDeclaredSet's own comment for how
+            // this is used.
+            var selectedBeforeDispatch = EventSystem.current.currentSelectedGameObject;
+
             base.Process();
 
             // Empty stack (no context registered anywhere -- e.g. Main Menu
@@ -104,7 +123,7 @@ namespace PrincesPalace
             // MoveFocus/ConfirmFocus -- those stay exclusively behind
             // IsNonSelecting's branch above, decided from topAtStart same as
             // ever.
-            ReselectIfOutsideDeclaredSet(Contexts?.Top);
+            ReselectIfOutsideDeclaredSet(Contexts?.Top, selectedBeforeDispatch);
         }
 
         // Five steps, nothing else runs this call -- plan section 3.
@@ -156,12 +175,34 @@ namespace PrincesPalace
         // Cancel that popped the stack down to nothing lands here too: null
         // is a legitimate answer, meaning nothing declares a set to enforce
         // right now, not an error.
-        private void ReselectIfOutsideDeclaredSet(NavContext top)
+        private void ReselectIfOutsideDeclaredSet(NavContext top, GameObject selectedBeforeDispatch)
         {
             if (top == null) return;
 
             var current = EventSystem.current.currentSelectedGameObject;
             if (current != null && top.ContainsSelectable(current)) return;
+
+            // PREFER WHAT WAS SELECTED A MOMENT AGO, if the SAME top context
+            // still declares it -- item 4's own mixed-input finding (see
+            // Process()'s own comment on `selectedBeforeDispatch`). This is
+            // deliberately narrower than "never let selection go stale":
+            // `top.ContainsSelectable` is false for a node that belonged to
+            // a context this frame just POPPED OUT FROM UNDER (Debug menu's
+            // own Cancel-closes-and-reselects-the-gate case,
+            // DebugMenuGamepadNavigationTests' own pinned claim, still true
+            // here -- the popped context's last-selected row is never a
+            // member of the NEW top's declared set) or PUSHED fresh over
+            // (a modal's own entry is chosen by ResolveSelection below, not
+            // by whatever the screen underneath happened to have selected).
+            // It only fires for the one case those two are not: the SAME
+            // context, still top, whose current selection was nulled by a
+            // click that never replaced it with anything -- a background
+            // click, or a click on a Navigation.Mode.None Selectable.
+            if (selectedBeforeDispatch != null && top.ContainsSelectable(selectedBeforeDispatch))
+            {
+                EventSystem.current.SetSelectedGameObject(selectedBeforeDispatch);
+                return;
+            }
 
             // NOT guarded on `resolved != null` -- a null resolution is a
             // legitimate answer here too (section 6's "screen-level

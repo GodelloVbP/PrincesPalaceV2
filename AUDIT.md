@@ -2973,3 +2973,141 @@ whole panel regardless of visibility, so a row hidden behind a panel it just ope
 as "declared" and the rule stays silent. `ShowSpells` now selects explicitly on both edges;
 `ShowPack`'s identical, older gap is left alone -- untested today, and fixing an unrequested
 control is a separate change from wiring this one.
+
+## Findings from gamepad-navigation phase 4, items 3 and 4, 2026-09-18
+
+### 162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone
+
+`JourneyToFirstFightMouseTests.MainMenuToNewGame_ThroughTheHubGateAndTheDraft_ReachesTheFirstFight_MouseOnly`
+("clicking the gate never opened the relic draft on a run that has not drafted one yet", expected
+`True`, got `False`) failed in every one of four batched runs this pass tried against it (three
+full `tools/run_tests_parallel.ps1` runs and one `tools/test.ps1 run`, 341 tests) --
+`JourneyHubToTalentsMouseTests.ATier1Orb_BeforeItsRootIsUnlocked_IsRefused_BackReturnsToTheHub_MouseOnly`
+("clicking TalentsBuilding should load the Talents scene", expected `"Talents"`, got `"Hub"`)
+joined it in two of those four. Both are new files this pass added (item 3, the mouse-only
+regression); nothing pre-existing is affected.
+
+**Not reproducible in a small slice.** Both classes pass reliably, every time, run alone or as
+part of the full ten-class new-test slice (`tools/test.ps1 <the ten new classes>`) -- confirmed
+five separate times across this investigation. The failure needs a LARGE batch to appear at all,
+but not a specific one: the fourth reproduction (`tools/test.ps1 run`, 341 tests, not the full
+1240-test gate) is what disproves this investigation's own earlier, narrower theory --
+`JourneyToFirstFightMouseTests` failed there with `JourneySystemMenuToMainMenuTests` (ending on
+the Main Menu, no run, no draft) as its immediate predecessor, not `JourneyHubToShopTests`
+(ending on the Map, mid-run) as in every earlier reproduction. Whatever this is, it is not tied to
+one specific predecessor's own leftover state.
+
+**Two mechanism-level fixes landed along the way, neither of which resolved this** (kept because
+both are real, independently-verified fixes -- see `NavigationInputModule.cs`'s own comments and
+segment 3/4/(a)/(e) of `JourneyMixedInputTests.cs`):
+1. `NavigationInputModule.ReselectIfOutsideDeclaredSet` now prefers the selection captured before
+   `base.Process()` runs, when the SAME top context still declares it, instead of always falling
+   back to `NavContext.Entry` -- fixed a genuine, previously-unproven regression (a mouse click on
+   a `Navigation.Mode.None` stepper button deselects the row behind it, per
+   `PointerInputModule.DeselectIfSelectionChanged`'s own `ISelectHandler`-based check, which
+   `Navigation.Mode.None` does nothing to prevent). See #163.
+2. `JourneyFixture.RootCanvas()` now scopes its `Canvas` lookup to `SceneManager.GetActiveScene()`
+   rather than a bare `isRootCanvas` check, ruling out a theorised stale-canvas read from another
+   fixture's own hand-built, `Object.Destroy`-deferred canvas. Applied, verified harmless, did not
+   change the failure.
+
+**Ruled out, not merely suspected:**
+- Not a settle-time-after-scene-load race in the simple sense: raising the post-`TakeOverInput`
+  real-time wait from 0.2s to 0.5s, every mouse test, every scene load, made no difference across
+  two full-gate runs -- if the true cause were "not enough real time before the click," more of it
+  should have helped at least partially, and it changed nothing at all.
+- Not `RunManager` state leaking across tests: `RunManager.ResetForTests()` only clears the
+  cached map (`Forget()`); run/draft state lives on `SaveSlotManager.CurrentSave`, and every
+  journey test (this one included) opens its own throwaway `SaveSystem.RootOverride` directory
+  with no pre-existing save file, so a prior test's run cannot be read back by this one.
+- Not `Navigation.LoadOverride` left stubbed by an earlier fixture: had that been true,
+  `SaveSlotManager.EnterSlot(0)`'s own `Navigation.Go(Hub)` call would have been a no-op and this
+  file's own `WaitForScene("Hub", ...)` would have timed out with a DIFFERENT message ("clicking
+  an empty slot should enter it and load the Hub") before ever reaching the gate click -- every
+  observed failure is the LATER assertion, so the Hub scene did load.
+- Not a specific predecessor's leftover state (see above) -- the one candidate this investigation
+  had most confidence in until the fourth reproduction contradicted it.
+
+**A structural difference worth naming, not yet confirmed as the cause.**
+`JourneyToFirstFightMouseTests` is the only one of the nine mouse files that reaches the Hub
+through a click-triggered scene load rather than a top-level one: its Hub load happens as a side
+effect of `SaveSlotController.Choose(0)`'s own `EnterSlot(0) -> Navigation.Go(Hub) ->
+SceneManager.LoadScene(Hub, Single)` (SYNCHRONOUS, per `Navigation.Go`'s own implementation),
+fired from inside the SAME `EventSystem.Update()` call this suite's own scripted `Click` on
+Slot0Button drives -- every other mouse file calls `SceneManager.LoadSceneAsync` directly at its
+own top level instead. `JourneyHubToTalentsMouseTests` does not share this shape (it loads Hub
+directly), which is consistent with it failing less often (2 of 4) than
+`JourneyToFirstFightMouseTests` (4 of 4) if this really is the mechanism, but that difference in
+RATE is not proof by itself.
+
+**Left open rather than forced.** Both tests assert real, correct production behaviour (verified
+by their own reliable passes in every small-slice configuration tried), so weakening either
+assertion to paper over an unreproduced-in-isolation symptom would hide a real claim behind a fake
+pass -- the standing rule this project's own `docs/CODE_STANDARDS.md` states. Whoever picks this
+up next: start from the synchronous-load-from-inside-a-click theory above (it is the one concrete,
+falsifiable difference this investigation found and did not have time to test in isolation -- e.g.
+by rewriting this one file's Hub transition to poll for scene readiness after the click rather
+than assuming `WaitForScene` plus a flat settle is enough), and reproduce with
+`tools/test.ps1 run` (341 tests, ~140s) rather than the full ~450s gate -- it reproduces there too
+and is far cheaper to iterate against.
+
+### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change
+
+Found writing item 4's own mixed-input pass, rule (e): `OptionsController.cs`'s own comment on
+`stepPrev`/`stepNext` states "does nothing to the row's own remembered focus, since
+`OnPointerDown` never calls `SetSelectedGameObject` for a `None`-mode Selectable" -- true as far
+as it goes, and incomplete. `Navigation.Mode.None` stops the CLICKED button from being reselected;
+it does nothing to stop `PointerInputModule.DeselectIfSelectionChanged` from nulling whatever WAS
+selected, since that check walks up from the clicked object looking for any `ISelectHandler`
+ancestor (a bare `Selectable`/`Button` implements it regardless of its own `Navigation.Mode`) and
+compares that against the current selection -- a stepper button, or a plain background click that
+hits nothing declared at all, both null the row/building that was selected a moment ago. Before
+this pass, `NavigationInputModule.ReselectIfOutsideDeclaredSet`'s only answer to a null selection
+was `NavContext.ResolveSelection()` (`RememberedId ?? Entry`), and grepped, `NavContext.Remember`
+is called nowhere in this project -- so the fallback was always `Entry`, silently, meaning a
+stepper click (or a background click) drops focus to the screen's declared entry rather than
+leaving it where it was.
+
+**Not `NavContext.RememberedId`'s job either.** That field is the CROSS-VISIT case (a modal
+reopened later restoring what it last had selected, which nothing in this project wires up yet --
+`DebugMenuGamepadNavigationTests`' own pinned claim, "HubController never calls
+`NavContext.Remember`, so there is no per-node memory to restore, only Entry," is about exactly
+that case, a Cancel that POPS a context, and stays true and unaffected by this fix). This bug is
+the SAME-VISIT case: the top context never changed, only a click's own deselect-without-replace
+ran through it.
+
+**Fixed**: `NavigationInputModule.Process` now captures `EventSystem.current.currentSelectedGameObject`
+BEFORE `base.Process()` runs, and `ReselectIfOutsideDeclaredSet` prefers that captured value over
+`Entry` whenever the SAME top context still declares it as one of its own Selectables -- which is
+true only for the same-context click case, never for a context that was just pushed or popped
+(the previous selection belongs to a DIFFERENT context in both of those, so `ContainsSelectable`
+answers false and `Entry` still runs, matching `DebugMenuGamepadNavigationTests`' own claim).
+Proven at the journey level by `JourneyMixedInputTests.cs` rules (a), (b) and (e) -- a background
+click on the Hub, a click through a System Menu modal, and a mouse click on an Options stepper
+button, each restoring the pre-click selection in the same frame rather than falling back to
+Entry.
+
+### 164. A scripted mouse cannot reliably reach a dot scrolled out of the reward track's own masked viewport
+
+Found writing item 3's own mouse-only regression for phase 4 item 2 segment 8 (the reward track).
+`RewardTrackController.Input.cs`'s `WireNodes` wires each dot's `HoverIndex` to call `ScrollTo`
+on pointer-enter, the mouse's own equivalent of the pad's `SelectIndex`-driven reveal -- but
+`RewardTrackLayout`'s own fly-in on open centres the rail on the character's CURRENT level, while
+the Rail's own declared SELECTED entry stays `FirstLevel` regardless (a pad `Move` steps the
+graph, not the viewport, so it needs no dot to be on screen at all). A scripted
+`RectTransformUtility.WorldToScreenPoint` aimed at a dot far from the currently-shown region
+computes a screen point outside `TrackViewport`'s own masked (`RectMask2D`) area, and the pointer
+never reaches it -- `content.anchoredPosition.x` simply never moves from wherever the fly-in left
+it, confirmed by trying both a click (`Press`) and a bare hover (`HoverIndex`) at the identical,
+unchanged wrong value.
+
+**Worked around, not fixed**: `JourneyVictoryToRewardScreensMouseTests.ReachingTheRewardTrack_...`
+hovers a dot beside the character's own CURRENT level (inside the fly-in's own visible window)
+instead of `FirstLevel + 1`, which is genuinely reachable by a real pointer and still proves
+`ScrollTo` fires on hover. Left open rather than claimed as reachable: a scripted mouse in this
+harness cannot yet drag the rail's own ribbon-seek (`BarSlider`-based, `RewardTrackController.
+WireRibbon`) to bring an arbitrary far level into view first, which is what a real player would
+do -- nothing production-facing is wrong here, this is a test-harness capability gap, matching
+`PartyGamepadVisualCaptureTests`' own already-stated hedge on the same raycast technique
+("whether a scripted pointer resolves against this scene's ScreenSpaceCamera canvas is not this
+capture's own claim").
