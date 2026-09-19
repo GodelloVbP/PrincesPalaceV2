@@ -858,18 +858,15 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             // Sylvan's root: a CHANCE, on this landed hit, to root the
-            // target -- StatusEffectType.Rooted via StatusEffects.Apply
-            // directly, the same status-list entry point ApplyChilled itself
-            // sits on top of. No speed bookkeeping to mirror here (Chilled's
-            // whole complication), so this needs no ApplyRooted wrapper --
-            // Apply is already the correct, complete call. `actor` is the
-            // Source so a rooted enemy's forfeited-turn message and any
-            // future "who rooted you" query can attribute it, matching
-            // Poison/Provoked/every other sourced status in this file.
+            // target -- through ApplyStatusTo, the one status seam, the same
+            // way the chill above reaches ApplyChilled. `actor` is the Source
+            // so a rooted enemy's forfeited-turn message and any future "who
+            // rooted you" query can attribute it, matching Poison/Provoked/
+            // every other sourced status in this file.
             int rootChance = effects.Best(ModifierEffectType.RootChancePercent);
             if (rootChance > 0 && target.IsAlive && RollPercent(rootChance))
             {
-                StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted,
+                ApplyStatusTo(target, StatusEffectType.Rooted,
                     magnitude: 0, turns: FightTuning.RootOnHitTurns, source: actor);
                 AppendMessage($"{target.Name} is rooted in place!");
             }

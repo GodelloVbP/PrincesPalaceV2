@@ -106,13 +106,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // A ward's clock runs at the END of the wearer's own turn and does not
         // count the turn it was raised on (StatusEffects' own WARDS header),
         // and this is the only thing in the game that knows which turn that
-        // was. Cleared by OpenTurnFor and NOT by ReopenTurnFor, because an
-        // extra action is the same turn (AUDIT #113) and a ward raised before
-        // a trample must still be exempt from the end of it.
-        //
-        // Holds the ActiveStatus itself rather than the wearer: two pools of
-        // the same size on the same clock are told apart by nothing else.
-        private readonly HashSet<ActiveStatus> _wardsRaisedThisTurn = new HashSet<ActiveStatus>();
+        // was. The set itself is _statusesAppliedThisTurn, declared with the
+        // ApplyStatusTo seam in FightSession.Riders.cs -- a ward is no longer
+        // the only thing that needs the exemption.
 
         // THE ONE PLACE A WARD GOES UP. Every ward in the game -- the five
         // skills through WardOne, and the three relic wards -- comes through
@@ -121,21 +117,59 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RaiseWard(CombatantState wearer, int points, int turns, CombatantState source)
         {
             var ward = StatusEffects.ApplyWard(wearer.Statuses, points, turns, source);
-            if (ward != null) _wardsRaisedThisTurn.Add(ward);
+            if (ward != null) _statusesAppliedThisTurn.Add(ward);
         }
 
-        // Counts the ending actor's wards down and says so when one lapses.
-        // Called from AdvanceAfterAction, which is the end of a turn.
-        private void TickWardsAtTurnEnd(CombatantState actor)
+        // Counts the ending actor's turn-end statuses down and says what
+        // lapsed. Called from AdvanceAfterAction, which is the end of a turn.
+        //
+        // It used to be wards only. Protect, Vulnerable, Chilled, Rooted and
+        // Marked joined that clock with plan D1, so this is where five more
+        // statuses now expire -- and where the one teardown any of them has
+        // (Chilled's speed malus) is settled.
+        private void TickStatusesAtTurnEnd(CombatantState actor)
         {
             if (actor == null) return;
 
-            int expired = StatusEffects.TickWardsAtTurnEnd(actor, _wardsRaisedThisTurn);
-            if (expired <= 0) return;
+            var expired = StatusEffects.TickAtTurnEnd(actor, _statusesAppliedThisTurn);
+            if (expired.Count == 0) return;
 
-            AppendMessage(expired == 1
-                ? $"The shield around {actor.Name} fades."
-                : $"{expired} shields around {actor.Name} fade.");
+            // A SHIELD SAYS SOMETHING DIFFERENT, and says it by the count
+            // rather than by name -- the wording the ward clock has always
+            // used, kept because "Shawn's Shielded wears off" is not a
+            // sentence about a shield running out.
+            int shields = 0;
+            foreach (var type in expired)
+            {
+                if (type == StatusEffectType.Shielded) shields++;
+            }
+
+            if (shields > 0)
+            {
+                AppendMessage(shields == 1
+                    ? $"The shield around {actor.Name} fades."
+                    : $"{shields} shields around {actor.Name} fade.");
+            }
+
+            // CHILLED'S MALUS IS A RECOMPUTE, NOT A REVOKE. The malus is booked
+            // in FightSession.SpeedBuffs' dictionary rather than on the status,
+            // and Chilled stacks -- one instance lapsing out of three must
+            // leave the other two slowing. RefreshChilledSpeed revokes and
+            // re-grants from the CURRENT sum, so the same call covers "some
+            // went" and "the last one went" and there is no "was that the last
+            // one?" question for a future edit to get wrong.
+            if (expired.Contains(StatusEffectType.Chilled))
+            {
+                RefreshChilledSpeed(actor);
+            }
+
+            // DISTINCT, because statuses stack -- see the same loop at the turn
+            // START in FightSession.Riders.TickStatuses.
+            foreach (var type in expired.Distinct())
+            {
+                if (type == StatusEffectType.Shielded) continue;
+                AppendMessage($"{actor.Name}'s {type} wears off.");
+            }
         }
 
         // What the wards on a combatant do to one incoming hit: absorb it, pay
@@ -373,7 +407,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (regenPercent <= 0 || wearer.MaxHealth <= 0) return;
 
             int regenTurns = caster.Talents.Threshold(TalentEffectType.WardAlsoAppliesRegen);
-            StatusEffects.Apply(wearer.Statuses, StatusEffectType.Regen,
+            ApplyStatusTo(wearer, StatusEffectType.Regen,
                 System.Math.Max(1, wearer.MaxHealth * regenPercent / 100),
                 System.Math.Max(1, regenTurns), caster);
         }
@@ -506,7 +540,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 }
                 else if (appliesVulnerable)
                 {
-                    StatusEffects.Apply(enemy.Statuses, StatusEffectType.Vulnerable,
+                    ApplyStatusTo(enemy, StatusEffectType.Vulnerable,
                         ShatterVulnerablePercent, ShatterVulnerableTurns, caster);
                     summary.Append(" It is left wide open!");
                 }
@@ -519,7 +553,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // rule is a flag -- the talent says THAT it applies Vulnerable, and one
         // consistent strength for it keeps the node's own text honest.
         private const int ShatterVulnerablePercent = 30;
-        private const int ShatterVulnerableTurns = 2;
+
+        // ONE affected turn, and it was authored 2 until plan D1 moved
+        // Vulnerable onto the turn-end clock. Under the old turn-start
+        // countdown a 2 exposed the target for exactly one of its turns,
+        // because the entry was removed at the start of the second one before
+        // its action ever happened. The number changed so the behaviour would
+        // not; StatusDurationMigrationTests pins that it did not.
+        private const int ShatterVulnerableTurns = 1;
 
         private CombatantState RandomLivingEnemy()
         {
@@ -575,7 +616,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // two-turn clocks; a gift is still the old shape, so it
                     // now says so with its own number instead of borrowing
                     // one that no longer means what it used to.
-                    StatusEffects.Apply(ally.Statuses, StatusEffectType.Empowered,
+                    ApplyStatusTo(ally, StatusEffectType.Empowered,
                         System.Math.Max(1, percent), GiftFuryDurationTurns, caster);
                     AppendMessage($"{caster.Name} winds {ally.Name} up - their next swing lands {percent}% harder.");
                     break;
@@ -616,7 +657,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Lamb's own bookkeeping and costs nothing to leave standing for a
             // party with no Lamb in it, where this one decides whether a ward
             // ages at all. See its own declaration.
-            _wardsRaisedThisTurn.Clear();
+            _statusesAppliedThisTurn.Clear();
 
             if (actor.SelfWardGraceTurns > 0)
             {
@@ -961,7 +1002,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Duration 1 is nominal -- Provoked is spent by the turn it
                 // redirects rather than counted down, so the number is only there
                 // to satisfy ActiveStatus' own floor.
-                StatusEffects.Apply(victim.Statuses, StatusEffectType.Provoked, reduction, 1, actor);
+                ApplyStatusTo(victim, StatusEffectType.Provoked, reduction, 1, actor);
                 count++;
             }
 

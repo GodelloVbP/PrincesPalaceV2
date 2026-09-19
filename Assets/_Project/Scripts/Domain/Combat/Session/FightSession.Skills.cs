@@ -1047,7 +1047,20 @@ namespace PrincesPalace.Domain.Combat.Session
                     int total = 0;
                     foreach (var instance in skill.DamageInstances)
                     {
-                        total += System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
+                        // THE ELEMENTAL RIDER TOO. This branch multiplied by
+                        // tier and spell scaling only until 2026-09-20, while
+                        // ResolveDamageInstances applied ElementalDamagePercent
+                        // as well -- so a caster wearing a +Fire item was shown
+                        // one figure on the power row and dealt another, and
+                        // the two disagreed silently because nothing compared
+                        // them. The arithmetic here is deliberately spelled the
+                        // same way the resolution path spells it, in the same
+                        // order, so the two round identically;
+                        // PreviewPurityTests compares them rather than trusting
+                        // that they look alike.
+                        float elemental = 1f + ElementalDamagePercentFor(actor, instance.type) / 100f;
+                        total += System.Math.Max(1,
+                            Rounding.AwayFromZero(instance.amount * multiplier * elemental));
                     }
                     return total;
                 }
@@ -1138,7 +1151,14 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!skill.AppliesStatus.HasValue || recipient == null || !recipient.IsAlive) return;
 
             var type = skill.AppliesStatus.Value;
-            StatusEffects.Apply(recipient.Statuses, type, skill.StatusMagnitude, skill.StatusDuration, caster);
+
+            // THROUGH THE SEAM, not through StatusEffects.Apply. This line read
+            // `StatusEffects.Apply(...)` until 2026-09-20 and was the latent
+            // half of plan D6: a content row authoring `appliesStatus: Chilled`
+            // would have put the badge up and slowed nobody, because
+            // ApplyChilled is the only path that registers the speed malus.
+            // Winter's Rebuke is the first row that authors one.
+            ApplyStatusTo(recipient, type, skill.StatusMagnitude, skill.StatusDuration, caster);
 
             bool isBeneficial = type == StatusEffectType.Regen || type == StatusEffectType.Protect;
             AppendMessage(isBeneficial

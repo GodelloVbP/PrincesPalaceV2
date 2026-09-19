@@ -329,11 +329,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // Speed stays a plain int the whole way through.
         //
         // NO PER-SOURCE KEYING NEEDED for Chilled specifically, unlike every
-        // relic above: StatusEffects.Apply already guarantees at most ONE
-        // Chilled entry per combatant (refresh-not-stack, the same rule
-        // every status in this game follows), so StatusEffectType.Chilled
-        // itself is a sufficient dictionary key -- there is never a second
-        // "instance" of Chilled to distinguish it from.
+        // relic above -- but NOT because there is only one of it any more.
+        // Chilled stacks as of 2026-09-20, so a combatant really can be
+        // carrying three. The dictionary still holds ONE entry keyed on
+        // StatusEffectType.Chilled, and that entry carries the SUM of the live
+        // instances, because Speed is a single number and the thing the
+        // dictionary exists to do is reverse it exactly. Splitting the malus
+        // across three keys would mean three roundings of a percent-of-true-
+        // base against a base each one changed, which is how the arithmetic
+        // stops reversing exactly. StatusEffects.MagnitudeOf is the sum.
         //
         // GRANTED WITH turns: 0 (-> TurnsLeft -1, "until revoked"), NOT the
         // status's own duration. Duration is already owned by
@@ -355,26 +359,33 @@ namespace PrincesPalace.Domain.Combat.Session
             // base is simpler than reasoning about a delta.
             RevokeSpeedBuff(target, StatusEffectType.Chilled);
 
-            var chilled = target.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Chilled);
-            if (chilled == null) return 0;
+            // THE SUM, not the first entry. Reading FirstOrDefault here would
+            // report a third of the slow for a target carrying three chills and
+            // would look entirely correct doing it -- the badge would say 75%
+            // and the schedule would run at 25% off.
+            int magnitude = StatusEffects.MagnitudeOf(target, StatusEffectType.Chilled);
+            if (magnitude <= 0) return 0;
 
-            return GrantSpeedMalusPercent(target, StatusEffectType.Chilled, chilled.Magnitude, turns: 0);
+            return GrantSpeedMalusPercent(target, StatusEffectType.Chilled, magnitude, turns: 0);
         }
 
-        // Applies (or refreshes) Chilled AND pushes its Speed effect through
-        // in the same call -- StatusEffects.Apply on its own is pure Domain
-        // and cannot touch Speed, so every caller that wants Chilled to
-        // actually slow anyone goes through here rather than calling
-        // StatusEffects.Apply directly and risking a forgotten follow-up.
-        // Returns the (non-positive) amount of Speed actually taken, the
-        // same convention GrantSpeedMalusPercent itself returns, so a
-        // caller can gate a message on "did this actually do anything" the
-        // same way LuckyDeckSlow always could.
+        // Adds a Chilled instance AND pushes its Speed effect through in the
+        // same call -- StatusEffects.Apply on its own is pure Domain and cannot
+        // touch Speed, so every caller that wants Chilled to actually slow
+        // anyone goes through here. It is reached through ApplyStatusTo's
+        // dispatch (FightSession.Riders.cs) rather than called directly by
+        // content paths, which is what stops the next status with bookkeeping
+        // repeating the bug at a new call site.
+        //
+        // Returns the (non-positive) amount of Speed actually taken, the same
+        // convention GrantSpeedMalusPercent itself returns, so a caller can
+        // gate a message on "did this actually do anything" the same way
+        // LuckyDeckSlow always could.
         private int ApplyChilled(CombatantState target, int magnitude, int turns, CombatantState source)
         {
             if (target == null || magnitude <= 0) return 0;
 
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, magnitude, turns, source);
+            RecordStatus(target, StatusEffectType.Chilled, magnitude, turns, source);
             return RefreshChilledSpeed(target);
         }
 

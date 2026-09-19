@@ -46,53 +46,186 @@ namespace PrincesPalace.Domain.Combat
     // GrantSpeedMalusPercent's.
     public static class StatusEffects
     {
-        // A fresh application of a type ALREADY on the list refreshes
-        // duration and takes the stronger magnitude, rather than stacking a
-        // second entry. Additive stacking of two Poisons or two Protects is
-        // exactly the silent compounding this project's other systems
-        // (ScalingProfile's additive-not-multiplicative rule, SpeedScale's
-        // hard ceiling) go out of their way to avoid — re-casting the same
-        // status should never be strictly better than casting it once.
+        // APPLIES A STATUS, and what a second application does is
+        // StackPolicyOf's answer, not this method's opinion.
         //
-        // REFUSES Shielded OUTRIGHT. A ward is a POOL of shield points and
-        // obeys the opposite application rule to every other status: wards
-        // STACK, as separate entries, where this method's whole job is to
-        // merge a second application into the first. Routing a ward through
-        // here would silently turn two 20-point shields into one, keeping the
-        // longer duration into the bargain. Throwing is the tier-1 version of
-        // that rule (CODE_STANDARDS section 9) -- the API cannot express the
-        // mistake -- and it costs nothing, because ApplyWard is two lines.
-        public static void Apply(List<ActiveStatus> statuses, StatusEffectType type, int magnitude, int turns, CombatantState source = null)
+        // IT USED TO BE ONE RULE FOR EVERY MEMBER: merge, taking the stronger
+        // magnitude and the longer duration, on the argument that additive
+        // stacking is the silent compounding this project's other systems
+        // (ScalingProfile's additive-not-multiplicative rule, SpeedScale's
+        // hard ceiling) go out of their way to avoid. The owner's answer on
+        // 2026-09-20 was the opposite -- "the DoTs and everything can stack of
+        // course" -- and it is the better model for the statuses whose
+        // magnitude is a quantity: three poisons from three casters ARE three
+        // poisons, each with its own strength, its own remaining ticks and its
+        // own source, and a player can add them up. See StackingPolicy for
+        // where the line falls and why a restriction stays on the old rule.
+        //
+        // RETURNS THE ENTRY it applied or refreshed. The caller needs it for
+        // the same reason ApplyWard's caller does: a status on the AtTurnEnd
+        // clock does not age at the end of the turn it was applied during, and
+        // the only way to say "this one, not that one" about two instances
+        // with the same magnitude and the same clock is to hold the entry.
+        //
+        // REFUSES Shielded OUTRIGHT, still. Wards stack like everything else
+        // on the Stack side now, but ApplyWard stays their one entry point for
+        // a reason this method cannot serve: it is the only place that knows a
+        // ward of non-positive points is a no-op rather than an entry.
+        // Throwing is the tier-1 version of that rule (CODE_STANDARDS section
+        // 9) -- the API cannot express the mistake -- and it costs nothing.
+        public static ActiveStatus Apply(List<ActiveStatus> statuses, StatusEffectType type, int magnitude, int turns, CombatantState source = null)
         {
             if (type == StatusEffectType.Shielded)
             {
                 throw new ArgumentException(
-                    "A ward is a shield POOL and wards STACK -- call StatusEffects.ApplyWard, which adds "
-                    + "an entry instead of merging into whatever is already there.", nameof(type));
+                    "A ward is a shield POOL with its own no-op rule -- call StatusEffects.ApplyWard, which "
+                    + "is the one place a shield goes up.", nameof(type));
             }
 
-            var existing = statuses.FirstOrDefault(s => s.Type == type);
-            if (existing != null)
+            if (StackPolicyOf(type) == StackingPolicy.Refresh)
             {
-                existing.Magnitude = Math.Max(existing.Magnitude, magnitude);
-                existing.TurnsRemaining = Math.Max(existing.TurnsRemaining, Math.Max(1, turns));
-
-                // Re-points the credit at whoever most recently paid for it,
-                // but never CLEARS it: a source-less refresh (an enemy's
-                // claws re-applying a Poison the mage originally landed) must
-                // not quietly disown a status the mage's engine is being paid
-                // for. Losing the attribution silently is the failure mode
-                // worth guarding, since nothing about it would look wrong —
-                // the wool income would just stop.
-                if (source != null)
+                var existing = statuses.FirstOrDefault(s => s.Type == type);
+                if (existing != null)
                 {
-                    existing.Source = source;
-                }
+                    existing.Magnitude = Math.Max(existing.Magnitude, magnitude);
+                    existing.TurnsRemaining = Math.Max(existing.TurnsRemaining, Math.Max(1, turns));
 
-                return;
+                    // Re-points the credit at whoever most recently paid for it,
+                    // but never CLEARS it: a source-less refresh (an enemy's
+                    // claws re-applying a status the mage originally landed) must
+                    // not quietly disown a status the mage's engine is being paid
+                    // for. Losing the attribution silently is the failure mode
+                    // worth guarding, since nothing about it would look wrong —
+                    // the wool income would just stop.
+                    if (source != null)
+                    {
+                        existing.Source = source;
+                    }
+
+                    return existing;
+                }
             }
 
-            statuses.Add(new ActiveStatus(type, magnitude, turns, source));
+            var added = new ActiveStatus(type, magnitude, turns, source);
+            statuses.Add(added);
+            return added;
+        }
+
+        // WHAT A SECOND APPLICATION DOES, per member. Total by construction --
+        // the listed arm is the closed set of restrictions and single-spend
+        // tokens, and the default arm is everything whose magnitude is a
+        // quantity, so a new damaging or percentage member joins the stacking
+        // side without an edit here.
+        // StatusEffectsTests.EveryStatusTypeAnswersStackPolicy walks
+        // Enum.GetValues so neither arm can go stale silently.
+        //
+        // THE LINE IS WHAT THE MAGNITUDE MEANS, not how old the status is:
+        //
+        //   Refresh -- the status is a binary restriction (Stun, Feared,
+        //   Rooted, Provoked) or a token spent whole on one occurrence
+        //   (Empowered, Marked). "Two of it" has no meaning beyond duration:
+        //   a turn cannot be skipped twice, and Marks.ConsumeMark spends one
+        //   mark whatever is underneath it. Feared is here although it carries
+        //   a percent, because that percent is Fear.VulnerablePercent -- one
+        //   authored constant whose own header exists to stop two appliers
+        //   disagreeing about it -- and summing it across instances would be a
+        //   balance change nobody asked for.
+        //
+        //   Stack -- the magnitude is a quantity (Poison, Regen, Shielded) or
+        //   an additive percentage (Protect, Vulnerable, Chilled) a player can
+        //   add up, and DamageTakenMultiplier and WardPoints already sum across
+        //   entries today.
+        public static StackingPolicy StackPolicyOf(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Stun:
+                case StatusEffectType.Feared:
+                case StatusEffectType.Rooted:
+                case StatusEffectType.Provoked:
+                case StatusEffectType.Empowered:
+                case StatusEffectType.Marked:
+                    return StackingPolicy.Refresh;
+                default:
+                    return StackingPolicy.Stack;
+            }
+        }
+
+        // EVERY LIVE INSTANCE of one type on one combatant, in the order they
+        // were applied. ONE WALK, so a magnitude reader, the HUD badge and a
+        // consumer cannot disagree about what is on the board -- the same
+        // argument WardsInDrainOrder already makes for the ward subset.
+        public static IEnumerable<ActiveStatus> InstancesOf(CombatantState combatant, StatusEffectType type)
+        {
+            if (combatant == null) yield break;
+
+            foreach (var status in combatant.Statuses)
+            {
+                if (status.Type == type) yield return status;
+            }
+        }
+
+        // THE EFFECTIVE MAGNITUDE of one type: the sum of its live instances,
+        // 0 for a type the combatant does not carry.
+        //
+        // Every caller that used to read FirstOrDefault(...)?.Magnitude wants
+        // this instead. Reading the first instance of three is the exact bug
+        // stacking introduces, and it is a quiet one -- it reports a third of
+        // the slow, a third of the poison, and looks entirely correct doing it.
+        public static int MagnitudeOf(CombatantState combatant, StatusEffectType type)
+        {
+            int total = 0;
+            foreach (var status in InstancesOf(combatant, type)) total += status.Magnitude;
+            return total;
+        }
+
+        // ONE TYPE'S WHOLE STATE ON ONE COMBATANT, for a reader that draws one
+        // badge however many instances are underneath it.
+        //
+        // Deliberately the same shape as WardSummary, which solved this exact
+        // problem for the one status that already stacked. Wards keep their own
+        // summary rather than folding into this one because their badge answers
+        // a different question -- "how much is left", not "how much longer" --
+        // and NeverExpires has no analogue for anything else.
+        public readonly struct StatusSummary
+        {
+            public readonly StatusEffectType Type;
+
+            // The sum of the live instances' magnitudes: the poison per turn,
+            // the percent of slow, the points of regen.
+            public readonly int Magnitude;
+
+            public readonly int Instances;
+
+            // Turns left on the instance that lapses first -- the next moment
+            // the number above changes on its own.
+            public readonly int SoonestTurns;
+
+            public bool Any => Instances > 0;
+
+            public StatusSummary(StatusEffectType type, int magnitude, int instances, int soonestTurns)
+            {
+                Type = type;
+                Magnitude = magnitude;
+                Instances = instances;
+                SoonestTurns = soonestTurns;
+            }
+        }
+
+        public static StatusSummary SummariseStatus(CombatantState combatant, StatusEffectType type)
+        {
+            int magnitude = 0;
+            int instances = 0;
+            int soonest = 0;
+
+            foreach (var status in InstancesOf(combatant, type))
+            {
+                magnitude += status.Magnitude;
+                instances++;
+                if (instances == 1 || status.TurnsRemaining < soonest) soonest = status.TurnsRemaining;
+            }
+
+            return new StatusSummary(type, magnitude, instances, soonest);
         }
 
         // How many of `combatants` carry a status applied by `source`.
@@ -607,40 +740,53 @@ namespace PrincesPalace.Domain.Combat
             return wearer.CurrentHealth - before;
         }
 
-        // COUNTS THE WEARER'S WARDS DOWN BY ONE OF THEIR OWN TURNS, at the
-        // END of that turn, and removes what ran out. Returns how many went,
-        // so the caller can say so only when something happened.
+        // THE END-OF-TURN CLOCK: counts down every AtTurnEnd status the actor
+        // whose turn is ending carries, removes what ran out, and reports the
+        // types that went -- one entry per INSTANCE removed, so a caller can
+        // tell two chills lapsing from one.
         //
-        // `raisedThisTurn` is the entries put up DURING the turn that is
-        // ending, which do not count it -- see this file's WARDS header for
-        // why, and FightSession.Riders for who keeps the set. Null means
-        // "nothing was raised", which is every turn but a few.
+        // IT USED TO BE TickWardsAtTurnEnd, and wards were the only thing on
+        // this clock. They are not any more: Protect, Vulnerable, Chilled,
+        // Rooted and Marked moved here on 2026-09-20 (plan D1) because a
+        // status counted down at turn START is removed before the action of
+        // its last counted turn ever happens -- a "turns: 2" Vulnerable
+        // exposed its bearer for one turn, not two. The whole argument the
+        // WARDS header above makes for a ward's visibility is the same
+        // argument for every standing modifier, so there is now one turn-end
+        // clock rather than a ward exception.
+        //
+        // `appliedThisTurn` is the entries applied DURING the turn that is
+        // ending, which do not count it -- see the WARDS header for why, and
+        // FightSession.Riders for who keeps the set. Null means "nothing was
+        // applied", which is most turns.
         //
         // A ward whose caster holds The Golden Fleece is skipped outright:
         // that capstone is a stopped clock, not a bigger number, so there is
-        // nothing here for it to count.
-        public static int TickWardsAtTurnEnd(CombatantState wearer,
-            ICollection<ActiveStatus> raisedThisTurn = null)
+        // nothing here for it to count. NeverExpires answers false for every
+        // non-ward, so the check costs nothing for the rest.
+        public static IReadOnlyList<StatusEffectType> TickAtTurnEnd(CombatantState wearer,
+            ICollection<ActiveStatus> appliedThisTurn = null)
         {
-            if (wearer == null) return 0;
+            if (wearer == null) return Array.Empty<StatusEffectType>();
 
-            int expired = 0;
+            List<StatusEffectType> expired = null;
 
             // Materialised, because removing from the list below would
             // otherwise invalidate the walk.
-            foreach (var ward in WardsInDrainOrder(wearer))
+            foreach (var status in wearer.Statuses.ToList())
             {
-                if (NeverExpires(ward)) continue;
-                if (raisedThisTurn != null && raisedThisTurn.Contains(ward)) continue;
+                if (DurationClock(status.Type) != StatusClock.AtTurnEnd) continue;
+                if (NeverExpires(status)) continue;
+                if (appliedThisTurn != null && appliedThisTurn.Contains(status)) continue;
 
-                ward.TurnsRemaining--;
-                if (ward.TurnsRemaining > 0) continue;
+                status.TurnsRemaining--;
+                if (status.TurnsRemaining > 0) continue;
 
-                wearer.Statuses.Remove(ward);
-                expired++;
+                wearer.Statuses.Remove(status);
+                (expired ??= new List<StatusEffectType>()).Add(status.Type);
             }
 
-            return expired;
+            return expired ?? (IReadOnlyList<StatusEffectType>)Array.Empty<StatusEffectType>();
         }
 
         // Somebody who has warded this combatant, or null. The engine's
@@ -789,20 +935,74 @@ namespace PrincesPalace.Domain.Combat
                 PoisonDamage == 0 && PoisonAbsorbed == 0 && RegenHealed == 0 && Expired.Count == 0;
         }
 
-        // The statuses whose whole effect IS the turn they land on, and which
-        // are therefore counted down by that turn rather than by the tick that
-        // opens it. See Tick's own comment at the countdown for the argument.
-        private static bool IsSpentByTheTurn(StatusEffectType type) =>
-            type == StatusEffectType.Provoked
-            || type == StatusEffectType.Stun
-            || type == StatusEffectType.Feared;
+        // WHEN THIS STATUS'S COUNTER MOVES. The one table, replacing the
+        // IsSpentByTheTurn predicate plus the separate ward arrangement that
+        // stood before 2026-09-20 -- see StatusClock's own header for what each
+        // family means and what the old two-and-a-half-family shape got wrong.
+        //
+        // THROWS on an unhandled member rather than defaulting. There is no
+        // safe default: falling into AtTick would tick a standing modifier down
+        // a turn early and look like nothing at all, which is precisely the bug
+        // this table exists to close. StatusEffectsTests
+        // .EveryStatusTypeAnswersDurationClock walks Enum.GetValues, so a new
+        // member fails a test rather than a fight.
+        public static StatusClock DurationClock(StatusEffectType type)
+        {
+            switch (type)
+            {
+                // The tick that deals or heals IS the countdown, and an entry
+                // reaching zero goes in that same pass: N authored = N ticks.
+                case StatusEffectType.Poison:
+                case StatusEffectType.Regen:
+                    return StatusClock.AtTick;
+
+                // Spent, not aged. ConsumeStun (Stun and Feared),
+                // ConsumeProvoke, ConsumeEmpowerment each move their own
+                // counter at the moment the effect is actually spent, so the
+                // turn a Stun promised always happens before the count moves.
+                case StatusEffectType.Stun:
+                case StatusEffectType.Feared:
+                case StatusEffectType.Provoked:
+                case StatusEffectType.Empowered:
+                    return StatusClock.AtUse;
+
+                // Standing modifiers, aged at the END of the bearer's turn and
+                // exempt from the end of a turn they were applied during. N
+                // authored = N of the bearer's turns fully covered, the
+                // modifier intact through the final affected action.
+                case StatusEffectType.Protect:
+                case StatusEffectType.Vulnerable:
+                case StatusEffectType.Chilled:
+                case StatusEffectType.Rooted:
+                case StatusEffectType.Marked:
+                case StatusEffectType.Shielded:
+                    return StatusClock.AtTurnEnd;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type,
+                        "StatusEffects.DurationClock has no family for this status -- a duration with no "
+                        + "clock would either never expire or expire a turn early, and both look like "
+                        + "nothing on the badge.");
+            }
+        }
 
         // The start-of-turn tick: Poison and Regen apply their Magnitude
         // through the SAME CombatMath.ApplyDamage/Heal every other source of
-        // damage or healing uses — a status is not a special case the
-        // pipeline has to know about twice — every status's duration counts
-        // down by one of the HOLDER's own turns, and anything that reaches
-        // zero is removed.
+        // damage or healing uses — a status is not a special case the pipeline
+        // has to know about twice — and the AtTick family's duration counts
+        // down by one of the HOLDER's own turns, anything reaching zero being
+        // removed in the same pass.
+        //
+        // ONLY THE AtTick FAMILY. It used to be every status except three
+        // hand-listed exemptions and wards; the AtUse family has no clock at
+        // all and the AtTurnEnd family is counted by TickAtTurnEnd. See
+        // DurationClock.
+        //
+        // EVERY INSTANCE TICKS. Poison stacks (StackPolicyOf), so a holder
+        // carrying three of them takes all three in this one pass and the
+        // report carries their sum -- the loop needed no change for that,
+        // which is the point of summing into locals rather than reading one
+        // entry.
         public static TickReport Tick(CombatantState combatant)
         {
             int poisonDamage = 0;
@@ -811,6 +1011,8 @@ namespace PrincesPalace.Domain.Combat
 
             foreach (var status in combatant.Statuses)
             {
+                if (DurationClock(status.Type) != StatusClock.AtTick) continue;
+
                 if (status.Type == StatusEffectType.Poison && status.Magnitude > 0)
                 {
                     int before = combatant.CurrentHealth;
@@ -832,43 +1034,15 @@ namespace PrincesPalace.Domain.Combat
                     regenHealed += combatant.CurrentHealth - before;
                 }
 
-                // A STATUS SPENT BY THE TURN IS NOT COUNTED DOWN BY IT.
-                //
-                // This tick runs at the START of the holder's turn, before
-                // the thing the status is supposed to change has happened --
-                // so counting one down here expires it a beat before it could
-                // do anything, and a one-turn application is silently dead
-                // content. Provoked was exempted for exactly that reason
-                // ("force one enemy to target Shawn on its next turn"), with
-                // the note that authoring two turns to work around it would
-                // leave a taunt lasting two enemy turns whenever the enemy
-                // died to something else first.
-                //
-                // Stun and Feared have the identical shape and were NOT
-                // exempted, which is the bug this predicate closes: both are
-                // read by ResolveSkippedTurn, which runs AFTER GrantTurnStart
-                // has already ticked. A one-turn Stun -- grapple's authored
-                // duration, and Loaded Dice's -- expired at the top of the
-                // very turn it existed to skip and cost nothing at all; a
-                // Fear was one turn short of what it promised, which for
-                // World Ender's Crown's authored 1 also meant nothing at all.
-                //
-                // Their countdown lives in ConsumeStun instead, beside
-                // ConsumeProvoke, at the moment the skip is actually spent.
-                // A WARD IS NOT COUNTED DOWN HERE AT ALL -- its clock runs at
-                // the END of the wearer's turn instead (TickWardsAtTurnEnd),
-                // which is what makes it visible on the turn it protects. This
-                // is NOT IsSpentByTheTurn's reason: those three are spent by
-                // the turn rather than aged by it, where a ward is aged by a
-                // turn, just by the other end of one.
-                if (!IsSpentByTheTurn(status.Type) && status.Type != StatusEffectType.Shielded)
-                {
-                    status.TurnsRemaining--;
-                }
+                status.TurnsRemaining--;
             }
 
-            var expired = combatant.Statuses.Where(s => s.TurnsRemaining <= 0).Select(s => s.Type).ToList();
-            combatant.Statuses.RemoveAll(s => s.TurnsRemaining <= 0);
+            var expired = combatant.Statuses
+                .Where(s => DurationClock(s.Type) == StatusClock.AtTick && s.TurnsRemaining <= 0)
+                .Select(s => s.Type)
+                .ToList();
+            combatant.Statuses.RemoveAll(
+                s => DurationClock(s.Type) == StatusClock.AtTick && s.TurnsRemaining <= 0);
 
             return new TickReport(poisonDamage, poisonAbsorbed, regenHealed, expired);
         }

@@ -110,7 +110,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // once per swing.
             if (_grantedExtraTurnTo == null || !ReferenceEquals(_grantedExtraTurnTo, _encounter.Current))
             {
-                TickWardsAtTurnEnd(_encounter.Current);
+                TickStatusesAtTurnEnd(_encounter.Current);
             }
 
             _encounter.AdvanceTurn();
@@ -451,6 +451,66 @@ namespace PrincesPalace.Domain.Combat.Session
             AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
         }
 
+        // THE ENTRIES APPLIED DURING THE TURN THAT IS RUNNING, which do not
+        // age at the end of it -- see StatusEffects' WARDS header for the
+        // argument and TickAtTurnEnd for where the set is read. Cleared by
+        // OpenTurnFor and NOT by ReopenTurnFor, because an extra action is the
+        // same turn (AUDIT #113).
+        //
+        // Holds the ActiveStatus itself rather than the wearer and the type:
+        // two chills of the same size on the same clock are told apart by
+        // nothing else, and since 2026-09-20 a combatant really can be carrying
+        // two of them.
+        //
+        // It used to be _wardsRaisedThisTurn, filled only by RaiseWard, because
+        // a ward was the only thing on the turn-end clock. Five more statuses
+        // joined that clock with plan D1 and they need the identical exemption:
+        // a Vulnerable a caster puts on THEMSELVES (Court of Whispers, Ashen
+        // Reckoning) must not be aged by the end of the turn that applied it.
+        private readonly HashSet<ActiveStatus> _statusesAppliedThisTurn = new HashSet<ActiveStatus>();
+
+        // THE ONE PLACE A STATUS IS APPLIED TO A COMBATANT during a fight.
+        //
+        // StatusEffects.Apply is pure Domain and cannot reach anything a status
+        // needs bookkeeping for. Chilled is the standing proof: ApplyChilled is
+        // the only path that registers the speed malus, and its own header says
+        // so -- so ApplySkillStatus, which called StatusEffects.Apply directly,
+        // would have landed an inert Chilled badge the first time a content row
+        // authored one. Nothing does today, which is why the gap was latent
+        // rather than a bug report.
+        //
+        // Fixed at the SEAM rather than at the caller: an `if (type == Chilled)`
+        // inside ApplySkillStatus would leave the next status with bookkeeping
+        // to repeat the bug at the next call site. Every relic, talent, item
+        // modifier and skill goes through here; StatusEffects.ApplyWard stays
+        // the separate entry point for shields, for the reason its own header
+        // gives.
+        private void ApplyStatusTo(CombatantState recipient, StatusEffectType type,
+            int magnitude, int turns, CombatantState source = null)
+        {
+            if (recipient == null) return;
+
+            if (type == StatusEffectType.Chilled)
+            {
+                ApplyChilled(recipient, magnitude, turns, source);
+                return;
+            }
+
+            RecordStatus(recipient, type, magnitude, turns, source);
+        }
+
+        // The application itself plus the turn-end exemption, with no
+        // status-specific bookkeeping. Separate from ApplyStatusTo so a
+        // dispatch arm that DOES have bookkeeping (ApplyChilled) can reach the
+        // application without recursing back through the dispatch.
+        private ActiveStatus RecordStatus(CombatantState recipient, StatusEffectType type,
+            int magnitude, int turns, CombatantState source)
+        {
+            var applied = StatusEffects.Apply(recipient.Statuses, type, magnitude, turns, source);
+            if (applied != null) _statusesAppliedThisTurn.Add(applied);
+            return applied;
+        }
+
         // StatusEffects.Tick applies the numbers and reports WHAT happened;
         // turning that into log lines is this layer's job, because the wording
         // belongs to the fight rather than to the status system.
@@ -489,20 +549,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var report = StatusEffects.Tick(actor);
 
-            // Chilled's malus is booked in FightSession.SpeedBuffs' own
-            // dictionary, not on the status itself -- StatusEffects.Tick just
-            // removed the EXPIRED ActiveStatus entry (generic per-status
-            // countdown, no special case needed there), but nothing has told
-            // Speed yet. Placed ahead of the report.IsEmpty early-return
-            // below on purpose, even though Expired containing anything
-            // already implies !IsEmpty -- keeping the Speed-honesty step
-            // unconditional here means a future change to IsEmpty's own
-            // definition can never silently start skipping it.
-            if (report.Expired.Contains(StatusEffectType.Chilled))
-            {
-                RevokeSpeedBuff(actor, StatusEffectType.Chilled);
-            }
-
+            // CHILLED'S TEARDOWN IS NOT HERE ANY MORE. It moved to
+            // TickStatusesAtTurnEnd with the clock (plan D1): Chilled is an
+            // AtTurnEnd status now, so StatusEffects.Tick never reports it
+            // expired and a revoke here would be dead code waiting to be read
+            // as coverage. The teardown follows whichever clock removed the
+            // entry -- that is the general rule, and this is the one status
+            // that currently has a teardown at all.
             if (report.IsEmpty) return;
 
             // GATED ON THE WHOLE TICK, not on the part that reached health. A
@@ -599,7 +652,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (ownsBeat) CommitBeat();
             }
 
-            foreach (var expired in report.Expired)
+            // DISTINCT, because statuses stack. Three poisons running out on
+            // the same tick are three removals and one thing a player needs
+            // told; saying it three times reads as a bug in the log rather
+            // than as three stacks having lapsed together.
+            foreach (var expired in report.Expired.Distinct())
             {
                 AppendMessage($"{actor.Name}'s {expired} wears off.");
             }
@@ -681,6 +738,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // private method directly removes the race without touching what it
         // exercises.
         public void TickStatusesForTest(CombatantState actor) => TickStatuses(actor);
+
+        // The other end of the same turn. Five statuses moved onto this clock
+        // with plan D1, and Chilled's speed teardown moved with them, so a test
+        // about a standing modifier expiring has to drive THIS rather than the
+        // turn-start tick.
+        public void TickStatusesAtTurnEndForTest(CombatantState actor) => TickStatusesAtTurnEnd(actor);
+
+        // THE TURN BOUNDARY ITSELF. _statusesAppliedThisTurn is cleared once
+        // per turn inside OpenTurnFor (TickLambTurnStart), which a test driving
+        // the two tick seams directly never reaches -- so without this a status
+        // the fixture applied stays exempt from every turn end forever and the
+        // sweep looks broken when it is working exactly as written.
+        public void CrossTurnBoundaryForTest() => _statusesAppliedThisTurn.Clear();
 
     }
 }

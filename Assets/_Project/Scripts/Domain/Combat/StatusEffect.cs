@@ -173,6 +173,63 @@ namespace PrincesPalace.Domain.Combat
         Feared,
     }
 
+    // WHEN A STATUS'S COUNTER MOVES -- the one question that decides how an
+    // authored duration reads to a player, and the reason there are three
+    // answers rather than two.
+    //
+    // Before 2026-09-20 there were effectively two: Tick's start-of-turn
+    // countdown, and a hand-written exemption list (IsSpentByTheTurn) for the
+    // three statuses that are spent rather than aged, plus a fourth
+    // arrangement for wards alone. That made "turns: 2" mean two things
+    // depending on which list the member happened to be on: a Vulnerable
+    // authored at 2 exposed its bearer for ONE turn, because the counter
+    // reached zero and the entry was removed at the start of the second turn,
+    // before that turn's action ever happened.
+    //
+    // StatusEffects.DurationClock is the table, and it is total -- every
+    // member answers, and StatusEffectsTests.EveryStatusTypeAnswersDurationClock
+    // fails rather than letting a new member default into the wrong family.
+    public enum StatusClock
+    {
+        // Counted by the tick that does the work, at the holder's turn start.
+        // N authored = N ticks dealt or healed. Poison and Regen.
+        AtTick,
+
+        // No clock at all. The counter moves at the moment the effect is
+        // spent -- ConsumeStun, ConsumeProvoke, ConsumeEmpowerment -- so the
+        // turn it promised always happens before the count moves.
+        AtUse,
+
+        // Counted at the END of the bearer's turn, exempting a turn the status
+        // was applied during. N authored = N of the bearer's turns fully
+        // covered, restriction intact through the final affected action. This
+        // is the rule wards have used since 2026-09-16, generalised to every
+        // standing modifier.
+        AtTurnEnd,
+    }
+
+    // WHAT A SECOND APPLICATION DOES. Owner's decision, 2026-09-20 -- "the
+    // DoTs and everything can stack of course" -- replacing the blanket
+    // refresh rule StatusEffects.Apply used to hold for every member.
+    //
+    // A different question from StatusClock and therefore a different table:
+    // Chilled and Rooted are both AtTurnEnd and they answer this one
+    // differently.
+    public enum StackingPolicy
+    {
+        // Merge into the entry already there: the stronger magnitude, the
+        // longer duration, the newer source. Still the right answer wherever
+        // the magnitude is not a quantity a player could add up -- a turn
+        // cannot be skipped twice, and a mark is spent whole whatever is
+        // underneath it.
+        Refresh,
+
+        // Add a second entry beside the first, with its own magnitude, its own
+        // clock and its own Source. The holder's effect is the SUM of the live
+        // entries, and they expire apart rather than together.
+        Stack,
+    }
+
     // One active affliction or boon on a combatant: what it is, how strong,
     // and how many of the HOLDER'S OWN turns it has left to run — not wall
     // clock, not a round count. TurnOrder's charge scheduling already means
@@ -201,9 +258,13 @@ namespace PrincesPalace.Domain.Combat
         // Provoked needs it for a harder reason than credit: the taunt has to
         // know WHO to force the target onto.
         //
-        // Not readonly, unlike Type: Apply refreshes an existing entry rather
-        // than stacking a second one, and a refresh from a new caster should
-        // re-point the credit at whoever most recently paid for it.
+        // Not readonly, unlike Type: a Refresh-policy status merges a second
+        // application into the entry already there (StackingPolicy), and a
+        // refresh from a new caster should re-point the credit at whoever most
+        // recently paid for it. A Stack-policy status never reaches that
+        // branch -- each instance keeps the Source that paid for it, for the
+        // life of that instance, which is what lets two casters poison one
+        // target and both be paid.
         public CombatantState Source;
 
         public ActiveStatus(StatusEffectType type, int magnitude, int turns, CombatantState source = null)

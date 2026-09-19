@@ -145,15 +145,16 @@ namespace PrincesPalace.Domain.Tests
                 "Rooted's no-legal-skill forfeit must go through the exact same 'cannot act' path Stun uses");
 
             // UNLIKE Stun (ConsumeStun removes it outright, spent on the
-            // skip), Rooted decays by TURN COUNT like Chilled/Protect --
-            // GrantTurnStart's ordinary per-status tick already ran once
-            // (ahead of the skip check, the same order every status ticks
-            // in), so a 5-turn Rooted reads 4 here, not gone and not still 5.
+            // skip), Rooted decays by TURN COUNT like Chilled/Protect -- and
+            // since plan D1 that count moves at the END of the bearer's turn,
+            // which this fixture does not reach. A 5-turn Rooted reads 5 here:
+            // not gone, and not yet aged, because the turn it is restricting
+            // has not finished.
             var rooted = monster.Statuses.SingleOrDefault(s => s.Type == StatusEffectType.Rooted);
             Assert.IsNotNull(rooted, "a forfeited turn must not erase the turns of Rooted still owed -- " +
                                       "that would make forfeiting the turn Rooted's OWN escape hatch");
-            Assert.AreEqual(4, rooted.TurnsRemaining,
-                "decremented by exactly the one ordinary turn-start tick, not consumed like Stun");
+            Assert.AreEqual(5, rooted.TurnsRemaining,
+                "not consumed like Stun, and not aged by a turn-start tick that no longer owns this clock");
         }
 
         [Test]
@@ -347,7 +348,7 @@ namespace PrincesPalace.Domain.Tests
         // whatever it equals (see FightTuningItemModifierConstantsTests for
         // that separate, narrower pin).
         [Test]
-        public void RootChancePercentOnHit_LandsRooted_ForExactlyTwoTurns()
+        public void RootChancePercentOnHit_LandsRooted_ForExactlyOneTurn()
         {
             // A LARGE hero/monster speed gap -- the same fixture shape
             // ChilledStatusTests' own ChilledOnHit test relies on -- so the
@@ -371,9 +372,11 @@ namespace PrincesPalace.Domain.Tests
 
             // The literal, not FightTuning.RootOnHitTurns read back at
             // itself -- if the on-hit call site ever stops passing that
-            // constant through, this is what turns red.
-            Assert.AreEqual(2, rooted.TurnsRemaining,
-                "the on-hit proc must apply Rooted for exactly FightTuning.RootOnHitTurns (2) turns");
+            // constant through, this is what turns red. ONE since plan D1
+            // moved Rooted to the turn-end clock, where 1 affects the same one
+            // turn the old turn-start 2 affected.
+            Assert.AreEqual(1, rooted.TurnsRemaining,
+                "the on-hit proc must apply Rooted for exactly FightTuning.RootOnHitTurns (1) turn");
         }
     }
 }

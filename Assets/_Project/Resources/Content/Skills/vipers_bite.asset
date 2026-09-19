@@ -1,0 +1,269 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: vipers_bite
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  data:
+    Id: vipers_bite
+    DisplayName: Viper's Bite
+    Description: Detonates existing Poison, then poisons again.
+    CharacterId: sheep
+    UnlockLevel: 2147483647
+    Effect: 0
+    Targeting: 0
+    ManaCost: 7
+    ResourceCost: 0
+    SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 1
+    Power: 0
+    FlatAmount: 0
+    IgnoresDefense: 0
+    DamageInstances:
+    - type: 4
+      amount: 3
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers:
+      - id: coil
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/prismatic_orb_wind_charge
+        seconds: 0.3
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 250
+        facing: auto
+        sort: ground
+        align: 
+        punch: 0
+        glow: 1.05
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: jaws
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0.02
+        path: Spells/mud_burst
+        seconds: 0.26
+        fps: 0
+        startFrame: 0
+        until: loop
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 240
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.15
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0.26
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: venom
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: Spells/prismatic_orb_earth_drops
+        seconds: 0.4
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.16
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 300
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.24
+        glow: 1.2
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.28
+    SortOrder: 9
+    Status: 0
+    HasStatus: 1
+    StatusMagnitude: 3
+    StatusDuration: 3
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+      spritePath: 
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0
+        hitStopSeconds: 0
+    CooldownTurns: 2
+    PlayerSelectable: 1
+    Shake: 0
+    Approach: 0
+    Stance: 
+    ApproachStance: 
+    WindupStance: 
+    SummonEnemyId: 
+    SummonCap: 0
+    IconPath: 
+    Reach:
+      Kind: 0
+      RankMask: 0
+    BookOnly: 1
+    BookTier: 1
+    Elements: []
+    PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

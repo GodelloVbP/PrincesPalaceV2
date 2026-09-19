@@ -30,15 +30,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(3, target.Statuses[0].TurnsRemaining);
         }
 
-        // Re-casting the same status must never be strictly better than
-        // casting it once — the same anti-compounding rule ScalingProfile
-        // and SpeedScale hold everywhere else in this game.
+        // THE MERGE BRANCH STILL EXISTS and these three still pin it -- they
+        // were written against Poison, which stacks as of 2026-09-20, and are
+        // re-aimed at Empowered rather than deleted. Empowered is a
+        // single-spend token (StackingPolicy.Refresh): "two of it" has no
+        // meaning beyond duration, so re-casting it must never be strictly
+        // better than casting it once, which is the rule these were always
+        // about.
         [Test]
         public void Apply_SameTypeTwice_RefreshesRatherThanStacking()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 3);
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 3);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 10, 3);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 10, 3);
 
             Assert.AreEqual(1, target.Statuses.Count, "A second application should refresh, not add a second entry");
         }
@@ -47,8 +51,8 @@ namespace PrincesPalace.Domain.Tests
         public void Apply_SameTypeAgain_TakesTheStrongerMagnitudeAndLongerDuration()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 2);
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 25, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 10, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 25, 5);
 
             Assert.AreEqual(25, target.Statuses[0].Magnitude);
             Assert.AreEqual(5, target.Statuses[0].TurnsRemaining);
@@ -58,11 +62,273 @@ namespace PrincesPalace.Domain.Tests
         public void Apply_AWeakerReapplication_NeverWeakensTheExistingOne()
         {
             var target = MakeCombatant();
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 25, 5);
-            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 1);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 25, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Empowered, 10, 1);
 
             Assert.AreEqual(25, target.Statuses[0].Magnitude, "A weaker re-application should not downgrade the stronger one already active");
             Assert.AreEqual(5, target.Statuses[0].TurnsRemaining);
+        }
+
+        // ---- the two tables, and neither may go stale -------------------------
+
+        // A table that answers for eleven of twelve members and throws on the
+        // twelfth is a crash waiting for the content that authors it. Walking
+        // Enum.GetValues is the only check that cannot be outrun by a new
+        // member, and the count assertion is the vacuity guard: a reflection
+        // sweep over nothing passes everything.
+        [Test]
+        public void EveryStatusTypeAnswersDurationClock()
+        {
+            var all = (StatusEffectType[])System.Enum.GetValues(typeof(StatusEffectType));
+            Assert.GreaterOrEqual(all.Length, 12, "the sweep found fewer members than this game ships");
+
+            foreach (var type in all)
+            {
+                Assert.DoesNotThrow(() => StatusEffects.DurationClock(type),
+                    $"{type} has no duration family -- it would expire a turn early or never");
+            }
+        }
+
+        [Test]
+        public void EveryStatusTypeAnswersStackPolicy()
+        {
+            var all = (StatusEffectType[])System.Enum.GetValues(typeof(StatusEffectType));
+            Assert.GreaterOrEqual(all.Length, 12, "the sweep found fewer members than this game ships");
+
+            foreach (var type in all)
+            {
+                Assert.DoesNotThrow(() => StatusEffects.StackPolicyOf(type),
+                    $"{type} does not say what a second application of it does");
+            }
+        }
+
+        // The families themselves, as a literal table. DurationClock is a
+        // judgement about each status and this is where that judgement is
+        // written down in a form that fails when somebody moves a member.
+        [Test]
+        public void TheThreeDurationFamiliesHoldTheMembersTheyWereDecidedFor()
+        {
+            Assert.AreEqual(StatusClock.AtTick, StatusEffects.DurationClock(StatusEffectType.Poison));
+            Assert.AreEqual(StatusClock.AtTick, StatusEffects.DurationClock(StatusEffectType.Regen));
+
+            Assert.AreEqual(StatusClock.AtUse, StatusEffects.DurationClock(StatusEffectType.Stun));
+            Assert.AreEqual(StatusClock.AtUse, StatusEffects.DurationClock(StatusEffectType.Feared));
+            Assert.AreEqual(StatusClock.AtUse, StatusEffects.DurationClock(StatusEffectType.Provoked));
+            Assert.AreEqual(StatusClock.AtUse, StatusEffects.DurationClock(StatusEffectType.Empowered));
+
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Protect));
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Vulnerable));
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Chilled));
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Rooted));
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Marked));
+            Assert.AreEqual(StatusClock.AtTurnEnd, StatusEffects.DurationClock(StatusEffectType.Shielded));
+        }
+
+        [Test]
+        public void ARestrictionRefreshes_AndAQuantityStacks()
+        {
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Stun));
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Feared));
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Rooted));
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Provoked));
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Empowered));
+            Assert.AreEqual(StackingPolicy.Refresh, StatusEffects.StackPolicyOf(StatusEffectType.Marked));
+
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Poison));
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Regen));
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Protect));
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Vulnerable));
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Chilled));
+            Assert.AreEqual(StackingPolicy.Stack, StatusEffects.StackPolicyOf(StatusEffectType.Shielded));
+        }
+
+        // ---- instance stacking, owner 2026-09-20 -------------------------------
+
+        [Test]
+        public void ASecondPoison_StandsBesideTheFirst_WithItsOwnMagnitudeAndClock()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 7, 5);
+
+            Assert.AreEqual(2, target.Statuses.Count, "the second application merged instead of stacking");
+            Assert.AreEqual(4, target.Statuses[0].Magnitude);
+            Assert.AreEqual(2, target.Statuses[0].TurnsRemaining);
+            Assert.AreEqual(7, target.Statuses[1].Magnitude,
+                "the weaker first instance must not be raised to the stronger second one");
+            Assert.AreEqual(5, target.Statuses[1].TurnsRemaining);
+        }
+
+        // 4 + 7 + 2 = 13. Written as a literal, not as a sum of the same
+        // fields the production code adds up.
+        [Test]
+        public void ThreePoisonInstances_TickForTheirSum_InOnePass()
+        {
+            var target = MakeCombatant(maxHealth: 200);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 3);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 7, 3);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 2, 3);
+
+            var report = StatusEffects.Tick(target);
+
+            Assert.AreEqual(13, report.PoisonDamage, "the tick must be the sum of every live instance");
+            Assert.AreEqual(187, target.CurrentHealth);
+        }
+
+        [Test]
+        public void TheShortestPoisonInstanceGoesFirst_AndTheOthersKeepTicking()
+        {
+            var target = MakeCombatant(maxHealth: 200);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 5, 1);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 3, 3);
+
+            var first = StatusEffects.Tick(target);
+            Assert.AreEqual(8, first.PoisonDamage);
+            CollectionAssert.AreEqual(new[] { StatusEffectType.Poison }, first.Expired,
+                "one instance ran out and one removal is what should be reported");
+            Assert.AreEqual(1, target.Statuses.Count, "the longer instance went with the shorter one");
+
+            var second = StatusEffects.Tick(target);
+            Assert.AreEqual(3, second.PoisonDamage, "the survivor must keep ticking at its own strength");
+        }
+
+        [Test]
+        public void TwoCastersPoisoningOneTarget_EachKeepTheirOwnAttribution()
+        {
+            var target = MakeCombatant();
+            var mage = MakeCombatant();
+            var lamb = MakeCombatant();
+
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 3, mage);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 3, lamb);
+
+            Assert.AreSame(mage, target.Statuses[0].Source);
+            Assert.AreSame(lamb, target.Statuses[1].Source,
+                "a second caster must not re-point the first caster's instance -- two wool engines are paid from this");
+        }
+
+        [Test]
+        public void ASecondStun_RefreshesRatherThanStacking()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Stun, 0, 1);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Stun, 0, 1);
+
+            Assert.AreEqual(1, target.Statuses.Count,
+                "a turn cannot be skipped twice, so a second Stun is one Stun");
+        }
+
+        // 1 + 0.25 + 0.30 = 1.55. Pinned as a literal.
+        [Test]
+        public void TwoVulnerables_AddUpInTheDamageMultiplier()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 25, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 30, 2);
+
+            Assert.AreEqual(1.55f, StatusEffects.DamageTakenMultiplier(target.Statuses), 0.0001f);
+            Assert.AreEqual(55, StatusEffects.MagnitudeOf(target, StatusEffectType.Vulnerable));
+        }
+
+        [Test]
+        public void MagnitudeOf_ReadsTheWholePile_NotTheFirstEntry()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, 20, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, 25, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, 15, 2);
+
+            Assert.AreEqual(60, StatusEffects.MagnitudeOf(target, StatusEffectType.Chilled));
+            Assert.AreEqual(0, StatusEffects.MagnitudeOf(target, StatusEffectType.Protect),
+                "a type the combatant does not carry is 0, not the first thing in the list");
+        }
+
+        [Test]
+        public void SummariseStatus_ReportsTheSum_TheCount_AndTheSoonestExpiry()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 7, 2);
+
+            var summary = StatusEffects.SummariseStatus(target, StatusEffectType.Poison);
+
+            Assert.AreEqual(11, summary.Magnitude);
+            Assert.AreEqual(2, summary.Instances);
+            Assert.AreEqual(2, summary.SoonestTurns, "the soonest is the next moment the number changes on its own");
+            Assert.IsTrue(summary.Any);
+        }
+
+        // ---- the turn-end clock, plan D1 ---------------------------------------
+
+        // THE BUG D1 CLOSES. Under the old turn-start countdown a two-turn
+        // Vulnerable was removed at the start of the bearer's second turn,
+        // before that turn's action ever happened, so it exposed them for one
+        // turn and not two.
+        [Test]
+        public void AStandingStatusWithTwoTurns_StillApplies_OnTheSecondTurnsAction()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 25, 2);
+
+            StatusEffects.Tick(target);
+            Assert.AreEqual(1.25f, StatusEffects.DamageTakenMultiplier(target.Statuses), 0.0001f,
+                "turn one's action");
+            StatusEffects.TickAtTurnEnd(target);
+
+            StatusEffects.Tick(target);
+            Assert.AreEqual(1.25f, StatusEffects.DamageTakenMultiplier(target.Statuses), 0.0001f,
+                "turn two's action -- the turn a turn-start countdown used to take it away before");
+            StatusEffects.TickAtTurnEnd(target);
+
+            Assert.AreEqual(1f, StatusEffects.DamageTakenMultiplier(target.Statuses), 0.0001f,
+                "and gone at the end of the second turn, not a third");
+        }
+
+        [Test]
+        public void AStatusAppliedOnTheBearersOwnTurn_DoesNotAgeAtThatTurnsEnd()
+        {
+            var target = MakeCombatant();
+            var applied = StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 25, 1);
+            var thisTurn = new List<ActiveStatus> { applied };
+
+            CollectionAssert.IsEmpty(StatusEffects.TickAtTurnEnd(target, thisTurn),
+                "the turn it was applied during counted");
+            Assert.AreEqual(1, target.Statuses[0].TurnsRemaining);
+
+            CollectionAssert.AreEqual(new[] { StatusEffectType.Vulnerable },
+                StatusEffects.TickAtTurnEnd(target));
+        }
+
+        [Test]
+        public void TheTurnStartTickLeavesEveryStandingModifierAlone()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Protect, 30, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, 20, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 2);
+
+            StatusEffects.Tick(target);
+
+            foreach (var status in target.Statuses)
+            {
+                Assert.AreEqual(2, status.TurnsRemaining,
+                    $"{status.Type} is on the turn-END clock and the turn-start tick moved it");
+            }
+        }
+
+        [Test]
+        public void Tick_Poison_StillDealsExactlyThreeTicksForThree()
+        {
+            var target = MakeCombatant(maxHealth: 200);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 5, 3);
+
+            StatusEffects.Tick(target);
+            StatusEffects.Tick(target);
+            var third = StatusEffects.Tick(target);
+
+            Assert.AreEqual(185, target.CurrentHealth, "three ticks of five, no more and no fewer");
+            CollectionAssert.AreEqual(new[] { StatusEffectType.Poison }, third.Expired);
+            Assert.AreEqual(0, StatusEffects.Tick(target).PoisonDamage, "a fourth tick landed");
         }
 
         [Test]
@@ -149,10 +415,14 @@ namespace PrincesPalace.Domain.Tests
             var target = MakeCombatant();
             StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 1);
 
-            var report = StatusEffects.Tick(target);
+            // The turn-END clock since plan D1: a restriction has to survive
+            // the action of the turn it is restricting.
+            Assert.IsTrue(StatusEffects.HasRooted(target.Statuses),
+                "a turn-start tick must no longer take a restriction away before the turn it restricts");
+            var expired = StatusEffects.TickAtTurnEnd(target);
 
-            Assert.IsFalse(StatusEffects.HasRooted(target.Statuses), "a one-turn Rooted must be gone after one tick");
-            Assert.IsTrue(report.Expired.Contains(StatusEffectType.Rooted));
+            Assert.IsFalse(StatusEffects.HasRooted(target.Statuses), "a one-turn Rooted must be gone after one turn end");
+            Assert.IsTrue(expired.Contains(StatusEffectType.Rooted));
         }
 
         [Test]
@@ -161,9 +431,9 @@ namespace PrincesPalace.Domain.Tests
             var target = MakeCombatant();
             StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 2);
 
-            StatusEffects.Tick(target);
+            StatusEffects.TickAtTurnEnd(target);
 
-            Assert.IsTrue(StatusEffects.HasRooted(target.Statuses), "a two-turn Rooted must survive one tick");
+            Assert.IsTrue(StatusEffects.HasRooted(target.Statuses), "a two-turn Rooted must survive one turn end");
             Assert.AreEqual(1, target.Statuses[0].TurnsRemaining);
         }
 
@@ -276,15 +546,16 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, target.Statuses[0].TurnsRemaining);
         }
 
-        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, area 9):
-        // Vulnerable and Marked are neither IsSpentByTheTurn (Provoked/Stun/
-        // Feared) nor Shielded (aged at turn END instead) -- both fall through
-        // to Tick's generic per-status countdown, at the bearer's turn START,
-        // same as Protect/Chilled/Rooted. Marked's own 99-turn duration is
-        // long specifically so this ordinary decay can never expire an
-        // unconsumed mark first (see Marks.MarkDurationTurns).
+        // MOVED WITH PLAN D1. The baseline (docs/SPELL_EXPANSION_BASELINE.md
+        // area 9) recorded these two decrementing at the bearer's turn START,
+        // and recorded why that was wrong: a standing modifier reached zero and
+        // was removed before the action of its last counted turn. Both are on
+        // the turn-END clock now. Marked's own 99-turn duration is still long
+        // specifically so ordinary decay can never expire an unconsumed mark
+        // first (see Marks.MarkDurationTurns), whichever end of the turn it
+        // decays at.
         [Test]
-        public void Tick_VulnerableAndMarked_DecrementAtTurnStart_LikeAnyStandingStatus()
+        public void Tick_VulnerableAndMarked_DecrementAtTurnEnd_NotAtTurnStart()
         {
             var target = MakeCombatant();
             StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 25, 2);
@@ -294,6 +565,11 @@ namespace PrincesPalace.Domain.Tests
 
             var vulnerable = target.Statuses.First(s => s.Type == StatusEffectType.Vulnerable);
             var marked = target.Statuses.First(s => s.Type == StatusEffectType.Marked);
+            Assert.AreEqual(2, vulnerable.TurnsRemaining, "the turn-start tick moved a turn-end clock");
+            Assert.AreEqual(99, marked.TurnsRemaining, "the turn-start tick moved a turn-end clock");
+
+            StatusEffects.TickAtTurnEnd(target);
+
             Assert.AreEqual(1, vulnerable.TurnsRemaining);
             Assert.AreEqual(98, marked.TurnsRemaining);
         }

@@ -248,12 +248,19 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!HasRelic(actor, RelicEffect.RampagingBullsHorn)) return;
 
             // Protect is the existing "incoming damage reduced by Magnitude
-            // percent, decays by turn count" status -- exactly this relic's
-            // shape, so it needs no status of its own. Refresh-not-stack
-            // (StatusEffects.Apply's own rule) means re-casting a
-            // convergence ability while the reduction still stands never
-            // compounds it.
-            StatusEffects.Apply(actor.Statuses, StatusEffectType.Protect,
+            // percent" status -- exactly this relic's shape, so it needs no
+            // status of its own.
+            //
+            // IT DOES COMPOUND NOW. Protect stacks as of 2026-09-20
+            // (StatusEffects.StackPolicyOf), so a second convergence cast while
+            // the first reduction still stands adds a second entry rather than
+            // refreshing the first. Two of these is 100% additive, which
+            // StatusEffects.MinimumDamageTakenMultiplier floors at a 90%
+            // reduction; the horn's own duration is one affected turn, so the
+            // window in which a second can land at all is one cast wide. Left
+            // uncapped deliberately -- a cap is a balance decision and it is
+            // the owner's.
+            ApplyStatusTo(actor, StatusEffectType.Protect,
                 FightTuning.BullsHornReductionPercent, FightTuning.BullsHornDurationTurns, actor);
 
             AppendMessage($"{actor.Name}'s horn lowers - the next blows land softer.");
@@ -329,7 +336,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     seen++;
                 }
 
-                StatusEffects.Apply(target.Statuses, StatusEffectType.Stun, 0, 1, actor);
+                ApplyStatusTo(target, StatusEffectType.Stun, 0, 1, actor);
                 AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
                 return;
             }

@@ -103,9 +103,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // free; a skill's is big and costs a turn, and the one that costs
         // something is the one with a window.
         //
-        // The shield is not stacked on a re-raise: StatusEffects.ApplyWard
-        // replaces a pool no bigger than the new one and refuses a bigger
-        // one outright, so raising it again while it stands never compounds.
+        // Raising it again while it stands DOES compound: StatusEffects
+        // .ApplyWard always adds an entry and wards drain soonest-first. That
+        // has been true since the shield model landed on 2026-09-16; the line
+        // that used to sit here still described the percentage ward it
+        // replaced.
         public const int MagicalShieldDurationTurns = 99;
 
         // MAGICAL SHIELD'S OWN POOL, in shield points. Roughly one leg-two
@@ -162,7 +164,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // relic with its own long-shipped balance; tying the two together
         // would mean retuning one every time the other needed to move.
         public const int ChilledOnHitSpeedPercent = 20;
-        public const int ChilledOnHitTurns = 2;
+
+        // ONE affected turn, authored 2 until plan D1 moved Chilled onto the
+        // turn-end clock. A 2 under the old turn-start countdown slowed the
+        // target for exactly one of its turns; the number changed so the
+        // behaviour would not. StatusDurationMigrationTests pins it.
+        public const int ChilledOnHitTurns = 1;
 
         // ---- rooted (Phase D3, item-modifier plan) -----------------------------
         //
@@ -172,7 +179,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // fixed constant. No sibling "strength" constant -- Rooted has no
         // Magnitude of its own to author (ModifierEffectType.RootChancePercent's
         // own comment), only a duration.
-        public const int RootOnHitTurns = 2;
+        // ONE affected turn -- see ChilledOnHitTurns just above for why this
+        // read 2 before plan D1 and means the same thing now that it reads 1.
+        public const int RootOnHitTurns = 1;
 
         // ---- the balance pass -- mechanics a-g, and the relics built on them ----
 
@@ -200,7 +209,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // Rampaging Bull's Horn: damage reduction after casting a
         // convergence/ultimate ability, and how long it lasts.
         public const int BullsHornReductionPercent = 50;
-        public const int BullsHornDurationTurns = 2;
+
+        // ONE affected turn -- see ChilledOnHitTurns for why this read 2 before
+        // plan D1 and means the same thing now that it reads 1.
+        public const int BullsHornDurationTurns = 1;
 
         // ---- balance pass 2 -- see FightSession.BalanceRelics2 ----------------
 

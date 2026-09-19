@@ -254,21 +254,31 @@ namespace PrincesPalace.Domain.Combat.Session
         // still a detriment badge even though the player is pleased about
         // it, which is why this reads IsPositive(status.Type) rather than
         // anything about who currently holds the status.
-        private static string TooltipFor(ActiveStatus status)
+        //
+        // TAKES THE SUMMARY, NOT ONE ENTRY, because statuses stack as of
+        // 2026-09-20: a holder carrying three poisons is taking their sum every
+        // turn, and a tooltip quoting the first entry would say a third of the
+        // truth with total confidence. Magnitude is the sum, the duration is
+        // the SOONEST instance -- the next moment the number changes on its own
+        // -- and the "across N stacks" clause is the same one WardRow has used
+        // since wards started stacking, for the same reason.
+        private static string TooltipFor(StatusEffects.StatusSummary summary)
         {
-            bool positive = IsPositive(status.Type);
-            string duration = DurationPhrase(status.TurnsRemaining);
+            bool positive = IsPositive(summary.Type);
+            string duration = DurationPhrase(summary.SoonestTurns);
+            string stacks = summary.Instances > 1 ? $" across {summary.Instances} stacks" : "";
+            int magnitude = summary.Magnitude;
 
-            switch (status.Type)
+            switch (summary.Type)
             {
                 case StatusEffectType.Poison:
-                    return $"Poison -- {Wrap(positive, $"{status.Magnitude} damage each turn start")}, {duration}";
+                    return $"Poison -- {Wrap(positive, $"{magnitude} damage each turn start")}{stacks}, {duration}";
                 case StatusEffectType.Regen:
-                    return $"Regen -- {Wrap(positive, $"{status.Magnitude} healing each turn start")}, {duration}";
+                    return $"Regen -- {Wrap(positive, $"{magnitude} healing each turn start")}{stacks}, {duration}";
                 case StatusEffectType.Protect:
-                    return $"Protect -- {Wrap(positive, $"{status.Magnitude}% less damage taken")}, {duration}";
+                    return $"Protect -- {Wrap(positive, $"{magnitude}% less damage taken")}{stacks}, {duration}";
                 case StatusEffectType.Vulnerable:
-                    return $"Vulnerable -- {Wrap(positive, $"{status.Magnitude}% more damage taken")}, {duration}";
+                    return $"Vulnerable -- {Wrap(positive, $"{magnitude}% more damage taken")}{stacks}, {duration}";
                 case StatusEffectType.Stun:
                     return $"Stunned -- {Wrap(positive, "turn skipped")}, {duration}";
                 // NEVER REACHED FOR A WARD. Wards stack, so they do not get a
@@ -281,11 +291,11 @@ namespace PrincesPalace.Domain.Combat.Session
                         "A ward's badge is built from StatusEffects.SummariseWards, not from one entry -- "
                         + "see StatusHud.WardRow.");
                 case StatusEffectType.Provoked:
-                    return $"Provoked -- {Wrap(positive, $"must attack its provoker, for {status.Magnitude}% less damage to them")}, {duration}";
+                    return $"Provoked -- {Wrap(positive, $"must attack its provoker, for {magnitude}% less damage to them")}, {duration}";
                 case StatusEffectType.Empowered:
-                    return $"Empowered -- {Wrap(positive, $"next attack deals {status.Magnitude}% more")}, {duration}";
+                    return $"Empowered -- {Wrap(positive, $"next attack deals {magnitude}% more")}, {duration}";
                 case StatusEffectType.Chilled:
-                    return $"Chilled -- {Wrap(positive, $"-{status.Magnitude}% Speed")}, {duration}";
+                    return $"Chilled -- {Wrap(positive, $"-{magnitude}% Speed")}{stacks}, {duration}";
                 case StatusEffectType.Rooted:
                     return $"Rooted -- {Wrap(positive, "Skill Only")}, {duration}";
                 case StatusEffectType.Marked:
@@ -299,9 +309,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 // rather than the constant directly still always prints 25
                 // and stays correct if that ever authors differently.
                 case StatusEffectType.Feared:
-                    return $"Feared -- {Wrap(positive, $"turn skipped and {status.Magnitude}% more damage taken")}, {duration}";
+                    return $"Feared -- {Wrap(positive, $"turn skipped and {magnitude}% more damage taken")}, {duration}";
                 default:
-                    throw new System.ArgumentOutOfRangeException(nameof(status), status.Type,
+                    throw new System.ArgumentOutOfRangeException(nameof(summary), summary.Type,
                         "StatusHud has no tooltip for this status -- a badge would otherwise show nothing on hover.");
             }
         }
@@ -362,13 +372,30 @@ namespace PrincesPalace.Domain.Combat.Session
                     status.Magnitude, 1, status.TurnsRemaining, StatusEffects.NeverExpires(status)));
             }
 
+            // AND A LONE ANYTHING ELSE IS A ONE-INSTANCE SUMMARY, for the same
+            // reason: one place words each status, whether the caller is
+            // holding one entry or a pile.
+            return RowFor(new StatusEffects.StatusSummary(
+                status.Type, status.Magnitude, 1, status.TurnsRemaining));
+        }
+
+        // ONE BADGE FOR EVERY INSTANCE OF ONE TYPE, its number the SOONEST
+        // expiry and its tooltip the summed magnitude.
+        //
+        // The counter stays a turn count rather than becoming an instance
+        // count: every non-ward badge in the game answers "how much longer",
+        // and a three that means "three stacks" sitting beside a three that
+        // means "three turns" is a worse lie than no number. How many stacks
+        // there are is in the tooltip, where WardRow already puts it.
+        public static FightHudModel.StatusRow RowFor(StatusEffects.StatusSummary summary)
+        {
             return new FightHudModel.StatusRow(
-                CodeFor(status.Type),
-                SlugFor(status.Type),
-                TooltipFor(status),
-                IsPositive(status.Type),
-                CounterFor(status.TurnsRemaining),
-                SortKeyFor(status.Type));
+                CodeFor(summary.Type),
+                SlugFor(summary.Type),
+                TooltipFor(summary),
+                IsPositive(summary.Type),
+                CounterFor(summary.SoonestTurns),
+                SortKeyFor(summary.Type));
         }
 
         // A running transformation as one badge. `displayName` is the form's

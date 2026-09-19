@@ -98,6 +98,38 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, StatusCombos.SpendPoisonIfMatched(null, DamageType.Nature));
         }
 
+        // ---- stacking, owner 2026-09-20 ---------------------------------------
+
+        // EVERY INSTANCE, NOT THE FIRST. A detonation that ate one of three
+        // would read to a player as a detonation that did nothing much, and
+        // would leave the pile detonatable again by the very next Nature hit.
+        [Test]
+        public void DetonatingThreeStacks_ConsumesAllOfThem_AndLeavesNoneTicking()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 2, 3);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 7, 1);
+
+            int bonus = StatusCombos.SpendPoisonIfMatched(target, DamageType.Nature);
+
+            Assert.AreEqual(33, bonus, "20 + 6 + 7 -- the whole pile's remaining worth");
+            Assert.IsFalse(target.Statuses.Exists(s => s.Type == StatusEffectType.Poison),
+                "a survivor here is an instance that keeps ticking after being detonated");
+        }
+
+        [Test]
+        public void DetonatingAPile_IsStillIdempotent_TheSecondCallDoesNothing()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 2, 3);
+
+            Assert.AreEqual(26, StatusCombos.SpendPoisonIfMatched(target, DamageType.Poison));
+            Assert.AreEqual(0, StatusCombos.SpendPoisonIfMatched(target, DamageType.Poison),
+                "the recursion guard has to hold for a pile, not just for one entry");
+        }
+
         // Protect/Vulnerable/Stun on the same combatant must not interfere —
         // detonation only ever looks at Poison specifically.
         [Test]

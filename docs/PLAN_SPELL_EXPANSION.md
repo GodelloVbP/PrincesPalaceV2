@@ -1801,6 +1801,80 @@ Per action and per mana, both, for every comparison:
 | Thorn Tithe vs direct damage, on fast physical enemies and on slow casters | **focused harness.** The whole point is action *frequency*, so the pair is `crystal_bat`/`gloom_moth` (fast, physical) against `treant`/`golem` (slow); the bot's aggregate hides exactly this |
 | Court of Whispers + Borrowed Moment + Gale Scythe + Chill + Rooted, alternating casters | **focused harness**, and it is the `ControlLoopTests` fixture from §3 run long. Count enemy actions allowed per round over five rounds with two and three casters |
 
+### Measured values — milestone A, 2026-09-20
+
+Instrument: `Assets/_Project/Scripts/Tests/EditMode/Combat/SpellExpansionBalanceTests.cs`,
+a focused EditMode harness. `tools/bot.ps1` was **not** used for these two
+pairs and the reason is the one §5 already gives: it reports damage and
+survival, not points of shield per mana, and it cannot script "the same spell
+at spell-Attack 4 and at 90". The figures below are pinned as literals in that
+file, so moving one costs a visible edit here and there.
+
+**Gilded Aegis vs existing protection.** Ward points, at the two anchor casters
+`PhaseFourSkillTests` already uses:
+
+| caster | Gilded Aegis (7 mana) | `prism_ward` (8 mana) | `fleece_ward` (2 wool) |
+|---|---|---|---|
+| spell attack 4 | **22** (3.1 / mana) | 24 (3.0 / mana) | 50 |
+| spell attack 90 | **108** (15.4 / mana) | 110 (13.8 / mana) | 50 |
+
+Verdict: **neither dominated nor dominating, number stands at `prototype` 18.**
+It is a shade under `prism_ward` at both ends for one mana less, and it carries
+a two-turn cooldown `prism_ward` does not — marginally better per point of
+mana, strictly worse per cast, which is the trade the cooldown is there to buy.
+Against `fleece_ward`'s flat 50 it is worse early and twice as good late, so it
+crosses rather than replaces.
+
+**Winter's Rebuke vs direct damage.** One cast against an undefended target,
+variance off:
+
+| spell | packet | mana | landed | per mana |
+|---|---|---|---|---|
+| Winter's Rebuke | Frost 6 | 8 | **6** | 0.75 |
+| `mud_burst` | Earth 6 | 8 | 6 | 0.75 |
+| `lightning_bolt` | Lightning 10 | 11 | 10 | 0.91 |
+
+Both anchors read the same, because a fixed packet does not scale with the
+caster's attack — existing behaviour of every `damageInstances` book, not
+something this spell introduces.
+
+**Finding, reported rather than tuned:** Winter's Rebuke is *exactly*
+`mud_burst`'s packet for *exactly* `mud_burst`'s mana, and it is authored a
+tier higher. The damage half of it earns nothing over a cheaper book. It is not
+strictly dominated — it carries a two-turn Chilled where mud_burst carries a
+one-turn Vulnerable — so under this section's own rule the number was left
+alone. **Owner's call:** raise the packet, drop the tier to 1, or accept that
+the Chill is what the tier buys.
+
+**Winter's Rebuke vs queue control.** Enemy actions allowed, read off
+`CombatEncounter.UpcomingTurns` over a 30-turn forecast. Hero speed 10, one
+enemy at speed 20:
+
+| chill on the enemy | enemy turns in 30 | actions denied |
+|---|---|---|
+| none | 17 | — |
+| one at 25% | 16 | 1 |
+| two at 25% | 15 | 2 |
+| three at 25% | 12 | 5 |
+
+**Finding, and the one worth carrying to the owner: a 25% Chilled does not deny
+25% of an enemy's actions — it denies about 6% of them.** The badge says -25%
+Speed and that is true; `SpeedScale`'s charge curve is deliberately sub-linear
+with a hard ceiling (its own header records why), so a quarter off the Speed
+number is far less than a quarter off how often the actor acts. The effect only
+starts to bite at the third stack. That is an argument *for* the stacking model
+rather than against the percent, and it means the "Chilled 25%" line in every
+spell entry below promises more than it delivers to a player reading it as an
+action tax. Not tuned; 25% is the owner's `prototype` figure and the
+measurement says it is weak, not wrong.
+
+**Viper's Bite** has no §5 pair of its own — its comparison (against Ashen
+Reckoning and against ordinary detonation) is milestone B's, because two of the
+three scripted lines need spells B introduces. Its milestone A behaviour is
+pinned by `VipersBiteTests` instead.
+
+---
+
 **Where `tools/bot.ps1` covers it, use it** — it plays whole runs and its
 numbers are a floor, not a verdict. Where the comparison needs a scripted line
 rather than a policy, a focused EditMode harness is the instrument, and its

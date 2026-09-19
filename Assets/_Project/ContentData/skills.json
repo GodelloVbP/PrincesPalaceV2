@@ -56,7 +56,7 @@
       ],
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 25,
-      "statusDuration": 2,
+      "statusDuration": 1,
       "vfx": {
         "path": "Spells/mud_burst",
         "seconds": 0.65,
@@ -183,6 +183,215 @@
       "bookTier": 3
     },
     {
+      "_comment": "MILESTONE A of docs/PLAN_SPELL_EXPANSION.md, section 2.1. Every number here is marked prototype in that document and is tuning, not specification. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship, so the cast reads on the stage before its own sheet exists -- the atlas under Art/Sheets/Spells/Gilded Aegis is stage 5's work. No iconPath yet for the same reason; an empty one hides the slot rather than drawing a placeholder.",
+      "id": "gilded_aegis",
+      "bookOnly": true,
+      "displayName": "Gilded Aegis",
+      "description": "Shields one ally. The gilding holds for two of their turns.",
+      "characterId": "sheep",
+      "effect": "Ward",
+      "targeting": "SingleAlly",
+      "manaCost": 7,
+      "flatAmount": 18,
+      "wardTurns": 2,
+      "scalingAxis": "Spell",
+      "cooldownTurns": 2,
+      "bookTier": 1,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.28,
+        "layers": [
+          {
+            "id": "gather",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "path": "Spells/prismatic_orb_earth_charge",
+            "seconds": 0.3,
+            "until": "once",
+            "size": 240,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.1
+          },
+          {
+            "id": "plate",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "offset": 0.02,
+            "path": "Spells/prismatic_orb_earth_core",
+            "seconds": 0.26,
+            "travelSeconds": 0.26,
+            "until": "loop",
+            "size": 200,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.2
+          },
+          {
+            "id": "seat",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/prismatic_orb_earth_contact",
+            "seconds": 0.34,
+            "until": "once",
+            "size": 300,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.18,
+            "glow": 1.3,
+            "fade": 0.12
+          }
+        ]
+      }
+    },
+    {
+      "_comment": "MILESTONE A, section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled is the FIRST content row in the game to author it, and it only slows anyone because ApplySkillStatus now goes through FightSession.ApplyStatusTo (plan D6). statusDuration 2 means two of the target's turns fully affected, the turn-end clock plan D1 put every standing modifier on. Placeholder presentation, as above. No reachSlots: a spell book reaches the whole line, the way mud_burst and lightning_bolt already do.",
+      "id": "winters_rebuke",
+      "bookOnly": true,
+      "displayName": "Winter's Rebuke",
+      "description": "Frost damage, and the cold hangs on them for two turns.",
+      "characterId": "sheep",
+      "effect": "DamageSingle",
+      "targeting": "SingleEnemy",
+      "manaCost": 8,
+      "damageInstances": [
+        {
+          "type": "Frost",
+          "amount": 6
+        }
+      ],
+      "appliesStatus": "Chilled",
+      "statusMagnitude": 25,
+      "statusDuration": 2,
+      "cooldownTurns": 2,
+      "bookTier": 2,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.28,
+        "layers": [
+          {
+            "id": "craze",
+            "render": "sprite",
+            "place": "caster",
+            "at": "release",
+            "path": "Spells/prismatic_orb_water_charge",
+            "seconds": 0.28,
+            "until": "once",
+            "size": 260,
+            "facing": "auto",
+            "sort": "ground",
+            "glow": 1.1
+          },
+          {
+            "id": "sheet",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "offset": 0.02,
+            "path": "Spells/prismatic_orb_water_core",
+            "seconds": 0.26,
+            "travelSeconds": 0.26,
+            "until": "loop",
+            "size": 210,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.2
+          },
+          {
+            "id": "rime",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/frost_flare",
+            "seconds": 0.36,
+            "until": "once",
+            "size": 320,
+            "impactX": 0.5,
+            "impactY": 0.18,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.2,
+            "glow": 1.35,
+            "fade": 0.14
+          }
+        ]
+      }
+    },
+    {
+      "_comment": "MILESTONE A, section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies. Placeholder presentation: the jaws are the owner's priority visual and are stage 5's work; mud_burst's flat lance stands in for the travel until the real sheet is sliced.",
+      "id": "vipers_bite",
+      "bookOnly": true,
+      "displayName": "Viper's Bite",
+      "description": "Detonates existing Poison, then poisons again.",
+      "characterId": "sheep",
+      "effect": "DamageSingle",
+      "targeting": "SingleEnemy",
+      "manaCost": 7,
+      "damageInstances": [
+        {
+          "type": "Poison",
+          "amount": 3
+        }
+      ],
+      "appliesStatus": "Poison",
+      "statusMagnitude": 3,
+      "statusDuration": 3,
+      "cooldownTurns": 2,
+      "bookTier": 1,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.28,
+        "layers": [
+          {
+            "id": "coil",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "path": "Spells/prismatic_orb_wind_charge",
+            "seconds": 0.3,
+            "until": "once",
+            "size": 250,
+            "facing": "auto",
+            "sort": "ground",
+            "glow": 1.05
+          },
+          {
+            "id": "jaws",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "offset": 0.02,
+            "path": "Spells/mud_burst",
+            "seconds": 0.26,
+            "travelSeconds": 0.26,
+            "until": "loop",
+            "size": 240,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.15
+          },
+          {
+            "id": "venom",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/prismatic_orb_earth_drops",
+            "seconds": 0.4,
+            "until": "once",
+            "size": 300,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.24,
+            "glow": 1.2,
+            "fade": 0.16
+          }
+        ]
+      }
+    },
+    {
       "id": "provoke",
       "displayName": "Provoke",
       "description": "Head down, eyes up. Whatever it was going to do, it is going to do it to you.",
@@ -289,7 +498,7 @@
       "resourceCost": 10,
       "appliesStatus": "Protect",
       "statusMagnitude": 50,
-      "statusDuration": 2,
+      "statusDuration": 1,
       "cooldownTurns": 3
     },
     {
@@ -417,7 +626,7 @@
       "manaCost": 0,
       "appliesStatus": "Protect",
       "statusMagnitude": 50,
-      "statusDuration": 2,
+      "statusDuration": 1,
       "stance": "shell_closed",
       "playerSelectable": false
     },
@@ -473,7 +682,7 @@
       "manaCost": 0,
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 25,
-      "statusDuration": 2,
+      "statusDuration": 1,
       "stance": "cast",
       "vfx": {
         "path": "Spells/mud_burst",

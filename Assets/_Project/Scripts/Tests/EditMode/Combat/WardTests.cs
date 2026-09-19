@@ -229,10 +229,10 @@ namespace PrincesPalace.Domain.Tests
             Ward(lamb, lamb, 60, turns: 1);
             var raised = new List<ActiveStatus>(lamb.Statuses);
 
-            Assert.AreEqual(0, StatusEffects.TickWardsAtTurnEnd(lamb, raised), "the turn it went up counted");
+            Assert.AreEqual(0, StatusEffects.TickAtTurnEnd(lamb, raised).Count, "the turn it went up counted");
             Assert.AreEqual(60, StatusEffects.WardPoints(lamb));
 
-            Assert.AreEqual(1, StatusEffects.TickWardsAtTurnEnd(lamb));
+            Assert.AreEqual(1, StatusEffects.TickAtTurnEnd(lamb).Count);
             Assert.IsFalse(StatusEffects.IsWarded(lamb), "still standing past its one turn");
         }
 
@@ -244,11 +244,11 @@ namespace PrincesPalace.Domain.Tests
             var lamb = Fighter();
             Ward(lamb, lamb, 60, turns: 3);
 
-            StatusEffects.TickWardsAtTurnEnd(lamb);
-            StatusEffects.TickWardsAtTurnEnd(lamb);
+            StatusEffects.TickAtTurnEnd(lamb);
+            StatusEffects.TickAtTurnEnd(lamb);
             Assert.AreEqual(60, StatusEffects.WardPoints(lamb), "gone a turn early");
 
-            StatusEffects.TickWardsAtTurnEnd(lamb);
+            StatusEffects.TickAtTurnEnd(lamb);
             Assert.IsFalse(StatusEffects.IsWarded(lamb));
         }
 
@@ -267,7 +267,7 @@ namespace PrincesPalace.Domain.Tests
 
             for (int turn = 0; turn < 20; turn++)
             {
-                StatusEffects.TickWardsAtTurnEnd(shawn);
+                StatusEffects.TickAtTurnEnd(shawn);
             }
 
             Assert.AreEqual(60, StatusEffects.WardPoints(shawn), "his own ward aged away");
@@ -283,7 +283,7 @@ namespace PrincesPalace.Domain.Tests
 
             for (int turn = 0; turn < 20; turn++)
             {
-                StatusEffects.TickWardsAtTurnEnd(ally);
+                StatusEffects.TickAtTurnEnd(ally);
             }
 
             Assert.AreEqual(30, StatusEffects.WardPoints(ally),
@@ -298,7 +298,7 @@ namespace PrincesPalace.Domain.Tests
             var odette = Fighter("Odette");
             Ward(odette, shawn, 30, turns: 1);
 
-            StatusEffects.TickWardsAtTurnEnd(shawn);
+            StatusEffects.TickAtTurnEnd(shawn);
 
             Assert.IsFalse(StatusEffects.IsWarded(shawn),
                 "the capstone is the caster's, and Odette does not hold it");

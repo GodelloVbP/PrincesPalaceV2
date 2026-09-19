@@ -65,7 +65,7 @@ namespace PrincesPalace.Domain.Tests
             foreach (string id in new[]
                      {
                          "fleece_ward", "placeholder_brawler_ward", "bear_bulwark", "prism_ward",
-                         "gift_mana", "gift_fury", "gift_haste", "mend",
+                         "gift_mana", "gift_fury", "gift_haste", "mend", "gilded_aegis",
                      })
             {
                 Assert.IsTrue(byId.ContainsKey(id), $"skills.json no longer has a row called '{id}'");
@@ -92,6 +92,10 @@ namespace PrincesPalace.Domain.Tests
                 // targeting Self, because a free action that stops for a
                 // pick is a free action that costs a click.
                 "bear_bulwark", "prism_ward", "mend",
+
+                // Spell expansion milestone A. A ward like the four above and
+                // it rides the same Ward arm, which already reads its target.
+                "gilded_aegis",
             };
 
             var strays = ByIdFromContent()

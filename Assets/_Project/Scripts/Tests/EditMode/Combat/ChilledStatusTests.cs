@@ -99,10 +99,19 @@ namespace PrincesPalace.Domain.Tests
             session.ApplyChilledForTest(target, magnitude: 25, turns: 1);
             Assert.AreEqual(30, target.Speed, "fixture check: the malus should have applied");
 
-            session.TickStatusesForTest(target);
+            // THE TURN-END CLOCK, not the turn-start tick. Chilled moved there
+            // with plan D1 and its teardown moved with it.
+            //
+            // THE FIRST TURN END DOES NOT COUNT, because the chill was applied
+            // during it -- the exemption every AtTurnEnd status now carries.
+            session.TickStatusesAtTurnEndForTest(target);
+            Assert.AreEqual(30, target.Speed, "the turn it was applied during counted against it");
+
+            session.CrossTurnBoundaryForTest();
+            session.TickStatusesAtTurnEndForTest(target);
 
             Assert.IsFalse(target.Statuses.Any(s => s.Type == StatusEffectType.Chilled),
-                "a one-turn Chilled must be gone from the status list after one tick");
+                "a one-turn Chilled must be gone from the status list after one turn end");
             Assert.AreEqual(40, target.Speed,
                 "an expired Chilled must hand back EXACTLY what it took, not merely apply the inverse percent " +
                 "(which would not return to 40 -- see FightSession.SpeedBuffs' own header on why)");
@@ -115,18 +124,25 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { Fighter("Hero", true) }, new[] { target }));
 
             session.ApplyChilledForTest(target, magnitude: 25, turns: 2);
-            session.TickStatusesForTest(target);
+            session.CrossTurnBoundaryForTest();
+            session.TickStatusesAtTurnEndForTest(target);
 
             var chilled = target.Statuses.SingleOrDefault(s => s.Type == StatusEffectType.Chilled);
-            Assert.IsNotNull(chilled, "a two-turn Chilled must survive one tick");
+            Assert.IsNotNull(chilled, "a two-turn Chilled must survive one turn end");
             Assert.AreEqual(1, chilled.TurnsRemaining);
             Assert.AreEqual(30, target.Speed, "the malus must still be in effect while turns remain");
         }
 
-        // ---- refresh, not stack ------------------------------------------------
+        // ---- stack, not refresh (owner, 2026-09-20) ---------------------------
+        //
+        // These two were the refresh pins. Chilled stacks now, so what they
+        // guard has changed from "a recast cannot compound" to "a recast
+        // compounds ADDITIVELY and the malus is still computed once, off the
+        // true base" -- which is the property that made the old refresh
+        // arithmetic reversible and is the one worth keeping.
 
         [Test]
-        public void Chilled_ASecondStrongerApplication_RefreshesRatherThanStacking()
+        public void Chilled_ASecondApplication_StacksAndTheMalusIsTheSum()
         {
             var target = Fighter("Foe", false, speed: 40);
             var session = Session(new CombatEncounter(new[] { Fighter("Hero", true) }, new[] { target }));
@@ -136,14 +152,17 @@ namespace PrincesPalace.Domain.Tests
 
             session.ApplyChilledForTest(target, magnitude: 25, turns: 5);
 
-            Assert.AreEqual(1, target.Statuses.Count(s => s.Type == StatusEffectType.Chilled),
-                "a second application must refresh the existing entry, not add a second one");
-            Assert.AreEqual(30, target.Speed,
-                "the refreshed malus must be -(40*25/100) = -10 off the TRUE base, not -4 stacked with a further -10 (26)");
+            Assert.AreEqual(2, target.Statuses.Count(s => s.Type == StatusEffectType.Chilled),
+                "a second application must add a second instance with its own clock");
+
+            // 10 + 25 = 35, and -(40*35/100) = -14. Computed ONCE off the true
+            // base 40, not as -4 then a further -(36*25/100): the second
+            // reading would be -9 and the pair would not reverse exactly.
+            Assert.AreEqual(26, target.Speed);
         }
 
         [Test]
-        public void Chilled_AWeakerReapplication_NeverWeakensTheExistingOne()
+        public void Chilled_AWeakerSecondChill_AddsItsOwnMalusOnTop()
         {
             var target = Fighter("Foe", false, speed: 40);
             var session = Session(new CombatEncounter(new[] { Fighter("Hero", true) }, new[] { target }));
@@ -153,7 +172,36 @@ namespace PrincesPalace.Domain.Tests
 
             session.ApplyChilledForTest(target, magnitude: 5, turns: 1);
 
-            Assert.AreEqual(30, target.Speed, "a weaker re-application must not lift the stronger chill already active");
+            // 25 + 5 = 30, and -(40*30/100) = -12.
+            Assert.AreEqual(28, target.Speed,
+                "a weaker second chill is still a chill and adds its own share");
+        }
+
+        // THE FAILURE STACKING INTRODUCES, pinned: one instance lapsing must
+        // leave the rest slowing. A teardown written as a bare revoke would
+        // hand back the WHOLE malus the first time any instance expired.
+        [Test]
+        public void TwoChills_SlowByTheirSum_AndOneExpiringLeavesTheOtherSlowing()
+        {
+            var target = Fighter("Foe", false, speed: 40);
+            var session = Session(new CombatEncounter(new[] { Fighter("Hero", true) }, new[] { target }));
+
+            session.ApplyChilledForTest(target, magnitude: 25, turns: 1);
+            session.ApplyChilledForTest(target, magnitude: 10, turns: 3);
+            Assert.AreEqual(26, target.Speed, "35% off true base 40 is -14");
+
+            session.CrossTurnBoundaryForTest();
+            session.TickStatusesAtTurnEndForTest(target);
+
+            Assert.AreEqual(1, target.Statuses.Count(s => s.Type == StatusEffectType.Chilled),
+                "the one-turn instance should have gone and the three-turn one should not");
+            Assert.AreEqual(36, target.Speed,
+                "the survivor's own 10% must still be taken -- -(40*10/100) = -4, not a full revert to 40");
+
+            session.TickStatusesAtTurnEndForTest(target);
+            session.TickStatusesAtTurnEndForTest(target);
+
+            Assert.AreEqual(40, target.Speed, "and the last instance hands back exactly what it took");
         }
 
         // ---- lucky deck's migration ---------------------------------------------
@@ -203,9 +251,16 @@ namespace PrincesPalace.Domain.Tests
             session.LuckyDeckSlowForTest(actor, target);
             Assert.AreEqual(14, target.Speed, "fixture check");
 
-            session.TickStatusesForTest(target);
+            // The slow was applied during the ATTACKER's turn, so the target's
+            // own turn is a turn later -- the boundary crossing is what the
+            // round trip would have done between the two.
+            session.CrossTurnBoundaryForTest();
+            session.TickStatusesAtTurnEndForTest(target);
 
-            Assert.AreEqual(20, target.Speed, "the one-turn slow must revert exactly after the target's own next turn starts");
+            Assert.AreEqual(20, target.Speed,
+                "the one-turn slow must revert exactly at the end of the target's own next turn -- " +
+                "which under plan D1 is one full affected turn later than it used to be, the one row " +
+                "in the migration table whose behaviour could not be preserved");
         }
 
         // THE MALUS TWIN'S OWN REFRESH RULE, which nothing reached until this

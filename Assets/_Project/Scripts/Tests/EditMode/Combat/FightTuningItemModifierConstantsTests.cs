@@ -48,7 +48,13 @@ namespace PrincesPalace.Domain.Tests
             // pins ChilledOnHitSpeedPercent's magnitude via a hand-derived
             // speed literal; the duration side of that same proc was only
             // ever checked against FightTuning.ChilledOnHitTurns itself.
-            Assert.AreEqual(2, FightTuning.ChilledOnHitTurns);
+            //
+            // ONE, not the 2 it read until plan D1. Chilled moved to the
+            // turn-end clock, where 1 affects exactly the turn the old
+            // turn-start 2 actually affected -- the number changed so the
+            // behaviour would not, and StatusDurationMigrationTests is where
+            // that equivalence is pinned.
+            Assert.AreEqual(1, FightTuning.ChilledOnHitTurns);
         }
 
         [Test]
@@ -57,7 +63,9 @@ namespace PrincesPalace.Domain.Tests
             // Sylvan's on-hit Rooted duration -- Rooted's only tunable
             // number, since the chance itself lives in modifiers.json and
             // Rooted carries no Magnitude of its own to author.
-            Assert.AreEqual(2, FightTuning.RootOnHitTurns);
+            //
+            // ONE since plan D1 -- see ChilledOnHitTurns_Pin just above.
+            Assert.AreEqual(1, FightTuning.RootOnHitTurns);
         }
     }
 }

@@ -59,7 +59,7 @@ MonoBehaviour:
     Status: 3
     HasStatus: 1
     StatusMagnitude: 25
-    StatusDuration: 2
+    StatusDuration: 1
     Requirements:
       strength: 0
       dexterity: 0

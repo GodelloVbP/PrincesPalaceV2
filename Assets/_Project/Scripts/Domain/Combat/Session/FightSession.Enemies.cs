@@ -989,7 +989,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // plain attack or skill either one.
             if (hasSource && source.HasStatus && target.IsAlive)
             {
-                StatusEffects.Apply(target.Statuses, source.AppliesStatus.Value, source.StatusMagnitude, source.StatusDuration);
+                ApplyStatusTo(target, source.AppliesStatus.Value, source.StatusMagnitude, source.StatusDuration);
                 AppendMessage($"{target.Name} is afflicted with {source.AppliesStatus.Value}!");
             }
 

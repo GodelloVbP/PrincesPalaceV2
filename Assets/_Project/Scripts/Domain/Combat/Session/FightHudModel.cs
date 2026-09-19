@@ -690,17 +690,23 @@ namespace PrincesPalace.Domain.Combat.Session
             var rows = new List<StatusRow>();
             if (actor == null) return rows;
 
+            // ONE BADGE PER TYPE, not one per entry. Wards stacked first (the
+            // shield model, StatusEffects' own WARDS header) and were
+            // special-cased below; every other status joined them on
+            // 2026-09-20, so the de-duplication is now the rule rather than the
+            // exception. A combatant carrying three poisons draws one PSN pill
+            // whose tooltip says what all three are doing -- three pills each
+            // telling a third of the story is the failure this closes.
+            var summarised = new HashSet<StatusEffectType>();
             foreach (var status in actor.Statuses)
             {
-                // WARDS ARE ONE BADGE, not one each. They stack since the
-                // shield model (StatusEffects' own WARDS header), so a
-                // combatant behind a Bulwark, a Flock share and a relic ward
-                // would otherwise draw three SHD pills that each tell the
-                // player a fraction of what they want to know. Summarised once
-                // below instead.
+                // Wards keep their own summary: their badge answers "how much
+                // is left", not "how much longer", and NeverExpires has no
+                // analogue for anything else.
                 if (status.Type == StatusEffectType.Shielded) continue;
+                if (!summarised.Add(status.Type)) continue;
 
-                rows.Add(StatusHud.RowFor(status));
+                rows.Add(StatusHud.RowFor(StatusEffects.SummariseStatus(actor, status.Type)));
             }
 
             var wards = StatusEffects.SummariseWards(actor);

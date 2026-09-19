@@ -48,6 +48,64 @@ namespace PrincesPalace.Domain.Tests
             return session;
         }
 
+        // ---- one badge per type, however many instances ------------------------
+
+        // WARDS SOLVED THIS FIRST and every other status joined them on
+        // 2026-09-20. Three poisons drawing three PSN pills would each tell a
+        // third of the story, and the badge a player glances at would be the
+        // weakest of the three rather than the total.
+        [Test]
+        public void ThreePoisonInstances_DrawOneBadge_WhoseTooltipCarriesTheSum()
+        {
+            var session = Session();
+            var actor = Combatant();
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Poison, 4, 5);
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Poison, 7, 2);
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Poison, 2, 4);
+
+            var rows = FightHudModel.StatusRowsFor(session, actor);
+            var poison = rows.Where(r => r.Slug == StatusHud.SlugFor(StatusEffectType.Poison)).ToList();
+
+            Assert.AreEqual(1, poison.Count, "three pills where a player wants one number");
+            StringAssert.Contains("13 damage each turn start", poison[0].Tooltip,
+                "the tooltip must carry the SUM of the live instances, not the first one's magnitude");
+            StringAssert.Contains("across 3 stacks", poison[0].Tooltip,
+                "and say how many are underneath it, the way a ward badge already does");
+            Assert.AreEqual(2, poison[0].Counter,
+                "the counter is the SOONEST expiry -- the next moment the number above changes on its own");
+        }
+
+        [Test]
+        public void ALoneInstanceStillReadsExactlyAsItAlwaysDid()
+        {
+            var session = Session();
+            var actor = Combatant();
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Poison, 6, 3);
+
+            var row = FightHudModel.StatusRowsFor(session, actor)
+                .Single(r => r.Slug == StatusHud.SlugFor(StatusEffectType.Poison));
+
+            StringAssert.Contains("6 damage each turn start", row.Tooltip);
+            StringAssert.DoesNotContain("stacks", row.Tooltip,
+                "one instance is not a stack and must not be described as one");
+            Assert.AreEqual(3, row.Counter);
+        }
+
+        [Test]
+        public void TwoChills_DrawOneBadge_WhoseTooltipCarriesTheSummedPercent()
+        {
+            var session = Session();
+            var actor = Combatant();
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Chilled, 25, 2);
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Chilled, 15, 4);
+
+            var row = FightHudModel.StatusRowsFor(session, actor)
+                .Single(r => r.Slug == StatusHud.SlugFor(StatusEffectType.Chilled));
+
+            StringAssert.Contains("-40% Speed", row.Tooltip,
+                "the badge must say what the schedule is actually doing");
+        }
+
         // ---- codes -------------------------------------------------------------
 
         // Every status must produce a real three-letter code, and the
