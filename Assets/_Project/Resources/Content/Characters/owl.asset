@@ -30,7 +30,7 @@ MonoBehaviour:
       wisdom: 12
       intelligence: 14
       charisma: 8
-    PortraitPath: Portraits/sheep
+    PortraitPath: Portraits/owl
     BattleSpritePath: Characters/owl
     BattleSpriteFacing: 1
     AttackType: 5

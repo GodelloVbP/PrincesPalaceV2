@@ -67,6 +67,8 @@ SOURCE_ROOT = "Assets/_Project/Art/Portraits"
 # there deliberately, do not assume Processed/ is what the game reads.
 PORTRAITS = {
     "Sheep": {"tolerance": DEFAULT_TOLERANCE, "reproduces": False},
+    "Bear": {"tolerance": DEFAULT_TOLERANCE, "reproduces": True},
+    "Owl": {"tolerance": DEFAULT_TOLERANCE, "reproduces": True},
 }
 
 
