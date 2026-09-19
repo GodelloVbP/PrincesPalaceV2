@@ -43,7 +43,7 @@ Structure the README around:
 - One prototype file (`<Name>.dc.html`) + its `support.js` + (when useful) a
   `reference_screenshot.png`, all together in `docs/handoffs/<slug>/`.
 - `<slug>` is lowercase, underscore-separated, no spaces — matches the
-  folder structure already in place (`docs/handoffs/relic_screen/`, not
+  folder structure already in place (`docs/handoffs/archive/relic_screen/`, not
   `docs/handoffs/Relic Screen/`).
 - The interactive prototype is authoritative for **behavior and layout**;
   a reference screenshot (when present) is a secondary visual anchor, not

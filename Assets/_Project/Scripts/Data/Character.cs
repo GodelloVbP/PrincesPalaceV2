@@ -374,7 +374,7 @@ namespace PrincesPalace
         //
         // Only THE GRANT is paid here. Everything else the track carries is
         // read live off `claimedTrackLevel` at its own site -- see RewardTrack
-        // and docs/PLAN_REWARD_TRACKS.md §2.
+        // and docs/archive/PLAN_REWARD_TRACKS.md §2.
         //
         // Returns whether the watermark actually moved, so a caller can drive
         // a "reward earned" flourish without diffing the character. NOT
@@ -434,7 +434,7 @@ namespace PrincesPalace
             // Everything the track pays except stat points is summed live off
             // `claimedTrackLevel` at its own read site (max health in
             // ContentDatabase.EffectiveStats, wool in
-            // BuildSignatureResource, and so on -- docs/PLAN_REWARD_TRACKS.md
+            // BuildSignatureResource, and so on -- docs/archive/PLAN_REWARD_TRACKS.md
             // §2's read-site table). Stat points are the exception because
             // the player SPENDS them, so the balance has to be storable; a
             // stored copy of anything else could only disagree with the

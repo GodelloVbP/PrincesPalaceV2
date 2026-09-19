@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // A LOCKED SEAT'S OCCUPANT CANNOT LEAVE IT, whichever gesture asks.
     //
-    // docs/handoffs/party_screen/GAP_AUDIT.md row 37 states the contract as
+    // docs/handoffs/archive/party_screen/GAP_AUDIT.md row 37 states the contract as
     // "locked position rejects any placement, and its occupant can't be moved
     // out either -- both directions blocked", and cites two call sites for it:
     // ClickSeat's destination check for the way in, SendToBench's own check

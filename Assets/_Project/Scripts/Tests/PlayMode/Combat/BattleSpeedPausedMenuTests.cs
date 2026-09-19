@@ -17,7 +17,7 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // T6, docs/PLAN_BATTLE_SPEED.md, contract 4: the row stepped while the
+    // T6, docs/archive/PLAN_BATTLE_SPEED.md, contract 4: the row stepped while the
     // system menu holds the clock, mid-beat, through the REAL menu and the
     // real OptionsController.Step -- not a synthetic source swap.
     //

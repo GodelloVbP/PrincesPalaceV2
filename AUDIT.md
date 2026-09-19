@@ -702,7 +702,7 @@ Six Opus hunters (combat; run/dungeon/economy/progression; UiKit/stage/audio/par
 Core→Domain seam; tools/; a speed-buff/reach follow-up) each found a defect, fixed it, and
 also found a few things that are not bugs — a comment or a mechanism that quietly stopped
 matching intent, left exactly as found because deciding differently is the owner's call, not
-the hunter's. Full write-up: `docs/BUG_HUNT_2026-09-08.md`.
+the hunter's. Full write-up: `docs/archive/BUG_HUNT_2026-09-08.md`.
 
 ### 84. `FightHudModel.MoveRow` cannot tell "no room" from "rooted", though its own header promises a reason
 
@@ -846,40 +846,7 @@ finding #77), which is a validation-rule addition, not a `StanceManifest` bug fi
 duplicate `spritePath` is ever legitimately authored (two stances sharing art) is a content-authoring
 question this register can't answer from the code alone.
 
-### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d
-
-**The answer, 2026-09-11.** Owner's call, of the two coherent readings the finding named: the SAVE learns to
-carry a hole. An empty front rank is a formation the player can choose, so `selectedCharacterIds` is a seat list
-and an empty seat is `SaveData.EmptySeat` in place.
-
-The sentinel is the empty string rather than null, and that is forced rather than stylistic: `JsonUtility`
-writes a null element of a `List<string>` as `""` and reads it back as `""`, so a null hole would not survive
-its own round trip. `SaveData.IsEmptySeat` is what readers ask; `PartyController` translates once, at the one
-seam between the save's `""` and `PartyFormation`'s null.
-
-TRAILING holes are still dropped. A hole says something only when somebody sits behind it, and keeping the tail
-would write three entries for a solo save's one member.
-
-The transcription problem the ignored test always had is now covered from the other side:
-`PartySeatGapRoundTripTests` still transcribes `PartyController.SeatList` and the `Refresh` loop because it is
-engine-free Domain, but two PlayMode tests in `SystemMenuPartyTests` press the bench affordance and read the
-file back, so a drifting transcription fails somewhere.
-
-The original finding follows.
-
-`Core/PartyController.cs:395`: `save.selectedCharacterIds = Formation.SeatIds.Where(id => id !=
-null).ToList();` — every save writes the seat list with empty seats filtered out entirely, rather
-than keeping their position. Benching the Front-seat member and reloading therefore promotes
-whoever was in Middle into Front, silently, because the gap that used to separate them is gone
-from the persisted list. `Tests/EditMode/Run/PartySeatGapRoundTripTests.cs` pins the round-trip
-and is marked `[Ignore]`, added deliberately alongside the finding (`64dab014`, "Owner's call: an
-empty seat is a state the model has and the save cannot").
-
-**Why it is the owner's:** already labelled as such at the commit that added the failing-but-ignored
-test — whether a benched hole should survive a save/load round trip (needs a nullable/sentinel
-slot in `selectedCharacterIds`) or compaction-on-save is the intended behaviour is a save-format
-design decision, not a bug fix.
-
+### ~~93. `PartyController.Persist` compacts a benched seat's hole, promoting the next member unchosen~~ — fixed in `82385df6`, answered together with #118: the save carries the hole, and `PartySeatGapRoundTripTests` is un-`[Ignore]`d; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 94. `unity_lock.ps1`'s `Certain`/`Ambiguous` fields have no reader, so a guess and a real hold look identical
 
 `tools/unity_lock.ps1:78-79` computes `Certain = $held` (a Unity.exe process actually matched to
@@ -957,7 +924,7 @@ summon's authored reward. `FightOutcomeTests.ASummonedBodyDoesNotPayItsOwnReward
 ### 98. `tools/measure_stage.py` is not wired into the gate, which is how it rotted silently
 
 The eighth hunter (Core runtime relayout) found the tool itself dead (fixed, `cd6f6f67`; see
-`docs/BUG_HUNT_2026-09-08.md`), but fixing the tool does not fix the fact that nothing runs it.
+`docs/archive/BUG_HUNT_2026-09-08.md`), but fixing the tool does not fix the fact that nothing runs it.
 It answers the one clearance question `UiAudit` structurally cannot (a stage slot's declared
 320x200 is a placeholder the runtime replaces with the real sprite canvas, so `UiAudit` measures
 a box that never appears on screen) and it failed loud, exit 1, for however long the 2x1 plate
@@ -1037,7 +1004,7 @@ refused, nothing new got staged, and the bare `git commit` a hunter then tried a
 had no `add` in the same command for the hook to refuse -- it went through and committed
 whatever was already staged in this shared working tree, which was another agent's in-flight
 docs changes. Caught before anything left the tree (`git reset --soft HEAD~1`, recommitted by
-explicit pathspec); nothing lost. See `docs/BUG_HUNT_2026-09-08.md` (f) for the incident.
+explicit pathspec); nothing lost. See `docs/archive/BUG_HUNT_2026-09-08.md` (f) for the incident.
 
 **Why it is the owner's:** two independent design calls -- whether the hook should scan commit
 message text at all (a false positive costs a blocked commit; not scanning risks missing a
@@ -1112,37 +1079,7 @@ redirect was never spent) is a design call; the comment at `:664` reads as
 
 ## Findings from the layered-spell pass, 2026-09-08
 
-### ~~106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive~~ — fixed in `16eeb5aa`: `BeginAppearancePop` sets the badge's final scale directly instead of starting a coroutine when the screen cannot host one. The guard is NOT the one proposed below and the difference is measured: at that teardown repaint `isActiveAndEnabled` still reads **true** — nothing called `SetActive`, the whole SCENE is unloading — and the scheduler refuses anyway, so the error still fired from the same line with the proposed guard in place (stack in the runner log). `gameObject.scene.isLoaded` is the flag that has already flipped. Asserted by `FightTeardownLifecycleTests.LoadingAFightOverALiveOneWithEverythingInFlightLogsNothing`, which abandons a real round (a popup mid-rise, a death fade mid-fade, a lunge mid-tween) with no `LogAssert.ignoreFailingMessages` anywhere in it, and was seen red with this exact message. The four Fight fixtures that tolerate it across a scene swap can now drop that line; none was touched here.
-
-Found by `SpellRuntimeCaptureTests` becoming the first fixture in the suite to
-load `Fight` twice in one class: the second `LoadSceneAsync(..., Single)`
-disables the outgoing scene, and Unity logs
-`Coroutine couldn't be started because the the game object 'FightPanel' is
-inactive!` before the new scene opens.
-
-Verified, one call chain and no branch in it:
-`FightBeatPlayer.OnDisable` (`FightBeatPlayer.cs:329`) calls `EndFight`
-(`:321`), which calls `Flush` (`:303`), which fires `_onFinished` ->
-`FightController.OnPlaybackFinished` (`FightController.Input.cs:820`) ->
-`RefreshUi` (`FightController.Hud.cs:63`) -> `RefreshPartyPlate` (`:583`) ->
-`RefreshPartyStatusRow` (`:1300`) -> `PaintStatusRow` (`:1107`) -> `PaintBadge`
-(`:1196`) -> `BeginAppearancePop` (`FightController.Hud.cs:1218`), which calls
-`StartCoroutine` on a `FightPanel` the engine has already deactivated.
-
-It is cosmetic in the game -- the badge simply does not pop on a screen that is
-being torn down -- and it is not cosmetic in a test host: Unity's test framework
-fails any test that logs an unexpected error, so it turns an unrelated fixture
-red. `SpellRuntimeCaptureTests` tolerates it across the scene swap only
-(`LogAssert.ignoreFailingMessages`, lifted before the cast) and says so at the
-line.
-
-The fix shape: `BeginAppearancePop` should set the final scale directly rather
-than starting a coroutine when the behaviour is not `isActiveAndEnabled` --
-which is the same graceful-degradation rule the rest of the HUD follows, and
-one guard rather than a caller-side check at each of the paint sites. Left
-undone here because it belongs to fight-HUD teardown rather than to the spell
-layers, and a change to `RefreshUi`'s path deserves its own gate.
-
+### ~~106. Loading a fight scene over a live one logs an error, because a status badge pops on a panel that is already inactive~~ — fixed in `16eeb5aa`: `BeginAppearancePop` sets the badge's final scale directly instead of starting a coroutine when the screen cannot host one. The guard is NOT the one proposed below and the difference is measured: at that teardown repaint `isActiveAndEnabled` still reads **true** — nothing called `SetActive`, the whole SCENE is unloading — and the scheduler refuses anyway, so the error still fired from the same line with the proposed guard in place (stack in the runner log). `gameObject.scene.isLoaded` is the flag that has already flipped. Asserted by `FightTeardownLifecycleTests.LoadingAFightOverALiveOneWithEverythingInFlightLogsNothing`, which abandons a real round (a popup mid-rise, a death fade mid-fade, a lunge mid-tween) with no `LogAssert.ignoreFailingMessages` anywhere in it, and was seen red with this exact message. The four Fight fixtures that tolerate it across a scene swap can now drop that line; none was touched here.; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### ~~107. `tools/preview.ps1 -Spell` cannot choose which element of a choice-skill it casts~~ — fixed in `4c45692b`: `-Element <DamageType>` on `preview.ps1`, validated against the skill's own `elements[]` before Unity boots and refused by name listing what is offered; carried through `PreviewProtocol.element` and `FightBootstrap.DevForcedElement` to `PreviewFight.ForSpell`/`PreviewElementOf`, which now casts the requested element and falls back to the old first-that-draws rule only when none was asked. The forced press and the capture prefix both name it (`spell_prismatic_orb_wind_impact.png`), so four elements no longer overwrite each other or require reordering `elements[]` in `skills.json`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~108. `SpellEmitter` cannot weight which atlas cell a particle draws~~ — fixed in `44e05216`: an optional `float[] weights` on `SpellEmitter`, one entry per cell in the folder's own file order, landed together with an array-aware `IsAuthored`/`FieldsEqual` so a `float[]` field defaulting to null never reads as reference-unequal to itself. `SpellLayerRules` refuses a negative, non-finite or all-zero array (the numbers-only half it can check without the disk); the length-equals-frame-count half lives beside the identical `startFrame` rule in `SpellVfxRecipeDriftTests`, because Domain cannot see the folder's frame count either way. `SpellEmitterSim.At` picks by cumulative weight over the same `hash(seed, index, 6)` an unweighted emitter always used, so a shipped emitter that authors no weights plays the identical field it always did. Earth's `shed` and `spray` emitters both ship `[15, 18, 8, 12, 12, 8, 15, 2]` over the 8-cell drops folder -- small/mid chunks dominant, the two heaviest chunks held down, grit present, the dust puff at 2.2%; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
@@ -1259,7 +1196,7 @@ Four Opus hunters (combat and the resource-pool model; the run outside combat; t
 stage and its presentation; verification/content tooling plus UiKit) reported rather than
 fixed, and four fixers worked from those reports — which is what let a finding be graded as
 an owner's call before anyone spent a commit on it. Full write-up, including the deferred
-work and the untuned Fury economy: `docs/BUG_HUNT_2026-09-10.md`. This hunt has TWO register
+work and the untuned Fury economy: `docs/archive/BUG_HUNT_2026-09-10.md`. This hunt has TWO register
 entries and they sit under different headers: #112 below, and #111 (`absorbsDamage`), which
 was appended to the 2026-09-08 layered-spell section above rather than here. Left where it
 is — this register does not renumber or relocate — but noted, because a reader looking for
@@ -1306,479 +1243,16 @@ The twelve below are the ones a fixer could not take: each either picks a
 behaviour the evidence does not settle, or changes a number that is a balance
 decision. Full write-up, including what was fixed, what was disproven with
 counter-evidence and what is still awaiting reproduction:
-`docs/BUG_HUNT_2026-09-11.md`. The manifest row for each is in
+`docs/archive/BUG_HUNT_2026-09-11.md`. The manifest row for each is in
 `docs/hunt/MANIFEST.md`.
 
-### ~~113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round~~ -- fixed in `c477205f`: the owner took option 1 -- a bonus action is the SAME turn and re-pays nothing, so `GrantTurnStart` split into `OpenTurnFor` (unchanged) and `ReopenTurnFor` (`_locks.ResetTurn`, `TickPrimaryPool`, and the two recomputes that read them), and the three `[Ignore]`d repro tests are green with a control beside them; full reasoning in the commit message
-
-Found 2026-09-11 by the `FightSession` seam finder (F2) and confirmed by a run.
-This is the lead `L1` (rider ordering) that two previous hunts deferred; the
-ordering is now written out in full in `docs/BUG_HUNT_2026-09-11.md`, and this
-is what it was hiding.
-
-`FightSession.Riders.cs:79-80` runs `_encounter.AdvanceTurn(); GrantTurnStart();`
-after `TryGrantTrample`/`TryGrantBloodlust` have already called
-`_encounter.GrantExtraTurn(actor)`, so the SAME actor is `Current` again and
-`GrantTurnStart` (`:218-261`) runs its whole thirteen-step block for them a
-second time. Four of those steps are destructive rather than idempotent:
-`TickStatuses` (`:233` -- the poison tick AND every non-`IsSpentByTheTurn`
-duration countdown), `TickCooldowns` (`:234`), `TickTransform` (`:246`) and
-`TickPhoenixEgg` (`:249`).
-
-Clearance ledger row `K8` cleared exactly two of the thirteen (`_locks.ResetTurn`
-`:229` and `TickPrimaryPool` `:231`) and argued they were intended. The other
-eleven were never examined. `K8` has been narrowed in the manifest to say so.
-
-**Contract, quoted.** `talents.json:169` (`sheep_ram_trample_3`, "Momentum"):
-*"A kill does not cost you the turn. Once per turn -- he is heavy, not
-infinite."* `Riders.cs:147-152`: *"Trample T3: a kill does not consume the
-action."* And `Riders.cs:216-217`, which is the sentence the code breaks:
-*"The next actor's turn opens: mana regenerates, statuses tick..."* -- on an
-extra turn there is no next actor.
-
-**Reachable on shipped content, and the pairing is forced.** `talents.json`
-puts `sheep_ram_trample_3` (`ExtraAttackOnKill`) in the SAME path as
-`sheep_ram_converge` (Black Ram Mode, *"7 wool for three turns of splash,
-weight and speed"*) and lists it as a PREREQUISITE of it. Nobody can own Black
-Ram Mode without owning Trample, and Black Ram Mode's splash makes a kill more
-likely.
-
-**The repro lives in the tree.** `Tests/EditMode/Combat/TurnRiderTests.cs`
-carries three `[Ignore]`d tests (`:400`, `:421`, `:441`, all citing the same
-`ExtraTurnDecision` reason string) added by `2c84a7a9` precisely so this is not
-re-derived when the call is made. Their output today:
-
-```
-APoisonedTramplerIsPoisonedOncePerRoundNotOncePerKill
-  Expected: 1   But was:  3
-ATramplersStatusDurationsTickOncePerRound
-  a 3-turn Shielded expired inside ONE of the hero's rounds
-  Expected: True   But was:  False
-ThreeTurnsOfBlackRamModeSurviveARoundInWhichHeTramples
-  Expected: 2   But was:  1
-```
-
-**Two honest options.**
-
-1. **Split the method.** `GrantTurnStart()` becomes `OpenTurnFor(actor)` (all
-   thirteen steps, a genuinely new turn) and `ReopenTurnFor(actor)` (an extra
-   action by the same actor). `K8`'s two steps stay in both. What else stays is
-   the owner's line to draw, and each side of it is a balance number: not
-   paying poison twice is a straight buff to a Trample build, not refunding
-   cooldowns is a straight nerf. The call-site change is one line at
-   `Riders.cs:79-80`, or a `_grantedExtraTurnTo` field the grant methods set
-   and `GrantTurnStart` reads and clears.
-2. **Leave it and fix the content row instead.** Say Black Ram Mode lasts
-   "three actions" rather than three turns, and accept that a Trample build
-   ages its own statuses faster as the cost of the extra swing.
-
-The one part that is not a balance question either way is Black Ram Mode: a
-three-turn form that reliably lasts two turns is a content row lying about
-itself. Option 2 is the cheap way to stop it lying; option 1 is the one that
-makes `Riders.cs:216-217` true again.
-
-Callers a fix touches: `FightSession.Riders.cs` (both grant methods),
-`FightSession.Enemies.cs:526` and `FightSession.cs:290` (both must keep the
-full version). Tests: `TurnRiderTests` (un-`[Ignore]` the three),
-`KillCreditTests`, `ChilledStatusTests`, `RelicMechanicsTests`,
-`StatusEffectsTests`.
-
-### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc` (content) and `5fc4eb51` (code): the owner took neither filed option — the starting kit is DELETED, and `Candidates()` asks `ContentDatabase.Offerable` rather than re-typing a predicate, so there is no third universe left for the two filters to disagree about
-
-**The answer, 2026-09-11.** Option 1 was "`Candidates()` reads `Offerable`"; option 2 was "keep the kit and
-correct the header". The owner's answer was that a new profile should not open wearing anything: the six
-`startingStock` rows are gone from `items.json`, along with their six generated assets and metas. `items.json` is
-the two potions now, neither of them `IsEquippable`, so `Candidates()` and `ContentDatabase.Offerable` currently
-select the identical set — and the green test `OnlyEquippablesAreOffered`, which a fixer could not have broken to
-satisfy a header, did not have to be broken to get there. The `startingStock` FIELD survives, unauthored and still
-pinned by `ItemEntryResolverTests`; `items.json`'s `_readme` records why the kit went. Stage 2's coverage
-denominator and the roll's universe now agree, which they differed on by exactly these six ids.
-
-The code half landed the same day in `5fc4eb51`, independently and from the other side: `Candidates()` now calls
-`ContentDatabase.Offerable` rather than re-typing the `IsEquippable` predicate, so the two cannot drift apart
-again the next time a hand-authored equippable is added, and `OnlyEquippablesAreOffered` was rewritten as
-`OnlyOfferableItemsAreOffered` plus `TheStartingKitIsNeverOfferedAsAReward` — a rule that keeps saying something
-the day a `startingStock` row is authored again. Either commit alone would have fixed the symptom; together they
-close both the row and the seam.
-
-The original finding follows.
-
-Found 2026-09-11 by the `ContentDatabase` seam finder (F3). Filed rather than
-fixed because the intent evidence CONFLICTS -- one of the two sources is a
-green test asserting today's behaviour.
-
-`Core/ItemOfferRoll.cs:36-42` (`Candidates()`) filters on `IsEquippable` alone
-(`:39`).
-`ContentDatabase.cs:199-208` (`Offerable`) filters on "was this generated with
-a tier" and its header says why:
-
-> That leaves out the hand-authored one-offs in items.json -- potions and the
-> starting kit -- which have their own routes in and would otherwise turn up
-> as a "reward" the player already owns six of.
-
-`Offerable`'s only production caller is `Editor/Bot/BalanceBotRunner.cs:817`.
-The reward screen, the shop's gear shelf (`RunOrchestrator.Shop.cs:396`) and
-the Reckoning all draw from `Candidates()`.
-
-**Repro (static).** Six `startingStock` items, all Equipment, tier 0;
-`RarityTable.FloorTier(step) = step/16` is 0 on floors 1-2 and
-`ItemOfferTable.Choose` opens at `TierSpread` 1, so all six sit in the early
-band. Win the first fight of a run and be offered the `iron_helm` you are
-wearing.
-
-**Intent evidence, both directions.** FOR `Offerable`: the header above,
-`docs/BOT_SUMMARY_SCHEMA.md:144`, `docs/PLAN_SHOP.md:962`. AGAINST:
-`ItemOfferRoll.cs:30-35` reasons only about potions, and
-`Tests/PlayMode/Content/ItemOfferRollTests.cs:37` `OnlyEquippablesAreOffered`
-asserts the current behaviour by name. A fixer cannot break a named green test
-to satisfy a header.
-
-**Two options.**
-
-1. **`Candidates()` reads `ContentDatabase.Offerable`.** The starting kit stops
-   being a reward and stops stocking the shop's gear shelf. Touches
-   `ItemOfferRoll.Roll`, `RunOrchestrator.Shop.cs:396`, `ReckoningController`,
-   `ShopStock.RollGear`; `OnlyEquippablesAreOffered` is rewritten in the same
-   commit to say what it now means. Failing test:
-   `ItemOfferRollTests.TheStartingKitIsNeverOfferedAsAReward` -- `Candidates()`
-   ids exclude every `StartingStock` id.
-2. **Keep the kit offerable and correct the header.** The argument for it: six
-   tier-0 items in the floor-1 band are the cheapest possible early reward, and
-   a duplicate `iron_helm` is a sell, not a dead offer.
-
-Side effect worth recording either way: stage 2's bot coverage denominator
-("Offerable items offered, 491/638") and the roll's actual universe differ by
-exactly these six ids, so the coverage figure is measured against a list the
-roll does not use.
-
-### ~~115. The shop screen produces refusals it may not guess at, and displays none of them~~ — fixed in `bbe23ff6`: option 1, one `PaintRefusal(ShopResult)` into the existing `detailLabel`, and `Reroll`/`SellRow` stopped discarding their results
-
-**The answer, 2026-09-11.** Owner's call: show the refusal, minimal effort, "can't afford" is the important
-one. So option 1 (reuse `detailLabel`) over option 2 (a dedicated line, a screen-tree change and a
-`-BuildScenes` run), and the cost of that choice — a refusal replaces the selected card's description — is paid
-by an explicit clearing rule: the line goes on the next selection, on opening or closing the pack, and on
-opening the shop.
-
-Three strings, not ten. Seven of `ShopRefusal`'s ten values describe a call arriving out of order and a player
-cannot act on the difference, so they share "Can't do that"; `NotEnoughGold` gets "Not enough gold";
-`AppliedNotPersisted` gets "Bought, but the save did not write", because it is the opposite news and a player
-who reads it as "you cannot afford this" loses the run. `Reroll` and `SellRow` keep their results too — a reroll
-refuses `NotEnoughGold` the same way a purchase does, and `SELL ALL` has no interactable gate against `NotInBag`
-at all (#F5's asymmetry, still open).
-
-`ShopScreenRefusalTests` drives the buttons rather than the orchestrator, because the mechanism was never in
-doubt and only a press crosses the gap the finding is about. KNOWN AND LEFT: a sell's refusal is painted while
-the pack modal is up, and the keeper panel it lands in may sit behind that modal; it is cleared on close, so it
-cannot leak onto the shelf as a line about a row nothing is showing.
-
-The original finding follows.
-
-Found 2026-09-11 by the `RunOrchestrator` seam finder (F4). Confirmed for
-`NotEnoughGold`; candidate for `AppliedNotPersisted`.
-
-`ShopController.cs:21-25` states the design:
-
-> only BUY can refuse, and it refuses through RunOrchestrator's own ShopResult
-> rather than a client-side guess
-
-and `ShopResult.cs:59-65` says *"The screen can say so."* It does not.
-`Commit` (`ShopController.cs:176-200`) reads only `result.Applied` (`:192`);
-`Reroll` (`:202-216`) and `SellRow` (`:269-289`) discard the `ShopResult`
-entirely. The only production reader of `.Reason` anywhere in the tree is
-`BotRunDriver.cs:530`, which writes it to a trace file.
-
-So the UI CAN produce `NotEnoughGold` (there is no pre-check, by design),
-`NotInBag`, and `AlreadyKnown`/`NotOwned`/`NoFreeSlot` from the dossier
-(#116) -- and shows the player nothing at all. Combined with stage 2's finding
-that no bot archetype can construct an illegal shop choice, seven of the ten
-`ShopRefusal` values have no path from produced to seen except a test and the
-bot's trace.
-
-**Repro.** Gold one below a card's price, press Buy: nothing happens, no
-message, gold unchanged.
-
-**Failing test** (PlayMode):
-`ShopScreenRefusalTests.BuyingACardYouCannotAffordSaysWhy` -- invoke
-`buyButton.onClick`, assert the detail label carries the refusal string and
-gold is unchanged. Red today.
-
-**The mechanism is not in question; the wording and the placement are.** One
-`PaintRefusal(ShopResult)` mapping `Reason` to a `UiStrings` line, called from
-the three sites that currently discard the result.
-
-**Two options.**
-
-1. **Reuse `detailLabel`** (`ShopController.cs:31`), the line that already
-   carries the selected card's description. Zero new UI, no scene change; the
-   cost is that a refusal replaces the description and has to be cleared on the
-   next selection.
-2. **A dedicated refusal line** in the shop screen tree. Clearer, survives a
-   re-selection, and costs a `Domain/UiKit/Screens/` change plus a
-   `-BuildScenes` run and a `UiTextFitAudit` sample.
-
-`AppliedNotPersisted` wants its own line under either option -- it means the
-purchase happened and the save did not, which is not the same news as "you
-cannot afford this".
-
-### ~~116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out~~ — fixed in `ed24933b`: option 3, "You already have this spell prepared" in the spell panel's existing status line, and the green would-fill preview is suppressed for a book the character already carries
-
-**The answer, 2026-09-11.** Owner's wording and owner's placement. Option 3 (a message line) rather than an
-OWNED marker on the slot chip or the row, and it is the only one of the three that needs no screen-tree change
-and therefore no scene rebuild: the line borrows `DossierSpellsNoBooksLine`'s node, and the two can never be up
-at once because a character who cannot hold a book cannot already have one.
-
-Both halves of the finding are closed, not just the visible one. `PressSlot` reads `result.Reason` now, and
-`RefreshSpells` asks ONCE per refresh — not per slot — whether the selected book is already in one of this
-character's slots, because that is a fact about the book and the character and the slot the press lands on
-cannot change it. That is what stops the screen promising a placement it then refuses.
-
-The refusal belongs to one press: selecting another row, paging to another character, closing the panel and a
-successful placement all clear it.
-
-NOT MEASURED: the line is 36 characters against `DossierNoSpellBooks`' 33-character audit sample, in the same
-14pt band at the same 381px width, so it fits with room — but `UiTextFitAudit` runs at scene build and this
-change deliberately triggers none.
-
-**The node it borrows is in the wrong place for this second reading, and that is filed as #146.** The
-no-books line is centred in the three-slot band (`CharacterDossierScreen.cs:726`,
-`slotTop - slotBandHeight * 0.5f`), which is correct for the case it was built for -- the slots are hidden
-then, so the line stands in the empty band. For AlreadyKnown the slots are UP, so the refusal draws across
-slot 1's name. `UiAudit` cannot see it: the line is `.AsDecor()`, and `CheckSiblingOverlap` skips any pair
-with a decor side. The text-fit reasoning above is unaffected -- it fits; it is sitting on something.
-
-The original finding follows.
-
-Found 2026-09-11 by the `RunOrchestrator` seam finder (F3), confirmed by
-inspection of both paths.
-
-`CharacterDossierController.PressSlot` (`:434-452`) picks `ReplaceSpell`
-(`:448`) or `LearnSpell` (`:449`) by slot occupancy, then:
-
-```
-if (result.Applied) _selectedUnassignedRow = -1;
-Refresh();
-```
-
-`result.Reason` is never read. `RefreshSpells` paints no OWNED marker, and the
-green "would fill" preview lights for ANY empty slot while a row is selected --
-including one this press cannot fill.
-
-**Contract.** `docs/PLAN_SHOP.md` 1d: *"Refuse a duplicate ... the assignment
-panel reads OWNED for that character ... not a silent success either"*; 2d
-(revision 2026-09-03): the player *"only finds out at assignment time, via 1d's
-duplicate refusal"*. `Domain/Rewards/ShopResult.cs:5-9` exists as a reason enum
-because *"the screen ... need[s]"* it.
-
-**Reachability is anticipated, not hypothetical.** `AvailableBookOptions`
-(`RunOrchestrator.Shop.cs:452-455`) excludes a book only when EVERY squad
-member has learned it, `ShopController.BookFactLine` (`:540-546`) prints "N
-unassigned copies", and `ReplaceSpell`'s own comment
-(`RunOrchestrator.Spells.cs:137-140`) discusses buy-two-learn-one-replace.
-Repro: buy X, assign to Shawn slot 0; buy X again; select it, press Shawn slot
-1. Nothing happens and nothing is said.
-
-**Restore in substance; the placement is the choice.** The refusal must become
-visible -- that part has three agreeing sources and is not in doubt. Where:
-
-1. **On the slot chip.** The slot the press would hit reads OWNED and the green
-   fill preview is suppressed for it. Most local, tells the player before the
-   press.
-2. **On the row.** The unassigned-book row itself reads OWNED per character.
-   Survives a slot-less glance; costs a per-character recompute on every
-   refresh.
-3. **A message line.** The refusal is said after the press, like #115's shop.
-   Cheapest, and the only one that also covers `NoFreeSlot`.
-
-Failing test (PlayMode, extending `DossierSpellSlotsTests`):
-`PressingAnEmptySlotWithABookThisCharacterAlreadyKnowsSaysSo` --
-`learnedSpells=[{shawn, mud_burst, 0}]`, `unassignedSpellBooks=["mud_burst"]`,
-select the row, press slot 1; assert `learnedSpells.Count == 1` (passes today)
-and the OWNED marker visible (red today). Touches
-`CharacterDossierController` plus one `UiStrings` addition, so `-BuildScenes`.
-
-### ~~117. The boot settle rewrites slot 0, so Continue points at the wrong slot~~ — fixed in `b8242045`: option 3, the `[RuntimeInitializeOnLoadMethod]` boot check is gone and `SaveSlotManager.EnterSlot` -> `SettleOnOpening` is the whole of the rule's enforcement
-
-**The answer, 2026-09-11.** Owner's words: "if your last played save was 3, Continue should open save 3." Option
-3 of the three, as the register recommended — it removes a mechanism rather than adding a special-cased write or
-a save field and a migration for a fact the filesystem already keeps.
-
-Nothing was lost with it. The boot check could only ever SEE slot 0 (that is what "before any scene" means), so
-every slot it was written for was already covered by `SettleOnOpening`, which runs from `EnterSlot` AFTER
-`CurrentSlot` is set and therefore reaches all five. `MostRecentSlot`'s mtime rule is untouched.
-
-`SaveSlotFlowTests.SettlingARunLeftInSlotZeroDoesNotStealContinueFromTheSlotLastPlayed` reflects over
-`RunManager`'s `[RuntimeInitializeOnLoadMethod]` members rather than naming the method that used to do this, so
-what it pins is "nothing RunManager runs at boot may write a save" — a second boot hook added later under any
-name is caught without the test being edited. `OpeningSlotZeroStillSettlesTheRunAPreviousSessionLeftInIt` is the
-other half, and it is why removing the check did not make slot 0 the one slot a descent outlives the process in.
-
-Worth keeping for the next fixture of this shape: the test ages slot 0's file by an hour rather than relying on
-write ORDER. Two writes inside one system-clock tick carry the same mtime on Windows, and `MostRecentSlot`
-breaks a tie toward the lower slot.
-
-Related #123 turns on the same invariant and is still open; this answer does not settle it.
-
-The original finding follows.
-
-Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F4).
-
-`RunManager.cs:69` is a `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]` boot
-check that runs with `CurrentSlot` still 0. When slot 0 holds a leftover run it
-calls `EndRun`, and BOTH of `EndRun`'s live exits call `Persist()` --
-`File.Replace` onto slot 0, whose mtime is then the newest on disk. `45be6e6a`
-widened this: the discard arm persists too.
-
-`SaveSystem.cs:224` states the rule the write breaks:
-
-> KEYED OFF THE FILE'S OWN LAST-WRITE TIME, not a field on SaveData.
-> CurrentSlot ... cannot answer "which slot did I play last time".
-
-`MainMenuController.RefreshContinue` (`:72-74`) reads
-`SaveSystem.MostRecentSlot()` (`:234`), which now returns 0.
-
-**Repro.** Play slot 3. Leave a run in slot 1 (alt-F4 mid-descent). Relaunch:
-the main menu offers "Continue (Slot 1)".
-
-**Failing test.**
-`SaveSlotFlowTests.SettlingARunLeftInSlotZeroDoesNotStealContinueFromTheSlotLastPlayed`
--- throwaway root, write slot 2 (newest), then slot 0 carrying a run under way,
-invoke the boot settle, assert `MostRecentSlot() == 2`. Red today: 0.
-
-**Three options; the third is recommended.**
-
-1. **Preserve slot 0's mtime around the settle write.** Smallest diff, but it
-   makes one write a special case and the next writer will not know.
-2. **`MostRecentSlot` reads a `lastPlayedAtTicks` written only by `EnterSlot`.**
-   Honest -- the question is "which slot did I play", and a field can answer it
-   where a file timestamp only approximates it. Costs a save field and a
-   migration.
-3. **Drop the boot settle entirely** and rely on `SettleOnOpening`
-   (`RunManager.cs:102`), which `SaveSlotManager.EnterSlot` already calls for
-   every slot including slot 0, AFTER `CurrentSlot` is set (ledger row `R14`).
-   Recommended: it removes a mechanism rather than adding one, and the boot
-   check's stated job is already done by the other half.
-
-Related: #123 below turns on the same invariant (a run never survives into
-gameplay) and its answer should be decided with this one.
-
-### ~~118. Benching a character is undone by the next load~~ — fixed in `82385df6`, together with #93: option 1, the save records the fact — `squadSizeSeen` for the cap, a hole in `selectedCharacterIds` for the seat
-
-**The answer, 2026-09-11.** Owner's call: benching survives a reload. Option 1 (store the fact), not option 2
-(benching is within-session and the screen says so) — an affordance weaker than it looks is not the thing to
-ship.
-
-Two facts, because the two questions are different and the register said so: a hole-carrying
-`selectedCharacterIds` alone does NOT fix this, since the top-up counts ENTRIES against `effectiveMax`.
-`squadSizeSeen` is the cap this profile last reconciled against, stamped at the bottom of `Reconcile`, and the
-top-up fires only when `effectiveMax` exceeds it. It is 0 on every save written before the field existed —
-JsonUtility keeps the initialiser for a missing key — which reads as "has never seen a cap" and so tops up
-exactly once, exactly as before.
-
-THE CASE THAT IS NOT THE PLAYER'S CHOICE KEEPS ITS OLD BEHAVIOUR, and this is the part worth remembering: an id
-naming content that is gone still closes up and is still replaced, because nobody chose that hole and a squad
-silently down to two would hide behind `ActiveSquad`'s whole-roster fallback. That is a second trigger on the
-same loop, counted locally from the drop rather than stored, and it is what
-`SaveReconcileRenamedCharacterTests` has always pinned.
-
-`ReconcileTopsUpAShortSquadFromTheContentDefault` keeps passing with one added fixture line —
-`squadSizeSeen = 1`, a profile written while the squad was still solo. That is the case the top-up was built
-for and the only one it still fires in; the register was right that the two tests contradicted each other, and
-stating the fixture is what resolves it rather than deleting either.
-
-The original finding follows.
-
-Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F7). Filed because
-the fix CHOOSES between two readings of one field, and a green test asserts the
-other one.
-
-`SaveData.Reconcile`'s squad top-up (`:774-800`) tops `selectedCharacterIds` up
-to `EffectiveMaxSquadSize()` from `TopUpOrder()` (`:809`). Its header says:
-
-> EXISTING SAVES KEEP THEIR SQUAD, and this loop is why: it only ever ADDS,
-> never reorders and never removes anything the player chose.
-
-Adding back the character the player deliberately removed IS undoing what they
-chose. `PartyController.SendToBench` (`:390-397`) is Camp-only and refuses only
-at `FilledCount == 1`; the player benches one of three, `Persist` writes two
-ids, `EffectiveMaxSquadSize()` is still 3, and the next `Reconcile` puts the
-benched character back -- in the REAR seat, because that is where `TopUpOrder`
-lands.
-
-**Repro.** Hub -> Party -> pick a front-ranker -> Bench (squad shows 2). Quit.
-Relaunch. Squad is 3, with the benched member in the rear.
-
-**Failing test.**
-`SaveDataSquadOfThreeTests.ADeliberatelyShortSquadIsNotToppedBackUp` -- set two
-of three starters, `Reconcile`, assert `ActiveSquadIds().Count == 2`. Red
-today: 3. It directly contradicts the green
-`ReconcileTopsUpAShortSquadFromTheContentDefault`, which is why this is a
-choose and not a restore.
-
-**The question is whether `selectedCharacterIds.Count < effectiveMax` means
-"the cap grew" or "the player benched somebody".** Today the code can only read
-it the first way.
-
-1. **Store the fact.** The save records that a seat is empty by choice (a
-   `benchedCharacterIds` list, or a hole-carrying `selectedCharacterIds`), and
-   the top-up fills only seats the cap opened. This also answers #93 -- and
-   note that a hole-carrying fix for #93 alone will NOT fix this, because the
-   top-up counts ENTRIES against `effectiveMax`, not seats.
-2. **Benching is within-session and the screen says so.** The Bench affordance
-   keeps working for the current session and the toast says the squad returns
-   on next load. Cheapest, and it stops the save lying, but it makes a visible
-   affordance weaker than it looks.
-
-Answer this together with #93; they are the same field read two ways.
-
-### ~~119. `SaveData.relicLoadout` is a serialized field with no writer and no reader~~ — fixed in `a7ebbf28`: option 1, the field, its prune, the `RelicLoadout` type and its unit tests are all deleted
-
-**The answer, 2026-09-11.** Owner's call: delete. Option 2 (wire it into per-character relic assignment) is a
-design decision with a screen behind it and is not on the roadmap.
-
-No migration and no version bump. `JsonUtility` DROPS an unknown key on load, so an existing save's
-`"relicLoadout": {}` is simply ignored — the same no-migration deletion `grantedGold` got in the pass that filed
-#112, and it is only safe because the field was empty on every save ever written. A field with real data in it
-is the case `SaveData`'s version comment covers instead.
-
-Three comments named the type and would have pointed at nothing: `ContentDatabase.Relics` now says relics are
-run-scoped and there is no per-character assignment, `RunSnapshot`'s in-band-discriminator note cites `Wallet`
-alone, and `SaveReconcileRenamedCharacterTests`' list of what `Reconcile` prunes drops the entry. A comment
-pointing at a deleted type is the drift the deletion was supposed to prevent.
-
-What stands where the field did is a comment, because the hazard was never the field — it was a future reader
-seeing a relic loadout on the save and concluding relics were already handled.
-
-The original finding follows.
-
-Found 2026-09-11 by the `RunManager`/`SaveData` seam finder (F8). Same family
-as #50, #87 and #112, and stronger than all of them: those are written and
-never read, this one is NEITHER written nor read.
-
-`Data/SaveData.cs:187` declares it with a nine-line header explaining its
-NAME. `:760-762` null-guards and prunes it on every `Reconcile`. Those are the
-only two mentions in the tree outside its own type: zero hits for
-`relicLoadout` anywhere else in `Assets/_Project/Scripts/`, and the
-`RelicLoadout` type is referenced only by its own unit tests and two comments.
-
-What actually carries a character's relic is `RunSnapshot.relicIds` plus
-`FightEncounterAdapter.ResolveRelics`, which is run-scoped rather than
-save-scoped -- and per-character assignment, which is what `RelicLoadout`'s
-`(characterId, relicId)` shape is for, exists nowhere.
-
-It is written as `{}` on every save, so dropping it is harmless: `JsonUtility`
-keeps the initialiser for a missing key.
-
-**Two options.**
-
-1. **Delete it**, its prune and its type, the way `grantedGold` was deleted in
-   the same pass that filed #112. One less field to read as "already handled".
-2. **Wire it**: per-character relic assignment becomes a real feature and this
-   is its storage. That is a design decision with a screen behind it, not a
-   cleanup.
-
-Deleting is recommended only if option 2 is not on the roadmap; the field is
-inert either way, and the hazard is a future reader assuming it holds something.
-
+### ~~113. What an extra turn should re-pay: today it re-pays everything, and Black Ram Mode loses two of its three turns in one round~~ -- fixed in `c477205f`: the owner took option 1 -- a bonus action is the SAME turn and re-pays nothing, so `GrantTurnStart` split into `OpenTurnFor` (unchanged) and `ReopenTurnFor` (`_locks.ResetTurn`, `TickPrimaryPool`, and the two recomputes that read them), and the three `[Ignore]`d repro tests are green with a control beside them; full reasoning in the commit message; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~114. The reward roll draws from Equippables, not Offerable, so the six starting-kit items are offerable rewards~~ — fixed in `0ec7d8fc` (content) and `5fc4eb51` (code): the owner took neither filed option — the starting kit is DELETED, and `Candidates()` asks `ContentDatabase.Offerable` rather than re-typing a predicate, so there is no third universe left for the two filters to disagree about; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~115. The shop screen produces refusals it may not guess at, and displays none of them~~ — fixed in `bbe23ff6`: option 1, one `PaintRefusal(ShopResult)` into the existing `detailLabel`, and `Reroll`/`SellRow` stopped discarding their results; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~116. The dossier swallows AlreadyKnown, which the plan says is where the player finds out~~ — fixed in `ed24933b`: option 3, "You already have this spell prepared" in the spell panel's existing status line, and the green would-fill preview is suppressed for a book the character already carries; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~117. The boot settle rewrites slot 0, so Continue points at the wrong slot~~ — fixed in `b8242045`: option 3, the `[RuntimeInitializeOnLoadMethod]` boot check is gone and `SaveSlotManager.EnterSlot` -> `SettleOnOpening` is the whole of the rule's enforcement; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~118. Benching a character is undone by the next load~~ — fixed in `82385df6`, together with #93: option 1, the save records the fact — `squadSizeSeen` for the cap, a hole in `selectedCharacterIds` for the seat; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~119. `SaveData.relicLoadout` is a serialized field with no writer and no reader~~ — fixed in `a7ebbf28`: option 1, the field, its prune, the `RelicLoadout` type and its unit tests are all deleted; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 120. The `Effective*` family has two different null contracts, and `EffectiveStats` has a dead guard
 
 Found 2026-09-11 by the `ContentDatabase` seam finder (F11). No behaviour
@@ -2065,71 +1539,8 @@ weights to sum to ~1.0).
    per-score share of a variable pool rather than a fixed one, accepting the current spread as
    intended variety between materials.
 
-### ~~126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable~~ — fixed in `62094abf`: option 1, dropped the flag and rewrote the stale comment (no other enemy plain-attacks with a stationary pose yet, so the worked example was removed rather than relocated)
-
-`Assets/_Project/ContentData/enemies.json`, row `golem`: `"attackHoldsPosition": true` beside
-`"attackWeight": 0` and one ability (`boulder_slam`, weight 1).
-`FightEncounterAdapter.cs:573` adds the plain swing to the draw pool only
-`if (source.AttackWeight > 0f)`, so the golem never takes a plain attack.
-`FightSession.Enemies.cs:853` reads the flag as
-`if (!usingSkill && hasSource && source.AttackHoldsPosition)` — `usingSkill` is true on every
-golem turn, so the branch is unreachable for this enemy. The contradiction sits in the code's
-own comment four lines above the branch (`FightSession.Enemies.cs:849-852`): "The golem is the
-case this exists for: its 'attack' stance is a byte-for-byte alias of its 'cast' stance" — the
-one enemy the flag was written for is the one enemy that cannot reach it. No visible symptom
-today: `boulder_slam` authors no `approach`, so it holds by the cast route instead.
-
-**Intent evidence.** The `FightSession.Enemies.cs:849-852` comment, plus `RawEnemyEntry
-.attackWeight`'s own doc ("0 removes plain attacks entirely") — the two agree on the facts and
-disagree on the row.
-
-**Two options.**
-1. Drop `attackHoldsPosition` from the golem row and move the comment's worked example to an
-   enemy that still plain-attacks.
-2. Give the golem a non-zero `attackWeight` so the plain slam it has art for is drawn again (a
-   balance change). Either way, `EnemyEntryResolver` could refuse `attackHoldsPosition`/
-   `attackApproach` on a row with `attackWeight: 0`, the same "no meaning on that effect" rule
-   `SkillEntryResolver` already applies five times (see #145).
-
-### ~~127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only~~ — fixed in `90c41655`: option 2, the prose. The owner's reasoning is that Wool is per-turn-led AT BASE and grows, through the reward track and the Black Ram talents
-
-**The answer, 2026-09-11.** The row is right and the paragraph was describing an engine this tree has never had.
-Wool builds per turn; capacity and income grow at later levels (`SignatureGainPerTurn` at 10 and 50,
-`SignatureCapacity` at 25 and 100, `SignatureGainOnDamageTaken` at 40, twelve more capacity through the filler);
-and talents add other income on top — sworn to the Black Ram, `WoolOnHitTaken` and `WoolPerTurnBelowHealth` at
-67% and 33% health are what make a damage-taken engine reach him at all. So the base row is the floor of a curve
-rather than the whole economy, and the paragraph now says that. `signatureGainOnAttack` stays authored at 0 and
-stays sourceless — no `TrackReward` member and no `RawTalentEntry` field pays it — which the paragraph now states
-outright instead of leaving to a reader to discover. The absorb sentence was rewritten in the same commit; see
-#121 above, which stays open on the balance question alone.
-
-The original finding follows.
-
-`Assets/_Project/ContentData/characters.json`, row `sheep`: `signatureGainPerTurn: 1`,
-`signatureGainOnAttack: 0`, `signatureGainOnDamageTaken: 0`. The file's own `_readme` says of
-the same resource: "Wool (Shawn) is the balanced template: **attack-led** with a real per-turn
-and damage-taken floor" … "His plain Attack pays the most because his Attack is 5 against enemy
-Defense of up to 9, i.e. nearly worthless as damage; giving it the best Wool yield turns his
-weakest action into a deliberate choice." Both halves are false of the shipped row: on-attack
-yield is 0 and the damage-taken floor is 0. What Shawn actually has is per-turn-only — the shape
-the same paragraph assigns to a *different* resource ("Insight (Owl) is per-turn-led and almost
-nothing else"). Not #121 (`signatureAbsorbsDamage: false`, a different pair of fields).
-
-`signatureGainOnAttack` has no source anywhere in shipped content: authored 0 on the only
-character with a signature; `TrackReward` has `SignatureCapacity`/`SignatureGainPerTurn`/
-`SignatureGainOnDamageTaken`/`SignatureAbsorbs` but no gain-on-attack member
-(`Domain/Progression/RewardTrack.cs`); `RawTalentEntry` offers only `signatureCapacityBonus`/
-`signaturePerTurnBonus`. The row has read `1 / 0 / 0 / false` unchanged since `1bd59995`, the
-first commit of this tree — the prose was written against an intent the data never carried.
-
-**Intent evidence.** The `_readme` paragraph is the only source (a comment alone is a lead, not
-two agreeing sources) — filed as the owner's call on which side is wrong.
-
-**Two options.**
-1. Make Wool attack-led as written: author `signatureGainOnAttack` on the row and add a
-   `SignatureGainOnAttack` track-reward member so it can grow.
-2. Rewrite the `_readme` paragraph to describe Wool as per-turn-led, matching the shipped row.
-
+### ~~126. `enemies.json`'s golem authors `attackHoldsPosition` on a row where `attackWeight: 0` makes it unreachable~~ — fixed in `62094abf`: option 1, dropped the flag and rewrote the stale comment (no other enemy plain-attacks with a stationary pose yet, so the worked example was removed rather than relocated); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~127. `characters.json`'s `_readme` describes Wool as attack-led; the shipped row is per-turn-only~~ — fixed in `90c41655`: option 2, the prose. The owner's reasoning is that Wool is per-turn-led AT BASE and grows, through the reward track and the Black Ram talents; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 128. `achievements.json:three_bosses` cannot be earned by the shipped roster
 
 `{"id": "three_bosses", "condition": "DefeatDistinctBosses", "threshold": 3}`. `enemies.json`
@@ -2168,42 +1579,7 @@ a folder with a provenance that no skill plays.
 1. Delete the folder and its recipe.
 2. Keep it as the single-sheet fallback and say so in the recipe's `_notes`.
 
-### ~~130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand~~ — fixed in `44258f3e`: option 1, he. The four player-facing strings are swept; the two CODE comments are not, and that is recorded below rather than quietly left
-
-**The answer, 2026-09-11:** he. `talents.json:sheep_lamb_ward_3` and `skills.json`'s `fleece_ward`, `shatter` and
-`gift_mana` now read he/him/himself. Odette's pronouns were not touched — `characters.json` still says owl wears
-Shawn's face "until her own portrait is drawn", which is about her.
-
-**The code comments landed afterwards, and there were six of them, not two.** Swept in `b7ee8a40`. The two
-this entry names were there -- `:325` ("a share of her Attack") and `:343` ("Her OWN ward") -- but a
-whole-file `grep -w` for her/she/hers found four more the finding never censused: `:81` ("a round of hers"),
-`:98-99` ("ending her income the moment she finishes her tree"), `:211` ("the thing she was already doing")
-and `:455` ("her per-turn payout cap"). All six are the Lamb strand's caster, i.e. Shawn, and all six now
-read he/his. The lesson is the census, not the sweep: the finding read the two lines its repro walked
-through and stated a count, and the count was wrong by four.
-
-The original finding follows.
-
-`characters.json`'s `_readme` is consistent ("his abilities shear it off", "He starts every
-fight at zero"), and the Black Ram talent strand agrees (`sheep_ram_trample_3` "he is heavy, not
-infinite", `sheep_ram_stand_3` "leaves him standing on 1"). The Fragile Lamb strand does not,
-across five player-facing strings for the same character: `talents.json:sheep_lamb_ward_3`
-("**She** can cover **herself** AND do something with the day"), `skills.json:fleece_ward`
-("finds wool before it finds **her**"), `skills.json:shatter` ("Every ward **she** has out…"),
-`skills.json:gift_mana` ("**She** has more wool than **she** has turns"), and the code follows
-it — `FightSession.Talents.cs:325-326,343` ("throws a share of **her** Attack", "**Her** OWN
-ward is worth triple"). The strand boundary is too clean to be a typo — it reads as a design
-where the Lamb strand was written for someone else.
-
-**Intent evidence.** Single source (the pronoun split itself); the strand boundary's cleanliness
-argues design rather than typo, but does not settle which pronoun is correct.
-
-**Two options.**
-1. Sweep the Fragile Lamb strand's five strings (and the two code comments) to "he"/"his"/
-   "himself", matching the rest of the character.
-2. Confirm the Lamb strand was deliberately written for a different character's voice and
-   reassign it, leaving Shawn's own strand as Black Ram only.
-
+### ~~130. Shawn is "he" in the Black Ram strand and "she" in the Fragile Lamb strand~~ — fixed in `44258f3e`: option 1, he. The four player-facing strings are swept; the two CODE comments are not, and that is recorded below rather than quietly left; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 131. `amulet_of_wisdom` is the one starting-kit item with no icon
 
 `items.json` has six `startingStock: true` rows. Five carry an `iconPath` into
@@ -2217,40 +1593,7 @@ consistent with each other and not part of this finding.
 2. Leave it on the graceful-degradation path and note in the row why (a stated placeholder,
    rather than an unnoticed gap).
 
-### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth
-
-**The answer, 2026-09-11.** Not "was it a transposed pair", and not "keep the glass cannon and add a
-justification rule". The four elements were chosen by hand on theme: Wind and Arcane cut through a bog, Water and
-Earth are the bog. She is no longer weak to her own `attackType`, so the roster's seven-for-seven pattern holds
-without her having to resist Poison.
-
-`"weakness": "Wind, Arcane"` / `"resistance": "Water, Earth"` is also the first SHIPPED use of
-`RawEnemyEntry`'s comma list, which until now had only ever been exercised by the resolver's own synthetic tests.
-The two sets are disjoint, so the both-lists refusal has nothing to catch. `EnemyContentPinTests` gained the pin —
-it had no weakness/resistance assertion of any kind before, which is part of why this sat unnoticed — and it also
-asserts she is not weak to her own `attackType`, so the exact shape this finding describes fails loudly next time
-rather than passing quietly.
-
-**Blind spot B6 in #145 is NOT closed by this.** No resolver rule was added; the one live instance was authored
-away. A future row may still name its own `attackType` as a weakness and validate clean.
-
-The original finding follows.
-
-`enemies.json:bog_witch`: `"attackType": "Poison"`, `"weakness": "Poison"`,
-`"resistance": "Nature"`. Every other elementally-typed row resists its own attack type: `imp`
-Fire/resists Fire, `ember_hound` Fire/Fire, `gloom_moth` Ice/Ice, `mire_lurker` Poison/Poison,
-`crystal_bat` Arcane/Arcane, `sable_wisp` Arcane/Arcane, `hollow_choir` Arcane/Arcane — seven for
-seven; the bog witch inverts it. Validates clean: `EnemyEntryResolver` only refuses an element
-appearing in *both* `weakness` and `resistance`, which this row does not do. Fielded 81,183
-times across stage 2's bot batches.
-
-**Two options.**
-1. Give the bog witch a resistance to Poison (or a different weakness) to match the roster's own
-   pattern, if the inversion was a transposed pair.
-2. Leave it as a deliberate glass-cannon caster and add a resolver rule that requires an explicit
-   justification comment for a self-weak row, so the next one is a choice rather than a silent
-   pass.
-
+### ~~132. The bog witch is the only monster weak to the element it attacks with~~ — fixed in `8a4c32d6`: neither filed option. The owner re-authored the pair outright — weak to Wind and Arcane, resistant to Water and Earth; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 133. Four enemy stance PNGs nothing can play
 
 Driven stances are the six on `FightSession.Beats.cs:423-430` (`idle`, `attack`, `cast`, `hurt`,
@@ -2328,40 +1671,7 @@ was written, but nothing establishes what the intended top of the curve is.
 2. Confirm 9 is the intended ceiling (Skill deliberately flattens for the rest of a run) and say
    so explicitly in the `_readme`, replacing the "curve deepens with level" framing.
 
-### ~~136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist~~ — fixed in `5d46970d`: option 1, deleted as superseded by `test.ps1` and `run_tests_parallel.ps1`; `docs/CODE_MAP.md`'s entry went with it
-
-Seven places still name it in PROSE and were left alone as outside that pass's scope: `tools/unity_path.ps1:3`,
-`tools/bot.ps1:23` and `:161`, `tools/graphics_tests.ps1:3` and `:76`, `tools/run_tests_parallel.ps1:38`,
-`docs/PLAN_BALANCE_BOT.md:164` and `docs/WORKFLOW.md:162`. None of them is a call; all describe a shape ("mirrors
-run_tests.ps1", "dot-sourced by run_tests.ps1"). They now name a file that does not exist.
-
-The original finding follows.
-
-`tools/run_tests.ps1:12-13`:
-```
-$SourceProject = "C:\Games\Prince's Palace"
-$TestProject = "C:\Games\Prince's Palace-TestRunner"
-```
-Every sibling script (`test.ps1`, `run_tests_parallel.ps1`, `bot.ps1`, `preview.ps1`,
-`build_content.ps1`, `screenshot.ps1`) derives its project root dynamically via
-`Split-Path $PSScriptRoot -Parent`; this is the only one that hardcodes an absolute v1 path.
-Verified on disk: neither `C:\Games\Prince's Palace` nor `C:\Games\Prince's Palace-TestRunner`
-exists. `git log` shows this file's only commit in this tree is `1bd59995` ("Start keeping the
-rebuild's history") — carried into the v2 rebuild verbatim, paths untouched. As written it fails
-loudly today (robocopy errors against a missing source, Unity fails to open a missing
-`-projectPath`, "No results file produced", non-zero exit) — dead-but-noisy, not silent. But
-robocopy's own exit code is never checked (line 19-21, piped to `Out-Null`), so if either path
-were ever resurrected on disk (a stray v1 checkout, a restored backup, a second clone) this
-script would silently sync from/to that tree and report results with zero indication they are
-not about this project — the "tests the wrong tree and reports green" shape this hunt was
-looking for. `docs/CODE_MAP.md:266` claimed this script "still works"; corrected in the stage 4
-docs commit (see the entry above this section for the sha).
-
-**Two options.**
-1. Delete `tools/run_tests.ps1` as superseded by `test.ps1` + `run_tests_parallel.ps1`.
-2. Repoint it to derive its project root dynamically like every sibling script, and add a
-   robocopy exit-code gate, if it should stay as a documented fallback.
-
+### ~~136. `tools/run_tests.ps1` hardcodes v1 paths that no longer exist~~ — fixed in `5d46970d`: option 1, deleted as superseded by `test.ps1` and `run_tests_parallel.ps1`; `docs/CODE_MAP.md`'s entry went with it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 137. A balance-bot shard killed after `runs.jsonl` starts writing silently drops its requested-count share from the batch total
 
 A shard that crashes or is killed **after** writing at least one run to `runs.jsonl` but
@@ -2403,87 +1713,8 @@ wrong.
    `docs/BOT_SUMMARY_SCHEMA.md`'s "Partial batches" section to describe the sharded reality
    rather than the pre-sharding mechanism it currently documents.
 
-### ~~138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way~~ — fixed in `5d46970d`: option 1, deleted. The grep was re-run over `.cs`, `.json` and `.md` first, and the only hits outside the file itself were this register and the hunt's own notes
-
-The original finding follows.
-
-`Assets/_Project/Scripts/Domain/Combat/CombatAction.cs` (whole file, 17 lines):
-`public enum CombatAction { Attack, Skill, Item, Run, Default }`.
-`grep -rn "CombatAction" --include=*.cs --include=*.json Assets/_Project` returns exactly one
-line, the enum's own declaration — no caller, past or present, anywhere in the tree, including
-Tests. The combat menu's actual action-kind type today is `FightActionKind`
-(`Domain/Bot/FightAction.cs:16-25`: `Attack, Skill, Item, Move`), a differently-shaped enum (no
-`Run`, no `Default`, has `Move` instead) used throughout the bot/FightSession seam. No comment,
-doc, or commit references `CombatAction` outside its own file (repo history is squashed to one
-commit, so no earlier trail is recoverable) — the single-source/none case the hunt's own
-definitions call out: the file's header is the only description of intent, and nothing
-corroborates or contradicts it.
-
-**Two options.**
-1. Delete the file — nothing in the tree references it and its own header gives no reason to
-   keep it around.
-2. Confirm it is scaffolding for a menu-level action distinct from `FightActionKind` (a `Run`/
-   `Default` choice the bot-facing enum does not need) and give it a first caller.
-
-### ~~139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix~~ — fixed in `5d46970d`: option 1, the dead file deleted — but ONLY the dead-code half of it
-
-> **THE DESIGN QUESTION IS NOT ANSWERED, AND IT DOES NOT GO AWAY WITH THE FILE.** `OverlayAnchors`'s header argued
-> that slot cells sitting on the mannequin make the dossier read as "a stack of boxes with a purple shape behind
-> it", and its flanking-column geometry cleared that overlap by construction. The live `DossierLayout` keeps the
-> older mannequin-hugging numbers, and `CharacterDossierScreen.cs:883` carries an `AllowOverlap` exemption for
-> exactly that overlap. Nobody has yet looked at the rendered screen with real equipped-item icons over the
-> mannequin at its sub-10% alpha, which is what BOTH filed options said was needed before deciding. Deleting 194
-> lines nothing called does not settle it — it only stops a dead file arguing one side of it.
-
-`DebugMenuScreen.cs` cited `OverlayAnchors` as one of its two examples of an anchors sibling and now cites
-`DossierLayout`, which is where the dossier's slot geometry actually lives.
-
-The original finding follows.
-
-`Assets/_Project/Scripts/Domain/UiKit/OverlayAnchors.cs` (194 lines) vs.
-`Assets/_Project/Scripts/Domain/UiKit/DossierLayout.cs` (753 lines, live) and its caller
-`Assets/_Project/Scripts/Domain/UiKit/Screens/CharacterDossierScreen.cs:833`
-(`DossierLayout.SlotAt(slot)`) and `:883`
-(`.AllowOverlap("a slot stands on the mannequin and its own leader line")`).
-
-`OverlayAnchors.cs:44-59` describes a PRIOR arrangement that put slot cells directly on the
-silhouette's centre line as a defect: "the paperdoll reads as a stack of boxes with a purple
-shape behind it rather than as a body wearing things… This is the same defect the armour-stand
-art brief already named — 'no internal detail competing with the slot cells' — arriving from the
-other side" — the exact phrase MEMORY.md's recorded 2026-08-11 incident names (an armour-stand
-generation that put pauldrons, tassets and joint seams where the slot cells land, praised as
-"exactly it" before the reservation was walked back). `OverlayAnchors`'s fix: two columns
-flanking the figure with 32px gutters, clearing the overlap "by construction rather than by
-exemption."
-
-`grep -rn "OverlayAnchors" --include=*.cs Assets/_Project/Scripts` returns exactly two lines: the
-class's own declaration, and one illustrative comment in
-`Domain/UiKit/Screens/DebugMenuScreen.cs:10` that is prose, not a call site.
-`OverlayAnchors.PositionFor` — the method carrying the whole flanking-columns fix — has zero
-callers. What is live instead: `CharacterDossierScreen.cs:833` positions each equipment slot via
-`DossierLayout.SlotAt(slot)`, whose own header (line 20-24) states plainly that "the mannequin
-slots and their leader hairlines are still the handover's own numbers, still positioned against
-each other" — i.e. `DossierLayout` deliberately kept the older slot-against-mannequin numbers
-`OverlayAnchors.cs`'s header describes replacing — and `CharacterDossierScreen.cs:883` carries a
-live `AllowOverlap` exemption for the full slot cell (not just a hairline) on the mannequin,
-exactly the category of overlap `OverlayAnchors.cs`'s header treats as the thing to eliminate.
-
-Provenance: `OverlayAnchors.cs` was authored first (`40af5d16`), `DossierLayout.cs` second
-(`c85af675`, the newer class) — `OverlayAnchors` kept receiving commits for a while, including
-one titled `4be7ce55` ("Get the slot cells off the figure they are meant to describe" — the
-exact fix its header narrates), before the screen's real wiring moved fully onto `DossierLayout`
-and `OverlayAnchors` stopped being called at all.
-
-**Two options, both requiring eyes on the rendered screen rather than a unilateral change.**
-1. `OverlayAnchors.cs` is superseded and safe to delete outright — `DossierLayout`'s
-   mannequin-hugging slot placement, with its `AllowOverlap` exemption, is an accepted design
-   (low mannequin alpha and the item icon itself may not actually compete with painted detail in
-   practice).
-2. `OverlayAnchors.cs`'s flanking-column geometry is the better-considered design for exactly the
-   reason its own header gives, and `DossierLayout`'s mannequin-hugging placement is a regression
-   worth revisiting — check the actual screen with real equipped-item icons over the mannequin
-   before deciding.
-
+### ~~138. `Domain/Combat/CombatAction.cs` is dead code with no intent evidence either way~~ — fixed in `5d46970d`: option 1, deleted. The grep was re-run over `.cs`, `.json` and `.md` first, and the only hits outside the file itself were this register and the hunt's own notes; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~139. `Domain/UiKit/OverlayAnchors.cs` is dead code whose replacement re-permits the exact defect it was built to fix~~ — fixed in `5d46970d`: option 1, the dead file deleted — but ONLY the dead-code half of it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### ~~140. AUDIT.md's own archival rule was not followed for thirteen struck findings~~ — fixed in `5d46970d`: option 1. #62's and #64's inline write-ups moved verbatim to `docs/AUDIT_STRUCK_ARCHIVE.md`; #66-#76 are recorded there as one block, because they never had a write-up here to move
 
 That distinction matters for whoever runs the cross-check next. #66-#76 were struck the day they were found and
@@ -2573,32 +1804,7 @@ of the shipped behaviour.
    it against `ACinderfaultOverALiveTailSharesNoRendererWithIt`, which currently asserts the
    opposite for a different case.
 
-### ~~144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move~~ -- fixed in `6740399e`: the owner took option 2 on 2026-09-11 ("move"). `_plateOccupants` stopped being scratch for one loop and became the painted-occupancy record itself: `RefreshPcPlates` walks the party in FORMATION order and writes which member it put on each card, `PaintVitals` reads that record instead of looking any index up. During a Move's playback the record says what the screen says (the cards have not been repainted yet, because `AfterResolution` deliberately repaints the menu chrome only); at `OnPlaybackFinished` the repaint moves the cards and rewrites the record in one pass. Option 1's cost was the whole finding -- a turn spent on nothing but position, readable only as two figures sliding past each other on the stage. Option 2 turned out smaller than this entry estimated: the record has no lifecycle of its own to keep synchronized against Move, death or revive, because it is rewritten whole by the one repaint that already handles all three. Pinned by `FightHudSnapshotLifecycleTests.AMoveReordersTheColumnToFollowTheField`, seen red (`Expected: "Beta" But was: "Alpha"`); `4c4bddc3`'s two tests are unaltered and stayed green throughout; full reasoning in the commit message
-
-`4c4bddc3` fixed two real defects in `FightController.Hud.cs`'s `PaintVitals` (a beat painting a
-stale maximum, and a Move-reordered party list landing two members' numbers on each other's
-cards) by addressing both plates by slot rather than by list index — matching
-`RefreshPcPlates`'s own header claim ("a plate belongs to a character for the whole fight") and
-`DrawSide`'s stated convention (position walked by rank; drawing/nameplate/flash/fade by slot,
-"which belongs to one combatant for the whole fight"). The commit's own message names the
-consequence directly: "the HUD column no longer reorders itself when a Move reorders the field"
-— a visible behaviour change that was a side effect of the correctness fix, not something the
-fix's brief asked for. The commit's own reasoning for taking it anyway is sound (indexing one
-half and not the other would fix the round containing the Move and break every round after it),
-but whether the column should visually reorder to track live field position at all is a design
-question the fix did not settle, it just answered which BROKEN option to pick between (slot for
-both, or index for both — never a mix).
-
-**Two options.**
-1. Accept identity-stable plates (the shipped fix): the column never reorders after the first
-   repaint of a round, and a Move is only visible as the two swapped plates' own content, not
-   their position. Matches `DrawSide`'s existing slot-vs-rank convention.
-2. Build a painted-occupancy record (a third piece of state recording which VISUAL slot is
-   occupied by which combatant at each point in the beat sequence, independent of both rank and
-   fight-long slot) so the column can re-order live to track field position while still painting
-   the right numbers on the right card. Larger: a new record to keep synchronized against Move,
-   death, and revive.
-
+### ~~144. Which order the plate column keeps: a bug fix stopped the HUD column from reordering on a Move~~ -- fixed in `6740399e`: the owner took option 2 on 2026-09-11 ("move"). `_plateOccupants` stopped being scratch for one loop and became the painted-occupancy record itself: `RefreshPcPlates` walks the party in FORMATION order and writes which member it put on each card, `PaintVitals` reads that record instead of looking any index up. During a Move's playback the record says what the screen says (the cards have not been repainted yet, because `AfterResolution` deliberately repaints the menu chrome only); at `OnPlaybackFinished` the repaint moves the cards and rewrites the record in one pass. Option 1's cost was the whole finding -- a turn spent on nothing but position, readable only as two figures sliding past each other on the stage. Option 2 turned out smaller than this entry estimated: the record has no lifecycle of its own to keep synchronized against Move, death or revive, because it is rewritten whole by the one repaint that already handles all three. Pinned by `FightHudSnapshotLifecycleTests.AMoveReordersTheColumnToFollowTheField`, seen red (`Expected: "Beta" But was: "Alpha"`); `4c4bddc3`'s two tests are unaltered and stayed green throughout; full reasoning in the commit message; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 145. Eleven content-resolver blind spots found across the shipped `.json` files (B3-B11 plus two prior)
 
 One entry for the resolver gaps the content pass found that let an authored value validate clean
@@ -2706,56 +1912,8 @@ orchestrator made, flip-able, see its commit message), F4 (`15b1560d`, Magic Mar
 
 ### ~~147. "The Flock" wards exactly one ally, and which one is decided by the field formation~~ - fixed in `ee0d7727`: neither filed option, and not a patch on this talent. The owner's call was that the engine deciding for the player is "just stupid", so nothing auto-picks any more: `SkillTargeting.SingleAlly` enters the same Target depth `SingleEnemy` does, on the party rack, and Ward plus all three Gifts go through it. Who may be picked is `Domain/Combat/AllyTargeting`, one predicate per effect, read by the plates, by `CastSkill`'s refusal and by the bot alike; `FightSession.EligibleAllies` is the filter over it, beside `EligibleTargets`; `CanReach` split into `CanReachEnemy`, `CanReachAlly` and a side-blind core, and the ally side takes no `Reach` at all because nothing stands between a caster and his own squad. The Flock's own rule (owner, 2026-09-15) is now: warding himself spreads nowhere, warding somebody else sends the share back to him -- isolated in `FlockSpread` so it is one edit to retune. `GiftRecipient` is gone; its two orderings and the ward's "his own back first" moved to `Domain/Bot/AllyTargetSelection`, the only caller left that must choose with no hand on the mouse. Full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability
-
-Found 2026-09-11 by the combat finder. `Domain/Combat/Session/FightSession.Enemies.cs`, in
-`ResolveEnemyAction`: a plain-swing commitment made before the enemy was Rooted is re-drawn with
-`EnemyAbilityDraw.Pick(effective, _rng?.NextFloat() ?? 0f)`.
-
-That draw happens ONLY when the player rooted the enemy after its intent was committed -- a
-branch whose frequency is decided by how the player is playing. The file states the opposite
-rule three separate times, most plainly at `PrepareEnemyIntents`: "THE ROLL STILL HAPPENS EITHER
-WAY, and it has to: the draw's position in the RNG stream is what keeps a seeded run
-reproducible, and a preview that skipped the draw would give the fight a different shape from
-the one being previewed". The same file refused exactly this shape once already for the target
-re-pick and took a forfeit instead.
-
-**The impact is narrower than the rule sounds**, and that is why this is low rather than urgent:
-a replay fed the same player actions still reproduces, because the same actions produce the same
-branches. What breaks is seed-to-seed comparability between two runs that differ in whether a
-Root landed -- which is the balance bot's determinism lens, not a player-visible bug.
-
-**Two options.**
-1. **Pass a literal `0f`, the way `RootedEnemyHasNoLegalAction` deliberately does** -- its own
-   comment: "passing a literal 0f (not `_rng.NextFloat()`) costs nothing from the seeded stream
-   -- this is a query, not a commitment". The redraw would then always take the first legal
-   entry rather than a weighted one, which is a real behavioural narrowing for a monster with
-   two legal skills and worth saying so.
-2. **Write the exception into the header.** State that the Root redraw is the one draw whose
-   frequency depends on play, and what that does and does not cost. Cheapest, and honest, but
-   it leaves the invariant with a hole in it that the next reader has to re-derive.
-
-### ~~149. Lucky Deck's red card says "a moment to recover" even when nothing recovered~~ — fixed in `62094abf`: option 2, the owner's call was to drop the line rather than measure it
-
-Found 2026-09-11 by the combat finder as a suspected sixth instance of F5 (`0aad2cec`), checked
-by the F5 fixer and found NOT to be one. `Domain/Combat/Session/FightSession.Relics.cs`,
-`LuckyDeckHeal`: it heals a percentage of max health and restores a percentage of max mana, then
-announces "{name}'s Lucky Deck turns up a red card - a moment to recover." The line carries **no
-number**, so there is nothing for it to misreport and F5's fix does not reach it.
-
-What remains is the weaker variant of the same question: a holder at full health with a full
-primary pool draws the red card, nothing moves, and the log still says a moment to recover. The
-precedent either way is in the same neighbourhood -- `RestorePartyMana` prints "finds nothing to
-restore" when nothing landed, while plenty of flavour lines say something happened without
-claiming a figure.
-
-**Two options.**
-1. **Measure it like everything else.** `HealAndCount` now returns what landed and
-   `CombatMath.RestoreMana` always did, so the line can say "a moment to recover" or "and it is
-   no use to him right now" on the same evidence the other announcements use. Two lines.
-2. **Leave it.** It is a flavour line about drawing a card, not a claim about a number, and the
-   card WAS drawn. Nothing is measurably wrong.
-
+### ~~148. The one conditional RNG draw in the enemy loop, on a branch the player's Root creates~~ — fixed in `44d94bc0`, beyond both filed options: the owner's call was that Root cancels the swing outright rather than redrawing into anything (legal skill or not), which drops the RNG draw entirely and changes real gameplay, not just seed comparability; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~149. Lucky Deck's red card says "a moment to recover" even when nothing recovered~~ — fixed in `62094abf`: option 2, the owner's call was to drop the line rather than measure it; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ## Findings from the fleece-spell removal, 2026-09-15
 
 ### 150. Shawn's reward-track level 30 has no replacement for static_fleece
@@ -2839,340 +1997,16 @@ before and after: 173). Left unfixed -- out of scope for the gamepad-navigation 
 is the area to chase the actual swing-timing regression, and whether it's stale content or a
 real formula bug is still open. Not this plan's call to make.
 
-### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`
-
-`HubController`'s own pre-existing comment (`Core/HubController.cs`, the `Update()` method's
-gating check) already named this before phase 3a started: the debug menu, the glossary, the
-relic draft and the character overlay all cover the hub without registering a context of their
-own. Phase 3a wired Hub's own building/gate navigation (`ec81b29f`) but did not touch any of the
-four modals -- while any one of them is open, the hub's own `NavContext` (buildings, gate,
-`MainMenuButton`) is STILL top of stack, so a stick Move would walk the hub's buildings
-underneath whichever modal is covering them. Mouse/click users are unaffected (the modals already
-block the raycast). None of the five screens this plan's brief named (Hub, Main Menu, Map,
-Talent, Shop) is one of these four, so this is out of scope for phase 3a rather than a gap in it
--- named here so it is not silently assumed to already work.
-
-**Corrected, phase 3b, 2026-09-17: the count above is wrong.** `characterOverlayPanel`
-(`Core/HubController.cs`) IS `screen.SystemMenu.Root` --
-`Editor/SceneBuilder/ScreenRegistry.cs`'s `WireCharacterOverlay` assigns it directly, and its own
-comment says so ("The character overlay: a Modal living inside the hub's own tree... The hub's
-own NavContext.Cancel now opens this directly"). The "character overlay" is the same
-`SystemMenuController` instance every other scene shares, which has carried its own `NavContext`
-since phase 2 step B (`c8837374`) -- it is not a fourth un-navigable modal, it was already fixed
-before this finding was written. Only RelicDraftController, GlossaryController and
-DebugMenuController remain genuinely unwired. Not attempted in phase 3b (see
-`docs/GAMEPAD_NAVIGATION_PLAN.md`'s status header for the sizing reasoning); still open.
-
-**Fixed in `ccb1b08d`** (phase 3, item 1): each of the three pushes its own `NavContext` now,
-rebuilt at the end of every repaint (`RelicDraftController.RefreshNavigation`, `GlossaryController.
-RefreshNavigation`, `DebugMenuController.RefreshNavigation`) rather than declared once at open, so
-paging, a new draft round or a filter change all keep the declared set matching what is on screen.
-`HubController.HandleEscape` is simplified to just `SystemMenuController.OpenOnCancel(systemMenu)`
-now that each modal's own context sits above the hub's while open -- the debug-menu/glossary/
-relic-draft priority branches it used to run are dead code once nothing can reach them. RelicDraft's
-Cancel is a deliberate no-op (`cancel: null`) rather than a close, matching the screen's own stated
-design ("a draft you can navigate around is not a draft") over the brief's literal "Cancel closes
-them" -- closing it would let a player leave without `RunOrchestrator.FinishDraft` ever running.
-
-### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`
-
-`MainMenuController`'s save-slot NavContext (`d39d955b`) covers the base Play/Continue/Exit list
-and the save-slot picker, but deliberately stops there: `ManageSavesButton` (reached and pressed
-via Submit like any other wired control) switches to `ManageSavesPanel`, and neither that panel
-nor its own `ResetConfirmPanel`/hold-to-delete dialog declares any Selectables or a Cancel
-handler. A controller-only player who presses Submit on Manage Saves can reach the panel but has
-no stick-driven way back out of it (no Cancel, no Move target) -- mouse/`CloseManageSavesButton`
-still works. Scoped out deliberately (the task brief for this screen named only "Main Menu and
-its save slots", not the destructive delete flow behind it) rather than missed; a future pass
-wiring it should follow the same Reconfigure-on-panel-swap shape `MainMenuController.
-RefreshNavigation` already established for the save-slot toggle.
-
-**Fixed in `232f310b`** (phase 3b, item 7): the same shared `NavContext` gained the manage list
-and its confirm dialog as two more `Reconfigure` states (four total now), resolved topmost-first
-since `ResetConfirmPanel` is a sibling drawn over `ManageSavesPanel`, not a child of it. Cancel
-mirrors the same precedence through `ResetProgressController.Dismiss()`/`GoBack()`. The confirm
-dialog's Yes/hold button still has no gamepad-Submit path of its own (`HoldToConfirm` is
-pointer-only), recorded as a deliberate limitation in the commit message rather than chased --
-teaching `NavigationInputModule` a "held button" concept used nowhere else would be out of
-proportion for one destructive-confirm dialog.
-
+### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ## Findings from gamepad-navigation phase 3b items 1 and 2, 2026-09-17
 
-### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`, REOPENED BY HARDWARE AND CLOSED DIFFERENTLY in `ce405df9`
-
-`65ad5325`'s halos were exactly what this entry asked for and the owner rejected them on a
-real pad: "a player can't see where they're going in the character sheets screen: no obvious
-selectors". A soft radial glow the same footprint as a cell, sitting under an icon and a
-name, is a tint rather than a selector. The halos are gone along with every other one in the
-project; `Core/FocusMarker.cs` is the one answer now, on this screen and on the other ten.
-The original finding below is left standing because its reasoning about WHY these controls
-had nothing is still correct -- it is the remedy that changed.
-
-Both screens wired this pass (`914c249e`, `9c26de94`) are now fully operable on stick + Submit
-+ Cancel, and on both of them the only feedback that a control has focus is the tooltip the
-focus opens. The controls themselves carry no selected treatment at all: the dossier's slot
-cells, ability-score cells and pack cells are `.NoChrome()` (two of them with `Hovers(1.02f)`,
-which is a POINTER scale), and the Reckoning's offer cards are `.NoChrome()` with a deliberate
-"NO PLATE" note in `Domain/UiKit/Screens/ReckoningScreen.cs` -- a themed plate behind each card
-is recorded there as the mistake that "turned three treasures into three menu entries". So none
-of them has a `ThemedButtonState`, and `ThemedButtonState.SelectedGlowAlpha`/`Scale` -- the ratio
-every themed Button answers focus with -- reaches none of them.
-
-Seen in the capture pass, not deduced: `tools/screenshots/gamepad_phase3/
-Reckoning_selected_tooltip.png` has the MIDDLE card selected and nothing in the picture says so.
-The four `Dossier_tooltip_*.png` shots have the same hole.
-
-This is `docs/GAMEPAD_NAVIGATION_PLAN.md` section 12.2's open owner call (the selected-visual
-treatment is "a candidate pending the visual capture, not approved") arriving on two more
-screens, and the same shape Party's own capture already raised for its slots. `Core/
-SelectHaloPainter.cs` exists for exactly this case -- an un-themed focusable borrowing the
-themed ratio through a plain Image -- and Hub's four buildings and its gate already use it, so
-the mechanism is one call per surface. Not applied here unasked: on the Reckoning it would put a
-glow behind cards whose own design note argues against exactly that, which is a visual decision
-belonging to the owner rather than a wiring gap. The pictures are the ask.
-
-**Fixed in `65ad5325`** (phase 4, item 1). Each of the three genuinely `.NoChrome()` dossier
-groups (pack cells, equipment slots, ability-score cells) gets its own `Core/SelectHaloPainter.cs`
-halo, wired through the `SelectIndex` these cells already carry from `TooltipFocusRouter.Register`
-(job 1) -- `+=` on `Changed`, not `=`, since that delegate was already claimed for the tooltip.
-**Narrower than this finding's own "none of them has a ThemedButtonState" read**: re-checking
-`UiEmitter.WireThemedButton` and `ThemedButtonState.UpdateGlow` while wiring these three found
-that the pack's sort tabs and the pack/spells Close buttons (not named above, but named in the
-phase 4 brief) are `.ThemedPlate()`/`.Themed()` and DO already carry a `ThemedButtonState`, which
-already answers `ISelectHandler` focus with `SelectedGlowAlpha`/`Scale` for free -- so they were
-left alone rather than given a redundant second halo. The Reckoning took the smaller fix this
-finding itself anticipated: no new node, `PaintOffers` brightens the card's own existing rarity
-halo to `Max(rarity alpha, SelectedGlowAlpha)` instead of a plate, honouring `BuildOffer`'s own
-"NO PLATE" note. Re-captured via the same two capture test classes this finding cites
-(`DossierTooltipCaptureTests`, `ReckoningTooltipCaptureTests` -- no new capture test needed, the
-hole was in what the existing pictures showed) into `tools/screenshots/gamepad_phase4/`; the halo
-and the brightened glow are visibly the selected control in every shot.
-
-### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`
-
-`CharacterDossierController.RefreshNavigation` (`914c249e`) declares two states -- pack open and
-pack shut -- because `DossierPackPanel` is an opaque Image over the whole of column A and the
-mouse cannot reach what it covers. `DossierSpellsPanel` is the same shape (same column, same
-opaque ground, opened by `SpellsRow`) and got neither: its three spell slots and five unassigned
-rows are in `SystemMenuController`'s declared Selectable set (so a mouse click on one sticks, and
-the dispatcher will not fight it) but nothing links INTO them, so no Move can reach them --
-and, the other way round, column A's own nav rows keep their links while the spells panel covers
-them, so a stick can walk onto and Submit a row the mouse cannot click.
-
-Deliberately out of scope rather than missed: this pass's brief named the equipment slots,
-ability scores, pack items and pack sort tabs, and the spells panel is a third state of column A
-with its own selection model (`_selectedUnassignedRow`, a slot/row pairing that PressSlot and
-SelectUnassigned resolve between them) -- comparable in size to the pack itself. The fix is a
-third `RefreshNavigation` branch keyed on `spellsPanel.activeSelf`, plus `SpellsCloseButton` in
-the graph for the same reason `DossierPackClose` is in it (this pane does not claim Cancel).
-`RewardTrackController`'s panel, the dossier's other column-A door, is NOT affected: its own
-ribbon and collect button are already wired (phase 2 step C, `da205520`).
-
-**Fixed in `7ea33bca`** (phase 3, item 4): `RefreshNavigation` is a third state exactly as this
-finding predicted -- `DeclareSpells`, keyed on the new `IsSpellsShown`, mirrors `DeclarePack`
-(the three spell slots and the unassigned-book rows as two Lists, `SpellsCloseButton` in the
-graph). `RefreshSpells` now calls `RefreshNavigation()` at its own end, which is the literal bug
-this finding named: opening or closing the panel never touched the graph at all before this,
-regardless of which state `RefreshNavigation`'s own branch would otherwise have resolved to.
-Found while wiring, not predicted here: neither `ShowPack` nor the old `ShowSpells` ever
-explicitly reselected on open/close, and the dispatcher's own next-frame reselection rule cannot
-paper over it -- `SystemMenuController.RefreshSelectables` declares every Selectable under the
-whole panel regardless of visibility, so a row hidden behind a panel it just opened still reads
-as "declared" and the rule stays silent. `ShowSpells` now selects explicitly on both edges;
-`ShowPack`'s identical, older gap is left alone -- untested today, and fixing an unrequested
-control is a separate change from wiring this one.
-
+### ~~160. Nothing on the dossier or the Reckoning shows WHERE the stick is standing~~ -- fixed in `65ad5325`, REOPENED BY HARDWARE AND CLOSED DIFFERENTLY in `ce405df9`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~161. The dossier's spell-books panel is mouse-only, and its nav rows stay Move-reachable underneath it~~ -- fixed in `7ea33bca`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ## Findings from gamepad-navigation phase 4, items 3 and 4, 2026-09-18
 
-### ~~162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone~~ -- fixed in `bd6f80af`: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at the target's PIVOT rather than its rect centre, which on the Hub's gate (pivot 0.5/0, rect y:0) is the rect's own inclusive bottom edge, and the hover scale-up the pointer's own arrival starts then shifts that edge a fraction of a pixel away from the frozen pointer before the MouseDown frame arrives.
-
-`JourneyToFirstFightMouseTests.MainMenuToNewGame_ThroughTheHubGateAndTheDraft_ReachesTheFirstFight_MouseOnly`
-("clicking the gate never opened the relic draft on a run that has not drafted one yet", expected
-`True`, got `False`) failed in every one of four batched runs this pass tried against it (three
-full `tools/run_tests_parallel.ps1` runs and one `tools/test.ps1 run`, 341 tests) --
-`JourneyHubToTalentsMouseTests.ATier1Orb_BeforeItsRootIsUnlocked_IsRefused_BackReturnsToTheHub_MouseOnly`
-("clicking TalentsBuilding should load the Talents scene", expected `"Talents"`, got `"Hub"`)
-joined it in two of those four. Both are new files this pass added (item 3, the mouse-only
-regression); nothing pre-existing is affected.
-
-**Not reproducible in a small slice.** Both classes pass reliably, every time, run alone or as
-part of the full ten-class new-test slice (`tools/test.ps1 <the ten new classes>`) -- confirmed
-five separate times across this investigation. The failure needs a LARGE batch to appear at all,
-but not a specific one: the fourth reproduction (`tools/test.ps1 run`, 341 tests, not the full
-1240-test gate) is what disproves this investigation's own earlier, narrower theory --
-`JourneyToFirstFightMouseTests` failed there with `JourneySystemMenuToMainMenuTests` (ending on
-the Main Menu, no run, no draft) as its immediate predecessor, not `JourneyHubToShopTests`
-(ending on the Map, mid-run) as in every earlier reproduction. Whatever this is, it is not tied to
-one specific predecessor's own leftover state.
-
-**Two mechanism-level fixes landed along the way, neither of which resolved this** (kept because
-both are real, independently-verified fixes -- see `NavigationInputModule.cs`'s own comments and
-segment 3/4/(a)/(e) of `JourneyMixedInputTests.cs`):
-1. `NavigationInputModule.ReselectIfOutsideDeclaredSet` now prefers the selection captured before
-   `base.Process()` runs, when the SAME top context still declares it, instead of always falling
-   back to `NavContext.Entry` -- fixed a genuine, previously-unproven regression (a mouse click on
-   a `Navigation.Mode.None` stepper button deselects the row behind it, per
-   `PointerInputModule.DeselectIfSelectionChanged`'s own `ISelectHandler`-based check, which
-   `Navigation.Mode.None` does nothing to prevent). See #163.
-2. `JourneyFixture.RootCanvas()` now scopes its `Canvas` lookup to `SceneManager.GetActiveScene()`
-   rather than a bare `isRootCanvas` check, ruling out a theorised stale-canvas read from another
-   fixture's own hand-built, `Object.Destroy`-deferred canvas. Applied, verified harmless, did not
-   change the failure.
-
-**Ruled out, not merely suspected:**
-- Not a settle-time-after-scene-load race in the simple sense: raising the post-`TakeOverInput`
-  real-time wait from 0.2s to 0.5s, every mouse test, every scene load, made no difference across
-  two full-gate runs -- if the true cause were "not enough real time before the click," more of it
-  should have helped at least partially, and it changed nothing at all.
-- Not `RunManager` state leaking across tests: `RunManager.ResetForTests()` only clears the
-  cached map (`Forget()`); run/draft state lives on `SaveSlotManager.CurrentSave`, and every
-  journey test (this one included) opens its own throwaway `SaveSystem.RootOverride` directory
-  with no pre-existing save file, so a prior test's run cannot be read back by this one.
-- Not `Navigation.LoadOverride` left stubbed by an earlier fixture: had that been true,
-  `SaveSlotManager.EnterSlot(0)`'s own `Navigation.Go(Hub)` call would have been a no-op and this
-  file's own `WaitForScene("Hub", ...)` would have timed out with a DIFFERENT message ("clicking
-  an empty slot should enter it and load the Hub") before ever reaching the gate click -- every
-  observed failure is the LATER assertion, so the Hub scene did load.
-- Not a specific predecessor's leftover state (see above) -- the one candidate this investigation
-  had most confidence in until the fourth reproduction contradicted it.
-
-**A structural difference worth naming, not yet confirmed as the cause.**
-`JourneyToFirstFightMouseTests` is the only one of the nine mouse files that reaches the Hub
-through a click-triggered scene load rather than a top-level one: its Hub load happens as a side
-effect of `SaveSlotController.Choose(0)`'s own `EnterSlot(0) -> Navigation.Go(Hub) ->
-SceneManager.LoadScene(Hub, Single)` (SYNCHRONOUS, per `Navigation.Go`'s own implementation),
-fired from inside the SAME `EventSystem.Update()` call this suite's own scripted `Click` on
-Slot0Button drives -- every other mouse file calls `SceneManager.LoadSceneAsync` directly at its
-own top level instead. `JourneyHubToTalentsMouseTests` does not share this shape (it loads Hub
-directly), which is consistent with it failing less often (2 of 4) than
-`JourneyToFirstFightMouseTests` (4 of 4) if this really is the mechanism, but that difference in
-RATE is not proof by itself.
-
-**Left open rather than forced.** Both tests assert real, correct production behaviour (verified
-by their own reliable passes in every small-slice configuration tried), so weakening either
-assertion to paper over an unreproduced-in-isolation symptom would hide a real claim behind a fake
-pass -- the standing rule this project's own `docs/CODE_STANDARDS.md` states. Whoever picks this
-up next: start from the synchronous-load-from-inside-a-click theory above (it is the one concrete,
-falsifiable difference this investigation found and did not have time to test in isolation -- e.g.
-by rewriting this one file's Hub transition to poll for scene readiness after the click rather
-than assuming `WaitForScene` plus a flat settle is enough), and reproduce with
-`tools/test.ps1 run` (341 tests, ~140s) rather than the full ~450s gate -- it reproduces there too
-and is far cheaper to iterate against.
-
-**RESOLVED, and the synchronous-load theory above was wrong.** Five instrumented reproductions of
-`tools/test.ps1 run` (a temporary per-frame dump of `EventSystem.current`, the active scene, the
-context stack, a fresh `RaycastAll` at the pointer, and the target's own rect geometry -- all
-removed again) put the whole mechanism on the record:
-
-```
-frame N   localPt=(0.000, 0.000)  contains=True   hits=1 <StartRunGate>
-frame N+1 localPt=(0.009,-0.009)  contains=False  hits=0      <- the MouseDown frame
-frame N+2 localPt=(0.010,-0.010)  contains=False  hits=0      <- the MouseUp frame
-```
-
-`MoveMouseTo` aimed at `((RectTransform)node.transform).position`, which is the PIVOT and equals
-the centre only at pivot (0.5, 0.5). `StartRunGate` is pivoted (0.5, 0) -- rect
-(x:-310, y:0, w:620, h:620), pivot flat on the bottom edge, because a building is placed by the
-ground it stands on -- so the pointer sat exactly on `yMin`, inside only because `Rect.Contains` is
-inclusive there. The `MoveMouseTo` frame then fires `OnPointerEnter`, `ButtonPressAnimator` starts
-lerping the button toward `HoverScale`, and the sub-pixel shift that puts in the pivot's screen
-position (measured 78.320 -> 78.323 at a 0.333 canvas scale) moves the frozen pointer 0.009 canvas
-units BELOW `yMin` on the very next frame -- the frame carrying `MouseButton0Down`.
-`GraphicRaycaster` finds nothing, the press lands on no target, the release has no `pointerPress`
-to match, and the Button's `onClick` never fires.
-
-Batch size decided which way the coin fell because that first hover step is
-`Time.deltaTime`-driven: a loaded run's longer frame moves the pivot a measurable fraction of a
-pixel, the same test alone moves it too little to leave the edge. So "needs a large batch but not a
-specific one" was the symptom of a knife edge, not of leaked state -- which is also why every
-theory above about a predecessor, a settle time or a scene load from inside `Process()` could be
-ruled out one after another without getting closer. Everything those theories suspected was
-measured as sane at the failing frame: `EventSystem.current` was the Hub's own and focused, one
-EventSystem alive, one context on the stack, the gate interactable, the module never deactivated.
-
-Fixed at the aim point: `MoveMouseTo` now aims at `rect.TransformPoint(rect.rect.center)`, which is
-what that fixture's own contract already claimed and what a mouse player aims at, and is robust by
-construction -- a rect's centre is interior to it for every pivot. `WorldPointAtFraction`'s local y
-gets the same correction for the same reason (it was 0, the pivot's row). Identical for anything
-already pivoted (0.5, 0.5), so the other eight mouse files and the mixed-input file are
-bit-identical. Three consecutive `tools/test.ps1 run` runs green plus a full
-`tools/run_tests_parallel.ps1`.
-
-### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change
-
-Found writing item 4's own mixed-input pass, rule (e): `OptionsController.cs`'s own comment on
-`stepPrev`/`stepNext` states "does nothing to the row's own remembered focus, since
-`OnPointerDown` never calls `SetSelectedGameObject` for a `None`-mode Selectable" -- true as far
-as it goes, and incomplete. `Navigation.Mode.None` stops the CLICKED button from being reselected;
-it does nothing to stop `PointerInputModule.DeselectIfSelectionChanged` from nulling whatever WAS
-selected, since that check walks up from the clicked object looking for any `ISelectHandler`
-ancestor (a bare `Selectable`/`Button` implements it regardless of its own `Navigation.Mode`) and
-compares that against the current selection -- a stepper button, or a plain background click that
-hits nothing declared at all, both null the row/building that was selected a moment ago. Before
-this pass, `NavigationInputModule.ReselectIfOutsideDeclaredSet`'s only answer to a null selection
-was `NavContext.ResolveSelection()` (`RememberedId ?? Entry`), and grepped, `NavContext.Remember`
-is called nowhere in this project -- so the fallback was always `Entry`, silently, meaning a
-stepper click (or a background click) drops focus to the screen's declared entry rather than
-leaving it where it was.
-
-**Not `NavContext.RememberedId`'s job either.** That field is the CROSS-VISIT case (a modal
-reopened later restoring what it last had selected, which nothing in this project wires up yet --
-`DebugMenuGamepadNavigationTests`' own pinned claim, "HubController never calls
-`NavContext.Remember`, so there is no per-node memory to restore, only Entry," is about exactly
-that case, a Cancel that POPS a context, and stays true and unaffected by this fix). This bug is
-the SAME-VISIT case: the top context never changed, only a click's own deselect-without-replace
-ran through it.
-
-**Fixed**: `NavigationInputModule.Process` now captures `EventSystem.current.currentSelectedGameObject`
-BEFORE `base.Process()` runs, and `ReselectIfOutsideDeclaredSet` prefers that captured value over
-`Entry` whenever the SAME top context still declares it as one of its own Selectables -- which is
-true only for the same-context click case, never for a context that was just pushed or popped
-(the previous selection belongs to a DIFFERENT context in both of those, so `ContainsSelectable`
-answers false and `Entry` still runs, matching `DebugMenuGamepadNavigationTests`' own claim).
-Proven at the journey level by `JourneyMixedInputTests.cs` rules (a), (b) and (e) -- a background
-click on the Hub, a click through a System Menu modal, and a mouse click on an Options stepper
-button, each restoring the pre-click selection in the same frame rather than falling back to
-Entry.
-
-**THE CROSS-VISIT HALF, the one the paragraph above deliberately left standing, is fixed in
-`fd7c8984`**: `NavContext.Remember` is now called -- by `NavigationInputModule.Process`, once, for
-every context, after the post-dispatch reselection has settled the frame -- so a context popped or
-re-entered lands where the player left it rather than on its entry. Three things needed fixing
-before "remembered ?? entry" could mean anything, each a model problem rather than a missing line:
-
-1. **A context destroyed on close can never satisfy "Push selects remembered".** SystemMenu, the
-   debug menu, the glossary and the shop each built a fresh `NavContext` on every open and nulled
-   the field on every close. Their contexts now outlive their time ON THE STACK (created once, put
-   back with the new `NavContextStack.PushIfAbsent`, removed but not discarded on close). The other
-   seven are one-per-scene or one-per-fight and are untouched -- nothing re-enters them without a
-   scene load, which resets the stack anyway.
-2. **"Still valid" had to mean usable, not declared.** A controller declares what it owns, not what
-   is on screen, so a hidden or destroyed node is still a member of its context's set. The whole
-   rule now lives once in `NavigationInputModule.SelectionFor` (remembered if shown and alive, else
-   entry); `NavContext` keeps only the half it can answer engine-free (`RememberedSelectable`), and
-   `NavContext.ResolveSelection` is gone rather than left beside it.
-3. **The same gap on the CURRENT selection**, which plan section 6 already specified and nothing
-   implemented ("if the focused node vanishes mid-session... the entry if none remain"):
-   `ReselectIfOutsideDeclaredSet`'s early-out tested non-null and declared, so hiding the control
-   that held the focus left the focus on something the player can neither see nor move off.
-
-Proven by `FocusMemoryGamepadNavigationTests` (the Hub's pop case, the System Menu's cross-visit
-case, and a remembered node hidden after the fact falling back to entry), all three through the
-real dispatcher. Two existing tests were adapted rather than relaxed, both because they encoded the
-absence of memory -- `DebugMenuGamepadNavigationTests`' own pinned claim passes unchanged and only
-its reason was stale (nothing in it moves off the gate, so memory and entry agree, and both
-readings hold), while `DossierGamepadNavigationTests`' tooltip-on-close test genuinely changed
-behaviour and is renamed to say so: a reopened menu now restores the remembered cell, and a box
-describing the selected cell is section 7's tooltip following focus rather than a stale flag
-surviving.
-
-**One limitation stated rather than hidden**: `SystemMenuController` keys its declared set by
-position (`s0`, `s1`, ... off a hierarchy walk) rather than by name the way the debug menu and the
-glossary do. That is stable across a close and a reopen, so the memory above is correct there, but
-a pane that rebuilt its rows between visits would restore focus to the same POSITION rather than
-the same control. Left alone deliberately -- a name-keyed set is a change to what that screen
-declares, with its own duplicate-name risk for runtime-instantiated rows.
-
+### ~~162. `JourneyToFirstFightMouseTests` (and once, `JourneyHubToTalentsMouseTests`) fails in a large batch, never alone~~ -- fixed in `bd6f80af`: `JourneyFixture.MoveMouseTo` aimed the scripted pointer at the target's PIVOT rather than its rect centre, which on the Hub's gate (pivot 0.5/0, rect y:0) is the rect's own inclusive bottom edge, and the hover scale-up the pointer's own arrival starts then shifts that edge a fraction of a pixel away from the frozen pointer before the MouseDown frame arrives.; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~163. A click on a Navigation.Mode.None Selectable (a stepper button, a background click) drops the row's own selection to the context's Entry, not back to the row~~ -- fixed in this pass's own `NavigationInputModule.cs` change; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 164. A scripted mouse cannot reliably reach a dot scrolled out of the reward track's own masked viewport
 
 Found writing item 3's own mouse-only regression for phase 4 item 2 segment 8 (the reward track).
@@ -3320,23 +2154,7 @@ Fixed in `ce405df9` (`Core/FocusMarker.cs`, `Domain/UiKit/FocusMarkerPlacement.c
 `NavigationInputModule.ShowFocusOn`). `Core/SelectHaloPainter.cs` had no callers left and is
 deleted.
 
-### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`
-
-"Attack is always seeming to be hovered over (not a gamepad bug) and makes it difficult to notice
-if you hover/select it." `FightController.Hud.RefreshVerbs` computed
-`highlighted = i == active || (active < 0 && i == _focusedVerb)` and painted `ThemedMenuState.Open`
-for anything highlighted. `_focusedVerb` is 0 from the moment the controller wakes and is never -1
--- Fight's model keeps a focused verb at all times because Submit has to have something to press --
-so with no branch open the second clause was unconditionally true for index 0.
-
-Worth recording as a class rather than an instance: the code's own comment asserted the two states
-were "mutually exclusive in practice", and `FightFlowTests` had written the SAME wrong belief into
-an assertion with a comment explaining it ("`highlighted` is already true for ATTACK before
-anything is ever pressed"). A green suite pinned the defect. What caught it was a person holding a
-controller.
-
-Drawing only; `_focusedVerb`, `MoveFocus` and `ConfirmFocus` are untouched.
-
+### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong
 
 Not a defect in shipped code -- it is a defect the capture pass caught in the marker itself before
@@ -3351,28 +2169,7 @@ project could have caught that; the capture did. The rule is now "the target's o
 last sibling", which cannot be wrong for the reason that a canvas covering the marker covers the
 control it points at too.
 
-### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely
-
-#169 removed the open-branch plate from the resting verb column. What remains on ATTACK is
-`ThemedMenuState.Primary` -- the recommended-default gold ring it has always had, from
-`i == 0` and nothing else -- which is visible in `tools/screenshots/gamepad_visuals/
-marker_fight_verb.png` as a warm glow the other three verbs do not have.
-
-That is the intended design of the verb column and it was not touched by this pass. But the owner's
-complaint was about what ATTACK LOOKS LIKE at rest, and half of what it looks like is still there.
-If the ring is what read as "hovered" rather than the plate, the fix is to drop Primary from the
-verb column entirely and let the hotkey number carry "this is the default" -- a one-line change in
-`RefreshVerbs`, not a mechanism. Not done unasked: a recommended action is a real thing to signal
-and removing it is a design decision, not a bug fix.
-
-**Closed in `b12a1682`, by the owner's answer rather than by a new argument.** The ring WAS what
-read as hovered -- the complaint survived #169's fix unchanged. `RefreshVerbs` now computes
-`i == active ? Open : Idle` and nothing else, so the resting column carries no ring on any verb,
-and "ATTACK is the default" is left to the hotkey number beside it: already on screen, costing no
-glow, and impossible to mistake for focus or hover. The one-line change the finding predicted, at
-the cost the finding named. `ThemedMenuState.Primary` itself survives with one production user
-left, which is #175 below.
-
+### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control
 
 `FocusMarkerPlacement.EdgeFor` puts the marker to the LEFT of anything wider than 1.8:1 and ABOVE

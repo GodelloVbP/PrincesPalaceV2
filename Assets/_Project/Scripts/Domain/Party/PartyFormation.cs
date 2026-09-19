@@ -228,7 +228,7 @@ namespace PrincesPalace.Domain.Party
             // THE ORIGIN'S LOCK, not just the destination's. A seat-sourced
             // move or swap VACATES the origin, which is the thing a lock
             // forbids -- "locked rejects any placement, and its occupant
-            // can't be moved out either" (docs/handoffs/party_screen/
+            // can't be moved out either" (docs/handoffs/archive/party_screen/
             // GAP_AUDIT.md row 37). SendToBench already refuses on exactly
             // this ground; without the same step here the identical
             // sequence commits through the other gesture.

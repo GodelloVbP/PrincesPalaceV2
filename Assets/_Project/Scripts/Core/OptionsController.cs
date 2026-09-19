@@ -241,7 +241,7 @@ namespace PrincesPalace
         // holding down is a nasty surprise; the ends of these lists are ends.
         //
         // Public, like Refresh and RestoreDefaults beside it: T3 and T6
-        // (docs/PLAN_BATTLE_SPEED.md) both step a row directly rather than
+        // (docs/archive/PLAN_BATTLE_SPEED.md) both step a row directly rather than
         // finding and clicking its Button, and PlayMode has no
         // InternalsVisibleTo grant to reach this at `internal`.
         public void Step(string key, int delta)

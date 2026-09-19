@@ -629,7 +629,7 @@ namespace PrincesPalace.Content
             // symptom but an absence.
             //
             // THE FIRST HALF OF THAT ARM AND DELIBERATELY NOT ITS SECOND
-            // (docs/PLAN_REWARD_TRACKS.md §3h). The talent check also refuses
+            // (docs/archive/PLAN_REWARD_TRACKS.md §3h). The talent check also refuses
             // a skill belonging to another character; this one must not, and
             // the next reader restoring the symmetry is exactly what this
             // paragraph is here to stop. A talent belongs to a character and

@@ -4,7 +4,7 @@ using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // T1 from docs/PLAN_BATTLE_SPEED.md: the preset table's rule list,
+    // T1 from docs/archive/PLAN_BATTLE_SPEED.md: the preset table's rule list,
     // nothing about the fight that reads it.
     //
     // EVERY EXPECTED VALUE IS A LITERAL, never TodaysPaceDisplay or

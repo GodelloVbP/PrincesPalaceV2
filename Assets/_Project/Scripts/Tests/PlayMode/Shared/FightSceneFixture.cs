@@ -6,7 +6,7 @@ using PrincesPalace;
 namespace PrincesPalace.PlayModeTests
 {
     // THE SHARED PLAYMODE FIGHT LOAD, for the battle-speed timing fixtures
-    // (docs/PLAN_BATTLE_SPEED.md revision 3 point 1) that need a
+    // (docs/archive/PLAN_BATTLE_SPEED.md revision 3 point 1) that need a
     // deterministic PlayerSpeedMultiplier from the moment the scene opens.
     //
     // DEVIATION FROM THE PLAN AS WRITTEN, recorded here and in the plan's

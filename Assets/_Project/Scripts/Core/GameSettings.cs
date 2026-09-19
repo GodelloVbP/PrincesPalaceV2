@@ -88,7 +88,7 @@ namespace PrincesPalace
         // Display), not the multiplier FightBeatPlayer actually applies --
         // same split as every other stored index here surfacing a label
         // while a converter (BattleSpeedTable.Nearest/.Multiplier) does the
-        // rest. In-fight only (docs/PLAN_BATTLE_SPEED.md); nothing outside a
+        // rest. In-fight only (docs/archive/PLAN_BATTLE_SPEED.md); nothing outside a
         // fight reads this.
         public static float BattleSpeed { get; private set; } = BattleSpeedTable.DefaultDisplay;
 

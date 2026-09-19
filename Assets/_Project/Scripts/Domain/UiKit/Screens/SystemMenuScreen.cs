@@ -70,7 +70,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // characters.json authors today -- a COMPATIBILITY default, not a
         // design choice (CODE_STANDARDS.md 5): ScreenRegistry, which builds
         // this with no argument, is out of scope for the package that added
-        // the parameter (see docs/handoffs/party_screen/DECISIONS.md), so the
+        // the parameter (see docs/handoffs/archive/party_screen/DECISIONS.md), so the
         // default keeps every existing caller compiling. Wiring the REAL
         // count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count) is
         // that later package's job, the same way MainMenuScreen.Build reads

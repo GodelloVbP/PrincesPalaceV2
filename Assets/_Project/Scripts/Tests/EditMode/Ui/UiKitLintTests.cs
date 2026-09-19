@@ -272,7 +272,7 @@ namespace PrincesPalace.Domain.Tests
                 "these restate a colour the palette already owns -- " + string.Join("; ", offenders));
         }
 
-        // ---- T9, docs/PLAN_BATTLE_SPEED.md: the battle-speed seam --------------
+        // ---- T9, docs/archive/PLAN_BATTLE_SPEED.md: the battle-speed seam --------------
         //
         // Secondary guard only -- contract 10 ("Writers and readers") is
         // structural (the seam's own writer is the only place that assigns
@@ -290,7 +290,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsEmpty(offenders,
                 "PlayerSpeedMultiplier/PlayerSpeedSource belong to FightBeatPlayer/FightBootstrap/" +
-                "SpellPerformancePlayer only (docs/PLAN_BATTLE_SPEED.md contract 10).\n" + Describe(offenders));
+                "SpellPerformancePlayer only (docs/archive/PLAN_BATTLE_SPEED.md contract 10).\n" + Describe(offenders));
         }
 
         // The two HUB motion multipliers (TalentController, HubController --

@@ -268,7 +268,7 @@ namespace PrincesPalace.PlayModeTests
         // points: a reward that is granted, stored, and read by nothing. A
         // number on the save is not a reward.
         // 150 IS THE TRACK'S WHOLE MAX-HEALTH LINE for either authored
-        // character (docs/PLAN_REWARD_TRACKS.md §5: 15 filler nodes at 10,
+        // character (docs/archive/PLAN_REWARD_TRACKS.md §5: 15 filler nodes at 10,
         // and no milestone pays health on Shawn's or Odette's track). Written
         // as a literal rather than read back off CollectedTotal, which would
         // make this a tautology -- the point is that the watermark reaches the

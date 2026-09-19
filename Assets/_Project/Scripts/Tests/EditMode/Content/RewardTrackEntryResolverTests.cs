@@ -6,7 +6,7 @@ using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Pins docs/PLAN_REWARD_TRACKS.md §4's validation rules against
+    // Pins docs/archive/PLAN_REWARD_TRACKS.md §4's validation rules against
     // RewardTrackEntryResolver directly -- no JSON, no ContentBuilder, the
     // same shape RelicEntryResolverTests/SkillEntryResolverTests use.
     //

@@ -223,7 +223,7 @@ namespace PrincesPalace.PlayModeTests
                 },
                 _menu.VisibleTabs.ToArray(),
                 "out of a run the bar should carry exactly the four tabs that have something to show " +
-                "(Party joined this set - it is meaningful at camp, see docs/handoffs/party_screen/DECISIONS.md)");
+                "(Party joined this set - it is meaningful at camp, see docs/handoffs/archive/party_screen/DECISIONS.md)");
         }
 
         [UnityTest]

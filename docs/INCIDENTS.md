@@ -511,3 +511,102 @@ one is authored and the other is the remainder. The remainder can be starved
 to nearly nothing without ever being wrong enough to fail. `PackIconSize` now
 takes the smaller of its width bound and `cell height - PackNameMinHeight`,
 so the name has a floor and the icon is what gives.
+
+## Claude coded directly instead of orchestrating, nine times (through 2026-09-18)
+
+The rule was "Fable orchestrates, Sonnet/Opus agents do the work" — cost,
+not quality: subagent tokens are the expensive part, not the orchestrator's
+own (see the measurement appended below). It lived only in a memory file.
+Between 2026-09-01 and 2026-09-18 the user restated it
+nine times, each time after catching the same drift: a Grep/Read recon pass
+that felt like "just checking something," followed by the momentum of
+already being in the files carrying straight into `Edit` calls — a whole
+feature (the Odette hover channel: four production files, three test files),
+a hand-written 38 KB HTML report, and finally a full spell-book-art
+integration (schema field, resolver branch, constructor threading, registry
+wiring) done end to end before the ninth catch.
+
+**Why a memory file didn't hold:** recall competes with momentum and loses.
+Nothing in the moment of typing a second `Grep` call surfaces "there is a
+rule about this" — the rule has to be read passively, every session, for it
+to out-compete "let me just check something."
+
+**Fixed by moving the rule into `CLAUDE.md` itself**, which loads in full at
+the start of every session rather than being recalled selectively. The
+memory file was deleted rather than kept as a second copy.
+
+Measured 2026-09-19 over the previous 14 days of transcripts
+(`tools/usage_baseline.py`): Fable orchestrator 13% of list-price-equivalent
+spend, Opus subagents 59%, Sonnet subagents 28%; cache-read was 96% of all
+tokens; the average subagent turn carried ~212K tokens of context and the
+median subagent lived 64 turns. The orchestrate-only rule was already
+holding (1,815 main-session turns against 32,339 subagent turns). The leak
+was downstream: "Opus when a mistake would be costly" routed 121 of 377
+launches to Opus. Limitations: list prices on a subscription account are a
+proxy; the binding limit is the weekly all-models cap. Fixed 2026-09-19 by
+four project agent definitions with pinned models and a PreToolUse hook
+(`tools/githooks/route_agents.py`) that denies any other type, any model
+override, and `Workflow`.
+
+## Batchmode Unity steals focus (2026-09-18)
+
+Every `tools/` script used to call `Start-Process` on `Unity.exe` directly.
+A first fix (commit `241f9b22`) routed every launch through one seam,
+`Start-UnityQuiet` in `tools/unity_path.ps1`, and assumed `-nographics`
+could never create a window worth guarding, on the strength of the Unity
+6000.x command-line reference documenting no flag that does better. The
+owner's report after it shipped: "still does it."
+
+That sent it back to be measured instead of reasoned about.
+`tools/focus_check.ps1`, extended to log every foreground change during a
+real `run_tests_parallel.ps1`/`test.ps1` pass, found batchmode `Unity.exe`
+grabbing the foreground for over a second even with `-nographics` — the
+reference was right that no launch flag suppresses this, but the fix did
+not have to live in how Unity is started.
+
+A second pass (commit `a065d230`, same day) fixed it by restoring focus
+fast instead of preventing the steal: every `tools/` entry point that can
+spawn a window anywhere in its process tree calls `Start-FocusGuard` near
+its own top and `Stop-FocusGuard` in a matching `finally`. The guard
+records whatever window was foreground when the script started, then a
+background watchdog rebuilds the script's full descendant process tree
+(`CreateToolhelp32Snapshot`, cheap enough to poll every ~200ms) and hands
+focus back the moment any window in that tree becomes foreground. That
+closed the gap to ~200ms — and the owner still noticed it.
+
+A third pass (commit `398f19cd`, same day) removed the flicker instead of
+shortening it, for the one launch shape that can afford to: `-nographics`
+needs no real display, so `Start-UnityQuiet` now runs it on its own Windows
+desktop object (`WinSta0\PPHeadless`, created once per script run via the
+`CreateDesktop` API) instead of the interactive one. A window belongs to
+exactly one desktop, and only a window station's active desktop is ever
+what the user sees or can alt-tab into, so a window on a different desktop
+cannot become foreground on the real screen at all — nothing left for the
+tree guard to restore. Verified with `tools/focus_check.ps1 -Mode Command`
+across `test.ps1 NavigationDispatcherTests`, `test.ps1 ui`, and the full
+`run_tests_parallel.ps1` gate: zero foreground changes logged in any of the
+three. `Start-FocusGuard`/`Stop-FocusGuard` stayed unchanged and still cover
+every launch site — windowed launches (`screenshot.ps1 -Runtime`,
+`preview.ps1 -Launch`, `graphics_tests.ps1`) genuinely need the interactive
+desktop's graphics device and stay on the tree-restore guard, and any
+`-nographics` launch where `CreateDesktop` fails (logged, not silent) falls
+back to the same minimized launch the tree guard already covered.
+
+Along the way: wrapping the launched pid with `Process.GetProcessById` (the
+obvious way to get a `System.Diagnostics.Process` back from a raw
+`CreateProcess` call) leaves `.ExitCode` permanently broken — .NET
+Framework throws "Process was not started by this object" for a Process
+obtained that way, because it gates on a private `associated` flag only
+`Process.Start()` sets, and `bot.ps1` reads `.ExitCode` on exactly this
+kind of object. Fixed by `tools/unity_path.ps1`'s `DesktopLauncher.AdoptProcess`,
+which calls the same two private methods `Process.Start()` itself calls
+right after its own internal `CreateProcess`, so the result is
+indistinguishable from a normally-started process.
+
+**What enforces it now:** `tools/unity_path.ps1`'s header comment documents
+`Start-UnityQuiet`, `Start-FocusGuard`/`Stop-FocusGuard`, and the headless
+desktop mechanism in full. `tools/focus_check.ps1` proves it from outside
+the launched process tree with its own independent P/Invoke calls, and is
+itself passive. The rule (every window-spawning `tools/` entry point wires
+in `Start-FocusGuard`/`Stop-FocusGuard`; every `-nographics` launch goes
+through `Start-UnityQuiet`) lives in `docs/TESTING.md`.

@@ -960,7 +960,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString OptionsGameplay = UiString.Define("options.gameplay", "GAMEPLAY");
         public static readonly UiString OptionsBattleSpeed =
             UiString.Define("options.battle_speed", "Battle speed");
-        // "{0}x", sample "1.5x" -- docs/PLAN_BATTLE_SPEED.md's own sample
+        // "{0}x", sample "1.5x" -- docs/archive/PLAN_BATTLE_SPEED.md's own sample
         // rule. {0} is BattleSpeed.Preset.DisplayNumber, already formatted
         // with "0.##" so "1" prints "1x" rather than "1.00x"; this template
         // only adds the "x".
@@ -974,7 +974,7 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("options.battle_speed.note", "Applies from the next action");
         public static readonly UiString OptionsRestoreDefaults =
             UiString.Define("options.restore_defaults", "RESTORE DEFAULTS");
-        // Reworded, docs/PLAN_BATTLE_SPEED.md: the blanket claim stopped
+        // Reworded, docs/archive/PLAN_BATTLE_SPEED.md: the blanket claim stopped
         // being true the moment one row on this screen no longer retimes
         // whatever beat is already playing.
         public static readonly UiString OptionsAppliesImmediately =
@@ -1087,7 +1087,7 @@ namespace PrincesPalace.Domain.UiKit
         // "Position 1/2/3" -- this game's positions ARE mechanically different
         // (the front-rank rule, landed 2026-09-07), and the handoff's own
         // escape clause says to rename them the moment that is true. See
-        // docs/handoffs/party_screen/DECISIONS.md.
+        // docs/handoffs/archive/party_screen/DECISIONS.md.
         public static readonly UiString PartyBannerDefault =
             UiString.Define("party.banner.default", "Select a companion, then choose a position.");
         public static readonly UiString PartyBannerSelected =

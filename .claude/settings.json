@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -9,6 +12,17 @@
             "command": "python \"$CLAUDE_PROJECT_DIR/tools/githooks/deny_broad_staging.py\"",
             "timeout": 10,
             "statusMessage": "Checking git staging scope"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|Workflow",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/tools/githooks/route_agents.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking agent routing"
           }
         ]
       }

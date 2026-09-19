@@ -102,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
         {
             FightBeatPlayer.BeatSpeedMultiplier = 8f;
 
-            // docs/PLAN_BATTLE_SPEED.md G3: several fixed WaitForSecondsRealtime
+            // docs/archive/PLAN_BATTLE_SPEED.md G3: several fixed WaitForSecondsRealtime
             // calls below (the stage settle, the map/dossier/fight captures,
             // the 1/30s-per-frame spell sampling) are calibrated against
             // Pace == BeatSpeedMultiplier exactly, at both 8x and the local

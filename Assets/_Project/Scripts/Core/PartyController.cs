@@ -119,7 +119,7 @@ namespace PrincesPalace
         // PartyScreen's own GlowNeutral is private (the build-time default
         // every seat starts on); these three are the runtime states a glow
         // can move to, read off the handoff's own token table
-        // (docs/handoffs/party_screen/README.md, "Ground-glow accents") the
+        // (docs/handoffs/archive/party_screen/README.md, "Ground-glow accents") the
         // same way PartyScreen's constants were.
         private const string GlowNeutral = "#B4AA9629";     // rgba(180,170,150,.16)
         private const string GlowOccupied = "#5FE07A8C";    // rgba(95,224,122,.55)
@@ -361,7 +361,7 @@ namespace PrincesPalace
 
             // NO RUN-MODIFIER SYSTEM EXISTS to ask which seat, if any, is
             // locked for this run -- see PartyFormation's own header and
-            // docs/handoffs/party_screen/DECISIONS.md ("Locked seats are a
+            // docs/handoffs/archive/party_screen/DECISIONS.md ("Locked seats are a
             // rendered state with no system behind them yet"). `_ => false`
             // is production's honest answer until one is built; wire this to
             // whichever system ends up authoring run modifiers.
@@ -1254,7 +1254,7 @@ namespace PrincesPalace
         }
 
         // ART LOADS AT RUNTIME, off the same folder the fight stage uses --
-        // see FightController.StanceSpriteFor and docs/handoffs/party_screen/
+        // see FightController.StanceSpriteFor and docs/handoffs/archive/party_screen/
         // DECISIONS.md ("Art loads from Resources/Characters/<id>, never from
         // the handoff's sprites"). "idle" is the only stance a menu screen
         // ever has reason to ask for.

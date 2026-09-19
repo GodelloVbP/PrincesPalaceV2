@@ -272,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
             talents.GetComponentsInChildren<Button>(includeInactive: true)
                 .FirstOrDefault(b => b.name == name);
 
-        // THREE STATES, NOT TWO, since docs/PLAN_REWARD_TRACKS.md P4 made the
+        // THREE STATES, NOT TWO, since docs/archive/PLAN_REWARD_TRACKS.md P4 made the
         // respec a COLLECTED reward rather than a function of `level`: not
         // reached, reached but not collected, collected. The middle one is the
         // new state and the one worth pinning -- a character who has reached

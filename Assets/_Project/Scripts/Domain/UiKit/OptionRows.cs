@@ -59,9 +59,9 @@ namespace PrincesPalace.Domain.UiKit
     // it, believes something changed, and is wrong.
     //
     // The design asked for six groups. Three survive, because GameSettings
-    // now holds six values (docs/PLAN_BATTLE_SPEED.md added BattleSpeed) and
+    // now holds six values (docs/archive/PLAN_BATTLE_SPEED.md added BattleSpeed) and
     // nothing else exists to bind to. What was cut and what each would need
-    // is written down in docs/handoffs/system_menu/REMAINING.md rather than
+    // is written down in docs/handoffs/archive/system_menu/REMAINING.md rather than
     // shipped as furniture:
     //
     //   Readability (text size, tooltip delay)  - neither value exists
@@ -95,7 +95,7 @@ namespace PrincesPalace.Domain.UiKit
                 new OptionRowDef("window", UiStrings.OptionsWindow, OptionKind.Stepper),
                 new OptionRowDef("fps", UiStrings.OptionsFrameLimit, OptionKind.Stepper)),
 
-            // docs/PLAN_BATTLE_SPEED.md: the one Gameplay setting that binds
+            // docs/archive/PLAN_BATTLE_SPEED.md: the one Gameplay setting that binds
             // to a real value. The note says what the design's own footer
             // now also says for this one row specifically -- a stepped
             // battle speed does not retime a beat already under way (contract

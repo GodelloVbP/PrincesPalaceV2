@@ -5,7 +5,7 @@ using PrincesPalace.Domain.Progression;
 namespace PrincesPalace
 {
     // WHICH REWARD TRACK A CHARACTER IS ON -- the one lookup every read site
-    // goes through (docs/PLAN_REWARD_TRACKS.md §2's read-site table).
+    // goes through (docs/archive/PLAN_REWARD_TRACKS.md §2's read-site table).
     //
     // Core rather than Domain because it needs ContentDatabase to find the
     // authored track, and Domain cannot see a content type at all

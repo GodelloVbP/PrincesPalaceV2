@@ -97,7 +97,7 @@ namespace PrincesPalace.PlayModeTests
         // fight test in this suite sets a multiplier in its own [SetUp], and a
         // leaked 60x would silently turn this capture into four frames.
         //
-        // docs/PLAN_BATTLE_SPEED.md G3: BeatSpeedMultiplier == 1 no longer
+        // docs/archive/PLAN_BATTLE_SPEED.md G3: BeatSpeedMultiplier == 1 no longer
         // guarantees Pace == 1 by itself -- FightBootstrap can install a
         // settings-backed PlayerSpeedMultiplier on top of it -- so both are
         // pinned now.

@@ -216,7 +216,7 @@ namespace PrincesPalace.Domain.Tests
         // exercising them.
         //
         // ONE HALF DIFFERS BETWEEN THE TWO MAPS, deliberately, and it is the
-        // rule docs/PLAN_REWARD_TRACKS.md §3f/§3h turns on: Level1DamageTypes
+        // rule docs/archive/PLAN_REWARD_TRACKS.md §3f/§3h turns on: Level1DamageTypes
         // is the character's OWN kit, while SkillDisplayNames is the WHOLE
         // catalogue, because a track may grant a skill authored to somebody
         // else and every book-only spell in the game is authored to "sheep".

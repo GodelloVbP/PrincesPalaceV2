@@ -5,7 +5,7 @@ revisions 1 and 2 of this file in full. Revision 4 is a **targeted amendment**
 of revision 3, not a rewrite: the owner approved the direction and named seven
 gaps to close before coding. Everything revision 3 said stands except where
 the revision-4 log below says otherwise.
-**Answers:** `docs/handoffs/spell_layers/BRIEF.md` (owner, 2026-09-08).
+**Answers:** `docs/handoffs/archive/spell_layers/BRIEF.md` (owner, 2026-09-08).
 **Extends, does not contradict:** `docs/PLAN_SPELL_FEEL.md` §"Revised cast
 model" (four moments, `FightBeatPlayer` stays the clock) and §"Minimum
 technical changes" (expose the impact moment; add only proven metadata;
@@ -551,7 +551,7 @@ at the line. Left undone because it belongs to fight-HUD teardown rather than to
 the spell layers.
 
 **D36 — §9 M9's `GAP_AUDIT.md` was not written.** The milestone asks for
-`docs/handoffs/spell_layers/GAP_AUDIT.md` "section-by-section against the
+`docs/handoffs/archive/spell_layers/GAP_AUDIT.md` "section-by-section against the
 brief". The brief's own acceptance is answered instead in the section below,
 clause by clause with its evidence, because a second document restating the same
 six answers is the thing that goes stale first. `docs/ART_PIPELINE.md` §5b and
@@ -1859,7 +1859,7 @@ converts at `:458`; a multiplier changed between the two would leave them
 disagreeing. It is a test seam set before a fight and reset after — policed as
 a global at `GlobalStateLintTests.cs:52-54` — and no production code writes it.
 
-**UPDATE, `docs/PLAN_BATTLE_SPEED.md`: the case above is now IN contract, not
+**UPDATE, `docs/archive/PLAN_BATTLE_SPEED.md`: the case above is now IN contract, not
 out of it, because production code writes a second factor.** `FightBeatPlayer.
 Pace` is now `BeatSpeedMultiplier * PlayerSpeedMultiplier` — the player-facing
 preset joins the product `Scaled` reads, and `FightBootstrap.Start` installs a
@@ -2336,7 +2336,7 @@ new `SceneBuilder` code that knows about layout, which is the one thing
 
 ### 6a. The naming mismatch, and why nothing is renamed
 
-Gameplay id: `prismatic_orb` (`skills.json`, and `docs/PLAN_PRISMATIC_ORB.md`).
+Gameplay id: `prismatic_orb` (`skills.json`, and `docs/archive/PLAN_PRISMATIC_ORB.md`).
 Art folder: `Assets/_Project/Art/Sheets/Spells/prismatic_bolt/water/`. Recipe
 id: `prismatic_orb_water` (`Art/Sheets/recipes/prismatic_orb_water.json`).
 
@@ -2859,7 +2859,7 @@ video is `ffmpeg` over that series.
 `run_tests_parallel.ps1 -BuildContent -BuildScenes`, ~4 minutes.
 `docs/ART_PIPELINE.md` §5b gains the layer vocabulary beside the existing
 `vfx` block table; `docs/CODE_MAP.md` gains the new files;
-`docs/handoffs/spell_layers/GAP_AUDIT.md` is written section-by-section
+`docs/handoffs/archive/spell_layers/GAP_AUDIT.md` is written section-by-section
 against the brief, per `docs/HANDOFF_TEMPLATE.md`.
 
 **Total: 18 agent hours** (0.5 + 2.5 + 1.5 + 3 + 4 + 3 + 1 + 0.5 + 1 + 1),

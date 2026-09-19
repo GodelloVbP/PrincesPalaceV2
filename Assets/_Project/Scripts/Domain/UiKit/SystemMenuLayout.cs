@@ -65,7 +65,7 @@ namespace PrincesPalace.Domain.UiKit
         // WAS a themed 2:1 Container's own measured inset boundary until the
         // owner called every kit frame inside the system menu ugly and asked
         // for the bare violet pane the design pass actually specified
-        // (docs/handoffs/system_menu/README.md). PaneContentHalfWidth/
+        // (docs/handoffs/archive/system_menu/README.md). PaneContentHalfWidth/
         // HalfHeight kept the exact numbers the container's border used to
         // leave -- 744/357.78, PanelWidth/ContentHeight against the container
         // kit's old 3.5%/5.5% side/top insets -- so removing the frame moved

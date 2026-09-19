@@ -96,7 +96,7 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- grants vs unlocks --------------------------------------------------
 
-        // STATPOINT IS THE ONLY GRANT (docs/PLAN_REWARD_TRACKS.md §2) --
+        // STATPOINT IS THE ONLY GRANT (docs/archive/PLAN_REWARD_TRACKS.md §2) --
         // spent once against the watermark and stored. Everything else,
         // MaxHealth included, is read live instead
         // (RewardTrackDefinition.CollectedTotal).
@@ -144,7 +144,7 @@ namespace PrincesPalace.Domain.Tests
         // Written as a function of a level because that is HasUnlocked's
         // parameter; what production passes it since P4 is the character's
         // claimedTrackLevel, not their level, so the capability is COLLECTED
-        // rather than merely reached (docs/PLAN_REWARD_TRACKS.md §2). The
+        // rather than merely reached (docs/archive/PLAN_REWARD_TRACKS.md §2). The
         // arithmetic under test is the same either way.
 
         [TestCase(TrackReward.Respec, 7, false)]

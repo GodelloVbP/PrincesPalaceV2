@@ -26,7 +26,7 @@ namespace PrincesPalace.PlayModeTests
     // (one flight, one trail, one contact, one particles) a second burst on the
     // caster had nowhere to live; here it is one more entry in an array.
     //
-    // FIXTURE-ONLY, AND DELIBERATELY. docs/PLAN_SPELL_LAYERS.md section 8 says
+    // FIXTURE-ONLY, AND DELIBERATELY. docs/archive/PLAN_SPELL_LAYERS.md section 8 says
     // this composition is never authored into skills.json: no spell in the game
     // wants it, and inventing one to prove a scheduler property would put art
     // and a recipe register behind a test. The art is what already ships --

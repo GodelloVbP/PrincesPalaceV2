@@ -43,7 +43,7 @@ namespace PrincesPalace
 
         // THE PANEL'S OWN CONTROLLER, not just the GameObject it lives on --
         // so ShowTrack can tell it WHICH character to paint before it opens
-        // (docs/PLAN_REWARD_TRACKS.md §8). Assigned by ScreenRegistry
+        // (docs/archive/PLAN_REWARD_TRACKS.md §8). Assigned by ScreenRegistry
         // (ScreenRegistry.WireSystemMenu), which is the one place that has
         // both wiring calls' return values in hand; not auto-bound, because
         // it is a controller reference rather than one of UiAutoBind's five

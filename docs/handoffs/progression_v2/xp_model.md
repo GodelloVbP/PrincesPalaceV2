@@ -358,7 +358,7 @@ the *next* fight (when `Build`/`KitFor` runs again with the now-higher `claimedT
 2 shards, `reports/bot/20260911-030038/summary.json`) — that is batchmode simulation wall-clock,
 not real played time, and the schema doc says as much
 (`docs/BOT_SUMMARY_SCHEMA.md:494-495`: "wall-clock time for the whole batch"). The battle-speed
-preset doc (`docs/PLAN_BATTLE_SPEED.md`) defines presets (0.5x/1x/1.5x/2x/3x, today's pace
+preset doc (`docs/archive/PLAN_BATTLE_SPEED.md`) defines presets (0.5x/1x/1.5x/2x/3x, today's pace
 labelled 1.5x, default 1x) and per-cast pacing multipliers, but no aggregate "a fight takes N
 real minutes" or "a run takes N real minutes" figure exists anywhere in `docs/` or the bot
 reports. **I will assume a figure** for any pacing conversion rather than inventing one here —

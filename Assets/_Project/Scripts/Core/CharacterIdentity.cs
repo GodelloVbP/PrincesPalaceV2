@@ -36,7 +36,7 @@ namespace PrincesPalace
         // Every Identity item this character has collected, oldest first --
         // read live off claimedTrackLevel, the same "nothing but the one
         // grant is stored" posture every other reward track total already
-        // follows (docs/PLAN_REWARD_TRACKS.md §2).
+        // follows (docs/archive/PLAN_REWARD_TRACKS.md §2).
         public static IReadOnlyList<CharacterIdentityItem> CollectedFor(Character character)
         {
             if (character == null) return System.Array.Empty<CharacterIdentityItem>();

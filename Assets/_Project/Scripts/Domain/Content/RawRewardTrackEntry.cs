@@ -3,7 +3,7 @@ using System;
 namespace PrincesPalace.Domain.Content
 {
     // ONE LEVEL'S REWARD, exactly as typed into reward_tracks.json's
-    // "levels" array. See docs/PLAN_REWARD_TRACKS.md §4 for the authoring
+    // "levels" array. See docs/archive/PLAN_REWARD_TRACKS.md §4 for the authoring
     // format and RewardTrackEntryResolver for what each field is validated
     // against.
     //

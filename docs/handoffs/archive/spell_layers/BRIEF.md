@@ -4,7 +4,7 @@ Date: 2026-09-08
 Status: owner-requested revision of the proposed layered spell presentation
 plan. This document is a design and implementation handoff, not a report
 that the system has been built or verified. Owner's words, recorded
-verbatim; the plan that answers it is `docs/PLAN_SPELL_LAYERS.md`.
+verbatim; the plan that answers it is `docs/archive/PLAN_SPELL_LAYERS.md`.
 
 ## Owner intent
 

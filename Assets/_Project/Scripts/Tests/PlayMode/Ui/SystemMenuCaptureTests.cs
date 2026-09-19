@@ -293,7 +293,7 @@ namespace PrincesPalace.PlayModeTests
             RestoreSave(backup);
         }
 
-        // docs/PLAN_BATTLE_SPEED.md G4: the Options pane, on its own rather
+        // docs/archive/PLAN_BATTLE_SPEED.md G4: the Options pane, on its own rather
         // than tacked onto the end of CaptureTheSkeletonOnEachTab the way an
         // earlier pass here had it. That test's own equip-and-verify step
         // ("the pack click changed nothing on the character") is a
@@ -471,7 +471,7 @@ namespace PrincesPalace.PlayModeTests
         // CONTENT-SHAPE NOTE: the handoff's second state names is "a bench
         // card selected showing the Replace badges". characters.json authors
         // exactly 3 characters against 3 seats, so nothing is ever benched
-        // today (see docs/handoffs/party_screen/DECISIONS.md's P3 section) --
+        // today (see docs/handoffs/archive/party_screen/DECISIONS.md's P3 section) --
         // "Replace" only ever shows for a ROSTER-sourced selection, which
         // needs a benched card to exist. The closest real state is a SEATED
         // card selected, which shows the same badge mechanism ("Swap with

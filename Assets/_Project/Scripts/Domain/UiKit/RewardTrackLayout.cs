@@ -975,7 +975,7 @@ namespace PrincesPalace.Domain.UiKit
         // painting has to still read as at 15px.
         //
         // FOUR PROCEDURAL BAKES PLUS THE RING DEFAULT, reused rather than
-        // grown to twelve (docs/PLAN_REWARD_TRACKS.md §1): a rail mark is
+        // grown to twelve (docs/archive/PLAN_REWARD_TRACKS.md §1): a rail mark is
         // read at a glance, not read, so the eight new reward kinds share the
         // four existing bakes by what they resemble (a capacity/gain/absorb
         // kind reads as "a capability", the same as Respec or SecondLife) and

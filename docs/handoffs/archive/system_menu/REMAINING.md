@@ -94,7 +94,7 @@ Layout `2a`, no scrolling, applies immediately, `RESTORE DEFAULTS` — but in
 `GameSettings` had been fully implemented for a while with **no UI at all**;
 this is the first screen that reaches it.
 
-**Three groups survive as of `docs/PLAN_BATTLE_SPEED.md`, because
+**Three groups survive as of `docs/archive/PLAN_BATTLE_SPEED.md`, because
 `GameSettings` now holds six values and nothing else exists to bind to.** The
 design's own rule for Run statistics — every row binds to a tracked field or
 gets cut — is what decided it: a control that stores nothing is worse than an
@@ -106,7 +106,7 @@ consumer already waiting" — it no longer waits.
 |---|---|---|
 | Audio | Sound, Music | Built. **Two sliders, not three** — there are two channels; `AudioLevels` is a per-sound gain table, not a third bus. Music is labelled "Stored - no music yet", which `GameSettings`' own header asks for. |
 | Display | Resolution, Window, Frame limit | Built. **Frame limit replaces v-sync**, which is not stored; the frame limit is the real setting sitting next to it. |
-| Gameplay | battle speed | **Built** (`docs/PLAN_BATTLE_SPEED.md`). One stepper, four rows (0.5x/1x/1.5x/2x), in-fight only — `FightBeatPlayer.PlayerSpeedSource`, installed by `FightBootstrap.Start` from `GameSettings.BattleSpeed`. "show tooltips" stays cut below; it never had a value either. |
+| Gameplay | battle speed | **Built** (`docs/archive/PLAN_BATTLE_SPEED.md`). One stepper, four rows (0.5x/1x/1.5x/2x), in-fight only — `FightBeatPlayer.PlayerSpeedSource`, installed by `FightBootstrap.Start` from `GameSettings.BattleSpeed`. "show tooltips" stays cut below; it never had a value either. |
 | Readability | text size, tooltip delay | **Cut.** Neither value exists anywhere. |
 | show tooltips | (was bundled under Gameplay) | **Cut.** No value exists. |
 | Keybinds | rebind door, conflict count | **Cut.** No rebind screen and no keybind storage; the design lists that screen as still open, so this would be a door to a room and a number counting nothing. |

@@ -802,7 +802,7 @@ namespace PrincesPalace.PlayModeTests
             // measurement of nothing, and it read as a bug in the player for
             // three rounds.
             //
-            // docs/PLAN_BATTLE_SPEED.md G3: pinned alongside it -- "real
+            // docs/archive/PLAN_BATTLE_SPEED.md G3: pinned alongside it -- "real
             // speed" now means Pace == 1, and BeatSpeedMultiplier alone no
             // longer guarantees that once FightBootstrap can install a
             // settings-backed PlayerSpeedMultiplier on the same fight.

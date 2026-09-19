@@ -174,7 +174,7 @@ KITS = [
         "default_delivery_size": None,
     },
     {
-        # Status-effect badge glyphs (docs/PLAN_STATUS_EFFECT_UI.md, package
+        # Status-effect badge glyphs (docs/archive/PLAN_STATUS_EFFECT_UI.md, package
         # D). Painted objects on flat green like every other kit here, keyed
         # on hue-dominance -- these are small icons with genuine dark detail
         # (outlines, shadowed folds) that brightness-keying would eat.

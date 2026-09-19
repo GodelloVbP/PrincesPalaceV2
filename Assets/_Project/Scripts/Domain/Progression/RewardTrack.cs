@@ -22,7 +22,7 @@ namespace PrincesPalace.Domain.Progression
 
         // ---- EVERYTHING ELSE: a total summed over the entries at levels
         // <= the watermark, read live at its own site rather than stored --
-        // docs/PLAN_REWARD_TRACKS.md §2. --
+        // docs/archive/PLAN_REWARD_TRACKS.md §2. --
         MaxHealth,
         Respec,
         SecondLife,
@@ -201,7 +201,7 @@ namespace PrincesPalace.Domain.Progression
         public readonly int Amount;
 
         // The two selectors an authored entry can carry beyond reward and
-        // amount (docs/PLAN_REWARD_TRACKS.md §4): which element an
+        // amount (docs/archive/PLAN_REWARD_TRACKS.md §4): which element an
         // ElementalDamagePercent entry scales, and which skill an UnlockSkill
         // entry grants.
         public readonly DamageType? Against;
@@ -245,7 +245,7 @@ namespace PrincesPalace.Domain.Progression
 
     // THE PART OF A REWARD TRACK THAT DOES NOT VARY BY CHARACTER.
     //
-    // docs/PLAN_REWARD_TRACKS.md P3 split this file in two. WHICH REWARD sits
+    // docs/archive/PLAN_REWARD_TRACKS.md P3 split this file in two. WHICH REWARD sits
     // at which level is now per-character (RewardTrackDefinition, one instance
     // per track); WHERE THE MILESTONES FALL, and the pure arithmetic over a
     // level/claimedLevel pair the screen's whole state model runs on, is
@@ -308,7 +308,7 @@ namespace PrincesPalace.Domain.Progression
         public const int CompletionLevel = 30;
 
         // THE SHARED CADENCE. Ten levels, the same on every track whatever it
-        // pays at them -- docs/PLAN_REWARD_TRACKS.md §1 explains why this
+        // pays at them -- docs/archive/PLAN_REWARD_TRACKS.md §1 explains why this
         // stays fixed while the CONTENT at each one does not.
         //
         // The early three (3, 5, 10) are new and are where the first hour
@@ -338,7 +338,7 @@ namespace PrincesPalace.Domain.Progression
 
         // A quantity handed over once, as against a capability or a total
         // that is simply read live off the watermark. THE ONLY GRANT IS
-        // StatPoint (docs/PLAN_REWARD_TRACKS.md §2: "Nothing else is spent,
+        // StatPoint (docs/archive/PLAN_REWARD_TRACKS.md §2: "Nothing else is spent,
         // so nothing else needs storage -- and storing it is strictly worse,
         // because a stored copy can disagree with the definition after a
         // retune"). A second grant added here without noticing would be paid

@@ -1323,7 +1323,7 @@ namespace PrincesPalace
         //
         // ClaimTrackRewards is idempotent against its own watermark, so calling
         // it after every won fight costs nothing on the fights that crossed no
-        // level. It moves the watermark, and under docs/PLAN_REWARD_TRACKS.md
+        // level. It moves the watermark, and under docs/archive/PLAN_REWARD_TRACKS.md
         // that is the WHOLE payment: stat points are handed over here because
         // the bot spends them below, and every other reward on the track --
         // max health, wool, elemental damage, the respec, the second life, a

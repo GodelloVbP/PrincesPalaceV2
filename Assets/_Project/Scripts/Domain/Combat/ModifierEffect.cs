@@ -91,7 +91,7 @@ namespace PrincesPalace.Domain.Combat
         // ResolveDamageInstances is never reached by a plain swing or a
         // formula-scaled cast -- which is why this member and
         // ElementalDamageOnHitPercent are NOT interchangeable and the
-        // reward-track routing rule (docs/PLAN_REWARD_TRACKS.md §2) appends
+        // reward-track routing rule (docs/archive/PLAN_REWARD_TRACKS.md §2) appends
         // exactly one of the two per element, never both: same element as
         // attackType rides the rider above (every landed hit); any other
         // element rides this one (spell packets only).

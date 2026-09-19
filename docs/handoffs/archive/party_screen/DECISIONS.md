@@ -76,7 +76,7 @@ Dog are explicitly not real content per the handoff's own Assets section).
 The handoff's `party-screen-reference/sprites/` are copies of
 `Resources/Characters/sheep/idle.png` and `.../owl/idle.png`, made because the
 designer had no access to the real UI kit. They were **not** copied into
-`docs/handoffs/party_screen/` — the handoff README says as much, and copying
+`docs/handoffs/archive/party_screen/` — the handoff README says as much, and copying
 them would have invited exactly the mistake it warns against. The tree
 declares an Image node per art slot with no baked sprite; the runtime (a later
 package) loads `Resources/Characters/<id>/idle.png` directly, the same way

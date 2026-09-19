@@ -95,7 +95,7 @@ namespace PrincesPalace
 
         internal static float Now() => ClockOverride != null ? ClockOverride() : Time.time;
 
-        // T4's test seam (docs/PLAN_BATTLE_SPEED.md), not in the plan's own
+        // T4's test seam (docs/archive/PLAN_BATTLE_SPEED.md), not in the plan's own
         // stated Seams line ranges (98-105,152-164,196-208) because it
         // touches Advance instead, which sits outside them -- recorded as a
         // deviation in the plan's own Deviations section. HitCue is "the one
