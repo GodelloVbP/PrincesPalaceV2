@@ -133,6 +133,46 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(30, target.Speed, "the malus must still be in effect while turns remain");
         }
 
+        // ---- the seam, through the dispatcher ----------------------------------
+
+        // THE LATENT BUG PLAN D6 CLOSES, driven through CastSkill rather than
+        // through ApplyChilled directly -- because the thing that was broken
+        // was the route, not the arithmetic.
+        //
+        // ApplySkillStatus called StatusEffects.Apply, which is pure Domain and
+        // cannot reach Speed. Nothing authored `appliesStatus: Chilled`, so the
+        // gap never fired; Winter's Rebuke is the first content row that would
+        // have hit it, and it would have put a CHL badge on an enemy moving at
+        // full speed. The badge is the easy half to get right and the useless
+        // half to check.
+        [Test]
+        public void ASkillAuthoringChilled_RegistersTheSpeedMalus_NotJustTheBadge()
+        {
+            // The hero outruns the foe so the opening turn is theirs -- a cast
+            // on somebody else's turn is refused, and the refusal would read
+            // here as "the seam did nothing".
+            var hero = Fighter("Hero", true, speed: 60);
+            var foe = Fighter("Foe", false, speed: 40);
+
+            var rebuke = new ResolvedSkill("winters_rebuke", "Winter's Rebuke", "", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Ice, 1) }, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Chilled, statusMagnitude: 25, statusDuration: 2);
+
+            var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { rebuke }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(4)) { DamageVarianceRange = 0f };
+
+            session.CastSkill(0, foe);
+
+            Assert.IsTrue(foe.Statuses.Any(s => s.Type == StatusEffectType.Chilled),
+                "fixture check: the cast should have landed the status at all");
+
+            // -(40 * 25 / 100) = -10. The badge alone would leave this at 40.
+            Assert.AreEqual(30, foe.Speed,
+                "a content-authored Chilled has to actually slow its target, not just draw a pill");
+        }
+
         // ---- stack, not refresh (owner, 2026-09-20) ---------------------------
         //
         // These two were the refresh pins. Chilled stacks now, so what they
