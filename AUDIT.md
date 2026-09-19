@@ -3252,6 +3252,27 @@ Not a defect and not fixable from here -- it is the part of item 4 that only the
 hardware can close, and it belongs beside section 12 item 4's standing hardware-acceptance call
 rather than inside it.
 
+**ADDENDUM, hardware round 2 (2026-09-19): three more bindings with the same shape.** Round 2
+added a `SystemMenu` axis and two trigger axes to `ProjectSettings/InputManager.asset`, and every
+one of them is documentation-correct and hardware-unverified for exactly the reason above.
+
+1. **Start is `joystick button 7`**, with `escape` as the `positiveButton` and the pad on
+   `altPositiveButton` (`InputManager.asset`, the `SystemMenu` entry). Button 7 is Xbox Start under
+   Windows in Unity's legacy system. The failure mode is cleanly separable from every other one
+   here: **Start does nothing while Escape still works** means the button NUMBER is wrong and
+   nothing else is, because both drive the same axis and only one of them is a guess.
+2. **The DualSense's Options button is deliberately NOT bound.** It is believed to report as
+   `joystick button 9` under Windows, which on an Xbox pad is the right-stick click AND is already
+   spoken for -- `Enable Debug Button 2`. Binding a button that means two different things on two
+   pads, one of which opens the debug overlay, was judged worse than a DualSense owner having no
+   Start until the pad is in hand. It needs the pad, same as item 3 above.
+3. **The triggers are `TriggerLeft`/`TriggerRight` on the 9th and 10th joystick axes** (serialized
+   as `axis: 8`/`axis: 9` -- `GamepadAxisBindingTests`' own documented zero-based convention, the
+   same offset that file already pins for the left stick), feeding `INavSectionStrip`. DualSense L2
+   and R2 are believed to be axes 4 and 5 and are not bound, for the reason above.
+   The failure mode worth recognising is #166's own item 1 restated: **a trigger pull that moves
+   the selection** means the axis numbers landed on the sticks.
+
 ### 167. A held stick no longer repeats at all, which is a real loss on a long list
 
 Hardware round 1 item 3 (`f6672a26`) answered "the joystick only is wonky... it feels almost
@@ -3330,7 +3351,7 @@ project could have caught that; the capture did. The rule is now "the target's o
 last sibling", which cannot be wrong for the reason that a canvas covering the marker covers the
 control it points at too.
 
-### 171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169
+### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely
 
 #169 removed the open-branch plate from the resting verb column. What remains on ATTACK is
 `ThemedMenuState.Primary` -- the recommended-default gold ring it has always had, from
@@ -3343,6 +3364,14 @@ If the ring is what read as "hovered" rather than the plate, the fix is to drop 
 verb column entirely and let the hotkey number carry "this is the default" -- a one-line change in
 `RefreshVerbs`, not a mechanism. Not done unasked: a recommended action is a real thing to signal
 and removing it is a design decision, not a bug fix.
+
+**Closed in `b12a1682`, by the owner's answer rather than by a new argument.** The ring WAS what
+read as hovered -- the complaint survived #169's fix unchanged. `RefreshVerbs` now computes
+`i == active ? Open : Idle` and nothing else, so the resting column carries no ring on any verb,
+and "ATTACK is the default" is left to the hotkey number beside it: already on screen, costing no
+glow, and impossible to mistake for focus or hover. The one-line change the finding predicted, at
+the cost the finding named. `ThemedMenuState.Primary` itself survives with one production user
+left, which is #175 below.
 
 ### 172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control
 
@@ -3357,3 +3386,172 @@ The cost, visible in the captures: on Talents the arrow lands on top of the orb'
 hangs above it would be better served by a marker to its left. If the owner wants that, the
 proportionate change is an opt-out on the kit node (a `UiNode.FocusEdge` hint the emitter carries
 through), not a table of exceptions in `FocusMarkerPlacement`.
+
+---
+
+## Findings from hardware round 2, 2026-09-19
+
+### 173. OWNER'S CALL: Start is absorbed by every modal, so it is not "open the menu from anywhere"
+
+`NavContext.RaiseSystemMenu` (`Domain/UiKit/NavContext.cs:144-149`) returns false and does nothing
+when the top context declares no `systemMenu` handler, and only four contexts in the tree declare
+one: Hub (`HubController.cs:170`), Map (`MapController.cs:190`), the menu itself
+(`SystemMenuController.cs:243-245`) and Fight (`FightController.Input.cs:1571`, through
+`NavContext.ForFight`). Every other context absorbs the press --
+`GlossaryController.cs:261`, `DebugMenuController.cs:277`, `RelicDraftController.cs:293` and
+`MainMenuController.cs:138` all construct a `NavContext` with `cancel:` and no `systemMenu:`.
+
+So while a hub-covering modal is up, Start is silently eaten. That is not a bug in any of those
+four files: a context that is top is the thing the player is talking to, and a modal that lets a
+button reach past it is the failure mode contexts exist to prevent.
+
+But it means the shipped behaviour is "Start opens the menu from a ROOT", not "from anywhere",
+which is the plainer reading of the owner's ask. Closing that gap is a real mechanism and not a
+flag: every intervening context would have to be suspended (or popped and restored) while the menu
+is up, and something has to own putting them back in the right order when it closes. That is a
+design with a lifecycle, so it is recorded rather than improvised.
+
+**One member of the list is not the same case and is called out so it is not "fixed" by mistake.**
+The main menu's own modals absorb Start too, but the MainMenu scene carries no system menu at all
+-- `ScreenRegistry.WireSystemMenu` is called from three places only (`ScreenRegistry.cs:125`, `:583`,
+`:856`: Fight, Map, Hub). There is nothing there for Start to open, so nothing there is being
+absorbed FROM. The same is true of Shop, Talents and the Reckoning.
+
+### 174. OWNER'S CALL: Start over a Party carry puts the character back down rather than being ignored
+
+`SystemMenuController.cs:245` wires the menu's own context `systemMenu:
+CloseUnlessTheActivePaneClaimsIt`, and that method (`:413-419`) asks
+`ActivePaneCancelClaim()` -- the same `INavCancelClaim` lookup Cancel goes through -- before
+closing. `PartyController` is the only implementor, and it claims while a character is in hand.
+
+So Start pressed over a Party carry spends itself undoing the carry, and a SECOND Start closes the
+menu. The alternative would be for Start to ignore the claim and shut the menu on an open
+transaction, leaving a picked-up character in an ambiguous state.
+
+Recorded because it is a deliberate choice rather than a consequence, and because it is the one
+place Start and Cancel are not independent. Reusing the identical check (rather than writing a
+second one that could answer differently) is the reason this is a two-line method instead of a
+policy.
+
+### 175. OWNER'S CALL: `ThemedMenuState.Primary` now has exactly one production user, and "recommended" may be the wrong word for it
+
+With ATTACK's ring dropped (#171 above), the only production caller passing
+`ThemedMenuState.Primary` is `SaveSlotController.cs:108`:
+`ThemedButtonState.ApplySelection(slotButtons[i], facts.Filled, ThemedMenuState.Primary)` -- so
+EVERY FILLED SAVE SLOT wears the gold ring, up to three at once. Its own comment calls it "the gold
+'recommended action' ring".
+
+Three filled slots cannot all be the recommended action. Either the save screen is using a
+recommended-default treatment to mean "this slot has a run in it" (a different fact, which deserves
+a different visual), or `Primary` is misnamed and is really a generic "this control is live"
+emphasis, in which case the name has been lying at every call site it ever had.
+
+Not changed unasked: the enum value, `PrimaryGlowColor`/`PrimaryGlowAlpha` and
+`ThemedButtonState.cs:285`'s `IsSelectedHalo` arm are all still wired, and picking between "rename
+the state" and "restyle the save screen" is a design call. It is recorded now because a state with
+one user is the moment to ask, not later when there are five again.
+
+### 176. OWNER'S CALL: while the pad is inspecting, Up/Down walk the actor ring, so changing verb costs a press first
+
+`FightController.Input.cs:1317-1333`: the explicit
+`IFightNavigationTarget.MoveFocus` asks `IsInspecting` first and routes to `InspectStep(delta)`,
+so BOTH axes walk the ring while the marker stands on a monster. The verb column is only reachable
+again after a Left at the ring's head (`InspectMove` -> `InspectStep` -> `StepInspectRing` returns
+-1 -> `LeaveInspect`, `:1795-1802` and `:1831-1853`) or a B
+(`IFightNavigationTarget.OnBackPressed`, `:1349-1361`, which calls `LeaveInspect` BEFORE
+`_menu.Back()` for exactly this reason).
+
+The argument for it is in the code and is a good one: if the vertical axis quietly moved the verb
+selection while the player was reading a monster, B would return them to a verb they never saw
+themselves choose. The cost is that reading a monster and then picking a different verb is three
+presses (Left/B, then Up or Down, then A) where it could be two.
+
+The alternative is one branch in `MoveFocus`'s inspect arm -- vertical leaves inspect and moves the
+column, horizontal walks the ring -- which is a smaller change than it sounds because both paths
+already exist. It is not taken unasked because it trades the "B returns you where you were"
+guarantee for a press, and which of those the owner wants is the owner's to say.
+
+### 177. STATED DEVIATION: `ProcessFight` spends one axis per frame, so no diagonal can step the column and enter inspect in one gesture
+
+`NavigationInputModule.ProcessFight` (`:552`) reads `Horizontal` and `Vertical` directly rather
+than through `BaseInputModule.DetermineMoveDirection`, so it has to apply that method's
+dominant-axis rule for itself, and it does (`:596-615`: `verticalLeads = |v| >= |h|` at `:604`, then one
+armed branch or the other, never both). Vertical wins a tie.
+
+This is not a defect -- without it a diagonal push would step the verb column AND step onto the
+actor row on one gesture, which is two moves the player made one motion for. It is recorded as a
+DEVIATION because it is a real behavioural limit that the Fight branch does not share with the
+ordinary branch by accident but by a rule written out twice, and because the next person to wonder
+why a diagonal "only did one thing" should find the answer here rather than in a stick's dead zone.
+
+### 178. OWNER'S CALL: nothing on the Talents screen names the open character or which constellation is open
+
+The owner's 2026-09-19 removal list took `TalentCharacterName` and `TalentPathName`
+("CONSTELLATION x OF x - x KINDLED") off the panel, along with the fill bar, the "CHOOSE A STAR"
+prompt and the violet container (`TalentScreen.BuildPanel`; `UiStrings.TalentPath` and
+`UiStrings.TalentPickPrompt` are deleted outright). Carried out as given.
+
+What is left to answer "who is this and where am I" is the tree silhouette itself and the path
+pager's greyed state -- `TalentController.cs:518-519` sets
+`prevPathButton.interactable`/`nextPathButton.interactable` from `ConstellationLayout.CanStep`, so
+a dark left arrow means "this is the first constellation" and nothing else says so in words. The
+character pager is not even that: `:504-513` hides both buttons outright while there is one
+character, which is today's case for every character but Shawn.
+
+Not re-added, because every one of those nodes was named in the owner's own cut list and adding
+back a smaller version of a thing that was just removed is the worst of both. Recorded so that
+"there is no way to tell which constellation you are in" is a known consequence of a decision
+rather than a bug someone finds later.
+
+### 179. Four nav-link asymmetries the round-2 audit found and did not fix
+
+Found by walking every `RuntimeNavWiring.Link` call after the Map's own missing reverse was fixed
+(`RuntimeNavWiring.LinkBoth` exists to make that class of omission impossible where a two-way edge
+is meant). These four are the remaining candidates. None is fixed here: each is a one-way edge
+that MIGHT be deliberate, and guessing wrong wires a step where the player never took one.
+
+1. **`DebugMenuController.cs:248-249`** -- `nextPageButton -Down-> closeButton` with no reverse.
+   `closeButton -Up-> prevPageButton` at `:249` is the only way back up, so Down-then-Up off the
+   NEXT pager arrow lands on the PREV one.
+2. **`GlossaryController.cs:234-235`** -- the identical pair, identically asymmetric. The two files
+   share this block almost verbatim, which is why they are one finding.
+3. **`RewardTrackController.Input.cs:96`** -- every dot links `-Down-> collectButton` and nothing
+   links back up, so the collect button has no Up at all: reaching it is one-way, and the only way
+   off it is whatever Unity's automatic navigation happens to find.
+4. **`SystemMenuController.cs:366`** -- the selected tab links `-Down-> ActivePaneEntry()` with no
+   Up back to the tab. This one is the most likely to be deliberate (a pane owns its own Up), and
+   is listed so that "deliberate" is a decision somebody made rather than an omission nobody
+   noticed.
+
+**A fifth, listed separately because it is inconsistency rather than absence.**
+`TalentController.cs:1178-1185` wires three doors from the right path-arrow into the panel --
+`Up -> nextCharacterButton`, `Right -> investButton`, `Down -> respecButton` -- and the three
+return by three different rules: Invest and Respec both come back `Left` (`:1184`, `:1185`), while
+the character pager does not come back to the arrow at all, going `Down -> investButton` instead
+(`:1182`, `:1183`). The block's own header explains the outbound directions ("each in the direction
+that thing actually sits") and says nothing about the returns, so it is unclear whether the pager's
+is a considered choice or the one that was forgotten.
+
+### 180. OWNER'S CALL: the hub ring is derived from `HubAnchors` x, which reverses the owner's own literal wording
+
+`HubController.cs:252-262` builds `hubRingOrder` by sorting the five staged controls on
+`HubAnchors.PositionFor(...).X` (and `HubAnchors.Gate.X` for the gate, which is not a `Plot`), so
+the ring is Principality (-673), Talents (-349), Gate (0), Relics (295), CharacterSheet (628).
+
+That CONTRADICTS the owner's 2026-09-18 phrasing, which round 1 (`a9f89ebe`) hand-typed verbatim:
+"from the gate, Left goes Principality then Talents". Those words and screen-x do not describe the
+same ring, because Talents physically sits BETWEEN Principality and the gate. Round 1 resolved the
+conflict in favour of the words and recorded the deviation; the owner's 2026-09-19 report -- "press
+left twice you are left middle" -- is what that build actually feels like, which is the hand-typed
+order overshooting the nearer building and landing back on it.
+
+So round 2 reverses the call: the heuristic wins here because the two things the owner said
+disagree with each other, and only one of them is a description of what they saw. The other stated
+expectation ("Right off Relics reaches Character Sheet") was already the x-order answer and is
+unchanged; only the left arm's two buildings swap.
+
+Recorded rather than treated as settled for one reason: it is now possible for a future
+`HubAnchors` `Depth`/`Lateral` edit to reorder the ring silently, which is the price of deriving it.
+`HubRingAdjacencyTests` (EditMode, no scene) pins the resulting adjacency literally so that such a
+move shows up as a failing test naming both buildings rather than as a play-test complaint three
+weeks later.

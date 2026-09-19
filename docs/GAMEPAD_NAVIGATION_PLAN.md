@@ -1,5 +1,54 @@
 # Gamepad Navigation -- Plan v3
 
+> ## Status: 2026-09-19. HARDWARE ROUND 2. The pause menu moves from B to Start, the hub ring stops being hand-typed, and the fight's horizontal axis gets a job
+>
+> The owner played the round-1 build with a pad. Round 2 is what came back, and unlike round 1's
+> visual half these were six unrelated things rather than one defect wearing six faces.
+>
+> **What landed**, one line each:
+>
+> - **Start opens the overarching menu; B only steps back.** `NavContext` grows a `systemMenu`
+>   handler beside `cancel`, and Hub, Map and Fight hang their one shared open call off it. Cancel
+>   at a root is now deliberately nothing at all.
+> - **`SystemMenu` is a new axis** in `ProjectSettings/InputManager.asset`: `escape` as
+>   `positiveButton`, `joystick button 7` (Xbox Start on Windows) as `altPositiveButton`.
+> - **`TriggerLeft`/`TriggerRight`** on the 9th and 10th joystick axes drive `INavSectionStrip`.
+> - **`SystemMenuController.OpenOnCancel` is renamed `OpenFromRoot`**, at its definition and all
+>   three call sites; the name described the button, and the button moved.
+> - **The hub ring is derived from `HubAnchors` x**, not hand-typed -- which reverses round 1's
+>   literal reading of the owner's own words. See `AUDIT.md` #180.
+> - **`RuntimeNavWiring.LinkBoth`** closes the class of bug the Map's missing Up link was an
+>   instance of: a caller that wants a two-way edge asks once and gets both halves.
+> - **Map's choice column gets its Up links**, and Main Menu's two modals are refactored onto
+>   `LinkBoth`.
+> - **The fight's horizontal axis steps off the verb column onto the actors**
+>   (`IFightNavigationTarget.InspectMove`), so "what is this monster carrying" is answerable
+>   without committing to a verb first.
+> - **One status box replaces the per-badge tooltip**, hung under the inspected actor and listing
+>   every status on it -- the old tooltip answered for one badge, landed beside that badge, and a
+>   pad could not reach it at all.
+> - **ATTACK loses its `Primary` ring** at rest, which closes `AUDIT.md` #171 by the owner's
+>   answer rather than by a new argument.
+> - **Talents: A on an unkindled star kindles it**, through `Button.onClick` so the mouse gets the
+>   identical path; and the panel loses the character name, the constellation line, the fill bar,
+>   the "CHOOSE A STAR" prompt and the violet container.
+> - **The dossier's Skills row opens a real (read-only) pane** instead of doing nothing.
+> - **Forty talent descriptions** are rewritten to state their numbers.
+>
+> **Open owner calls this round produced**, all in `AUDIT.md`:
+>
+> | # | The call |
+> |---|---|
+> | #166 (addendum) | Start's button number, the unbound DualSense Options button, and the two trigger axes are all documentation-correct and hardware-unverified |
+> | #173 | Start is absorbed by every modal, so it is "from a root", not "from anywhere" -- closing that needs a suspend/restore mechanism |
+> | #174 | Start over a Party carry undoes the carry rather than being ignored |
+> | #175 | `ThemedMenuState.Primary` has one production user left, and it lights three save slots at once |
+> | #176 | While inspecting, Up/Down walk the actor ring, so changing verb costs a press first |
+> | #177 | (stated deviation) `ProcessFight` spends one axis per frame, so no diagonal does two things |
+> | #178 | Nothing on the Talents screen names the open character or the constellation any more |
+> | #179 | Four nav-link asymmetries found and deliberately not fixed |
+> | #180 | The hub ring is derived from x, reversing the owner's own literal wording |
+
 > ## Status: 2026-09-18. HARDWARE ROUND 1, VISUAL HALF COMPLETE. The owner's four visual findings were one defect, and section 12 item 2's open call is answered by replacement rather than by tuning
 >
 > The round's navigation half is the status block below this one: six findings, all fixed, the pad
@@ -1608,10 +1657,34 @@ the dossier and the Reckoning at every step that reaches them:
 - [ ] Fight: stick through the verb menu to Attack (or a Skill, if one is
       off cooldown), Submit; stick to a target, Submit; let the round play
       with no further input and confirm it resolves on its own.
-- [ ] Mid-fight: Cancel opens the System Menu over the fight (§3's own
+- [ ] Mid-fight: START opens the System Menu over the fight (§3's own
       transition case -- confirm Fight's own menu depth is unmoved when you
       leave the System Menu again). Stick to Options, Submit; stick to a
       row, Left/Right to adjust it; Cancel back out to the fight.
+- [ ] START, on the owner's own pad, is joystick button 7 -- the whole of
+      what the 2026-09-19 call rests on, and unverified here (`AUDIT.md`
+      #166). Press it on the hub, on the map and in a fight: each should
+      open the menu, and pressing it again should close it. If nothing
+      happens on any of the three, the button number is wrong rather than
+      the wiring -- the keyboard's escape drives the same axis, so try that
+      first to tell the two apart.
+- [ ] B (Cancel) on the hub, on the map, and in a fight at its Root depth
+      should now do NOTHING. B one level INTO a fight (inside a target pick
+      or a submenu) should still step back exactly one level. Both halves
+      matter: B doing nothing at Root is the change, and B still stepping
+      back is what says the change did not cost anything.
+- [ ] DualSense's Options button is believed to enumerate as joystick
+      button 9 on Windows, which is the Xbox pad's right-stick click, so it
+      is deliberately NOT bound (`AUDIT.md` #166). On a DualSense, expect
+      Start/Options to do nothing and say so -- that is a known gap, not a
+      new finding.
+- [ ] LT/RT (`TriggerLeft`/`TriggerRight`, the 9th and 10th joystick axes):
+      on any screen that declares an `INavSectionStrip`, one pull should
+      move one section and a HELD trigger should move exactly one (the
+      armed edge, `NavigationInputModule.TriggerPressed`). If a pull moves
+      the SELECTION instead of a section, the axis numbers landed on the
+      sticks -- the same failure mode #166 names for the D-pad. On a
+      DualSense L2/R2 are believed to be axes 4/5 and are not bound.
 - [ ] Finish or flee the fight the way the game allows on this screen
       (check the verb menu for a Flee/Retreat verb, or simply let the fight
       resolve to victory/defeat) -- confirm the stick reaches whichever one

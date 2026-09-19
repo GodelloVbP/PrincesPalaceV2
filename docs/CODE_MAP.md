@@ -24,7 +24,7 @@ controller (+ its own parts, for Fight), its tests, and its content data
 | Run Map | `Domain/UiKit/Screens/MapScreen.cs` | `MapController.cs` + `MapController.Walk.cs` | `enemies.json` (room pools) |
 | Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 4 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
 | Rewards / Item Choice ("The Reckoning") | `Domain/UiKit/Screens/ReckoningScreen.cs` (wired as `fight.reckoning` inside the Fight scene via `ScreenRegistry.cs`) | `ReckoningController.cs` | `items.json`, `itemsets.json` |
-| Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`) | `CharacterDossierController.cs` | `characters.json`, `items.json` |
+| Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`). Column A's four rows each open a covering pane: Pack (`BuildPackPanel`), Spells (`BuildSpellsPanel`), Skills (`BuildSkillsPanel` -- read-only, no per-entry Selectable, `DeclareSkills`) and the reward track | `CharacterDossierController.cs` | `characters.json`, `items.json` |
 | Shop / Store | `Domain/UiKit/Screens/ShopScreen.cs` (nested panel inside the Map scene, wired via `ScreenRegistry.cs`; laid out to `docs/handoffs/shop_v2/Shop Screen v2.dc.html`) | `ShopController.cs` | `items.json`, `relics.json`, `skills.json` |
 | Hub | `Domain/UiKit/Screens/HubScreen.cs` + `HubAmbience.cs` | `HubController.cs`, `HubBuildingLooper.cs` | — |
 | Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
@@ -232,15 +232,25 @@ rail, the row list) linked category<->first-row and pager<->Close, Cancel
 closing · four Rails/Lists (currency, filter, the row list, the pager)
 chained top to bottom by explicit links, Cancel closing.
 `HubController.HandleEscape` is simplified to just
-`SystemMenuController.OpenOnCancel` now that each modal's own context sits
-above the hub's while open.
+`SystemMenuController.OpenFromRoot` now that each modal's own context sits
+above the hub's while open -- and it hangs off the context's `systemMenu`
+handler, not its `cancel`, since the owner's 2026-09-19 call: the
+`SystemMenu` axis (escape, joystick button 7 = Start) opens and closes the
+overarching menu, the three roots' Cancel is a deliberate no-op, and a
+context declaring no `systemMenu` handler absorbs the press
+(`NavContext.RaiseSystemMenu` returns whether it was spent, which is what
+keeps escape closing a modal while it also drives the menu axis).
 
 `Core/NavigationInputModule.cs`'s shoulder shortcut (item 2,
 `ProjectSettings/InputManager.asset`'s new `TabPrev`/`TabNext` axes): offered
 to `topAtStart` the same way Cancel is, through a new
 `Domain/UiKit/INavTabStrip.cs` interface a context opts into via
 `NavContext`'s own optional `tabStrip` provider (the `_claimant` shape,
-reused). `SystemMenuController.StepTab` is the one implementor -- steps
+reused). Its TRIGGER twin is `INavSectionStrip`/`NavContext.RaiseSectionStep`
+off the `TriggerLeft`/`TriggerRight` axes (joystick axes 9 and 10 in the
+Inspector's one-based naming, serialized 8 and 9) -- the same shape for a
+second axis of navigation above the tabs, and the module owns its press edge
+because an axis-type entry never reports `GetButtonDown` (`TriggerPressed`). `SystemMenuController.StepTab` is the one implementor -- steps
 `_visible` in SLOT space (not `_selected` by +-1, which would walk a hidden
 run-only tab), through the SAME `Select(index)` each tab's own click calls,
 landing on the new pane's own entry (`ActivePaneEntry`) rather than merely
@@ -427,10 +437,13 @@ the separate "grow the box to fit its body" half.
 **Cancel** reaches `NavContext.RaiseCancel`, which offers the press to the
 active pane (`INavCancelClaim`) before running the context's own handler --
 `PartyController` claims it while carrying, nothing else implements it. With
-nothing else up, Cancel opens the system menu from the hub
-(`HubController.HandleEscape`), the map (`MapController.HandleCancel`) and the
-fight at `MenuDepth.Root` (`FightController.OnBackPressed`), all three through
-`SystemMenuController.OpenOnCancel`. `TalentController.HandleCancel` takes the
+nothing else up at a root, Cancel now does nothing at all: the owner's
+2026-09-19 call moved the overarching menu onto the `SystemMenu` axis, so the
+hub (`HubController.HandleEscape`), the map (`MapController.HandleSystemMenu`)
+and the fight (`FightController.OpenSystemMenu`) hang their one shared
+`SystemMenuController.OpenFromRoot` call off their context's `systemMenu`
+handler instead, and `FightController.OnBackPressed` at `MenuDepth.Root`
+returns without doing anything. `TalentController.HandleCancel` takes the
 same `Navigation.Go(Navigation.Hub)` path `TalentBackButton` already does.
 Three of phase 3's own modals (item 1) answer it a third way: `cancel: null`
 on `RelicDraftController`'s own `NavContext` makes the press a deliberate
@@ -833,8 +846,8 @@ are plain logic; only the PAINTING needs Unity.
 |---|---|
 | `Domain/.../FightMenuState.cs` | the five menu edges, the selection, the mana preview |
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
-| `Core/FightController.Hud.cs` | painting, and nothing else |
-| `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) |
+| `Core/FightController.Hud.cs` | painting, and nothing else -- including `RefreshStatusBox`/`PlaceStatusBox`, the ONE status box (`FightScreen.BuildStatusBox`) that replaced the per-badge `StatusTooltip`: every status on one actor, one row each, hung under that actor |
+| `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) -- including `InspectMove`/`InspectStep`/`LeaveInspect`, the pad-only reading position that sits ON TOP of `MenuDepth.Root` and walks a ring of combatants no depth owns |
 | `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends |
 | `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
