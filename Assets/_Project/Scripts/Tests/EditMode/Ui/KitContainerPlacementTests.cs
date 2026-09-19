@@ -11,21 +11,22 @@ namespace PrincesPalace.Domain.Tests
     // be true of it -- it wears the theme/ratio art it claims to, and its
     // content sits inside the kit's measured inset rather than the painted
     // border -- collapsed to one parameterised test instead of the same pair
-    // repeated per screen (ConstellationScreenTests' Talent panel,
-    // DefeatScreenTests, FightScreenTests x2, RelicDraftScreenTests). A row
-    // that is also screen-specific (the Defeat/RelicDraft frames' "old flat
-    // fill is gone" ColorHex check) stays in its own file -- this covers only
-    // the two facts every row shares.
+    // repeated per screen (DefeatScreenTests, FightScreenTests x2,
+    // RelicDraftScreenTests). A row that is also screen-specific (the
+    // Defeat/RelicDraft frames' "old flat fill is gone" ColorHex check)
+    // stays in its own file -- this covers only the two facts every row
+    // shares.
     //
-    // FOUR ROWS WENT (RunStatsPane, OptionsPane, ExitsPane,
-    // DossierColumnAFrame) on 2026-09-07: the owner called every kit frame
+    // FIVE ROWS WENT: RunStatsPane, OptionsPane, ExitsPane and
+    // DossierColumnAFrame on 2026-09-07 (the owner called every kit frame
     // inside the system menu ugly, and Exits/Options/Party/RunStats/
-    // RewardTrack/DossierColumnAFrame are plain Panels now (Ui.SystemMenuPane,
-    // CharacterDossierScreen.BuildColumnAFrame) with no theme/ratio/inset for
-    // this test to pin. PartyPane and RewardTrackPanel were never rows here
-    // to begin with -- SystemMenuScreenTests.NoSystemMenuNodeUsesAContainer
-    // OrFlagBannerSprite is the mechanised form of the rule that replaces
-    // all six.
+    // RewardTrack/DossierColumnAFrame are plain Panels now -- Ui.SystemMenuPane,
+    // CharacterDossierScreen.BuildColumnAFrame -- with no theme/ratio/inset for
+    // this test to pin), and TalentPanelColumn on 2026-09-19 for the same
+    // reason (Cases() has that row's own note). PartyPane and
+    // RewardTrackPanel were never rows here to begin with --
+    // SystemMenuScreenTests.NoSystemMenuNodeUsesAContainerOrFlagBannerSprite
+    // is the mechanised form of the rule that replaces all of them.
     public class KitContainerPlacementTests
     {
         private static IEnumerable<UiNode> Walk(UiNode node)
@@ -41,11 +42,12 @@ namespace PrincesPalace.Domain.Tests
         // ratio, container width, container height).
         private static IEnumerable Cases()
         {
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn")),
-                "TalentPanelContent", ButtonTheme.Violet, ContainerRatio.NineBySixteen,
-                ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight)
-                .SetName("TalentPanelColumn/Violet/NineBySixteen");
+            // TalentPanelColumn/Violet/NineBySixteen WENT (2026-09-19): the
+            // owner called the violet frame ugly, the same call that took
+            // RunStatsPane/OptionsPane/ExitsPane/DossierColumnAFrame off this
+            // list on 2026-09-07 (see this class's own header) -- the column
+            // is a plain Panel now (TalentScreen.BuildPanel), with no
+            // theme/ratio art for either row below to pin.
 
             yield return new TestCaseData(
                 (System.Func<UiNode>)(() => DefeatScreen.Build().Frame.Node),

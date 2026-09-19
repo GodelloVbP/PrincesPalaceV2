@@ -69,9 +69,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public UiNode Root;
 
         public NodeRef Sky;
-        public NodeRef CharacterName;
         public NodeRef EmberCount;
-        public NodeRef PathName;
         public NodeRef PrevPathButton;
         public NodeRef NextPathButton;
         public NodeRef PrevCharacterButton;
@@ -83,7 +81,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PanelPrice;
         public NodeRef PanelRefusal;
         public NodeRef PanelMeter;
-        public NodeRef PanelMeterFill;
 
         public NodeRef RespecDialog;
         public NodeRef RespecDialogBody;
@@ -255,36 +252,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // column that is always there and says what to do with it is furniture.
         private UiNode BuildPanel()
         {
-            // VIOLET, 9:16 CONTAINER ART -- replaces the flat "proc:card_ground"
-            // slab and its own 1px accent edge with the themed kit frame; the
-            // painted border is the only line separating the column from the
-            // sky now, so nothing else draws one. Content is added below via
-            // Ui.ContainerContent, which measures the kit's own inset and is
-            // what keeps every label off the border.
-            var frame = Ui.Container("TalentPanelColumn", ButtonTheme.Violet, ContainerRatio.NineBySixteen,
+            // A PLAIN PANEL, NOT THE VIOLET 9:16 KIT FRAME -- the owner
+            // called it out on 2026-09-19 ("remove the purple container as
+            // well, it looks like shit"), the same call that took the
+            // themed frame off every System Menu pane on 2026-09-07 (see
+            // Ui.SystemMenuPane's own header). ContainerContent is still
+            // what places content below: called against a Container-shaped
+            // holder with no frame sprite child, it falls back to Container
+            // kind and applies the exact same measured inset the violet art
+            // used to sit inside, so every row authored against
+            // PanelHeaderY..PanelRespecY keeps its place -- the chrome is
+            // gone, the layout region it framed is not.
+            var frame = Ui.Panel("TalentPanelColumn",
                 Place.At(ConstellationLayout.PanelCentreX, 0f),
-                new UiVec(ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight));
+                UiSize.Fixed(ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight));
 
             var parts = new List<UiNode>();
 
-            // THE CHARACTER'S NAME HEADS THE COLUMN, and is a CHILD of it.
-            //
-            // It was a sibling, positioned at the panel's own centre-x: the
-            // same place on screen, and wrong in a way the audit caught -- an
-            // opaque column drawn under two live buttons, which is how a
-            // control ends up silently eating clicks meant for the thing
-            // beneath it. Inside the panel the two are one object that moves,
-            // hides and pages together.
-            var characterName = Ui.Label("TalentCharacterName", UiString.Runtime,
-                    new UiVec(ConstellationLayout.PanelInnerWidth - 90f, 44f), 36, "#EDE6FF",
-                    Place.At(0f, ConstellationLayout.PanelHeaderY))
-                .Tracked(20f)
-                .AsDecor();
-            CharacterName = characterName;
-            parts.Add(characterName);
-
             // Hidden outright while there is one character -- see
             // TalentController.Refresh, and the reason written there.
+            //
+            // WHERE THE HEADER ROW USED TO CARRY A NAME. TalentCharacterName
+            // sat here and is gone (owner, 2026-09-19: the header text
+            // duplicated what the pager and the sky itself already say) --
+            // the pager alone still heads the column.
             var characterPager = Ui.Pager(
                 "PrevCharacterButton",
                 Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f + 20f,
@@ -298,14 +289,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             parts.Add(characterPager.Prev);
             parts.Add(characterPager.Next);
 
-            var pathName = Ui.Label("TalentPathName", UiString.Runtime,
-                    new UiVec(ConstellationLayout.PanelInnerWidth, 34f), 28, "#B8A8D9",
-                    Place.At(0f, ConstellationLayout.PanelPathY))
-                .Tracked(18f)
-                .AsDecor();
-            PathName = pathName;
-            parts.Add(pathName);
-
+            // TalentPathName ("CONSTELLATION x OF x - x KINDLED") is gone
+            // too, for the same 2026-09-19 pass -- it was the second of the
+            // two places this panel printed "KINDLED" (the kicker below is
+            // the other, and is the one that survives, since it also carries
+            // the other five states a star can be in). PanelPathY is no
+            // longer read by anything; the rows beneath it (kicker down)
+            // still stack off PanelHeaderY exactly as before.
             var detailName = Ui.Label("TalentDetailName", UiString.Runtime,
                     new UiVec(ConstellationLayout.PanelInnerWidth, 96f), 38, "#EDE6FF",
                     Place.At(0f, ConstellationLayout.PanelNameY))
@@ -373,23 +363,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             InvestLabel = investLabel;
             parts.Add(invest);
 
-            // ---- the committed meter ------------------------------------------
+            // ---- the ember count ------------------------------------------------
             //
-            // 30 embers across all paths, drawn as a bar rather than a fraction:
-            // the cap is a budget, and a budget is a length.
-            parts.Add(Ui.Solid("TalentMeterTrack", "#221838",
-                    new UiVec(ConstellationLayout.PanelInnerWidth, 6f),
-                    Place.At(0f, ConstellationLayout.PanelMeterY))
-                .AsDecor());
-
-            var meterFill = Ui.Solid("TalentMeterFill", "#E7B25C",
-                    new UiVec(ConstellationLayout.PanelInnerWidth, 6f),
-                    Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f,
-                             ConstellationLayout.PanelMeterY, new UiVec(0f, 0.5f)))
-                .AsDecor();
-            PanelMeterFill = meterFill;
-            parts.Add(meterFill);
-
+            // TalentMeterTrack/TalentMeterFill -- the committed-over-earned bar --
+            // are gone (owner, 2026-09-19: "the weird yellow line at the
+            // bottom"). The count itself stays; PaintMeter's own header says
+            // why nothing replaced the bar.
             var meter = Ui.Label("TalentEmberCount", UiString.Runtime,
                     new UiVec(ConstellationLayout.PanelInnerWidth, 22f), 12, "#8E7FB0",
                     Place.At(0f, ConstellationLayout.PanelMeterY + 24f))

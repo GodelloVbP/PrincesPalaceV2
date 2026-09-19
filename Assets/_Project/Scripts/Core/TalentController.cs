@@ -18,7 +18,7 @@ namespace PrincesPalace
     // its own tests. This decides nothing -- it reads the save, asks Domain, and
     // paints. The one thing it genuinely owns is the SLIDE, because that is time
     // and time needs a frame.
-    public partial class TalentController : MonoBehaviour
+    public partial class TalentController : MonoBehaviour, INavTabStrip, INavSectionStrip
     {
         [SerializeField] internal RectTransform sky;
         [SerializeField] internal Button[] orbs;
@@ -58,15 +58,12 @@ namespace PrincesPalace
         [SerializeField] internal Sprite orbReachableSprite;
         [SerializeField] internal Sprite orbCostlySprite;
 
-        [SerializeField] internal TMP_Text characterName;
-        [SerializeField] internal TMP_Text pathName;
         [SerializeField] internal TMP_Text emberCount;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailBody;
         [SerializeField] internal TMP_Text panelKicker;
         [SerializeField] internal TMP_Text panelPrice;
         [SerializeField] internal TMP_Text panelRefusal;
-        [SerializeField] internal RectTransform panelMeterFill;
         [SerializeField] internal TMP_Text investLabel;
         [SerializeField] internal Button investButton;
 
@@ -254,6 +251,14 @@ namespace PrincesPalace
             Refresh();
         }
 
+        // A ON AN UNKINDLED STAR KINDLES IT, same press that used to only
+        // select (owner play-test, 2026-09-19: "Make A on a star that is
+        // unkindled the way to kindle it"). Button.onClick is the ONE
+        // handler a mouse click and a pad Submit on the focused orb both
+        // already drive (Unity's own OnPointerClick/OnSubmit each call
+        // Press()), so there is exactly one place this decision can live,
+        // and a mouse click gets the identical behaviour rather than a
+        // second copy of it.
         private void OnOrbPressed(int index)
         {
             int path = index / TalentScreen.OrbCount;
@@ -266,6 +271,21 @@ namespace PrincesPalace
 
             _selectedSlot = slot;
             AimPushIn();
+
+            // RE-ASKED HERE rather than trusted off the last paint, which
+            // could be a frame stale -- the same question Kindle() below
+            // would ask again anyway. A refused star still selects (the
+            // panel is where the refusal is explained) and simply does not
+            // kindle; InvestButton and its Down-link override stay as a
+            // second path onto the same call, for a mouse player or anyone
+            // who lands on the panel by other means.
+            var refusal = TalentPage.Evaluate(Tree, path, slot, Unlocked, Embers, Budget);
+            if (refusal == TalentPage.Refusal.None)
+            {
+                Kindle();
+                return;
+            }
+
             Refresh();
         }
 
@@ -436,8 +456,6 @@ namespace PrincesPalace
             var character = Current;
             if (character == null) return;
 
-            characterName.SetContent(character.definitionId);
-
             // HIDDEN until earned, not greyed out -- the same call the
             // Reckoning's reroll makes. A disabled button for a reward the
             // player has never heard of reads as something broken rather than
@@ -461,8 +479,6 @@ namespace PrincesPalace
             }
 
             var unlocked = Unlocked;
-            pathName.Set(UiStrings.TalentPath, _path + 1, TalentPage.PathCount,
-                TalentPage.SpentOn(Tree, _path, unlocked));
 
             PaintOrbs(unlocked);
             PaintDetail(unlocked);
@@ -797,7 +813,13 @@ namespace PrincesPalace
             if (_selectedSlot < 0)
             {
                 detailName.SetContent(string.Empty);
-                panelKicker.SetContent(UiStrings.TalentPickPrompt.Template);
+
+                // BLANK, NOT "CHOOSE A STAR" -- the owner called the prompt
+                // out on 2026-09-19. The kicker still carries the state word
+                // once something IS selected (KickerFor below), so the node
+                // stays; this branch is the only place that stops writing
+                // to it.
+                panelKicker.SetContent(string.Empty);
                 panelPrice.SetContent(string.Empty);
                 detailBody.SetContent(UiStrings.TalentPickBody.Template);
                 panelRefusal.SetContent(string.Empty);
@@ -859,34 +881,14 @@ namespace PrincesPalace
             investLabel.Set(LabelFor(refusal));
         }
 
-        // The committed meter, drawn as a length because a proportion is a
-        // length and a pair of numbers is not.
-        //
-        // AGAINST WHAT HAS BEEN EARNED, NOT AGAINST THE CAP -- and the reason
-        // is narrower than this comment used to claim. It said "there is no
-        // such ceiling in this game", which was wrong even when it was written:
-        // ContentDatabase.EmberSpendCap is the design's 30 and is now enforced
-        // on this very screen (TalentPage.Refusal.BudgetSpent). What is
-        // uncapped is EARNING -- the wallet accumulates across runs with no
-        // limit -- and a bar drawn against 30 would fill at the cap and then
-        // keep being full while the player kept gathering. Committed over
-        // committed-plus-held is the same shape and is a real quantity: empty
-        // when nothing is spent, full when everything is. Changing the
-        // denominator to the cap is a design decision, not a bug fix, so this
-        // stays as it is and says so.
+        // THE FILL BAR IS GONE (owner, 2026-09-19: "the weird yellow line at
+        // the bottom"). What is left is the wallet count alone -- the
+        // committed-over-earned PROPORTION it used to draw as a length has
+        // no reader left to draw for, and the panel's own layout region is
+        // otherwise untouched (TalentScreen.BuildPanel).
         private void PaintMeter(Character character)
         {
             emberCount.Set(UiStrings.TalentEmbers, Embers);
-
-            if (panelMeterFill == null) return;
-
-            int spent = ContentDatabase.SpentBy(character);
-            int total = spent + Embers;
-            float fraction = total <= 0 ? 0f : Mathf.Clamp01(spent / (float)total);
-
-            panelMeterFill.sizeDelta = new Vector2(
-                ConstellationLayout.PanelInnerWidth * fraction,
-                panelMeterFill.sizeDelta.y);
         }
 
         // The refusal the player is told about is the FIRST one that applies,
@@ -1040,7 +1042,8 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel,
+                tabStrip: () => this, sectionStrip: () => this);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -1056,6 +1059,21 @@ namespace PrincesPalace
         // invented, so a future change to what "leaving Talents" means only
         // has one call site to update.
         private void HandleCancel() => Navigation.Go(Navigation.Hub);
+
+        // THE SHOULDER SHORTCUT (INavTabStrip, plan phase 3 item 2; owner
+        // hardware round 2, 2026-09-19: "RB LB scrolls you between
+        // different talent trees"). StepTab IS StepPath, verbatim -- the
+        // same rule INavCancelClaim/INavTabStrip's own header states for
+        // every implementor: the shoulder press and the on-screen arrow
+        // both have to run through the ONE "what is the next path"
+        // computation, or they could disagree about where the clamp lands.
+        public void StepTab(int direction) => StepPath(direction);
+
+        // THE TRIGGER SHORTCUT (INavSectionStrip; owner hardware round 2,
+        // 2026-09-19: "To go to the next character or prior you can press
+        // LT or RT"). StepSection IS StepCharacter, verbatim, for the same
+        // "one computation, never two" reason StepTab is StepPath above it.
+        public void StepSection(int direction) => StepCharacter(direction);
 
         // Called from Refresh() -- every path switch, character switch,
         // selection change and Kindle all funnel through it already, so this

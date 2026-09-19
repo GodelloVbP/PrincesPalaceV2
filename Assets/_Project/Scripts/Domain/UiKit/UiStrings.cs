@@ -118,10 +118,9 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("talent.price_gate", "{0} Embers spent on this path",
                 "20 Embers spent on this path");
 
-        // What the panel says with nothing picked. It stopped being hidden when
-        // empty, so it needs something to be.
-        public static readonly UiString TalentPickPrompt =
-            UiString.Define("talent.pick_prompt", "CHOOSE A STAR");
+        // The kicker above the name says nothing with no star picked
+        // (owner, 2026-09-19: "CHOOSE A STAR" cut) -- the body below still
+        // does, so the panel is not silent.
         public static readonly UiString TalentPickBody =
             UiString.Define("talent.pick_body",
                 "Every star in this constellation is a change to who they are. Pick one to read it.");
@@ -148,9 +147,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("talent.respec_prompt",
                 "{0} stars go dark across every constellation, and {1} Embers come back to you.",
                 "21 stars go dark across every constellation, and 148 Embers come back to you.");
-        public static readonly UiString TalentPath =
-            UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
-
         public static readonly UiString TrackRow =
             UiString.Define("track.row", "Reward Track");
         public static readonly UiString TrackClose =
@@ -664,6 +660,17 @@ namespace PrincesPalace.Domain.UiKit
         // slot chips.
         public static readonly UiString DossierSpellAlreadyKnown =
             UiString.Define("dossier.spell_already_known", "You already have this spell prepared");
+
+        // --- the dossier's skills panel (owner bug report, 2026-09-19) -----------
+        // The row already existed (OverlaySkills, above); this is the panel it
+        // opens, same "SMALL CAPS TITLE" register as ShopSectionBooks/
+        // OverlayPackTitle.
+        public static readonly UiString DossierSkillsTitle = UiString.Define("dossier.skills_title", "SKILLS");
+
+        // Same register as DossierUnassignedEmpty ("NOTHING TO PLACE") -- a
+        // character with no talent-granted skills yet, not an error state.
+        public static readonly UiString DossierSkillsEmpty =
+            UiString.Define("dossier.skills_empty", "NOTHING LEARNED YET");
 
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");

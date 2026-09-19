@@ -143,10 +143,11 @@ namespace PrincesPalace.Domain.Tests
             // could be moved or hidden and leave its own text over the sky --
             // the same class of bug the plate had, in the other direction.
             //
-            // Walked (not panel.Children directly) because the panel is now a
-            // Container wrapper -- BuildFrameHolder's shape puts the frame art
-            // and TalentPanelContent as its two children, and the labels below
-            // are TalentPanelContent's children, one level further down.
+            // Walked (not panel.Children directly): TalentPanelColumn is a
+            // plain Panel now (the violet kit frame came off, 2026-09-19),
+            // and its content still sits one level down inside
+            // TalentPanelContent (Ui.ContainerContent's own inset wrapper),
+            // not as a direct child.
             var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
             var names = Walk(panel).Select(c => c.Name).ToList();
 
@@ -156,10 +157,13 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(names, "TalentDetailRefusal");
         }
 
-        // ---- the Violet 9:16 container ---------------------------------------
-
-        // The panel's container theme/ratio and content inset are covered
-        // by KitContainerPlacementTests, not repeated here.
+        // ---- the panel's own chrome --------------------------------------------
+        //
+        // TalentPanelColumn wore the Violet 9:16 kit frame here and is a
+        // plain Panel now (owner, 2026-09-19: "remove the purple container
+        // ... it looks like shit") -- KitContainerPlacementTests dropped its
+        // row for the same reason, so there is no longer a theme/ratio pair
+        // to pin for this screen at all.
 
         // The confirmation is the one thing on this screen that MUST start
         // hidden: it is a modal over everything, and a screen that opens asking
