@@ -522,7 +522,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (ground line + breath + hover, one row per actor — no per-stance timing, because a stance is one drawing; `groundLineSource` says whether the slicer or a person owns the number, absent meaning authored, and `StanceManifestValidationTests` re-measures the committed stills against it), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `HoverCurve` + `HoverSpec` (the altitude an airborne actor rides at and bobs around, authored per actor as the manifest's `hover` block; Odette is the one flyer) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (ground line + breath + hover, one row per actor — no per-stance timing, because a stance is one drawing; `groundLineSource` says whether the slicer or a person owns the number, absent meaning authored, and `StanceManifestValidationTests` re-measures the committed stills against it), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `HoverCurve` + `HoverSpec` (the altitude an airborne actor rides at and bobs around, authored per actor as the manifest's `hover` block; Odette is the one flyer); `FormationSpan` (the line through a rank of struck bodies — a rank is a diagonal, so a spell layer authored `align: span` gets a box rotated onto it, extended past each end body by that slot's OWN half-width because the ends sit at different depths and are drawn at different sizes; `align: level` remains the axis-aligned box on the rank's mean ground line, which is what a footprint wants and what a drawn line does not. Pinned with literals by `FormationSpanTests`) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map
@@ -541,7 +541,12 @@ scene-name constants in one place rather than string literals at each call
 site; deliberately thin, not a state machine) now cover what this row used
 to credit to a `GameplayManager.cs` that no longer exists in the tree,
 `ItemIcons.cs` (shared id→sprite lookup, also used for portraits — see
-`docs/CODE_STANDARDS.md` §2), `PreviewFight.cs` (everything
+`docs/CODE_STANDARDS.md` §2; the dossier plate a character actually wears is
+`characters.json`'s `portraitPath` under `Resources/Portraits/`, and Odette's
+stopped being Shawn's face on 2026-09-19 — `Portraits/owl`, keyed out of
+`Art/Portraits/Owl/` by `tools/remove_portrait_backgrounds.py`, whose
+`PORTRAITS` manifest now carries `Owl` and `Bear`. Bjorn still wears a
+stance-crop stopgap: `AUDIT.md` #192), `PreviewFight.cs` (everything
 `tools/preview.ps1 -Spell`/`-Character` decides about one throwaway fight —
 who casts it, how many enemies it needs to be visible against, what has to be
 waived and said out loud, and which setups are refused by name rather than
@@ -848,7 +853,7 @@ are plain logic; only the PAINTING needs Unity.
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else -- including `RefreshStatusBox`/`PlaceStatusBox`, the ONE status box (`FightScreen.BuildStatusBox`) that replaced the per-badge `StatusTooltip`: every status on one actor, one row each, hung under that actor |
 | `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) -- including `InspectMove`/`InspectStep`/`LeaveInspect`, the pad-only reading position that sits ON TOP of `MenuDepth.Root` and walks a ring of combatants no depth owns |
-| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends |
+| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils; the three "which moment" delegates — `PaintVitals`, `PaintFormation`, `PaintTurnOrder` — all fired from the same per-beat point and all cleared to live state when playback ends; and `StillReeling`, which holds a beat whose actor or target is still coming home from an earlier blow. The reel is 3.2 beats (1.505s) and a beat is 0.75s, so "playback finished" stopped implying "the stage is at rest" — `TravelFor` measures the stand-off against both figures' MARKS, and at this length they are no longer standing on them. Narrow by design (those two figures, not the stage): `AUDIT.md` #183 and #184 |
 | `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
@@ -1012,7 +1017,7 @@ hold the runtime; nothing else in the game knows a spell has layers at all.
 | `Domain/Combat/Presentation/SpellFrameCursor.cs` | which drawing is on screen at time t, and how far into its dissolve |
 | `Domain/Combat/Presentation/SpellEmitterSim.cs` | ballistic drops as a closed form over `(spec, seed, index, age)` |
 | `Core/SpellPerformancePlayer.cs` | the module: owns the clock (`Time.time`), the handles, the schedule tick, and the two renderer bands plus the particle pool |
-| `Core/SpellVfxPlayer.cs` | the sprite/still renderer, and nothing else — `Show(frame, next, blend, alpha, at, size)` |
+| `Core/SpellVfxPlayer.cs` | the sprite/still renderer, and nothing else — `Show(frame, next, blend, alpha, at, size)`; also owns the `glow` swap onto `Resources/Shaders/UISpellGlow.shader`, the only thing in the game that can put a UI pixel above 1.0 and so the only thing the Volume's Bloom has ever been able to see (a `CanvasRenderer`'s vertex colour is a `Color32` and clamps; the shader multiplies AFTER the sample and ramps the boost in over the sprite's own luminance, so a flat gain does not clip every midtone). `AUDIT.md` #181 |
 | `Core/SpellParticleRenderer.cs` | N pooled `Image`s driven from the sim. `Show` activates the member's own GameObject as well as enabling its Image — every pool member is built `Inactive()`, and enabling half the switch draws nothing while reporting itself as drawing |
 | `Core/FightController.SpellVfx.cs` | placement only: where the bottom of an effect is, which is the question every bug in it came from |
 

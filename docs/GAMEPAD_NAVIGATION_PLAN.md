@@ -1,5 +1,41 @@
 # Gamepad Navigation -- Plan v3
 
+> ## Status: 2026-09-19. HARDWARE ROUND 3. Start reaches the shop, Left/Right pick a target, and the spell list finally shows the books
+>
+> Round 3 is the same play-test's remainder, and three of its four items are one-liners that
+> only look small because the hard part was deciding where they belong.
+>
+> - **Start opens the menu from inside the shop.** The shop is nested in the Map scene and has
+>   no scene of its own, so it shares the Map's one `SystemMenuController` instance rather than
+>   owning a second (`ScreenRegistry.cs:625`). Wiring it exposed a z-order bug in the other
+>   direction: `MapScreen` had drawn the shop OVER the menu on purpose, back when "no dossier
+>   access from inside the shop" was the rule that ask has now reversed. See `AUDIT.md` #191,
+>   which also names the two contexts still absorbing Start and why they were left alone.
+> - **Target cycling on Left/Right**, the owner's follow-up to round 2's inspect ring
+>   ("selecting different mobs with gamepad goes with up down, but it should work with left
+>   right"). One cycling rule serves both axes and both racks; what the two axes have to do
+>   for themselves is translate their own sign, because Y is not mirrored and X is. The ally
+>   rack is therefore the one side whose horizontal hand flips. `AUDIT.md` #190.
+> - **The first press now MOVES.** `FocusedElement`/`ConfirmFocus` already read "nothing
+>   hovered" as enemy 0 -- the marker sits there before any press and Submit would hit it --
+>   so the older "first press lands ON index 0" rule made a pad player's first Up or Right
+>   look like it did nothing. `CycleTargetFromPad` is the pad-only entry point that fixes it
+>   without moving any direct-call test's literal indices.
+> - **The fight's spell submenu draws each book's art**, which it never had
+>   (`FightController.Hud.cs`'s `RefreshSubmenu`). The mark is painted only at Skill depth:
+>   the same pooled rows serve the Element list, and a null id is what stops a mark from
+>   surviving the reuse.
+>
+> **Open calls this round produced**, all in `AUDIT.md`: #181 (bloom was unreachable until a
+> spell shader crossed it; two numbers now need a fresh look), #184 (the settle gate is narrow
+> on purpose and widening it costs ~4.4s a round), #190 (the ally rack's horizontal direction,
+> which needs a hand on a pad), #191 (Start over the Reckoning and the RelicDraft) and #192
+> (Bjorn's portrait). #182 and #187 are small fixes deliberately left for the next commit in
+> their own areas.
+>
+> The pad-side checklist for all of it is section 13, which grew four rows for the target
+> cycling and the first-press rule.
+
 > ## Status: 2026-09-19. HARDWARE ROUND 2. The pause menu moves from B to Start, the hub ring stops being hand-typed, and the fight's horizontal axis gets a job
 >
 > The owner played the round-1 build with a pad. Round 2 is what came back, and unlike round 1's
@@ -1657,6 +1693,29 @@ the dossier and the Reckoning at every step that reaches them:
 - [ ] Fight: stick through the verb menu to Attack (or a Skill, if one is
       off cooldown), Submit; stick to a target, Submit; let the round play
       with no further input and confirm it resolves on its own.
+- [ ] Fight, target pick, against two or more living enemies: with nothing
+      hovered yet, Right should land on the nearest one (same as a first
+      Down) and Left on the farthest (same as a first Up). From there,
+      Right/Left should walk the rack exactly like Down/Up do -- one slot
+      deeper (further right and higher on stage) per Right or Down, one
+      slot nearer per Left or Up, wrapping at both ends -- and the marker
+      (and the status box, if the target carries one) should follow every
+      step. This is the owner's 2026-09-19 follow-up ("selecting different
+      mobs with gamepad goes with up down, but it should work with left
+      right"); if only Up/Down move the target, the horizontal branch did
+      not reach Target depth.
+- [ ] Fight, an ally-targeting skill (a ward, a heal -- whatever this
+      roster has) against two or more party members: Left/Right should
+      cycle the party rack too, but the DIRECTION reads the other way from
+      the enemy rack on screen -- the party's diagonal is mirrored
+      (FightStageAnchors.SlotOffset negates X for it), so Right walks
+      TOWARD the near end there (further right on screen) and Left walks
+      away from it, the opposite hand from which key goes "deeper" on the
+      enemy side. Up/Down on the ally rack read the same way as the enemy
+      one (Up deeper, Down nearer) -- only the horizontal hand flips.
+- [ ] Fight, mid skill/item submenu (the row list under SKILL or ITEM):
+      Left/Right should still do nothing there -- only Up/Down walk that
+      list, unchanged by this pass.
 - [ ] Mid-fight: START opens the System Menu over the fight (§3's own
       transition case -- confirm Fight's own menu depth is unmoved when you
       leave the System Menu again). Stick to Options, Submit; stick to a

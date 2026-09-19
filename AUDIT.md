@@ -3555,3 +3555,311 @@ Recorded rather than treated as settled for one reason: it is now possible for a
 `HubRingAdjacencyTests` (EditMode, no scene) pins the resulting adjacency literally so that such a
 move shows up as a failing test naming both buildings rather than as a play-test complaint three
 weeks later.
+
+## Findings from hardware round 3, 2026-09-19
+
+### 181. Bloom is configured, tuned twice, and until this round could not touch a single pixel
+
+`PipelineBuilder.cs:167` overrides `bloom.threshold` to `1.05f` on
+`MenuVolumeProfile` (`:27`), and `:174` sets `intensity` to `0.285f`. Every other
+precondition is met -- `supportsHDR` on the pipeline asset (`:98`), the camera's
+post-processing pass, and `SceneBuilder` putting the canvas in `ScreenSpaceCamera`
+rather than `ScreenSpaceOverlay` (`:134-138` says so in as many words, and calls
+that the half of the URP migration that buys anything).
+
+**A Canvas `Image` cannot produce a pixel above 1.0.** Sprite textures are LDR and
+top out at white; a `CanvasRenderer`'s vertex colour is a `Color32`, so
+`image.color` clamps at 1 before the shader ever runs. A threshold of 1.05 is
+therefore above everything the UI can draw, and the bloom override has been inert
+since it was written. `:153-158`'s comment -- "so the lantern glows and the palace
+bloom while ordinary button faces and body text do not" -- describes an effect that
+has never occurred: the lantern and the palace are Canvas Images like everything
+else.
+
+Nothing crossed the threshold until this round's `Resources/Shaders/UISpellGlow.shader`,
+which multiplies AFTER the sample (`SpellVfxPlayer.cs:167`, `:179`) and is selected
+per spell layer by the new `glow` field. So the first pixel that has ever bloomed in
+this game is a spell layer authored with `glow`, and `cinderfault`'s two layers
+(`glow: 1.0` and `1.3`) are the only ones today.
+
+**Two owner's calls, stated separately because they pull opposite ways.**
+(a) Whether to lower the threshold so ordinary bright art blooms again -- the number
+was already 0.90 once and `:161-166` records why it was raised (bloom cannot tell
+near from far, and the whole painted skyline bloomed as hard as the near lantern).
+Lowering it re-opens a decision that was made on a picture.
+(b) Whether `intensity` 0.285 is now too weak. That number was tuned by eye
+(`:169-173`) against a frame in which NOTHING was blooming, so it was measuring
+nothing. The first real look at it is a frame with a `glow` layer in it.
+
+The third option, and the cheapest: leave both numbers alone and give the lantern,
+the palace and any other art that is supposed to glow the same shader treatment the
+spell layers now have. That keeps "what blooms" an authored property of the thing
+rather than a threshold everything is measured against.
+
+### 182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box
+
+`SpellPerformance.cs:103` declares `public bool Placed = true;`, and
+`SpellPerformancePlayer.cs:436` (`if (!instance.Placed) return;`) is what stops a
+layer with nowhere to go from taking a pool member.
+
+`FightController.SpellVfx.cs:203` (`PlaceOne`) handles that correctly for every
+placement but one. Its `on == null` branch at `:232-235` sets `Placed = false` and
+returns, with a five-line comment explaining exactly why. But the `formation` branch
+at `:208-212` returns BEFORE that check is reached, and `PlaceOnFormation`'s own
+nobody-to-stand-on exit (`:389`, `if (stood.Count == 0) return;`) returns without
+touching `Placed`. Its comment -- "A fault of no width would be a zero-sized
+graphic, so draw none" -- states the intent; the flag that implements it is the one
+thing not set.
+
+The result is a `Placed = true` instance with `Box`/`To`/`From` at their zero
+default: one pooled renderer spent, for the layer's whole lifetime, on a
+zero-sized box at the stage origin. Reachable whenever a cast-level formation layer
+outlives the last body under it, or is aimed at an off-stage or synthetic target.
+
+Not fixed here because the one-line fix (`instance.Placed = false;` before that
+return) belongs with a test that covers the case, and this round's spell work was
+already gated. Small, local, and the next spell commit should take it.
+
+### 183. The reel is four times slower, and the two legs that moved are the two that are motion
+
+The owner, 2026-09-19: "Reeling happens way too fast: it should happen 4x as slow."
+`FightBeatPlayer.cs:1464` is the factor (`ReelSlowdown = 4f`), spread over the legs
+of a recoil that are MOVEMENT rather than stillness:
+
+| Leg | Was | Is | Why |
+|---|---|---|---|
+| Push out (`StageActorAnimator.LungeSeconds`) | 0.055s | 0.055s | unchanged -- it is what puts the body where the flash and the damage number already are, so stretching it slides the impact frame off them |
+| Dwell (`RecoilDwellBeats`, `:1467`) | 0.2025s | 0.81s | the motionless beat at full extent |
+| Spring back (`RecoilReturnBeats`, `:1473`) | 0.16s | 0.64s | the recovery, and the leg an earlier attempt left alone |
+
+**Stated in BEATS, not seconds** (`:1467`, `:1473`), which is the other half of the
+fix: the dwell was always a fraction of `BeatHoldSeconds`, and replacing it with a
+flat number would have taken the reel out of the beat's unit system, so the speed
+preset and the beat budget could move underneath it. The reel is 3.2 beats at every
+speed. `RecoilReturnBeats` is written as `(0.16f / BeatHoldSeconds) * ReelSlowdown`
+rather than as the literal 1.4222f so the number reads as "the old constant, in
+beats, times four" -- `FightBeatPacingTests` pins the products literally (0.81,
+0.64, 1.8, 1.4222, 1.505).
+
+**`RecoilDistance` (`:1431`, 45f) is deliberately NOT 4x.** A body shoved four times
+as far reads as a knockback, which is a different move from a flinch.
+
+**The dwell is stepped by `Time.deltaTime`, not `WaitForSeconds`**
+(`StageActorAnimator.PlayRoutine`). The tweens either side of it step by deltaTime,
+so under a pinned `Time.captureDeltaTime` -- how every capture fixture in this
+project records a strip -- they advance exactly one recorded frame per frame. A
+`WaitForSeconds` is measured against the engine's own clock instead, so a hold long
+enough to matter parks the figure mid-move for whole strips. At the old 0.2025s this
+was invisible; at 0.81s the struck figure sat 45px off its mark for every frame of a
+2.4s strip.
+
+**And a later beat aimed at a reeling body now waits for it.**
+`FightBeatPlayer.StillReeling` (`:1384`, with `_reeling` at `:1347` and `IsReeling`
+at `:1391`) is the predicate; `PlayBeats` gates on it at `:566`, in the same `while`
+as the formation walk. `TravelFor` measures the stand-off against both figures'
+MARKS, which silently assumes the bodies are standing on them -- true at a 0.4175s
+reel by the time the next beat opened, false at 1.505s, and the second and third
+attacker of a round were landing blows in 45px of daylight.
+
+### 184. OWNER'S CALL: the settle gate is narrow (this beat's two figures), and widening it costs about 4.4s a round
+
+`StillReeling` (`FightBeatPlayer.cs:1384`) asks only about `beat.Actor` and
+`beat.Target`, because those two are what `TravelFor` measures. A THIRD figure still
+easing home from its own hit while this blow lands elsewhere is not gated -- that is
+what a reel four times slower than the beat looks like, and it was asked for.
+
+**Measured, not estimated** (`:1368-1372`): a beat's tail after the impact instant is
+about 0.625s (hit-stop + `SettleAfter` + `BeatGapSeconds`), so a 1.505s reel has
+about 0.88s left when the very next beat opens, 0.255s when the one after that does,
+and nothing by the third. The narrow gate therefore pays **up to 0.88s, and only when
+a blow is aimed at a body that was just hit** -- focused fire and sweeps, not every
+beat.
+
+Widening it to the whole stage is the stronger claim and pays that 0.88s on EVERY
+damaging beat after the first: **about 4.4s on a six-beat round**, which more than
+doubles it. `StillReeling` is the one place to change if that is wanted.
+
+The alternative considered and rejected: cutting the spring-back short when the next
+beat needs the mark. That would make the reel's length depend on what happens after
+it, so the same blow would read differently in a duel and in a crowd. Waiting costs
+pacing and says so; it does not cost the reel its shape.
+
+### 185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it
+
+A reel is 1.505s and a beat is about 0.75s, so a figure struck on beat 1 is still
+moving during beat 3 and past the end of the round. `FightBeatPlayer.IsPlaying`
+answers about the beat QUEUE; `StageActorAnimator.IsPlaying` answers about the
+BODY, and after this round they are different questions.
+
+Four PlayMode fixtures were changed to wait on the animator rather than on the
+player: `FightBeatPlayerFixtureTests.cs:95`, `FightBeatPlayerLifecycleTests.cs:146`,
+`FightPlayableTests.cs:211` and `MeleeStandOffCaptureTests.cs:469`. (The brief for
+this round said five; `StaticPilotStageCaptureTests` was changed for other reasons
+and gained no such wait. Recorded rather than rounded.)
+
+**The fifth piece of fallout was found by the gate, not by the fixers.**
+`TransformFlashTests.TheRevertBeatFlashesTheActorsOwnSilhouette` failed with "the
+transform never expired inside eight rounds, so there was no revert to look at" --
+and the transform HAD expired. Its inner loop bounded one round of playback at a
+literal 1200 frames; with the 4x reel and `StillReeling` a round now costs about
+2350 (measured over three rounds: 1439 / 2349 / 1628). The bound was truncating
+playback mid-round, the outer loop then clicked its next turn while the fight was
+still busy, that click was dropped, and the revert beat was still QUEUED when the
+fixture gave up on it. Fixed here by naming the number (`RoundFrameBudget`, 6000,
+used by both loops in that file) and writing down what it measures.
+
+**The general form, for the next fixture that trips on this:** a bound measured in
+FRAMES pins how long playback takes, which is a number this project keeps moving on
+purpose. Every other wait in these fixtures is a `Time.realtimeSinceStartup`
+deadline, which does not. `TransformFlashTests` was the only frame-counted one left.
+
+### 186. A typed hit is two pulses now, because one tinted pulse read as repainting the monster
+
+`StageHitFlash.cs` draws the struck figure's own silhouette over itself. Before this
+round a typed (elemental) hit was ONE pulse in the element's colour, and at the
+alphas it was using the eye read it as the creature changing colour rather than as
+something landing on it.
+
+It is now white first, then the element:
+
+| Pulse | Peak alpha | Hold | Fade |
+|---|---|---|---|
+| White | 1.0 | `HoldSeconds` 0.05s (`:26`) | `FadeSeconds` 0.16s (`:27`) |
+| Element | `TypedPeakAlpha` 0.6 (`:47`) | `TypedHoldSeconds` 0.06s (`:48`) | `TypedFadeSeconds` 0.30s (`:49`) |
+
+`DamageType.Physical` takes the white pulse alone (`:143`, `:170`) -- there is no
+element to name, and a second pulse the same colour as the first is just a longer
+first one.
+
+`HitFlashPixelTests` samples the second pulse at 0.6 rather than at 1.0, which
+leaves a luminance margin of roughly 0.45 over the fixture's background. That is a
+real margin but a smaller one than the white pulse's, and it is the first thing to
+suspect if that fixture ever goes intermittent over a lighter background.
+
+### 187. `BeginStatusTickBeat` duplicates `BeginBeat`'s constructor to skip one line of it
+
+`FightSession.Riders.cs:638` opens a beat for a status tick, and `:644-654` is a
+copy of `FightSession.Beats.cs:22-32` -- the same `new CombatBeat { Actor, Target,
+PreSnapshot, Approach }`, differing only in what it puts in the fields.
+
+**The reason it is not one call is sound and is written down** (`:611-619`):
+`BeginBeat`'s last line is `NotePoolActivity(actor, PoolActivity.Action)`, the seam
+that tells a decaying pool "this turn was not idle". A tick is not an action its
+holder took -- it is something done TO them at the top of a turn they have not spent
+yet -- so routing it through `BeginBeat` would quietly stop wool decaying on any turn
+its owner happened to be poisoned.
+
+**The duplication is still duplication.** The fix is to extract the constructor half
+of `BeginBeat` into `FightSession.Beats.cs` (a `NewBeat(...)` that builds and assigns
+`_recordingBeat` and nothing else), and let `BeginBeat` be that plus
+`NotePoolActivity` while `BeginStatusTickBeat` is that plus its own element and
+stance work. Left undone because it is a pure refactor in a file the round was
+already changing for behaviour, and the two should not land in one commit.
+
+### 188. `TickReport` names poison specifically, so the second damage-over-time will not fit
+
+`StatusEffects.cs:764` and `:774` declare `PoisonDamage` and `PoisonAbsorbed` by
+name, `:789`'s "nothing happened" predicate walks them by name, and
+`FightSession.Riders.cs:513`, `:528`, `:537`, `:539`, `:542` and `:554` all read
+them by name. A burn or a bleed -- the obvious next two -- has nowhere to be
+reported.
+
+The shape this wants is per-element rather than per-status, and half of it already
+exists: `StatusEffects.ElementOf` (`:745`) answers what element a status deals its
+damage in, generically, and `BeginStatusTickBeat` (`FightSession.Riders.cs:661-663`)
+already uses it to colour the tick's beat. So the beat layer is already generic and
+only the REPORT is not.
+
+Not fixed here: a second DoT is not authored yet, and the shape of the replacement
+(a small list of `(element, dealt, absorbed)` versus a pair of dictionaries) is worth
+deciding against a real second case rather than against an imagined one.
+
+### 189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats
+
+A status tick now opens its own beat (`FightSession.Riders.cs:638`), and
+`BeginStatusTickBeat` sets `Actor = isHealing ? victim : null` (`:644`). So a REGEN
+tick on an enemy produces a beat whose `Actor` is that enemy -- and the idiom three
+test helpers use to count enemy turns counts it as one. (A poison tick is safe: its
+`Actor` is null by design, which is also what makes the victim flinch.)
+
+Four call sites, not three:
+`TurnRiderTests.cs:77` (`EnemyTurnsIn`), `EnemyAiTests.cs:70`,
+`FightConsumableTests.cs:114` and `FightConsumableTests.cs:201`.
+
+All four pass today because nothing in the shipped content gives an enemy a regen
+status. That is the definition of a test that will break for a content reason, in a
+file whose author will have no idea why. The fix is a predicate on the session side
+that says "this beat is an action somebody took" rather than four copies of a null
+check -- `CombatBeat` is where it belongs, beside `PaintActorDamageType`, which is
+the other reader that had to learn the same lesson this round.
+
+### 190. OWNER'S CALL: on the ally rack, Right means "nearer", and that needs a hand on a pad to confirm
+
+The owner, 2026-09-19: "selecting different mobs with gamepad goes with up down,
+but it should work with left right." `FightController.Input.cs:1926`
+(`InspectMove`) is where the horizontal axis reaches target depth, and `:1951` is
+the whole of the rule:
+
+```
+CycleTargetFromPad(_menu.Side == TargetSide.Allies ? -delta : delta);
+```
+
+**The two racks disagree, and only one of them is flipped.** The enemy rack runs
+outward unmirrored (`FightStageAnchors`, Near.X 300 -> Far.X 660), so Right already
+means "further right on stage, one slot deeper" and needs nothing. The party rack is
+mirrored (`SlotOffset` negates X), so its Near.X 320 -> Far.X 810 becomes on-screen
+-320 -> -810: the FARTHER ally sits FURTHER LEFT. For Right to keep pointing
+rightward on screen there, it has to mean "toward the near end" -- a negative step in
+depth ordering.
+
+Vertical is not flipped per side at all, because Y is not mirrored: Up is deeper on
+both racks (`IFightNavigationTarget.MoveFocus`).
+
+So the shipped rule is: **Right = nearer on the party rack, deeper on the enemy
+rack; Up = deeper on both.** That is screen-consistent by construction and is the
+reading of the owner's words this round took. It is recorded as a call rather than as
+settled because "left/right should pick a different ally" could equally have meant
+list order regardless of mirroring, and nobody has held a pad and tried it.
+
+### 191. Extends #173: Shop is wired for Start, and its own tree had been drawing OVER the menu
+
+#173's closing paragraph listed Shop among the screens with no system menu for Start
+to open. That is no longer true. `ShopController.cs:74` holds a `systemMenu` field,
+`:674` declares the handler on its `NavContext`, `:718` is
+`SystemMenuController.OpenFromRoot(systemMenu)`, and `ScreenRegistry.cs:625` assigns
+it `map.systemMenu` -- **the Map's own instance, not a second one**. One overlay per
+scene; the shop is nested in Map and has no scene of its own.
+
+**A z-order bug fell out of it.** `MapScreen.cs` had `systemMenu.Root` before
+`shop.Root` in `MapPanel`'s children, so the shop drew OVER the menu. That was
+deliberate while `docs/PLAN_SHOP.md` 2c's "no dossier access from inside the shop"
+held, and the owner's ask ("press Start in the shop to check on your chars'
+equipment / skills") reverses it. Fixed this round at `MapScreen.cs:304`, with both
+the field comment and the build comment rewritten to say why the order is what it is.
+
+**Two contexts still absorb Start, and that is the open call.** The Reckoning (in
+Fight) and the RelicDraft (in Hub) declare `cancel:` and no `systemMenu:`. Both trees
+ALREADY order the menu above them -- `HubScreen.cs:216` (draft) before `:221`
+(menu), `FightScreen.cs:412` (reckoning) before `:421` (menu) -- so wiring them is
+one field each and no layout work. What is not decided is whether Start SHOULD open
+over an offer or a choice that is waiting on the player, or whether those two are the
+cases where absorbing it is correct. That is a design answer, not a wiring one.
+
+### 192. Bjorn ships the stance-crop stopgap while a painted portrait sits unused on disk
+
+`Assets/_Project/Resources/Portraits/bear.png` (1010x1250, unchanged since
+2026-09-07) is the crop taken from his stance art as a placeholder. A painted
+`Art/Portraits/Bear/Processed/Bjorn_neutral.png` exists at 1122x1379, keyed by the
+same `tools/remove_portrait_backgrounds.py` pass that produced Odette's, and was
+never copied to `Resources/Portraits/`.
+
+Odette's was promoted this round -- `Resources/Portraits/owl.png` (1094x1366) and
+`characters.json`'s `portraitPath: "Portraits/owl"` -- so the whole of the remaining
+work for Bjorn is one copy, one `.meta`, and one `portraitPath` that is already
+correct.
+
+**Not done here, and the reason is ownership rather than effort.**
+`Assets/_Project/Art/Portraits/Bear/` is another session's untracked work; staging it
+from this round would sweep it into a commit its author has not finished. The owner's
+call is whether to promote it as Odette's was, and whoever owns that folder should be
+the one to stage it.
