@@ -230,6 +230,28 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(before - 40, target.CurrentHealth);
         }
 
+        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, areas 1
+        // and 5): a Poison tick calls CombatMath.ApplyDamage(target, Magnitude)
+        // directly -- a two-argument call with no defense or affinity term to
+        // pass -- never DamagePipeline.AfterDefences. A huge PhysicalDefense/
+        // MagicalDefense must not blunt it, which is the one thing that would
+        // look wrong if a future change accidentally routed a tick through the
+        // mitigated path.
+        [Test]
+        public void Tick_Poison_IgnoresTheTargetsDefense_UnlikeAnOrdinaryHit()
+        {
+            var target = MakeCombatant();
+            target.PhysicalDefense = 999999;
+            target.MagicalDefense = 999999;
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 3);
+
+            var report = StatusEffects.Tick(target);
+
+            Assert.AreEqual(10, report.PoisonDamage,
+                "a tick's flat Magnitude reaches health untouched -- defense is a DamagePipeline concern " +
+                "and a tick never enters that funnel");
+        }
+
         [Test]
         public void Tick_Regen_HealsItsMagnitude()
         {
@@ -252,6 +274,28 @@ namespace PrincesPalace.Domain.Tests
             StatusEffects.Tick(target);
 
             Assert.AreEqual(2, target.Statuses[0].TurnsRemaining);
+        }
+
+        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, area 9):
+        // Vulnerable and Marked are neither IsSpentByTheTurn (Provoked/Stun/
+        // Feared) nor Shielded (aged at turn END instead) -- both fall through
+        // to Tick's generic per-status countdown, at the bearer's turn START,
+        // same as Protect/Chilled/Rooted. Marked's own 99-turn duration is
+        // long specifically so this ordinary decay can never expire an
+        // unconsumed mark first (see Marks.MarkDurationTurns).
+        [Test]
+        public void Tick_VulnerableAndMarked_DecrementAtTurnStart_LikeAnyStandingStatus()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Vulnerable, 25, 2);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Marked, 0, 99);
+
+            StatusEffects.Tick(target);
+
+            var vulnerable = target.Statuses.First(s => s.Type == StatusEffectType.Vulnerable);
+            var marked = target.Statuses.First(s => s.Type == StatusEffectType.Marked);
+            Assert.AreEqual(1, vulnerable.TurnsRemaining);
+            Assert.AreEqual(98, marked.TurnsRemaining);
         }
 
         [Test]

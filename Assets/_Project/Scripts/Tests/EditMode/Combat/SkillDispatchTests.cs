@@ -147,6 +147,52 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(line.Contains("Ice"), line);
         }
 
+        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, area 5):
+        // a Nature/Poison-typed hit detonates whatever Poison is ALREADY on
+        // the target (ResolveDetonation, called from inside DamagePipeline.
+        // AfterDefences) before ApplySkillStatus -- reached only afterward,
+        // once ApplyFinalDamage has landed -- applies the skill's OWN status.
+        // The old entry is gone (StatusCombos.SpendPoisonIfMatched removes it)
+        // by the time the fresh one is authored, so the two never merge --
+        // this is the "detonates old Poison before fresh Poison is applied"
+        // rule the Viper's Bite brief asks to preserve, proven end to end
+        // rather than at StatusCombos' own unit level (StatusCombosTests).
+        [Test]
+        public void ANatureCastThatAlsoAppliesPoison_DetonatesTheOldPoisonBeforeTheFreshOneLands()
+        {
+            var skill = Skill(SkillEffect.DamageSingle, "Root Strike",
+                damageInstances: new[] { new DamageInstance(DamageType.Nature, 10) },
+                appliesStatus: StatusEffectType.Poison, statusMagnitude: 5, statusDuration: 3);
+
+            // Baseline: the same cast on a fresh target with no Poison out, so
+            // the packet's own damage is measured rather than assumed.
+            var (baselineSession, _, baselineEncounter) = Fight(Kit(skills: new[] { skill }));
+            var baselineFoe = baselineEncounter.Enemies[0];
+            int baselineBefore = baselineFoe.CurrentHealth;
+            baselineSession.CastSkill(0, baselineFoe);
+            int packetDamage = baselineBefore - baselineFoe.CurrentHealth;
+
+            // The real case: an OLD Poison already out, worth 2 x 4 = 8
+            // remaining -- deliberately NOT equal to the fresh skill's own
+            // 5 x 3, so a wrong order (fresh applied/merged, THEN detonated)
+            // would read completely differently on both counts below.
+            var (session, _, encounter) = Fight(Kit(skills: new[] { skill }));
+            var foe = encounter.Enemies[0];
+            foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 2, 4));
+            int before = foe.CurrentHealth;
+
+            session.CastSkill(0, foe);
+
+            Assert.AreEqual(before - packetDamage - 8, foe.CurrentHealth,
+                "the packet's own damage plus exactly the OLD poison's remaining worth (2 x 4) -- " +
+                "not the fresh skill's own numbers, which is the proof the old one detonated first");
+
+            var poison = foe.Statuses.Single(s => s.Type == StatusEffectType.Poison);
+            Assert.AreEqual(5, poison.Magnitude, "the fresh Poison this skill authors, standing alone");
+            Assert.AreEqual(3, poison.TurnsRemaining,
+                "not merged with the old entry's turns -- it was already gone (detonated) by the time this applied");
+        }
+
         [Test]
         public void DamageAllHitsEveryLivingEnemy()
         {

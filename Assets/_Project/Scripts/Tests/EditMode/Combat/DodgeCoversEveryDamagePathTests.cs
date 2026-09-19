@@ -144,6 +144,31 @@ namespace PrincesPalace.Domain.Tests
                 "no status may be applied off a dodged skill cast");
         }
 
+        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, area 2):
+        // CastSkill pays mana, starts the cooldown and spends the resource
+        // BEFORE ResolveCharacterSkill ever runs -- RollDodge only fires deep
+        // inside DamagePipeline.AfterDefences, reached from inside that same
+        // resolution. So a cast that goes on to miss has already paid in
+        // full by the time the dodge is even rolled; CastSkill returning
+        // `true` above (CharacterSkill_SingleTarget_..._AppliesNoStatus)
+        // already shows the cast was not REFUSED, and this pins the mana
+        // side of that explicitly.
+        [Test]
+        public void ACastThatDodges_HasAlreadyPaidItsManaBeforeTheRollHappens()
+        {
+            var hero = Hero(attack: 20, mana: 100);
+            var foe = Foe();
+            Give(foe, AlwaysDodge);
+            var skill = new ResolvedSkill("costed", "Costed Bolt", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 30, 0, false, 100, 0, false,
+                null, SpellPresentation.None, 0);
+
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }), Kit(new[] { skill }));
+
+            Assert.IsTrue(session.CastSkill(0, foe), "a dodge is not a refusal");
+            Assert.AreEqual(70, hero.CurrentMana, "the mana was spent in CastSkill, before the dodge was ever rolled");
+        }
+
         // ---- 3. a character skill, AOE (ResolveDamageAll) --------------------
 
         [Test]

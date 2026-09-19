@@ -186,5 +186,26 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(session.CastSkill(bolt, foe), "and back on turn 4, as the cooldown says");
         }
+
+        // ---- refusal spends nothing ------------------------------------------
+
+        // SPELL-EXPANSION BASELINE (docs/SPELL_EXPANSION_BASELINE.md, area 2):
+        // CastSkill's mana check (CanAfford) sits ahead of BeginCooldown, so a
+        // cast refused for want of mana must not start the wait a landed cast
+        // would have. This is the cooldown half of "invalid or canceled casts
+        // spend nothing" -- SkillDispatchTests already pins the mana half
+        // (ACastThatCannotBePaidForIsRefusedAndCostsNoTurn).
+        [Test]
+        public void ARefusedCast_ForUnaffordableMana_StartsNoCooldown()
+        {
+            var costly = new ResolvedSkill("costly", "Costly", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 100000, 0, false, 0, 20, ignoresDefense: true,
+                null, SpellPresentation.None, 0, cooldownTurns: 2);
+            var (session, hero, foe) = Fight(costly);
+
+            Assert.IsFalse(session.CastSkill(costly, foe), "hero cannot pay for it");
+            Assert.AreEqual(0, session.CooldownRemaining(hero, costly.Id),
+                "a refused cast must not put the skill on cooldown");
+        }
     }
 }
