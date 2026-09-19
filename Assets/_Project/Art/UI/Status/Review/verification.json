@@ -1,0 +1,268 @@
+[
+  {
+    "slug": "chilled",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      23,
+      15,
+      232,
+      240
+    ]
+  },
+  {
+    "slug": "empowered",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      50,
+      15,
+      206,
+      240
+    ]
+  },
+  {
+    "slug": "feared",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      59,
+      15,
+      197,
+      240
+    ]
+  },
+  {
+    "slug": "marked",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      15,
+      17,
+      240,
+      238
+    ]
+  },
+  {
+    "slug": "poison",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      41,
+      15,
+      214,
+      240
+    ]
+  },
+  {
+    "slug": "protect",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      43,
+      15,
+      212,
+      240
+    ]
+  },
+  {
+    "slug": "provoked",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      17,
+      15,
+      239,
+      240
+    ]
+  },
+  {
+    "slug": "regen",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      15,
+      32,
+      240,
+      223
+    ]
+  },
+  {
+    "slug": "rooted",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGB",
+    "background": "green keyed",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      18,
+      15,
+      238,
+      240
+    ]
+  },
+  {
+    "slug": "shielded",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      15,
+      17,
+      240,
+      239
+    ]
+  },
+  {
+    "slug": "speed",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      16,
+      15,
+      240,
+      240
+    ]
+  },
+  {
+    "slug": "speed_down",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      46,
+      15,
+      209,
+      240
+    ]
+  },
+  {
+    "slug": "stun",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      15,
+      19,
+      240,
+      236
+    ]
+  },
+  {
+    "slug": "vulnerable",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_mode": "RGBA",
+    "background": "native alpha preserved",
+    "export_size": [
+      256,
+      256
+    ],
+    "alpha_bbox": [
+      37,
+      15,
+      218,
+      240
+    ]
+  }
+]

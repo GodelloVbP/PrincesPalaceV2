@@ -88,7 +88,7 @@ She replaced `placeholder_caster` in `characters.json` (id `owl`) with that
 entry's INT/WIS build kept as her starting numbers.
 
 Her three borrowed `placeholder_caster_*` skills are **gone** as of
-`docs/PLAN_PRISMATIC_ORB.md` (2026-09-08). Her level-1 kit is one authored
+`docs/archive/PLAN_PRISMATIC_ORB.md` (2026-09-08). Her level-1 kit is one authored
 skill, `prismatic_orb`: 8 mana, one 16-point packet, and a choice of Earth,
 Water, Fire or Wind made after the skill and before the target, which
 retypes the packet. Nothing in her kit reads "placeholder" any more.
