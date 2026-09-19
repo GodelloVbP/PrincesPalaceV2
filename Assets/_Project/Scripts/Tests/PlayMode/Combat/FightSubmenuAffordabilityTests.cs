@@ -202,5 +202,133 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Named("CharacterSkill1").GetComponent<Button>().interactable,
                 "control: the health potion's row must stay pressable");
         }
+
+        // ---- the SPELL submenu's row art (owner, 2026-09-19) --------------------
+        //
+        // "Art for spell book is not shown in the select spell screen." fe40bd36
+        // baked shop.skillArt and controller.icons (shop, dossier) off the real
+        // ContentDatabase.Skills but never reached this row pool -- FightController
+        // had no submenuMarks/skillArt fields, WireFight bound nothing, and
+        // RefreshSubmenu painted only names. The join key this fixture actually
+        // exercises is a skill's Id: fight.skillArt is baked in ScreenRegistry.
+        // Fight() from the REAL skills.json at scene-build time, so a fixture
+        // skill only needs to reuse one of the four authored book ids
+        // (mud_burst/frost_flare/cinderfault/lightning_bolt) to land a hit --
+        // its own constructor fields are otherwise irrelevant to the lookup.
+        [UnityTest]
+        public IEnumerator ARowWithBookArtShowsItsMarkAndARowWithoutStaysInactive()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            var withArt = new ResolvedSkill("mud_burst", "Mud Burst", "", "shawn", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5, resourceCost: 0,
+                spendsAllResource: false, power: 1, flatAmount: 0, ignoresDefense: false,
+                damageInstances: null, presentation: SpellPresentation.None, sortOrder: 0);
+
+            // No skills.json row owns this id, so ItemIcons.Find must miss --
+            // the control that proves a mark can also stay off.
+            var withoutArt = new ResolvedSkill("no_such_skill_art", "Plain Strike", "", "shawn", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 3, resourceCost: 0,
+                spendsAllResource: false, power: 1, flatAmount: 0, ignoresDefense: false,
+                damageInstances: null, presentation: SpellPresentation.None, sortOrder: 1);
+
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var foes = new[] { new CombatantState("Front", false, 5000, 10, 8, 4) };
+            var encounter = new CombatEncounter(new[] { hero }, foes);
+
+            // kit.Skills order is row order (SkillOptionsFor's own header: a
+            // Select((s, i) => ...) over kit.Skills with no reorder), so
+            // withArt lands on row 0 and withoutArt on row 1 deterministically.
+            var kit = new PlayerKit("shawn", CharacterRole.Tank,
+                new List<ResolvedSkill> { withArt, withoutArt }, null, null);
+            var enemyKit = new EnemyKit(
+                new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false);
+
+            var session = new FightSession(encounter, new List<PlayerKit> { kit },
+                new List<EnemyKit> { enemyKit }, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>());
+            yield return null;
+
+            Click("Verb1");
+            yield return null;
+
+            var mark0 = Named("CharacterSkill0Mark")?.GetComponent<Image>();
+            var mark1 = Named("CharacterSkill1Mark")?.GetComponent<Image>();
+            Assert.IsNotNull(mark0, "row 0's mark node was not found -- FightScreen.BuildSubmenuColumn's own name");
+            Assert.IsNotNull(mark1, "row 1's mark node was not found");
+
+            Assert.IsTrue(mark0.enabled, "mud_burst has authored art in skills.json and must show its mark");
+            Assert.IsNotNull(mark0.sprite, "the mark must actually carry the book's sprite, not just be enabled");
+
+            Assert.IsFalse(mark1.enabled,
+                "a skill with no authored iconPath must leave its mark inactive, not show a stale sprite");
+        }
+
+        // Depth change reuses the SAME pooled row nodes for a different list
+        // (BuildSubmenuColumn's own header) -- an element choice is not a
+        // skill, so opening one must not leave the skill row's mark showing
+        // through it.
+        [UnityTest]
+        public IEnumerator TheElementListDoesNotInheritTheSkillRowsMark()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            var dualElement = new ResolvedSkill("mud_burst", "Mud Burst", "", "shawn", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5, resourceCost: 0,
+                spendsAllResource: false, power: 1, flatAmount: 0, ignoresDefense: false,
+                damageInstances: null, presentation: SpellPresentation.None, sortOrder: 0,
+                elements: new[]
+                {
+                    new ElementChoice { Type = DamageType.Fire },
+                    new ElementChoice { Type = DamageType.Nature },
+                });
+
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var foes = new[] { new CombatantState("Front", false, 5000, 10, 8, 4) };
+            var encounter = new CombatEncounter(new[] { hero }, foes);
+
+            var kit = new PlayerKit("shawn", CharacterRole.Tank,
+                new List<ResolvedSkill> { dualElement }, null, null);
+            var enemyKit = new EnemyKit(
+                new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false);
+
+            var session = new FightSession(encounter, new List<PlayerKit> { kit },
+                new List<EnemyKit> { enemyKit }, new SeededRandom(9));
+            session.Begin();
+
+            _fight.Bind(session, EncounterClass.Normal, new List<SatchelStack>());
+            yield return null;
+
+            Click("Verb1");
+            yield return null;
+
+            var skillMark0 = Named("CharacterSkill0Mark")?.GetComponent<Image>();
+            Assert.IsNotNull(skillMark0);
+            Assert.IsTrue(skillMark0.enabled, "fixture: the skill row must show its mark before the element press");
+
+            // Same pooled node, now serving the element list this skill opens.
+            Click("CharacterSkill0");
+            yield return null;
+
+            var elementMark0 = Named("CharacterSkill0Mark")?.GetComponent<Image>();
+            Assert.IsNotNull(elementMark0, "the element list reuses the same pooled mark node");
+            Assert.IsFalse(elementMark0.enabled,
+                "an element choice is not a skill -- the row pool must not still show the skill's mark " +
+                "it was carrying one depth up");
+        }
     }
 }

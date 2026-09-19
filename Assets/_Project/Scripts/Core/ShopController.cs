@@ -65,6 +65,14 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] relicMetas;
         [SerializeField] internal TMP_Text[] relicPrices;
 
+        // The overarching menu this screen's Start opens (owner's
+        // 2026-09-19 ask: "press Start in the shop to check on your chars'
+        // equipment / skills"), assigned by ScreenRegistry.Map's Wire lambda
+        // from the same instance it hands MapController -- one
+        // SystemMenuController per Map scene, not a second copy for the
+        // shop to own, the same sharing MapController.systemMenu documents.
+        [SerializeField] internal SystemMenuController systemMenu;
+
         [SerializeField] internal GameObject packRoot;
         [SerializeField] internal Button packCloseButton;
         [SerializeField] internal GameObject packEmptyHint;
@@ -653,7 +661,17 @@ namespace PrincesPalace
 
         private void RegisterNavContext()
         {
-            if (_navContext == null) _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            // systemMenu, not folded into cancel: AUDIT.md #173 found the
+            // shop absorbed Start with no handler of its own (RaiseSystemMenu
+            // no-ops here, and the Map context underneath never gets a turn --
+            // a context that is top is the thing the player is talking to).
+            // Mirrors MapController.RegisterNavContext, which is why this
+            // context's own Cancel is untouched: HandleCancel still means
+            // "close the pack, else arm/confirm Leave", and opening the menu
+            // is a second, independent press exactly as it is on the map.
+            if (_navContext == null)
+                _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel,
+                    systemMenu: HandleSystemMenu);
 
             // PushIfAbsent, not Push: this context outlives its time on the
             // stack now (see PopNavContext), so re-entering the shop puts the
@@ -685,6 +703,19 @@ namespace PrincesPalace
             if (_packOpen) ClosePack();
             else Leave();
         }
+
+        // Start, over EITHER the shelf or the pack modal, opens the menu --
+        // no branch on _packOpen the way HandleCancel has one. A pack view
+        // is a page of rows, not a pending transaction (nothing here commits
+        // until a sell button is pressed, and that press is itself atomic),
+        // so it does not earn the Party-carry treatment (AUDIT.md #174):
+        // ShopController implements no INavCancelClaim, and
+        // SystemMenuController.CloseUnlessTheActivePaneClaimsIt's claimant
+        // lookup is scoped to the MENU's own active pane, never to whatever
+        // sits underneath it, so there was nothing to wire here either way.
+        // Same shape as MapController.HandleSystemMenu, down to the null-
+        // and already-open tolerance OpenFromRoot provides.
+        private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
         // Called from the end of Paint() -- every selection, purchase,
         // reroll, pack toggle and page step already funnels through it, the

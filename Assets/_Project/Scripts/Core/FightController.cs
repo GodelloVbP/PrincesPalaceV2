@@ -396,6 +396,24 @@ namespace PrincesPalace
         private MenuBranch _submenuScrolledBranch = MenuBranch.None;
         [SerializeField] internal TMP_Text[] submenuNames;
 
+        // The SPELL submenu's per-row book art (FightScreen.BuildSubmenuColumn's
+        // 36x36 `CharacterSkill{i}Mark`) -- auto-bound off the "SubmenuMarks"
+        // NodeRef list the same way submenuNames above binds "SubmenuNames"
+        // (UiAutoBind keys on the field's own identifier; no wiring line
+        // needed in ScreenRegistry for this one). fe40bd36 wired the shop and
+        // dossier spell slots but left this row pool untouched, which is the
+        // "art for spell book is not shown in the select spell screen" bug
+        // (owner, 2026-09-19); RefreshSubmenu paints it.
+        [SerializeField] internal Image[] submenuMarks;
+
+        // Skill book/glyph art, keyed by skill id -- baked in Fight()'s Wire
+        // step the same way ShopController.skillArt is (see its own header),
+        // not paired with any UI array the same length (a lookup table
+        // filtered to whichever skills authored an iconPath), which is why
+        // ScreenRegistry's own "NO CountBindings" comment sits beside the
+        // assignment rather than here.
+        [SerializeField] internal IconEntry[] skillArt;
+
         [SerializeField] internal GameObject detailColumn;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailKind;

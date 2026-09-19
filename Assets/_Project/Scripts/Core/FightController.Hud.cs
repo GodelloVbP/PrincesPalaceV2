@@ -271,6 +271,20 @@ namespace PrincesPalace
 
             var rows = CurrentRows();
 
+            // THE SKILL OPTION LIST, ONLY WHEN A ROW ACTUALLY NAMES A SKILL.
+            // FightHudModel.SkillRows builds `rows` 1:1 off this exact list
+            // (one SubmenuRow per option, in order, nothing filtered) so row
+            // index i and options[i] agree without a second lookup -- see its
+            // own header. Element/Item/Move rows are not skills (an element
+            // choice, a satchel stack, a direction), so there is no skill id
+            // for the loop below to paint a mark from, and leaving `options`
+            // null there is what stops a mark painted at Skill depth from
+            // surviving into the Element list the same rows get reused for
+            // (the "one row pool serves both branches" pool BuildSubmenuColumn
+            // describes) -- fixing bug 2026-09-19, "art for spell book is not
+            // shown in the select spell screen".
+            var options = CurrentSubmenuKind() == SubmenuKind.Skill ? SkillOptions(ActingCharacter()) : null;
+
             // ELEMENT DEPTH TITLES ITSELF, ahead of the branch: the column is
             // still the Skill branch's, but what is in it is a list of
             // elements, and a header reading SKILLS over four element names is
@@ -303,6 +317,30 @@ namespace PrincesPalace
 
                 var row = rows[i];
                 submenuNames[i].SetContent(row.Name);
+
+                // THE ROW'S BOOK ART, painted from its skill id through the
+                // same lookup-and-assign idiom every other icon in the game
+                // uses (ItemIcons.Apply's own header). `options` is null
+                // outside Skill depth, and Apply(_, _, null) already returns
+                // false and disables the Image -- Find's own null-id guard --
+                // so a stale mark from the Skill list cannot survive into the
+                // Element list these same pooled nodes get reused for. A
+                // skill with no authored iconPath (every non-book skill
+                // today) disables the mark the identical way a gear card
+                // with no art already does.
+                if (submenuMarks != null && i < submenuMarks.Length)
+                {
+                    string skillId = options != null && i < options.Count ? options[i].Skill?.Id : null;
+                    if (ItemIcons.Apply(submenuMarks[i], skillArt, skillId))
+                    {
+                        // Same DimmedAlpha channel the name already carries --
+                        // an unaffordable row dims as one thing, not a mark
+                        // that stays bright over a greyed-out name.
+                        var markColor = submenuMarks[i].color;
+                        markColor.a = row.Affordable ? 1f : DimmedAlpha;
+                        submenuMarks[i].color = markColor;
+                    }
+                }
 
                 // interactable BEFORE SetMenuState, not after: SetMenuState
                 // ends in Refresh(), which reads Button.interactable RIGHT

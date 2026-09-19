@@ -127,6 +127,26 @@ public static class ScreenRegistry
 
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
 
+                // The SPELL submenu's row marks, baked the same way
+                // WireShop bakes shop.skillArt (its own header): a skill
+                // with no authored iconPath (every non-book skill today) is
+                // filtered out here, and ItemIcons.Apply hides its row's
+                // mark at paint time -- not a special case, the same
+                // graceful path a gear card with no art already takes.
+                // fe40bd36 wired this exact table into the shop and the
+                // dossier and missed the fight's own submenu; this closes
+                // that gap rather than adding a second copy of the bake.
+                fight.skillArt = ContentDatabase.Skills
+                    .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+                    .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+                    .ToArray();
+
+                // NO CountBindings for fight.skillArt above -- same reason
+                // WireShop's own block gives: a lookup TABLE keyed by
+                // content id, filtered to whichever skills authored an
+                // iconPath, has no UI array of the same length to check it
+                // against.
+
                 fight.reckoning = WireReckoning(result, screen.Reckoning);
                 fight.defeat = WireDefeat(result, screen.Defeat);
 
@@ -595,6 +615,14 @@ public static class ScreenRegistry
 
                 shopController = WireShop(result, screen.Shop);
                 map.shop = shopController;
+
+                // The SAME SystemMenuController instance the map just built
+                // above (map.systemMenu), not a second one: one overlay per
+                // Map scene, and the shop is a nested panel inside it, not a
+                // screen of its own (AUDIT.md #173's Shop line, closed by the
+                // owner's 2026-09-19 ask -- "press Start in the shop to check
+                // on your chars").
+                shopController.systemMenu = map.systemMenu;
             },
 
             // Gate 2's own count bindings (docs/PLAN_SHOP.md §7.3): the six

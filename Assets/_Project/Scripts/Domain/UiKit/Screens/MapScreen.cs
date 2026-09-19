@@ -151,11 +151,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The in-run shop, entered from a Shop room (F10, docs/PLAN_SHOP.md).
         // Nested here the same way the draft nests in the hub -- entered from
-        // this screen, no scene of its own. Declared LAST among Root's
-        // children (below) so it draws over the system menu too -- there is
-        // no dossier access from inside the shop in v1 (docs/PLAN_SHOP.md
-        // §2c), and drawing on top is what makes that true rather than a
-        // z-order accident.
+        // this screen, no scene of its own. Declared BEFORE the system menu
+        // among Root's children (below), the reverse of an earlier build:
+        // docs/PLAN_SHOP.md §2c's "no dossier access from inside the shop in
+        // v1" stood only as long as Start had nowhere to open from the shop
+        // at all, and the owner's 2026-09-19 ask ("press Start in the shop to
+        // check on your chars' equipment / skills") reverses it -- so the
+        // menu now has to draw ON TOP of the shop it can be opened over,
+        // exactly the ordering AUDIT.md #173's Shop line calls out as the gap.
         public ShopScreen Shop;
 
         // Anchored to the content rect's LEFT edge, which is the origin every
@@ -275,8 +278,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // where changing your gear is supposed to happen. Walking back to
             // the hub to swap a breastplate between two rooms was the thing
             // that made having it in the fight only half an answer.
-            // The overarching menu, LAST in this scene's children so it draws
-            // over everything it can be opened on top of.
+            // The overarching menu -- built here, but placed in Root's
+            // children AFTER shop.Root below, so it draws over everything it
+            // can be opened on top of, the shop included (see Shop's own
+            // field comment above for why that is now true and was not
+            // before).
             var systemMenu = SystemMenuScreen.Build(partyRosterCardCount);
             screen.SystemMenu = systemMenu;
 
@@ -289,10 +295,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // dossier without any of them knowing the screen changed.
 
             // Viewport FIRST so the headings and the abandon button draw over
-            // the scrolling wood rather than under it. The sheet is LAST, so
-            // the modal dims the map and everything on it.
+            // the scrolling wood rather than under it. SHOP then SYSTEM MENU,
+            // last of all -- the menu has to draw over the shop it can now be
+            // opened on top of (AUDIT.md #173's Shop line), the same "opened
+            // FROM here, drawn OVER everything" rule the hub and the fight
+            // already apply to their own nested modals.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, pendingBook, abandon, roomMessage, systemMenu.Root, shop.Root);
+                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, systemMenu.Root);
 
             return screen;
         }

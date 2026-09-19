@@ -25,6 +25,7 @@ namespace PrincesPalace.PlayModeTests
         private string _root;
         private ScriptedBaseInput _input;
         private ShopController _shop;
+        private SystemMenuController _menu;
 
         [SetUp]
         public void UseAThrowawaySaveRoot()
@@ -89,6 +90,9 @@ namespace PrincesPalace.PlayModeTests
 
             _shop = Object.FindAnyObjectByType<ShopController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_shop, "the map scene has no ShopController");
+
+            _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(_menu, "the map scene has no SystemMenuController for the shop to open");
         }
 
         private IEnumerator DriveFrame()
@@ -272,6 +276,40 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_shop.gameObject.activeSelf,
                 "the second Cancel should confirm leaving, the same path ShopLeaveButton's own second press takes");
+        }
+
+        // AUDIT.md #173's Shop line, closed by the owner's 2026-09-19 ask
+        // ("press Start in the shop to check on your chars' equipment /
+        // skills"): ShopController now declares a systemMenu handler
+        // (mirrors StartOpensSystemMenuTests.MapStart_OpensTheMenu_
+        // AndStartAgainClosesIt for the map's own root context), so this is
+        // the shop's half of the same claim -- Start reaches the menu with
+        // the shop on top, and closing it restores the shelf's own entry
+        // rather than leaving the menu's last tab selected or nothing at
+        // all.
+        [UnityTest]
+        public IEnumerator ShopStart_OpensTheMenu_AndStartAgainClosesIt_RestoringTheShelfsEntry()
+        {
+            yield return OpenTheShop();
+
+            Assert.IsFalse(_menu.IsOpen, "the menu should start closed over the shop");
+
+            _input.SystemMenuDown = true;
+            yield return DriveFrame();
+
+            Assert.IsTrue(_menu.IsOpen,
+                "Start over the shop should open the system menu -- the same systemMenu handler the map's " +
+                "own context declares, off the SAME SystemMenuController instance (ScreenRegistry's " +
+                "shopController.systemMenu = map.systemMenu)");
+
+            _input.SystemMenuDown = true;
+            yield return DriveFrame();
+
+            Assert.IsFalse(_menu.IsOpen, "a second Start should close the menu it just opened, same as the map");
+
+            Assert.AreEqual(Node("ShopGearCard0"), EventSystem.current.currentSelectedGameObject,
+                "closing the menu should restore the shop's own remembered entry -- the shop's NavContext " +
+                "was never popped, only the menu's was pushed above it and removed");
         }
     }
 }

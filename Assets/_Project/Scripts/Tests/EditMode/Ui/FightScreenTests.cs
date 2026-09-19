@@ -165,7 +165,7 @@ namespace PrincesPalace.Domain.Tests
                 { "PartyHitFlashes", s.PartyHitFlashes }, { "PartyNameplates", s.PartyNameplates },
                 { "PartyFootShadows", s.PartyFootShadows }, { "PartyFootGlows", s.PartyFootGlows },
                 { "EnemyPlates", s.EnemyPlates }, { "VerbButtons", s.VerbButtons },
-                { "SubmenuRows", s.SubmenuRows },
+                { "SubmenuRows", s.SubmenuRows }, { "SubmenuMarks", s.SubmenuMarks },
                 { "DamagePopups", s.DamagePopups },
                 { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
                 { "PartyHitAreas", s.PartyHitAreas },
