@@ -70,6 +70,20 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] unassignedNames;
         [SerializeField] internal Image[] unassignedSelections;
 
+        // The skills panel (owner bug report, 2026-09-19: "Skills in the
+        // char menu, when you click on it, nothing happens" -- there was no
+        // skillsRow field here for UiAutoBind to fill, and no pane to open).
+        // Same row+panel+close shape as Spells above, but read-only: NO
+        // per-entry Button field, because nothing in this pane takes a
+        // press -- see DeclareSkills.
+        [SerializeField] internal Button skillsRow;
+        [SerializeField] internal TMP_Text skillsChevron;
+        [SerializeField] internal GameObject skillsPanel;
+        [SerializeField] internal Button skillsCloseButton;
+        [SerializeField] internal GameObject skillsEmptyHint;
+        [SerializeField] internal TMP_Text[] skillNames;
+        [SerializeField] internal TMP_Text[] skillDescriptions;
+
         // The fight's copy is readable and inert; every other copy is live.
         //
         // Decided at BUILD time rather than sniffed at runtime, which is the
@@ -253,6 +267,13 @@ namespace PrincesPalace
 
             if (spellsRow != null) spellsRow.onClick.AddListener(ToggleSpells);
             if (spellsCloseButton != null) spellsCloseButton.onClick.AddListener(() => ShowSpells(false));
+
+            // Wired ABOVE the lockedForFight guard too, same reasoning as
+            // trackRow/spellsRow just above: this pane names what the
+            // character can already do, nothing it opens edits the fight
+            // it would be describing.
+            if (skillsRow != null) skillsRow.onClick.AddListener(ToggleSkills);
+            if (skillsCloseButton != null) skillsCloseButton.onClick.AddListener(() => ShowSkills(false));
 
             if (spellSlots != null)
             {
@@ -478,30 +499,34 @@ namespace PrincesPalace
             // And the right file out to the scores' own left column.
             PairAcross(links, rightFile, ColumnOf(scores, 0), UiNavDirection.Right, UiNavDirection.Left);
 
-            // THREE STATES, not two -- AUDIT.md #161's fix. DossierSpellsPanel
-            // is the same shape as DossierPackPanel (an opaque Image over the
-            // whole of column A, opened by SpellsRow), so it gets the same
-            // "cover it, own the graph while covered" treatment: checked
-            // before falling back to the column-A rows, exactly the way pack
-            // already is, so the two can never both be considered.
+            // FOUR STATES, not three -- DossierSkillsPanel joins Pack and
+            // Spells (owner bug report, 2026-09-19). Same opaque-cover-of-
+            // column-A shape as the other two, checked before falling back
+            // to the column-A rows so at most one of the three is ever
+            // considered.
             if (IsPackShown) DeclarePack(groups, links, leftFile);
             else if (IsSpellsShown) DeclareSpells(groups, links, leftFile);
+            else if (IsSkillsShown) DeclareSkills(groups, links, leftFile);
             else DeclareColumnARows(groups, links, leftFile);
 
             RuntimeNavWiring.Apply(groups, links);
         }
 
-        // Column A as the player meets it with the pack closed: the roster
+        // Column A as the player meets it with no panel open: the roster
         // pager (a Rail of two, hidden entirely for a one-character squad)
-        // over the three live nav rows. The Skills row is deliberately NOT
-        // here -- it carries no onClick at all (there is no skillsRow field
-        // for the binder to fill), so a Move that landed on it would be a
-        // Submit that does nothing.
+        // over the four live nav rows, top to bottom as drawn.
+        //
+        // THE SKILLS ROW USED TO BE MISSING HERE (owner bug report,
+        // 2026-09-19: "Skills in the char menu, when you click on it,
+        // nothing happens") -- it carried no onClick at all, so a Move that
+        // landed on it was a Submit that did nothing. It opens
+        // DossierSkillsPanel now, the same row+panel+close shape Spells and
+        // Pack already use.
         private void DeclareColumnARows(List<UiNavGroup<Selectable>> groups,
             List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
         {
             var pager = Present(new[] { prevCharacterButton, nextCharacterButton });
-            var rows = Present(new[] { spellsRow, trackRow, packRow });
+            var rows = Present(new[] { spellsRow, trackRow, skillsRow, packRow });
 
             groups.Add(RuntimeNavWiring.Group("dossierRoster", UiNavGroupKind.Rail, pager));
             groups.Add(RuntimeNavWiring.Group("dossierRows", UiNavGroupKind.List, rows));
@@ -624,6 +649,25 @@ namespace PrincesPalace
             PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
         }
 
+        // Column A while the skills panel covers it (owner bug report,
+        // 2026-09-19) -- the character's talent-granted kit, read-only.
+        // Same "cover it, own the graph while covered" spine handoff
+        // DeclarePack/DeclareSpells use, but NO group of entries to
+        // declare: a skill is something the character already has, not
+        // something a press here does anything with, and giving each row a
+        // Selectable with no onClick would be the exact bug this pane
+        // exists to fix (DeclareColumnARows' own header), one level
+        // further in. Close is this pane's only control.
+        private void DeclareSkills(List<UiNavGroup<Selectable>> groups,
+            List<UiNavLink<Selectable>?> links, List<Selectable> leftFile)
+        {
+            var close = (Selectable)skillsCloseButton;
+            var spine = new List<Selectable>();
+            if (close != null) spine.Add(close);
+
+            PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
         // The panel's own entry, same rule DeclareColumnARows/DeclarePack's
         // callers effectively get for free from Move alone -- but opening
         // via Submit needs it stated explicitly (ShowSpells's own header
@@ -640,6 +684,11 @@ namespace PrincesPalace
 
             return spellsCloseButton;
         }
+
+        // The skills pane's own entry. Always Close -- unlike Spells/Pack
+        // there is no interactive row to land on first, because nothing in
+        // this pane takes a press (see DeclareSkills).
+        private Selectable SkillsEntry() => skillsCloseButton;
 
         private const int PackColumns = 2;
         private const int ScoreColumns = 3;
@@ -916,11 +965,12 @@ namespace PrincesPalace
         // this method answers at the moment of the press, so nothing has to
         // remember to set or clear anything, and a pane with no level open
         // simply says false and lets SystemMenu close as it always did. The
-        // panels are tested innermost first -- only one of the three can be
+        // panels are tested innermost first -- only one of the four can be
         // open at a time (the track row is only reachable with column A's
-        // rows showing, which means neither the pack nor the books are), but
-        // stating the order costs nothing and means a future fourth level
-        // cannot quietly invert it.
+        // rows showing, which means the pack, the books and the skills pane
+        // are not), but stating the order costs nothing and means the fourth
+        // level this comment used to predict -- now landed, skills below --
+        // cannot quietly invert it, nor can a fifth.
         bool INavCancelClaim.ClaimCancel()
         {
             if (trackPanel != null && trackPanel.activeSelf)
@@ -943,6 +993,12 @@ namespace PrincesPalace
             if (IsSpellsShown)
             {
                 ShowSpells(false);
+                return true;
+            }
+
+            if (IsSkillsShown)
+            {
+                ShowSkills(false);
                 return true;
             }
 
@@ -975,7 +1031,7 @@ namespace PrincesPalace
         private int _selectedUnassignedRow = -1;
         private List<string> _unassignedSnapshot = new List<string>();
 
-        // Read by SheetPanel and now by RefreshNavigation's own three-way
+        // Read by SheetPanel and now by RefreshNavigation's own four-way
         // branch, same shape and same reason IsPackShown already has.
         public bool IsSpellsShown => spellsPanel != null && spellsPanel.activeSelf;
 
@@ -1241,6 +1297,74 @@ namespace PrincesPalace
             RefreshNavigation();
         }
 
+        // ---- skills (owner bug report, 2026-09-19) --------------------------------
+
+        // Read by RefreshNavigation's own four-way branch, same shape and
+        // same reason IsPackShown/IsSpellsShown already have.
+        public bool IsSkillsShown => skillsPanel != null && skillsPanel.activeSelf;
+
+        public void ShowSkills(bool open)
+        {
+            skillsPanel.SetShown(open);
+            if (skillsChevron != null) skillsChevron.SetContent(open ? "<" : ">");
+            RefreshSkills();
+
+            // EXPLICIT on both edges, same reason ShowSpells/ShowPack state
+            // on their own identical two lines: the dispatcher's reselection
+            // rule never fires here on its own, because
+            // SystemMenuController.RefreshSelectables declares every
+            // Selectable under the whole pane regardless of visibility, so
+            // SkillsRow -- hidden behind the panel covering it -- still
+            // counts as declared.
+            if (open) EventSystem.current?.SetSelectedGameObject(SkillsEntry()?.gameObject);
+            else if (skillsRow != null) EventSystem.current?.SetSelectedGameObject(skillsRow.gameObject);
+        }
+
+        private void ToggleSkills() => ShowSkills(skillsPanel != null && !skillsPanel.activeSelf);
+
+        // Paints the panel's own list. Talent-granted only -- the same set
+        // skillsCount already counts in RefreshIdentity -- so the row's "N
+        // known" and the pane's row count can never disagree; there is no
+        // second, wider notion of "skills" this screen could show without a
+        // fight session in hand (TalentGrantedSkillsFor's own header).
+        private void RefreshSkills()
+        {
+            var squad = Squad();
+            var character = (_index >= 0 && _index < squad.Count) ? squad[_index] : null;
+            var skills = character == null
+                ? (IReadOnlyList<SkillDefinition>)System.Array.Empty<SkillDefinition>()
+                : ContentDatabase.TalentGrantedSkillsFor(character);
+
+            if (skillsEmptyHint != null) skillsEmptyHint.SetActive(skills.Count == 0);
+
+            if (skillNames != null)
+            {
+                for (int i = 0; i < skillNames.Length; i++)
+                {
+                    bool present = i < skills.Count;
+                    skillNames[i].gameObject.SetActive(present);
+                    if (skillDescriptions != null && i < skillDescriptions.Length)
+                    {
+                        skillDescriptions[i].gameObject.SetActive(present);
+                    }
+
+                    if (!present) continue;
+
+                    skillNames[i].SetContent(skills[i].Data.DisplayName);
+                    if (skillDescriptions != null && i < skillDescriptions.Length)
+                    {
+                        skillDescriptions[i].SetContent(skills[i].Data.Description);
+                    }
+                }
+            }
+
+            // WHICH ROWS ARE ACTIVE changed above (a character swap resizes
+            // the list; opening/closing the panel does too), so the links do
+            // -- the same "one method every path goes through" rule
+            // RefreshSpells' own identical call states.
+            RefreshNavigation();
+        }
+
         private void Step(int by)
         {
             var squad = Squad();
@@ -1310,6 +1434,7 @@ namespace PrincesPalace
             RefreshSlots(character);
             RefreshPack();
             RefreshSpells();
+            RefreshSkills();
         }
 
         // The bag, through the SAME BagView the old sheet sorted with -- the

@@ -71,6 +71,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PackRow;
         public NodeRef PackChevron;
 
+        // The skills panel (owner bug report, 2026-09-19: "Skills in the char
+        // menu, when you click on it, nothing happens" -- SkillsRow above
+        // carried no onClick and there was no pane for it to open). Same
+        // row+panel+close shape Spells and Pack already use, but read-only:
+        // no per-entry Button, see CharacterDossierController.DeclareSkills.
+        public NodeRef SkillsChevron;
+        public NodeRef SkillsPanel;
+        public NodeRef SkillsCloseButton;
+        public NodeRef SkillsEmptyHint;
+        public List<NodeRef> SkillNames = new List<NodeRef>();
+        public List<NodeRef> SkillDescriptions = new List<NodeRef>();
+
         // The spell-books panel (docs/PLAN_SHOP.md §1g, gate 3): a fourth
         // nav row and a fourth column-A overlay, same shape as Pack's own
         // row+panel pair.
@@ -215,6 +227,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // draws on top (only one is ever active at a time, per the
             // controller's own arm-one-panel-at-a-time rule).
             children.Add(screen.BuildSpellsPanel());
+
+            // Same shape again, one row later still: covers column A too,
+            // and declared after both so the three can never fight over
+            // which one draws on top (only one is ever active, per the
+            // controller's own arm-one-panel-at-a-time rule).
+            children.Add(screen.BuildSkillsPanel());
 
             // And the tooltip over everything.
             children.Add(screen.BuildTooltip());
@@ -388,7 +406,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // screen existed -- two readouts of one fact, and UiAudit caught
             // them overlapping the moment the row arrived. The row is the
             // better home: it says what is next AND is the door to the rest.
-            if (key == "Skills") { SkillsRow = button; SkillsCount = countLabel; }
+            if (key == "Skills") { SkillsRow = button; SkillsCount = countLabel; SkillsChevron = chev; }
             else if (key == "Track") { TrackRow = button; TrackNext = countLabel; }
             else if (key == "Spells") { SpellsRow = button; SpellsCount = countLabel; SpellsChevron = chev; }
             else { PackRow = button; PackChevron = chev; }
@@ -825,6 +843,110 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             foreach (var child in children) panel.Children.Add(child);
             SpellsPanel = panel;
+            return panel;
+        }
+
+        // ---- column A, covered: skills (owner bug report, 2026-09-19) -------------
+
+        // How many entries show at once. Same "a window, not the whole
+        // thing" posture UnassignedVisibleCount above takes, sized against
+        // today's content rather than any hard cap: the most any one
+        // character's talent tree currently grants is three
+        // (talents.json -- Shawn's provoke/black_ram_mode/headbutt), so five
+        // is headroom, not a guess.
+        public const int SkillsVisibleCount = 5;
+
+        private UiNode BuildSkillsPanel()
+        {
+            // Zero, not the column centre -- same reason BuildSpellsPanel's
+            // children are cx-relative immediately above.
+            const float cx = 0f;
+            var children = new List<UiNode>();
+
+            children.Add(Ui.Label("DossierSkillsTitle", UiStrings.DossierSkillsTitle,
+                new UiVec(170f, 22f), 13, TextFaint,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
+
+            // SILVER THEMED PLATE, same shape and same height-fixed solve as
+            // DossierSpellsClose/DossierPackClose immediately above -- see
+            // DossierPackClose's own comment for the UiTextFitAudit numbers
+            // this avoids.
+            var closeShape = Ui.PlateShapeFor(110f, 28f);
+            var closeSize = new UiVec(28f * Ui.PlateAspect(closeShape), 28f);
+            var close = Ui.Button("DossierSkillsClose", UiStrings.OverlayPackClose, closeSize, 15,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - closeSize.X * 0.5f,
+                             DossierLayout.ColumnATop - 12f))
+                .Themed(ButtonTheme.Silver);
+            SkillsCloseButton = close;
+            children.Add(close);
+
+            children.Add(Ui.Solid("DossierSkillsHeaderRule", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f),
+                Place.At(cx, DossierLayout.ColumnATop - 26f)).AsDecor());
+
+            // ONE ENTRY, TWO LINES: name, then its description/effect text
+            // straight off content (ResolvedSkill.Description -- the same
+            // field GlossaryEntries and the shop already show for a skill,
+            // so this reads the way the player has already seen a skill
+            // described elsewhere). NO BUTTON PER ROW -- unlike a pack cell
+            // or an unassigned book, nothing here is placed or equipped;
+            // wrapping this in a Selectable with no onClick would be the
+            // exact bug this whole panel exists to fix, one level further
+            // in. See CharacterDossierController.DeclareSkills.
+            const float rowHeight = 76f;
+            const float rowGap = 8f;
+            const float nameHeight = 20f;
+            const float descHeight = 40f;
+            const float lineGap = 4f;
+            float rowTop = DossierLayout.ColumnATop - 46f;
+            float textWidth = DossierLayout.ContentAWidth - 24f;
+
+            for (int i = 0; i < SkillsVisibleCount; i++)
+            {
+                float top = rowTop - i * (rowHeight + rowGap);
+                float nameY = top - nameHeight * 0.5f;
+                float descY = nameY - nameHeight * 0.5f - lineGap - descHeight * 0.5f;
+
+                var name = Ui.Label($"DossierSkill{i}Name", UiString.Runtime,
+                        new UiVec(textWidth, nameHeight), 16, Text, Place.At(cx, nameY))
+                    .Inactive().AsDecor()
+                    .TextAligned(UiTextAlign.TopLeft);
+
+                var description = Ui.Label($"DossierSkill{i}Description", UiString.Runtime,
+                        new UiVec(textWidth, descHeight), 12, TextDim, Place.At(cx, descY))
+                    .Inactive().AsDecor()
+                    .TextAligned(UiTextAlign.TopLeft);
+
+                SkillNames.Add(name);
+                SkillDescriptions.Add(description);
+                children.Add(name);
+                children.Add(description);
+            }
+
+            // WHAT SHOWS INSTEAD OF THE LIST for a character with no
+            // talent-granted skills yet -- same "one sentence, not empty
+            // boxes" posture SpellsNoBooksLine/UnassignedEmptyHint already
+            // take on this same column. Centred on the whole band the rows
+            // above occupy, so the panel's own geometry does not move for
+            // either reading.
+            float bandHeight = SkillsVisibleCount * rowHeight + (SkillsVisibleCount - 1) * rowGap;
+            var empty = Ui.Label("DossierSkillsEmptyHint", UiStrings.DossierSkillsEmpty,
+                    new UiVec(DossierLayout.ContentAWidth, 24f), 14, TextDim,
+                    Place.At(cx, rowTop - bandHeight * 0.5f))
+                .AsDecor()
+                .Inactive();
+            SkillsEmptyHint = empty;
+            children.Add(empty);
+
+            var panel = Ui.Sprite("DossierSkillsPanel", null,
+                    Place.At(DossierLayout.ColumnACentreX, 0f),
+                    UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.HalfHeight * 2f))
+                .Coloured(PackGround)
+                .Inactive()
+                .AllowOverlap("this panel covers column A entirely - that IS the interaction, same as pack/spells");
+
+            foreach (var child in children) panel.Children.Add(child);
+            SkillsPanel = panel;
             return panel;
         }
 

@@ -784,8 +784,15 @@ namespace PrincesPalace.PlayModeTests
         //     pager     y   49    Head       y  159    cells 0/1/2  y 182
         //     Spells    y  -87    Necklace   y   54    cells 3/4/5  y 118
         //     Track     y -129    Torso      y  -14
-        //     Pack      y -213    Gloves     y  -85
-        //                         Legs       y -156
+        //     Skills    y -171    Gloves     y  -85
+        //     Pack      y -213    Legs       y -156
+        //
+        // Skills is new to this table, not new to the screen -- the row was
+        // always drawn at -171 (DossierLayout.SkillsRowCentreY, one
+        // NavRowHeight above Pack), but it carried no onClick, so
+        // DeclareColumnARows left it out of the spine and no pairing could
+        // reach it. It is in the spine now, which moves exactly one
+        // expectation below; the geometry did not move at all.
 
         // One press, then the real-time settle the module's own repeat gate
         // needs before it will let another through -- JourneyFixture's own
@@ -821,7 +828,9 @@ namespace PrincesPalace.PlayModeTests
                 "Gloves (-85) sits 2 units off the Spells row, which is what index pairing sent it 170 past");
 
             yield return Step("DossierSlotLegs", -1f, 0f);
-            AssertSelected("DossierTrackRow", "Legs (-156) is nearest the reward-track row (-129)");
+            AssertSelected("DossierSkillsRow",
+                "Legs (-156) is nearest the Skills row (-171), 15 off it against 27 to the reward-track row " +
+                "(-129) -- the row Skills joining the spine takes over from Track");
         }
 
         [UnityTest]
@@ -838,9 +847,12 @@ namespace PrincesPalace.PlayModeTests
             yield return Step("DossierTrackRow", 1f, 0f);
             AssertSelected("DossierSlotLegs", "the reward-track row (-129) is nearest Legs (-156)");
 
+            yield return Step("DossierSkillsRow", 1f, 0f);
+            AssertSelected("DossierSlotLegs", "and the Skills row (-171) is nearer Legs still");
+
             yield return Step("DossierPackRow", 1f, 0f);
             AssertSelected("DossierSlotLegs",
-                "the Pack row (-213) is below the whole left file, so it clamps onto its lowest slot -- two " +
+                "the Pack row (-213) is below the whole left file, so it clamps onto its lowest slot -- three " +
                 "rows reaching the same slot is the honest answer when one column is longer than the other");
         }
 
@@ -855,10 +867,20 @@ namespace PrincesPalace.PlayModeTests
             yield return Step("DossierSpellsRow", 0f, -1f);
             AssertSelected("DossierTrackRow", "and the rows step in drawn order");
 
+            // ADAPTED, NOT RELAXED (owner bug report, 2026-09-19: "Skills in
+            // the char menu, when you click on it, nothing happens"). This
+            // used to assert Down from Track reached Pack directly, on the
+            // grounds that Skills carried no onClick and so was left out of
+            // the List entirely. It opens a real pane now (see
+            // DeclareColumnARows' own updated header) and is wired into the
+            // same List between Track and Pack, exactly as drawn.
             yield return Step("DossierTrackRow", 0f, -1f);
-            AssertSelected("DossierPackRow",
-                "Skills is deliberately absent from the graph -- it carries no onClick, so a Move onto it " +
-                "would be a Submit that does nothing");
+            AssertSelected("DossierSkillsRow",
+                "the Skills row now opens a real pane, so it takes its place in the column's own List, " +
+                "between Track and Pack as drawn");
+
+            yield return Step("DossierSkillsRow", 0f, -1f);
+            AssertSelected("DossierPackRow", "and the rows continue stepping in drawn order");
 
             yield return Step("DossierPackRow", 0f, -1f);
             AssertSelected("DossierPackRow", "the foot of the column clamps rather than wrapping to its head");
