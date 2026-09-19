@@ -15,9 +15,11 @@ MonoBehaviour:
   data:
     Id: sheep_ram_converge
     DisplayName: Black Ram Mode
-    Description: 'The three roots gather. Unlocks the transform: 7 wool for three
-      turns of splash, weight and speed, plus temporary health that leaves again
-      when it does. Free, but it wants 9 embers spent in this path first.'
+    Description: 'Unlocks Black Ram Mode (7 wool): transform for 3 turns, gaining
+      +50% attack, +30% speed, and temporary health equal to 25% of your max health
+      (lost when the transform ends). While transformed, every landed hit also splashes
+      50% of its damage onto the adjacent enemies. 5-turn cooldown. Free, gated at
+      9 embers spent in this path.'
     CharacterId: sheep
     Column: 0
     Row: 10

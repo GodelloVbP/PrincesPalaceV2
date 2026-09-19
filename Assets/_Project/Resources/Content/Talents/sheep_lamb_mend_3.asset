@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_3
     DisplayName: Parting Gift
-    Description: A ward running out heals whoever was wearing it for a tenth of their
-      health. Losing one stops being a loss.
+    Description: When a Ward you cast is fully spent, its wearer heals for 10% of
+      their max health.
     CharacterId: sheep
     Column: 1
     Row: 8

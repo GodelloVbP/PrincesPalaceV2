@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_provoke_3
     DisplayName: All of You, Then
-    Description: Provoke takes the whole room, and every enemy fixed on you feeds
-      the fleece. The engine comes fully online at about the moment the transform
-      does.
+    Description: Provoke now affects every enemy instead of one. Gain 1 wool at the
+      start of your turn for each enemy you currently have provoked.
     CharacterId: sheep
     Column: 0
     Row: 8

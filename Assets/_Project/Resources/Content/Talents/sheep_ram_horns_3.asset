@@ -15,9 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_horns_3
     DisplayName: Splintering Charge
-    Description: Every hit takes a piece of their guard with it, for the rest of
-      the fight, and it stacks. Soften the wall and the whole squad walks through
-      it.
+    Description: Each hit you land permanently reduces the target's defense by 2,
+      for the rest of the fight. Stacks with repeated hits.
     CharacterId: sheep
     Column: 0
     Row: 7

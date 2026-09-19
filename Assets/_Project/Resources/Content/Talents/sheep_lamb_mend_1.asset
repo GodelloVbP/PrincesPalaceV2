@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_1
     DisplayName: Mending Fleece
-    Description: 'A ward also knits: 3% of the wearer''s health back, each turn,
-      for two.'
+    Description: 'Casting a Ward also heals its wearer: 3% of their max health at
+      the start of each of the next 2 turns.'
     CharacterId: sheep
     Column: 1
     Row: 2

@@ -15,8 +15,9 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_3
     DisplayName: Sacrifice
-    Description: Breaking your OWN ward hits three times as hard and leaves the target
-      open -- and leaves you with nothing between you and the room.
+    Description: Detonating your own Ward deals triple the usual damage instead of
+      the normal amount, and applies Vulnerable (+30% damage taken for 2 turns) to
+      the target it hits.
     CharacterId: sheep
     Column: 1
     Row: 19

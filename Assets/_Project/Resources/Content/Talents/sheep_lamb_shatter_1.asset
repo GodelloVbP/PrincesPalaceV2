@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_1
     DisplayName: Shatter
-    Description: 'Unlocks Shatter (3 wool): break every ward you have out. Each one
-      throws your full weight at something.'
+    Description: 'Unlocks Shatter (3 wool): detonates every Ward you have cast; each
+      one deals damage to a random enemy equal to 100% of your Attack.'
     CharacterId: sheep
     Column: 1
     Row: 13

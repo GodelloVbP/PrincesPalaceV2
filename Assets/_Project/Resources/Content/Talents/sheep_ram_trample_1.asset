@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_1
     DisplayName: Trample
-    Description: A quarter more damage into anything already on its way down.
+    Description: Deal 25% more damage to a target at or below 30% of its max health.
     CharacterId: sheep
     Column: 0
     Row: 3

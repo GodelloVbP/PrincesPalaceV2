@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_3
     DisplayName: Momentum
-    Description: A kill does not cost you the turn. Once per turn -- he is heavy,
-      not infinite.
+    Description: Killing an enemy grants an extra action instead of ending your turn,
+      up to once per turn.
     CharacterId: sheep
     Column: 0
     Row: 9

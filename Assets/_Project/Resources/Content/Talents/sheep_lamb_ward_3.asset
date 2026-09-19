@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_ward_3
     DisplayName: Second Nature
-    Description: Warding stops costing the turn. He can cover himself AND do something
-      with the day.
+    Description: Casting Ward no longer costs your action; you can ward and act again
+      on the same turn.
     CharacterId: sheep
     Column: 1
     Row: 7

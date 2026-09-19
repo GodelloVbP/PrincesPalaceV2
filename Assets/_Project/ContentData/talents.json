@@ -7,7 +7,7 @@
       "displayName": "The Black Ram",
       "column": 0,
       "row": 0,
-      "description": "Your allegiance. He gains wool from being hit, and gains it faster the worse the day is going. Free -- but you may swear to only one path's engine at a time, and respeccing is the only way to change your mind.",
+      "description": "Gain 1 wool whenever you take a hit. Also gain wool at the start of your turn based on your health: 2 at 67% health or below, 3 at 33% or below (only the stronger tier applies, not both). Free, but only one path's root talent can be active at a time; respec to change it.",
       "effects": [
         {
           "type": "WoolOnHitTaken",
@@ -31,7 +31,7 @@
       "displayName": "Sharp Horns",
       "column": 0,
       "row": 1,
-      "description": "Attacks ignore a quarter of what the target is hiding behind.",
+      "description": "Attacks ignore 25% of the target's defense.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -48,7 +48,7 @@
       "displayName": "Honed Horns",
       "column": 0,
       "row": 4,
-      "description": "Half, now.",
+      "description": "Attacks ignore 50% of the target's defense.",
       "prerequisites": [
         "sheep_ram_horns_1"
       ],
@@ -65,7 +65,7 @@
       "displayName": "Splintering Charge",
       "column": 0,
       "row": 7,
-      "description": "Every hit takes a piece of their guard with it, for the rest of the fight, and it stacks. Soften the wall and the whole squad walks through it.",
+      "description": "Each hit you land permanently reduces the target's defense by 2, for the rest of the fight. Stacks with repeated hits.",
       "prerequisites": [
         "sheep_ram_horns_2"
       ],
@@ -82,7 +82,7 @@
       "displayName": "Provoke",
       "column": 0,
       "row": 2,
-      "description": "Unlocks Provoke: one enemy can see nothing but you on its next turn.",
+      "description": "Unlocks Provoke: forces one enemy to target you on its next turn.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -94,7 +94,7 @@
       "displayName": "Draw the Blow",
       "column": 0,
       "row": 5,
-      "description": "A goaded enemy swings wide. They hit you a fifth softer.",
+      "description": "A provoked enemy deals 20% less damage to you.",
       "prerequisites": [
         "sheep_ram_provoke_1"
       ],
@@ -111,7 +111,7 @@
       "displayName": "All of You, Then",
       "column": 0,
       "row": 8,
-      "description": "Provoke takes the whole room, and every enemy fixed on you feeds the fleece. The engine comes fully online at about the moment the transform does.",
+      "description": "Provoke now affects every enemy instead of one. Gain 1 wool at the start of your turn for each enemy you currently have provoked.",
       "prerequisites": [
         "sheep_ram_provoke_2"
       ],
@@ -131,7 +131,7 @@
       "displayName": "Trample",
       "column": 0,
       "row": 3,
-      "description": "A quarter more damage into anything already on its way down.",
+      "description": "Deal 25% more damage to a target at or below 30% of its max health.",
       "prerequisites": [
         "sheep_ram_root"
       ],
@@ -149,7 +149,7 @@
       "displayName": "Wreckage",
       "column": 0,
       "row": 6,
-      "description": "A kill throws half your weight into whoever was standing next to it.",
+      "description": "Killing an enemy deals 50% of your Attack as damage to the enemies adjacent to it.",
       "prerequisites": [
         "sheep_ram_trample_1"
       ],
@@ -166,7 +166,7 @@
       "displayName": "Momentum",
       "column": 0,
       "row": 9,
-      "description": "A kill does not cost you the turn. Once per turn -- he is heavy, not infinite.",
+      "description": "Killing an enemy grants an extra action instead of ending your turn, up to once per turn.",
       "prerequisites": [
         "sheep_ram_trample_2"
       ],
@@ -183,7 +183,7 @@
       "displayName": "Black Ram Mode",
       "column": 0,
       "row": 10,
-      "description": "The three roots gather. Unlocks the transform: 7 wool for three turns of splash, weight and speed, plus temporary health that leaves again when it does. Free, but it wants 9 embers spent in this path first.",
+      "description": "Unlocks Black Ram Mode (7 wool): transform for 3 turns, gaining +50% attack, +30% speed, and temporary health equal to 25% of your max health (lost when the transform ends). While transformed, every landed hit also splashes 50% of its damage onto the adjacent enemies. 5-turn cooldown. Free, gated at 9 embers spent in this path.",
       "prerequisites": [
         "sheep_ram_horns_3",
         "sheep_ram_provoke_3",
@@ -198,7 +198,7 @@
       "displayName": "Wrath",
       "column": 0,
       "row": 11,
-      "description": "Four turns of it instead of three.",
+      "description": "Black Ram Mode lasts 1 turn longer: 4 turns instead of 3.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -215,7 +215,7 @@
       "displayName": "Fed on Blood",
       "column": 0,
       "row": 14,
-      "description": "Every kill buys another turn of it, up to three.",
+      "description": "A kill during Black Ram Mode extends it by 1 turn, up to 3 extra turns total.",
       "prerequisites": [
         "sheep_ram_wrath_1"
       ],
@@ -233,7 +233,7 @@
       "displayName": "No Way Back",
       "column": 0,
       "row": 17,
-      "description": "Below a third health the timer simply stops running. Played right, the transform is no longer a timer at all.",
+      "description": "While at or below 33% health, Black Ram Mode's duration stops counting down.",
       "prerequisites": [
         "sheep_ram_wrath_2"
       ],
@@ -250,7 +250,7 @@
       "displayName": "Last Stand",
       "column": 0,
       "row": 12,
-      "description": "A quarter more armour once you are under half.",
+      "description": "+25% Defense while at or below 50% health.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -268,7 +268,7 @@
       "displayName": "Unflinching",
       "column": 0,
       "row": 15,
-      "description": "Under a quarter health, nothing lands for more than a quarter of your maximum. No single blow ends it.",
+      "description": "While at or below 25% health, no single hit can deal more than 25% of your max health.",
       "prerequisites": [
         "sheep_ram_stand_1"
       ],
@@ -286,7 +286,7 @@
       "displayName": "Not Yet",
       "column": 0,
       "row": 18,
-      "description": "Once a fight, the hit that would put him down leaves him standing on 1.",
+      "description": "Once per fight, a hit that would reduce you to 0 health leaves you at 1 instead.",
       "prerequisites": [
         "sheep_ram_stand_2"
       ],
@@ -302,7 +302,7 @@
       "displayName": "Charge",
       "column": 0,
       "row": 13,
-      "description": "Unlocks Headbutt: a swing that also knocks the target a place down the order.",
+      "description": "Unlocks Headbutt (2 wool): a weapon attack that also pushes the target back one place in the turn order.",
       "prerequisites": [
         "sheep_ram_converge"
       ],
@@ -314,7 +314,7 @@
       "displayName": "Concussive",
       "column": 0,
       "row": 16,
-      "description": "The shove does not delay what they were winding up. It takes it.",
+      "description": "Headbutt also cancels the target's queued action outright.",
       "prerequisites": [
         "sheep_ram_charge_1"
       ],
@@ -330,7 +330,7 @@
       "displayName": "Stampede",
       "column": 0,
       "row": 19,
-      "description": "Becoming the ram drives the entire enemy line back a place.",
+      "description": "Entering Black Ram Mode pushes every enemy back one place in the turn order.",
       "prerequisites": [
         "sheep_ram_charge_2"
       ],
@@ -346,7 +346,7 @@
       "displayName": "What He Is Now",
       "column": 0,
       "row": 20,
-      "description": "Below a quarter health the transformation stops being a button. Free, gated at 20 embers spent in this path.",
+      "description": "While at or below 25% health, Black Ram Mode no longer ends and costs nothing to enter. Free, gated at 20 embers spent in this path.",
       "prerequisites": [
         "sheep_ram_wrath_3",
         "sheep_ram_stand_3",
@@ -366,7 +366,7 @@
       "displayName": "The Fragile Lamb",
       "column": 1,
       "row": 0,
-      "description": "Your allegiance. Wool comes from wards being struck, not from being struck yourself -- you cover somebody, they take the hit, you get paid. Free, and you may swear to only one path's engine at a time.",
+      "description": "Gain 2 wool when a Ward you cast is hit, once per wearer per turn. Free, but only one path's root talent can be active at a time; respec to change it.",
       "effects": [
         {
           "type": "WoolWhenWardedAllyHit",
@@ -415,7 +415,7 @@
       "displayName": "Second Nature",
       "column": 1,
       "row": 7,
-      "description": "Warding stops costing the turn. He can cover himself AND do something with the day.",
+      "description": "Casting Ward no longer costs your action; you can ward and act again on the same turn.",
       "prerequisites": [
         "sheep_lamb_ward_2"
       ],
@@ -431,7 +431,7 @@
       "displayName": "Mending Fleece",
       "column": 1,
       "row": 2,
-      "description": "A ward also knits: 3% of the wearer's health back, each turn, for two.",
+      "description": "Casting a Ward also heals its wearer: 3% of their max health at the start of each of the next 2 turns.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -449,7 +449,7 @@
       "displayName": "Deep Mending",
       "column": 1,
       "row": 5,
-      "description": "Six percent a turn, for three.",
+      "description": "The heal from Ward increases to 6% of max health per turn, for 3 turns.",
       "prerequisites": [
         "sheep_lamb_mend_1"
       ],
@@ -467,7 +467,7 @@
       "displayName": "Parting Gift",
       "column": 1,
       "row": 8,
-      "description": "A ward running out heals whoever was wearing it for a tenth of their health. Losing one stops being a loss.",
+      "description": "When a Ward you cast is fully spent, its wearer heals for 10% of their max health.",
       "prerequisites": [
         "sheep_lamb_mend_2"
       ],
@@ -484,7 +484,7 @@
       "displayName": "Weight of Wool",
       "column": 1,
       "row": 3,
-      "description": "Every ward you are carrying makes you hit harder: a quarter more per warded ally, and double if the ward is on you.",
+      "description": "+25% attack damage for each other party member you have warded; +100% attack damage while you are warded yourself.",
       "prerequisites": [
         "sheep_lamb_root"
       ],
@@ -505,7 +505,7 @@
       "displayName": "Heavier Still",
       "column": 1,
       "row": 6,
-      "description": "Half again per ally, and two and a half times on yourself.",
+      "description": "+50% attack damage for each other warded ally; +150% while you are warded yourself.",
       "prerequisites": [
         "sheep_lamb_weight_1"
       ],
@@ -526,7 +526,7 @@
       "displayName": "Afterweight",
       "column": 1,
       "row": 9,
-      "description": "Triple on yourself -- and it does not vanish the instant the ward does. One turn of grace to make the loss count for something.",
+      "description": "+200% attack damage while warded yourself (the per-ally bonus stays at +50%). This self bonus now persists for 1 turn after your own Ward is spent.",
       "prerequisites": [
         "sheep_lamb_weight_2"
       ],
@@ -551,7 +551,7 @@
       "displayName": "Wail",
       "column": 1,
       "row": 10,
-      "description": "The three strands gather. Unlocks Wail: 10 wool -- the whole meter -- and nothing in the room hits for more than half for two turns. Free, but it wants 9 embers spent in this path first.",
+      "description": "Unlocks Wail (10 wool, the full pool): applies Protect to the whole party, reducing incoming damage by 50% for 2 turns. 3-turn cooldown. Free, gated at 9 embers spent in this path.",
       "prerequisites": [
         "sheep_lamb_ward_3",
         "sheep_lamb_mend_3",
@@ -566,7 +566,7 @@
       "displayName": "The Flock",
       "column": 1,
       "row": 11,
-      "description": "A ward also covers one other, for half the shield.",
+      "description": "A Ward you cast also lands on one other ally, at 50% of its size.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -583,7 +583,7 @@
       "displayName": "The Whole Flock",
       "column": 1,
       "row": 14,
-      "description": "Everyone, for half the shield.",
+      "description": "The spread now reaches the entire party instead of one ally, still at 50% size.",
       "prerequisites": [
         "sheep_lamb_flock_1"
       ],
@@ -603,7 +603,7 @@
       "displayName": "Nobody Left Out",
       "column": 1,
       "row": 17,
-      "description": "Everyone, for the whole shield, for the same two wool.",
+      "description": "The spread to the rest of the party is now full size instead of half.",
       "prerequisites": [
         "sheep_lamb_flock_2"
       ],
@@ -623,7 +623,7 @@
       "displayName": "Wool Gift",
       "column": 1,
       "row": 12,
-      "description": "Unlocks Gift: Mana (2 wool) -- a quarter of an ally's mana, back.",
+      "description": "Unlocks Gift: Mana (2 wool): restores 25% of an ally's maximum mana.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -641,7 +641,7 @@
       "displayName": "Gift of Fury",
       "column": 1,
       "row": 15,
-      "description": "Unlocks Gift: Fury (3 wool) -- an ally's next swing lands half again as hard.",
+      "description": "Unlocks Gift: Fury (3 wool): an ally's next attack deals 50% more damage.",
       "prerequisites": [
         "sheep_lamb_gift_1"
       ],
@@ -659,7 +659,7 @@
       "displayName": "Gift of Haste",
       "column": 1,
       "row": 18,
-      "description": "Unlocks Gift: Haste (5 wool) -- an ally goes next, whatever the queue thought.",
+      "description": "Unlocks Gift: Haste (5 wool): pulls an ally to the front of the turn queue.",
       "prerequisites": [
         "sheep_lamb_gift_2"
       ],
@@ -676,7 +676,7 @@
       "displayName": "Shatter",
       "column": 1,
       "row": 13,
-      "description": "Unlocks Shatter (3 wool): break every ward you have out. Each one throws your full weight at something.",
+      "description": "Unlocks Shatter (3 wool): detonates every Ward you have cast; each one deals damage to a random enemy equal to 100% of your Attack.",
       "prerequisites": [
         "sheep_lamb_converge"
       ],
@@ -694,7 +694,7 @@
       "displayName": "Splintering",
       "column": 1,
       "row": 16,
-      "description": "Each one throws nearly double.",
+      "description": "Each detonated Ward now deals 175% of your Attack instead of 100%.",
       "prerequisites": [
         "sheep_lamb_shatter_1"
       ],
@@ -711,7 +711,7 @@
       "displayName": "Sacrifice",
       "column": 1,
       "row": 19,
-      "description": "Breaking your OWN ward hits three times as hard and leaves the target open -- and leaves you with nothing between you and the room.",
+      "description": "Detonating your own Ward deals triple the usual damage instead of the normal amount, and applies Vulnerable (+30% damage taken for 2 turns) to the target it hits.",
       "prerequisites": [
         "sheep_lamb_shatter_2"
       ],
@@ -731,7 +731,7 @@
       "displayName": "The Golden Fleece",
       "column": 1,
       "row": 20,
-      "description": "Wards YOU cast stop timing out -- yours, wherever you put them, including the ones the Flock spreads. They last the fight, until something spends them. A ward somebody else put on you keeps its own clock. Free, gated at 20 embers spent in this path.",
+      "description": "Wards you cast no longer expire from time; they last until spent, including wherever The Flock has spread them. A Ward someone else placed on you keeps its own duration. Free, gated at 20 embers spent in this path.",
       "prerequisites": [
         "sheep_lamb_flock_3",
         "sheep_lamb_gift_3",

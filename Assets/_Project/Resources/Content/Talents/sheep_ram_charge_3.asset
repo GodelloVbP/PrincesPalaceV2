@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_charge_3
     DisplayName: Stampede
-    Description: Becoming the ram drives the entire enemy line back a place.
+    Description: Entering Black Ram Mode pushes every enemy back one place in the
+      turn order.
     CharacterId: sheep
     Column: 0
     Row: 19

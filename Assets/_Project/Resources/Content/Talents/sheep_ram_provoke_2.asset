@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_provoke_2
     DisplayName: Draw the Blow
-    Description: A goaded enemy swings wide. They hit you a fifth softer.
+    Description: A provoked enemy deals 20% less damage to you.
     CharacterId: sheep
     Column: 0
     Row: 5

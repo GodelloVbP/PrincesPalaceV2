@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_stand_3
     DisplayName: Not Yet
-    Description: Once a fight, the hit that would put him down leaves him standing
-      on 1.
+    Description: Once per fight, a hit that would reduce you to 0 health leaves you
+      at 1 instead.
     CharacterId: sheep
     Column: 0
     Row: 18

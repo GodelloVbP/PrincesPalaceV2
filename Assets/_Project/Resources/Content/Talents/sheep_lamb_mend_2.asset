@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_mend_2
     DisplayName: Deep Mending
-    Description: Six percent a turn, for three.
+    Description: The heal from Ward increases to 6% of max health per turn, for 3
+      turns.
     CharacterId: sheep
     Column: 1
     Row: 5

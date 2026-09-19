@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_wrath_1
     DisplayName: Wrath
-    Description: Four turns of it instead of three.
+    Description: 'Black Ram Mode lasts 1 turn longer: 4 turns instead of 3.'
     CharacterId: sheep
     Column: 0
     Row: 11

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_stand_2
     DisplayName: Unflinching
-    Description: Under a quarter health, nothing lands for more than a quarter of
-      your maximum. No single blow ends it.
+    Description: While at or below 25% health, no single hit can deal more than 25%
+      of your max health.
     CharacterId: sheep
     Column: 0
     Row: 15

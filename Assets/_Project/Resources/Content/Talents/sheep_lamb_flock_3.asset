@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_3
     DisplayName: Nobody Left Out
-    Description: Everyone, for the whole shield, for the same two wool.
+    Description: The spread to the rest of the party is now full size instead of
+      half.
     CharacterId: sheep
     Column: 1
     Row: 17

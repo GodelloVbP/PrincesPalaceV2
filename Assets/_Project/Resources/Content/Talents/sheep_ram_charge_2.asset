@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_charge_2
     DisplayName: Concussive
-    Description: The shove does not delay what they were winding up. It takes it.
+    Description: Headbutt also cancels the target's queued action outright.
     CharacterId: sheep
     Column: 0
     Row: 16

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_trample_2
     DisplayName: Wreckage
-    Description: A kill throws half your weight into whoever was standing next to
-      it.
+    Description: Killing an enemy deals 50% of your Attack as damage to the enemies
+      adjacent to it.
     CharacterId: sheep
     Column: 0
     Row: 6

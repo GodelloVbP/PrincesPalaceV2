@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_weight_1
     DisplayName: Weight of Wool
-    Description: 'Every ward you are carrying makes you hit harder: a quarter more
-      per warded ally, and double if the ward is on you.'
+    Description: +25% attack damage for each other party member you have warded;
+      +100% attack damage while you are warded yourself.
     CharacterId: sheep
     Column: 1
     Row: 3

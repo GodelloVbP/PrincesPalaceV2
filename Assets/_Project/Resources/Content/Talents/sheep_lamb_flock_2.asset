@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_2
     DisplayName: The Whole Flock
-    Description: Everyone, for half the shield.
+    Description: The spread now reaches the entire party instead of one ally, still
+      at 50% size.
     CharacterId: sheep
     Column: 1
     Row: 14

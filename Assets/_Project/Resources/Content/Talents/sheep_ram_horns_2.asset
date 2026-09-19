@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_horns_2
     DisplayName: Honed Horns
-    Description: Half, now.
+    Description: Attacks ignore 50% of the target's defense.
     CharacterId: sheep
     Column: 0
     Row: 4

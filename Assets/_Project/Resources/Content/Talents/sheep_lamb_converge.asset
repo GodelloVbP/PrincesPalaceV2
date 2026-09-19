@@ -15,9 +15,9 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_converge
     DisplayName: Wail
-    Description: 'The three strands gather. Unlocks Wail: 10 wool -- the whole meter
-      -- and nothing in the room hits for more than half for two turns. Free, but
-      it wants 9 embers spent in this path first.'
+    Description: 'Unlocks Wail (10 wool, the full pool): applies Protect to the whole
+      party, reducing incoming damage by 50% for 2 turns. 3-turn cooldown. Free,
+      gated at 9 embers spent in this path.'
     CharacterId: sheep
     Column: 1
     Row: 10

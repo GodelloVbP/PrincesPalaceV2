@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_weight_2
     DisplayName: Heavier Still
-    Description: Half again per ally, and two and a half times on yourself.
+    Description: +50% attack damage for each other warded ally; +150% while you are
+      warded yourself.
     CharacterId: sheep
     Column: 1
     Row: 6

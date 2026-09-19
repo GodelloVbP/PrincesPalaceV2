@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_shatter_2
     DisplayName: Splintering
-    Description: Each one throws nearly double.
+    Description: Each detonated Ward now deals 175% of your Attack instead of 100%.
     CharacterId: sheep
     Column: 1
     Row: 16

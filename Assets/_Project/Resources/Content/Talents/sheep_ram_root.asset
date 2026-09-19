@@ -15,9 +15,10 @@ MonoBehaviour:
   data:
     Id: sheep_ram_root
     DisplayName: The Black Ram
-    Description: Your allegiance. He gains wool from being hit, and gains it faster
-      the worse the day is going. Free -- but you may swear to only one path's engine
-      at a time, and respeccing is the only way to change your mind.
+    Description: 'Gain 1 wool whenever you take a hit. Also gain wool at the start
+      of your turn based on your health: 2 at 67% health or below, 3 at 33% or below
+      (only the stronger tier applies, not both). Free, but only one path''s root
+      talent can be active at a time; respec to change it.'
     CharacterId: sheep
     Column: 0
     Row: 0

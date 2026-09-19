@@ -15,10 +15,9 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_cap
     DisplayName: The Golden Fleece
-    Description: Wards YOU cast stop timing out -- yours, wherever you put them,
-      including the ones the Flock spreads. They last the fight, until something
-      spends them. A ward somebody else put on you keeps its own clock. Free, gated
-      at 20 embers spent in this path.
+    Description: Wards you cast no longer expire from time; they last until spent,
+      including wherever The Flock has spread them. A Ward someone else placed on
+      you keeps its own duration. Free, gated at 20 embers spent in this path.
     CharacterId: sheep
     Column: 1
     Row: 20

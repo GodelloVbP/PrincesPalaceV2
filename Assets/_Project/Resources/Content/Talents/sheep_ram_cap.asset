@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_cap
     DisplayName: What He Is Now
-    Description: Below a quarter health the transformation stops being a button.
-      Free, gated at 20 embers spent in this path.
+    Description: While at or below 25% health, Black Ram Mode no longer ends and
+      costs nothing to enter. Free, gated at 20 embers spent in this path.
     CharacterId: sheep
     Column: 0
     Row: 20

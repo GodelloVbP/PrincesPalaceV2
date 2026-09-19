@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_gift_1
     DisplayName: Wool Gift
-    Description: 'Unlocks Gift: Mana (2 wool) -- a quarter of an ally''s mana, back.'
+    Description: 'Unlocks Gift: Mana (2 wool): restores 25% of an ally''s maximum
+      mana.'
     CharacterId: sheep
     Column: 1
     Row: 12

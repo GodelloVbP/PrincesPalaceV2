@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_flock_1
     DisplayName: The Flock
-    Description: A ward also covers one other, for half the shield.
+    Description: A Ward you cast also lands on one other ally, at 50% of its size.
     CharacterId: sheep
     Column: 1
     Row: 11

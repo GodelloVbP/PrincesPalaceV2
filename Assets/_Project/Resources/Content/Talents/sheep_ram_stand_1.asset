@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_stand_1
     DisplayName: Last Stand
-    Description: A quarter more armour once you are under half.
+    Description: +25% Defense while at or below 50% health.
     CharacterId: sheep
     Column: 0
     Row: 12

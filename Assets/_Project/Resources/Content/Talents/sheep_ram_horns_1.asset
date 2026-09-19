@@ -15,7 +15,7 @@ MonoBehaviour:
   data:
     Id: sheep_ram_horns_1
     DisplayName: Sharp Horns
-    Description: Attacks ignore a quarter of what the target is hiding behind.
+    Description: Attacks ignore 25% of the target's defense.
     CharacterId: sheep
     Column: 0
     Row: 1

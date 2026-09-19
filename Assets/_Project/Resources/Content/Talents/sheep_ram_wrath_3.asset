@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_ram_wrath_3
     DisplayName: No Way Back
-    Description: Below a third health the timer simply stops running. Played right,
-      the transform is no longer a timer at all.
+    Description: While at or below 33% health, Black Ram Mode's duration stops counting
+      down.
     CharacterId: sheep
     Column: 0
     Row: 17

@@ -15,8 +15,8 @@ MonoBehaviour:
   data:
     Id: sheep_lamb_gift_3
     DisplayName: Gift of Haste
-    Description: 'Unlocks Gift: Haste (5 wool) -- an ally goes next, whatever the
-      queue thought.'
+    Description: 'Unlocks Gift: Haste (5 wool): pulls an ally to the front of the
+      turn queue.'
     CharacterId: sheep
     Column: 1
     Row: 18
