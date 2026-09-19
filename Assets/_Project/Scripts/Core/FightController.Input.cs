@@ -1013,19 +1013,25 @@ namespace PrincesPalace
 
             var beats = _session.DrainBeats();
 
-            // THE ONE PLACE A BEAT LEARNS ITS DAMAGE TYPE. CombatBeat itself
-            // stays Physical (see its own field comment) -- FightSession
-            // never sets this, so it is filled in HERE, the single choke
-            // point every drained batch already passes through regardless of
-            // which verb produced it (attack, skill, an enemy's own reply).
-            // ActorAttackType is the same public read FightHudModel's detail
-            // card already uses for its element label, so a hit and the card
-            // that described the skill causing it cannot disagree about what
-            // "Fire" means.
+            // WHERE A BEAT LEARNS ITS DAMAGE TYPE FROM WHOEVER SWUNG, which is
+            // most beats but no longer all of them. This is still the single
+            // choke point every drained batch passes through regardless of
+            // which verb produced it (attack, skill, an enemy's own reply),
+            // and ActorAttackType is still the same public read
+            // FightHudModel's detail card uses for its element label -- so a
+            // hit and the card that described the skill causing it cannot
+            // disagree about what "Fire" means.
+            //
+            // PAINT, NOT ASSIGN. A status tick records its own element off
+            // the status (CombatBeat.DeclareDamageType) and has no actor to
+            // read one from; PaintActorDamageType is what lets this loop stay
+            // a loop without having to ask each beat which kind it is. The
+            // `?? Physical` that used to live on this line moved inside it
+            // for the same reason -- see that method's own header.
             foreach (var beat in beats)
             {
                 if (beat == null) continue;
-                beat.DamageType = _session.ActorAttackType(beat.Actor) ?? DamageType.Physical;
+                beat.PaintActorDamageType(_session.ActorAttackType(beat.Actor));
             }
 
             if (beatPlayer != null && beats.Count > 0)
@@ -1329,6 +1335,45 @@ namespace PrincesPalace
             }
 
             _inspecting = false;
+
+            // THE PAD'S OWN FLIP, NOT MoveFocus' -- MoveFocus is the frozen
+            // focus model (this file's own "ONE INPUT MODEL" header) and
+            // every direct-call test drives it with delta UNCHANGED
+            // (CycleTarget's own header names them); this wrapper is the
+            // dispatch-boundary seam that already exists to layer pad-only
+            // behaviour on top of it (inspect, the busy guard), so it is
+            // where a pad-only sign correction belongs too.
+            //
+            // ProcessFight hands every call here Vertical's OWN sign (Up ->
+            // -1, Down -> +1, armed that way so Root's bottom-up verb column
+            // reads right -- MoveFocus' own Root case). That is backwards
+            // for a target rack: the owner's 2026-09-19 call is Up = one
+            // slot DEEPER, Down = one slot nearer, so it needs one negation
+            // to land in CycleTarget's "+1 is deeper" convention. Y is not
+            // mirrored between the two racks (FightStageAnchors.SlotOffset
+            // only negates X), so "further back is higher on screen" is true
+            // for both, and this single flip serves both racks -- unlike
+            // InspectMove's horizontal case, which needs a per-side one.
+            //
+            // TARGET DEPTH GOES THROUGH CycleTargetFromPad, NOT MoveFocus,
+            // for a second, separate reason (2026-09-19, the gate's own
+            // find): FocusedElement/ConfirmFocus already treat "nothing
+            // hovered" as enemy 0 -- the marker sits there and Submit would
+            // hit it -- so a pad player's FIRST press has to read as one
+            // step FROM that implicit 0, not as WrapFromNoHover's older
+            // "first press is index 0" rule (CycleTarget's own header). That
+            // older rule is still exactly right for the direct MoveFocus(int)
+            // convention below (every FightGamepadNavigationTests/
+            // AllyTargetPickerTests direct call pins it), so it could not be
+            // changed in place -- CycleTargetFromPad is the same cycle with
+            // only the no-hover case resolved differently, kept to this one
+            // pad entry point and InspectMove's own Target branch.
+            if (_menu.Depth == MenuDepth.Target)
+            {
+                CycleTargetFromPad(-delta);
+                return;
+            }
+
             MoveFocus(delta);
         }
 
@@ -1599,6 +1644,17 @@ namespace PrincesPalace
         // ONE HELPER for both racks, so a future third rack cannot drift back
         // into the two independently-reasoned cases this replaces -- see
         // FightGamepadNavigationTests for the literal indices this pins.
+        //
+        // STILL LIVE, not superseded by CycleTargetFromPad (2026-09-19): the
+        // at<0 branch below is exactly right for a DIRECT MoveFocus(int)/
+        // CycleTarget(delta) call -- the only kind FightGamepadNavigationTests'
+        // MovingFocusAtTargetDepthCyclesTheHoveredLivingEnemy/
+        // AFirstPreviousPressAtTargetDepthLandsOnTheLastLivingEnemy and every
+        // AllyTargetPickerTests case drive -- where "nothing hovered" really
+        // does mean nothing, not an implicit enemy 0. CycleTargetFromPad
+        // resolves that implicit-0 case itself, one layer up, so by the time
+        // it calls this the `at` argument is never negative and this method's
+        // own no-hover branch is simply never reached from a pad path.
         public static int WrapFromNoHover(int at, int delta, int count) =>
             at < 0 ? (delta > 0 ? 0 : count - 1) : Wrap(at + delta, count);
 
@@ -1638,34 +1694,90 @@ namespace PrincesPalace
                     break;
 
                 case MenuDepth.Target:
-                    // THE SIDE BEING PICKED, not always the monsters. The
-                    // cycle itself is identical on both racks -- the living
-                    // and legal candidates, in screen order, wrapping -- so
-                    // the only thing the side decides is which list is walked
-                    // and which cursor remembers where the stick got to.
-                    if (_menu.Side == TargetSide.Allies)
-                    {
-                        var allies = PickableAllyPlates();
-                        if (allies.Count == 0) return;
-
-                        int atAlly = allies.IndexOf(_hoveredAllyIndex);
-                        OnAllyHovered(allies[WrapFromNoHover(atAlly, delta, allies.Count)]);
-                        break;
-                    }
-
-                    var enemies = Enemies;
-                    var living = new List<int>();
-                    for (int i = 0; i < enemies.Count; i++)
-                    {
-                        if (enemies[i].IsAlive) living.Add(i);
-                    }
-
-                    if (living.Count == 0) return;
-                    int at = living.IndexOf(_hoveredEnemyIndex);
-                    int next = WrapFromNoHover(at, delta, living.Count);
-                    OnEnemyHovered(living[next]);
+                    // DELTA HERE IS ALREADY IN CycleTarget's OWN CONVENTION
+                    // (+1 is one slot deeper) -- this case is reached only by
+                    // a direct call (every test in this family, plus the
+                    // Back button's own callers) and by the explicit
+                    // IFightNavigationTarget.MoveFocus wrapper below, which
+                    // does the one sign flip a raw vertical press needs
+                    // before it gets here. See CycleTarget's own header for
+                    // why a second, ally-only flip lives in InspectMove
+                    // instead of here.
+                    CycleTarget(delta);
                     break;
             }
+        }
+
+        // ONE CYCLING RULE FOR BOTH TARGET RACKS AND BOTH AXES (the owner's
+        // 2026-09-19 follow-up: "selecting different mobs with gamepad goes
+        // with up down, but it should work with left right"). `delta` is
+        // DEPTH-SPACE: +1 steps one slot DEEPER (the living/pickable list's
+        // next index -- further right on stage for the enemy rack, further
+        // left for the mirrored ally one), -1 steps one slot nearer.
+        //
+        // MoveFocus' own Target case above calls this with delta UNCHANGED
+        // (preserving every existing direct-call test's literal indices --
+        // FightGamepadNavigationTests and AllyTargetPickerTests both drive
+        // MoveFocus directly, bypassing the interface wrapper entirely) AND
+        // with WrapFromNoHover's OLDER "first press is index 0" no-hover
+        // rule, via the shared FromPad=false core below. InspectMove and the
+        // IFightNavigationTarget.MoveFocus wrapper are the two pad entry
+        // points and go through CycleTargetFromPad instead, which resolves
+        // "nothing hovered" to enemy/plate 0 before delta is applied -- see
+        // that method's own header for why a pad press needs a different
+        // no-hover rule than a direct call does. Both still TRANSLATE an
+        // axis's raw sign into this method's "+1 is deeper" convention
+        // themselves, because the two axes disagree with each other about
+        // what "+1" already means: vertical arrives through
+        // IFightNavigationTarget.MoveFocus, which flips ONE sign for both
+        // racks (Y is not mirrored, so "up is deeper" is true on both);
+        // horizontal arrives through InspectMove, which flips per SIDE
+        // instead (X is mirrored, so "right is deeper" is true only for the
+        // enemy rack -- see InspectMove's own header).
+        private void CycleTarget(int delta) => CycleTarget(delta, fromPad: false);
+
+        // THE PAD-ONLY ENTRY POINT (2026-09-19, the gate's own find): a pad
+        // player's first press at Target depth has to read as one step FROM
+        // enemy/plate 0, not as CycleTarget's own "first press lands ON
+        // index 0" rule -- FocusedElement/ConfirmFocus already treat no
+        // hover as enemy 0 (the marker sits there before any press, and
+        // Submit would hit it), so leaving WrapFromNoHover's no-hover branch
+        // in place here made the first Up/Right press look like it did
+        // nothing at all. Used only by the IFightNavigationTarget.MoveFocus
+        // wrapper and InspectMove's Target branch -- both pad paths, never a
+        // direct call.
+        private void CycleTargetFromPad(int delta) => CycleTarget(delta, fromPad: true);
+
+        private void CycleTarget(int delta, bool fromPad)
+        {
+            // THE SIDE BEING PICKED, not always the monsters. The cycle
+            // itself is identical on both racks -- the living and legal
+            // candidates, in screen order, wrapping -- so the only thing the
+            // side decides is which list is walked and which cursor
+            // remembers where the stick got to.
+            if (_menu.Side == TargetSide.Allies)
+            {
+                var allies = PickableAllyPlates();
+                if (allies.Count == 0) return;
+
+                int atAlly = allies.IndexOf(_hoveredAllyIndex);
+                if (fromPad && atAlly < 0) atAlly = 0;
+                OnAllyHovered(allies[WrapFromNoHover(atAlly, delta, allies.Count)]);
+                return;
+            }
+
+            var enemies = Enemies;
+            var living = new List<int>();
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (enemies[i].IsAlive) living.Add(i);
+            }
+
+            if (living.Count == 0) return;
+            int at = living.IndexOf(_hoveredEnemyIndex);
+            if (fromPad && at < 0) at = 0;
+            int next = WrapFromNoHover(at, delta, living.Count);
+            OnEnemyHovered(living[next]);
         }
 
         // The PLATE indices an ally pick will actually accept, in column
@@ -1801,11 +1913,45 @@ namespace PrincesPalace
             return next >= count ? 0 : next;
         }
 
-        // The horizontal axis' whole meaning in a fight. Root only: at a
-        // submenu or a target rack the horizontal axis does what it did
-        // before, which is nothing, and target-pick semantics are untouched.
+        // The horizontal axis' whole meaning in a fight. At a submenu it
+        // still does what it always did, which is nothing -- a skill or
+        // item LIST is walked by Up/Down alone. At Root it walks the inspect
+        // ring, unchanged below. AT TARGET DEPTH (the owner's 2026-09-19
+        // follow-up, "selecting different mobs with gamepad goes with up
+        // down, but it should work with left right") it now cycles the rack
+        // exactly like Up/Down do, through the same CycleTargetFromPad
+        // IFightNavigationTarget.MoveFocus's own Target branch uses -- see
+        // that method's own header for the shared "+1 is deeper" convention
+        // this translates into.
         internal void InspectMove(int delta)
         {
+            if (_menu.Depth == MenuDepth.Target)
+            {
+                // THE ENEMY RACK RUNS OUTWARD, UNMIRRORED (FightStageAnchors:
+                // Near.X 300 -> Far.X 660), so Right (raw +1, straight off
+                // ProcessFight) already points at "further right on stage,
+                // one slot deeper" -- CycleTarget's own convention -- and
+                // needs no flip.
+                //
+                // THE ALLY RACK IS MIRRORED (SlotOffset negates X for the
+                // party), so ITS depth runs the other way on screen:
+                // Near.X 320 -> Far.X 810 becomes on-screen -320 -> -810,
+                // meaning the FARTHER ally sits FURTHER LEFT. Right has to
+                // mean "toward the near end" there to keep pointing
+                // rightward on screen -- a NEGATIVE step in CycleTarget's
+                // depth ordering -- so this is the one place the two racks
+                // disagree and the only side that gets flipped.
+                //
+                // FromPad, not CycleTarget directly -- this is a pad press
+                // reaching Target depth exactly the way IFightNavigationTarget.
+                // MoveFocus's own Target branch does, so a fresh pick needs
+                // the same "nothing hovered reads as enemy/plate 0" fix (that
+                // wrapper's own header explains why the plain no-hover rule
+                // is wrong here now).
+                CycleTargetFromPad(_menu.Side == TargetSide.Allies ? -delta : delta);
+                return;
+            }
+
             if (_menu.Depth != MenuDepth.Root) return;
 
             if (IsInspecting)

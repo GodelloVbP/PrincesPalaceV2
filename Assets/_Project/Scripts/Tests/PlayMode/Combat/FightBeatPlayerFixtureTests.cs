@@ -77,6 +77,24 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(finished, "the beat never finished playing");
             Assert.IsTrue(moved,
                 "the target's slot never moved -- AnimatorFor never reached a real StageActorAnimator");
+
+            // THE REEL OUTLIVES THE BEAT ON PURPOSE (2026-09-19: the owner
+            // asked for a reel four times slower, and 1.505s of it does not
+            // fit in a 0.75s beat -- FightBeatPlayer.RecoilDwellSeconds plus
+            // RecoilReturnSeconds). So the beat reporting itself finished is
+            // no longer the moment the target is back on its mark, and this
+            // waits for the thing the assertion below actually claims: that
+            // the reel ENDS at home.
+            //
+            // NOT SOMETHING THE SETTLE GATE MAKES UNNECESSARY. That gate
+            // holds the NEXT beat until the figures it measures are at rest,
+            // and this fixture plays one beat and stops -- there is no next
+            // beat to be held, so the only thing that knows when the reel is
+            // over is the animator.
+            deadline = Time.realtimeSinceStartup + 5f;
+            while (targetAnimator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
+            yield return null;
+
             Assert.AreEqual(0f, targetRect.anchoredPosition.x, 0.01f,
                 "the recoil never carried the target back to its mark");
 

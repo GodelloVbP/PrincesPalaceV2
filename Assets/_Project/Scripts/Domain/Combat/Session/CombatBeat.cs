@@ -40,16 +40,22 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // THE ONE FIELD THIS CLASS DID NOT CARRY UNTIL THE POPUP NEEDED IT.
         //
-        // FightSession never sets this -- it stays Physical (the enum's own
-        // zero value) for every beat FightSession itself records, exactly as
-        // it always implicitly was. It is set from OUTSIDE, in
-        // FightController.AfterResolution, the one place every drained batch
-        // of beats already passes through: that call already has
+        // FILLED FROM OUTSIDE FOR NEARLY EVERY BEAT, in
+        // FightController.AfterResolution -- the one place every drained
+        // batch of beats already passes through: that call already has
         // FightSession.ActorAttackType(beat.Actor) on hand (FightHudModel's
         // detail-card label reads the very same method), so painting it onto
         // each beat costs one loop rather than a second recording path
         // threaded through every RecordBeatAmount call site inside
-        // FightSession's own several files.
+        // FightSession's own several files. Everything FightSession records
+        // through BeginBeat leaves it at Physical (the enum's own zero) until
+        // that loop runs, exactly as it always implicitly did.
+        //
+        // THE ONE EXCEPTION IS A BEAT WITH NO ACTOR TO ASK. A status tick
+        // declares its element from the status itself, in Domain, because
+        // there is nobody whose attack type could answer for it -- see
+        // DeclareDamageType and PaintActorDamageType below for which of the
+        // two wins.
         //
         // A caster's OWN type, not the packet's -- a fixed-damage skill that
         // authors a type its caster does not carry (frost_flare's Ice half on
@@ -58,7 +64,51 @@ namespace PrincesPalace.Domain.Combat.Session
         // acted and who was hit, so that finer distinction would need the
         // beat to carry the skill too -- a bigger seam than a popup justifies
         // today.
+        //
+        // WRITTEN THROUGH ONE OF THE TWO METHODS BELOW, never assigned at a
+        // call site. Which of them wins is a precedence rule, and a bare
+        // `beat.DamageType = x` is how a precedence rule gets lost.
         public DamageType DamageType;
+
+        private bool _damageTypeDeclared;
+
+        // THE ACTOR'S OWN ATTACK TYPE, painted over every drained beat by
+        // FightController.AfterResolution -- and IGNORED for a beat that has
+        // already declared its own element.
+        //
+        // The precedence is in the name because the caller is a loop over
+        // every beat in a batch and cannot reasonably ask, per beat, which
+        // kind it is holding. A damage-over-time tick is the case that needs
+        // it: the tick has no actor at all (FightSession.Riders records it
+        // with Actor = null -- nobody is credited for it, the same fact
+        // RecordUnattributedDamage states about the ledger), so an
+        // unconditional paint would ask ActorAttackType(null), get nothing,
+        // and fall through to Physical -- colouring a poison tick's flash and
+        // popup like a sword blow.
+        //
+        // TAKES THE NULLABLE, and owns the fallback. `fromActor` is null for
+        // an actor with neither a kit attack type nor an authored enemy
+        // attackType, and for no actor at all; both mean "nothing elemental
+        // was swung here", which is what Physical has always meant for a beat
+        // FightSession never touched. Keeping the `?? Physical` here rather
+        // than at the call site is what stops a second caller inventing a
+        // different answer for the same absence.
+        public void PaintActorDamageType(DamageType? fromActor)
+        {
+            if (_damageTypeDeclared) return;
+
+            DamageType = fromActor ?? DamageType.Physical;
+        }
+
+        // THE BEAT'S OWN ELEMENT, for damage with no actor to read one off --
+        // a status tick naming StatusEffects.ElementOf. Outranks the paint
+        // above from the moment it is called. Pinned from both sides by
+        // CombatBeatTests.ADeclaredDamageTypeSurvivesTheActorPaint.
+        public void DeclareDamageType(DamageType type)
+        {
+            DamageType = type;
+            _damageTypeDeclared = true;
+        }
 
         // PHASE D1: the single-target swing or cast this beat represents was
         // DODGED — Amount stays 0 (RecordBeatAmount already no-ops for a

@@ -1381,8 +1381,14 @@ namespace PrincesPalace
             var flash = HitFlashFor(target);
             if (flash == null) return;
 
+            // AND THE ELEMENT OFF THE BEAT, for the same reason the amount is
+            // read off it: a poison tick's beat declares Poison (see
+            // CombatBeat.DeclareDamageType), and everything else carries
+            // whatever AfterResolution painted from the actor's own attack
+            // type -- which is Physical, and still flashes white, for every
+            // ordinary swing.
             if (beat.IsHealing) flash.FlashHeal();
-            else flash.Flash();
+            else flash.Flash(beat.DamageType);
         }
 
         // ---- resolving art from content ----------------------------------------

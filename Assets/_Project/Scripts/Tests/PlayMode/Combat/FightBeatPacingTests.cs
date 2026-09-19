@@ -182,6 +182,94 @@ namespace PrincesPalace.PlayModeTests
                 "the stance outran the budget");
         }
 
+        // ---- how long a struck figure reels (owner 2026-09-19) ------------------
+        //
+        // "Reeling happens way too fast: it should happen 4x as slow." The
+        // reel is three legs: StageActorAnimator's 0.055s push out, the dwell
+        // at full extent, and the spring back. The push out does NOT move --
+        // it is what puts the body where the flash and the damage number
+        // already are, and stretching it slides the impact frame off the one
+        // those two land on. The other two are each four times what they
+        // were, because "too fast" is a complaint about velocity and the
+        // spring back is the leg the eye reads as the flinch easing off.
+        //
+        // PINNED AS LITERALS, for the reason SwingSeconds above is: derived
+        // from the beat budget and the slowdown factor, these would agree
+        // with whatever those became, and what the owner asked for was two
+        // lengths.
+
+        private const float ReelPushOutSeconds = 0.055f;   // StageActorAnimator.LungeSeconds
+        private const float ReelDwellSeconds = 0.81f;      // was 0.2025
+        private const float ReelReturnSeconds = 0.64f;     // was 0.16
+
+        [Test]
+        public void TheReelDwellsForFourTimesAsLongAsItUsedTo()
+        {
+            Assert.AreEqual(ReelDwellSeconds, FightBeatPlayer.RecoilDwellSeconds, 0.001f);
+        }
+
+        [Test]
+        public void TheReelSpringsBackFourTimesAsSlowlyAsItUsedTo()
+        {
+            // THE LEG THE FIRST ATTEMPT AT THIS LEFT ALONE, which is why that
+            // attempt made the reel four times longer without making anything
+            // about it four times slower: all of its extra time was a figure
+            // standing still.
+            Assert.AreEqual(ReelReturnSeconds, FightBeatPlayer.RecoilReturnSeconds, 0.001f);
+        }
+
+        [Test]
+        public void BothReelLegsAreStatedInBeatsSoThePresetAndTheBudgetCarryThem()
+        {
+            // The dwell was 0.45 of a beat and the spring back 0.3556 of one;
+            // four times each is what these two factors are. Stated in beats
+            // rather than in seconds so a battle-speed preset scales them
+            // exactly as it scales the beat they belong to -- the property a
+            // flat 1.45f seconds constant quietly gave up.
+            Assert.AreEqual(1.8f, FightBeatPlayer.RecoilDwellBeats, 0.001f);
+            Assert.AreEqual(1.4222f, FightBeatPlayer.RecoilReturnBeats, 0.001f);
+
+            Assert.AreEqual(FightBeatPlayer.RecoilDwellSeconds,
+                FightBeatPlayer.BeatHoldSeconds * FightBeatPlayer.RecoilDwellBeats, 0.0001f);
+            Assert.AreEqual(FightBeatPlayer.RecoilReturnSeconds,
+                FightBeatPlayer.BeatHoldSeconds * FightBeatPlayer.RecoilReturnBeats, 0.0001f);
+        }
+
+        [Test]
+        public void TheWholeReelIsFourTimesTheOneTheOwnerCalledTooFast()
+        {
+            // The number the owner actually asked about: the reel end to end.
+            // The push out is deliberately not part of the multiplication, so
+            // this is 4x the old 0.4175s LESS the 3x the push out did not get
+            // -- 1.505 rather than 1.67, and the 0.165s difference is the
+            // impact frame staying exactly where it was.
+            float whole = ReelPushOutSeconds + FightBeatPlayer.RecoilDwellSeconds
+                          + FightBeatPlayer.RecoilReturnSeconds;
+
+            Assert.AreEqual(1.505f, whole, 0.001f);
+        }
+
+        [Test]
+        public void TheReelDeliberatelyOutlivesTheBeatThatCausedIt()
+        {
+            // NOT A DEFECT, AND WRITTEN DOWN SO IT CANNOT BE MISTAKEN FOR ONE.
+            // Every other timing in this file is sized to fit inside the beat
+            // budget; the reel is four times one that already nearly filled
+            // it, so a figure struck on one beat is still coming home during
+            // the next. That is what "4x as slow" costs and it is visible on
+            // purpose.
+            //
+            // WHAT STOPS IT BEING A BUG is FightBeatPlayer's own settle gate:
+            // a beat whose actor or target is still reeling waits for it
+            // before measuring a stand-off against their marks. So the reel
+            // overlaps beats it has nothing to do with, and never the one
+            // that is about to land on it.
+            Assert.Greater(FightBeatPlayer.RecoilDwellSeconds + FightBeatPlayer.RecoilReturnSeconds,
+                FightBeatPlayer.BeatHoldSeconds + FightBeatPlayer.BeatGapSeconds,
+                "the reel now fits inside its own beat; either the beat grew or the reel was " +
+                "shortened, and the comment above is stale either way");
+        }
+
         // ---- a stopped playback still reports -----------------------------------
         //
         // THE BUG THESE EXIST FOR: FightController sets _isBusy before Play and

@@ -39,6 +39,26 @@ namespace PrincesPalace.PlayModeTests
         // produce.
         private const string FormStance = "victory";
 
+        // HOW MANY FRAMES ONE ROUND OF PLAYBACK IS ALLOWED, and it is a
+        // measurement rather than a round number. It was a literal 1200 at
+        // both loops below until 2026-09-19, when the owner's "reeling should
+        // happen 4x as slow" took the reel from 0.4175s to 1.505s and
+        // FightBeatPlayer.StillReeling started holding a beat whose actor or
+        // target is still coming home from an earlier one. A round that used
+        // to play inside 1200 frames at this fixture's 12x now costs about
+        // 2350 of them (measured here: 1439 / 2349 / 1628 over the three
+        // rounds the revert test needs), so the old bound was truncating
+        // playback mid-round -- the outer loop then clicked its next turn
+        // while the fight was still busy, the click was dropped, and the
+        // revert beat was still QUEUED when the fixture gave up on it. The
+        // failure read as "the transform never expired", which it had.
+        //
+        // Sized at roughly 2.5x the measured cost rather than at the measure
+        // itself: this bound exists to turn a hang into a failing test, not
+        // to pin the reel's length, and anything that pins the reel belongs
+        // in FightBeatPacingTests where the numbers are literal.
+        private const int RoundFrameBudget = 6000;
+
         private FightController _fight;
         private FightBeatPlayer _beats;
 
@@ -132,7 +152,7 @@ namespace PrincesPalace.PlayModeTests
             // Without it, the enemy's reply later in the same round -- which
             // flashes Shawn while he is already in the ram's art -- satisfies
             // the assertion, and it did: this test passed against the bug.
-            for (int frame = 0; frame < 1200 && _fight.IsBusy; frame++)
+            for (int frame = 0; frame < RoundFrameBudget && _fight.IsBusy; frame++)
             {
                 if (NewestLineContains("becomes the"))
                 {
@@ -184,7 +204,7 @@ namespace PrincesPalace.PlayModeTests
             // whatever the turn order does with a faster or slower rat.
             for (int round = 0; round < 8 && !flashedOnExit; round++)
             {
-                for (int frame = 0; frame < 1200 && _fight.IsBusy; frame++)
+                for (int frame = 0; frame < RoundFrameBudget && _fight.IsBusy; frame++)
                 {
                     if (ExitLineIsNewest())
                     {

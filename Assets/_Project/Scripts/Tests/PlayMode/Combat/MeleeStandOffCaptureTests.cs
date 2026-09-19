@@ -445,6 +445,34 @@ namespace PrincesPalace.PlayModeTests
             // one run and 74 on the next with nothing changed between them.
             // The contract is about where the attacker stops relative to
             // where the target STANDS.
+            //
+            // AT REST NOW HAS TO BE WAITED FOR, not assumed. Both tests below
+            // play their beats back to back in a loop, and since 2026-09-19 a
+            // struck figure's reel runs 1.505s (FightBeatPlayer's
+            // RecoilDwellSeconds plus RecoilReturnSeconds) and deliberately
+            // outlives the beat that caused it -- so the target of the
+            // PREVIOUS beat is still shoved RecoilDistance back when the next
+            // one opens, and reading its edges there measures the recoil
+            // rather than the stand-off. Every beat after the first reported
+            // exactly 45px of phantom daylight before this wait existed.
+            //
+            // THE SAME WAIT THE GAME MAKES, one step earlier. FightBeatPlayer
+            // holds a beat whose actor or target is still reeling before it
+            // measures either of their marks (see StillReeling), so
+            // production never lands a blow in that daylight either. This
+            // fixture cannot lean on that gate, because it reads the target's
+            // edges BEFORE handing the beat over -- so it waits for the same
+            // condition itself rather than photographing a body mid-flinch
+            // and calling the difference a stand-off.
+            float restDeadline = Time.realtimeSinceStartup + 6f;
+            while (Time.realtimeSinceStartup < restDeadline
+                   && (target.Animator.IsPlaying || actor.Animator.IsPlaying
+                       || Vector2.Distance(target.Slot.anchoredPosition, target.Animator.Mark) > 0.01f
+                       || Vector2.Distance(actor.Slot.anchoredPosition, actor.Animator.Mark) > 0.01f))
+            {
+                yield return null;
+            }
+
             var targetBox = EdgesOf(target);
             float targetNearMass = actorApproachesFromTheLeft ? targetBox.MassLeft : targetBox.MassRight;
             float targetNearTight = actorApproachesFromTheLeft ? targetBox.TightLeft : targetBox.TightRight;

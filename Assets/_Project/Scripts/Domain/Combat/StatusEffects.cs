@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat
 {
@@ -714,6 +715,48 @@ namespace PrincesPalace.Domain.Combat
         // as above deliberately, so the two can never name different gifts.
         public static int EmpowermentWorth(CombatantState attacker) =>
             attacker?.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Empowered)?.Magnitude ?? 0;
+
+        // WHAT A DAMAGING STATUS'S DAMAGE IS MADE OF, and null for the ten
+        // that deal none.
+        //
+        // Keyed on the status TYPE because that is what the element is a
+        // property of: a Poison tick is poison damage whoever applied it and
+        // whatever they happen to swing. It is emphatically NOT the holder's
+        // or the source's attack type -- the source is usually long dead by
+        // the time a tick lands, which is the same fact
+        // FightSession.Riders' RecordUnattributedDamage already states about
+        // the ledger.
+        //
+        // ONE HOME, because two things read it and they must not disagree:
+        // the tick's damage popup and the tick's hit flash both colour
+        // themselves through FightHudPalette.ForDamageType. A second
+        // damaging status (a burn, a bleed) gets both for free by answering
+        // here; nothing in the view learns its name.
+        //
+        // NOT A CONTENT FIELD. StatusEffectType is a Domain enum and skills
+        // .json only names members of it, so there is no Raw*Entry to grow
+        // and nothing for docs/CONTENT_SCHEMA.md (which is generated from the
+        // types) to say about this.
+        //
+        // NULLABLE rather than defaulting to Physical: "this status deals no
+        // damage" and "this status deals untyped damage" are different
+        // answers, and a caller that has to tell them apart should not have
+        // to know that Physical is the enum's zero.
+        public static DamageType? ElementOf(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison: return DamageType.Poison;
+
+                // Everything else on the list changes a number, skips a turn
+                // or absorbs a hit. None of them deal damage of their own, so
+                // none of them have an element to report -- and a new member
+                // that DOES has to be added here or
+                // StatusEffectsTests.EveryStatusTypeAnswersElementOf fails
+                // rather than silently painting its ticks Physical red.
+                default: return null;
+            }
+        }
 
         public readonly struct TickReport
         {

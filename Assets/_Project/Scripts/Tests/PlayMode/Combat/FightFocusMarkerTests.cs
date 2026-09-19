@@ -206,7 +206,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(Node("EnemyHitArea0").transform, Marker.Target,
                 "with nothing hovered, the marker sits on the figure Submit would land on");
 
-            yield return Move(1f);
+            // STICK DOWN, not up, since 2026-09-19: the pad's vertical axis is
+            // negated at Target depth (FightController.Input's
+            // IFightNavigationTarget.MoveFocus -- the owner's "up is one slot
+            // deeper"), so the press that walks the marker off the near end of
+            // a two-enemy rack is the one that used to sit still.
+            yield return Move(-1f);
 
             Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "and a stick press walks it along the rack");

@@ -5,6 +5,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -354,6 +355,15 @@ namespace PrincesPalace.Domain.Tests
             // AUDIT #13 again, from the other side: turn-start lines are
             // decided after the beat committed. Written straight to the
             // immediate list they land OLDER than the blow they follow.
+            //
+            // "NO BEAT IS INVENTED FOR A RIDER" WAS THE OLD CONTRACT AND IS
+            // NOT THIS ONE. A poison tick now opens its own beat (owner
+            // 2026-09-19, "poison damage or DoTs are not clear") precisely so
+            // the stage can play the hurt pose, the tinted flash and the
+            // number that the log line has always described on its own. What
+            // has not changed is the half this test exists for: nothing
+            // reaches the immediate list, so no turn-start line can land
+            // older than the blow it follows.
             var hero = Hero();
             StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
             var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
@@ -361,8 +371,102 @@ namespace PrincesPalace.Domain.Tests
 
             session.ExecuteAttack(encounter.Enemies[0]);
 
-            Assert.AreEqual(1, session.DrainBeats().Count, "no beat is invented for a rider");
+            var beats = session.DrainBeats();
+            Assert.AreEqual(2, beats.Count, "the swing, then the poison tick that opened the next turn");
+            Assert.IsTrue(beats[1].Messages.Any(m => m.Contains("poison damage")),
+                "the tick's own line belongs to the tick's own beat");
             CollectionAssert.IsEmpty(session.DrainImmediateMessages());
+        }
+
+        // ---- a tick the stage can see (owner 2026-09-19) ---------------------
+        //
+        // A damage-over-time tick was log-only until now: it went through
+        // StatusEffects.Tick and RecordUnattributedDamage without ever
+        // opening a beat, so the victim played no hurt pose, no flash and no
+        // damage number. These pin the shape of the beat it opens instead --
+        // the shape is what carries the whole reaction, because playback has
+        // exactly one path and the tick now uses it.
+
+        [Test]
+        public void APoisonTickRecordsABeatAimedAtItsVictim()
+        {
+            var hero = Hero();
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
+            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            var tick = session.DrainBeats().Last();
+
+            Assert.AreSame(hero, tick.Target, "the poisoned combatant is what the tick lands on");
+            Assert.IsNull(tick.Actor, "nobody is credited for a tick -- see SettleDeath's KillCredit.Nobody");
+            Assert.AreEqual(DamageType.Poison, tick.DamageType);
+            Assert.AreEqual(7, tick.Amount, "the magnitude, which is what the log line already prints");
+            Assert.IsFalse(tick.IsHealing);
+            Assert.AreEqual(StageApproach.Hold, tick.Approach, "nothing crosses the stage for a tick");
+            Assert.AreEqual(FightSession.Stances.Hurt, tick.Stances[hero]);
+        }
+
+        [Test]
+        public void APoisonTicksBeatShowsTheHealthGoingDownRatherThanAlreadyGone()
+        {
+            // The PreSnapshot has to predate the damage the beat describes,
+            // or the bar drops the instant the beat opens instead of on the
+            // frame the tick lands. StatusEffects.Tick spends the health
+            // before anything can decide to record a beat, which is why
+            // TickStatuses snapshots ahead of it.
+            var hero = Hero();
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Poison, 7, 3);
+            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
+
+            int beforeTheSwing = hero.CurrentHealth;
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            var tick = session.DrainBeats().Last();
+
+            Assert.AreEqual(beforeTheSwing, tick.PreSnapshot[hero].Health);
+            Assert.AreEqual(beforeTheSwing - 7, tick.Snapshot[hero].Health);
+        }
+
+        [Test]
+        public void ARegenTickIsItsOwnHealingBeatAndDoesNotFlinchTheHolder()
+        {
+            // The heal flash falls out of the same recorder: FlashOne branches
+            // on IsHealing, and RecoilOne/Punch both skip a target that is its
+            // own actor -- which is why a regen tick names the holder as the
+            // actor where a poison tick names nobody.
+            var hero = Hero();
+            hero.CurrentHealth = 100;
+            StatusEffects.Apply(hero.Statuses, StatusEffectType.Regen, 5, 3);
+            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            var tick = session.DrainBeats().Last();
+
+            Assert.IsTrue(tick.IsHealing);
+            Assert.AreEqual(5, tick.Amount);
+            Assert.AreSame(hero, tick.Target);
+            Assert.AreSame(hero, tick.Actor, "a body does not flinch away from its own mending");
+            CollectionAssert.IsEmpty(tick.Stances, "there is no being-mended drawing to wear");
+        }
+
+        [Test]
+        public void ATickWithNothingToReportOpensNoBeatAtAll()
+        {
+            // The control. Every other fight in the game must be beat-for-beat
+            // what it was before the tick learned to record one, or this pass
+            // changed the pacing of combat rather than the clarity of poison.
+            var hero = Hero();
+            var (session, _, encounter) = Fight(hero, null, Foe("Tank", 1000));
+            encounter.GrantExtraTurn(hero);
+
+            session.ExecuteAttack(encounter.Enemies[0]);
+
+            Assert.AreEqual(1, session.DrainBeats().Count, "the swing, and nothing invented after it");
         }
 
         // ---- WHAT AN EXTRA TURN RE-PAYS: decided, AUDIT #113 ------------------

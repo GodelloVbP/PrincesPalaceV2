@@ -549,7 +549,26 @@ namespace PrincesPalace
                 // waited its own guess at that number would drift the day it
                 // changed. Nothing is moving on the overwhelming majority of
                 // beats, so this costs one delegate call.
-                while (FormationIsMoving != null && FormationIsMoving()) yield return null;
+                //
+                // AND NEITHER OF THE TWO FIGURES THIS BEAT IS ABOUT IS STILL
+                // REELING FROM AN EARLIER ONE. One gate rather than two
+                // consecutive whiles, because there is one claim being made
+                // here and everything below depends on all of it: the bodies
+                // this beat measures are standing on the marks it measures
+                // them by. See StillReeling for what a second attacker used
+                // to land on.
+                //
+                // BEFORE PaintVitals, so the numbers on screen through the
+                // settle are still the ones the last blow left -- the reel
+                // being waited out belongs to that blow, and painting the
+                // incoming beat's pre-snapshot over it would move a health
+                // bar for a hit that has not opened yet.
+                while ((FormationIsMoving != null && FormationIsMoving()) || StillReeling(beat))
+                {
+                    yield return null;
+                }
+
+                PruneReeling();
 
                 PaintVitals?.Invoke(beat.PreSnapshot);
 
@@ -1303,8 +1322,91 @@ namespace PrincesPalace
 
             float dx = target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
             var offset = new Vector2(dx, 0f);
-            float hold = Scaled(BeatHoldSeconds) * 0.45f;
-            animator.Play(offset, hold);
+
+            // THE RETURN LEG IS THIS BEAT'S, not every mover's. Passed as an
+            // argument rather than by raising StageActorAnimator.ReturnSeconds
+            // -- that constant is the recovery for a lunge, a charge and a
+            // walk-in as well, and a reel four times slower is a statement
+            // about being HIT, not about coming home from anything.
+            animator.Play(offset, Scaled(RecoilDwellSeconds), returnSeconds: RecoilReturnSeconds);
+
+            // AND A LATER BEAT AIMED AT THIS BODY HAS TO WAIT FOR IT -- see
+            // StillReeling.
+            if (!_reeling.Contains(animator)) _reeling.Add(animator);
+        }
+
+        // WHOEVER IS STILL COMING HOME FROM A BLOW.
+        //
+        // Pruned rather than cleared per beat, because the reel is 1.505s and
+        // a beat is 0.75s: a figure struck on beat 1 is still reeling during
+        // beat 3, so a register that only remembered the previous beat would
+        // forget it exactly when it still mattered. Nothing accumulates --
+        // PruneReeling drops an animator the frame it stops moving, and the
+        // list is at most one entry per combatant on the stage.
+        private readonly List<StageActorAnimator> _reeling = new List<StageActorAnimator>();
+
+        // WHETHER THIS BEAT IS ABOUT TO MEASURE A BODY THAT IS NOT WHERE ITS
+        // MARK SAYS IT IS.
+        //
+        // THE PROBLEM THIS EXISTS FOR. TravelFor measures the stand-off
+        // against both figures' MARKS -- it has to, see its own header -- so
+        // it silently assumes the bodies are standing on them. At a 0.4175s
+        // reel that was true by the time the next beat opened. At 1.505s it
+        // is not: the second and third attacker of a round arrive at a target
+        // still shoved RecoilDistance further away than the stand-off aimed
+        // at, and the blow lands in 45px of daylight. The one picture this
+        // whole stand-off mechanism exists to produce is a blow landing ON
+        // something.
+        //
+        // THE ACTOR AND THE TARGET, NOT THE WHOLE STAGE. Those two are what
+        // TravelFor measures, so those two are what the claim is about. A
+        // THIRD figure still easing home from its own hit while this blow
+        // lands somewhere else is not a defect -- it is what a reel four
+        // times slower than the beat looks like, and it was asked for.
+        //
+        // THE COST, MEASURED. A beat's tail after the impact instant is about
+        // 0.625s (hit-stop plus SettleAfter plus BeatGapSeconds), so a reel of
+        // 1.505s has about 0.88s left when the very next beat opens, 0.255s
+        // when the one after that does, and nothing by the third. This gate
+        // therefore pays up to 0.88s, and only when a blow is aimed at a body
+        // that was just hit -- focused fire and sweeps, not every beat.
+        //
+        // Widening it to the whole stage would be the stronger claim and pays
+        // that 0.88s on EVERY damaging beat after the first: about 4.4s on a
+        // six-beat round, which more than doubles it. If that is wanted
+        // anyway, this predicate is the one place to change.
+        //
+        // WAIT, RATHER THAN HURRY THE SPRING-BACK. Cutting the return short
+        // when the next beat needs the mark would make the reel's length
+        // depend on what happens after it, so the same blow would read
+        // differently in a duel and in a crowd. Waiting costs pacing and says
+        // so; it does not cost the reel its shape.
+        private bool StillReeling(CombatBeat beat)
+        {
+            if (beat == null || _reeling.Count == 0) return false;
+
+            return IsReeling(beat.Actor) || IsReeling(beat.Target);
+        }
+
+        private bool IsReeling(CombatantState who)
+        {
+            if (who == null) return false;
+
+            var animator = AnimatorFor?.Invoke(who);
+
+            // BOTH HALVES. IsPlaying alone would also be true of a figure
+            // mid-LUNGE, and _reeling alone would still name one whose reel
+            // finished a frame ago.
+            return animator != null && animator.IsPlaying && _reeling.Contains(animator);
+        }
+
+        private void PruneReeling()
+        {
+            for (int i = _reeling.Count - 1; i >= 0; i--)
+            {
+                var animator = _reeling[i];
+                if (animator == null || !animator.IsPlaying) _reeling.RemoveAt(i);
+            }
         }
 
         // THE THREE TRAVEL FRACTIONS ARE GONE -- 0.35/0.70 here, 0.78 on
@@ -1327,6 +1429,58 @@ namespace PrincesPalace
         // was ever making here.
 
         private const float RecoilDistance = 45f;
+
+        // ---- how long a struck figure reels ----------------------------------
+        //
+        // "Reeling happens way too fast: it should happen 4x as slow" (owner,
+        // 2026-09-19). A reel is three legs and the slowdown is spread over
+        // the two that are MOTION:
+        //
+        //   PUSH OUT, StageActorAnimator.LungeSeconds, 0.055s -- UNCHANGED.
+        //   It is what puts the body where the flash and the damage number
+        //   already are, so stretching it slides the impact frame off the
+        //   one those two land on. The blow still connects as hard as it did.
+        //
+        //   DWELL, below, 0.2025s -> 0.81s. The motionless beat at full
+        //   extent.
+        //
+        //   SPRING BACK, 0.16s -> 0.64s. The recovery, and the leg the first
+        //   attempt at this left alone -- which is why that attempt made the
+        //   reel four times LONGER without making anything about it four
+        //   times SLOWER. All of its extra time was a figure standing still,
+        //   and "too fast" is a complaint about velocity. This is the leg the
+        //   eye actually reads as the flinch easing off.
+        //
+        // IN BEATS, NOT IN SECONDS, and that is the other half of the fix.
+        // The dwell was always a fraction of BeatHoldSeconds; replacing it
+        // with a flat 1.45f took the reel out of the beat's system of units,
+        // so the preset and the beat budget could move underneath it. Both
+        // legs are now multiples of the beat, so the reel is 3.2 beats long
+        // at every speed and stays that way if the budget ever moves.
+        //
+        // NOT 4x THE DISTANCE. RecoilDistance above is unchanged: a body
+        // shoved four times as far reads as a knockback, which is a different
+        // move from a flinch.
+        private const float ReelSlowdown = 4f;
+
+        // The dwell was 0.45 of a beat.
+        public const float RecoilDwellBeats = 0.45f * ReelSlowdown;
+
+        // The spring-back was StageActorAnimator's flat ReturnSeconds, 0.16s,
+        // which is this much of a 0.45s beat. Written as the arithmetic
+        // rather than as 1.4222f so the number cannot be read as arbitrary:
+        // it is the old constant, in beats, times four.
+        public const float RecoilReturnBeats = (0.16f / BeatHoldSeconds) * ReelSlowdown;
+
+        // THE AUTHORED LENGTHS, before the preset. 0.81s and 0.64s.
+        //
+        // Neither is scaled here, and the two are handed to the animator
+        // through different doors because the animator already treats them
+        // differently: holdSeconds arrives pre-scaled, every tween duration
+        // arrives raw and is scaled inside PlayRoutine. RecoilOne therefore
+        // scales the dwell and does not scale the return -- see its call.
+        public const float RecoilDwellSeconds = BeatHoldSeconds * RecoilDwellBeats;
+        public const float RecoilReturnSeconds = BeatHoldSeconds * RecoilReturnBeats;
 
         // How long the walk in takes. Long enough to read as a decision and
         // short enough that a fight full of them does not become a parade.

@@ -61,15 +61,24 @@ namespace PrincesPalace.PlayModeTests
         // Time.captureDeltaTime below.
         private const float SampleSeconds = 1f / 30f;
 
-        // 1.4s: past the beat's own settle by a wide margin, which is the half
-        // of the pilot's four questions ("does the actor return cleanly to
-        // formation?") that a shorter window cannot answer.
+        // 1.4s: past the swinger's own settle by a wide margin, which is the
+        // half of the pilot's four questions ("does the actor return cleanly
+        // to formation?") that a shorter window cannot answer.
         //
-        // The window is longer than the fight leaves free. Measured, this beat
-        // opens at frame 0, is back on its mark by frame 14 and the NEXT enemy
-        // turn opens at frame 24 -- so a 1.2s window that simply let the fight
-        // run would photograph a second swing. TheBeat stops playback once the
-        // stage is at rest instead; see its Flush call.
+        // AND IT STAYS 42 FRAMES, deliberately, even though since 2026-09-19
+        // the strip no longer reaches the end of the STRUCK figure's reel: a
+        // hit figure dwells 0.81s at full extent and takes another 0.64s to
+        // spring home (FightBeatPlayer's RecoilDwellSeconds and
+        // RecoilReturnSeconds, the owner's "4x as slow"), which lands 45
+        // frames past the impact. Frame-for-frame comparability with every
+        // strip taken before it is the stated reason this fixture names one
+        // fixed subject at all, and a longer strip would forfeit that for
+        // nine more frames of a figure easing home. TheBeat's settle tail
+        // carries the return instead, and asserts it.
+        //
+        // The window is longer than the fight leaves free. TheBeat stops
+        // playback the moment the SWINGER is done instead of relying on a
+        // short window; see its Flush call.
         private const int FrameCount = 42;
 
         // A slot is back at its mark or it is not; the tween assigns the home
@@ -363,7 +372,7 @@ namespace PrincesPalace.PlayModeTests
                 // tell a figure that settled from one whose next beat happened
                 // to start it moving again.
                 if (rec.StoppedAt < 0 && rec.ImpactFrames.Count > 0 && i > rec.ImpactFrames[0]
-                    && AtRest(rec, sample))
+                    && SwingOver(rec, sample))
                 {
                     _player.Flush();
                     rec.StoppedAt = i;
@@ -373,14 +382,82 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Time.captureDeltaTime = 0f;
+
+            // AND THEN PAST THE STRIP, until the figure the witch hit is back
+            // on its mark.
+            //
+            // WHY A TAIL AND NOT A LONGER STRIP. The reel runs 1.505s from
+            // the impact frame (FightBeatPlayer's RecoilDwellSeconds plus
+            // RecoilReturnSeconds), which at this fixture's pinned 1/30
+            // capture step is 45 frames AFTER the impact -- so a strip long
+            // enough to contain it is about 51, and the 42 here is deliberate:
+            // frame-for-frame comparability with every strip taken before is
+            // the stated reason this fixture names one fixed subject at all,
+            // and nine more frames of a figure easing home buys nothing to
+            // look at.
+            //
+            // IT IS A COUNTABLE NUMBER OF FRAMES NOW, which it was not when
+            // the reel's dwell was a WaitForSeconds: that ignored the pinned
+            // captureDeltaTime the tweens either side of it obeyed, so the
+            // struck figure sat 45px off its mark for all 72 frames of a 2.4s
+            // strip and no frame count could have contained it. The dwell
+            // steps by Time.deltaTime like everything else on the beat clock
+            // as of 2026-09-19, so the tail below is bounded rather than a
+            // race -- the deadline is a backstop, not the mechanism.
+            //
+            // APPENDED TO THE RECORDING BUT NOT TO THE STRIP: onFrame is not
+            // called here, so the pictures on disk are exactly the 42 the
+            // capture has always written, and only the assertions can see the
+            // tail. Playback was flushed back at SwingOver, so nothing new can
+            // land during it.
+            float settleDeadline = Time.realtimeSinceStartup + 6f;
+            while (true)
+            {
+                var tail = Read(rec);
+                rec.Samples.Add(tail);
+                rec.EnemyTravelPeak = Mathf.Max(rec.EnemyTravelPeak,
+                    Vector2.Distance(tail.EnemyAt, rec.EnemyAnimator.Home));
+                rec.PartyTravelPeak = Mathf.Max(rec.PartyTravelPeak,
+                    Vector2.Distance(tail.PartyAt, rec.PartyAnimator.Home));
+
+                if (AtRest(rec, tail) || Time.realtimeSinceStartup >= settleDeadline) break;
+                yield return null;
+            }
         }
 
         // The witch is posed idle again and both figures are standing on their
         // own marks -- the beat is over as far as the stage is concerned.
         private static bool AtRest(Recording rec, Sample s) =>
-            s.EnemyStanceSprite == rec.IdleSprite
-            && Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home) <= MarkTolerance
+            SwingOver(rec, s)
             && Vector2.Distance(s.PartyAt, rec.PartyAnimator.Home) <= MarkTolerance;
+
+        // THE SWINGER IS DONE, WHICH IS NOT THE SAME AS THE STAGE BEING AT
+        // REST -- and since 2026-09-19 the two are far apart. A struck figure
+        // reels for 1.505s (FightBeatPlayer's RecoilDwellSeconds plus
+        // RecoilReturnSeconds, the owner's "4x as slow"), and the witch's
+        // NEXT turn opens about 1.2s after the last one, so the party member
+        // she hit is still shoved back when she winds up again: waiting for
+        // the whole stage before calling Flush meant the window could never
+        // hold exactly one blow, whatever its length. Measured on this
+        // fixture, a 72-frame window stopped at rest photographed her
+        // swinging twice, at frames 6 and 42.
+        //
+        // NOT THE SAME COMPLAINT THE GAME HAS, and the difference is worth
+        // stating so this is not read as one. FightBeatPlayer holds a beat
+        // whose own actor or target is still reeling (StillReeling), so no
+        // blow in production is measured against a displaced body. What this
+        // fixture needs is narrower and nothing production owes it: exactly
+        // ONE blow in the window, whoever the next one would land on.
+        //
+        // So the two claims are separated. This one -- the witch idle, back
+        // on her own mark -- is what stops the fight, because it is the last
+        // frame of HER beat and nothing after it belongs to the pilot.
+        // AtRest above still carries the claim the fixture exists to make,
+        // that the struck figure comes home too, and SettledFrame still looks
+        // for it; the reel just lands a good 30 frames later than it used to.
+        private static bool SwingOver(Recording rec, Sample s) =>
+            s.EnemyStanceSprite == rec.IdleSprite
+            && Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home) <= MarkTolerance;
 
         // The first frame after the blow on which that is true. -1 means it
         // never happened inside the window.
@@ -399,7 +476,12 @@ namespace PrincesPalace.PlayModeTests
         // A compact per-frame picture of the whole window, so a failure says
         // WHAT the stage was doing rather than only that a count was wrong.
         // "idle" is the drawing the witch wore before the beat opened; the
-        // number after each frame is how far she stood from her mark.
+        // two numbers after it are how far SHE stood from her mark and how
+        // far the figure she hit stood from ITS mark. The second one was
+        // added 2026-09-19: with the reel four times longer than it was, the
+        // struck figure is the half of the stage that decides whether this
+        // window is long enough, and a timeline that only showed the swinger
+        // could not say why a settle never arrived.
         private static string Timeline(Recording rec)
         {
             var line = new StringBuilder();
@@ -410,6 +492,8 @@ namespace PrincesPalace.PlayModeTests
                     .Append(s.EnemyStanceSprite == rec.IdleSprite ? "idle" : s.EnemyStanceSprite)
                     .Append('/')
                     .Append(Mathf.RoundToInt(Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home)))
+                    .Append('/')
+                    .Append(Mathf.RoundToInt(Vector2.Distance(s.PartyAt, rec.PartyAnimator.Home)))
                     .Append('/')
                     .Append(s.PopupsBusy)
                     .Append(' ');
@@ -436,7 +520,8 @@ namespace PrincesPalace.PlayModeTests
             int settled = SettledFrame(rec);
             Assert.GreaterOrEqual(settled, 0,
                 "the stage never returned to rest inside the window: the witch is still posed or a figure " +
-                "is parked off its mark, which is the leak StageActorAnimator.ResetToHome exists to prevent");
+                "is parked off its mark, which is the leak StageActorAnimator.ResetToHome exists to prevent. " +
+                "Timeline: " + Timeline(rec));
 
             var last = rec.Samples[settled];
             Assert.AreEqual(rec.EnemyAnimator.BaseScale.x, last.EnemyScale.x,

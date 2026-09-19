@@ -131,6 +131,19 @@ namespace PrincesPalace.PlayModeTests
             // ONE HANDLE, NOT TWO, read off what a second live PlayBeats
             // would leave behind rather than off a field no test can see: the
             // figure back on its mark, and every popup back in the pool.
+            //
+            // WAITED FOR, NOT COUNTED IN FRAMES, since 2026-09-19: a struck
+            // figure's reel now runs 1.505s (FightBeatPlayer's
+            // RecoilDwellSeconds plus RecoilReturnSeconds) and deliberately
+            // outlives the beat that caused it, so two frames after playback
+            // ends is mid-reel rather than at rest. What this still proves is
+            // the same thing it always did -- ONE animator is driving the
+            // slot, and it finishes at home -- because a second, superseded
+            // handle would either fight this one or park the figure somewhere
+            // else when this one is done. In fact the wait strengthens it: a
+            // superseded handle has a whole extra second to betray itself.
+            deadline = Time.realtimeSinceStartup + 5f;
+            while (animator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
             yield return null;
             yield return null;
 

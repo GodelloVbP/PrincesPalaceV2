@@ -93,13 +93,26 @@ namespace PrincesPalace.PlayModeTests
             yield return PressSubmit(); // ATTACK at Root skips straight to targeting
             Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest, "fixture: nothing is hovered at a fresh target pick");
 
-            // PICK A TARGET WITH MOVE: Down at target depth maps to
-            // MoveFocus(1) ("next"), landing on the first living enemy from
-            // no hover (NavigationInputModule.ProcessFight's own vertical
-            // sign mapping; FightGamepadNavigationTests' pinned "a first
-            // next press from no hover lands on the first living enemy").
-            yield return MoveDown();
-            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest, "one Down at target depth should hover the first living enemy");
+            // PICK A TARGET WITH MOVE, TWO UPS NOT ONE (2026-09-19, the
+            // gate's own bug, fixed today): CycleTargetFromPad now treats a
+            // fresh, nothing-hovered pick as if enemy 0 were ALREADY hovered
+            // -- the marker sits there and Submit would hit it
+            // (FightFocusMarkerTests' own "the marker sits on the figure
+            // Submit would land on") -- so the first Up steps one slot DEEPER
+            // from that implicit 0, to enemy 1, rather than landing on 0
+            // itself (FightGamepadNavigationTests'
+            // FirstPressOnAFreshTargetPickTreatsEnemyZeroAsHovered pins the
+            // same rule directly). Enemy 1 is not reachable by a melee ATTACK
+            // (FightGamepadNavigationTests' own header on CanReachEnemy), so
+            // this round needs a SECOND Up to wrap back to the reachable
+            // front enemy before it can confirm anything.
+            yield return MoveUp();
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "one Up at target depth should hover one slot deeper than the implicit enemy 0");
+
+            yield return MoveUp();
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "a second Up wraps back to the first living enemy, the one ATTACK can actually reach");
 
             yield return PressSubmit(); // confirm the attack on the hovered enemy
 

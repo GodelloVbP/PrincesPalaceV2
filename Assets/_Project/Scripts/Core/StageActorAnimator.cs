@@ -562,7 +562,15 @@ namespace PrincesPalace
         // see PlayRoutine. Zero by default and only ever passed for a
         // single-drawing actor's lunge, so every other caller in the game
         // moves byte-for-byte as it did before the parameter existed.
-        public void Play(Vector2 offset, float holdSeconds, float outSeconds = -1f, float leadSeconds = 0f)
+        //
+        // returnSeconds < 0 means the shared ReturnSeconds, which is what
+        // every lunge, charge and walk-in still takes. A RECOIL passes its
+        // own, four times longer (FightBeatPlayer.RecoilReturnSeconds): being
+        // hit recovers slowly, coming home from a swing does not, and raising
+        // the shared constant to say the first would have said the second
+        // too.
+        public void Play(Vector2 offset, float holdSeconds, float outSeconds = -1f, float leadSeconds = 0f,
+                         float returnSeconds = -1f)
         {
             if (!isActiveAndEnabled)
             {
@@ -579,7 +587,7 @@ namespace PrincesPalace
                 ApplyStretch(0f);
             }
 
-            _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds, leadSeconds));
+            _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds, leadSeconds, returnSeconds));
         }
 
         // ---- walking to a new mark ------------------------------------------
@@ -786,7 +794,7 @@ namespace PrincesPalace
         }
 
         private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds, float outSeconds = -1f,
-                                        float leadSeconds = 0f)
+                                        float leadSeconds = 0f, float returnSeconds = -1f)
         {
             // SCALED, through the same seam SpellVfxPlayer and StageHitFlash
             // already use. This one did not, and the mismatch is visible rather
@@ -812,12 +820,29 @@ namespace PrincesPalace
 
             float outFor = outSeconds < 0f ? LungeSeconds : outSeconds;
             yield return TweenOut(from, target, FightBeatPlayer.Scaled(outFor));
-            if (holdSeconds > 0f)
-            {
-                yield return new WaitForSeconds(holdSeconds);
-            }
 
-            yield return TweenBack(target, Vector2.zero, FightBeatPlayer.Scaled(ReturnSeconds));
+            // STEPPED BY Time.deltaTime, NOT WaitForSeconds, and the two are
+            // not interchangeable here.
+            //
+            // The tweens either side of this hold step by deltaTime, so under
+            // a pinned Time.captureDeltaTime -- which is how every capture
+            // fixture in this project records a strip -- they advance exactly
+            // one recorded frame per frame. A WaitForSeconds does not: it is
+            // measured against the engine's own clock, so a hold long enough
+            // to matter parks the figure mid-move for whole strips while the
+            // frames tick past. The struck figure sat 45px off its mark for
+            // all 72 frames of a 2.4s strip that way, and no frame count
+            // would have contained it, because the answer depended on how
+            // fast the machine rendered.
+            //
+            // One clock for the whole move is also what lets the reel's dwell
+            // be stated in beats (FightBeatPlayer.RecoilDwellBeats) and
+            // believed: the preset scales the caller's number, and this steps
+            // through it at the same rate everything else on the beat does.
+            for (float t = 0f; t < holdSeconds; t += Time.deltaTime) yield return null;
+
+            float backFor = returnSeconds < 0f ? ReturnSeconds : returnSeconds;
+            yield return TweenBack(target, Vector2.zero, FightBeatPlayer.Scaled(backFor));
             SetTravel(Vector2.zero);
             _running = null;
         }

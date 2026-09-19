@@ -195,6 +195,22 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(_fight.IsBusy, "playback never finished");
             Assert.Greater(travelled, 1f,
                 "the attacker never left its mark, so a single-drawing swing showed nothing at all");
+
+            // PAST THE REEL, not merely past playback. The enemy's reply
+            // recoils this same figure, and since 2026-09-19 that reel runs
+            // 1.505s (FightBeatPlayer's RecoilDwellSeconds plus
+            // RecoilReturnSeconds) and outlives the beat it belongs to, so
+            // "IsBusy went false" no longer means "the stage is at rest". The
+            // claim being made is still that the figure ends up home rather
+            // than parked, which is what the next round needs -- and which
+            // the next round no longer has to take on trust, because the beat
+            // player's settle gate holds a beat until the figures it measures
+            // have arrived. This asserts the arriving; that gate is what
+            // consumes it.
+            deadline = Time.realtimeSinceStartup + 5f;
+            while (animator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
+            yield return null;
+
             Assert.Less(Vector2.Distance(slot.anchoredPosition, animator.Home), 1f,
                 "the attacker never came home, so it fights the next round from wherever it stopped");
         }

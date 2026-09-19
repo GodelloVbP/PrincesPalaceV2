@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -186,6 +187,87 @@ namespace PrincesPalace.Domain.Tests
         {
             // The view indexes what comes back without checking it.
             CollectionAssert.IsEmpty(CombatBeat.QueueToShow(null, null));
+        }
+    
+
+        // --- which damage type wins -------------------------------------------
+
+        [Test]
+        public void TheActorPaintFillsABeatThatDeclaredNothing()
+        {
+            // The ordinary path: FightController.AfterResolution paints every
+            // drained beat with its actor's own attack type, and a beat that
+            // said nothing takes it.
+            var beat = new CombatBeat();
+            Assert.AreEqual(DamageType.Physical, beat.DamageType, "the enum's zero, as it always was");
+
+            beat.PaintActorDamageType(DamageType.Fire);
+
+            Assert.AreEqual(DamageType.Fire, beat.DamageType);
+        }
+
+        [Test]
+        public void AnActorWithNoTypeOfItsOwnPaintsPhysical()
+        {
+            // ActorAttackType answers null for an actor carrying neither a kit
+            // attack type nor an authored enemy attackType -- and for no actor
+            // at all. Both mean nothing elemental was swung, which is what
+            // Physical has always meant here. The fallback lives in the paint
+            // rather than at the call site so a second caller cannot invent a
+            // different answer for the same absence.
+            var beat = new CombatBeat();
+
+            beat.PaintActorDamageType(null);
+
+            Assert.AreEqual(DamageType.Physical, beat.DamageType);
+        }
+
+        [Test]
+        public void ADeclaredDamageTypeSurvivesTheActorPaint()
+        {
+            // A damage-over-time tick has NO actor, so the paint arrives with
+            // null and would fall through to Physical -- colouring a poison
+            // tick's flash and popup like a sword blow. The tick declares its
+            // element off the status instead, and the paint may not take it
+            // back, whether it arrives empty or with a type of its own.
+            var declaredThenPaintedEmpty = new CombatBeat();
+            declaredThenPaintedEmpty.DeclareDamageType(DamageType.Poison);
+            declaredThenPaintedEmpty.PaintActorDamageType(null);
+
+            Assert.AreEqual(DamageType.Poison, declaredThenPaintedEmpty.DamageType);
+
+            var declaredThenPaintedOver = new CombatBeat();
+            declaredThenPaintedOver.DeclareDamageType(DamageType.Poison);
+            declaredThenPaintedOver.PaintActorDamageType(DamageType.Physical);
+
+            Assert.AreEqual(DamageType.Poison, declaredThenPaintedOver.DamageType);
+        }
+
+        [Test]
+        public void DeclaringAfterThePaintStillWins()
+        {
+            // Order-independent on purpose: the rule is "a declared element
+            // outranks the actor's", not "whichever ran last". Nothing records
+            // a beat in this order today, and pinning it is what keeps the
+            // rule a decision rather than an accident of the call sequence.
+            var beat = new CombatBeat();
+            beat.PaintActorDamageType(DamageType.Fire);
+            beat.DeclareDamageType(DamageType.Poison);
+
+            Assert.AreEqual(DamageType.Poison, beat.DamageType);
+        }
+
+        [Test]
+        public void DeclaringTwiceTakesTheSecondAnswer()
+        {
+            // Declaring is a statement about the beat, not a latch -- only the
+            // ACTOR paint is outranked. Nothing does this today; pinned so the
+            // rule is a decision rather than an accident of the flag's shape.
+            var beat = new CombatBeat();
+            beat.DeclareDamageType(DamageType.Poison);
+            beat.DeclareDamageType(DamageType.Fire);
+
+            Assert.AreEqual(DamageType.Fire, beat.DamageType);
         }
     }
 }

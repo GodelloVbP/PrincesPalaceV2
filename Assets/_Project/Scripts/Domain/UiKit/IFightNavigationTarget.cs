@@ -13,23 +13,33 @@ namespace PrincesPalace.Domain.UiKit
         void ConfirmFocus();
         void OnBackPressed();
 
-        // THE HORIZONTAL AXIS, and the one thing a fight does with it: step
-        // sideways off the verb column onto the actors themselves, so that
-        // "what is this monster carrying" is a question a pad can ask without
-        // first committing to ATTACK or a spell (the owner's 2026-09-19 call).
+        // THE HORIZONTAL AXIS, and what a fight does with it AT TWO
+        // DIFFERENT DEPTHS now (the owner's 2026-09-19 call, both halves):
+        // at Root it steps sideways off the verb column onto the actors
+        // themselves, so "what is this monster carrying" is a question a
+        // pad can ask without first committing to ATTACK or a spell; at
+        // Target depth it cycles the rack being picked, the same rack
+        // Up/Down already walk (the follow-up call the same day: "selecting
+        // different mobs with gamepad goes with up down, but it should work
+        // with left right").
         //
         // A SECOND METHOD RATHER THAN A SECOND ARGUMENT ON MoveFocus, because
         // the two axes do not do the same thing at any depth: vertical walks
         // whatever list the current MenuDepth makes live, and this one walks a
-        // ring of combatants that no depth owns. Folding them together would
-        // mean every implementor -- and every existing direct-call test of
-        // MoveFocus -- growing an axis argument to answer a question only one
-        // of the two ever asks.
+        // ring of combatants that no depth owns AT ROOT, and the SAME rack
+        // MoveFocus walks, via the SAME cycling code, AT TARGET. Folding them
+        // together would mean every implementor -- and every existing
+        // direct-call test of MoveFocus -- growing an axis argument to answer
+        // a question only one of the two ever asks.
         //
-        // +1 is right/down the ring, -1 is left/up it. What a step actually
-        // does, including where the ring starts and which end leads back to
-        // the verb column, is the implementor's rule: see
-        // FightController.Input.cs's InspectMove.
+        // +1 is right/down, -1 is left/up, in whatever sense the CALLER's own
+        // axis means them -- at Root that is the ring's own order, and at
+        // Target depth it is screen-relative (the mirrored ally rack answers
+        // "right" differently from the enemy one). What a step actually does,
+        // including where the ring starts, which end leads back to the verb
+        // column, and how each depth's own sign is decided, is the
+        // implementor's rule: see FightController.Input.cs's InspectMove and
+        // CycleTarget/CycleTargetFromPad.
         void InspectMove(int delta);
 
         // WHAT THE PAD IS POINTING AT RIGHT NOW -- the verb plate, the

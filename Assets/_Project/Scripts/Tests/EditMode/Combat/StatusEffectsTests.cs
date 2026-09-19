@@ -5,6 +5,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -442,6 +443,37 @@ namespace PrincesPalace.Domain.Tests
                 "a tick the player's armour absorbed was never mentioned at all");
             Assert.IsTrue(lines.Any(l => l.Contains("Wool soaks 5 of it")),
                 "and the armour doing its job is the half worth saying");
+        }
+    
+
+        // ---- what a status's damage is made of ------------------------------
+
+        [Test]
+        public void ElementOf_PoisonIsPoison()
+        {
+            // The literal, not a re-read of the switch: a poison tick's flash
+            // and its damage number are both coloured through
+            // FightHudPalette.ForDamageType off this answer, and "it agrees
+            // with itself" is what a tautology looks like.
+            Assert.AreEqual(DamageType.Poison, StatusEffects.ElementOf(StatusEffectType.Poison));
+        }
+
+        [Test]
+        public void ElementOf_EveryOtherStatusDealsNoDamageAndSaysSo()
+        {
+            // The vacuity guard first -- a switch asked about nothing passes
+            // anything, and this list is the whole point of the test.
+            var all = System.Enum.GetValues(typeof(StatusEffectType)).Cast<StatusEffectType>().ToList();
+            Assert.GreaterOrEqual(all.Count, 12, "StatusEffectType shrank; this test stopped covering it");
+
+            // NULL, not Physical. A status that deals no damage has no
+            // element, and a caller must not have to know that Physical is
+            // the enum's zero to tell the two apart.
+            foreach (var type in all.Where(t => t != StatusEffectType.Poison))
+            {
+                Assert.IsNull(StatusEffects.ElementOf(type),
+                    $"{type} answered with an element; if it deals damage now, say which in ElementOf");
+            }
         }
     }
 }

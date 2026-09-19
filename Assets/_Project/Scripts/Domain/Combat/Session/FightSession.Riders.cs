@@ -471,6 +471,22 @@ namespace PrincesPalace.Domain.Combat.Session
             // outlive every stack that justified it.
             RefreshIceFingernailSpeed(actor);
 
+            // TAKEN BEFORE THE TICK, because the tick SPENDS the health the
+            // beats below exist to show being spent. StatusEffects.Tick
+            // applies poison and regen in one pass and only then reports what
+            // it did, so by the time this method can decide to record
+            // anything, live vitals are already the AFTER picture -- and a
+            // beat whose PreSnapshot is its own Snapshot drops the health bar
+            // the instant the beat opens instead of on the frame the tick
+            // lands, which is the exact failure CombatBeat's own header
+            // records for the round as a whole.
+            //
+            // Unconditional, and one small dictionary per turn start is what
+            // that costs. Asking first whether a damaging status is present
+            // would be a second copy of Tick's own condition, free to
+            // disagree with it the day a second DoT lands.
+            var preTick = SnapshotVitals();
+
             var report = StatusEffects.Tick(actor);
 
             // Chilled's malus is booked in FightSession.SpeedBuffs' own
@@ -496,6 +512,21 @@ namespace PrincesPalace.Domain.Combat.Session
             // got spent with no line, no ledger row and no word to the pools.
             if (report.PoisonDamage > 0 || report.PoisonAbsorbed > 0)
             {
+                // THE TICK BECOMES A BEAT, so the stage plays it the way it
+                // plays every other blow: the hurt pose, the recoil, the
+                // flash tinted with the status's own element, the number.
+                // Owner 2026-09-19 -- "poison damage or DoTs are not clear".
+                // Until now a tick was log-only, because it never opened one.
+                //
+                // OPENED BEFORE THE LINES BELOW, so they land ON it rather
+                // than being retro-attached to whatever beat happened to be
+                // last (AppendMessage's own fallback). That is also what
+                // moves the poison line from the end of the PREVIOUS blow to
+                // the moment the tick is shown.
+                bool ownsBeat = BeginStatusTickBeat(
+                    actor, preTick, StatusEffectType.Poison,
+                    report.PoisonDamage + report.PoisonAbsorbed, isHealing: false);
+
                 // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
                 // already uses ("attacks X for N damage!" followed by "X's Wool
                 // soaks M of it."). Printing the health figure instead would
@@ -532,18 +563,112 @@ namespace PrincesPalace.Domain.Combat.Session
                 // buys is that `grep SettleDeath` finds every death decision
                 // in the file family, this one included.
                 SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
+
+                // COMMITTED AFTER THE DEATH IS SETTLED, and that ordering is
+                // the point: SettleDeath records no beat of its own, so the
+                // tick's beat is the only thing that can show the kill --
+                // CommitBeat's snapshot is what FightController.FadeTheFallen
+                // reads to fade a body, exactly as it does for a killing
+                // swing.
+                if (ownsBeat) CommitBeat();
+
+                // The regen beat below, if there is one, opens on live vitals
+                // rather than on preTick -- the poison beat has already shown
+                // the drop and its Snapshot IS live state, so re-using
+                // preTick would make the second beat replay the first one's
+                // damage.
+                preTick = null;
             }
 
             if (report.RegenHealed > 0)
             {
+                // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT
+                // -- FlashOne already branches on IsHealing, so a regen tick
+                // gets the green flash and the green number for the cost of
+                // the boolean. Its ACTOR is the holder rather than nobody,
+                // which is what keeps the recoil and the squash off it
+                // (FightBeatPlayer.RecoilOne/Punch both skip a target that is
+                // its own actor): a body does not flinch away from its own
+                // mending.
+                bool ownsBeat = BeginStatusTickBeat(
+                    actor, preTick, StatusEffectType.Regen, report.RegenHealed, isHealing: true);
+
                 AppendMessage($"{actor.Name} regenerates {report.RegenHealed} health.");
                 Ledger.Restored(LedgerIdOf(actor), report.RegenHealed);
+
+                if (ownsBeat) CommitBeat();
             }
 
             foreach (var expired in report.Expired)
             {
                 AppendMessage($"{actor.Name}'s {expired} wears off.");
             }
+        }
+
+        // A STATUS TICK THE STAGE CAN SEE, or false when something else already
+        // owns the beat being recorded.
+        //
+        // WHY IT DOES NOT GO THROUGH BeginBeat: that method's last line is
+        // NotePoolActivity(actor, PoolActivity.Action), the seam that tells a
+        // decaying pool "this turn was not idle". A tick is not an action its
+        // holder took -- it is something done TO them at the top of a turn
+        // they have not spent yet -- and routing it through BeginBeat would
+        // quietly stop wool decaying on any turn its owner happened to be
+        // poisoned. Everything else a beat needs is CommitBeat's, which this
+        // does call, so the snapshot, the turn order, the formation and the
+        // hit-cue floor all stay in one place.
+        //
+        // ACTOR = NULL FOR DAMAGE. Nobody is credited for a tick (see
+        // RecordUnattributedDamage), and a null actor is also what makes the
+        // victim flinch: FightBeatPlayer skips the recoil and the squash for
+        // a target that IS the actor, which is right for a self-heal and
+        // wrong for a poison. Every other reader of beat.Actor in the view
+        // already guards for null -- the stand-off (CrossesToATarget), the
+        // stance phases, the spell placement and the voice lines -- so the
+        // one that did not is the damage-type paint, which now asks first
+        // (CombatBeat.PaintActorDamageType) and loses to the element declared
+        // below.
+        //
+        // REFUSES TO NEST. _recordingBeat is a single slot, so opening a
+        // second beat over an open one would drop the first entirely. No
+        // caller does this today (a turn start is between actions), but the
+        // failure would be an action silently vanishing from the fight, so it
+        // degrades to the old behaviour -- log-only, lines attached to the
+        // open beat -- rather than risking that.
+        private bool BeginStatusTickBeat(CombatantState victim,
+                                         Dictionary<CombatantState, Vitals> pre,
+                                         StatusEffectType type, int amount, bool isHealing)
+        {
+            if (victim == null || amount <= 0 || _recordingBeat != null) return false;
+
+            _recordingBeat = new CombatBeat
+            {
+                Actor = isHealing ? victim : null,
+                Target = victim,
+                PreSnapshot = pre ?? SnapshotVitals(),
+
+                // Nothing crosses the stage for a tick: there is no attacker
+                // to walk in, and Hold is how the vocabulary says so.
+                Approach = StageApproach.Hold,
+            };
+
+            RecordBeatAmount(amount, isHealing);
+
+            // THE ELEMENT COMES FROM THE STATUS, not from anyone's weapon --
+            // StatusEffects.ElementOf is the one home for that question, and
+            // a status that deals damage without declaring one keeps the
+            // beat's default rather than inventing a colour.
+            var element = StatusEffects.ElementOf(type);
+            if (element.HasValue) _recordingBeat.DeclareDamageType(element.Value);
+
+            // The hurt drawing, worn at the impact instant like any other
+            // victim's (FightBeatPlayer.PoseVictims) and put back to idle
+            // when the beat closes. A heal poses nobody: there is no
+            // being-mended drawing, and wearing "hurt" for a regen tick would
+            // say the opposite of what happened.
+            if (!isHealing) SetStance(victim, Stances.Hurt);
+
+            return true;
         }
 
         // ---- seams for tests -------------------------------------------------

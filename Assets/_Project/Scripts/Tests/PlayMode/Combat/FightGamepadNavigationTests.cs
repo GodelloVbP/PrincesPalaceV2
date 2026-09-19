@@ -164,6 +164,126 @@ namespace PrincesPalace.PlayModeTests
                 "a first \"previous\" press from no hover lands on the last living enemy, index 1 of 2");
         }
 
+        // THE GATE'S OWN BUG (2026-09-19 follow-up): the two tests above
+        // drive MoveFocus/CycleTarget DIRECTLY, bypassing
+        // IFightNavigationTarget.MoveFocus -- the wrapper that flips the
+        // pad's vertical sign at Target depth so "up is one slot deeper" (the
+        // owner's call). That flip exposed a second, separate bug:
+        // FocusedElement/ConfirmFocus already treat no hover as enemy 0 (the
+        // marker sits there before any press, and Submit would hit it), so a
+        // FIRST pad press has to read as one step FROM that implicit 0 --
+        // not as WrapFromNoHover's older "first press lands ON index 0" rule,
+        // which is what the two direct-call tests above still correctly pin.
+        // Before today's fix, the first Up press landed back on 0 (no
+        // visible change) instead of on 1.
+        [UnityTest]
+        public IEnumerator FirstPressOnAFreshTargetPickTreatsEnemyZeroAsHovered()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest,
+                "precondition: nothing hovered, the marker reads FocusedElement's implicit enemy 0");
+
+            // UP: ProcessFight hands the wrapper raw -1, which Target depth
+            // negates to +1 (CycleTarget's "deeper" direction) -- one slot
+            // deeper than the enemy 0 a fresh pick already implies.
+            pad.MoveFocus(-1);
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "first Up from a fresh pick steps one slot deeper than the implicit enemy 0, not onto it again");
+
+            // A WHOLE NEW SCENE, not Back-then-re-enter: _hoveredEnemyIndex is
+            // a mouse-hover latch (OnEnemyUnhovered's own comment) that
+            // OnBackPressed never clears, so reopening the same rack would
+            // still read the 1 just proven above. Reloading is the only way
+            // to get a genuinely fresh, unhovered pick to test Down against.
+            yield return StandUpAFight();
+            pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest, "precondition: a new pick, nothing hovered yet");
+
+            // DOWN: raw +1, negated to -1 (CycleTarget's "nearer" direction)
+            // -- wraps to the deepest living enemy, the same place a SECOND
+            // press from enemy 0 would land (Wrap(0 - 1, count) == count - 1).
+            // THIS HALF WAS NEVER ACTUALLY BROKEN: WrapFromNoHover's older
+            // no-hover rule already agreed with "as if enemy 0 were hovered"
+            // whenever delta is negative, since count - 1 is what both rules
+            // compute -- pinned here beside Up's fix so the two directions
+            // stay proven together rather than drifting apart unnoticed.
+            pad.MoveFocus(1);
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "first Down from a fresh pick wraps to the last living enemy");
+        }
+
+        // THE LEFT/RIGHT TWIN of the fix above, through InspectMove instead
+        // of the vertical wrapper -- and covering the case the enemy-rack
+        // fix in HorizontalAtTargetDepthCyclesTargets does NOT: the MIRRORED
+        // ally rack, where Right means "nearer" rather than "deeper"
+        // (InspectMove's own header). A fresh Right on the ally rack already
+        // read correctly before today (HorizontalAtTargetDepthCyclesAllyTargets
+        // pins it, unaffected by this fix, same reason Down above is
+        // unaffected) -- Left is the ally rack's "deeper" direction, and
+        // "deeper" is exactly the case that was broken.
+        [UnityTest]
+        public IEnumerator FirstPressOnAFreshTargetPickTreatsPlateZeroAsHoveredOnTheMirroredAllyRack()
+        {
+            yield return LoadFight();
+
+            var caster = new CombatantState("Shawn", true, 300, 30, 40, 30);
+            var ally = new CombatantState("Bjorn", true, 300, 30, 40, 8);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 1);
+            var encounter = new CombatEncounter(new[] { caster, ally }, new[] { foe });
+
+            var ward = new Domain.Content.ResolvedSkill("fleece_ward", "Ward", "", "sheep", 1,
+                SkillEffect.Ward, SkillTargeting.SingleAlly,
+                0, 0, false, 0, 50, false, null, Domain.Content.SpellPresentation.None, 0);
+
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("sheep", Domain.Content.CharacterRole.Support, new[] { ward }, null,
+                    Domain.Stats.DamageType.Physical),
+                new PlayerKit("bear", Domain.Content.CharacterRole.Tank, null, null,
+                    Domain.Stats.DamageType.Physical),
+            };
+            var enemyKits = new List<EnemyKit>
+            {
+                new EnemyKit(new Domain.Content.ResolvedEnemy("front", "Front", new Domain.Stats.StatBlock(),
+                    5, 3, false, Domain.Stats.DamageType.Physical, Domain.Stats.DamageType.Physical, 0), false),
+            };
+
+            var session = new FightSession(encounter, kits, enemyKits, new Domain.Rng.SeededRandom(9));
+            session.Begin();
+            _fight.Bind(session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            var pad = (IFightNavigationTarget)_fight;
+
+            // Up once reaches SKILL; Submit opens the list, Submit again
+            // presses row 0 -- the ward -- opening the party rack. Both
+            // plates are pickable (a ward can target its own caster).
+            pad.MoveFocus(-1);
+            pad.ConfirmFocus();
+            yield return null;
+            pad.ConfirmFocus();
+            yield return null;
+
+            Assert.IsTrue(IsShown("TargetPrompt"), "precondition: the ally pick opened");
+            Assert.AreEqual(-1, _fight.HoveredAllyIndexForTest, "precondition: nothing hovered yet");
+
+            // LEFT on the mirrored ally rack is the "deeper" direction
+            // (InspectMove's own header: Right means nearer there, so Left is
+            // the one that steps away from the implicit plate 0). Before
+            // today's fix this landed back on plate 0 -- the caster, no
+            // visible change -- instead of stepping to plate 1.
+            pad.InspectMove(-1);
+            yield return null;
+            Assert.AreEqual(1, _fight.HoveredAllyIndexForTest,
+                "Left from a fresh ally pick steps one slot deeper than the implicit plate 0, landing on Bjorn");
+        }
+
         // ---- the status box follows the pad (2026-09-19) -------------------------
         //
         // The owner's question, in their words: "in a fight, how does a player
@@ -412,41 +532,205 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(StatusBoxIsShown(), "and the box closes");
         }
 
-        // TARGET-PICK SEMANTICS ARE UNTOUCHED. The horizontal axis reaches
-        // this controller at every depth now, and at every depth but Root it
-        // has to keep meaning what it meant before, which is nothing -- a
-        // player aiming a spell must not have Left/Right quietly walk them
-        // out of the pick.
+        // TARGET-PICK SEMANTICS CHANGED, DELIBERATELY, AT ONE DEPTH ONLY
+        // (the owner's 2026-09-19 follow-up: "selecting different mobs with
+        // gamepad goes with up down, but it should work with left right").
+        // Left/Right at Target depth now CYCLES the rack, the same rack
+        // Up/Down already walk -- see HorizontalAtTargetDepthCyclesTargets
+        // and its ally twin below. What survives from the old claim is
+        // narrower than it was: a submenu LIST (a skill or item row) still
+        // answers to Up/Down alone, and cycling a target -- on either axis
+        // -- still only ever HOVERS one; a player aiming a spell still
+        // cannot have a press quietly CONFIRM the pick out from under them.
         [UnityTest]
-        public IEnumerator HorizontalAtTargetDepthStillDoesNothing()
+        public IEnumerator HorizontalAtTargetDepthCyclesTargets()
         {
             yield return StandUpAFight();
 
             var pad = (IFightNavigationTarget)_fight;
 
-            // ATTACK, straight to the enemy rack.
+            // ATTACK, straight to the enemy rack, nothing hovered yet.
             pad.ConfirmFocus();
             yield return null;
             Assert.IsTrue(IsShown("TargetPrompt"), "precondition: a target pick is open");
 
-            pad.MoveFocus(1);
+            // RIGHT from no hover treats enemy 0 as ALREADY hovered (the gate's
+            // own 2026-09-19 fix, CycleTargetFromPad) and steps one slot
+            // DEEPER from it -- enemy 1, not enemy 0. A bare "first press
+            // lands on 0" would be no visible change at all, since the marker
+            // already sat on EnemyHitArea0 before this press (FocusedElement's
+            // own no-hover rule, pinned in FightFocusMarkerTests).
+            pad.InspectMove(1);
             yield return null;
-            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest, "precondition: the stick aimed at the first enemy");
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "Right from a fresh pick steps one slot deeper than the implicit enemy 0");
+            Assert.AreEqual("EnemyHitArea1", FocusName(pad), "and the marker follows onto its figure");
 
             // THE OTHER HALF OF ShowFigureTarget's SPLIT: a figure that is a
             // real mark takes clicks, exactly as it always did. Pinned beside
             // the perched case so the two cannot drift into one.
-            AssertRaycasts("EnemyHitArea0", true, "a figure being picked is still a click target");
+            AssertRaycasts("EnemyHitArea1", true, "a figure being picked is still a click target");
 
-            var before = FocusName(pad);
+            // RIGHT again: one slot DEEPER still, which on a two-enemy rack
+            // wraps off the far end back to the near one.
+            pad.InspectMove(1);
+            yield return null;
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest, "Right again wraps to the near enemy");
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad), "and the marker follows it there");
+
+            // RIGHT again returns to the deeper enemy -- an ordinary hovered
+            // press, not a fresh pick, so it is unaffected by today's fix and
+            // just proves the cycle keeps going.
+            pad.InspectMove(1);
+            yield return null;
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest, "Right cycles back to the deeper enemy");
+
+            // LEFT is the reverse: one slot nearer, wrapping the other way.
+            pad.InspectMove(-1);
+            yield return null;
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest, "Left off the deeper enemy wraps to the near one");
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad));
+
+            // AND THE PICK IS STILL OPEN THROUGHOUT -- cycling a target with
+            // either axis only ever hovers one; it never confirms it.
+            Assert.IsTrue(IsShown("TargetPrompt"), "cycling with Left/Right must not close or confirm the pick");
+        }
+
+        // THE ALLY RACK'S DIAGONAL IS MIRRORED (FightStageAnchors.SlotOffset
+        // negates X for the party), so its on-screen "right" is the enemy
+        // rack's "left": Near.X 320 -> Far.X 810 becomes on-screen
+        // -320 -> -810, meaning the FARTHER ally sits FURTHER LEFT. Right
+        // therefore has to mean "one slot NEARER" here to keep pointing
+        // rightward on screen -- InspectMove's own header states the same
+        // rule this test pins in literal plate indices.
+        [UnityTest]
+        public IEnumerator HorizontalAtTargetDepthCyclesAllyTargets()
+        {
+            yield return LoadFight();
+
+            // A hand-built two-PC party and a single-ally skill (a ward: no
+            // mana, no resource, no cooldown -- the cheapest way to stand up
+            // an ally pick, same fixture shape AllyTargetPickerTests uses).
+            // ContentDatabase's own roster is not guaranteed to hand the
+            // first character a SingleAlly skill, and this test's claim has
+            // nothing to do with which one is on the row.
+            var caster = new CombatantState("Shawn", true, 300, 30, 40, 30);
+            var ally = new CombatantState("Bjorn", true, 300, 30, 40, 8);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 1);
+            var encounter = new CombatEncounter(new[] { caster, ally }, new[] { foe });
+
+            var ward = new Domain.Content.ResolvedSkill("fleece_ward", "Ward", "", "sheep", 1,
+                SkillEffect.Ward, SkillTargeting.SingleAlly,
+                0, 0, false, 0, 50, false, null, Domain.Content.SpellPresentation.None, 0);
+
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("sheep", Domain.Content.CharacterRole.Support, new[] { ward }, null,
+                    Domain.Stats.DamageType.Physical),
+                new PlayerKit("bear", Domain.Content.CharacterRole.Tank, null, null,
+                    Domain.Stats.DamageType.Physical),
+            };
+            var enemyKits = new List<EnemyKit>
+            {
+                new EnemyKit(new Domain.Content.ResolvedEnemy("front", "Front", new Domain.Stats.StatBlock(),
+                    5, 3, false, Domain.Stats.DamageType.Physical, Domain.Stats.DamageType.Physical, 0), false),
+            };
+
+            var session = new FightSession(encounter, kits, enemyKits, new Domain.Rng.SeededRandom(9));
+            session.Begin();
+            _fight.Bind(session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            Assert.AreSame(caster, session.Current, "fixture: the ward's owner has to be the one acting");
+
+            var pad = (IFightNavigationTarget)_fight;
+
+            // Up once (bottom-up column) reaches SKILL; Submit opens the
+            // list, Submit again presses row 0 -- the ward -- which opens
+            // the party rack (AllyTargetPickerTests' own
+            // AWardOpensThePartyRackAndClosesTheEnemyOne covers that half;
+            // this test's claim starts once the rack is already open).
+            pad.MoveFocus(-1);
+            pad.ConfirmFocus();
+            yield return null;
+            pad.ConfirmFocus();
+            yield return null;
+
+            Assert.IsTrue(IsShown("TargetPrompt"), "precondition: the ally pick opened");
+
+            // RIGHT from no hover: both plates are pickable (a ward can
+            // target its own caster), and Right means "toward the near end"
+            // on this mirrored rack -- plate 1 (Bjorn), not plate 0.
+            pad.InspectMove(1);
+            yield return null;
+            Assert.AreEqual(1, _fight.HoveredAllyIndexForTest,
+                "Right on the mirrored ally rack lands nearer (plate 1), not deeper");
+
+            // RIGHT again steps to the other pickable plate -- the caster,
+            // one slot DEEPER on this rack's own diagonal even though it
+            // reads as the "other end" rather than "further along".
+            pad.InspectMove(1);
+            yield return null;
+            Assert.AreEqual(0, _fight.HoveredAllyIndexForTest, "Right again reaches the caster's own plate");
+
+            // LEFT is the reverse, wrapping the other way -- back to Bjorn.
+            pad.InspectMove(-1);
+            yield return null;
+            Assert.AreEqual(1, _fight.HoveredAllyIndexForTest, "Left off the caster wraps to the other plate");
+
+            Assert.IsTrue(IsShown("TargetPrompt"), "cycling with Left/Right must not close or confirm the pick");
+        }
+
+        // THE OTHER SURVIVING HALF OF THE OLD CLAIM: a submenu LIST (a
+        // skill or an item row) is walked by Up/Down alone, same as before
+        // this pass -- only Target depth gained a horizontal meaning.
+        [UnityTest]
+        public IEnumerator HorizontalAtSubmenuDepthStillDoesNothing()
+        {
+            yield return LoadFight();
+
+            // A hand-built one-skill kit, the same shape
+            // FightSubmenuAffordabilityTests uses -- ContentDatabase's real
+            // roster is not guaranteed to hand the first character an
+            // affordable skill, and this test's claim has nothing to do
+            // with which skill is on the row.
+            var hero = new CombatantState("Shawn", true, 300, 5, 40, 10);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 4);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+
+            var skill = new Domain.Content.ResolvedSkill("s", "Spellblade", "", "shawn", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5, resourceCost: 0,
+                spendsAllResource: false, power: 1, flatAmount: 0, ignoresDefense: false, damageInstances: null,
+                presentation: Domain.Content.SpellPresentation.None, sortOrder: 0);
+
+            var kit = new PlayerKit("shawn", Domain.Content.CharacterRole.Tank,
+                new List<Domain.Content.ResolvedSkill> { skill }, null, null);
+            var enemyKit = new EnemyKit(
+                new Domain.Content.ResolvedEnemy("front", "Front", new Domain.Stats.StatBlock(), 5, 3, false,
+                    Domain.Stats.DamageType.Physical, Domain.Stats.DamageType.Physical, 0), false);
+
+            var session = new FightSession(encounter, new List<PlayerKit> { kit },
+                new List<EnemyKit> { enemyKit }, new Domain.Rng.SeededRandom(9));
+            session.Begin();
+            _fight.Bind(session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            var pad = (IFightNavigationTarget)_fight;
+
+            // Up once from ATTACK (index 0, bottom of the column) reaches
+            // SKILL (index 1) -- MovingFocusAtRootStepsBottomUpTheWayThe
+            // ColumnIsBuilt's own ordering. Submit opens the one-row list.
+            pad.MoveFocus(-1);
+            pad.ConfirmFocus();
+            yield return null;
+
+            Assert.IsTrue(IsShown("CharacterSkill0"), "precondition: the one-skill kit opened its own row");
 
             pad.InspectMove(1);
             pad.InspectMove(-1);
             yield return null;
 
-            Assert.IsTrue(IsShown("TargetPrompt"), "the pick is still open");
-            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest, "and still aimed at the same enemy");
-            Assert.AreEqual(before, FocusName(pad), "and the marker has not moved");
+            Assert.IsTrue(IsShown("CharacterSkill0"), "Left/Right at a submenu still does not touch it");
         }
 
         // One hero, two monsters, and a status on each of the two actors the
