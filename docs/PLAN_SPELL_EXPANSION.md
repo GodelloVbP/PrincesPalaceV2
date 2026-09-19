@@ -13,8 +13,57 @@ marked `prototype` and is tuning, not specification.
 ## 0. Decisions taken
 
 Each decision states the alternative that was rejected and what taking it would
-have cost. One question is left for the owner, at the end of this section, with
-the recommendation first.
+have cost.
+
+### Owner decisions, 2026-09-20
+
+Two answers arrived after this document was written. Both are binding and both
+are folded into the sections below rather than bolted on here; this block is the
+record of what was asked and what was said, so a later reader can tell an
+owner's call from the author's.
+
+**(1) "Do the entire plan."** This answers the one open question at the end of
+this section — **D1 applies globally**, with the nine re-authored rows in D1's
+own table and Lucky Deck's stated exception. The question is closed; the section
+that held it now records the answer.
+
+**(2) "The DoTs and everything can stack of course."** This replaces D3 outright
+and the refresh half of D4. It is a plain-language answer, so what follows is
+**Fable's reading of it, revisable** — implemented as written, and the place to
+correct it if the reading is wrong:
+
+- A damage-over-time status (Poison today; Burn and Thorned in milestone E)
+  **does not merge on re-application**. Every application creates an independent
+  instance carrying its own snapshot magnitude, its own remaining ticks and its
+  own source. Instances of the same type coexist; each ticks and expires on its
+  own; the holder's per-turn tick total is the **sum** of its live instances.
+- **Detonation** (1.6) consumes the remaining stored value of **every** Poison
+  instance on the target in one consumption, and is recorded **once**.
+- **Censer of Embers' 4→6→8 intensity ladder is dropped** (2.11). A recast adds
+  an instance. With it goes the `ActiveStatus.IntensityLevel` field D4 proposed.
+- **Existing Poison changes**: `StatusEffects.Apply`'s `max`/`max` merge becomes
+  instance stacking for it. Its tick arithmetic, its detonation arithmetic and
+  its mitigation (none — flat magnitude, no affinity, no defense) are otherwise
+  preserved exactly.
+- **Wards already stack** (baseline §3) and are untouched by this.
+- **Magnitude debuffs the new spells apply** — Vulnerable, Chilled — stack
+  **additively** across instances with independent expiry, subject to the
+  existing speed floor for Chilled. The effective percentage is the sum.
+- **Binary restrictions** (Stun, Feared, Rooted, Provoked) and **Marked** keep
+  their existing refresh behaviour: "stack" has no meaning for a restriction
+  beyond duration, and the owner's brief says Marked's meaning is preserved.
+
+`Domain/Combat/FallingOffStacks.cs` was checked first as the existing model for
+"a pile where every stack carries its own expiry", per the standing rule against
+inventing a third shape. **It is the wrong seam here and is left alone**: it is
+keyed by an arbitrary string on `CombatantState.StackTimers`, and a stack in it
+is a bare remaining-turn count — it carries no magnitude and no `Source`, which
+is exactly what an instance of a DoT has to carry. What it models correctly is
+*independent expiry*, and that is the property `ActiveStatus` lists gain here:
+the status list becomes the stack pile, several entries of one `Type`, which is
+the shape wards have used since 2026-09-16 and which `WardsInDrainOrder`,
+`WardPoints` and `SummariseWards` already read. Reusing the ward shape rather
+than `FallingOffStacks` is the "swap the seam, not every caller" answer.
 
 ### D1. Duration means effective affected turns, and the clock moves to turn end
 
@@ -93,46 +142,93 @@ behaves exactly as today.
 Cost: two places that both know "detonation is `Magnitude * TurnsRemaining`",
 free to disagree; and two places a recursion guard would have to be written.
 
-### D3. Refresh policy for new DoTs: stronger snapshot wins, duration refreshes
+### D3. Statuses stack as independent instances; one table says which ones do
 
-**Taken, stated once here and referenced everywhere below.** When a DoT is
-applied to a target that already carries it:
+**Superseded by the owner's decision of 2026-09-20 and rewritten.** The
+original D3 was a refresh policy ("stronger snapshot wins, duration refreshes").
+The owner's answer was *"the DoTs and everything can stack of course."* Fable's
+reading, recorded above, is the contract; this is what it means operationally.
 
-- the stored tick strength becomes `max(existing, incoming)` — the stronger
-  potency snapshot wins, whoever cast it;
-- the duration becomes the incoming authored duration if that is longer,
-  otherwise it is left (i.e. `max`), which is the "refreshing duration" the
-  owner's Burn rule asks for given every DoT authors a fixed tick count;
-- `Source` re-points to the most recent non-null applier and is never cleared;
-- the intensity ladder (Censer's 4→6→8) advances **only when the incoming
-  application is stronger or equal**, so a weaker caster's recast cannot
-  advance a stronger caster's ladder and then be floored by the `max` above.
+A second application of a status either **merges into** the entry already there
+or **adds a second entry beside it**. That is one question with one answer per
+status type, so it is one total table — `StatusEffects.StackPolicy(type)` —
+beside the two tables `StatusEffects` already keeps (`ElementOf`, and D1's
+`DurationClock`). No flag on `ActiveStatus`, no per-caller argument.
 
-The first three are `StatusEffects.Apply`'s existing rule
-(`StatusEffects.cs:65-96`), verified, and need no change. Only the fourth is
-new, and it lives on the one `ApplyDot` seam (D6).
+| Policy | Members | A second application |
+|---|---|---|
+| **Stack** | Poison, Regen, Protect, Vulnerable, Chilled, Shielded (+ Burn, Thorned in E) | adds an entry: its own magnitude, its own clock, its own `Source` |
+| **Refresh** | Stun, Feared, Provoked, Empowered, Rooted, Marked | today's `max`/`max` merge, `Source` re-pointed and never cleared |
 
-### D4. New DoTs carry a snapshot and an intensity level on `ActiveStatus`; existing Poison is untouched
+The split is not arbitrary and it is not "new spells versus old". It follows
+from what the magnitude of each status **means**:
 
-**Taken.** `ActiveStatus` gains **one** field, `IntensityLevel` (default 1),
-beside the `Magnitude` that already *is* the snapshotted per-tick strength for
-Poison (`StatusEffect.cs:184-215`, verified). Mitigation is a table, not a
-field: `StatusEffects.MitigationOf(type)` returns `None` for Poison (today's
-behaviour, unchanged) and `AffinityOnly` for Burn and Thorned. The element is
-already a table — `StatusEffects.ElementOf` (`:745-759`), which today answers
-`Poison → DamageType.Poison` and `null` for everything else, and whose own
-comment says a new damaging member must be added there or
-`StatusEffectsTests.EveryStatusTypeAnswersElementOf` fails.
+- Where the magnitude is a **quantity or an additive percentage**, two of them
+  is a bigger number and the player can add it up — the rule
+  `StatusEffects.DamageTakenMultiplier` already applies across entries and
+  `StatusEffects.WardPoints` already applies across wards. Those stack.
+- Where the status is a **binary restriction** (Stun, Feared, Rooted, Provoked)
+  or a **single-spend token** (Empowered, Marked), "stack" has no meaning
+  beyond duration: a turn cannot be skipped twice, and `Marks.ConsumeMark`
+  spends one mark whatever is underneath it. The owner's brief says Marked's
+  meaning is preserved. Those refresh.
 
-So a tick is: `damage = ApplyMitigation(status.Magnitude, MitigationOf(type),
-ElementOf(type), AffinityOf(holder))`. One path, two table values, no branch on
-status identity. Migrating Poison later (explicitly out of scope per the
-owner's shared rules) is a one-value change to `MitigationOf`.
+Feared sits with the restrictions although it carries a Vulnerable percent,
+because that percent is **one authored constant** (`Fear.VulnerablePercent`,
+D8) whose own header exists to stop two appliers disagreeing about it; summing
+it across instances would be a balance change nobody asked for. Empowered sits
+with them for the same shape as Provoked — it is spent on the next occurrence,
+and `ConsumeEmpowerment` removes one entry.
 
-**Alternative rejected:** a `DotSnapshot` payload object hung off
-`ActiveStatus`. Cost: a DoT's tick strength would have two homes (`Magnitude`
-for Poison, `payload.TickStrength` for the rest), and every existing reader of
-`Magnitude` would need to know which.
+Protect and Regen are **not named in the owner's decision**; they are here by
+symmetry with Vulnerable and Poison, which are. A model where Vulnerable stacks
+and Protect does not has an asymmetry with no stated reason behind it, and
+`DamageTakenMultiplier` already sums Protect across entries today. Recorded as
+Fable's reading, revisable.
+
+**Consequences, stated rather than discovered:**
+
+- A DoT's per-turn total is the **sum of its live instances' magnitudes**, and
+  it is bounded — an applier adding one instance per turn plateaus at
+  `instancesPerTurn x magnitude x tickCount`, because the oldest instance
+  expires as the newest lands. It does not run away.
+- An additive percentage debuff on a **turn-end** clock is bounded by how many
+  of them can be alive at once, which is `ceil(duration / castInterval) + 1`.
+  Where that product crosses `1.0`, `StatusEffects.MinimumDamageTakenMultiplier`
+  (0.1) is the floor and it holds. §5 records the measured cases.
+- No cap is invented anywhere. A cap is a balance decision and it is the
+  owner's.
+
+**Alternative rejected:** keep the merge and express "stacking" as a bigger
+magnitude on one entry. Cost: the instances would have to share one clock, so
+a Poison landed on turn 5 would expire with one landed on turn 1 — which is the
+opposite of what an instance's "own remaining ticks" means, and it cannot carry
+two `Source`s, which two wool engines are paid from.
+
+### D4. Instance stacking needs no new field on `ActiveStatus`; mitigation stays a table
+
+**Rewritten with D3.** The original D4 added an `IntensityLevel` field to carry
+Censer of Embers' 4→6→8 ladder. **The ladder is dropped** (owner, 2026-09-20: a
+recast adds an instance). With it goes the field: `ActiveStatus` already carries
+everything an instance needs — `Type`, `Magnitude` (the snapshotted per-tick
+strength), `TurnsRemaining` (its own ticks), `Source` (its own applier) — and
+the only thing that changes is that there may now be several of them.
+
+Mitigation remains a table rather than a field: `StatusEffects.MitigationOf(type)`
+returns `None` for Poison (today's behaviour, unchanged) and `AffinityOnly` for
+Burn and Thorned. The element is already a table, `StatusEffects.ElementOf`
+(`:745-759`), whose own comment says a new damaging member must be added there
+or `StatusEffectsTests.EveryStatusTypeAnswersElementOf` fails.
+
+So a tick is: `damage = ApplyMitigation(instance.Magnitude, MitigationOf(type),
+ElementOf(type), AffinityOf(holder))`, once per instance, summed. One path, two
+table values, no branch on status identity and no branch on how many instances
+there are.
+
+**Alternative rejected:** a `DotSnapshot` payload object hung off `ActiveStatus`.
+Cost: a DoT's tick strength would have two homes (`Magnitude` for Poison,
+`payload.TickStrength` for the rest), and every existing reader of `Magnitude`
+would need to know which.
 
 ### D5. `TickReport` becomes a list of typed rows (closes AUDIT #188)
 
@@ -256,28 +352,29 @@ the enums are ordinal.
 
 ---
 
-### The one owner question
+### The one owner question — ANSWERED 2026-09-20
 
-**Apply the duration model change (D1) globally, or only to the thirteen new
-spells?**
+**Asked:** apply the duration model change (D1) globally, or only to the thirteen
+new spells? **Recommendation given:** globally.
 
-**Recommendation: globally**, with the nine re-authored rows in the table above
-landing in the same commit as the model change.
+**Answered:** *"Do the entire plan."* — **globally**, with the nine re-authored
+rows in D1's table landing in the same commit as the model change, and Lucky
+Deck's one row accepted as changed rather than deleted.
 
-The reason is that there is no smaller *model-consistent* option. "New spells
-only" cannot be expressed as anything but a per-row flag saying which meaning of
-"duration" this row uses, which is precisely what `docs/CODE_STANDARDS.md` §10
-forbids and what the baseline's §9 note flags as needing a decision rather than
-an assumption. The scope of the global change is nine authored numbers, one
-predicate rename (`IsSpentByTheTurn` → `DurationClock`), and moving five status
-types from the turn-start tick to the existing turn-end tick that wards already
-use.
+The reason the recommendation was made, kept here because it is also the reason
+the answer is safe to build on: there is no smaller *model-consistent* option.
+"New spells only" cannot be expressed as anything but a per-row flag saying which
+meaning of "duration" this row uses, which is precisely what
+`docs/CODE_STANDARDS.md` §10 forbids and what the baseline's §9 note flags as
+needing a decision rather than an assumption. The scope of the global change is
+nine authored numbers, one predicate rename (`IsSpentByTheTurn` →
+`DurationClock`), and moving five status types from the turn-start tick to the
+existing turn-end tick that wards already use.
 
-The consequence of taking it: eight of the nine rows preserve today's effective
-behaviour exactly; Lucky Deck's one-turn chill gains one affected turn and
-cannot be preserved. The consequence of refusing it: Winter's Rebuke and Velvet
-Shackles ship with durations that mean something different from every other
-status in the game, and the divergence is invisible in content.
+Eight of the nine rows preserve today's effective behaviour exactly, pinned by
+`StatusDurationMigrationTests`. Lucky Deck's one-turn chill gains one affected
+turn and is pinned as **changed** in the same test, so the deviation cannot go
+quiet.
 
 ---
 
@@ -396,6 +493,12 @@ Per D1. In operational terms:
 - **`AtTick`**: the tick and the decrement happen in the same pass, at the
   holder's turn start, and an entry reaching 0 is removed in that same pass. `N`
   authored = `N` ticks dealt. Poison, Regen, Burn, Thorned all sit here.
+
+**Every clock is per INSTANCE, not per type** (D3). Three Poison instances tick
+and decrement independently in one pass, and the one that runs out is removed
+while the other two stand. An expiry is reported once per instance removed, and
+the log deduplicates so a player is not told the same status wore off twice in
+one breath.
 - **`AtUse`**: no clock. The counter moves at the moment the effect is spent —
   `ConsumeStun` for Stun and Feared (`StatusEffects.cs:221-232`),
   `ConsumeProvoke` for Provoked, `ConsumeEmpowerment` for Empowered.
@@ -418,9 +521,17 @@ returns the same `Expired` list `Tick` already returns
 `TickStatuses` already does at turn start. That matters for exactly one
 teardown today: Chilled's speed malus is revoked when the status is reported
 expired (`FightSession.Riders.cs:501-504`), and under D1 that report now arrives
-from the turn-END sweep instead of from `Tick`. The revoke moves with it. Any
-future status with a teardown hangs off the same list, at whichever end of the
-turn its clock sits.
+from the turn-END sweep instead of from `Tick`. The revoke moves with it.
+
+**And under D3 the teardown is a RECOMPUTE, not a revoke.** Chilled stacks, so
+one instance expiring out of three must leave the other two slowing the bearer.
+`RefreshChilledSpeed` already revokes and re-grants from scratch against the true
+base — the shape its own header argues for — so the turn-end caller calls *that*
+rather than `RevokeSpeedBuff`, on any Chilled expiry. When the last instance
+goes, the re-grant finds nothing and grants nothing, which is the revoke. One
+call covers both cases and there is no "was that the last one?" question for
+anybody to get wrong. Any future status with a teardown hangs off the same list,
+at whichever end of the turn its clock sits.
 
 **Empty case:** a bearer with no statuses ticks nothing and reports an empty
 `TickReport` and an empty expiry list at both ends. **RNG:** none.
@@ -449,7 +560,9 @@ dispatches to today's `StatusEffects.Apply`.
   Nothing on the tick path may gate on `Source.IsAlive`. Kill credit for a tick
   death remains `KillCredit.Nobody` (`FightSession.Riders.cs:554-565`), the
   same answer Poison already gives and for the same recorded reason.
-- **Refresh.** Per D3.
+- **Re-application.** Per D3: a second cast adds a second instance. Nothing
+  merges, nothing is compared, no `max` is taken. The two instances tick
+  together and expire apart, and each keeps the `Source` that paid for it.
 - **Expiry.** `AtTick` family: the final tick and the removal are simultaneous.
   The log says the status wore off after it said what the tick did
   (`FightSession.Riders.cs:602-605`).
@@ -469,19 +582,25 @@ percent (default 100).
 
 1. Refuse unless the incoming type is `Nature` or `Poison`
    (`StatusCombos.cs:45-48`).
-2. Find the single Poison entry. **None → return 0**, the empty case.
-3. `worth = Magnitude * TurnsRemaining`, then `premium` applied:
-   `Rounding.AwayFromZero(worth * percent / 100)`.
-4. **Remove the entry before dealing anything** (`StatusCombos.cs:57`). This is
-   the recursion guard and it already exists: the entry is gone before
-   `ResolveDetonation` calls `DealDamage`, so a Poison-typed detonation packet
-   that re-enters `AfterDefences` finds nothing to detonate. `StatusCombosTests
-   .DetonatingTwiceInARow_TheSecondCallDoesNothing` pins it.
+2. Find **every** Poison entry (D3 — they stack). **None → return 0**, the
+   empty case.
+3. `worth = sum over instances of (Magnitude * TurnsRemaining)`, then `premium`
+   applied **once to the sum**: `Rounding.AwayFromZero(worth * percent / 100)`.
+   Applying the premium per instance and adding up would round `k` times and
+   quietly pay a different figure for the same board.
+4. **Remove every entry before dealing anything** (`StatusCombos.cs:57`). This is
+   the recursion guard and it already exists, widened from one entry to all of
+   them: the list is clear before `ResolveDetonation` calls `DealDamage`, so a
+   Poison-typed detonation packet that re-enters `AfterDefences` finds nothing to
+   detonate — and finds nothing whether the target carried one instance or five,
+   which is the case a one-entry removal would have got wrong. `StatusCombosTests
+   .DetonatingTwiceInARow_TheSecondCallDoesNothing` pins the old half;
+   `.DetonatingThreeStacks_ConsumesAllOfThem_AndLeavesNoneTicking` pins the new.
 5. Deal it through `DealDamage`, typed `Poison` regardless of the trigger's own
    type, credited `Attacker` if the attacker is player-side and `Nobody`
    otherwise (`FightSession.cs:909-918`, AUDIT #63).
 
-**No caster scaling is applied at detonation** — the figure is
+**No caster scaling is applied at detonation** — the figure is the summed
 `Magnitude * TurnsRemaining` and a percent, nothing else. The snapshot was taken
 when the Poison was applied; applying spell scaling again here would scale it
 twice.
@@ -495,9 +614,11 @@ packets carry it.
 runs inside `AfterDefences`, which `ResolveDamageSingle` reaches before
 `ApplyFinalDamage`; `ApplySkillStatus` — which applies the spell's own fresh
 Poison — runs afterwards and only on a live target
-(`FightSession.Skills.cs:682-721`). The old entry is removed before the fresh
-one lands, so the two never merge. One detonation, one record, then a new
-Poison.
+(`FightSession.Skills.cs:682-721`). Every old entry is removed before the fresh
+one lands, so the cast cannot re-detonate what it just applied. Under D3 the
+fresh Poison is a new instance rather than a merge, which is the same observable
+outcome and one less rule: **one detonation, one record, then exactly one Poison
+instance on a target that carried nothing else.**
 
 **Preview purity falls out of construction**: a preview passes
 `resolveDetonation: null`, and `null` means "no combo", never "combo with
@@ -983,7 +1104,12 @@ expiry, failure behaviour, presentation, content row. Numbers marked
   malus is revoked when the status is reported expired — the same
   `Expired.Contains(Chilled)` teardown that lives at
   `FightSession.Riders.cs:501-504` today, moved to the turn-end sweep with the
-  clock (1.4).
+  clock (1.4) and widened to a recompute so a second Chill outliving the first
+  keeps slowing (D3).
+- **Stacking** two Rebukes on one target are two Chilled instances at 25% each,
+  a 50% malus, each expiring on its own turn-end. The speed floor
+  (`GrantSpeedMalusPercent`) is what stops a pile reaching zero Speed; no cap is
+  authored on the status.
 - **Failure** dodge → no damage, **no Chill**; lethal damage → no Chill
   (`IsAlive` gate, `FightSession.Skills.cs:717-721`); no target → refused at
   reach.
@@ -1001,17 +1127,21 @@ expiry, failure behaviour, presentation, content row. Numbers marked
 - **Scaling** one packet `{"type": "Poison", "amount": 3}` `prototype`.
 - **Effect order** (1) pay; (2) dodge, once; (3) the packet enters
   `AfterDefences`, whose detonation step (`DamagePipeline.cs:264`) fires because
-  the packet is Poison-typed — **the existing Poison is consumed and dealt
-  first, at premium 100**, and the entry is removed before anything else;
+  the packet is Poison-typed — **every Poison instance the target carries is
+  consumed and dealt as one figure, at premium 100**, and all of them are
+  removed before anything else;
   (4) `ApplyFinalDamage` for the packet; (5) marks; (6) if the target lives,
-  apply fresh Poison, magnitude 3 `prototype`, 3 ticks `prototype`.
-- **Expiry** `AtTick`: three ticks, the third and the removal simultaneous.
+  apply fresh Poison, magnitude 3 `prototype`, 3 ticks `prototype`, as a new
+  instance (D3).
+- **Expiry** `AtTick`: three ticks, the third and the removal simultaneous, per
+  instance.
 - **Failure** dodge → nothing consumed, nothing applied, no detonation (the
   roll short-circuits `AfterDefences` at `:234`, before `:264`); lethal → no
   fresh Poison; no existing Poison → no detonation, ordinary hit.
-- **One detonation, recorded once.** The entry is gone before the fresh Poison
-  is applied, so the two never merge and the fresh entry cannot be re-detonated
-  by the same cast.
+- **One detonation, recorded once, however many instances it ate.** The list is
+  clear before the fresh Poison is applied, so the fresh instance cannot be
+  re-detonated by the same cast — and a target that was carrying three stacks
+  is left carrying exactly one.
 - **Presentation** the owner's priority visual: begin — coils gather behind the
   caster. release — jaws travel. impact — **jaws close over the target**, the
   authoritative `hitCueSeconds`. settle — the jaws dissolve and green runs down
@@ -1232,17 +1362,17 @@ expiry, failure behaviour, presentation, content row. Numbers marked
 
 - **Targeting** one enemy. **Costs** 8 mana `prototype`. **Cooldown** 2
   `prototype`. **Tier** 2 `prototype`. No direct damage.
-- **Scaling** the new-DoT rule (1.5): the tick strength is the current intensity
-  step multiplied by the caster's tier and spell scaling, snapshotted at
-  application.
-- **Intensity ladder** `intensitySteps: [4, 6, 8]` `prototype`. A first
-  application takes step 1; each application onto a target that still carries
-  Burn advances one step, and the last step repeats. The ladder is per target,
-  stored as `ActiveStatus.IntensityLevel` (D4), and advances only when the
-  incoming application is at least as strong as the stored snapshot (D3).
-- **Effect order** (1) pay; (2) `ApplyDot(target, Burn, step, 3 ticks, caster)`
-  through the seam; (3) log the resulting tick strength, which is what the
-  tooltip and the badge show.
+- **Scaling** the new-DoT rule (1.5): the tick strength is the authored base
+  multiplied by the caster's tier and spell scaling, snapshotted at application.
+- **No intensity ladder.** `intensitySteps` is **dropped** (owner, 2026-09-20).
+  A recast adds a second Burn instance at its own snapshot rather than stoking
+  the first, and the target's per-turn burn is the sum. That is the stacking
+  model doing the job the ladder was invented to do, with no new field, no new
+  content key and no "is the incoming application at least as strong" rule.
+  Authored base `4` `prototype`.
+- **Effect order** (1) pay; (2) `ApplyDot(target, Burn, base, 3 ticks, caster)`
+  through the seam, which adds an instance; (3) log the resulting tick strength,
+  which is what the tooltip and the badge show.
 - **Expiry** `AtTick`: three ticks `prototype`, the third and the removal
   simultaneous.
 - **Tick** Fire-typed, affinity applied against the holder, no flat defense, no
@@ -1251,11 +1381,10 @@ expiry, failure behaviour, presentation, content row. Numbers marked
   dodgeable.
 - **Presentation** begin: a censer swings up beside the caster. release: it
   arcs over. impact: coals scatter across the target. settle: a held ember glow
-  that brightens one step on each recast.
-- **Tooltip** "Burns for three turns. Casting it again on a burning enemy
-  stokes it."
-- **Content row** new `SkillEffect.Afflict`, new field `intensitySteps`;
-  `appliesStatus: "Burn"`, `statusDuration: 3`.
+  that brightens with each live instance.
+- **Tooltip** "Burns for three turns. Cast it again and both fires burn."
+- **Content row** new `SkillEffect.Afflict`, existing fields only;
+  `appliesStatus: "Burn"`, `statusMagnitude: 4`, `statusDuration: 3`.
 
 ### 2.12 Thorn Tithe — `thorn_tithe`
 
@@ -1364,14 +1493,25 @@ calling a resolution method directly, per Appendix B.
 | **1.5** no flat defense per tick | `NewDotTests.ABurnTickIgnoresTheHoldersMagicalDefence` | E |
 | **1.5** attribution survives the caster's death | `NewDotTests.ABurnAppliedByACasterWhoThenDies_StillTicksAndStillNamesItsSource` | E |
 | **1.5** tick death is credited to nobody | `KillCreditTests` + `NewDotTests.ABurnTickThatKills_SettlesWithNobody` | E |
-| **D3** stronger snapshot wins, duration refreshes | `NewDotTests.TwoCastersDifferentStrengths_TheStrongerSnapshotStands_AndTheDurationRefreshes` | E |
-| **D3** a weaker recast cannot advance the ladder | `NewDotTests.AWeakerRecast_DoesNotAdvanceTheIntensityStep` | E |
+| **D3** the stack-policy table is total | `StatusEffectsTests.EveryStatusTypeAnswersStackPolicy` (vacuity-guarded on `Enum.GetValues`) | A |
+| **D3** a second DoT application adds an instance, it does not merge | `StatusEffectsTests.ASecondPoison_StandsBesideTheFirst_WithItsOwnMagnitudeAndClock` | A |
+| **D3** the per-turn tick total is the sum of live instances | `StatusEffectsTests.ThreePoisonInstances_TickForTheirSum_InOnePass` | A |
+| **D3** instances expire apart, not together | `StatusEffectsTests.TheShortestPoisonInstanceGoesFirst_AndTheOthersKeepTicking` | A |
+| **D3** each instance keeps its own source | `StatusEffectsTests.TwoCastersPoisoningOneTarget_EachKeepTheirOwnAttribution` | A |
+| **D3** a binary restriction still refreshes | `StatusEffectsTests.ASecondStun_RefreshesRatherThanStacking` | A |
+| **D3** an additive debuff sums across instances | `StatusEffectsTests.TwoVulnerables_AddUpInTheDamageMultiplier` | A |
+| **D3** a stacked status draws ONE badge carrying the total | `StatusHudCoverageTests.ThreePoisonInstances_DrawOneBadge_WhoseTooltipCarriesTheSum` | A |
+| **D3** Chilled's malus is the sum, and survives one instance expiring | `ChilledStatusTests.TwoChills_SlowByTheirSum_AndOneExpiringLeavesTheOtherSlowing` | A |
+| **D3** two casters, different strengths, neither is floored by the other | `NewDotTests.TwoCastersDifferentStrengths_BothInstancesTickAtTheirOwnSnapshot` | E |
 | **D5** `TickReport` carries two damage types in one tick | `StatusEffectsTests.OneTick_CarryingBurnAndPoison_ReportsBothRowsSeparately` | E |
 | **D5** absorbed and health-loss stay apart | `WardTests.APoisonTickAWoolPoolAbsorbsIsStillCountedAndStillSaid` (exists) | E |
 | **D6** `appliesStatus: Chilled` actually slows **(dispatcher)** | `ChilledStatusTests.ASkillAuthoringChilled_RegistersTheSpeedMalus_NotJustTheBadge` | A |
 | **1.4** the speed malus is revoked by the turn-END expiry report | `ChilledStatusTests.ChilledsSpeedIsGivenBack_OnTheTurnEndThatExpiresIt_NotTheTurnStart` | A |
 | **D6** no production path applies a side-effect status outside the seam | `StatusSeamTests.NoProductionCallerAppliesChilledOrADotThroughStatusEffectsApplyDirectly` (reflection over the assembly, vacuity-guarded on a minimum call-site count) | A |
 | **1.6** detonation consumes once and is not rescaled | `StatusCombosTests.Detonating_ConsumesThePoisonEntirely` (exists) | A |
+| **1.6** detonation eats EVERY instance, in one consumption | `StatusCombosTests.DetonatingThreeStacks_ConsumesAllOfThem_AndLeavesNoneTicking` | A |
+| **1.6** the premium is applied to the sum, not per instance | `StatusCombosTests.APremiumOverThreeStacks_RoundsOnceOnTheTotal` | B |
+| **Risk** a stacked detonation is recorded once, not once per instance | `VipersBiteTests.ABiteOnATripleStackedTarget_RecordsOneDetonationRow` | A |
 | **1.6** a second call does nothing | `StatusCombosTests.DetonatingTwiceInARow_TheSecondCallDoesNothing` (exists) | A |
 | **1.6** hit detonates before fresh Poison lands **(dispatcher)** | `SkillDispatchTests.ANatureCastThatAlsoAppliesPoison_DetonatesTheOldPoisonBeforeTheFreshOneLands` (exists) | A |
 | **1.6** Viper's Bite: one detonation, one record **(dispatcher)** | `VipersBiteTests.ABiteOnAPoisonedTarget_DetonatesOnce_ThenLeavesExactlyOneFreshPoison` | A |
@@ -1442,9 +1582,17 @@ that, and its gate says so.
 
 ### Milestone A — protection, frost, Poison, and the duration model
 
-**Scope.** The duration model (D1) and its nine re-authored rows; the
-`ApplyStatusTo` seam (D6); Gilded Aegis, Winter's Rebuke, Viper's Bite as
-complete slices; the preview-parity repair in 1.13; the enum-ordinal pin.
+**Scope.** The duration model (D1) and its nine re-authored rows; **the
+stacking model (D3) across `ActiveStatus`/`StatusEffects` and every reader of a
+status magnitude**; the `ApplyStatusTo` seam (D6); Gilded Aegis, Winter's
+Rebuke, Viper's Bite as complete slices; the preview-parity repair in 1.13; the
+enum-ordinal pin.
+
+The stacking model lands here rather than in E because milestone A's own content
+already exercises it — Winter's Rebuke stacks Chilled and Viper's Bite detonates
+a pile — and because existing content (the Giant Rat's every-hit Poison, the
+beetle's Shell Up) changes behaviour the moment the merge rule goes, whichever
+milestone the change rides in on.
 
 The duration model lands here, first, alone, and before any spell depends on it
 — it is one of the two hardest contracts and it is proven in its own package
@@ -1473,6 +1621,9 @@ with its own migration test (Appendix B).
 - Every existing content row listed in §0's table affects the same number of
   turns after the change as before it, Lucky Deck excepted and stated.
 - `appliesStatus: Chilled` registers a speed malus.
+- Three Poison instances tick for their sum, expire apart, draw one badge, and
+  are all consumed by one detonation that is recorded once.
+- A binary restriction still refreshes rather than stacking.
 
 ### Milestone B — consumption and health payment
 
@@ -1558,7 +1709,7 @@ its four callers, the content lint; Velvet Shackles.
 ### Milestone E — persistent damage
 
 **Scope.** The new-DoT model (1.5), `TickReport` as typed rows (D5, AUDIT #188),
-the intensity ladder (D4), the post-action hook (1.11); Censer of Embers, Thorn
+the post-action hook (1.11); Censer of Embers, Thorn
 Tithe.
 
 **Gate.**
@@ -1794,6 +1945,17 @@ during this pass. Line numbers are from the tree at `a016e0ba`.
 
 Reported here; `docs/SPELL_EXPANSION_BASELINE.md` is **not** edited.
 
+0. **Correct when written, SUPERSEDED on 2026-09-20.** Baseline §5's row
+   "Re-applying Poison **refreshes, does not stack**" and §9's reading of
+   `StatusEffects.Apply` describe the code as it stood at stage 1a. The owner's
+   stacking decision replaces that rule; the baseline stays as the record of
+   what the change was made against, and anyone reading it for present-tense
+   behaviour should read §0's owner-decision block and D3 instead. The two
+   `StatusEffectsTests` the baseline names as pins for the merge
+   (`Apply_SameTypeAgain_TakesTheStrongerMagnitudeAndLongerDuration`,
+   `.Apply_AWeakerReapplication_NeverWeakensTheExistingOne`) are re-aimed at a
+   refresh-policy status rather than deleted, so the merge branch keeps its
+   coverage for the statuses that still use it.
 1. **Silent, and it changes a contract.** Baseline §1 does not record that
    `ResolveDamageInstances` omits `ignoresDefense`. A fixed-packet spell's
    `ignoresDefense` is inert today (`FightSession.Skills.cs:983-991`). Blackglass
