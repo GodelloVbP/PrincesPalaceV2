@@ -106,6 +106,15 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
         }
 
+        // START, which is what opens and closes the overarching menu since
+        // the owner's 2026-09-19 call -- the hub is a root, so its Cancel is
+        // deliberately nothing at all now.
+        private IEnumerator PressSystemMenu()
+        {
+            _input.SystemMenuDown = true;
+            yield return DriveFrame();
+        }
+
         private IEnumerator PressTabNext()
         {
             _input.TabNextDown = true;
@@ -185,8 +194,8 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
 
-            yield return PressCancel();
-            Assert.IsTrue(menu.IsOpen, "fixture: Cancel with nothing else up should open the system menu");
+            yield return PressSystemMenu();
+            Assert.IsTrue(menu.IsOpen, "fixture: Start should open the system menu from the hub");
 
             // Two shoulder presses, each of which lands INSIDE the new pane
             // rather than on its tab (SystemMenuController.StepTab's own
@@ -221,8 +230,8 @@ namespace PrincesPalace.PlayModeTests
             yield return PressCancel();
             Assert.IsFalse(menu.IsOpen, "fixture: Cancel on an unclaimed pane should close the menu");
 
-            yield return PressCancel();
-            Assert.IsTrue(menu.IsOpen, "fixture: a third Cancel should reopen the menu");
+            yield return PressSystemMenu();
+            Assert.IsTrue(menu.IsOpen, "fixture: Start should reopen the menu");
 
             Assert.AreEqual(insideThePane, EventSystem.current.currentSelectedGameObject,
                 "reopening the menu should land on the node the last visit left focused -- and land on it " +

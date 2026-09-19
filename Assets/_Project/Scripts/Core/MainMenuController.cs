@@ -305,8 +305,7 @@ namespace PrincesPalace
             var links = new List<UiNavLink<Selectable>?>();
             if (slots.Count > 0 && footer.Count > 0)
             {
-                links.Add(RuntimeNavWiring.Link(slots[slots.Count - 1], UiNavDirection.Down, footer[0]));
-                links.Add(RuntimeNavWiring.Link(footer[0], UiNavDirection.Up, slots[slots.Count - 1]));
+                links.AddRange(RuntimeNavWiring.LinkBoth(slots[slots.Count - 1], UiNavDirection.Down, footer[0]));
             }
 
             RuntimeNavWiring.Apply(
@@ -355,8 +354,7 @@ namespace PrincesPalace
             var links = new List<UiNavLink<Selectable>?>();
             if (deletes.Count > 0 && footer.Count > 0)
             {
-                links.Add(RuntimeNavWiring.Link(deletes[deletes.Count - 1], UiNavDirection.Down, footer[0]));
-                links.Add(RuntimeNavWiring.Link(footer[0], UiNavDirection.Up, deletes[deletes.Count - 1]));
+                links.AddRange(RuntimeNavWiring.LinkBoth(deletes[deletes.Count - 1], UiNavDirection.Down, footer[0]));
             }
 
             RuntimeNavWiring.Apply(

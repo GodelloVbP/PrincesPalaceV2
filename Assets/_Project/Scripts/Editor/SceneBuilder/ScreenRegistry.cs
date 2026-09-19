@@ -575,8 +575,11 @@ public static class ScreenRegistry
                 // changing gear between rooms is supposed to happen.
                 map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                // Held, not discarded: the map's own NavContext.Cancel opens
-                // this (MapController.HandleCancel, AUDIT.md #155).
+                // Held, not discarded: the map's own NavContext.systemMenu
+                // handler opens this (MapController.HandleSystemMenu). The
+                // owner's 2026-09-19 call moved it off Cancel onto Start, so
+                // the map's Cancel is a no-op now and this is the only way in
+                // (AUDIT.md #155 for why the path is shared at all).
                 map.systemMenu = WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
                     inDescent: true);
 
@@ -859,13 +862,14 @@ public static class ScreenRegistry
     // `escapeConsumers` is gone (docs/GAMEPAD_NAVIGATION_PLAN.md phase 2, step
     // B): the menu no longer polls Escape itself at all, so there is nothing
     // left for a per-scene consumer list to guard. Every scene that carries
-    // one now reopens it on Cancel through ONE path
-    // (SystemMenuController.OpenOnCancel) from its own context's Cancel
-    // handler -- the hub's HandleEscape, the map's HandleCancel, and the
-    // fight's OnBackPressed at MenuDepth.Root, which is the only depth where
-    // Fight's own Back() has nothing to consume (AUDIT.md #155, closed in
-    // phase 2 step F). Each caller therefore needs the controller in hand,
-    // which is why this returns it.
+    // one now opens it through ONE path (SystemMenuController.OpenFromRoot)
+    // from its own context's `systemMenu` handler -- the hub's HandleEscape,
+    // the map's HandleSystemMenu and the fight's OpenSystemMenu -- which Start
+    // and Escape reach and Cancel does not. Cancel is a no-op at all three
+    // roots since the owner's 2026-09-19 call; AUDIT.md #155 closed in phase 2
+    // step F with the same single path hung off Cancel instead, so the button
+    // moved and the sharing did not. Each caller therefore needs the
+    // controller in hand, which is why this returns it.
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
         bool inDescent)

@@ -72,6 +72,39 @@ namespace PrincesPalace
             return new UiNavLink<UnityEngine.UI.Selectable>(from, direction, to);
         }
 
+        // Both halves of a hand-emitted link in one call. Added after a
+        // gamepad-nav audit (2026-09-19) found the class of bug this exists
+        // to close: MapController wrote choice[i-1] -Down-> choice[i] and
+        // never its reverse, so Up did nothing on a screen where Down
+        // worked -- one line forgotten among several near-identical ones, in
+        // a file whose several other calls to Link already hand-paired both
+        // directions correctly. A caller that wants a two-way edge asks for
+        // one and gets both; there is nothing left to forget.
+        //
+        // Not a replacement for one-way Link -- most of this file's callers
+        // (a Rail's foot down into a footer, a tab's Down into its pane)
+        // mean exactly one direction, and pairing those would wire a
+        // click-when-there-was-never-a-corresponding-step. Use this only
+        // where the reverse is the same edge walked backwards.
+        public static IEnumerable<UiNavLink<UnityEngine.UI.Selectable>?> LinkBoth(
+            UnityEngine.UI.Selectable a, UiNavDirection direction, UnityEngine.UI.Selectable b)
+        {
+            yield return Link(a, direction, b);
+            yield return Link(b, Opposite(direction), a);
+        }
+
+        private static UiNavDirection Opposite(UiNavDirection direction)
+        {
+            switch (direction)
+            {
+                case UiNavDirection.Up: return UiNavDirection.Down;
+                case UiNavDirection.Down: return UiNavDirection.Up;
+                case UiNavDirection.Left: return UiNavDirection.Right;
+                case UiNavDirection.Right: return UiNavDirection.Left;
+                default: throw new System.ArgumentOutOfRangeException(nameof(direction));
+            }
+        }
+
         public static void Apply(
             IEnumerable<UiNavGroup<UnityEngine.UI.Selectable>> groups,
             IEnumerable<UiNavLink<UnityEngine.UI.Selectable>?> links = null)

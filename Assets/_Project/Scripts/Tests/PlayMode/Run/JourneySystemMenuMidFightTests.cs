@@ -83,18 +83,18 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CancelOpensTheMenu_AdjustsAStepperAndASlider_CancelClosesBackToFight()
+        public IEnumerator StartOpensTheMenu_AdjustsAStepperAndASlider_CancelClosesBackToFight()
         {
             yield return OpenAFight();
 
             Assert.IsFalse(_menu.IsOpen, "fixture: the menu should start closed");
             int verbBefore = _fight.FocusedVerbForTest;
 
-            yield return PressCancel();
+            yield return PressSystemMenu();
 
             Assert.IsTrue(_menu.IsOpen,
-                "Cancel at MenuDepth.Root -- where FightMenuState.Back() consumes nothing -- should open the " +
-                "system menu (AUDIT.md #155)");
+                "Start should open the system menu over a fight, at any menu depth -- it is not Fight's own " +
+                "step-back any more (AUDIT.md #155, moved off Cancel by the owner's 2026-09-19 call)");
 
             // THE OTHER HALF OF THE SAME CLAIM: the menu's context now sits
             // above Fight's, so the dispatcher's Fight branch must not run

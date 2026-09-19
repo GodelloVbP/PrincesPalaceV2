@@ -227,8 +227,8 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
 
-            yield return PressCancel(); // opens the menu on its default tab, Character & Inventory outside a run
-            Assert.IsTrue(menu.IsOpen, "Cancel with nothing else up should open the system menu");
+            yield return PressSystemMenu(); // opens the menu on its default tab, Character & Inventory outside a run
+            Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub");
 
             yield return MoveDown(); // the tab's own Down lands on the first equipment slot, Head
             AssertSelectedName("DossierSlotHead", "the tab bar's Down should land on the first equipment slot");

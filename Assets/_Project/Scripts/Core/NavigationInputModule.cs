@@ -94,6 +94,14 @@ namespace PrincesPalace
         // is enough because at most one Fight context can be top at a time.
         private bool _fightVerticalArmed = true;
 
+        // The horizontal twin, armed and spent by exactly the same rule --
+        // one flick, one step, and no step again until the axis has been back
+        // below MoveThreshold. Its own field rather than a shared one because
+        // the two axes are pushed independently and a stick held right while
+        // being flicked up must not have the up-flick swallowed by the right
+        // one's spent edge.
+        private bool _fightHorizontalArmed = true;
+
         // HOW FAR THE STICK HAS TO GO BEFORE A PRESS COUNTS, for BOTH
         // branches. The Fight branch has always had an armed edge of its own
         // at this value; the ordinary branch had none and simply let
@@ -136,6 +144,32 @@ namespace PrincesPalace
         // every call site (ScriptedBaseInput's own test double included).
         private const string TabPrevButton = "TabPrev";
         private const string TabNextButton = "TabNext";
+
+        // THE OVERARCHING MENU'S OWN BUTTON -- Start on a pad, not B (the
+        // owner's 2026-09-19 call). InputManager.asset binds escape and
+        // joystick button 7 to it. Escape is ALSO Cancel's positiveButton,
+        // which is the whole reason the dispatch below spends a frame on one
+        // of the two and never on both.
+        private const string SystemMenuButton = "SystemMenu";
+
+        // The triggers, bound as AXES rather than buttons because an analog
+        // control has no digital edge for GetButtonDown to report at all.
+        private const string TriggerLeftAxis = "TriggerLeft";
+        private const string TriggerRightAxis = "TriggerRight";
+
+        // HOW FAR A TRIGGER HAS TO TRAVEL BEFORE A PULL COUNTS. Deliberately
+        // its own number rather than MoveThreshold, which happens to share
+        // the value: that one answers "how far has the stick been pushed",
+        // and tuning it against a worn stick has no business silently
+        // retuning how hard a trigger has to be squeezed.
+        public const float TriggerThreshold = 0.5f;
+
+        // One armed edge per trigger, the stick's own rule (f6672a26)
+        // applied to a control the legacy input system reports only as a
+        // level: a pull counts once and does not count again until the
+        // trigger has been back below TriggerThreshold.
+        private bool _triggerLeftArmed = true;
+        private bool _triggerRightArmed = true;
 
         protected override void Awake()
         {
@@ -198,11 +232,29 @@ namespace PrincesPalace
                 return;
             }
 
+            // START, NOT B -- and it takes this frame's Cancel with it when
+            // it lands.
+            //
+            // One keyboard key drives both axes: escape is SystemMenu's
+            // positiveButton and Cancel's alike. Without this guard the same
+            // press would open the menu on a root screen and then hand a
+            // Cancel to topAtStart -- which is the root, whose Cancel is now
+            // nothing, but on the MENU's own context is Close, so Escape
+            // would open and shut it inside one frame.
+            //
+            // RaiseSystemMenu answering whether the context HAD a handler is
+            // the only thing that tells the two cases apart, and it is why
+            // this is not simply `if (menu) else if (cancel)`: a modal --
+            // the glossary, the debug menu, the relic draft -- declares no
+            // systemMenu handler, absorbs the press, and must still get its
+            // Cancel, or Escape would stop closing it.
+            bool systemMenuHandled = input.GetButtonDown(SystemMenuButton) && topAtStart.RaiseSystemMenu();
+
             // RaiseCancel, not Cancel: the active pane gets first refusal
             // (NavContext.RaiseCancel / INavCancelClaim) -- Party carrying a
             // character spends this press putting them back rather than
             // closing the menu around the player.
-            if (input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
+            if (!systemMenuHandled && input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
 
             // THE SHOULDER SHORTCUT (plan section 7's "Tabs" contract,
             // phase 3 item 2), offered the same way and off the same
@@ -213,6 +265,22 @@ namespace PrincesPalace
             // (plan section 2).
             if (input.GetButtonDown(TabPrevButton)) topAtStart.RaiseTabStep(-1);
             else if (input.GetButtonDown(TabNextButton)) topAtStart.RaiseTabStep(1);
+
+            // THE TRIGGER SHORTCUT (INavSectionStrip), beside the shoulders
+            // and absorbed the same way by a context that declares no
+            // section strip.
+            //
+            // Both edges are READ before either is spent, unlike the
+            // shoulders' plain if/else: TriggerPressed re-arms as well as
+            // reports, so short-circuiting past the second call would leave
+            // a trigger that was held through this frame armed the instant
+            // it is released. At most one step still dispatches -- two
+            // directions of one axis of navigation, and a frame carrying
+            // both would otherwise step there and straight back.
+            bool leftPulled = TriggerPressed(TriggerLeftAxis, ref _triggerLeftArmed);
+            bool rightPulled = TriggerPressed(TriggerRightAxis, ref _triggerRightArmed);
+            if (leftPulled) topAtStart.RaiseSectionStep(-1);
+            else if (rightPulled) topAtStart.RaiseSectionStep(1);
 
             // RE-READ HERE, deliberately -- this is not the same "capture
             // once" rule Cancel-dispatch above follows, and conflating the
@@ -296,10 +364,43 @@ namespace PrincesPalace
             }
 
             if (input.GetButtonDown(submitButton) || input.GetButtonDown(cancelButton)
-                || input.GetButtonDown(TabPrevButton) || input.GetButtonDown(TabNextButton))
+                || input.GetButtonDown(TabPrevButton) || input.GetButtonDown(TabNextButton)
+                || input.GetButtonDown(SystemMenuButton))
             {
                 LastInputWasPad = true;
             }
+
+            // Read as LEVELS, for the reason the stick above is: the armed
+            // edge can swallow a pull the player definitely made, and a
+            // marker that vanished on exactly those frames would be missing
+            // when the player is most likely to be looking for it.
+            if (Mathf.Abs(input.GetAxisRaw(TriggerLeftAxis)) >= TriggerThreshold
+                || Mathf.Abs(input.GetAxisRaw(TriggerRightAxis)) >= TriggerThreshold)
+            {
+                LastInputWasPad = true;
+            }
+        }
+
+        // ONE PULL, ONE STEP. Arming is updated on every call, whether or
+        // not the caller spends the edge -- see the caller's own comment on
+        // why both triggers are asked before either is answered.
+        //
+        // Abs, though the per-trigger axes InputManager.asset binds read
+        // 0..1: a driver that hands back the SIGNED combined-trigger axis
+        // under these names should still produce one step per pull rather
+        // than none in one direction.
+        private bool TriggerPressed(string axisName, ref bool armed)
+        {
+            if (Mathf.Abs(input.GetAxisRaw(axisName)) < TriggerThreshold)
+            {
+                armed = true;
+                return false;
+            }
+
+            if (!armed) return false;
+
+            armed = false;
+            return true;
         }
 
         // THE ONE PLACE THE MARKER IS TOLD ANYTHING. Both branches end here,
@@ -474,19 +575,61 @@ namespace PrincesPalace
                 return;
             }
 
+            // BOTH AXES, THROUGH THE SAME TWO AXIS NAMES THE ORDINARY BRANCH
+            // READS. "Horizontal" and "Vertical" each have three entries in
+            // ProjectSettings/InputManager.asset -- the keyboard's arrows, the
+            // left stick, and the D-pad hat (its own `axis: 5`/`axis: 6`
+            // entries, the pad's 6th and 7th -- hardware round 1 item 4) --
+            // and legacy Input.GetAxisRaw answers with the largest of them
+            // under one name, so asking once is asking all three. Nothing
+            // here needs to know which device moved.
             float vertical = input.GetAxisRaw(verticalAxis);
-            if (Mathf.Abs(vertical) < MoveThreshold)
-            {
-                _fightVerticalArmed = true;
-            }
-            else if (_fightVerticalArmed)
+            float horizontal = input.GetAxisRaw(horizontalAxis);
+
+            // Re-arming is unconditional and per axis: a frame that spends
+            // neither edge must still be able to re-arm the axis that went
+            // slack, or a diagonal released one axis at a time would leave the
+            // other permanently spent.
+            if (Mathf.Abs(vertical) < MoveThreshold) _fightVerticalArmed = true;
+            if (Mathf.Abs(horizontal) < MoveThreshold) _fightHorizontalArmed = true;
+
+            // ONE AXIS PER FLICK, THE DOMINANT ONE -- the rule
+            // BaseInputModule.DetermineMoveDirection applies for us in the
+            // ordinary branch and that this branch has to apply for itself,
+            // because it reads the axes directly. Without it a diagonal push
+            // would step the verb column AND step onto the actor row on the
+            // same frame, which is two moves the player made one gesture for.
+            // Vertical wins a tie, which is what a purely vertical push has
+            // always resolved to here.
+            bool verticalLeads = Mathf.Abs(vertical) >= Mathf.Abs(horizontal);
+
+            if (verticalLeads && Mathf.Abs(vertical) >= MoveThreshold && _fightVerticalArmed)
             {
                 _fightVerticalArmed = false;
                 target.MoveFocus(vertical > 0f ? -1 : 1);
             }
+            else if (!verticalLeads && Mathf.Abs(horizontal) >= MoveThreshold && _fightHorizontalArmed)
+            {
+                _fightHorizontalArmed = false;
+                target.InspectMove(horizontal > 0f ? 1 : -1);
+            }
+
+            // START REACHES THE MENU FROM INSIDE A FIGHT TOO, off the same
+            // axis and the same NavContext handler the hub and the map use
+            // -- Fight's context carries one now (NavContext.ForFight's own
+            // systemMenu argument), so there is one read of this button in
+            // this class rather than a second one wired through
+            // IFightNavigationTarget.
+            //
+            // Guarded the same way the ordinary branch is, and here it is
+            // not merely tidy: escape drives both axes, and a fight sitting
+            // at a submenu depth would otherwise open the menu AND step back
+            // a level on one keypress. B keeps its one fight meaning -- step
+            // back -- which at Root is now nothing at all.
+            bool systemMenuHandled = input.GetButtonDown(SystemMenuButton) && top.RaiseSystemMenu();
 
             if (input.GetButtonDown(submitButton)) target.ConfirmFocus();
-            if (input.GetButtonDown(cancelButton)) target.OnBackPressed();
+            if (!systemMenuHandled && input.GetButtonDown(cancelButton)) target.OnBackPressed();
 
             // AFTER the three, so the marker lands on wherever this frame's
             // press left the focus rather than a frame behind it -- a Submit

@@ -162,12 +162,12 @@ namespace PrincesPalace.PlayModeTests
             // the two ENDS of the depth range (FightController.StageVisuals.
             // cs's own header), so slot 1 (enemy1, the second enemy above)
             // lands at the far end -- the rightmost badge row this screen
-            // ever draws. Proves the shared tooltip's TooltipPlacement.
-            // Beside positioning actually clamps inside the canvas rather
-            // than merely landing "beside" a badge with room to spare on
-            // every side, which the near slot's own badge would not have
-            // caught (see PlaceStatusTooltip's own comment on the first
-            // capture's defect). Driven through the component rather than a
+            // ever draws. Proves the status box's own placement actually
+            // clamps inside the canvas rather than merely landing under a
+            // figure with room to spare on every side, which the near slot's
+            // own badge would not have caught -- and, since 2026-09-19, that
+            // hovering ONE badge opens the whole of that enemy's list rather
+            // than that badge's own line. Driven through the component rather than a
             // synthetic pointer, same reasoning FightMenuCaptureTests' own
             // intent-hover shot gives (no real cursor exists in a capture,
             // and a fake EventSystem raycast would test Unity, not this

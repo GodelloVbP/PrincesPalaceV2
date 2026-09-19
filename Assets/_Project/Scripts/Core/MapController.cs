@@ -186,17 +186,20 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel);
+            // systemMenu, NOT cancel -- see HandleSystemMenu below.
+            _navContext = new NavContext(entry: null, selectables: null,
+                cancel: null, systemMenu: HandleSystemMenu);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
-        // Map's Cancel, called once a frame by the ONE dispatch point when
-        // this context is top. The map has nothing of its own to back out of
-        // -- there is no submenu depth here the way there is in a fight --
-        // so "nothing else owns this press" is the whole of it, and the menu
-        // opens. Once it IS open its own context sits above this one, so a
-        // second Cancel reaches the menu's Close, never this.
-        private void HandleCancel() => SystemMenuController.OpenOnCancel(systemMenu);
+        // Map's START, called once a frame by the ONE dispatch point when
+        // this context is top (the owner's 2026-09-19 call moved this off
+        // Cancel). The map has nothing of its own to back out of -- there is
+        // no submenu depth here the way there is in a fight -- so its Cancel
+        // is now nothing at all, and this is the only way in. Once the menu
+        // IS open its own context sits above this one, so a second Start
+        // reaches the menu's own handler, never this.
+        private void HandleSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
 
         private void OnDestroy()
         {
@@ -363,12 +366,15 @@ namespace PrincesPalace
             var links = new System.Collections.Generic.List<UiNavLink<Selectable>?>();
             if (choiceButtons.Count > 0)
             {
-                links.Add(RuntimeNavWiring.Link(currentButton, UiNavDirection.Right, choiceButtons[0]));
-                links.Add(RuntimeNavWiring.Link(choiceButtons[0], UiNavDirection.Left, currentButton));
+                links.AddRange(RuntimeNavWiring.LinkBoth(currentButton, UiNavDirection.Right, choiceButtons[0]));
 
                 for (int i = 1; i < choiceButtons.Count; i++)
                 {
-                    links.Add(RuntimeNavWiring.Link(choiceButtons[i - 1], UiNavDirection.Down, choiceButtons[i]));
+                    // Down steps to the next choice; Up steps back to the one
+                    // before it. The reverse used to be left out here (AUDIT:
+                    // gamepad Up did nothing on the Map, Down worked) --
+                    // LinkBoth now makes that omission impossible to repeat.
+                    links.AddRange(RuntimeNavWiring.LinkBoth(choiceButtons[i - 1], UiNavDirection.Down, choiceButtons[i]));
                     links.Add(RuntimeNavWiring.Link(choiceButtons[i], UiNavDirection.Left, currentButton));
                 }
             }

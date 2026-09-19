@@ -59,9 +59,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
             Assert.IsFalse(menu.IsOpen, "fixture: the menu should start closed");
 
-            yield return PressCancel(); // no click equivalent -- HubController's own Cancel handler, the mouse's own ESC key
+            yield return PressSystemMenu(); // no click equivalent -- HubController's own systemMenu handler, the mouse's own ESC key
 
-            Assert.IsTrue(menu.IsOpen, "Cancel with nothing else up should open the system menu");
+            Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub (the owner's 2026-09-19 call moved this off Cancel)");
 
             yield return Click(Node("SystemTabMainMenu")); // the tab strip's own real Button, not the shoulder shortcut
 

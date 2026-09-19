@@ -582,8 +582,32 @@ namespace PrincesPalace
                 top - drop + FightStageAnchors.IntentIconOffset + FightStageAnchors.IntentIconSize * 0.5f);
         }
 
+        // THE ICON OVER A MONSTER'S HEAD IS HOW A POINTER REACHES THE MONSTER
+        // (2026-09-19). The figure's own hit area is live ONLY while a target
+        // is being picked -- RefreshEnemyPlates raises it for that window and
+        // takes it down again, deliberately, so an idle stage takes no clicks
+        // -- which left the badge row under its feet as the only always-live
+        // node on an enemy, and those badges are 36px. The intent icon is
+        // always up during the player's turn and stands ON the figure, so it
+        // answers "what is on this thing" as well as "what is it about to
+        // do": the status box opens for the same enemy this tooltip
+        // describes.
+        //
+        // AND THE TWO CANNOT LAND ON EACH OTHER, which is worth stating
+        // because it is an argument rather than a distance. The intent
+        // tooltip is pinned upper-left at a fixed spot
+        // (FightScreen.BuildIntentTooltip) while the box hangs under a figure
+        // on the stage, so for an enemy they are nowhere near each other. The
+        // one geometry that WOULD cross it is a full-height box flipped above
+        // a near PARTY figure -- and that needs the box to be describing a
+        // party member while this tooltip describes an enemy, which takes two
+        // pointers: the mouse is what opens this, and opening it names its
+        // own enemy to the box (above), which outranks the pad's focus.
+        // Unreachable, so there is no stacking rule to write.
         private void OnHoverIndex(int index, bool entered)
         {
+            InspectEnemyAt(index, entered);
+
             if (intentTooltip == null) return;
 
             if (!entered)
@@ -1271,6 +1295,16 @@ namespace PrincesPalace
             // WireAllStatusBadges always left the (then row-keyed) dictionary
             // for a new fight anyway.
             _statusRowActiveCodes.Clear();
+
+            // AND NOBODY IS BEING INSPECTED. The same reasoning one line up,
+            // against a worse failure: a held reference to a combatant from
+            // the fight that just ended would keep the status box open over
+            // the new encounter, describing a monster that is not there.
+            _inspectedActor = null;
+            _inspectedCode = null;
+            _inspectedFrom = InspectSource.None;
+            _inspectedFromIndex = -1;
+            if (statusBox != null) statusBox.SetShown(false);
 
             // SEEDED WITH WHOEVER IS ALREADY HERE. The reveal rule only ever
             // has to hold back a monster that arrives DURING a round; the

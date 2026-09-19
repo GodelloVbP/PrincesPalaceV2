@@ -21,6 +21,19 @@ namespace PrincesPalace.PlayModeTests
     // the tests that encoded it are adapted rather than deleted: each still
     // asks about the same pair of controls, against the answer the owner
     // actually wants.
+    //
+    // ROUND 2 (2026-09-19): the ring's Left/Right assertions below are
+    // adapted again. Round 1 (a9f89ebe) hand-typed the ring in the order the
+    // owner's words gave it literally -- "Left goes Principality then
+    // Talents" -- which this file pinned verbatim. On real screen x, though,
+    // Talents (-349) sits BETWEEN Principality (-673) and the gate (0), so
+    // that order made Left overshoot Talents and land back on it on the
+    // second press -- exactly the follow-up report ("press left twice you
+    // are left middle"). HubController.WireNavigation now sorts the ring by
+    // each control's actual x instead of by hand, so Left off the gate
+    // reaches Talents (the nearer one) before Principality. See
+    // HubRingAdjacencyTests (EditMode) for the same claim pinned without a
+    // scene.
     // Driven through the REAL production dispatcher (scripted BaseInput via
     // inputOverride, `yield return null`, assert resulting state), the same
     // shape SystemMenuGamepadNavigationTests already established for this
@@ -100,19 +113,22 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the owner's own two expectations, pinned literally ------------
         //
-        // "from the gate ('start descent'), Left goes to Principality, then
-        // Left again to Talents"
+        // Left steps to the nearest building on screen, then the next
+        // nearest -- Talents (x -349) before Principality (x -673). Round 1
+        // pinned the owner's words ("Left goes to Principality, then Left
+        // again to Talents") verbatim instead, which put the farther
+        // building first; this is the 2026-09-19 correction.
         [UnityTest]
-        public IEnumerator Left_FromTheGate_ReachesPrincipality_ThenTalents()
+        public IEnumerator Left_FromTheGate_ReachesTalents_ThenPrincipality()
         {
             yield return LoadHub();
             AssertSelected(_gate, "the gate is the entry");
 
             yield return Move(-1f, 0f);
-            AssertSelected(_principality, "Left off the gate should reach Principality");
+            AssertSelected(_talents, "Talents (x -349) is the nearest thing left of the gate (x 0)");
 
             yield return Move(-1f, 0f);
-            AssertSelected(_talents, "Left again should reach Talents");
+            AssertSelected(_principality, "Principality (x -673) is the next nearest, one more press further left");
         }
 
         // "when I'm top right on relics and I go to the right with the
@@ -133,6 +149,9 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // ---- the whole ring, both ways -------------------------------------
+        // Ring order by screen x: Principality(-673), Talents(-349),
+        // Gate(0), Relics(295), CharacterSheet(628) -- see this file's
+        // header for why that replaced the hand-typed name order.
         [UnityTest]
         public IEnumerator TheWholeRing_RightThenLeft()
         {
@@ -144,18 +163,18 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(1f, 0f);
             AssertSelected(_characterSheet, "Right off Relics reaches Character Sheet");
             yield return Move(1f, 0f);
-            AssertSelected(_talents, "the ring wraps off its right end to Talents");
+            AssertSelected(_principality, "the ring wraps off its right end to Principality, the lowest x");
             yield return Move(1f, 0f);
-            AssertSelected(_principality, "Right off Talents reaches Principality");
+            AssertSelected(_talents, "Right off Principality reaches Talents");
             yield return Move(1f, 0f);
-            AssertSelected(_gate, "Right off Principality closes the ring on the gate");
+            AssertSelected(_gate, "Right off Talents closes the ring on the gate");
 
             yield return Move(-1f, 0f);
-            AssertSelected(_principality, "Left off the gate reaches Principality");
+            AssertSelected(_talents, "Left off the gate reaches Talents");
             yield return Move(-1f, 0f);
-            AssertSelected(_talents, "Left off Principality reaches Talents");
+            AssertSelected(_principality, "Left off Talents reaches Principality");
             yield return Move(-1f, 0f);
-            AssertSelected(_characterSheet, "the ring wraps off its left end to Character Sheet");
+            AssertSelected(_characterSheet, "the ring wraps off its left end to Character Sheet, the highest x");
             yield return Move(-1f, 0f);
             AssertSelected(_relics, "Left off Character Sheet reaches Relics");
             yield return Move(-1f, 0f);

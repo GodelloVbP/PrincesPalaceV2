@@ -60,9 +60,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
             Assert.IsFalse(menu.IsOpen, "fixture: the menu should start closed");
 
-            yield return PressCancel(); // HubController's own Cancel handler -> SystemMenuController.OpenOnCancel
+            yield return PressSystemMenu(); // HubController's own systemMenu handler -> SystemMenuController.OpenFromRoot
 
-            Assert.IsTrue(menu.IsOpen, "Cancel with nothing else up should open the system menu");
+            Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub (the owner's 2026-09-19 call moved this off Cancel)");
 
             yield return PressTabPrev(); // wraps from the first visible tab to the last one, MainMenu
 

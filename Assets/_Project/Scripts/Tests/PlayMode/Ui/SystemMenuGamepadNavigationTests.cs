@@ -52,7 +52,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CancelOpensTheMenuFromTheHub_CancelAgainClosesItAndRestoresTheGate()
+        public IEnumerator StartOpensTheMenuFromTheHub_StartAgainClosesItAndRestoresTheGate()
         {
             yield return LoadHub();
 
@@ -69,20 +69,19 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(gate.gameObject, EventSystem.current.currentSelectedGameObject,
                 "the hub's entry (the gate) should be selected as soon as the scene loads");
 
-            _input.CancelDown = true;
+            _input.SystemMenuDown = true;
             yield return DriveFrame();
 
             Assert.IsTrue(_menu.IsOpen,
-                "Cancel with nothing else up should open the system menu -- HubController.HandleEscape, " +
-                "now the hub's own NavContext.Cancel handler, doing the job SystemMenuController's own " +
-                "deleted poll used to do");
+                "Start should open the system menu -- HubController.HandleEscape, now the hub's own " +
+                "NavContext systemMenu handler rather than its Cancel (the owner's 2026-09-19 call)");
             Assert.IsNotNull(EventSystem.current.currentSelectedGameObject,
                 "opening the menu should select its own tab bar");
 
-            _input.CancelDown = true;
+            _input.SystemMenuDown = true;
             yield return DriveFrame();
 
-            Assert.IsFalse(_menu.IsOpen, "a second Cancel should close the menu it just opened");
+            Assert.IsFalse(_menu.IsOpen, "a second Start should close the menu it just opened");
 
             // Hub's remembered node IS restored now, provably: closing the
             // menu must land back on the hub's own entry (the gate), not the
@@ -111,15 +110,18 @@ namespace PrincesPalace.PlayModeTests
                 "context of its own, so there is only ever one layer to pop");
 
             // Exactly ONE layer, proven rather than assumed: if Cancel had
-            // somehow popped the hub's own base context too, this second
-            // press would find an empty stack and do nothing.
-            _input.CancelDown = true;
+            // somehow popped the hub's own base context too, this press would
+            // find an empty stack and do nothing. START rather than a second
+            // Cancel, because the hub is a ROOT now -- its Cancel is
+            // deliberately nothing, and Start is the only way back into the
+            // menu from it.
+            _input.SystemMenuDown = true;
             yield return DriveFrame();
 
             Assert.IsTrue(_menu.IsOpen,
                 "the hub's own context should still be on top and functioning after the menu's one pop -- " +
-                "a second Cancel re-opening the menu is what proves that, rather than the stack having lost " +
-                "its own base context along with the menu's");
+                "Start re-opening the menu is what proves that, rather than the stack having lost its own " +
+                "base context along with the menu's");
         }
 
         // Pinned to literal expected values (docs/CODE_STANDARDS.md section

@@ -134,5 +134,43 @@ namespace PrincesPalace.PlayModeTests
             Assert.DoesNotThrow(() => RuntimeNavWiring.Apply(
                 RuntimeNavWiring.Group("none", UiNavGroupKind.Rail, new UnityEngine.UI.Selectable[0])));
         }
+
+        // Added after a gamepad-nav audit (2026-09-19) found MapController
+        // had written a Down link and never its Up reverse -- LinkBoth exists
+        // so a caller cannot repeat that omission. Every direction paired
+        // with its opposite, once each.
+        [Test]
+        public void LinkBoth_WritesBothDirections()
+        {
+            var a = Btn("A");
+            var b = Btn("B");
+
+            RuntimeNavWiring.Apply(
+                System.Array.Empty<UiNavGroup<UnityEngine.UI.Selectable>>(),
+                RuntimeNavWiring.LinkBoth(a, UiNavDirection.Down, b));
+
+            Assert.AreEqual(b, a.navigation.selectOnDown);
+            Assert.AreEqual(a, b.navigation.selectOnUp, "the reverse must be the SAME edge walked backwards");
+        }
+
+        [TestCase(UiNavDirection.Up, UiNavDirection.Down)]
+        [TestCase(UiNavDirection.Left, UiNavDirection.Right)]
+        public void LinkBoth_OpposesEveryAxis(UiNavDirection forward, UiNavDirection reverseDirection)
+        {
+            var a = Btn("A");
+            var b = Btn("B");
+
+            RuntimeNavWiring.Apply(
+                System.Array.Empty<UiNavGroup<UnityEngine.UI.Selectable>>(),
+                RuntimeNavWiring.LinkBoth(a, forward, b));
+
+            var forwardTarget = forward == UiNavDirection.Up ? a.navigation.selectOnUp : a.navigation.selectOnLeft;
+            var reverseTarget = reverseDirection == UiNavDirection.Down
+                ? b.navigation.selectOnDown
+                : b.navigation.selectOnRight;
+
+            Assert.AreEqual(b, forwardTarget);
+            Assert.AreEqual(a, reverseTarget);
+        }
     }
 }

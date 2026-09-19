@@ -124,12 +124,14 @@ namespace PrincesPalace.PlayModeTests
             var attack = Node("Verb0").GetComponent<ThemedButtonState>();
             Assert.IsNotNull(attack, "Verb0 should be a themed button");
 
-            // Primary is "the recommended default", which ATTACK genuinely is
-            // by being index 0. Open is "this verb's branch is showing", which
-            // at rest nothing's is. Before this pass the pad's own focus
-            // index painted Open here, unconditionally, forever.
-            Assert.AreEqual(ThemedMenuState.Primary, attack.CurrentMenuState,
-                "nothing is open at rest, so no verb may wear the open plate");
+            // Open is "this verb's branch is showing", which at rest
+            // nothing's is. Before hardware round 1 the pad's own focus index
+            // painted Open here, unconditionally, forever; after it, index 0
+            // still wore Primary's gold ring, and the owner's answer to
+            // AUDIT.md #171 (2026-09-19) was that the ring reads as hover too.
+            // So the resting column is flat: no verb is lit for any reason.
+            Assert.AreEqual(ThemedMenuState.Idle, attack.CurrentMenuState,
+                "nothing is open at rest, so no verb may wear a plate or a ring");
         }
 
         [UnityTest]
@@ -151,8 +153,8 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(ThemedMenuState.Idle, Node("Verb1").GetComponent<ThemedButtonState>().CurrentMenuState,
                 "a focused verb is not an opened verb -- the marker is what says the pad is here");
-            Assert.AreEqual(ThemedMenuState.Primary, Node("Verb0").GetComponent<ThemedButtonState>().CurrentMenuState,
-                "and the verb the focus LEFT goes back to being merely the recommended default");
+            Assert.AreEqual(ThemedMenuState.Idle, Node("Verb0").GetComponent<ThemedButtonState>().CurrentMenuState,
+                "and the verb the focus LEFT is drawn no differently from the two it never visited");
         }
 
         // ---- the marker (the "no proper selector" complaint) --------------------

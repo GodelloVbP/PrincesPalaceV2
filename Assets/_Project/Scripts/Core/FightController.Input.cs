@@ -102,6 +102,20 @@ namespace PrincesPalace
 
                     int index = i;
                     pcPlates[i].onClick.AddListener(() => OnAllyPlatePressed(index));
+
+                    // HOVER, EVEN THOUGH A PLATE IS ONLY CLICKABLE DURING AN
+                    // ALLY PICK. The question "what is on this squadmate"
+                    // is a fair one on any turn, and the party's own figures
+                    // are unreachable to a pointer outside a pick the same
+                    // way the enemies' are -- so the plate is where a mouse
+                    // asks it. Inspection is not targeting: this opens the
+                    // status box and touches neither _hoveredAllyIndex nor
+                    // anything else the pick reads.
+                    var hover = pcPlates[i].gameObject.GetComponent<HoverIndex>()
+                                ?? pcPlates[i].gameObject.AddComponent<HoverIndex>();
+                    hover.Index = index;
+                    hover.Changed = InspectAllyOnPlate;
+
                     NoNavigation(pcPlates[i]);
                 }
             }
@@ -188,16 +202,35 @@ namespace PrincesPalace
             RefreshUi();
         }
 
+        // THE POINTER'S OWN PATH, and the inspect call belongs HERE rather
+        // than inside OnEnemyHovered: that method is shared with MoveFocus,
+        // which is the pad walking the rack, and the pad must not write the
+        // pointer's field. _inspectedActor is cleared by an EXIT event, and
+        // a stick press produces none -- so a pad target pick would have left
+        // the box open over an actor nothing was pointing at any more.
         private void AddEnemyHover(GameObject plate, int index)
         {
             var trigger = plate.GetComponent<EventTrigger>() ?? plate.AddComponent<EventTrigger>();
 
             var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ => OnEnemyHovered(index));
+            enter.callback.AddListener(_ =>
+            {
+                OnEnemyHovered(index);
+
+                // The plate names a monster, so it opens that monster's box
+                // -- under the FIGURE, not beside the plate: the figure is
+                // the thing being asked about and the plate is its readout
+                // (FightController.Hud's PlaceStatusBox).
+                InspectEnemyAt(index, true);
+            });
             trigger.triggers.Add(enter);
 
             var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exit.callback.AddListener(_ => OnEnemyUnhovered(index));
+            exit.callback.AddListener(_ =>
+            {
+                OnEnemyUnhovered(index);
+                InspectEnemyAt(index, false);
+            });
             trigger.triggers.Add(exit);
         }
 
@@ -765,28 +798,30 @@ namespace PrincesPalace
             AfterResolution();
         }
 
+        // THE FIGHT'S OWN WAY TO THE OVERARCHING MENU, wired as this
+        // context's `systemMenu` handler (RegisterNavContext) and reached by
+        // Start, the same button that reaches it from the hub and the map.
+        //
+        // NOT guarded on _isBusy, unlike the three IFightNavigationTarget
+        // members: opening the menu is not a fight action and does not ask
+        // the session for anything -- pausing mid-playback is exactly when a
+        // player wants it. Ordering is not a hazard either: opening pushes
+        // the menu's own context above Fight's, so the dispatcher's next
+        // call runs the menu's branch, not Fight's (topAtStart is captured
+        // once per call, plan section 3).
+        private void OpenSystemMenu() => SystemMenuController.OpenFromRoot(systemMenu);
+
         private void OnBackPressed()
         {
-            // THE ROOT CASE IS NOT "NOTHING HAPPENS" (AUDIT.md #155).
-            // FightMenuState.Back() returns false at MenuDepth.Root and only
-            // there -- a submenu, an element list and a target pick each step
-            // back one level and return true -- so a false here is exactly
-            // "Cancel with nothing else up", which on every other screen
-            // opens the system menu. It does here too now, through the same
-            // one path the hub and the map take.
-            //
-            // Ordering is not a hazard: opening pushes the menu's own context
-            // above Fight's, so the dispatcher's next call runs the menu's
-            // branch, not Fight's (topAtStart is captured once per call,
-            // plan section 3). The busy guard still sits in front of this --
-            // IFightNavigationTarget.OnBackPressed refuses while _isBusy --
-            // so Cancel mid-playback opens nothing, same as it confirms
-            // nothing.
-            if (!_menu.Back())
-            {
-                SystemMenuController.OpenOnCancel(systemMenu);
-                return;
-            }
+            // THE ROOT CASE IS NOW "NOTHING HAPPENS", and that is the whole
+            // of the owner's 2026-09-19 call. FightMenuState.Back() returns
+            // false at MenuDepth.Root and only there -- a submenu, an element
+            // list and a target pick each step back one level and return true
+            // -- so a false here is "B with nothing left to back out of",
+            // which used to open the system menu (AUDIT.md #155) and now
+            // belongs to Start instead (OpenSystemMenu above). B keeps one
+            // meaning in a fight rather than two.
+            if (!_menu.Back()) return;
 
             // The stick's ally cursor belongs to one open pick and to nothing
             // else. Left set, a later pick would open with the stick already
@@ -944,6 +979,13 @@ namespace PrincesPalace
         {
             _menu.Reset();
             _hoveredAllyIndex = -1;
+
+            // AND THE PAD IS BACK ON THE VERBS. A round resolving under a
+            // player who was reading a monster's statuses is the fight moving
+            // on without them; leaving the flag set would put the marker back
+            // on an actor the moment _isBusy cleared, on a turn the player
+            // arrived at fresh.
+            _inspecting = false;
 
             // SET BEFORE THE REPAINT, not after. RefreshMenuChrome (below)
             // includes RefreshVerbs, which now hides ATTACK/SKILL/ITEM/HOLD
@@ -1264,22 +1306,64 @@ namespace PrincesPalace
         // reinstate PollGamepadNavigation's own busy guard, which the
         // dispatcher itself has no reason to know about (Fight's model, not
         // the dispatch mechanism, owns "is this action legal right now").
+        // WHERE INSPECT IS LAYERED IN, and why it is here rather than inside
+        // MoveFocus/ConfirmFocus/OnBackPressed themselves: those three are
+        // the frozen focus model (docs/GAMEPAD_NAVIGATION_PLAN.md section 1)
+        // and are called directly, unguarded, by every existing test and by
+        // the Back button's own onClick. These wrappers are already the seam
+        // that reinstates the busy guard for the pad path only -- inspect is
+        // a pad-only state for exactly the same reason, so it is the same
+        // seam's job.
         void IFightNavigationTarget.MoveFocus(int delta)
         {
             if (_session == null || _isBusy) return;
+
+            // WHILE INSPECTING THE STICK WALKS THE ACTORS, both axes. The
+            // verb column is not somewhere the vertical axis can quietly move
+            // to while the marker stands on a monster -- B would then return
+            // to a verb the player never saw themselves choose.
+            if (IsInspecting)
+            {
+                InspectStep(delta);
+                return;
+            }
+
+            _inspecting = false;
             MoveFocus(delta);
         }
 
         void IFightNavigationTarget.ConfirmFocus()
         {
             if (_session == null || _isBusy) return;
+
+            // INSPECT IS A LOOK, NOT A CHOICE. There is no verb pending, so
+            // there is nothing for Submit to confirm -- pressing it must not
+            // fall through to Root's own ConfirmFocus and open ATTACK on the
+            // monster the player was only reading.
+            if (IsInspecting) return;
+
+            _inspecting = false;
             ConfirmFocus();
         }
 
         void IFightNavigationTarget.OnBackPressed()
         {
             if (_session == null || _isBusy) return;
+
+            // BEFORE _menu.Back(), and that order is the whole of it: B at
+            // Root is "nothing happens" by the owner's own 2026-09-19 call,
+            // and inspect sits on top of Root. Asking the menu first would
+            // spend the press on a no-op and leave the player stuck on the
+            // actor row with no way back to the verbs.
+            if (LeaveInspect()) return;
+
             OnBackPressed();
+        }
+
+        void IFightNavigationTarget.InspectMove(int delta)
+        {
+            if (_session == null || _isBusy) return;
+            InspectMove(delta);
         }
 
         // WHERE THE FOCUS MARKER GOES ON THIS SCREEN (hardware round 1's
@@ -1305,6 +1389,26 @@ namespace PrincesPalace
         internal GameObject FocusedElement()
         {
             if (_session == null || _isBusy) return null;
+
+            // INSPECT FIRST, because it sits on top of Root: the marker
+            // belongs on the actor being read, not on the verb the player
+            // will come back to.
+            //
+            // The same EnemyFigureOrPlate/AllyFigureOrPlate pair a target
+            // pick uses, and it resolves differently here for a reason worth
+            // knowing: the hit areas over the figures come up only while a
+            // target is being chosen (RefreshEnemyPlates, PaintPcPlate), so at
+            // Root both fall back to the PLATE. The marker therefore stands
+            // on the plate in the corner while PlaceStatusBox puts the box
+            // itself under the figure on the battlefield -- the two ends of
+            // one actor, which is the best this can do without the hit areas
+            // being brought up outside a pick (a Hud change, not this file's).
+            if (InspectedStop(out var inspected))
+            {
+                return inspected.IsAlly
+                    ? AllyFigureOrPlate(inspected.Index)
+                    : EnemyFigureOrPlate(inspected.Index);
+            }
 
             switch (_menu.Depth)
             {
@@ -1347,6 +1451,54 @@ namespace PrincesPalace
                     }
 
                     return null;
+            }
+
+            return null;
+        }
+
+        // WHICH COMBATANT THE PAD IS ON, or null when it is on something that
+        // is not one. FocusedElement's question answered one step earlier:
+        // that one resolves a node for the marker to stand on, this one
+        // resolves the actor the status box describes, and both read the same
+        // two cursors MoveFocus already maintains. Kept beside it so the two
+        // cannot drift into disagreeing about where the pad is.
+        //
+        // TWO WAYS THE PAD CAN BE ON AN ACTOR, and they are different
+        // questions rather than one with a flag. At Target depth the pad is
+        // CHOOSING one, and the box is a side effect of the choice. While
+        // inspecting it is only READING one, at Root, with nothing pending --
+        // the owner's 2026-09-19 call, and the reason the horizontal axis now
+        // reaches this method at all (InspectMove above,
+        // NavigationInputModule.ProcessFight for the axis read).
+        internal CombatantState FocusedActor()
+        {
+            if (_session == null || _isBusy) return null;
+
+            if (InspectedStop(out var inspected)) return inspected.Actor;
+
+            if (_menu.Depth != MenuDepth.Target) return null;
+
+            if (_menu.Side == TargetSide.Allies)
+            {
+                if (_hoveredAllyIndex >= 0) return PartyMemberOnPlate(_hoveredAllyIndex);
+
+                // NOTHING HOVERED YET names what Submit would press, which is
+                // the first candidate -- read off the same helper ConfirmFocus
+                // and FocusedElement use, so the box can never describe one
+                // monster while the arrow stands on another.
+                var pickable = PickableAllyPlates();
+                return pickable.Count > 0 ? PartyMemberOnPlate(pickable[0]) : null;
+            }
+
+            var enemies = Enemies;
+            if (_hoveredEnemyIndex >= 0 && _hoveredEnemyIndex < enemies.Count)
+            {
+                return enemies[_hoveredEnemyIndex];
+            }
+
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (enemies[i].IsAlive) return enemies[i];
             }
 
             return null;
@@ -1413,7 +1565,10 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = NavContext.ForFight(this);
+            // systemMenu, NOT Cancel (the owner's 2026-09-19 call): Start
+            // reaches the overarching menu from inside a fight, and B is
+            // left meaning one thing only -- step back a level.
+            _navContext = NavContext.ForFight(this, systemMenu: OpenSystemMenu);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -1530,6 +1685,269 @@ namespace PrincesPalace
             }
 
             return pickable;
+        }
+
+        // ---- inspecting, which costs no verb (the owner, 2026-09-19) ----------
+        //
+        // "In a fight, how does a player hover over a mob or a PC to check
+        // (de)buffs? (gamepad)" -- and until this, they could not. Fight's
+        // three depths are the verb column, a submenu list and a target rack,
+        // and only the last one stands on an actor, so the pad reached a
+        // monster only by first pressing A on ATTACK or a spell. Reading a
+        // monster is not choosing to hit it.
+        //
+        // NOT A FOURTH MenuDepth. MenuDepth belongs to FightMenuState, which
+        // is the domain model of what the player is COMMITTING to -- every
+        // one of its values is a step of one decision, and Back() walks them.
+        // Inspecting commits to nothing, resolves nothing, and is not a step
+        // back from anything. It is a pad-only reading position ON TOP of
+        // Root, so it is two fields here rather than a value in a domain enum
+        // that would then have to be given a meaning on every mouse path,
+        // every Back(), and in FightHudModel.
+        private bool _inspecting;
+
+        // WHO THE PAD WAS LAST READING, kept across a leave so that stepping
+        // back onto the row returns to the same actor rather than to the
+        // front of it. Never trusted on its own: every read resolves it
+        // against the ring built from the CURRENT fight (InspectedStop), so a
+        // combatant that has since died, or that belonged to the last
+        // encounter entirely, simply is not found and inspect reads as off.
+        // That is what makes this state safe to hold without a hook in
+        // ResetStagePresentation, which this file does not own.
+        private CombatantState _inspectCursor;
+
+        // INSPECT ONLY EVER EXISTS ON TOP OF ROOT, and the flag alone cannot
+        // say so: a MOUSE click on a verb while the pad was reading a monster
+        // moves the depth out from under it without the pad pressing
+        // anything. Asked here rather than trusted, so the stick goes
+        // straight back to walking whatever list that click opened. Every
+        // reader clears the stale flag on its way past.
+        private bool IsInspecting => _inspecting && _menu.Depth == MenuDepth.Root;
+
+        // One stop on the ring: the actor, and the two things needed to draw
+        // a marker on it. The side decides which of the two racks names it,
+        // and they name it differently -- an enemy by index, an ally by PLATE
+        // (see OnEnemyPressed's own header on the three indexing schemes).
+        private readonly struct InspectStop
+        {
+            public readonly CombatantState Actor;
+            public readonly bool IsAlly;
+            public readonly int Index;
+
+            public InspectStop(CombatantState actor, bool isAlly, int index)
+            {
+                Actor = actor;
+                IsAlly = isAlly;
+                Index = index;
+            }
+        }
+
+        // THE RING, IN SCREEN ORDER: every living monster, then every living
+        // squadmate. One list rather than two rows switched by Left/Right,
+        // because the racks are already built by two different index schemes
+        // and a second "which rack am I on" cursor would be a third one -- the
+        // combatant itself is the only name both sides agree on, and it is
+        // what _inspectCursor holds.
+        //
+        // Allies BY PLATE, not by party index: PartyMemberOnPlate and
+        // AllyFigureOrPlate both speak plates, and the column follows a Move
+        // (AUDIT #144), so walking the party list would step the stick in an
+        // order the screen does not show.
+        //
+        // Rebuilt per call, the same way MoveFocus' own target branch and
+        // PickableAllyPlates already rebuild theirs: the alternative is a
+        // cached list that a death, a Move or a new encounter can invalidate
+        // between frames.
+        private List<InspectStop> InspectRing()
+        {
+            var ring = new List<InspectStop>();
+
+            var enemies = Enemies;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (enemies[i] != null && enemies[i].IsAlive) ring.Add(new InspectStop(enemies[i], false, i));
+            }
+
+            if (pcPlates != null)
+            {
+                for (int i = 0; i < pcPlates.Length; i++)
+                {
+                    var member = PartyMemberOnPlate(i);
+                    if (member != null && member.IsAlive) ring.Add(new InspectStop(member, true, i));
+                }
+            }
+
+            return ring;
+        }
+
+        // THE RING'S ONE RULE, as arithmetic, so the two callers below cannot
+        // disagree about it and a test can pin it without a scene:
+        //
+        //   the verb column is the stop BEFORE the first monster. Stepping
+        //   backwards off the front of the ring lands there; stepping forwards
+        //   off the end wraps round to the front. One direction always gets
+        //   you home, the other always gets you round.
+        //
+        // -1 means "off the front" -- the verb column -- and is why this
+        // returns an int rather than wrapping like FightController.Wrap does.
+        // An empty ring answers -1 for either direction: there is nobody to
+        // stand on, so the only legal position is back on the verbs.
+        public static int StepInspectRing(int at, int delta, int count)
+        {
+            if (count <= 0) return -1;
+
+            int next = at + (delta > 0 ? 1 : -1);
+            if (next < 0) return -1;
+            return next >= count ? 0 : next;
+        }
+
+        // The horizontal axis' whole meaning in a fight. Root only: at a
+        // submenu or a target rack the horizontal axis does what it did
+        // before, which is nothing, and target-pick semantics are untouched.
+        internal void InspectMove(int delta)
+        {
+            if (_menu.Depth != MenuDepth.Root) return;
+
+            if (IsInspecting)
+            {
+                InspectStep(delta);
+                return;
+            }
+
+            // Left at the verb column has nowhere to go: the row is to the
+            // right of it, and entering it on a press that means "back" would
+            // make Left and Right both mean the same thing from here.
+            if (delta <= 0) return;
+
+            var ring = InspectRing();
+            if (ring.Count == 0) return;
+
+            int at = IndexOnRing(ring, _inspectCursor);
+            _inspectCursor = ring[at < 0 ? 0 : at].Actor;
+            _inspecting = true;
+            RefreshUi();
+        }
+
+        private void InspectStep(int delta)
+        {
+            var ring = InspectRing();
+
+            // A cursor that is no longer on the ring (its owner died while
+            // being read) is picked back up at the front rather than dropped:
+            // the press the player made was "move", and the nearest honest
+            // answer to it is the first monster.
+            int at = IndexOnRing(ring, _inspectCursor);
+            int next = StepInspectRing(at < 0 ? 0 : at, delta, ring.Count);
+
+            if (next < 0)
+            {
+                LeaveInspect();
+                return;
+            }
+
+            _inspectCursor = ring[next].Actor;
+            RefreshUi();
+        }
+
+        // True when there was an inspection to leave, so the caller can spend
+        // the press on it. _inspectCursor is deliberately NOT cleared -- it is
+        // the "or the remembered one" half of re-entering.
+        private bool LeaveInspect()
+        {
+            // A flag left standing after the depth moved under it is dropped
+            // here and the press falls through to whatever the new depth
+            // wants -- it is not an inspection to spend a Back on.
+            if (!IsInspecting)
+            {
+                _inspecting = false;
+                return false;
+            }
+
+            _inspecting = false;
+            RefreshUi();
+            return true;
+        }
+
+        // IS THE PAD PERCHED ON THIS PARTICULAR ACTOR? Through InspectedStop,
+        // the same resolver FocusedElement and FocusedActor both go through,
+        // so the figure that comes UP and the figure the marker lands ON
+        // cannot be two different answers -- which is exactly what asking
+        // IsInspecting at one call site and InspectedStop at the other would
+        // have allowed the moment one of them grew a condition the other did
+        // not.
+        //
+        // Per actor rather than per side, so only the ONE figure being read
+        // is raised. A whole rack of invisible rectangles coming up at once
+        // is more of the stage changing than the player asked for.
+        private bool IsPerchedOn(CombatantState actor) =>
+            actor != null && InspectedStop(out var stop) && ReferenceEquals(stop.Actor, actor);
+
+        // A FIGURE TARGET HAS TWO REASONS TO BE ON SCREEN AND ONLY ONE OF
+        // THEM TAKES CLICKS.
+        //
+        // `live` is the old reason and the only one that was ever there: a
+        // pick is open and this figure is one of its marks. `perched` is the
+        // new one: the pad is inspecting and the marker has to stand
+        // somewhere. Without it the marker fell back to the plate in the
+        // corner while PlaceStatusBox drew the box under the figure on the
+        // battlefield, which is one actor indicated at two ends of the
+        // screen.
+        //
+        // RAYCASTING FOLLOWS `live` ALONE, and that is the whole safety of
+        // this. A hit area is a NoChrome Button -- a transparent Image that
+        // raycasts against its RECT (FightScreen.BuildStage, UiEmitter.
+        // EmitButton) -- so a perched one left raycastable would be exactly
+        // the rectangle over the battlefield eating clicks that BuildStage's
+        // own header warns about, starting with the intent icon underneath
+        // it, which is the MOUSE's way to inspect that same monster
+        // (FightController.StageVisuals). A raycast it never receives cannot
+        // reach OnPointerClick, so onClick cannot fire and no pick can start
+        // from a perch -- which is the same answer Submit gets while
+        // inspecting, arrived at one layer lower.
+        //
+        // NOT WRITTEN AS "live ? ... : perched": the two are mutually
+        // exclusive today only because picking is Target depth and
+        // inspecting is Root, and a comment asserting exactly that kind of
+        // exclusivity is what AUDIT.md #169 turned out to be.
+        private void ShowFigureTarget(Button hitArea, bool live, bool perched)
+        {
+            if (hitArea == null) return;
+
+            hitArea.gameObject.SetShown(live || perched);
+
+            if (hitArea.targetGraphic != null) hitArea.targetGraphic.raycastTarget = live;
+        }
+
+        private static int IndexOnRing(List<InspectStop> ring, CombatantState actor)
+        {
+            if (actor == null) return -1;
+
+            for (int i = 0; i < ring.Count; i++)
+            {
+                if (ReferenceEquals(ring[i].Actor, actor)) return i;
+            }
+
+            return -1;
+        }
+
+        // WHERE THE PAD IS STANDING WHILE INSPECTING, resolved against the
+        // live ring every time it is asked. Every way inspect can go stale
+        // answers false here rather than needing its own teardown hook: a
+        // verb opened a submenu (depth moved off Root), a round resolved
+        // (_isBusy, and AfterResolution clears the flag outright), the actor
+        // died, or a whole new encounter was bound onto this controller and
+        // the remembered combatant belongs to the fight before it.
+        private bool InspectedStop(out InspectStop stop)
+        {
+            stop = default;
+            if (!IsInspecting || _session == null || _isBusy || _session.IsOver) return false;
+
+            var ring = InspectRing();
+            int at = IndexOnRing(ring, _inspectCursor);
+            if (at < 0) return false;
+
+            stop = ring[at];
+            return true;
         }
 
         public void ConfirmFocus()

@@ -228,12 +228,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Five per plate, flattened CARD-MAJOR.
         public List<NodeRef> PcStatusBadges = new List<NodeRef>();
 
-        // The one tooltip every status badge on every surface shares --
-        // enemy row and PC plates alike -- repositioned per hover through
-        // TooltipPlacement.Beside rather than each surface keeping its own
-        // copy.
-        public NodeRef StatusTooltip;
-        public NodeRef StatusTooltipText;
+        // The one status box the whole screen shares: every active status on
+        // ONE actor, one row each, hung under that actor. See BuildStatusBox
+        // for what it replaced and why a wider tooltip would not have done.
+        // Both lists are ROW-MAJOR and the same length -- row i is
+        // StatusBoxIcons[i] beside StatusBoxTexts[i].
+        public NodeRef StatusBox;
+        public List<NodeRef> StatusBoxIcons = new List<NodeRef>();
+        public List<NodeRef> StatusBoxTexts = new List<NodeRef>();
 
         // ONE badge for a party-wide charge (RunSettlement's own revive),
         // parked on the bottom plate -- see BuildPcPlates for why it has no
@@ -382,7 +384,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildDetailColumn());
             hud.Add(s.BuildTargetPrompt());
             hud.Add(s.BuildIntentTooltip());
-            hud.Add(s.BuildStatusTooltip());
+            hud.Add(s.BuildStatusBox());
             hud.Add(s.BuildSpellVfx());
             hud.Add(s.BuildSpellParticles());
             hud.Add(s.BuildDamagePopups());
@@ -2411,49 +2413,174 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return panel;
         }
 
-        // The ONE tooltip every status badge on every surface shares --
-        // enemy row, party plate and roster row alike (PLAN_STATUS_EFFECT_UI
-        // section 11's fixed contract). Repositioned per hover through
-        // Domain/UiKit/TooltipPlacement.cs's Beside, so its build-time
-        // position here is only a placeholder that never has to be reached
-        // -- unlike IntentTooltip above, whose fixed spot IS where it is
-        // read. (PartyBuffTooltip, the party plate's own former fixed-spot
-        // tooltip, was removed outright rather than left as a second example
-        // here -- S4's review: dead the moment this shared tooltip shipped.)
+        // ---- the status box -----------------------------------------------------
         //
-        // 300 WIDE, DOWN FROM 400 -- the first capture's defect: a
-        // ~380x160 panel is sized for a paragraph, not "Rooted -- Skill
-        // Only, 2 turns", and Beside's own reach (gap + half the badge +
-        // half the tooltip) grows with this box, which is what pushed the
-        // computed position far enough from the badge to read as
-        // unrelated.
+        // EVERY ACTIVE STATUS ON ONE ACTOR, hung under that actor. The owner's
+        // 2026-09-19 finding, in their words: "the debuff hover is still on the
+        // old container and it is too small, it should bring up a clear box
+        // under the hovered mob."
         //
-        // PHASE 3: HEIGHT NO LONGER BAKED FOR THE FIVE-LINE CASE. The build-
-        // time size only has to survive UiAudit, which solves this screen
-        // with no real hover text in hand -- so it is built at ONE LINE tall
-        // (StatusTooltipOneLineHeight) and Core/TooltipFit.ToBody grows it at
-        // runtime for section 6's "+N" chip (up to five lines,
-        // StatusTooltipMaxHeight -- the old fixed 130 the second capture
-        // actually needed). A build-time 130 sat as
-        // ~74px of empty violet under the common one-line case, which was
-        // this screen's own second capture defect -- see PlaceStatusTooltip's
-        // header for the first.
-        public const float StatusTooltipWidth = 300f;
-        public const float StatusTooltipPad = 10f;
-        public const float StatusTooltipOneLineHeight = 56f;
-        public const float StatusTooltipMaxHeight = 130f;
+        // WHAT IT REPLACES, and why this is a different object rather than a
+        // bigger one. StatusTooltip was a 300x56 panel placed BESIDE one 36px
+        // badge, showing that one badge's line. Three things follow from
+        // "beside one badge", and no width fixes any of them: it answers for
+        // one status when the question is "what is on this monster", it lands
+        // wherever there happens to be room rather than where the player is
+        // looking, and a pad cannot hover a badge at all -- so on a pad the
+        // feature did not exist.
+        //
+        // THE SOURCE OF TRUTH IS UNCHANGED. A row's text is the same
+        // FightHudModel.StatusRow.Tooltip the badge hover showed, so the name,
+        // the one-line effect and the remaining duration are still written in
+        // one place (Domain/Combat/Session/StatusHud.cs) and this screen only
+        // lays them out beside the icon the badge already resolves.
+        //
+        // EIGHT ROWS is PLAN_STATUS_EFFECT_UI section 6's counted worst case
+        // (a party member under Poison, Vulnerable, Shielded, Regen, Protect,
+        // a speed entry, Stun and Empowered); a ninth becomes a "+N more"
+        // line in the last row, the same overflow rule the badge rows use.
+        public const int StatusBoxRows = 8;
 
-        private UiNode BuildStatusTooltip()
+        public const float StatusBoxWidth = 460f;
+        public const float StatusBoxPad = 12f;
+        public const float StatusBoxIconSize = 24f;
+        public const float StatusBoxIconGap = 8f;
+        public const float StatusBoxRowGap = 4f;
+        public const int StatusBoxFontSize = 13;
+
+        // A row is one line of text and grows to two when a long entry wraps
+        // (Provoked's is the longest authored one). Beyond two it clips
+        // rather than pushing the box taller than the min height eight of
+        // them were measured against.
+        public const float StatusBoxRowMinHeight = 26f;
+        public const float StatusBoxRowMaxHeight = 40f;
+
+        // Clear air between the actor and the box, matching
+        // TooltipPlacement.DefaultGap so every floating panel on this screen
+        // stands off its subject by the same distance.
+        public const float StatusBoxGap = TooltipPlacement.DefaultGap;
+
+        public const float StatusBoxTextWidth =
+            StatusBoxWidth - StatusBoxPad * 2f - StatusBoxIconSize - StatusBoxIconGap;
+
+        // THE BUILD-TIME SIZE IS THE WORST CASE, not the common one -- the
+        // opposite choice from the tooltip this replaces, and for a reason
+        // that changed with the object. A tooltip built tall sat as empty
+        // violet under its common one-line body, so it was built short and
+        // grown; this box is positioned from its own measured height every
+        // time it opens (FightController.Hud's RefreshStatusBox), so its
+        // declared size is never a size anyone sees. What the declared size
+        // IS for is UiAudit, which solves this screen with no statuses in
+        // hand: eight full rows is the largest box the runtime can produce,
+        // so auditing that one audits every smaller one.
+        public const float StatusBoxMaxHeight =
+            StatusBoxPad * 2f + StatusBoxRows * StatusBoxRowMaxHeight + (StatusBoxRows - 1) * StatusBoxRowGap;
+
+        // Rows stack from the TOP of the box: `usedAbove` is how much row and
+        // gap has already been spent below the top pad. Shared by the build
+        // (every row at its maximum height) and by the runtime (every row at
+        // its measured one), so the two cannot disagree about where row i
+        // sits.
+        public static float StatusBoxRowCentreY(float boxHeight, float usedAbove, float rowHeight) =>
+            boxHeight * 0.5f - StatusBoxPad - usedAbove - rowHeight * 0.5f;
+
+        // WHERE THE BOX SITS, given the actor it describes. Pure, so
+        // FightScreenTests walks it against this screen's real geometry at
+        // every audited frame without a scene.
+        //
+        // UNDER THE ACTOR BY PREFERENCE, FLIPPED ABOVE WHEN IT WOULD NOT FIT.
+        // "Under" is what the owner asked for and is also where a box belongs
+        // when the thing above it is what named it. The flip is reachable,
+        // not defensive: the rear enemy slot's badge row bottoms out around
+        // y -203 and a full eight-row box needs 186 below that plus the gap,
+        // which is past the floor of a 1920x1080 canvas. 16:9 is the binding
+        // frame here and 4:3 is not -- every audited frame is at least
+        // 1920x1080 and 4:3 adds HEIGHT (UiFrames.cs), so the shortest canvas
+        // is the one that flips first.
+        //
+        // X FOLLOWS THE ACTOR and is only clamped to keep the box on screen,
+        // which is what makes "this box belongs to that monster" readable
+        // without a leader line: the box is centred under the figure.
+        public static UiVec StatusBoxAt(float actorCentreX, float actorBottom, float actorTop,
+                                        float boxWidth, float boxHeight,
+                                        float interiorLeft, float interiorRight,
+                                        float interiorBottom, float interiorTop,
+                                        float gap = StatusBoxGap)
         {
-            float labelW = StatusTooltipWidth - StatusTooltipPad * 2f;
-            float labelH = StatusTooltipOneLineHeight - StatusTooltipPad * 2f;
-            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(labelW, labelH), 13,
-                FightHudPalette.GoldText, Place.At(0f, 0f));
-            StatusTooltipText = label;
+            float halfW = boxWidth * 0.5f;
+            float halfH = boxHeight * 0.5f;
 
-            var panel = Ui.Tooltip("StatusTooltip", PanelViolet, null, Place.At(-330f, -60f),
-                UiSize.Fixed(StatusTooltipWidth, StatusTooltipOneLineHeight), label);
-            StatusTooltip = panel;
+            float x = ClampOrCentre(actorCentreX, interiorLeft + halfW, interiorRight - halfW);
+
+            float below = actorBottom - gap - halfH;
+            if (below - halfH >= interiorBottom) return new UiVec(x, below);
+
+            float above = actorTop + gap + halfH;
+            if (above + halfH <= interiorTop) return new UiVec(x, above);
+
+            // Neither side of the actor clears the canvas -- a box taller than
+            // the room above and below it. Pushed inside and overlapping the
+            // figure, stated here rather than left to happen: covering the
+            // monster is worse than standing off it and better than hanging
+            // half off the screen.
+            return new UiVec(x, ClampOrCentre(below, interiorBottom + halfH, interiorTop - halfH));
+        }
+
+        // A box wider or taller than the interior makes the two bounds cross,
+        // and min/max in that order would pin it to the wrong edge. Centring
+        // is the only sensible answer to "it does not fit" -- the same rule
+        // TooltipPlacement's own clamp states, restated here rather than
+        // reached for, because that one is private to a type this screen
+        // otherwise only borrows a constant from.
+        private static float ClampOrCentre(float value, float min, float max)
+        {
+            if (min > max) return (min + max) * 0.5f;
+            if (value < min) return min;
+            return value > max ? max : value;
+        }
+
+        private UiNode BuildStatusBox()
+        {
+            var rows = new List<UiNode>(StatusBoxRows * 2);
+
+            float iconX = -StatusBoxWidth * 0.5f + StatusBoxPad + StatusBoxIconSize * 0.5f;
+            float textX = -StatusBoxWidth * 0.5f + StatusBoxPad + StatusBoxIconSize + StatusBoxIconGap
+                          + StatusBoxTextWidth * 0.5f;
+
+            for (int i = 0; i < StatusBoxRows; i++)
+            {
+                float y = StatusBoxRowCentreY(StatusBoxMaxHeight,
+                    i * (StatusBoxRowMaxHeight + StatusBoxRowGap), StatusBoxRowMaxHeight);
+
+                // No sprite key: the glyph is resolved per status at runtime
+                // off the row's own slug, exactly as the badges do, and the
+                // Image is disabled outright on a miss so a sprite-less Image
+                // never renders as a white quad.
+                var icon = Ui.Sprite($"StatusBoxIcon{i}", null,
+                    new UiVec(StatusBoxIconSize, StatusBoxIconSize), Place.At(iconX, y));
+
+                // TextPrimary, which is also what the controller paints an
+                // ordinary row (FightController.Hud's StatusBoxRowText): the
+                // baked colour is never seen -- the box is Inactive until a
+                // paint has run -- and two different answers to "what colour
+                // is a row" is the restatement CODE_STANDARDS section 6 is
+                // about.
+                var text = Ui.Label($"StatusBoxText{i}", UiString.Runtime,
+                        new UiVec(StatusBoxTextWidth, StatusBoxRowMaxHeight), StatusBoxFontSize,
+                        FightHudPalette.TextPrimary, Place.At(textX, y))
+                    .TextAligned(UiTextAlign.Left);
+
+                StatusBoxIcons.Add(icon);
+                StatusBoxTexts.Add(text);
+                rows.Add(icon);
+                rows.Add(text);
+            }
+
+            // Place.At here is a placeholder, like the tooltip's was: the box
+            // is positioned from the actor every time it opens.
+            var panel = Ui.Tooltip("StatusBox", PanelViolet, null, Place.At(-330f, -60f),
+                UiSize.Fixed(StatusBoxWidth, StatusBoxMaxHeight), rows.ToArray());
+            StatusBox = panel;
             return panel;
         }
 

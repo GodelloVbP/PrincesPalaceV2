@@ -182,6 +182,20 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(_menu != null && _menu.IsOpen,
                 "Cancel must not fall through to the system menu while a draft is in progress, matching " +
                 "what HubController.HandleEscape used to enforce by hand");
+
+            // AND NEITHER DOES START, which is the button that actually
+            // opens the menu since the owner's 2026-09-19 call -- so this is
+            // now where the claim above has its teeth. The draft declares no
+            // systemMenu handler at all, so NavContext.RaiseSystemMenu
+            // absorbs the press rather than letting it reach the hub
+            // underneath.
+            _input.SystemMenuDown = true;
+            yield return DriveFrame();
+
+            Assert.IsTrue(_draft.gameObject.activeSelf, "Start should not have closed the draft either");
+            Assert.IsFalse(_menu != null && _menu.IsOpen,
+                "Start must not reach the hub's own context through an open draft -- a context with no " +
+                "systemMenu handler absorbs the press");
         }
     }
 }

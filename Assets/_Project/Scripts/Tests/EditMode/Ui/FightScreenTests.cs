@@ -1395,13 +1395,73 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
-            Assert.IsNotNull(Find(root, "StatusTooltip"));
-            Assert.IsNotNull(Find(root, "StatusTooltipText"));
-
-            // PartyBuffTooltip is GONE (S4's review) -- the party plate
-            // migrated onto the shared StatusTooltip above and nothing was
-            // ever wired to the old fixed-spot one again.
+            // THE BOX, not a tooltip. StatusTooltip/StatusTooltipText were
+            // removed outright (2026-09-19): they answered for ONE badge,
+            // sat beside that badge, and a pad -- which has no badge to
+            // hover -- could not open them at all. PartyBuffTooltip went the
+            // same way one pass earlier.
+            Assert.IsNull(Find(root, "StatusTooltip"));
             Assert.IsNull(Find(root, "PartyBuffTooltip"));
+
+            Assert.IsNotNull(Find(root, "StatusBox"));
+            for (int i = 0; i < FightScreen.StatusBoxRows; i++)
+            {
+                Assert.IsNotNull(Find(root, $"StatusBoxIcon{i}"), $"missing StatusBoxIcon{i}");
+                Assert.IsNotNull(Find(root, $"StatusBoxText{i}"), $"missing StatusBoxText{i}");
+            }
+        }
+
+        // The box is the one surface that answers "what is on this actor" in
+        // full, so its geometry is pinned here rather than left to the eye.
+        [Test]
+        public void TheStatusBoxStacksItsRowsInsideItsOwnPadding()
+        {
+            float boxHeight = FightScreen.StatusBoxMaxHeight;
+            float rowHeight = FightScreen.StatusBoxRowMaxHeight;
+
+            float firstTop = FightScreen.StatusBoxRowCentreY(boxHeight, 0f, rowHeight) + rowHeight * 0.5f;
+            Assert.AreEqual(boxHeight * 0.5f - FightScreen.StatusBoxPad, firstTop, 0.01f,
+                "row 0's top edge must sit exactly one pad below the box's top");
+
+            float usedByAll = FightScreen.StatusBoxRows * rowHeight
+                              + (FightScreen.StatusBoxRows - 1) * FightScreen.StatusBoxRowGap;
+            float lastBottom = FightScreen.StatusBoxRowCentreY(boxHeight,
+                usedByAll - rowHeight, rowHeight) - rowHeight * 0.5f;
+            Assert.AreEqual(-boxHeight * 0.5f + FightScreen.StatusBoxPad, lastBottom, 0.01f,
+                "the last row's bottom edge must sit exactly one pad above the box's bottom - " +
+                "StatusBoxMaxHeight is derived from the row count, so a row that does not fit " +
+                "means the derivation and the stacking disagree");
+        }
+
+        // UNDER THE ACTOR, ABOVE IT WHEN UNDER DOES NOT FIT. Both arms are
+        // reachable on the real screen, which is why the flip exists: the
+        // rear enemy slot's badge row bottoms out well short of the room a
+        // full eight-row box needs below it on the shortest audited canvas.
+        [Test]
+        public void TheStatusBoxHangsUnderItsActorAndFlipsAboveWhenTheCanvasFloorIsCloser()
+        {
+            const float Margin = 8f;
+            float halfW = 1920f * 0.5f - Margin;
+            float halfH = 1080f * 0.5f - Margin;
+
+            // A near enemy with a short box: plenty of floor left.
+            var under = FightScreen.StatusBoxAt(300f, -280f, -100f,
+                FightScreen.StatusBoxWidth, 90f, -halfW, halfW, -halfH, halfH);
+            Assert.Less(under.Y, -280f, "a box that fits below its actor hangs below it");
+            Assert.AreEqual(300f, under.X, 0.01f, "and is centred on the actor");
+
+            // The same actor with the tallest box the runtime can build.
+            var flipped = FightScreen.StatusBoxAt(300f, -280f, -100f,
+                FightScreen.StatusBoxWidth, FightScreen.StatusBoxMaxHeight, -halfW, halfW, -halfH, halfH);
+            Assert.Greater(flipped.Y, -100f, "a box with no room below its actor flips above it");
+            Assert.LessOrEqual(flipped.Y + FightScreen.StatusBoxMaxHeight * 0.5f, halfH + 0.01f,
+                "and still lands inside the canvas");
+
+            // An actor at the right-hand edge: x is pulled back inside.
+            var clamped = FightScreen.StatusBoxAt(halfW, -280f, -100f,
+                FightScreen.StatusBoxWidth, 90f, -halfW, halfW, -halfH, halfH);
+            Assert.AreEqual(halfW - FightScreen.StatusBoxWidth * 0.5f, clamped.X, 0.01f,
+                "the box never hangs off the side of the canvas to stay centred on its actor");
         }
 
         [Test]

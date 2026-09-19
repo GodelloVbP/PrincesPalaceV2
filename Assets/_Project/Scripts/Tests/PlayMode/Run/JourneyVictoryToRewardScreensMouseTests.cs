@@ -230,9 +230,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
 
             // OPENING THE MENU HAS NO CLICK EQUIVALENT (item 3's own brief) --
-            // the mouse's own ESC key, same button binding a pad's Cancel uses.
-            yield return PressCancel();
-            Assert.IsTrue(menu.IsOpen, "Cancel with nothing else up should open the system menu");
+            // the mouse's own ESC key, which binds the SystemMenu axis a pad
+            // reaches with Start.
+            yield return PressSystemMenu();
+            Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub");
 
             // Reached by clicking the row directly -- no Grid-then-List walk.
             yield return Click(Node("DossierTrackRow")); // ShowTrack() -- opens the panel over column A

@@ -167,11 +167,12 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator OpeningSkillPutsItInOpenStateAndAttackInPrimary()
+        public IEnumerator OpeningSkillPutsItInOpenStateAndLeavesEveryOtherVerbIdle()
         {
-            // FightController.RefreshVerbs' own three-way distinction, now
-            // painted through ThemedButtonState.SetMenuState instead of a
-            // flat targetGraphic.color write -- see FightController.Hud.cs.
+            // FightController.RefreshVerbs' own distinction, now a two-way
+            // one (Open or Idle) painted through ThemedButtonState.
+            // SetMenuState instead of a flat targetGraphic.color write --
+            // see FightController.Hud.cs.
             yield return LoadFight();
 
             var attackState = Named("Verb0").GetComponent<ThemedButtonState>();
@@ -179,27 +180,25 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(attackState, "Verb0 should be a themed button (ThemedPlate(Crimson))");
             Assert.IsNotNull(skillState, "Verb1 should be a themed button (ThemedPlate(Violet))");
 
-            // ADAPTED, NOT RELAXED (hardware round 1's visual pass). This
-            // assertion used to read `Open` here, and its own comment stated
-            // the defect in full while calling it the design: "gamepad focus
-            // defaults to index 0 ... so `highlighted` is already true for
-            // ATTACK before anything is ever pressed". That is what the owner
-            // saw on a real pad -- "attack is always seeming to be hovered
-            // over ... makes it difficult to notice if you hover/select it"
-            // -- and RefreshVerbs no longer paints Open off _focusedVerb at
-            // all. Resting, nothing is open, so ATTACK is exactly what its
-            // index makes it: the recommended default.
-            Assert.AreEqual(ThemedMenuState.Primary, attackState.CurrentMenuState);
+            // ADAPTED TWICE, NEVER RELAXED. Round 1 (hardware round 1's
+            // visual pass) turned `Open` here into `Primary`, because the pad
+            // focus index had been painting Open on ATTACK forever. Round 2
+            // (2026-09-19, AUDIT.md #171 answered) turns `Primary` into
+            // `Idle`: the owner looked at the remaining gold ring and said
+            // ATTACK is "still glowing always", so the resting column now
+            // wears nothing at all and the hotkey number carries "default".
+            // The claim is the same one it has always made -- a verb is lit
+            // only for a reason the player can name -- against a shorter list
+            // of reasons.
+            Assert.AreEqual(ThemedMenuState.Idle, attackState.CurrentMenuState);
             Assert.AreEqual(ThemedMenuState.Idle, skillState.CurrentMenuState);
 
             Click("Verb1");
 
             // SKILL's own branch open (ActiveVerbIndex 1) leaves ATTACK
-            // neither the open verb nor anything else, so it falls through to
-            // i == 0, its Primary/recommended-default colouring -- unchanged
-            // by the pass above, and the reason this half of the test still
-            // reads exactly as it did.
-            Assert.AreEqual(ThemedMenuState.Primary, attackState.CurrentMenuState);
+            // neither the open verb nor anything else, and there is no third
+            // state left for it to fall through to.
+            Assert.AreEqual(ThemedMenuState.Idle, attackState.CurrentMenuState);
             Assert.AreEqual(ThemedMenuState.Open, skillState.CurrentMenuState);
         }
 

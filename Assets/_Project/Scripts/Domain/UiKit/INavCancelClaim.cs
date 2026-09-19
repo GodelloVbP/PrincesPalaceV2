@@ -42,4 +42,27 @@ namespace PrincesPalace.Domain.UiKit
     {
         void StepTab(int direction);
     }
+
+    // FIRST -- and only -- OFFER OF A SECTION-STEP PRESS: the trigger
+    // shortcut (LT/RT), the same shape as INavTabStrip right above it and
+    // declared the same way, by a context that has a second axis of
+    // navigation ABOVE its tabs. A screen that does not implement it never
+    // sees the press, because NavContext.RaiseSectionStep no-ops when its
+    // own section-strip provider is null.
+    //
+    // Two strips rather than one with a "which level" argument: the
+    // shoulders and the triggers are different physical controls bound to
+    // different axes, and a context is free to have either, both or
+    // neither. Folding them into one interface would force every tab strip
+    // to answer for a level it does not have.
+    //
+    // Contract: StepSection moves ONE step, wrapping, in the given
+    // direction (-1 previous, +1 next), through the SAME code path the
+    // on-screen section buttons call on click -- never a second "what is
+    // the next section" computation, or the trigger and the mouse could
+    // disagree about where wrap lands.
+    public interface INavSectionStrip
+    {
+        void StepSection(int direction);
+    }
 }

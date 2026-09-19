@@ -68,9 +68,9 @@ namespace PrincesPalace
 
             // AFTER both status surfaces have repainted (RefreshStage's
             // enemy row and RefreshPcPlates' three plate rows) -- see
-            // RefreshHoveredStatusTooltip's own comment for why this cannot
-            // just live inside one of them.
-            RefreshHoveredStatusTooltip();
+            // RefreshStatusBox's own comment for why this cannot just live
+            // inside one of them.
+            RefreshStatusBox();
         }
 
         // HYSTERESIS, not one threshold -- a party sitting right at 25% would
@@ -219,17 +219,23 @@ namespace PrincesPalace
                 // and ConfirmFocus are untouched, and so are their direct-
                 // call tests.
                 //
+                // AND INDEX 0 NO LONGER WEARS Primary EITHER (owner, 2026-09-19:
+                // "the attack button in the fight menu is still glowing
+                // always"). AUDIT.md #171 left this open as a design call
+                // rather than a bug, because a recommended default is a real
+                // thing to signal; the owner has made it. The resting column
+                // shows no ring on any verb, and "ATTACK is the default" is
+                // carried by the hotkey number beside it -- which costs no
+                // glow, cannot be mistaken for focus or hover, and is already
+                // on screen.
+                //
                 // THEMED VERBS drive ThemedButtonState.SetMenuState (through
-                // ApplySelection) instead of targetGraphic.color -- Open/
-                // Primary/Idle is the same three-way distinction this method
-                // has always made, just painted on Glow/Plate instead of a
-                // flat Image tint. Every verb is themed today, so there is no
-                // unthemed fallback left to keep. Hover and press are
-                // ThemedButtonState's own, driven by the pointer, and are not
-                // touched here at all.
-                var verbState = i == active ? ThemedMenuState.Open
-                    : i == 0 ? ThemedMenuState.Primary
-                    : ThemedMenuState.Idle;
+                // ApplySelection) instead of targetGraphic.color -- Open or
+                // Idle, painted on Glow/Plate instead of a flat Image tint.
+                // Every verb is themed today, so there is no unthemed fallback
+                // left to keep. Hover and press are ThemedButtonState's own,
+                // driven by the pointer, and are not touched here at all.
+                var verbState = i == active ? ThemedMenuState.Open : ThemedMenuState.Idle;
                 ThemedButtonState.ApplySelection(verbButtons[i], verbState != ThemedMenuState.Idle, verbState);
 
                 // Only the two nesting verbs have a live caret; the others were
@@ -543,12 +549,16 @@ namespace PrincesPalace
                     }
                 }
 
-                // THE FIGURE IS A TARGET ONLY WHILE ONE IS BEING CHOSEN. Left
-                // live it is a rectangle over the battlefield eating clicks
-                // meant for whatever is behind it.
+                // THE FIGURE IS A TARGET ONLY WHILE ONE IS BEING CHOSEN, and
+                // it is now also a MARKER PERCH while the pad is inspecting
+                // -- shown but raycast-dead, so it is still not a rectangle
+                // over the battlefield eating clicks meant for whatever is
+                // behind it. ShowFigureTarget (FightController.Input.cs) is
+                // the one place that split lives.
                 if (Has(enemyHitAreas, i))
                 {
-                    enemyHitAreas[i].gameObject.SetShown(present && picking);
+                    ShowFigureTarget(enemyHitAreas[i], present && picking,
+                        present && IsPerchedOn(enemies[i]));
                 }
 
                 if (!present) continue;
@@ -760,10 +770,18 @@ namespace PrincesPalace
             // STAGE SLOT, not by plate index. The two are the same number on
             // the enemy side and are not here: a Move reorders the column
             // without moving anybody's fight-long slot.
+            //
+            // AND A MARKER PERCH WHILE THE PAD IS READING THIS ONE, on a
+            // condition that deliberately does NOT include `pickable`:
+            // that is "the open cast accepts this squadmate", a question only
+            // a cast can ask. Reading somebody's buffs asks nothing of them,
+            // so every LIVING member is a stop on the inspect ring
+            // (FightController.Input.cs's InspectRing) and each needs its own
+            // figure to stand on. Raycast-dead there -- see ShowFigureTarget.
             int slot = SlotIndexOf(member);
             if (Has(partyHitAreas, slot))
             {
-                partyHitAreas[slot].gameObject.SetShown(picking && pickable);
+                ShowFigureTarget(partyHitAreas[slot], picking && pickable, IsPerchedOn(member));
             }
 
             // A MISSING MEMBER STILL GETS ITS BADGE ROW PAINTED, with an
@@ -1239,11 +1257,12 @@ namespace PrincesPalace
             public Image CounterPatch;
         }
 
-        // _statusBadgeParts, _statusBadgeTooltip, _statusRowActiveCodes,
-        // _statusRowScratchCodes, _statusBadgePopRoutines, _hoveredStatusBadge,
-        // _statusTooltipCanvas, _enemyStatusStripHome and _enemyStatusBadgeHome
-        // all moved to the root FightController.cs (S9's review) -- see them
-        // there for what each one is and why.
+        // _statusBadgeParts, _statusBadgeCode, _statusBadgeHolder,
+        // _statusRowActiveCodes, _statusRowScratchCodes,
+        // _statusBadgePopRoutines, _inspectedActor,
+        // _inspectedCode, _statusBoxCanvas, _enemyStatusStripHome and
+        // _enemyStatusBadgeHome all moved to the root FightController.cs
+        // (S9's review) -- see them there for what each one is and why.
 
         private void WireAllStatusBadges()
         {
@@ -1254,13 +1273,13 @@ namespace PrincesPalace
             CaptureEnemyStatusRowHomePositions();
 
             // CACHED ONCE HERE (S8's review), not re-fetched by
-            // PlaceStatusTooltip on every single hover -- the ancestor
-            // chain a GetComponentInParent walk climbs never changes after
-            // the scene is built, so paying that walk per hover bought
-            // nothing a one-time lookup at wiring time doesn't already have.
-            _statusTooltipCanvas = statusTooltip != null ? statusTooltip.GetComponentInParent<Canvas>() : null;
+            // PlaceStatusBox on every single hover -- the ancestor chain a
+            // GetComponentInParent walk climbs never changes after the scene
+            // is built, so paying that walk per hover bought nothing a
+            // one-time lookup at wiring time doesn't already have.
+            _statusBoxCanvas = statusBox != null ? statusBox.GetComponentInParent<Canvas>() : null;
 
-            if (statusTooltip != null) statusTooltip.SetShown(false);
+            if (statusBox != null) statusBox.SetShown(false);
         }
 
         private void CaptureEnemyStatusRowHomePositions()
@@ -1541,6 +1560,14 @@ namespace PrincesPalace
                 var parts = _statusBadgeParts[flat];
                 if (parts.Root == null) continue;
 
+                // WHO THIS SLOT BELONGS TO, written for every slot in range
+                // including the ones about to be hidden: a badge that goes
+                // out while the pointer is on it fires HoverIndex.OnDisable,
+                // and the exit path has to be able to name the same actor the
+                // enter path did or it cannot tell whether the box it is
+                // closing is still its own.
+                _statusBadgeHolder[flat] = holder;
+
                 if (i == overflowSlot)
                 {
                     ResetBadgeMotion(flat, parts.Root);
@@ -1552,7 +1579,7 @@ namespace PrincesPalace
                 {
                     ResetBadgeMotion(flat, parts.Root);
                     parts.Root.SetShown(false);
-                    _statusBadgeTooltip[flat] = null;
+                    _statusBadgeCode[flat] = null;
                     continue;
                 }
 
@@ -1644,7 +1671,7 @@ namespace PrincesPalace
                     Vector3.one * (emphasise ? CounterPatchEmphasisScale : 1f);
             }
 
-            _statusBadgeTooltip[flat] = row.Tooltip;
+            _statusBadgeCode[flat] = row.Code;
 
             // THE POP, LAST -- after everything else about this badge is
             // already painted, so a pop that starts mid-way through a
@@ -1736,10 +1763,12 @@ namespace PrincesPalace
             rect.localScale = Vector3.one;
         }
 
-        // Section 6's whole overflow feature: the chip carries no polarity
-        // of its own (it is a mixed bag by definition) and hovering it
-        // lists every hidden entry, one per line, rather than opening a
-        // second, scrollable inspector.
+        // Section 6's whole overflow feature: the chip carries no polarity of
+        // its own (it is a mixed bag by definition). What hovering it does is
+        // no longer special -- it opens the status box, which lists every
+        // entry on this actor whether the row had a slot for it or not, so
+        // the chip's old job of carrying the hidden ones in a tooltip of its
+        // own is gone with the tooltip.
         //
         // THE FRAME STAYS ON, tinted NEUTRAL rather than either polarity --
         // the first capture shipped this chip with no frame at all
@@ -1776,9 +1805,9 @@ namespace PrincesPalace
                 parts.Code.SetContent($"+{hidden}");
             }
 
-            var lines = new List<string>(hidden);
-            for (int i = chipIndex; i < rows.Count; i++) lines.Add($"{rows[i].Code} · {rows[i].Tooltip}");
-            _statusBadgeTooltip[flat] = string.Join("\n", lines);
+            // No single status to emphasise: the chip stands for several, so
+            // the box it opens highlights none of its rows.
+            _statusBadgeCode[flat] = null;
         }
 
         // ---- the two call sites -------------------------------------------------
@@ -1923,215 +1952,342 @@ namespace PrincesPalace
             }
         }
 
-        // ---- hover ----------------------------------------------------------------
+        // ---- inspection: one box, one actor ---------------------------------------
+        //
+        // WHO IS BEING ASKED ABOUT is the whole model. Every surface that can
+        // name one combatant answers that question and nothing else: a status
+        // badge (on a plate, or under a figure), an enemy plate, the intent
+        // icon standing over a monster's head, a PC plate, and -- with no
+        // pointer at all -- the pad's own focus. None of them owns a tooltip
+        // of its own any more; they set _inspectedActor and this file draws
+        // one box under whoever that is.
+        //
+        // WHY THE OLD SHAPE COULD NOT BE GROWN INTO THIS ONE. The tooltip was
+        // keyed on a BADGE: it showed that badge's line, it was placed beside
+        // that badge, and a surface with no badge (a figure, a plate, a pad
+        // focus) had nothing to open. Keying on the ACTOR instead is what
+        // makes every one of those surfaces an answer to the same question
+        // rather than four features.
 
-        private void OnHoverStatusBadge(int flat, bool entered)
+        // A pointer arriving on, or leaving, something that names an actor.
+        // `code` is the one status the surface points at, or null when it
+        // points at the whole actor.
+        //
+        // ONLY THE SURFACE CURRENTLY HOLDING THE BOX MAY CLOSE IT -- see
+        // InspectSource for why that is keyed on the surface and not on the
+        // actor. Every refresh also calls SetShown(false) on every badge with
+        // nothing to draw, which fires HoverIndex.OnDisable unconditionally
+        // (see its own comment), so a badge two slots over going out must not
+        // swallow the box that belongs to whatever is still under the
+        // pointer.
+        private void SetInspected(CombatantState actor, bool entered, string code,
+            InspectSource from, int index)
         {
             if (entered)
             {
-                _hoveredStatusBadge = flat;
-                ShowStatusTooltip(flat);
+                if (actor == null) return;
+                _inspectedActor = actor;
+                _inspectedCode = code;
+                _inspectedFrom = from;
+                _inspectedFromIndex = index;
+                RefreshStatusBox();
                 return;
             }
 
-            // Only the badge CURRENTLY showing the tooltip gets to close it.
-            // Every refresh calls SetShown(false) on every badge with
-            // nothing to draw, which fires HoverIndex.OnDisable
-            // unconditionally (see its own comment) -- an unrelated badge
-            // two slots over deactivating must not swallow the tooltip that
-            // belongs to the one still under the pointer.
-            if (flat == _hoveredStatusBadge)
-            {
-                _hoveredStatusBadge = -1;
-                if (statusTooltip != null) statusTooltip.SetShown(false);
-            }
+            if (_inspectedFrom != from || _inspectedFromIndex != index) return;
+
+            _inspectedActor = null;
+            _inspectedCode = null;
+            _inspectedFrom = InspectSource.None;
+            _inspectedFromIndex = -1;
+            RefreshStatusBox();
         }
 
-        // Re-validates the open tooltip against this refresh's freshly
-        // painted text -- called once from RefreshUi, after all three
-        // surfaces have repainted. Covers the case HoverIndex's own exit
-        // event does not: a badge that STAYS active but now shows a
-        // DIFFERENT row (a re-sort, an expiring status handing its slot to
-        // the next one) fires no enter/exit at all, and a stale tooltip
-        // would otherwise keep reading the previous occupant's text.
-        private void RefreshHoveredStatusTooltip()
+        // Every status surface's own entry point: the badge knows its flat
+        // slot, and the slot knows both who it belongs to and which status it
+        // is showing, because PaintStatusRow wrote both down.
+        private void OnHoverStatusBadge(int flat, bool entered)
         {
-            if (_hoveredStatusBadge >= 0) ShowStatusTooltip(_hoveredStatusBadge);
+            if (flat < 0 || flat >= _statusBadgeHolder.Length) return;
+
+            SetInspected(_statusBadgeHolder[flat], entered, _statusBadgeCode[flat],
+                InspectSource.StatusBadge, flat);
         }
 
-        private void ShowStatusTooltip(int flat)
+        // The figure's own hover, from the stage: the intent icon over a
+        // monster's head is the only always-live node standing on an enemy
+        // (the hit areas come up ONLY while a target is being picked -- see
+        // RefreshEnemyPlates), so it is what "hovering the mob" reaches.
+        internal void InspectEnemyAt(int index, bool entered)
         {
-            if (statusTooltip == null || _statusBadgeParts == null) return;
-            if (flat < 0 || flat >= _statusBadgeTooltip.Length) return;
+            var enemies = Enemies;
+            var enemy = index >= 0 && index < enemies.Count ? enemies[index] : null;
+            SetInspected(enemy, entered, null, InspectSource.Enemy, index);
+        }
 
-            string text = _statusBadgeTooltip[flat];
-            if (string.IsNullOrEmpty(text))
-            {
-                // The row this badge was showing is gone -- hide, rather
-                // than show whatever the same index now holds instead.
-                _hoveredStatusBadge = -1;
-                statusTooltip.SetShown(false);
-                return;
-            }
+        internal void InspectAllyOnPlate(int plate, bool entered) =>
+            SetInspected(PartyMemberOnPlate(plate), entered, null, InspectSource.AllyPlate, plate);
 
-            if (statusTooltipText != null) statusTooltipText.SetContent(text);
-            statusTooltip.SetShown(true);
+        // Called once from RefreshUi, after all three status surfaces have
+        // repainted, AND directly by every hover that opens or closes the
+        // box. The refresh call is what covers the case a hover event cannot:
+        // a status expiring, or a new one landing, while the box is already
+        // open fires no enter or exit at all, and the box would otherwise go
+        // on reading the list it was opened with.
+        private void RefreshStatusBox()
+        {
+            if (statusBox == null) return;
 
-            // Grows the ONE shared tooltip past its build-time one-line
-            // height for the "+N" chip's multi-line body (section 6) --
-            // TooltipFit.ToBody (Core/TooltipFit.cs), shared with
-            // ReckoningController's identical offer-card version (S1's
-            // review). MUST RUN BEFORE PlaceStatusTooltip, which reads
-            // tooltipRect.rect.height to clamp inside the canvas -- sizing
-            // after placing would place against the wrong box.
-            var statusTooltipRect = statusTooltip == null ? null : statusTooltip.transform as RectTransform;
-            TooltipFit.ToBody(statusTooltipRect, statusTooltipText,
-                FightScreen.StatusTooltipWidth, FightScreen.StatusTooltipPad,
-                FightScreen.StatusTooltipOneLineHeight, FightScreen.StatusTooltipMaxHeight);
+            // THE POINTER WINS OVER THE PAD, and only because it is the more
+            // recent deliberate act: a player holding a mouse over a monster
+            // has said which one they mean, while the pad's focus is wherever
+            // the last stick press left it and is never absent.
+            var actor = _inspectedActor ?? FocusedActor();
 
-            var anchor = flat < _statusBadgeParts.Length && _statusBadgeParts[flat].Root != null
-                ? _statusBadgeParts[flat].Root.transform as RectTransform
+            var rows = actor != null && _session != null
+                ? FightHudModel.StatusRowsFor(_session, actor)
                 : null;
-            PlaceStatusTooltip(flat, anchor);
+
+            // AN EMPTY BOX IS NOT SHOWN AT ALL, the same rule the badge rows
+            // follow (PLAN_STATUS_EFFECT_UI section 7): an actor with no
+            // statuses has no answer to give, and an empty violet panel under
+            // a monster reads as a fault rather than as "nothing here".
+            if (rows == null || rows.Count == 0)
+            {
+                statusBox.SetShown(false);
+                return;
+            }
+
+            // SHOWN BEFORE MEASURING. TMP measures a mesh it has actually
+            // laid out, and the box spends most of its life inactive -- the
+            // tooltip this replaced learned the same lesson one layer up (see
+            // PlaceStatusBox's forced canvas update).
+            statusBox.SetShown(true);
+
+            // The badge's own status is only highlighted while the POINTER is
+            // what opened the box: the pad names an actor, never a row.
+            float height = PaintStatusBox(rows, _inspectedActor != null ? _inspectedCode : null);
+
+            PlaceStatusBox(actor, height);
         }
 
-        // Which physical badge slots share a row with `flat`. Both surfaces
-        // are now several independent rows of a fixed width -- the enemy
-        // stage rows of EnemyStatusBadgesPerRow, the PC plates of
-        // PcStatusBadgesPerPlate -- so this is two cases where it used to be
-        // three, and the third (the party plate's one long double line) is
-        // gone with the card that carried it. PlaceStatusTooltip needs this
-        // to widen its anchor past the single hovered badge to the whole row
-        // it sits in.
-        private static void GetStatusRowRange(int flat, out int start, out int count)
+        // The row the pointer's own badge names, against every other row.
+        // ONE extra colour rather than a second backing panel per row: the
+        // box is already a list on a dark ground, and a highlight that has to
+        // survive eight rows of it is better spent on the text than on more
+        // furniture (PLAN_STATUS_EFFECT_UI section 7's sludge budget).
+        private static readonly Color StatusBoxRowText = Hex(FightHudPalette.TextPrimary);
+        private static readonly Color StatusBoxRowHighlight = Hex(FightHudPalette.TargetAmber);
+
+        // Fills the box from ONE actor's rows and returns the height it now
+        // needs. Rows are MEASURED, never assumed: a row is one line until
+        // its own text does not fit one, and the box is the sum of what its
+        // rows actually took.
+        private float PaintStatusBox(IReadOnlyList<FightHudModel.StatusRow> rows, string highlightCode)
         {
-            if (flat < PcStatusBase)
+            int slots = statusBoxTexts != null ? statusBoxTexts.Length : 0;
+            if (slots == 0) return FightScreen.StatusBoxMaxHeight;
+
+            slots = Mathf.Min(slots, _statusBoxRowHeights.Length);
+
+            // THE LAST SLOT BECOMES "+N more" when the list is longer than
+            // the box has rows -- the same overflow rule the badge rows
+            // already use, so a player never has to learn a second one. It is
+            // reachable only past section 6's counted worst case of eight.
+            int overflowRow = rows.Count > slots ? slots - 1 : -1;
+            int shown = Mathf.Min(rows.Count, slots);
+
+            float used = 0f;
+
+            for (int i = 0; i < slots; i++)
             {
-                int slot = flat / EnemyStatusBadgesPerRow;
-                start = slot * EnemyStatusBadgesPerRow;
-                count = EnemyStatusBadgesPerRow;
+                var text = Has(statusBoxTexts, i) ? statusBoxTexts[i] : null;
+                var icon = Has(statusBoxIcons, i) ? statusBoxIcons[i] : null;
+
+                if (i >= shown)
+                {
+                    if (text != null) text.gameObject.SetShown(false);
+                    if (icon != null) icon.gameObject.SetShown(false);
+                    _statusBoxRowHeights[i] = 0f;
+                    continue;
+                }
+
+                bool isOverflow = i == overflowRow;
+                var row = rows[i];
+
+                float height = FightScreen.StatusBoxRowMinHeight;
+
+                if (text != null)
+                {
+                    text.gameObject.SetShown(true);
+                    text.SetContent(isOverflow ? $"+{rows.Count - overflowRow} more" : row.Tooltip);
+                    text.color = !isOverflow && highlightCode != null && highlightCode == row.Code
+                        ? StatusBoxRowHighlight
+                        : StatusBoxRowText;
+
+                    // GetPreferredValues, not preferredHeight, for the reason
+                    // Core/TooltipFit.cs states: the latter answers for the
+                    // last laid-out mesh, and the body was set one line ago.
+                    float wanted = text.GetPreferredValues(text.text, FightScreen.StatusBoxTextWidth, 0f).y;
+                    height = Mathf.Clamp(wanted, FightScreen.StatusBoxRowMinHeight,
+                        FightScreen.StatusBoxRowMaxHeight);
+
+                    text.rectTransform.sizeDelta = new Vector2(FightScreen.StatusBoxTextWidth, height);
+                }
+
+                // The overflow row stands for several statuses, so it gets no
+                // glyph -- exactly what the "+N" chip does on the badge rows.
+                var art = isOverflow ? null : StatusSpriteFor(row);
+                if (icon != null)
+                {
+                    icon.gameObject.SetShown(true);
+                    icon.sprite = art;
+
+                    // Disabled rather than left sprite-less: an Image with no
+                    // sprite renders as a solid white quad (ItemIcons' own
+                    // rule, CODE_STANDARDS section 2).
+                    icon.enabled = art != null;
+                }
+
+                _statusBoxRowHeights[i] = height;
+                used += height + (i > 0 ? FightScreen.StatusBoxRowGap : 0f);
             }
-            else
+
+            float boxHeight = FightScreen.StatusBoxPad * 2f + used;
+
+            var boxRect = statusBox.transform as RectTransform;
+            if (boxRect != null)
             {
-                int plate = (flat - PcStatusBase) / PcStatusBadgesPerPlate;
-                start = PcStatusBase + plate * PcStatusBadgesPerPlate;
-                count = PcStatusBadgesPerPlate;
+                boxRect.sizeDelta = new Vector2(FightScreen.StatusBoxWidth, boxHeight);
             }
+
+            // SECOND PASS, because a row's centre is measured from the box's
+            // own height and the height is not known until every row has been
+            // measured. Both passes -- and the build's own stacking in
+            // FightScreen.BuildStatusBox -- go through StatusBoxRowCentreY,
+            // so there is one statement of where row i sits.
+            float above = 0f;
+            for (int i = 0; i < shown; i++)
+            {
+                float height = _statusBoxRowHeights[i];
+                float centre = FightScreen.StatusBoxRowCentreY(boxHeight, above, height);
+
+                if (Has(statusBoxTexts, i))
+                {
+                    var rect = statusBoxTexts[i].rectTransform;
+                    rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, centre);
+                }
+
+                if (Has(statusBoxIcons, i))
+                {
+                    var rect = statusBoxIcons[i].rectTransform;
+                    rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, centre);
+                }
+
+                above += height + FightScreen.StatusBoxRowGap;
+            }
+
+            return boxHeight;
         }
 
-        // TooltipPlacement.Beside works in ONE local coordinate space; the
-        // anchor and the tooltip do not share one here -- the enemy row
-        // sits under the stage panel, a PC row under its own plate, and
-        // StatusTooltip is a
-        // top-level HUD child. The anchor's centre is carried through WORLD
-        // space first, the one conversion that is correct regardless of how
-        // deep the anchor happens to be nested.
+        // UNDER THE ACTOR IT DESCRIBES -- the arithmetic is
+        // FightScreen.StatusBoxAt (pure, EditMode-tested against this
+        // screen's real geometry); what lives here is only the measuring.
         //
-        // THE INTERIOR BOX IS tooltipRect.parent.rect ITSELF (S2's review
-        // reverses the earlier workaround). The first capture's defect really
-        // did look like "parent.rect (FightHud, a NestedCanvas meant to fill
-        // the whole screen) is far smaller than the canvas", which is what
-        // the original fix clamped against UiFrames.Reference instead to
-        // dodge -- but the actual cause was reading the rect on the SAME
-        // FRAME SetShown(true) ran, before layout had caught up to it, not
-        // the rect itself being wrong. Forcing a canvas rebuild first
-        // (immediately above) and then reading parent.rect measured (1920,
-        // 1440) at a 4:3 capture -- matching the real canvas, not a
-        // degenerate box -- so the fixed 1920x1080 reference frame is deleted
-        // in favour of the actual one, which is only ever as-or-more generous
-        // than the reference on any wider or taller real canvas.
-        private void PlaceStatusTooltip(int flat, RectTransform anchor)
+        // THREE RECTS DO NOT SHARE ONE LOCAL SPACE. A stage slot is several
+        // levels down and carries a WithScale, its badge strip is a child of
+        // the stage panel, and the box is a top-level HUD child. Every span
+        // below is therefore carried through WORLD space into the box's own
+        // parent, the one conversion that is correct whatever depth the rect
+        // happens to sit at -- the same route the tooltip this replaced took
+        // for the same reason.
+        private void PlaceStatusBox(CombatantState actor, float boxHeight)
         {
-            var tooltipRect = statusTooltip != null ? statusTooltip.transform as RectTransform : null;
-            if (tooltipRect == null || anchor == null) return;
+            var boxRect = statusBox != null ? statusBox.transform as RectTransform : null;
+            var parent = boxRect != null ? boxRect.parent as RectTransform : null;
+            var slot = SlotFor(actor);
+            if (boxRect == null || parent == null || slot == null) return;
 
-            var parent = tooltipRect.parent as RectTransform;
-            if (parent == null) return;
-
-            // FORCED BEFORE READING parent.rect (S2's review). Without this,
-            // reading the rect on the same frame SetShown(true) ran measured
-            // whatever the layout last happened to be, not what it is now --
-            // the original bug this method's own header used to blame on
-            // parent.rect itself. Measured directly: at a 4:3 capture,
-            // parent.rect.size read (1920, 1440) once forced, matching the
-            // real canvas rather than "far smaller" than it.
+            // FORCED BEFORE READING ANY RECT. Reading parent.rect on the same
+            // frame SetShown(true) ran measures whatever the layout last
+            // happened to be rather than what it is now -- the defect
+            // the tooltip this replaced recorded, and it applies twice
+            // as hard here because the sizeDelta this reads back was written
+            // a few lines ago.
             Canvas.ForceUpdateCanvases();
 
-            var canvas = _statusTooltipCanvas;
+            var canvas = _statusBoxCanvas;
             var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
                 ? canvas.worldCamera
                 : null;
 
-            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, anchor.position);
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, camera, out var anchorLocal))
+            if (!SpanInParent(slot, parent, camera, out float centreX, out float bottom, out float top))
             {
                 return;
             }
 
-            // Widen past the single hovered badge to the WHOLE row it shares
-            // a parent with -- Beside only ever sees one anchor width, and
-            // every one of the three surfaces places several badges under
-            // one parent (the enemy strip, the PC plate
-            // plate). Without this, flipping beside the first of several
-            // badges lands the tooltip on top of the second rather than
-            // beside the row (caught in this gate's own capture: the
-            // Regen/Protect pair on the far enemy slot).
-            GetStatusRowRange(flat, out int rowStart, out int rowCount);
-            var rowParent = anchor.parent as RectTransform;
-            float leftLocal = anchor.anchoredPosition.x - anchor.rect.width * 0.5f;
-            float rightLocal = anchor.anchoredPosition.x + anchor.rect.width * 0.5f;
-            float rowY = anchor.anchoredPosition.y;
-
-            if (rowParent != null && _statusBadgeParts != null)
+            // AN ENEMY'S BADGE ROW HANGS BELOW ITS FIGURE and is not a child
+            // of it (FightScreen.EnemyStatusRowDrop, 60 below the ground
+            // line), so a box placed off the figure alone would land on top
+            // of the very badges it is expanding. The party's badges are on
+            // its plates instead, so there is nothing to extend past there --
+            // one rule, with the side's own geometry answering it.
+            var strip = EnemyStatusStripFor(actor);
+            if (strip != null && strip.activeInHierarchy
+                && SpanInParent(strip.transform as RectTransform, parent, camera,
+                    out _, out float stripBottom, out _))
             {
-                int end = Mathf.Min(rowStart + rowCount, _statusBadgeParts.Length);
-                for (int i = rowStart; i < end; i++)
-                {
-                    var root = _statusBadgeParts[i].Root;
-                    if (root == null || !root.activeSelf) continue;
-                    var rt = root.transform as RectTransform;
-                    if (rt == null || rt.parent != rowParent) continue;
-
-                    float half = rt.rect.width * 0.5f;
-                    leftLocal = Mathf.Min(leftLocal, rt.anchoredPosition.x - half);
-                    rightLocal = Mathf.Max(rightLocal, rt.anchoredPosition.x + half);
-                }
-            }
-
-            float anchorWidth = anchor.rect.width;
-            float anchorXInParent = anchorLocal.x;
-
-            if (rowParent != null && rightLocal > leftLocal)
-            {
-                Vector3 leftWorld = rowParent.TransformPoint(new Vector3(leftLocal, rowY, 0f));
-                Vector3 rightWorld = rowParent.TransformPoint(new Vector3(rightLocal, rowY, 0f));
-
-                Vector2 leftScreen = RectTransformUtility.WorldToScreenPoint(camera, leftWorld);
-                Vector2 rightScreen = RectTransformUtility.WorldToScreenPoint(camera, rightWorld);
-
-                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, leftScreen, camera, out var leftInParent) &&
-                    RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, rightScreen, camera, out var rightInParent))
-                {
-                    anchorWidth = Mathf.Abs(rightInParent.x - leftInParent.x);
-                    anchorXInParent = (leftInParent.x + rightInParent.x) * 0.5f;
-                }
+                bottom = Mathf.Min(bottom, stripBottom);
             }
 
             const float Margin = 8f;
             var interior = parent.rect;
 
-            // The WIDTH above is the whole badge row's span (so the box
-            // clears every badge, not just the hovered one); the height is
-            // the one badge's, which is the row's too -- they are a single
-            // line of equal-height chips. Only the never-overlap fallback
-            // reads it (TooltipPlacement.Beside's own header).
-            var at = TooltipPlacement.Beside(
-                anchorXInParent, anchorLocal.y, anchorWidth, anchor.rect.height,
-                tooltipRect.rect.width, tooltipRect.rect.height,
+            var at = FightScreen.StatusBoxAt(centreX, bottom, top,
+                boxRect.rect.width, boxHeight,
                 interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
                 interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
 
-            tooltipRect.anchoredPosition = new Vector2(at.X, at.Y);
+            boxRect.anchoredPosition = new Vector2(at.X, at.Y);
+        }
+
+        // The backing strip under an ENEMY's badge row, or null for anyone
+        // else -- the party has no strip by design (its badges sit on painted
+        // plates, PLAN_STATUS_EFFECT_UI section 7).
+        private GameObject EnemyStatusStripFor(CombatantState actor)
+        {
+            if (actor == null || actor.IsPlayerSide || enemyStatusStrips == null) return null;
+
+            int slot = SlotIndexOf(actor);
+            return slot >= 0 && slot < enemyStatusStrips.Length ? enemyStatusStrips[slot] : null;
+        }
+
+        // One rect's centre-x, bottom and top, in `parent`'s local space.
+        private static bool SpanInParent(RectTransform rect, RectTransform parent, Camera camera,
+                                         out float centreX, out float bottom, out float top)
+        {
+            centreX = 0f;
+            bottom = 0f;
+            top = 0f;
+            if (rect == null || parent == null) return false;
+
+            var box = rect.rect;
+            Vector3 lowWorld = rect.TransformPoint(new Vector3(box.center.x, box.yMin, 0f));
+            Vector3 highWorld = rect.TransformPoint(new Vector3(box.center.x, box.yMax, 0f));
+
+            Vector2 lowScreen = RectTransformUtility.WorldToScreenPoint(camera, lowWorld);
+            Vector2 highScreen = RectTransformUtility.WorldToScreenPoint(camera, highWorld);
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, lowScreen, camera, out var low) ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, highScreen, camera, out var high))
+            {
+                return false;
+            }
+
+            centreX = (low.x + high.x) * 0.5f;
+            bottom = Mathf.Min(low.y, high.y);
+            top = Mathf.Max(low.y, high.y);
+            return true;
         }
 
         // The ordinary chip tint, restored every refresh so a preview from a

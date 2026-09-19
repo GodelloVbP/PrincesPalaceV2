@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -162,7 +163,12 @@ namespace PrincesPalace
         {
             if (_navContext != null) return;
 
-            _navContext = new NavContext(entry: StartRunButtonGameObject, selectables: Selectables(), cancel: HandleEscape);
+            // systemMenu, NOT cancel (the owner's 2026-09-19 call: Start
+            // opens the menu, B does not). The hub is a ROOT -- there is no
+            // level above it to step back to -- so its Cancel is deliberately
+            // nothing at all rather than a second way to reach the menu.
+            _navContext = new NavContext(entry: StartRunButtonGameObject, selectables: Selectables(),
+                cancel: null, systemMenu: HandleEscape);
             NavigationInputModule.Contexts?.Push(_navContext);
         }
 
@@ -190,25 +196,31 @@ namespace PrincesPalace
         // across the screen to Talents instead of continuing to Character
         // Sheet, which is the nearest thing to its right by a long way.
         //
-        // LEFT/RIGHT IS NOW ONE WRAPPING RING over the five staged controls,
-        // authored in the owner's own stated order rather than derived:
+        // LEFT/RIGHT IS ONE WRAPPING RING over the five staged controls,
+        // ordered by their actual HubAnchors x -- not hand-typed, and not
+        // the owner's 2026-09-18 verbatim phrasing either, after both were
+        // tried and both left a defect on the pad.
         //
-        //     Talents <-> Principality <-> Gate <-> Relics <-> CharacterSheet
+        // ROUND 1 (a9f89ebe) hand-typed the ring in the order the owner's
+        // words gave it -- "from the gate, Left goes Principality then
+        // Talents" -- over screen-x, on the theory that stated words beat a
+        // heuristic. They do not both describe the same ring: by x, the
+        // thing left of the gate is Talents (-349), not Principality (-673),
+        // so that order made Left OVERSHOOT the nearer building on the first
+        // press and land back on it, reading as "middle", on the second.
+        // That is 2026-09-19's own report -- "press left twice you are left
+        // middle" -- against the exact build that quoted the owner's words
+        // back at her.
         //
-        // so Left off the gate reaches Principality and Left again reaches
-        // Talents, and Right off Relics reaches CharacterSheet -- the two
-        // expectations the play-test stated, both pinned literally in
-        // HubGamepadNavigationTests.
-        //
-        // DEVIATION, STATED RATHER THAN QUIETLY RESOLVED: those two
-        // expectations are not both satisfiable by plain screen-x order.
-        // By x, the thing left of the gate is Talents (-349), not
-        // Principality (-673), so an x-ordered ring answers the Relics
-        // complaint and contradicts the gate one. Where the heuristic and the
-        // owner's own words disagree the words win, and the one hop that is
-        // not x-ordered (Talents <-> Principality, the two buildings on the
-        // left arm) is the price. Reversing it is one edit to the array
-        // below.
+        // ROUND 2 (here) sorts the ring by HubAnchors.PositionFor(...).X
+        // (and HubAnchors.Gate.X for the gate, which is not a staged Plot)
+        // instead of by either hand-typed order, so a Left/Right press
+        // always steps to the next nearest thing on screen and a future
+        // Depth/Lateral change in HubAnchors moves the ring with it rather
+        // than silently reintroducing this defect. The owner's other
+        // expectation -- Right off Relics reaches CharacterSheet -- was
+        // already the x-order answer and is unchanged; only the left arm's
+        // two buildings swap.
         //
         // UP/DOWN IS THE COLUMN each control stands in, top to bottom by
         // screen y, clamped at both ends: a vertical Move never crosses the
@@ -231,11 +243,28 @@ namespace PrincesPalace
             var gate = startRunButton;
             var mainMenu = mainMenuButton;
 
+            // The ring's own Members order, ascending by the x each button
+            // is actually staged at -- see this method's header for why a
+            // hand-typed order (either owner-word or x-guessed) is not
+            // trusted here any more. HubAnchors.Gate is not a Plot (the gate
+            // is not staged with the rest, HubAnchors' own header says so),
+            // so its x is read directly rather than through PositionFor.
+            var hubRingOrder = new[]
+                {
+                    (button: (Button)principality, x: HubAnchors.PositionFor(HubAnchors.Principality).X),
+                    (button: (Button)talents, x: HubAnchors.PositionFor(HubAnchors.Talents).X),
+                    (button: (Button)gate, x: HubAnchors.Gate.X),
+                    (button: (Button)relics, x: HubAnchors.PositionFor(HubAnchors.Relics).X),
+                    (button: (Button)characterSheet, x: HubAnchors.PositionFor(HubAnchors.CharacterSheet).X),
+                }
+                .OrderBy(p => p.x)
+                .Select(p => p.button)
+                .ToArray();
+
             RuntimeNavWiring.Apply(
                 new[]
                 {
-                    RuntimeNavWiring.Group("hubRing", UiNavGroupKind.Rail,
-                        new[] { talents, principality, gate, relics, characterSheet }),
+                    RuntimeNavWiring.Group("hubRing", UiNavGroupKind.Rail, hubRingOrder),
 
                     // Left arm, top to bottom: the corner button, the far
                     // building, the near one, and the gate at the foot.
@@ -394,9 +423,13 @@ namespace PrincesPalace
         // here is exactly the one thing that was never one of those three
         // branches: open the overarching menu, the job SystemMenuController's
         // own now-deleted poll used to do.
+        // Named for the key that still reaches it -- escape binds the
+        // SystemMenu axis as well as Cancel -- but it is the START button's
+        // handler now, wired as the context's `systemMenu` rather than its
+        // `cancel`. Nothing about what it does changed.
         public void HandleEscape()
         {
-            SystemMenuController.OpenOnCancel(systemMenu);
+            SystemMenuController.OpenFromRoot(systemMenu);
         }
 
         // The key read above is deliberately separated from the action here:

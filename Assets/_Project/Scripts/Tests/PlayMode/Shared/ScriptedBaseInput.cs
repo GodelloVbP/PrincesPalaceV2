@@ -32,6 +32,19 @@ namespace PrincesPalace.PlayModeTests
         public bool TabPrevDown;
         public bool TabNextDown;
 
+        // Start (ProjectSettings/InputManager.asset's own SystemMenu axis),
+        // the button that opens the overarching menu since the owner's
+        // 2026-09-19 call. A one-frame edge like the two above.
+        public bool SystemMenuDown;
+
+        // The triggers, which are LEVELS and not edges -- InputManager.asset
+        // binds them as Joystick Axis entries, so the dispatcher owns their
+        // press edge itself (NavigationInputModule.TriggerPressed) and a test
+        // drives them the way it drives Vertical/Horizontal: set, drive a
+        // frame, set back to 0.
+        public float TriggerLeft;
+        public float TriggerRight;
+
         public override Vector2 mousePosition => MousePosition;
         public override bool mousePresent => true;
 
@@ -43,6 +56,8 @@ namespace PrincesPalace.PlayModeTests
         {
             if (axisName == "Vertical") return Vertical;
             if (axisName == "Horizontal") return Horizontal;
+            if (axisName == "TriggerLeft") return TriggerLeft;
+            if (axisName == "TriggerRight") return TriggerRight;
             return 0f;
         }
 
@@ -52,6 +67,7 @@ namespace PrincesPalace.PlayModeTests
             if (buttonName == "Cancel") return CancelDown;
             if (buttonName == "TabPrev") return TabPrevDown;
             if (buttonName == "TabNext") return TabNextDown;
+            if (buttonName == "SystemMenu") return SystemMenuDown;
             return false;
         }
 
@@ -63,6 +79,7 @@ namespace PrincesPalace.PlayModeTests
             CancelDown = false;
             TabPrevDown = false;
             TabNextDown = false;
+            SystemMenuDown = false;
         }
     }
 }

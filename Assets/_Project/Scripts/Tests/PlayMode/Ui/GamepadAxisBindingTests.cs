@@ -116,6 +116,54 @@ namespace PrincesPalace.PlayModeTests
                 "the D-pad hat reports up as positive, so it must NOT carry the left stick's invert");
         }
 
+        // THE OFF-BY-ONE THIS FILE ALREADY NAMES, on two more entries. The
+        // Inspector calls the triggers the 9th and 10th axes on an Xbox pad
+        // under Windows, so serialized they are 8 and 9 -- anchored on the
+        // left stick above exactly as the D-pad's are. The 3rd axis is the
+        // COMBINED trigger (LT positive, RT negative) and is deliberately not
+        // used: one axis cannot say that both are pulled, and a section step
+        // wants a per-trigger edge.
+        private const string TriggerLeftAxisIndex = "8";
+        private const string TriggerRightAxisIndex = "9";
+
+        [Test]
+        public void TheTriggersAreBoundAsSeparateAxes_NotAsTheCombinedOne()
+        {
+            var left = AxesNamed("TriggerLeft").FirstOrDefault(a => IsJoystickAxis(a, TriggerLeftAxisIndex));
+            Assert.IsNotNull(left,
+                "TriggerLeft needs a Joystick Axis entry on the 9th axis (LT) -- without it a trigger pull " +
+                "reaches nothing, and NavigationInputModule's section step can never fire");
+
+            var right = AxesNamed("TriggerRight").FirstOrDefault(a => IsJoystickAxis(a, TriggerRightAxisIndex));
+            Assert.IsNotNull(right, "TriggerRight needs a Joystick Axis entry on the 10th axis (RT)");
+
+            Assert.AreNotEqual("2", left["axis"],
+                "the 3rd axis is the COMBINED trigger -- binding it would make LT and RT the same control");
+        }
+
+        // START, and the fact that ESCAPE DRIVES IT TOO. The second half is
+        // not incidental: escape is also Cancel's positiveButton, which is
+        // the whole reason NavigationInputModule has to decide which of the
+        // two a frame's press was spent on rather than letting both run.
+        [Test]
+        public void SystemMenuIsBoundToStartAndToEscape()
+        {
+            var entry = AxesNamed("SystemMenu").FirstOrDefault();
+            Assert.IsNotNull(entry, "ProjectSettings/InputManager.asset has no SystemMenu axis at all");
+            Assert.AreEqual("escape", entry["positiveButton"],
+                "a keyboard player needs escape to reach the menu, same key it always was");
+            Assert.AreEqual("joystick button 7", entry["altPositiveButton"],
+                "Start on an Xbox pad under Windows -- the owner's 2026-09-19 call, unverified on hardware " +
+                "(AUDIT.md #166)");
+
+            var cancel = AxesNamed("Cancel").FirstOrDefault(a => a["positiveButton"] == "escape");
+            Assert.IsNotNull(cancel,
+                "Cancel still binds escape, which is why the dispatcher spends a frame on one axis or the " +
+                "other -- if this ever stops being true, NavigationInputModule's guard can be dropped");
+            Assert.AreNotEqual("joystick button 7", cancel["altPositiveButton"],
+                "Start must not also be Cancel on a pad, or B and Start would mean the same thing again");
+        }
+
         [Test]
         public void TheKeyboardArrowsAreStillBound()
         {

@@ -74,10 +74,12 @@ namespace PrincesPalace.PlayModeTests
         // prefers THAT over Entry whenever the same top context still
         // declares it -- which is exactly and only this same-context case.
         // The Hub's own ring is the fixture: gate -> Up ->
-        // PrincipalityBuilding (the left arm above it) -> Left ->
-        // TalentsBuilding (the ring's next member,
-        // HubGamepadNavigationTests' own pinned claim). It was the 2x2 Grid
-        // until the hardware play-test rejected that shape.
+        // PrincipalityBuilding (the left arm above it) -> Right ->
+        // TalentsBuilding (the ring's next member by screen x,
+        // HubGamepadNavigationTests' own pinned claim -- Right rather than
+        // Left since 2026-09-19's ring-by-x fix put Principality ahead of
+        // Talents instead of behind it). It was the 2x2 Grid until the
+        // hardware play-test rejected that shape.
         [UnityTest]
         public IEnumerator BackgroundClick_RestoresTheRememberedNodeSameFrame_NextMoveAdvancesToTheLiteralNeighbour()
         {
@@ -104,7 +106,7 @@ namespace PrincesPalace.PlayModeTests
                 "the dispatcher must restore what was selected a moment ago in the SAME Process() call -- nothing " +
                 "should have crossed a frame boundary null, and it must not have fallen back to Entry either");
 
-            yield return MoveLeft(); // the ring's own next member, not a stale selection from before the click
+            yield return MoveRight(); // the ring's own next member, not a stale selection from before the click
 
             AssertSelectedName("TalentsBuilding",
                 "the next Move should advance to the literal ring neighbour of the RESTORED selection -- if the " +
@@ -174,11 +176,11 @@ namespace PrincesPalace.PlayModeTests
             int verbBefore = fight.FocusedVerbForTest;
             int enemyHpBefore = session.Encounter.Enemies[0].CurrentHealth;
 
-            yield return PressCancel(); // opens the system menu over Fight (no click equivalent, section 3's own transition case)
+            yield return PressSystemMenu(); // opens the system menu over Fight (no click equivalent, section 3's own transition case)
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the Fight scene carries no SystemMenuController");
-            Assert.IsTrue(menu.IsOpen, "Cancel should have opened the system menu");
+            Assert.IsTrue(menu.IsOpen, "Start should have opened the system menu");
 
             yield return PressTabPrev(); // the pad's own shortcut -- wraps to MainMenu, landing on ExitTitle (its own entry)
             AssertSelectedName("ExitTitle", "the shoulder shortcut should land on the MainMenu pane's own entry");
@@ -410,7 +412,7 @@ namespace PrincesPalace.PlayModeTests
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController");
 
-            yield return PressCancel(); // no click equivalent, the mouse's own ESC key
+            yield return PressSystemMenu(); // no click equivalent, the mouse's own ESC key
             yield return Click(Node("SystemTabOptions"));
 
             var resolutionRow = Node("OptionsRowresolution");

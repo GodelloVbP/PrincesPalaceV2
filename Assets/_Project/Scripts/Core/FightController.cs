@@ -6,6 +6,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace
 {
@@ -195,15 +196,15 @@ namespace PrincesPalace
         // plates already and were never given a strip of their own.
         [SerializeField] internal GameObject[] enemyStatusStrips;
 
-        // The ONE hover tooltip every status badge on every surface shares
-        // (enemy row, party plate, roster row) -- repositioned per hover
-        // through Domain/UiKit/TooltipPlacement.cs's Beside rather than
-        // sitting at a fixed spot. PartyBuffTooltip/PartyBuffTooltipText,
-        // the fixed-spot tooltip this one replaced, were removed outright
-        // (S4's review): dead since this shared tooltip shipped, never shown
-        // again by anything.
-        [SerializeField] internal GameObject statusTooltip;
-        [SerializeField] internal TMP_Text statusTooltipText;
+        // THE ONE STATUS BOX, hung under whichever actor is being inspected
+        // and listing every status on it, one row per status --
+        // FightScreen.BuildStatusBox for the shape and for what it replaced
+        // (StatusTooltip/StatusTooltipText, the per-badge tooltip, removed
+        // outright: it answered for one badge, landed beside that badge, and
+        // a pad could not reach it at all).
+        [SerializeField] internal GameObject statusBox;
+        [SerializeField] internal Image[] statusBoxIcons;
+        [SerializeField] internal TMP_Text[] statusBoxTexts;
 
         // ---- status badges: consts and runtime state (S9's review) ---------------
         //
@@ -232,7 +233,14 @@ namespace PrincesPalace
         private const int PcPlateCount = 3;
 
         private StatusBadgeParts[] _statusBadgeParts;
-        private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
+
+        // WHICH STATUS EACH PHYSICAL BADGE SLOT IS SHOWING, as of the last
+        // paint, or null for a slot showing nothing (and for the "+N" chip,
+        // which stands for several). It was the badge's whole tooltip TEXT
+        // until the status box replaced the per-badge tooltip; the box builds
+        // its own text from the holder's rows, so what a badge still has to
+        // carry is only which row of that list it is -- see _inspectedCode.
+        private readonly string[] _statusBadgeCode = new string[TotalStatusBadges];
 
         // Which CODES were actually painted for each HOLDER last refresh --
         // keyed by the CombatantState itself, not by the physical row's
@@ -261,23 +269,61 @@ namespace PrincesPalace
         // One appearance-pop coroutine per physical badge SLOT (flat index),
         // since the pop animates the slot's own RectTransform and two
         // overlapping tweens on the same node would fight over its scale.
-        // A flat array, sized like its two siblings (_statusBadgeParts,
-        // _statusBadgeTooltip) rather than a Dictionary<int, Coroutine>
+        // A flat array, sized like its siblings (_statusBadgeParts,
+        // _statusBadgeCode, _statusBadgeHolder) rather than a
+        // Dictionary<int, Coroutine>
         // (S7's review) -- flat is a dense 0..TotalStatusBadges-1 range by
         // construction, so a Dictionary was paying hashing/boxing for what
         // is really just indexed storage every other per-badge array here
         // already uses.
         private readonly Coroutine[] _statusBadgePopRoutines = new Coroutine[TotalStatusBadges];
 
-        // Which flat index currently owns the shared tooltip, or -1. Not
-        // read by the paint routine at all -- only by OnHoverStatusBadge and
-        // RefreshHoveredStatusTooltip, both in FightController.Hud.cs.
-        private int _hoveredStatusBadge = -1;
+        // WHO EACH PHYSICAL BADGE SLOT BELONGS TO, as of the last paint --
+        // the badge-hover path's answer to "which actor is being asked
+        // about". Written only by PaintStatusRow, which is already handed
+        // the holder for the appearance-pop's sake, so this is a second
+        // reader of a fact the paint already had rather than a second way of
+        // working it out.
+        private readonly CombatantState[] _statusBadgeHolder = new CombatantState[TotalStatusBadges];
 
-        // The Canvas statusTooltip sits under, resolved once by
-        // WireAllStatusBadges rather than per hover -- see that method's own
-        // comment (S8's review).
-        private Canvas _statusTooltipCanvas;
+        // THE ACTOR THE POINTER IS ASKING ABOUT, or null. Set by every mouse
+        // surface that names one combatant -- a status badge, an enemy
+        // plate, an intent icon over a monster's head, a PC plate -- and
+        // beaten by nothing: the pad's own focus is consulted only when this
+        // is null (RefreshStatusBox). One field rather than one hover index
+        // per surface, because the box's question is about an ACTOR and
+        // every surface that can answer it already holds one.
+        private CombatantState _inspectedActor;
+
+        // The status code whose row the box draws emphasised, or null. Only
+        // a badge hover sets one: the badge names a single status inside a
+        // list the box shows whole, and losing which one was pointed at is
+        // the one thing the old per-badge tooltip did better.
+        private string _inspectedCode;
+
+        // WHICH SURFACE OPENED THE BOX, so that only that surface can close
+        // it again. Comparing ACTORS is not enough: walking the pointer along
+        // one badge row is four surfaces naming the same monster, and Unity
+        // delivers the arriving surface's enter before the departing one's
+        // exit often enough that OnEnemyUnhovered already carries a comment
+        // about it -- an actor-keyed guard would let the badge being LEFT
+        // close the box the badge being ENTERED just opened.
+        private enum InspectSource { None, StatusBadge, Enemy, AllyPlate }
+
+        private InspectSource _inspectedFrom = InspectSource.None;
+        private int _inspectedFromIndex = -1;
+
+        // The Canvas statusBox sits under, resolved once by
+        // WireAllStatusBadges rather than per hover (S8's review).
+        private Canvas _statusBoxCanvas;
+
+        // What each status-box row MEASURED to this paint. A row is one line
+        // of text until its own line does not fit, so where row i sits
+        // depends on every row above it and on the box's final height --
+        // which is not known until they have all been measured. One reused
+        // buffer rather than a fresh array per paint, the same reasoning
+        // _statusRowScratchCodes carries.
+        private readonly float[] _statusBoxRowHeights = new float[FightScreen.StatusBoxRows];
 
         // BUILD-TIME positions, captured once and never overwritten --
         // RefreshEnemyStatusRows re-derives each refresh's position as

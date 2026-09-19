@@ -50,24 +50,52 @@ namespace PrincesPalace.Domain.UiKit
         // already does for Cancel.
         private readonly Func<INavTabStrip> _tabStrip;
 
+        // This context's own optional section strip (INavSectionStrip) --
+        // the trigger shortcut's only effect, held the same way and for the
+        // same reason `_tabStrip` is a function.
+        private readonly Func<INavSectionStrip> _sectionStrip;
+
+        // WHAT THE START BUTTON DOES HERE, or nothing.
+        //
+        // A SEPARATE handler from Cancel, not a mode on it: the two presses
+        // now mean different things everywhere at once (Cancel steps back a
+        // level, Start reaches the overarching menu), and a context that has
+        // no answer for Start absorbs it rather than falling through to its
+        // Cancel. An Action rather than an interface because, unlike the
+        // claimant and the two strips, there is no "which object is live
+        // right now" question to ask -- the root screens each have exactly
+        // one menu to open and know it when they build their context.
+        private readonly Action _systemMenu;
+
         public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel,
-            Func<INavCancelClaim> claimant = null, Func<INavTabStrip> tabStrip = null)
+            Func<INavCancelClaim> claimant = null, Func<INavTabStrip> tabStrip = null,
+            Action systemMenu = null, Func<INavSectionStrip> sectionStrip = null)
         {
             Entry = entry;
             Selectables = selectables ?? EmptySelectables;
             Cancel = cancel;
             _claimant = claimant;
             _tabStrip = tabStrip;
+            _systemMenu = systemMenu;
+            _sectionStrip = sectionStrip;
         }
 
-        private NavContext(IFightNavigationTarget fightTarget)
+        private NavContext(IFightNavigationTarget fightTarget, Action systemMenu)
         {
             FightTarget = fightTarget;
             IsNonSelecting = true;
             Selectables = EmptySelectables;
+            _systemMenu = systemMenu;
         }
 
-        public static NavContext ForFight(IFightNavigationTarget target) => new NavContext(target);
+        // systemMenu is the ONE handler the Fight shape shares with the
+        // ordinary one, and it is carried here rather than added to
+        // IFightNavigationTarget because it is not a fight concern: opening
+        // the overarching menu means the same thing on the map, the hub and
+        // the fight, and the dispatcher calls it off the context in all
+        // three so there is one read of the button, not two.
+        public static NavContext ForFight(IFightNavigationTarget target, Action systemMenu = null) =>
+            new NavContext(target, systemMenu);
 
         public void Remember(string stableId) => RememberedId = stableId;
 
@@ -93,6 +121,33 @@ namespace PrincesPalace.Domain.UiKit
         // argument answer null here, so a shoulder press on any of them is
         // simply absorbed, not routed anywhere by accident.
         public void RaiseTabStep(int direction) => _tabStrip?.Invoke()?.StepTab(direction);
+
+        // THE TRIGGER SHORTCUT'S ONLY EFFECT, offered off `topAtStart` the
+        // same way RaiseTabStep is and absorbed the same way by a context
+        // that declares no section strip.
+        public void RaiseSectionStep(int direction) => _sectionStrip?.Invoke()?.StepSection(direction);
+
+        // THE START BUTTON'S ONLY EFFECT. Absorbed, not forwarded, by a
+        // context with no handler -- which is every context but the three
+        // roots and the menu itself. That silence is the point: Start over a
+        // modal must not reach the screen underneath and open a menu on top
+        // of it.
+        //
+        // RETURNS WHETHER THIS CONTEXT ANSWERED, which is the one fact the
+        // dispatcher cannot work out for itself and needs: escape is bound
+        // to SystemMenu and to Cancel alike, so it has to know whether this
+        // frame's press was already spent here before it offers the same
+        // press to Cancel. "Handled" means a handler existed, not that it
+        // did anything visible -- the menu's own handler legitimately does
+        // nothing when a pane claims the press (INavCancelClaim), and that
+        // press is still spent.
+        public bool RaiseSystemMenu()
+        {
+            if (_systemMenu == null) return false;
+
+            _systemMenu.Invoke();
+            return true;
+        }
 
         // Map's own case (plan section 4): a context whose navigable set
         // genuinely changes contents across repaints -- a new floor has

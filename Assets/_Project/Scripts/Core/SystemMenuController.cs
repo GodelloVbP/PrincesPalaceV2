@@ -140,8 +140,11 @@ namespace PrincesPalace
             tabHovers[index].SetShown(show);
         }
 
-        // THE ONE PATH "Cancel with nothing else up" TAKES, from the hub,
-        // the map and the fight alike (AUDIT.md #155).
+        // THE ONE PATH TO THE OVERARCHING MENU FROM A ROOT CONTEXT, from
+        // the hub, the map and the fight alike (AUDIT.md #155). Each root
+        // hangs it on its context's `systemMenu` handler, so Start and Escape
+        // reach it and Cancel does not -- the owner's 2026-09-19 call. It was
+        // named OpenOnCancel while Cancel was the button.
         //
         // Static and null-tolerant on purpose. Its three callers each hold
         // this controller as a [SerializeField] a fixture scene may never
@@ -151,7 +154,7 @@ namespace PrincesPalace
         // happened when that poll went away and only the hub got a
         // replacement. Returns whether it opened, for a caller that has
         // something else to do when it did not.
-        public static bool OpenOnCancel(SystemMenuController menu)
+        public static bool OpenFromRoot(SystemMenuController menu)
         {
             if (menu == null || menu.IsOpen) return false;
 
@@ -229,8 +232,17 @@ namespace PrincesPalace
                 // unlike ActivePaneCancelClaim's "ask whichever pane is
                 // active right now" (NavContext's own header on why the
                 // shape still stays a function).
+                // systemMenu: the same press that opened this menu closes it
+                // again (the owner's 2026-09-19 call moved that press from B
+                // to Start). It goes through the claimant check too, and not
+                // as a nicety: Start over a Party carry has to put the
+                // character back rather than shut the menu on an open
+                // transaction, which is the identical hazard INavCancelClaim
+                // was written for -- so it is the identical check, not a
+                // second one that could answer differently.
                 _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
-                    claimant: ActivePaneCancelClaim, tabStrip: () => this);
+                    claimant: ActivePaneCancelClaim, tabStrip: () => this,
+                    systemMenu: CloseUnlessTheActivePaneClaimsIt);
             }
 
             // PushIfAbsent, not Push: this context outlives its time on the
@@ -389,6 +401,21 @@ namespace PrincesPalace
         {
             var activePane = ActivePane();
             return activePane == null ? null : activePane.GetComponentInChildren<INavCancelClaim>();
+        }
+
+        // WHAT START DOES WHILE THIS MENU IS TOP. It is NavContext.RaiseCancel's
+        // precedence restated for the other button, and it is written out here
+        // rather than reusing RaiseCancel because the dispatcher must be able
+        // to tell "this context answered Start" from "this context answered
+        // Cancel" -- one keyboard key (escape) drives both axes, so the two
+        // presses are indistinguishable at the source and only the handler
+        // that ran can say which one was spent.
+        private void CloseUnlessTheActivePaneClaimsIt()
+        {
+            var claimant = ActivePaneCancelClaim();
+            if (claimant != null && claimant.ClaimCancel()) return;
+
+            Close();
         }
 
         private void Pause()

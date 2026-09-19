@@ -42,9 +42,17 @@ namespace PrincesPalace.PlayModeTests
             public int MoveFocusCalls;
             public int ConfirmFocusCalls;
             public int OnBackPressedCalls;
+            public int InspectMoveCalls;
             public Action OnConfirm;
 
             public void MoveFocus(int delta) => MoveFocusCalls++;
+
+            // The horizontal axis' own call (the owner's 2026-09-19 inspect
+            // path). Counted rather than ignored for the same reason the
+            // three above are: this fixture's claims are about WHICH member
+            // one frame's input reaches, and a fourth member that could be
+            // reached has to be visible to them.
+            public void InspectMove(int delta) => InspectMoveCalls++;
 
             public void ConfirmFocus()
             {

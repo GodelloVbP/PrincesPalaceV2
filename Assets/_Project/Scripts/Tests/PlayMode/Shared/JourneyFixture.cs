@@ -71,6 +71,15 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
         }
 
+        // START -- the button that opens and closes the overarching menu
+        // since the owner's 2026-09-19 call. Distinct from PressCancel,
+        // which now steps back a level and nothing else.
+        protected IEnumerator PressSystemMenu()
+        {
+            Input.SystemMenuDown = true;
+            yield return DriveFrame();
+        }
+
         protected IEnumerator PressTabNext()
         {
             Input.TabNextDown = true;

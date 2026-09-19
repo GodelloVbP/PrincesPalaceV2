@@ -12,12 +12,12 @@ namespace PrincesPalace.PlayModeTests
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 4, item 3: segment 3's mouse-only
     // regression.
     //
-    // "CANCEL OPENS THE MENU" HAS NO MOUSE EQUIVALENT -- item 3's own brief
-    // names this exact case. A mouse player still has a keyboard, and the
-    // legacy Input Manager's Cancel button is bound to Escape either way
-    // (ProjectSettings/InputManager.asset), so this file keeps PressCancel()
-    // for opening and closing the menu rather than inventing a HUD icon that
-    // does not exist -- FightController.LeaveFight and HubController's own
+    // "OPENING THE MENU" HAS NO MOUSE EQUIVALENT -- item 3's own brief
+    // names this exact case. A mouse player still has a keyboard, and escape
+    // binds the SystemMenu axis as well as Cancel
+    // (ProjectSettings/InputManager.asset), so this file keeps the key
+    // presses for opening and closing the menu rather than inventing a HUD
+    // icon that does not exist -- FightController.LeaveFight and HubController's own
     // mainMenuButton are both a DIFFERENT shortcut (straight to the Main
     // Menu, ending the run), not "open the system menu", so there is no
     // button standing in for it.
@@ -87,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CancelOpensTheMenu_AdjustsAStepperAndASlider_CancelClosesBackToFight_MouseOnly()
+        public IEnumerator StartOpensTheMenu_AdjustsAStepperAndASlider_CancelClosesBackToFight_MouseOnly()
         {
             yield return OpenAFight();
 
@@ -95,11 +95,11 @@ namespace PrincesPalace.PlayModeTests
             int verbBefore = _fight.FocusedVerbForTest;
             int enemyHpBefore = _session.Encounter.Enemies[0].CurrentHealth;
 
-            yield return PressCancel(); // the mouse's own ESC key, same button binding -- see this file's header
+            yield return PressSystemMenu(); // the mouse's own ESC key, which binds this axis too -- see this file's header
 
             Assert.IsTrue(_menu.IsOpen,
-                "Cancel at MenuDepth.Root -- where FightMenuState.Back() consumes nothing -- should open the " +
-                "system menu (AUDIT.md #155)");
+                "Start should open the system menu over a fight (AUDIT.md #155, moved off Cancel by the " +
+                "owner's 2026-09-19 call)");
 
             // A click through the modal reaches nothing (plan section 2's
             // verified modal-dimmer property) -- Fight's own verb plate is
