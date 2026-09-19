@@ -110,6 +110,9 @@ MonoBehaviour:
             size: 260
             facing: auto
             sort: effects
+            align: 
+            punch: 0
+            glow: 0
             impactX: 0.43
             impactY: 0.48
             aspect: 0

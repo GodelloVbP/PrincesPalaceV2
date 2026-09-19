@@ -835,12 +835,40 @@ gameplay; a layered block cannot, which is the point of the format.
 | `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
+| `align` | `level` | `place: formation` only. `level` is an axis-aligned box on the rank's mean ground line; `span` runs the box from the leftmost struck body to the rightmost and rotates it to that line. Refused on any other placement. |
+| `punch` | `0` | Extra scale at the opening instant, eased out over the first fifth of the layer's lifetime. `0.22` opens it 22% oversized. Capped at `SpellLayerRules.MaxPunch`. |
+| `glow` | `0` | How far above 1 the layer's brightest pixels are pushed, so the Volume's Bloom can see them. Nothing else on this canvas can exceed 1. |
 | `emitter` | — | The particle block; inert unless `render` is `emitter`. |
 
 **Placement decides instancing, and no spell id ever appears in code.**
 `formation` and the `caster` words are cast-level -- one instance however many
 enemies were struck; `target` and `target-centre` fan out over the struck list.
 That is the whole of how Cinderfault draws one fault under three eruptions.
+
+**A rank is a diagonal, so a line drawn across one has to be.** Both formations
+recede: the enemy's runs (300, -218) -> (660, -125) and the party's
+(320, -218) -> (810, -64) (`FightStageAnchors`). A `formation` layer left at
+`align: level` is an axis-aligned box on the rank's MEAN ground line, which is
+right for a footprint -- a pool, a shadow, a wash across the floor -- and wrong
+for anything that IS a line: at `level` a three-body span misses both end
+bodies' feet by half the rank's rise. `align: span` takes the two outermost
+struck bodies, extends the line past each by that slot's OWN half-width (the
+ends sit at different depths and are drawn at different sizes), and rotates the
+box onto it; the sheet's `impactY` correction then moves along the box's own up
+rather than along screen +Y. The geometry is `Domain.Stage.FormationSpan` and is
+pinned with literals by `FormationSpanTests`.
+
+**Bloom is reachable and nothing reaches it without `glow`.** Every
+precondition is already true -- `supportsHDR` on the pipeline asset, `render
+PostProcessing` on the camera, the canvas in `ScreenSpaceCamera`, a `Bloom`
+override in the profile -- but the threshold is 1.05 and a Canvas `Image`
+cannot exceed 1.0: sprite textures top out at white and a `CanvasRenderer`'s
+vertex colour is a `Color32`, so `image.color` clamps. `glow` swaps the layer
+onto `PrincesPalace/UISpellGlow`, which multiplies AFTER the sample and ramps
+the boost in over the top of the sprite's own luminance, so the painted body of
+an effect is untouched and only the hot core climbs past the threshold. There
+is no tonemapper in the profile, so a FLAT multiply would clip every midtone to
+white -- which is why it is a knee and not a gain.
 
 **Authored order is draw order** within a band: a cast takes pool members in the
 order its layers are written, so a spray authored after a splash draws over it.

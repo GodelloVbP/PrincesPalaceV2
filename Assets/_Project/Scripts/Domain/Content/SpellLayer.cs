@@ -84,6 +84,36 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects.")]
         public string sort = "";
 
+        // WHICH WAY A FORMATION LAYER LIES ON THE RANK IT SPANS. Only
+        // `place: formation` has two points to draw a line between, so
+        // SpellLayerRules refuses this word anywhere else rather than letting
+        // it sit there doing nothing.
+        [ContentDoc("How a formation-placed layer lies on the rank: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). Refused on any other placement.")]
+        public string align = "";
+
+        // THE OVERSHOOT, AND WHY IT IS ONE NUMBER RATHER THAN TWO. A punch is
+        // an amount and a settle time, and the settle time has exactly one
+        // sensible value -- short enough to read as an impact rather than as a
+        // zoom. Authoring it would be a second number with no second answer,
+        // so the window is derived (SpellFrameCursor.PunchFraction of the
+        // layer's own lifetime) and only the amount is authored.
+        [ContentDoc("Extra scale at the layer's opening instant, eased out to nothing over the first fifth of its lifetime; 0 means no punch. 0.2 opens it 20% oversized.")]
+        public float punch;
+
+        // BRIGHTNESS ABOVE 1, WHICH IS THE ONLY WAY ANYTHING IN THIS GAME CAN
+        // BLOOM. The Volume profile's Bloom threshold is 1.05 (PipelineBuilder)
+        // and a Canvas Image cannot exceed 1.0 on its own: sprite textures top
+        // out at white and the vertex colour a CanvasRenderer carries is a
+        // Color32, so `image.color` clamps. Without a boost applied in the
+        // shader, no UI pixel in the game has ever crossed that threshold.
+        //
+        // APPLIED TO THE HOT CORE ONLY, not to the whole drawing -- see
+        // Resources/Shaders/UISpellGlow.shader. A flat multiply would push the
+        // midtones past 1 as well, and with no tonemapper in the profile
+        // everything above 1 clips to white: the "pop" would be a white blob.
+        [ContentDoc("How far above 1 this layer's brightest pixels are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core.")]
+        public float glow;
+
         [ContentDoc("Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored.")]
         public float impactX = SpellPresentation.Unauthored;
         [ContentDoc("Where the blow lands inside this layer's frames, as a fraction from the bottom edge; -1 means unauthored.")]
@@ -139,6 +169,9 @@ namespace PrincesPalace.Domain.Content
             size = size,
             facing = facing,
             sort = sort,
+            align = align,
+            punch = punch,
+            glow = glow,
             impactX = impactX,
             impactY = impactY,
             aspect = aspect,
@@ -153,6 +186,7 @@ namespace PrincesPalace.Domain.Content
         public SpellEnd Until => SpellEndNames.Parse(until);
         public SpellFacing Facing => SpellFacingNames.Parse(facing);
         public SpellSort Sort => SpellSortNames.Parse(sort);
+        public SpellAlign Align => SpellAlignNames.Parse(align);
 
         // The id this layer rides, or empty when it does not ride one. Read
         // rather than re-split at each of the four call sites that need it.

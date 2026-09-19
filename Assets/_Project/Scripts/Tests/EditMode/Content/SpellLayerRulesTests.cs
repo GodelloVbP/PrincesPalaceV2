@@ -44,7 +44,7 @@ namespace PrincesPalace.Domain.Tests
             seconds = 0.5f,
         };
 
-        // ---- the six words ------------------------------------------------------
+        // ---- the words ----------------------------------------------------------
 
         [Test]
         public void AnUnknownRendererIsRefusedAndTheKnownOnesAreListed()
@@ -281,6 +281,99 @@ namespace PrincesPalace.Domain.Tests
             string message = Only(With(layer));
             StringAssert.Contains("placed on the formation and authors size 380, which the measured span " +
                                   "overrides", message);
+        }
+
+        // ---- the rank a formation layer lies on ---------------------------------
+
+        [Test]
+        public void AFormationLayerMaySpanTheRankItOpensUnder()
+        {
+            var layer = Sprite();
+            layer.place = "formation";
+            layer.align = "span";
+
+            CollectionAssert.IsEmpty(Problems(With(layer)),
+                "spanning the rank is what a crack in the floor does");
+        }
+
+        // A WORD THAT WOULD DO NOTHING IS REFUSED RATHER THAN IGNORED. Five of
+        // the six placements resolve to ONE point, so there is no second point
+        // to take a direction from -- and an author who types `align: span` on
+        // a target layer and sees no change has no way to find out why.
+        [Test]
+        public void AlignSpanOnAnythingButAFormationIsRefused()
+        {
+            var layer = Sprite();
+            layer.place = "target";
+            layer.align = "span";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors align 'span' but is placed on target", message);
+            StringAssert.Contains("Only 'formation' spans a rank", message);
+        }
+
+        // `level` IS THE DEFAULT AND THEREFORE LEGAL EVERYWHERE, spelled out
+        // or not. Refusing it off a formation would make the word's own
+        // default value illegal to write down, which is a rule about typing
+        // rather than about spells.
+        [Test]
+        public void AlignLevelIsLegalOnAnyPlacementBecauseItIsTheDefault()
+        {
+            var layer = Sprite();
+            layer.place = "target";
+            layer.align = "level";
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
+        [Test]
+        public void AnUnknownAlignmentIsRefusedAndTheKnownOnesAreListed()
+        {
+            var layer = Sprite();
+            layer.place = "formation";
+            layer.align = "diagonal";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].align 'diagonal' is not an alignment", message);
+            StringAssert.Contains("level, span", message);
+        }
+
+        // ---- the overshoot -------------------------------------------------------
+
+        [Test]
+        public void APunchInsideItsCeilingIsLegal()
+        {
+            var layer = Sprite();
+            layer.punch = SpellLayerRules.MaxPunch;
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
+        // THE MISTAKE THIS CATCHES IS A PERCENTAGE TYPED WHERE A FRACTION
+        // BELONGED. 20 rather than 0.2 opens the layer twenty-one times its
+        // measured box -- which on a formation layer is most of the stage --
+        // and nothing downstream would refuse it.
+        [Test]
+        public void APunchPastItsCeilingIsRefusedAsAZoom()
+        {
+            var layer = Sprite();
+            layer.punch = 20f;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("punch 20 is past the 1 a layer's overshoot may reach", message);
+        }
+
+        [Test]
+        public void ANegativePunchOrGlowIsRefused()
+        {
+            var layer = Sprite();
+            layer.punch = -0.1f;
+            layer.glow = -1f;
+
+            var problems = Problems(With(layer));
+            Assert.AreEqual(2, problems.Count, "one problem each, reported in one pass");
+            StringAssert.Contains("punch", string.Join("; ", problems));
+            StringAssert.Contains("glow", string.Join("; ", problems));
         }
 
         // CINDERFAULT'S OWN FAULT STATES impactY AND NO impactX, and the

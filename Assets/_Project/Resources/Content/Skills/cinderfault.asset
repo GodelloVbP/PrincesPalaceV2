@@ -62,7 +62,7 @@ MonoBehaviour:
         at: release
         offset: 0
         path: Spells/cinderfault_ground
-        seconds: 0.78
+        seconds: 0.39
         fps: 0
         startFrame: 0
         until: once
@@ -73,6 +73,9 @@ MonoBehaviour:
         size: 0
         facing: none
         sort: ground
+        align: span
+        punch: 0
+        glow: 1
         impactX: -1
         impactY: 0.063
         aspect: 0
@@ -109,7 +112,7 @@ MonoBehaviour:
         at: release
         offset: 0
         path: Spells/cinderfault_eruption
-        seconds: 0.78
+        seconds: 0.39
         fps: 0
         startFrame: 0
         until: once
@@ -120,6 +123,9 @@ MonoBehaviour:
         size: 0
         facing: none
         sort: effects
+        align: 
+        punch: 0.22
+        glow: 1.3
         impactX: 0.5
         impactY: 0.129
         aspect: 0
@@ -150,7 +156,7 @@ MonoBehaviour:
           seed: 0
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.43333334
+      hitCueSeconds: 0.21666667
     SortOrder: 5
     Status: 0
     HasStatus: 0

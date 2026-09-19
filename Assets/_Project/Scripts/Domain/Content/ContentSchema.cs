@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawTrackLevel), nameof(RawTrackLevel.resource))] = typeof(Progression.TrackResourceTarget),
                 [(typeof(RawTrackLevel), nameof(RawTrackLevel.identityKind))] = typeof(Progression.TrackIdentityKind),
 
-                // A presentation's own word, and the six a layer is authored
+                // A presentation's own word, and the seven a layer is authored
                 // in. `place` is here for its CLOSED half only -- its open
                 // 'layer:<id>' form has no enum member that could spell it and
                 // lives in the field's own [ContentDoc] instead, because this
@@ -107,6 +107,7 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(SpellLayer), nameof(SpellLayer.until))] = typeof(SpellEnd),
                 [(typeof(SpellLayer), nameof(SpellLayer.facing))] = typeof(SpellFacing),
                 [(typeof(SpellLayer), nameof(SpellLayer.sort))] = typeof(SpellSort),
+                [(typeof(SpellLayer), nameof(SpellLayer.align))] = typeof(SpellAlign),
             };
 
         private static readonly StringComparer NameOrder = StringComparer.Ordinal;

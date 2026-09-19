@@ -552,8 +552,15 @@ namespace PrincesPalace
                 var next = sample.Next >= 0 && sample.Next < frameCount ? frames[sample.Next] : null;
                 var at = PositionOf(cast, i, instance, seconds);
 
+                // THE PUNCH MULTIPLIES THE BOX HERE, not in the placement.
+                // Core measures the box once at Begin and a scale that varies
+                // over the layer's life is a property of the instant, so it
+                // arrives with the frame (SpellFrameSample.Scale) and is
+                // applied at the one place the box reaches a renderer.
                 renderer.Show(frames[sample.Index], next, sample.Blend, sample.Alpha,
-                    new Vector2(at.X, at.Y), new Vector2(instance.Box.X, instance.Box.Y));
+                    new Vector2(at.X, at.Y),
+                    new Vector2(instance.Box.X * sample.Scale, instance.Box.Y * sample.Scale),
+                    instance.Degrees, instance.Layer.glow);
             }
         }
 

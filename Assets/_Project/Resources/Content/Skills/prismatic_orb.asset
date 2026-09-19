@@ -151,6 +151,9 @@ MonoBehaviour:
           size: 195
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -198,6 +201,9 @@ MonoBehaviour:
           size: 210
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -245,6 +251,9 @@ MonoBehaviour:
           size: 0
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -292,6 +301,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -347,6 +359,9 @@ MonoBehaviour:
           size: 260
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: 0.5
           impactY: 0.65
           aspect: 0
@@ -394,6 +409,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -469,6 +487,9 @@ MonoBehaviour:
           size: 170
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -516,6 +537,9 @@ MonoBehaviour:
           size: 190
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -563,6 +587,9 @@ MonoBehaviour:
           size: 0
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -610,6 +637,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -657,6 +687,9 @@ MonoBehaviour:
           size: 260
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: 0.76
           impactY: 0.58
           aspect: 0
@@ -704,6 +737,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -771,6 +807,9 @@ MonoBehaviour:
           size: 170
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -818,6 +857,9 @@ MonoBehaviour:
           size: 175
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -865,6 +907,9 @@ MonoBehaviour:
           size: 0
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -912,6 +957,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -959,6 +1007,9 @@ MonoBehaviour:
           size: 230
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: 0.5
           impactY: 0.48
           aspect: 0
@@ -1006,6 +1057,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -1073,6 +1127,9 @@ MonoBehaviour:
           size: 135
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -1120,6 +1177,9 @@ MonoBehaviour:
           size: 195
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -1167,6 +1227,9 @@ MonoBehaviour:
           size: 0
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -1214,6 +1277,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0
@@ -1261,6 +1327,9 @@ MonoBehaviour:
           size: 300
           facing: auto
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: 0.48
           impactY: 0.48
           aspect: 0
@@ -1308,6 +1377,9 @@ MonoBehaviour:
           size: 0
           facing: 
           sort: effects
+          align: 
+          punch: 0
+          glow: 0
           impactX: -1
           impactY: -1
           aspect: 0

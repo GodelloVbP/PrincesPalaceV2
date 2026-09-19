@@ -204,7 +204,7 @@ namespace PrincesPalace.Domain.Tests
             layerFormat = 1,
             sfxPath = "Audio/Sfx/cinderfault_impact",
             castSfxPath = "Audio/Sfx/cinderfault_pressure",
-            hitCueSeconds = 0.43333334f,
+            hitCueSeconds = 0.21666667f,
             layers = new[]
             {
                 new SpellLayer
@@ -212,13 +212,15 @@ namespace PrincesPalace.Domain.Tests
                     id = "fault",
                     render = "sprite",
                     place = "formation",
+                    align = "span",
                     at = "release",
                     path = "Spells/cinderfault_ground",
-                    seconds = 0.78f,
+                    seconds = 0.39f,
                     until = "once",
                     impactY = 0.063f,
                     facing = "none",
                     sort = "ground",
+                    glow = 1f,
                 },
                 new SpellLayer
                 {
@@ -227,12 +229,14 @@ namespace PrincesPalace.Domain.Tests
                     place = "target",
                     at = "release",
                     path = "Spells/cinderfault_eruption",
-                    seconds = 0.78f,
+                    seconds = 0.39f,
                     until = "once",
                     impactX = 0.5f,
                     impactY = 0.129f,
                     facing = "none",
                     sort = "effects",
+                    punch = 0.22f,
+                    glow = 1.3f,
                 },
             },
         };

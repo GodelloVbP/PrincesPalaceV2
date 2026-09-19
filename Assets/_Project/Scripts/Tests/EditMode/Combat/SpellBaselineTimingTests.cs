@@ -98,9 +98,12 @@ namespace PrincesPalace.Domain.Tests
         //
         // The frame counts stay pinned even though timing no longer depends on
         // them: with `seconds` authored and `fps` unauthored the folder is
-        // FITTED into 0.78s, so a re-cut sheet changes the per-frame rate of
-        // both layers, and this is where that becomes visible rather than a
-        // capture nobody diffs.
+        // FITTED into `seconds`, so a re-cut sheet changes the per-frame rate
+        // of both layers, and this is where that becomes visible rather than a
+        // capture nobody diffs. Nine frames in 0.39s is 43ms each -- fast, and
+        // the point: the rupture is HELD for two of those nine (the recipe's
+        // own `hold: 2`), so the peak still reads as a peak rather than as a
+        // dropped frame.
         [Test]
         public void TheCinderfaultLayersRuptureOnTheInstantItsLegacyBlockDid()
         {
@@ -117,10 +120,20 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsEmpty(vfx.groundPath,
                 "the shared fault is a layer placed on the formation now, not a second block beside the first");
 
-            Assert.AreEqual(0.43333334f, vfx.hitCueSeconds, 1e-6f,
-                "the authored cue moved off the instant the legacy block landed the blow on");
+            // HALVED 2026-09-19, ON THE OWNER'S WORD ("the animation is too
+            // slow ... it should feel more like a POP"). The legacy equality
+            // below is kept because it is the record of what the cast used to
+            // be: 5/9 of 0.78s is where the blow landed for this spell's whole
+            // life, and the cue now sits at exactly half of it. Stated as an
+            // exact halving rather than as a new free number so that a later
+            // retune has to argue with a relationship rather than overwrite a
+            // literal nobody can source.
+            Assert.AreEqual(0.21666667f, vfx.hitCueSeconds, 1e-6f,
+                "the authored cue moved off half the instant the legacy block landed the blow on");
             Assert.AreEqual(0.43333334, 0.78 * CombatBeat.ImpactFraction(5, 9), 1e-6,
-                "and that instant is 5/9 of 0.78s, which is what impactFrame 5 over nine frames meant");
+                "the legacy instant was 5/9 of 0.78s, which is what impactFrame 5 over nine frames meant");
+            Assert.AreEqual(0.21666667, 0.43333334 / 2.0, 1e-6,
+                "and today's cue is exactly half of it, because the whole cast was halved");
 
             Assert.AreEqual(2, vfx.layers.Length, "one shared fault and one plume per struck target");
             CollectionAssert.AreEqual(new[] { "fault", "erupt" }, vfx.layers.Select(l => l.id).ToList());
@@ -137,7 +150,8 @@ namespace PrincesPalace.Domain.Tests
             {
                 Assert.AreEqual("release", layer.at,
                     "both open with the beat, which is what makes their peaks share an instant");
-                Assert.AreEqual(0.78f, layer.seconds, 1e-6f);
+                Assert.AreEqual(0.39f, layer.seconds, 1e-6f,
+                    "half of the 0.78s both layers ran for until 2026-09-19");
                 Assert.AreEqual(0f, layer.fps,
                     "an unauthored rate fits the folder into `seconds`, which is what the pre-layer " +
                     "block's own frame rate was");

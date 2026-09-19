@@ -348,24 +348,29 @@ namespace PrincesPalace
         // margin. A back-row slot is depth-scaled, so its half-width in the
         // renderer's coordinates is not a front-row slot's -- one authored
         // margin would over-reach on one rank and under-reach on the other.
+        //
+        // MEASURING IS THIS FUNCTION'S WHOLE JOB; what to do with the numbers
+        // belongs to the layer's own `align` word and to one of the two
+        // branches below. The split is here rather than inside one function
+        // with an if in the middle because the level box and the spanning box
+        // share their inputs and nothing else -- a different centre, a
+        // different width, a different correction axis, a rotation one of them
+        // does not have.
         private void PlaceOnFormation(SpellLayerInstance instance, Transform parent,
             List<CombatantState> struck)
         {
-            float left = float.MaxValue;
-            float right = float.MinValue;
-            float ground = 0f;
-            int standing = 0;
-
             // THE PRE-DAMAGE SNAPSHOT, which is why the beat carries one: an
             // enemy killed by this very cast still stood in the fault when it
             // opened, and reading the living list would shrink the fault away
             // from a corpse that is still on screen.
+            var stood = new List<FootPrint>();
             foreach (var one in struck)
             {
                 var slot = SlotFor(one);
                 if (slot == null) continue;
 
                 var rect = slot.rect;
+                float centre = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
                 float slotLeft = parent.InverseTransformPoint(
                     slot.TransformPoint(new Vector3(rect.xMin, 0f, 0f))).x;
                 float slotRight = parent.InverseTransformPoint(
@@ -373,24 +378,71 @@ namespace PrincesPalace
 
                 if (slotLeft > slotRight) (slotLeft, slotRight) = (slotRight, slotLeft);
 
-                left = Mathf.Min(left, slotLeft);
-                right = Mathf.Max(right, slotRight);
-                ground += parent.InverseTransformPoint(
+                float ground = parent.InverseTransformPoint(
                     slot.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
-                standing++;
+
+                stood.Add(new FootPrint(centre, ground, slotLeft, slotRight));
             }
 
             // Nobody with a slot: an off-stage or synthetic target. A fault of
             // no width would be a zero-sized graphic, so draw none.
-            if (standing == 0 || right <= left) return;
+            if (stood.Count == 0) return;
 
-            // THE AVERAGE GROUND LINE across the ranks it opens under, not the
-            // front one's. The racks stand at different depths and the fault is
-            // one flat drawing: pinned to the front rank it would float above
-            // the back one, and pinned to the back it would cut through the
-            // front one's feet. Halfway is the only choice that is wrong by the
-            // same small amount at both ends.
-            ground /= standing;
+            if (instance.AlignKind == SpellAlign.Span)
+            {
+                PlaceAlongRank(instance, stood);
+                return;
+            }
+
+            PlaceLevelAcrossRank(instance, stood);
+        }
+
+        // ONE STRUCK BODY'S FOOTING: where it stands, what it is standing on,
+        // and how far its slot reaches either side of it. A struct rather than
+        // four parallel lists because the span below has to pick ENDS out of
+        // these, and picking an end from one list and its width from another is
+        // the bug this shape cannot have.
+        private readonly struct FootPrint
+        {
+            internal readonly float Centre;
+            internal readonly float Ground;
+            internal readonly float Left;
+            internal readonly float Right;
+
+            internal FootPrint(float centre, float ground, float left, float right)
+            {
+                Centre = centre;
+                Ground = ground;
+                Left = left;
+                Right = right;
+            }
+        }
+
+        // TODAY'S BOX, KEPT: as wide as the rank's horizontal extent, sitting
+        // on its average ground line, axis-aligned.
+        //
+        // THE AVERAGE GROUND LINE across the ranks it opens under, not the
+        // front one's. The racks stand at different depths and a level drawing
+        // is one flat thing: pinned to the front rank it would float above the
+        // back one, and pinned to the back it would cut through the front
+        // one's feet. Halfway is the only choice that is wrong by the same
+        // small amount at both ends -- which is exactly the compromise
+        // `align: span` below exists to stop having to make.
+        private void PlaceLevelAcrossRank(SpellLayerInstance instance, List<FootPrint> stood)
+        {
+            float left = float.MaxValue;
+            float right = float.MinValue;
+            float ground = 0f;
+
+            foreach (var foot in stood)
+            {
+                left = Mathf.Min(left, foot.Left);
+                right = Mathf.Max(right, foot.Right);
+                ground += foot.Ground;
+            }
+
+            if (right <= left) return;
+            ground /= stood.Count;
 
             var box = GroundBoxFor(instance.Layer, right - left);
             if (box.x <= 0f || box.y <= 0f) return;
@@ -402,7 +454,66 @@ namespace PrincesPalace
             float sheetGround = instance.Layer.HasImpactY ? instance.Layer.impactY : 0.5f;
 
             instance.Box = new UiVec(box.x, box.y);
+            instance.Degrees = 0f;
             instance.To = new UiVec((left + right) * 0.5f, ground + (0.5f - sheetGround) * art.y);
+            instance.From = instance.To;
+        }
+
+        // THE BOX LAID ALONG THE RANK, which is what a crack in the floor
+        // actually is.
+        //
+        // THE RANK IS A DIAGONAL AND ALWAYS HAS BEEN. FightStageAnchors runs
+        // the enemy line (300, -218) -> (660, -125) and the party's
+        // (320, -218) -> (810, -64), so a drawing spanning three bodies covers
+        // 93 units of rise it was drawing none of. The level branch above puts
+        // the whole sheet on the MEAN ground line, so the fault opened half a
+        // rank's rise below the back body's feet and the same distance above
+        // the front one's. Owner, 2026-09-19: the line "should follow the mobs,
+        // who stand in a diagonal line".
+        //
+        // LEFT TO RIGHT, NOT STRUCK ORDER. FormationSpan's own header gives the
+        // reason -- an angle taken from the struck walk would be 180 degrees
+        // out for a rank reached the other way round and would render the sheet
+        // upside down -- and this is where that ordering is actually imposed.
+        //
+        // THE PADS ARE THE TWO END SLOTS' OWN HALF-WIDTHS, each measured
+        // through that slot's own edges. A back-rank slot is depth-scaled, so
+        // one shared margin would over-reach at one end and under-reach at the
+        // other; that is the same reason the level branch reads edges rather
+        // than centres, carried through the rotation.
+        private void PlaceAlongRank(SpellLayerInstance instance, List<FootPrint> stood)
+        {
+            var first = stood[0];
+            var last = stood[0];
+
+            foreach (var foot in stood)
+            {
+                if (foot.Centre < first.Centre) first = foot;
+                if (foot.Centre > last.Centre) last = foot;
+            }
+
+            var span = FormationSpan.Between(
+                new UiVec(first.Centre, first.Ground),
+                new UiVec(last.Centre, last.Ground),
+                first.Centre - first.Left,
+                last.Right - last.Centre);
+
+            var box = GroundBoxFor(instance.Layer, span.Length);
+            if (box.x <= 0f || box.y <= 0f) return;
+
+            // THE GROUND-LINE CORRECTION MOVES ALONG THE BOX'S OWN UP, not
+            // along world +Y. The box is rotated, so its vertical axis is
+            // rotated with it: correcting on +Y would slide the art off the
+            // line it was just fitted to, by the correction times the tangent
+            // of the tilt. Small at 14 degrees and not zero, and it grows with
+            // every future formation that leans harder.
+            var art = RenderedSize(instance.Layer.path, box);
+            float sheetGround = instance.Layer.HasImpactY ? instance.Layer.impactY : 0.5f;
+            var lift = span.Up * ((0.5f - sheetGround) * art.y);
+
+            instance.Box = new UiVec(box.x, box.y);
+            instance.Degrees = span.Degrees;
+            instance.To = span.Centre + lift;
             instance.From = instance.To;
         }
 

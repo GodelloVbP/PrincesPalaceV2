@@ -112,11 +112,13 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("\"castSfxPath\": \"Audio/Sfx/cinderfault_pressure\"", entry);
             StringAssert.Contains("\"sfxPath\": \"Audio/Sfx/cinderfault_impact\"", entry);
 
-            // ONE CUE, AUTHORED, and it is the instant the pre-layer block
-            // landed on: 0.78s x 5/9. SpellBaselineTimingTests holds that
-            // equality against the old expression; here it is the file's own
-            // text, so an edit to the number has to pass both.
-            StringAssert.Contains("\"hitCueSeconds\": 0.43333334", entry);
+            // ONE CUE, AUTHORED, and it is HALF the instant the pre-layer
+            // block landed on: (0.78s x 5/9) / 2, the owner's 2026-09-19
+            // "the animation is too slow ... more like a POP".
+            // SpellBaselineTimingTests holds both equalities against the old
+            // expression; here it is the file's own text, so an edit to the
+            // number has to pass both.
+            StringAssert.Contains("\"hitCueSeconds\": 0.21666667", entry);
 
             // NEITHER LAYER STATES A FRAME INDEX. impactFrame is what the cue
             // used to be derived from, and a layered block that still carried
@@ -125,12 +127,21 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.DoesNotContain("groundPath", entry);
             StringAssert.DoesNotContain("groundSeconds", entry);
 
-            // BOTH LAYERS OPEN AT RELEASE AND RUN 0.78s. That is what makes
-            // their peaks land together now -- matching starts and matching
+            // BOTH LAYERS OPEN AT RELEASE AND RUN 0.39s. That is what makes
+            // their peaks land together -- matching starts and matching
             // durations over two nine-frame sheets, rather than one field
-            // being read twice.
+            // being read twice. The number itself is half what it was until
+            // 2026-09-19; what this test owns is that the two agree, so a
+            // retune that moved one and not the other fails here.
             StringAssert.Contains("\"at\": \"release\"", entry);
-            StringAssert.Contains("\"seconds\": 0.78", entry);
+            StringAssert.Contains("\"seconds\": 0.39", entry);
+            StringAssert.DoesNotContain("\"seconds\": 0.78", entry);
+
+            // THE FAULT FOLLOWS THE RANK. The enemies stand on a diagonal
+            // (FightStageAnchors: 300,-218 -> 660,-125) and the fault is the
+            // line they stand on, so it spans rather than lying level --
+            // owner, 2026-09-19, "the line ... should follow the mobs".
+            StringAssert.Contains("\"align\": \"span\"", entry);
         }
 
         // The presentation's own fallbacks, which is the mechanism the test

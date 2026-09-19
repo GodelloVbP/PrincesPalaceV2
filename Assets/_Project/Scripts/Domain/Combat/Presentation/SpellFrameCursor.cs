@@ -22,13 +22,22 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // The layer's own fade-out, 1 until its lifetime ends.
         public readonly float Alpha;
 
-        public SpellFrameSample(bool visible, int index, int next, float blend, float alpha)
+        // A MULTIPLIER ON THE PLACED BOX, 1 for every layer that authors no
+        // punch. On the sample rather than on the instance because it is a
+        // property of the INSTANT and not of the placement: Core measures the
+        // box once at Begin and never touches it again, so a scale that varies
+        // over the layer's life has to arrive with the frame.
+        public readonly float Scale;
+
+        public SpellFrameSample(bool visible, int index, int next, float blend, float alpha,
+            float scale = 1f)
         {
             Visible = visible;
             Index = index;
             Next = next;
             Blend = blend;
             Alpha = alpha;
+            Scale = scale;
         }
 
         public static SpellFrameSample Hidden => new SpellFrameSample(false, 0, -1, 0f, 0f);
@@ -53,6 +62,17 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // keeps every frame readable and removes the step between them.
         public const float DissolveFraction = 0.45f;
 
+        // HOW MUCH OF A LAYER'S LIFETIME ITS OVERSHOOT TAKES TO SETTLE.
+        //
+        // A fifth, and the reason it is derived rather than authored is that
+        // "how long does the punch last" has one sensible answer and content
+        // asking it twice would let the two drift: long enough to be seen at
+        // all -- at Cinderfault's new 0.39s that is 78ms, three frames at 40fps
+        // -- and short enough that the layer is at its true size well before
+        // its own peak. The rupture frame of a nine-frame sheet fitted into
+        // `seconds` lands at 5/9 of the way through, comfortably past a fifth.
+        public const float PunchFraction = 0.2f;
+
         public static SpellFrameSample SampleOf(SpellLayerInstance instance, int frameCount, float seconds)
         {
             if (instance == null || frameCount <= 0) return SpellFrameSample.Hidden;
@@ -65,6 +85,8 @@ namespace PrincesPalace.Domain.Combat.Presentation
             float alpha = AlphaAt(instance, age, lifetime);
             if (alpha <= 0f) return SpellFrameSample.Hidden;
 
+            float scale = PunchAt(layer, age, lifetime);
+
             // A STILL IS ONE FRAME OF A FOLDER, held. Its path names the folder
             // and not the file, which is mechanical rather than tidy: the drift
             // tests match a played path's last segment against recipe filenames
@@ -73,14 +95,14 @@ namespace PrincesPalace.Domain.Combat.Presentation
             int first = FirstIndex(layer, frameCount);
             if (instance.RenderKind == SpellRender.Still)
             {
-                return new SpellFrameSample(true, first, -1, 0f, alpha);
+                return new SpellFrameSample(true, first, -1, 0f, alpha, scale);
             }
 
             int playable = frameCount - first;
-            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha);
+            if (playable <= 0) return new SpellFrameSample(true, frameCount - 1, -1, 0f, alpha, scale);
 
             float perFrame = PerFrame(layer, lifetime, playable);
-            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha);
+            if (perFrame <= 0f) return new SpellFrameSample(true, first, -1, 0f, alpha, scale);
 
             float at = age / perFrame;
 
@@ -113,7 +135,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
             int next = NextIndex(index, first, frameCount, loops);
             float blend = next < 0 ? 0f : BlendAt(within);
 
-            return new SpellFrameSample(true, index, next, blend, alpha);
+            return new SpellFrameSample(true, index, next, blend, alpha, scale);
         }
 
         // The 1-based startFrame as an index; 0 means the first frame.
@@ -132,6 +154,31 @@ namespace PrincesPalace.Domain.Combat.Presentation
         {
             if (layer.fps > 0f) return 1f / layer.fps;
             return lifetime > 0f ? lifetime / playable : 0f;
+        }
+
+        // THE OVERSHOOT, EASED OUT. The layer opens at 1 + punch and settles
+        // to 1 over PunchFraction of its lifetime, on a quadratic ease-out
+        // (1-t)^2 -- most of the overshoot is gone in the first third of the
+        // window, which is what makes it read as a snap rather than as a
+        // shrink.
+        //
+        // EASE-OUT RATHER THAN EASE-IN-OUT, deliberately. An accent's whole
+        // job is to put its energy at the front; a symmetric curve spends half
+        // the window still arriving, and at 78ms there is no half of a window
+        // to spend.
+        //
+        // OFF BY DEFAULT AND EXACTLY 1, not 1-ish: `punch` unauthored returns
+        // the literal, so every layer that shipped before this multiplies its
+        // box by a number that cannot round it.
+        private static float PunchAt(SpellLayer layer, float age, float lifetime)
+        {
+            if (layer == null || layer.punch <= 0f || lifetime <= 0f) return 1f;
+
+            float window = lifetime * PunchFraction;
+            if (window <= 0f || age >= window) return 1f;
+
+            float remaining = 1f - age / window;
+            return 1f + layer.punch * remaining * remaining;
         }
 
         private static float AlphaAt(SpellLayerInstance instance, float age, float lifetime)

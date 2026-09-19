@@ -2,7 +2,7 @@ using System;
 
 namespace PrincesPalace.Domain.Content
 {
-    // THE SIX WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
+    // THE SEVEN WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
     // Parse/IsKnown pair beside it.
     //
     // The shape is SpellAnchorNames' exactly (SpellAnchor.cs), and it is copied
@@ -33,7 +33,7 @@ namespace PrincesPalace.Domain.Content
     // WHETHER AN AUTHORED WORD IS THIS ONE, character by character rather than
     // by normalising a copy of it.
     //
-    // The six tables below used to switch on
+    // The tables below used to switch on
     // `name.Trim().ToLowerInvariant().Replace("_", "-")`, which is correct and
     // costs a STRING PER CALL -- ToLowerInvariant allocates whether or not the
     // word was already lower case. That is invisible at content-build time and
@@ -338,6 +338,53 @@ namespace PrincesPalace.Domain.Content
             if (SpellWord.Is(name, "auto")) return SpellFacing.Auto;
             if (SpellWord.Is(name, "none")) return SpellFacing.None;
             if (SpellWord.Is(name, "reverse")) return SpellFacing.Reverse;
+            return fallback;
+        }
+    }
+
+    // ---- which way it lies on the rank it spans ------------------------------
+
+    // ONLY `place: formation` HAS A LINE TO LIE ALONG, which is why this word
+    // is refused anywhere else (SpellLayerRules.CheckPlacement) rather than
+    // quietly ignored. A target-anchored layer has one point, not two, and a
+    // word that does nothing on five of the six placements is a word an author
+    // will reasonably expect to do something.
+    public enum SpellAlign
+    {
+        // Axis-aligned: the box is as wide as the struck rank's horizontal
+        // extent and sits on its AVERAGE ground line. The default, and what
+        // every formation layer did before this word existed.
+        //
+        // Right for something that describes a FOOTPRINT rather than a line --
+        // a pool, a shadow, a wash of light across the floor -- where the
+        // rank's tilt is not part of the drawing.
+        Level,
+
+        // Along the rank: the box runs from the leftmost struck body to the
+        // rightmost, in BOTH axes, and is rotated to the line between them.
+        //
+        // Right for anything that IS a line: a crack, a sweep, a shockwave
+        // running the length of the floor. The stage's ranks recede diagonally
+        // (FightStageAnchors: the enemy's runs 300,-218 -> 660,-125), so a
+        // line drawn level across them describes floor nobody stands on.
+        Span,
+    }
+
+    public static class SpellAlignNames
+    {
+        public static SpellAlign Parse(string name) => Lookup(name, SpellAlign.Level);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellAlign)(-1)) != (SpellAlign)(-1);
+
+        public static string[] All => new[] { "level", "span" };
+
+        private static SpellAlign Lookup(string name, SpellAlign fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellAlign.Level;
+
+            if (SpellWord.Is(name, "level")) return SpellAlign.Level;
+            if (SpellWord.Is(name, "span")) return SpellAlign.Span;
             return fallback;
         }
     }

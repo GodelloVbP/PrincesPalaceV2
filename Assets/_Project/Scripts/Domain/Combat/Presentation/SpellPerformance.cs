@@ -19,11 +19,11 @@ namespace PrincesPalace.Domain.Combat.Presentation
     {
         public SpellLayer Layer;
 
-        // Layer.Render/Place/At/Until/Facing/Sort, PARSED ONCE HERE rather
-        // than read as computed properties on the frame path -- content is
-        // immutable after load, so Resolve (below) is the one place any of
-        // the six needs to touch a string. "Kind" suffixed because Facing
-        // already names the per-instance CAST direction (below); these six
+        // Layer.Render/Place/At/Until/Facing/Sort/Align, PARSED ONCE HERE
+        // rather than read as computed properties on the frame path -- content
+        // is immutable after load, so Resolve (below) is the one place any of
+        // the seven needs to touch a string. "Kind" suffixed because Facing
+        // already names the per-instance CAST direction (below); these seven
         // are the content's own authored word, resolved to its enum.
         public SpellRender RenderKind;
         public SpellPlace PlaceKind;
@@ -31,6 +31,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
         public SpellEnd UntilKind;
         public SpellFacing FacingKind;
         public SpellSort SortKind;
+        public SpellAlign AlignKind;
 
         // AUTHORED ARRAY ORDER, kept because it is draw order. A cast allocates
         // its renderers in this order from the lowest free member, so a spray
@@ -75,6 +76,20 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // `Sprite[] iconSprites` across five controllers -- and it fails the
         // same way: nothing makes the two lengths agree.
         public UiVec Box;
+
+        // HOW FAR THE BOX IS TURNED, counter-clockwise, in degrees. Zero for
+        // every layer that was ever drawn before `align: span` existed, which
+        // is what keeps a renderer that reads this from having to ask whether
+        // the layer rotates at all.
+        //
+        // WRITTEN BY CORE, beside Box/From/To and for the same reason: the
+        // angle is the angle of the line the struck bodies ACTUALLY landed on,
+        // which depends on the depth curve and on the stand-off and is
+        // therefore not something Domain can measure. The arithmetic that
+        // turns two measured points into an angle IS engine-free and lives in
+        // Domain.Stage.FormationSpan, so the part worth pinning with literals
+        // is pinned.
+        public float Degrees;
 
         // FALSE WHEN CORE COULD NOT FIND ANYWHERE FOR THIS LAYER TO GO --
         // FightController.PlaceOne's early return, a cast-level layer whose
@@ -276,6 +291,7 @@ namespace PrincesPalace.Domain.Combat.Presentation
                         UntilKind = layer.Until,
                         FacingKind = layer.Facing,
                         SortKind = layer.Sort,
+                        AlignKind = layer.Align,
                         LayerIndex = i,
                         TargetIndex = perTarget[i] ? t : -1,
                         SourceInstance = -1,

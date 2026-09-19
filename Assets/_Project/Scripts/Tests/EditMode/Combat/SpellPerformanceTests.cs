@@ -97,10 +97,15 @@ namespace PrincesPalace.Domain.Tests
         {
             var performance = Resolve(SpellLayerFixtures.Cinderfault(), targets: 3);
 
+            // HALVED 2026-09-19 (0.78 -> 0.39, cue 0.43333334 -> 0.21666667)
+            // on the owner's "the animation is too slow ... more like a POP".
+            // What this test owns is unchanged and is not the numbers: both
+            // layers open together and end together, so their peaks share an
+            // instant. A retune that halved one and not the other fails here.
             Assert.AreEqual(0f, Named(performance, "fault").StartSeconds, 1e-5f);
-            Assert.AreEqual(0.78f, Named(performance, "fault").EndSeconds, 1e-5f);
-            Assert.AreEqual(0.78f, Named(performance, "erupt").EndSeconds, 1e-5f);
-            Assert.AreEqual(0.43333334f, performance.HitCueSeconds, 1e-5f);
+            Assert.AreEqual(0.39f, Named(performance, "fault").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.39f, Named(performance, "erupt").EndSeconds, 1e-5f);
+            Assert.AreEqual(0.21666667f, performance.HitCueSeconds, 1e-5f);
         }
 
         [Test]

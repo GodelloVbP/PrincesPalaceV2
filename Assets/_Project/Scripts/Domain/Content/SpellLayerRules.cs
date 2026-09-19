@@ -41,6 +41,13 @@ namespace PrincesPalace.Domain.Content
         // beat constant moves past this number.
         public const float MaxFadeSeconds = 0.5f;
 
+        // THE LARGEST OVERSHOOT A LAYER MAY OPEN AT, as a fraction over its
+        // fitted box. 1.0 -- double size -- rather than something tighter,
+        // because a plume punching hard is a legitimate look and the number
+        // only has to rule out the case where `punch` was typed as a
+        // percentage (20 instead of 0.2), which is the mistake this catches.
+        public const float MaxPunch = 1f;
+
         // The version of the layer vocabulary this code reads. A block that
         // authors layers must state it; see SpellPresentation.layerFormat for
         // the migration policy the number exists to make arguable.
@@ -186,6 +193,12 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{at}.sort '{layer.sort}' is not a draw band. " +
                              $"Known: {string.Join(", ", SpellSortNames.All)}.");
             }
+
+            if (!SpellAlignNames.IsKnown(layer.align))
+            {
+                problems.Add($"{at}.align '{layer.align}' is not an alignment. " +
+                             $"Known: {string.Join(", ", SpellAlignNames.All)}.");
+            }
         }
 
         private static void CheckNumbers(string at, SpellLayer layer, List<string> problems)
@@ -197,6 +210,19 @@ namespace PrincesPalace.Domain.Content
             Positive(at, "fade", layer.fade, problems);
             Positive(at, "size", layer.size, problems);
             Positive(at, "aspect", layer.aspect, problems);
+            Positive(at, "punch", layer.punch, problems);
+            Positive(at, "glow", layer.glow, problems);
+
+            // A PUNCH IS AN ACCENT, NOT A ZOOM. Past MaxPunch the layer opens
+            // at more than double size and the settle reads as the effect
+            // rushing the camera rather than as the ground taking a hit --
+            // and, on a formation layer, an oversized first frame reaches well
+            // past the bodies it is supposed to be opening under.
+            if (layer.punch > MaxPunch)
+            {
+                problems.Add($"{at}.punch {Num(layer.punch)} is past the {Num(MaxPunch)} a layer's " +
+                             "overshoot may reach; that is a zoom rather than an accent.");
+            }
 
             if (layer.startFrame < 0)
             {
@@ -382,6 +408,20 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} is placed on the formation and authors dx {Num(layer.dx)}, which the " +
                              "measured span's own midpoint overrides. Remove it.");
+            }
+
+            // ONLY A FORMATION HAS A LINE TO LIE ALONG. Every other placement
+            // resolves to ONE point -- a slot's origin, a slot's middle, a
+            // caster's cast point -- and there is no second point to take a
+            // direction from. Refused rather than ignored, because a word that
+            // silently does nothing on five of the six placements is a word an
+            // author will keep re-typing and keep not seeing.
+            if (!onFormation && SpellAlignNames.IsKnown(layer.align) &&
+                layer.Align != SpellAlign.Level)
+            {
+                problems.Add($"{at} authors align '{layer.align.Trim()}' but is placed on " +
+                             $"{layer.place.Trim()}, which is one point and has no line to lie along. " +
+                             "Only 'formation' spans a rank.");
             }
 
             // BOTH HALVES OF THE POINT OR NEITHER, the rule

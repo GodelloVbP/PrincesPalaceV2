@@ -62,7 +62,8 @@ namespace PrincesPalace
         // upstream, which is what lets a held clock make "what is on screen at
         // the impact" a question with an answer rather than a race against
         // however long the next frame takes.
-        public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size)
+        public void Show(Sprite frame, Sprite next, float blend, float alpha, Vector2 at, Vector2 size,
+            float degrees = 0f, float glow = 0f)
         {
             if (image == null || frame == null) return;
 
@@ -74,6 +75,20 @@ namespace PrincesPalace
             var rect = image.rectTransform;
             rect.anchoredPosition = at;
             rect.sizeDelta = size;
+
+            // TURNED ON THE RECT, AFTER THE MIRROR. localScale carries the
+            // facing and localRotation carries this, and a RectTransform
+            // composes them as T * R * S -- so the sheet is mirrored in its own
+            // frame first and the whole mirrored thing is then tilted. That is
+            // what makes a spanning layer's angle mean the same slope whichever
+            // way the cast faces, instead of a mirrored cast tilting the other
+            // way. StopImmediately puts it back, so a member handed on carries
+            // no angle.
+            rect.localRotation = degrees == 0f
+                ? Quaternion.identity
+                : Quaternion.Euler(0f, 0f, degrees);
+
+            ApplyGlow(glow);
 
             image.sprite = frame;
             image.enabled = true;
@@ -103,6 +118,7 @@ namespace PrincesPalace
         public void StopImmediately()
         {
             IsPlaying = false;
+            ApplyGlow(0f);
 
             if (image != null)
             {
@@ -138,5 +154,91 @@ namespace PrincesPalace
         // per-INSTANCE while its two siblings were static, so every fight-scene
         // reload re-probed every spell folder from disk for no reason.
         public Sprite[] Frames(string vfxPath) => FrameSequenceLoader.Load(vfxPath);
+
+        // ---- the one thing on this stage that can be brighter than white ----------
+
+        // A UI Image CANNOT EXCEED 1.0 ON ITS OWN. A sprite texture tops out at
+        // white and a CanvasRenderer's vertex colour is a Color32, so
+        // `image.color` clamps long before the fragment shader runs -- which
+        // means that with the Volume's Bloom threshold at 1.05
+        // (PipelineBuilder) nothing drawn on this canvas has ever crossed it.
+        // Every precondition for bloom is in place (HDR on, post-processing on
+        // the camera, canvas in ScreenSpaceCamera) and the effect is still dead
+        // for want of a pixel above 1. UISpellGlow multiplies AFTER the sample
+        // and is the only way past that; see its own header for the knee.
+        //
+        // ONE MATERIAL PER RENDERER, created lazily and never shared. A pool
+        // member draws one layer at a time and layers author different boosts,
+        // so a shared material would make the last writer win for every
+        // concurrent cast -- and a MaterialPropertyBlock is not an option:
+        // CanvasRenderer batches by material and ignores per-renderer blocks.
+        //
+        // DEGRADES TO NOTHING. A missing shader leaves the Image on its default
+        // material and the layer draws flat, which is what it drew before this
+        // existed -- the same posture LoadSprite and StageHitFlash take.
+        private const string GlowShaderPath = "Shaders/UISpellGlow";
+        private static readonly int BoostId = Shader.PropertyToID("_Boost");
+
+        private Material _glowMaterial;
+        private bool _glowUnavailable;
+
+        private void ApplyGlow(float boost)
+        {
+            if (image == null) return;
+
+            if (boost <= 0f)
+            {
+                // BACK TO THE DEFAULT MATERIAL, not merely to _Boost 0. A
+                // member handed on with a custom material still costs the
+                // canvas a separate batch for whatever draws next on it, and
+                // "what this member is wearing" is exactly the kind of leftover
+                // StopImmediately's own header exists to refuse.
+                if (_glowMaterial != null && image.material == _glowMaterial) image.material = null;
+                if (fade != null && _glowMaterial != null && fade.material == _glowMaterial)
+                {
+                    fade.material = null;
+                }
+                return;
+            }
+
+            if (_glowMaterial == null)
+            {
+                if (_glowUnavailable) return;
+
+                var shader = Resources.Load<Shader>(GlowShaderPath);
+                if (shader == null)
+                {
+                    _glowUnavailable = true;
+                    Debug.LogWarning($"SpellVfxPlayer: no shader at Resources/{GlowShaderPath}; " +
+                                     "glowing layers draw flat.");
+                    return;
+                }
+
+                _glowMaterial = new Material(shader);
+            }
+
+            _glowMaterial.SetFloat(BoostId, boost);
+
+            // ASSIGNED ONLY WHEN IT CHANGES. Graphic.material's SETTER calls
+            // SetMaterialDirty() unconditionally, so re-assigning the same
+            // material every frame queues a canvas rebuild every frame for a
+            // change that did not happen -- and this runs once per drawn layer
+            // per frame. SetFloat above is not a material swap and does not
+            // dirty anything.
+            if (image.material != _glowMaterial) image.material = _glowMaterial;
+
+            // THE DISSOLVE LAYER TOO, or the frame fading up over a glowing one
+            // arrives flat and the effect visibly dims once per frame boundary.
+            if (fade != null && fade.material != _glowMaterial) fade.material = _glowMaterial;
+        }
+
+        private void OnDestroy()
+        {
+            // Created with `new Material`, so it is this component's to destroy
+            // -- an undestroyed material leaks for the lifetime of the process,
+            // and a PlayMode suite loads this scene dozens of times.
+            if (_glowMaterial != null) Destroy(_glowMaterial);
+            _glowMaterial = null;
+        }
     }
 }

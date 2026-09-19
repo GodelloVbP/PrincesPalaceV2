@@ -444,6 +444,9 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
 | `facing` | string | `""` | Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto. | Auto, None, Reverse |
 | `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
+| `align` | string | `""` | How a formation-placed layer lies on the rank: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). Refused on any other placement. | Level, Span |
+| `punch` | float | `0` | Extra scale at the layer's opening instant, eased out to nothing over the first fifth of its lifetime; 0 means no punch. 0.2 opens it 20% oversized. |  |
+| `glow` | float | `0` | How far above 1 this layer's brightest pixels are pushed so the Bloom override can see them; 0 means draw it flat, as every layer did before. 1.2 roughly doubles the hot core. |  |
 | `impactX` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the left edge; -1 means unauthored. |  |
 | `impactY` | float | `-1` | Where the blow lands inside this layer's frames, as a fraction from the bottom edge; -1 means unauthored. |  |
 | `aspect` | float | `0` | Width-over-height of the box; 0 means take the sheet's own frame aspect. |  |
