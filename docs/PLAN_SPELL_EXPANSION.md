@@ -1582,6 +1582,68 @@ that, and its gate says so.
 
 ### Milestone A — protection, frost, Poison, and the duration model
 
+> **STATUS: LANDED 2026-09-20**, on `workflow-2026-09-19`.
+> `bfe097aa` the plan revision (owner's stacking decision, section 0 and D3/D4),
+> `64046f77` the code, content, tests and measurements.
+>
+> **What landed.** The three-family `DurationClock` and the generalised
+> `TickAtTurnEnd` sweep; the nine re-authored rows with
+> `StatusDurationMigrationTests` as their pin; instance stacking across
+> `StatusEffects`/`StatusCombos`/`RefreshChilledSpeed`/`StatusHud`; the
+> `ApplyStatusTo` seam with `StatusSeamTests` as its lint; Gilded Aegis,
+> Winter's Rebuke and Viper's Bite as complete slices with placeholder
+> `vfx.layers`; the preview-parity repair with `PreviewPurityTests`; and
+> `ContentEnumOrdinalTests` over four ordinal-serialised enums.
+>
+> **What deviated, and why.**
+>
+> - **`TickReport` is unchanged.** The brief left the choice open between a row
+>   per instance and an aggregate per type. It aggregates: `PoisonDamage` and
+>   `PoisonAbsorbed` are already sums over the loop, so stacking needed no
+>   change there, and D5's typed rows are milestone E's. `Expired` reports one
+>   entry per instance REMOVED, and both log sites deduplicate, because three
+>   stacks lapsing together is three removals and one thing to tell a player.
+> - **Protect and Regen stack**, though the owner's answer named neither. By
+>   symmetry with Vulnerable and Poison, which it did name. Stated in D3 as
+>   Fable's reading and cheap to reverse: one line in `StackPolicyOf`.
+> - **Empowered refreshes.** Also unnamed. It is a single-spend token like
+>   Provoked, and stacking it would silently turn one empowered swing into two.
+> - **The `Shielded` throw in `StatusEffects.Apply` stays.** Wards are on the
+>   stacking side now, so the original argument for the throw is gone, but
+>   `ApplyWard` is still the only place that knows a ward of non-positive points
+>   is a no-op rather than an entry.
+> - **No `physicalMove` on the three rows.** D7's field does not exist yet; it
+>   is milestone D's, and the brief said not to author it early.
+> - **Winter's Rebuke authors no `reachSlots`.** Section 2.2 says "front-rank
+>   `Reach` as authored", which is ambiguous; every existing player book
+>   (`mud_burst`, `lightning_bolt`) reaches the whole line, and a book that
+>   could not reach the back rank would be a silent nerf against the family it
+>   is balanced with.
+> - **A `CrossTurnBoundaryForTest` seam was added.** The turn-end exemption set
+>   is cleared inside `OpenTurnFor`, which a test driving the two tick seams
+>   directly never reaches -- without it every status stays exempt forever and
+>   the sweep looks broken while working exactly as written.
+> - **Four preview PNGs, not twelve.** `docs/measurements/spell_expansion/
+>   milestone_a/` carries the impact and flight frames for both damaging
+>   spells; the other eight frames are 2.5 MB each and the gate's own wording
+>   asks for the impact frame.
+>
+> **Gate.** `run_tests_parallel.ps1 -BuildContent`: EditMode 4015/4018 passed,
+> 0 failed, 3 skipped; PlayMode 4 failed, every one of them saved-scene wiring
+> (`submenuMarks` null in the saved Fight scene, behind both
+> `FightSubmenuAffordabilityTests` failures and `ScreenWiringTests`; plus
+> `ShopGamepadNavigationTests` on the shop's `systemMenu` reference). No screen
+> tree, `SceneBuilder` file or scene is touched by either commit, and the five
+> `.unity` files in this tree are mid-edit from another session, so
+> `-BuildScenes` was deliberately not run. `test.ps1 combat` re-run after the
+> `vfx.layers` retiming: 410/422 PlayMode, the same two book-art failures, 1412
+> dotnet passed.
+>
+> **Open for the owner, from section 5's measurements.** Winter's Rebuke is
+> mud_burst's packet for mud_burst's mana one tier higher; and a 25% Chilled
+> denies about 6% of an enemy's actions, not 25%, because `SpeedScale`'s curve
+> is sub-linear. Neither number was moved.
+
 **Scope.** The duration model (D1) and its nine re-authored rows; **the
 stacking model (D3) across `ActiveStatus`/`StatusEffects` and every reader of a
 status magnitude**; the `ApplyStatusTo` seam (D6); Gilded Aegis, Winter's
