@@ -1940,6 +1940,114 @@ owner's brief requires, and land as tests in this package.
 
 ### Milestone D — physical-action restriction
 
+> **STATUS: LANDED 2026-09-20**, on `workflow-2026-09-19`.
+> `2c64a252` the classification, the predicate, the content and the tests.
+>
+> **What landed.** `physicalMove` end to end (`RawSkillEntry` ->
+> `SkillEntryResolver` -> `ResolvedSkill`), authored on all 23 damage rows and
+> on the ten spell-expansion rows; the audited classification of every id as a
+> literal table in `PhysicalMoveAuditTests`; `CombatActions.IsLegalFor`, the
+> one predicate, read at the four sites 1.10 names; the content lint, refusing
+> a damage row that states nothing; `SkillEffect.Afflict`; and Velvet Shackles
+> as a complete slice with placeholder `vfx.layers`.
+>
+> **Rooted itself gained the restriction** (2.10), rather than a distinct
+> status beside it. **One existing source is affected**, and only one: the
+> `Sylvan` item modifier's `RootChancePercent` (10% on a landed hit,
+> `FightTuning.RootOnHitTurns` = 1). It is a weapon modifier, so it only ever
+> roots an ENEMY. The balance effect, per enemy with an authored kit: `golem`
+> (boulder_slam, `attackWeight` 0) and the eleven monsters with no abilities
+> at all now forfeit the rooted turn outright where they previously lost only
+> a swing they mostly did not have; `forest_warden` is reduced to `roar`,
+> `treant` to `spore_cloud`, `beetle` to `shell_up`, and `bog_witch` is
+> untouched because its whole kit is a cast. Measured in section 5.
+>
+> **Four decisions the plan did not make, made here and stated.**
+>
+> - **"Omitted" is recovered by a PROBE PARSE, not by a sentinel or a
+>   scanner.** D7 asks for a `bool physicalMove` whose omission is refused on a
+>   damage row, and a bool has no spare value to reserve the way this file's
+>   `-1`/`""` sentinels do. `ContentBuilder` therefore deserialises
+>   `skills.json` a second time into a probe type whose default is the
+>   OPPOSITE, and the two parses agree on exactly the rows that stated a value;
+>   the answer is stamped onto `[NonSerialized] RawSkillEntry
+>   .physicalMoveOmitted` and the REFUSAL lives in `SkillEntryResolver` beside
+>   every other skill refusal. Nothing hand-parses JSON, and the answer comes
+>   from the same deserialiser production uses. The stamp defaults to "stated"
+>   so an entry built in code -- every resolver test, every fixture -- is never
+>   accused of omitting a field it had no file to omit it from.
+> - **The vacuity guard is split.** The build-time guard is a SHAPE check (the
+>   probe must return the same rows in the same order, or nothing is parsed),
+>   because a literal row count in a build refusal would fail the build for
+>   deleting a skill. The literal -- 23 damage rows -- is pinned in
+>   `PhysicalMoveAuditTests`, which is where `docs/CODE_STANDARDS.md` section 8
+>   puts literals: it is a test-rules section.
+> - **`SkillEffect.Afflict` APPENDS behind `SwapAllies`.** D10 lists it first
+>   of the five; `Reclaim`, `Hasten` and `SwapAllies` landed in milestones B
+>   and C while it waited for D, so the plan's ORDER was already spent. The
+>   rule the generated assets actually depend on -- "nothing is inserted or
+>   reordered" -- is the one kept. Ordinal 18, pinned in
+>   `ContentEnumOrdinalTests`.
+> - **The forfeiture fallback now answers for the PLAYER too.**
+>   `ResolveSkippedTurn`'s Rooted arm was gated on `!IsPlayerSide` because
+>   `SourceFor(player)` is null and the query would have read "helpless"
+>   unconditionally. Under Shackles a rooted character's plain attack is
+>   illegal as well, so "Attack is always there" stopped being what ends the
+>   turn, and the gate is replaced by a real player-side answer
+>   (`RootedPlayerHasNoLegalAction`: no legal swing, no ready-and-legal skill,
+>   no legal Move). It counts READINESS, not only legality, because a
+>   legality-only answer would leave a rooted character whose only legal casts
+>   are unaffordable staring at a menu of dead rows with no way to end the
+>   turn. **Stated limitation:** the satchel is invisible to the session
+>   (`UseConsumable` is handed one item, never the stock), so in principle a
+>   forfeit could step over a potion. It cannot happen in live content -- every
+>   shipped character carries a non-physical skill and nothing authors an
+>   enemy-side root -- and if an enemy ever authors one, the satchel has to
+>   reach the session first.
+>
+> **One bug found rather than shipped, and it was not milestone D's.**
+> **The turn-end clock only ran on PLAYER turns.**
+> `TickStatusesAtTurnEnd` had exactly one caller, inside `AdvanceAfterAction`,
+> which only the four player commands reach; a monster's turn and every skipped
+> turn on either side advance through `StepToNextTurn`, and an egg's through
+> `AutoResolveEggTurns`. So no `AtTurnEnd` status on a monster ever aged, and
+> no forfeited turn aged anything. That was invisible while wards were the only
+> thing on this clock and became live in **milestone A**, when D1 moved Protect,
+> Vulnerable, Chilled, Rooted and Marked onto it: **Winter's Rebuke's two-turn
+> Chill was permanent.** Milestone D's root would have been permanent and
+> self-sustaining on top of that, because a rooted monster with nothing legal
+> forfeits and a forfeited turn aged nothing. Found by
+> `VelvetShacklesTests.TheSecondOfTwoShackledTurns_IsStillRestricted` failing on
+> its THIRD turn. Fixed by `FightSession.EndTurnStatusesForCurrent`, one seam
+> sitting immediately before all three `_encounter.AdvanceTurn()` sites, with
+> the extra-action exemption (AUDIT #113) and a corpse guard. `RootedStatusTests`
+> pinned the old behaviour at 5 turns remaining after a forfeit; it now pins 4,
+> which is the one turn that was actually spent.
+>
+> **A second content rule had to move, for one authored number.**
+> `StatusAuthoring` required a positive `statusMagnitude` from any row naming a
+> status, and Rooted has no magnitude -- `grapple` had been satisfying the rule
+> with a `statusMagnitude: 1` that nothing reads, and Velvet Shackles would have
+> been the second. `StatusEffects.CarriesMagnitude` is the third table beside
+> `DurationClock` and `StackPolicyOf`, both halves of the rule read it (required
+> where there is one, refused where there is not), and `grapple`'s 1 is gone.
+> Not the same line `StackPolicyOf` draws: Empowered and Feared both refresh
+> rather than stacking and both carry a real number.
+>
+> **`EnemyShowcase` needed nothing.** A blocked ability is ZERO-WEIGHTED in
+> place rather than removed from the pool, which is the treatment the summon cap
+> and the reach gate already get, and `EnemyShowcase.Next` already names and
+> skips a zero-weight entry. `tools/preview.ps1 -Enemy forest_warden` was NOT
+> run: a Unity Editor is open on this project (pid 27916) and routing the
+> preview through an open Editor wiped `Resources/Content/` once before.
+>
+> **Three AUDIT entries.** #193 records the turn-end clock hole above, struck
+> with the same commit. #194 is an owner's call: Velvet Shackles denies a caster
+> nothing and hands a beetle a heal. #195 records that Rooted's new meaning
+> retuned the Sylvan item modifier without anybody editing it. #84 is unchanged
+> but now cheaper -- this milestone settled the "ROOTED" wording it was waiting
+> for, on the skill rows rather than on the Move row it names.
+
 **Scope.** The `physicalMove` field, the audited classification of all 36
 existing rows plus the plain attack (1.10), the shared legality predicate and
 its four callers, the content lint; Velvet Shackles.
@@ -2257,6 +2365,69 @@ it shipped, and what makes it feel immediate in play is its
 initiative spell in this plan:** they are turn-two-onwards tools, and a player
 who opens with one will see nothing happen. Not tuned, and not fixable inside
 a spell — the lever, if the owner wants one, is the seed itself.
+
+### Measured values — milestone D, 2026-09-20
+
+Instrument: `SpellExpansionBalanceTests.cs`, extended with the metric section 5
+calls "enemy actions allowed during a control rotation" read from the other end
+— actions DENIED. A root is a different question from a delay or a Chill and
+needs a different instrument: those change WHEN an enemy acts and are measured
+against a forecast window, while a root changes WHETHER it acts, so its turns
+are run and the ones that resolved into nothing are counted. `tools/bot.ps1` was
+not used, for section 5's own reason.
+
+The kits mirror `enemies.json` in the only two things this measures — which
+abilities are in the draw, at which weights, and whether each is a physical
+move. `bog_mud_burst`'s authored `reachSlots: [2,3]` is deliberately omitted:
+against the harness's one-hero party it would zero-weight the cast for having
+nothing in reach, which would measure the front-rank rule instead of the root.
+
+**Enemy turns that resolved into an action, out of six:**
+
+| enemy | kit | no root | shackled |
+|---|---|---|---|
+| `crystal_bat` (speed 15) | plain swing only | 6 | **0** |
+| `golem` (speed 3) | `boulder_slam` only, `attackWeight` 0 | 6 | **0** |
+| `bog_witch` (speed 8) | swing (w3) + `bog_mud_burst` (w2) | 6 | **6** |
+
+As authored — two effective turns for 9 mana — that is **2 actions denied**
+against a physical-only enemy and **0** against a caster.
+
+**Finding, reported rather than tuned: speed is not the axis, kit composition
+is.** The plan's own parties section names the fast end (`gloom_moth` 16,
+`crystal_bat` 15) and the slow end (`golem` 3, `treant` 3) as the ends an
+initiative spell must be measured against, and for a root they turn out not to
+be the relevant ends at all — a turn denied is a turn denied whether it came
+quickly or slowly. What decides Velvet Shackles' value is whether the target has
+anything non-physical to fall back on:
+
+| enemy | what a shackled turn becomes |
+|---|---|
+| eleven rows with no `abilities` list | forfeit |
+| `golem` | forfeit (`attackWeight` 0, and `boulder_slam` is physical) |
+| `forest_warden` (boss) | `roar` only — it has no plain swing either (`attackWeight` 0) |
+| `treant` | `spore_cloud` only |
+| `beetle` | `shell_up` only |
+| `bog_witch` | unchanged — its whole kit is a cast |
+
+So against thirteen of sixteen rows the spell removes a turn, and against three
+it converts one. **The owner's call is whether converting is enough.** Two of
+the three conversions are a downgrade for the monster (`forest_warden` trades a
+40-attack slam for a summon it may not have room for; `treant` trades a lunge
+for an AOE), but `beetle`'s is arguably an upgrade: `shell_up` is a heal, and a
+shackled beetle spends its two turns healing rather than rolling. Left alone;
+the levers if the owner wants one are the mana cost, the duration, or making the
+restriction cover a named non-physical ability class as well — and the third is
+a model change, not a number.
+
+**A second finding, about the existing source rather than the new spell.**
+Rooted gaining "no physical moves" retunes the `Sylvan` modifier without anyone
+touching it: a 10% on-hit root for 1 turn used to cost a monster a plain swing,
+which the five monsters with authored kits mostly were not going to take anyway
+(`golem` and `forest_warden` author `attackWeight: 0`). It now costs `golem` and
+`forest_warden` their whole turn and their best ability respectively. That is a
+buff to one item modifier, delivered by a rule change, and it is recorded here
+rather than in a tuning pass because nothing in `modifiers.json` changed.
 
 ---
 

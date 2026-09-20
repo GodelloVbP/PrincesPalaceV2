@@ -2661,3 +2661,88 @@ correct.
 from this round would sweep it into a commit its author has not finished. The owner's
 call is whether to promote it as Odette's was, and whoever owns that folder should be
 the one to stage it.
+
+
+## Findings from spell-expansion milestone D, 2026-09-20
+
+### ~~193. The turn-end status clock only ever ran on PLAYER turns~~ — fixed in `2c64a252`
+
+`TickStatusesAtTurnEnd` had exactly one caller, inside `AdvanceAfterAction`
+(`FightSession.Riders.cs`), and `AdvanceAfterAction` is reached only by the four
+player commands — attack, cast, item, move. A monster's turn and every skipped
+turn on either side advance through `StepToNextTurn`
+(`FightSession.Enemies.cs`), and a sealed egg's through `AutoResolveEggTurns`
+(`FightSession.RelicMechanics.cs`). Neither wound the clock.
+
+**Invisible until milestone A, then live.** While wards were the only thing on
+the turn-end clock the hole showed nothing: a monster rarely wears one. Plan D1
+moved Protect, Vulnerable, Chilled, Rooted and Marked onto that clock, and from
+that point **Winter's Rebuke's two-turn Chill never expired on an enemy**, nor
+did `mud_burst`'s Vulnerable, nor `spore_cloud`'s Poison holder's Protect from
+`shell_up`. Milestone D's root would have been permanent and self-sustaining on
+top of it: a rooted monster with nothing legal forfeits, and a forfeited turn
+was exactly the kind that aged nothing.
+
+**Found by a test failing on the wrong turn**, not by reading —
+`VelvetShacklesTests.TheSecondOfTwoShackledTurns_IsStillRestricted` expected the
+third turn to be free and it was not.
+
+Fixed by `FightSession.EndTurnStatusesForCurrent`, one seam sitting immediately
+before all three `_encounter.AdvanceTurn()` sites, keeping the extra-action
+exemption (#113) and adding a corpse guard so a combatant killed by its own
+turn-start tick does not print "the shield around X fades" over a body.
+`RootedStatusTests.RootedEnemyWithNoLegalSkill_ForfeitsItsTurn_TheSameWayStunDoes`
+pinned 5 turns remaining after a forfeit and now pins 4, which is the one turn
+that was actually spent.
+
+### 194. OWNER'S CALL: Velvet Shackles denies a caster nothing, and heals a beetle
+
+Measured, `docs/PLAN_SPELL_EXPANSION.md` section 5, milestone D. A shackled
+enemy loses every action classified `physicalMove`. Against the thirteen rows in
+`enemies.json` whose whole repertoire is physical — the eleven with no
+`abilities` list plus `golem` (`boulder_slam`, `attackWeight: 0`) — that is the
+turn gone: 0 actions out of 6 in the harness, against 6 unshackled. Against the
+other three it is a substitution:
+
+| enemy | what a shackled turn becomes |
+|---|---|
+| `bog_witch` | unchanged — its whole kit is `bog_mud_burst` |
+| `forest_warden` (boss) | `roar` only, and it has no plain swing either |
+| `treant` | `spore_cloud` only |
+| `beetle` | `shell_up` only — **a heal** |
+
+**Why it is the owner's:** two of the three substitutions are plainly a
+downgrade for the monster, but `beetle`'s is not. A shackled beetle spends both
+turns healing instead of rolling, which may be a better outcome for it than the
+turn it lost. Nine mana for "the boss casts instead of slamming" is a different
+product from nine mana for "the boss does nothing", and the card currently
+promises the second ("It cannot strike, charge or move — only cast" is honest
+about the mechanism and silent about the value).
+
+The levers, in ascending cost: the mana price, the duration, or extending the
+restriction to a named non-physical class as well. The third is a model change
+and not a number — the classification is deliberately binary, and a second
+category would need a second reason to exist (`docs/CODE_STANDARDS.md` §10).
+
+Not tuned. `SpellExpansionBalanceTests.VelvetShacklesDeniesAWholeTurnOnlyFromAnEnemyWithNoCast`
+pins every figure above, so a decision either way moves a literal.
+
+### 195. Rooted gaining "no physical moves" silently retuned the Sylvan modifier
+
+`modifiers.json`'s `Sylvan` carries `RootChancePercent: 10` — a 10% chance on a
+landed hit to root the target for `FightTuning.RootOnHitTurns` (**1** turn; the
+baseline's §8 says 2 and is stale). It is a weapon modifier, so it only ever
+roots an enemy, and it is the ONLY authored source of Rooted in the game.
+
+Before `2c64a252` that root cost a monster its plain swing. Three of the five
+monsters with authored kits would rather have cast anyway, and two of them
+(`golem`, `forest_warden`) author `attackWeight: 0` and had no swing to lose, so
+the modifier's on-hit effect was close to nothing against exactly the enemies a
+player would want it against. It now costs `golem` its entire turn and
+`forest_warden` its two best abilities.
+
+**Recorded rather than fixed** because it is not a defect: it is the rule change
+working, and it lands on one item modifier that nobody edited. Flagged so a
+later balance pass on `Sylvan` reads the right history — if the modifier looks
+strong, this is when it became so, and the cause is in `CombatActions`, not in
+`modifiers.json`.
