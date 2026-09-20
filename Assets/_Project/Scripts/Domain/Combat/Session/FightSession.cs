@@ -310,7 +310,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // one that was pressed.
             return kit.Skills
                 .Select((s, i) => new ResolvedSkillOption(i, s,
-                    SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost),
+                    // healthCostPercent JOINS mana/resource here too (plan
+                    // 1.2, milestone B) -- omitting it left Blackglass
+                    // Spear reading as affordable on a menu row (and to
+                    // every bot policy that trusts this flag) even when the
+                    // health cost would be refused outright at cast time,
+                    // the exact "legal-looking, actually refused" shape
+                    // that stalls a greedy policy without a repeat guard.
+                    SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost, s.HealthCostPercent),
                     CooldownRemaining(actor, s.Id)))
                 .Where(o => actor.AbilityScores.Meets(RequirementCurve.Apply(o.Skill.Requirements)))
                 .ToList();

@@ -109,6 +109,14 @@ MonoBehaviour:
     SummonEnemyId: 
     SummonCap: 0
     IconPath: Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book.png
+    HealthCostPercent: 0
+    RequiresStatusType: 0
+    HasRequiresStatus: 0
+    ConsumesStatusType: 0
+    HasConsumesStatus: 0
+    DamageInstancesIfConsumed: []
+    DetonationPercent: 0
+    DetonationSplit: 
     Reach:
       Kind: 0
       RankMask: 0

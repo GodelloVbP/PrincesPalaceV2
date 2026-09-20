@@ -111,6 +111,23 @@ namespace PrincesPalace.Domain.Combat
         // balance change to Woolgathering and the beetle's Shell Up riding
         // in on a new member.
         HealSingle,
+
+        // ONE ENEMY, CONSUMES THE NAMED STATUS, DEALS ITS WORTH SPLIT ACROSS
+        // AUTHORED TYPES -- Ashen Reckoning (plan D10, milestone B), and the
+        // first of five appended together across the spell-expansion
+        // milestones (Afflict, Hasten, SwapAllies, Enthrall are the other
+        // four, each landing with the milestone that first needs it).
+        //
+        // A MEMBER RATHER THAN A DamageSingle VARIANT because its packets do
+        // not exist until the consumption has happened: HasFixedDamage is
+        // false and the authored damageInstances list is empty, so the
+        // packets are built at resolution from a total ResolveReclaim reads
+        // off StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit, not
+        // from anything skills.json carries directly.
+        //
+        // APPENDED, never inserted -- see this enum's own header on why
+        // (SkillDefinition stores this as a raw int).
+        Reclaim,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

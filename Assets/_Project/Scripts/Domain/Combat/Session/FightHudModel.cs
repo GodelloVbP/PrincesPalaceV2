@@ -361,6 +361,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.GiftFury:
                 case SkillEffect.GiftHaste: return "GIFT";
                 case SkillEffect.Summon: return "SUMMON";
+                // Ashen Reckoning: no packet of its own, but it IS damage --
+                // the same word DamageSingle/DamageAll already read as, off a
+                // total the cast computes rather than authors.
+                case SkillEffect.Reclaim: return "DAMAGE";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +

@@ -1055,7 +1055,8 @@ Reported from play: "provoke doesn't resolve -- a taunted creature stays
 taunted for ever."
 
 Verified: Provoked is deliberately not counted down by the turn-start tick
-(`StatusEffects.cs:441-468`, `IsSpentByTheTurn`) because a one-turn taunt
+(`StatusEffects.cs:441-468`, `DurationClock` -- renamed from `IsSpentByTheTurn`
+in the spell expansion's milestone A, 2026-09-20) because a one-turn taunt
 would expire before the turn it exists to redirect. It is consumed instead
 by `StatusEffects.ConsumeProvoke` (`:218-221`), whose only two production
 callers are inside the enemy's PLAIN-ATTACK resolution -- the miss branch

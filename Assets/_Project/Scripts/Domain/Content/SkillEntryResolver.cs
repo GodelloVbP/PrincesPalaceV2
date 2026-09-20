@@ -200,7 +200,15 @@ namespace PrincesPalace.Domain.Content
                     || raw.resourceSpendCap != 0 || raw.spendsAllPrimary
                     || raw.percentOfMaxHealthPerPoint != 0 || raw.freeAction
                     // AND THE SHIELD MODEL'S TWO, for the same reason.
-                    || raw.percentOfCasterMaxHealth != 0 || raw.wardTurns != 0;
+                    || raw.percentOfCasterMaxHealth != 0 || raw.wardTurns != 0
+                    // AND MILESTONE B'S SIX, same reason again: a stand-in
+                    // may not quietly author a health cost, a board-state
+                    // requirement, a consumed status, or a detonation split.
+                    || raw.healthCostPercent != 0 || !string.IsNullOrWhiteSpace(raw.requiresStatus)
+                    || !string.IsNullOrWhiteSpace(raw.consumesStatus)
+                    || (raw.damageInstancesIfConsumed != null && raw.damageInstancesIfConsumed.Length > 0)
+                    || raw.detonationPercent != 0
+                    || (raw.detonationSplit != null && raw.detonationSplit.Length > 0);
 
                 if (authorsAnEffectField)
                 {
@@ -519,9 +527,136 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // ---- milestone B: the health cost -----------------------------
+            //
+            // A PAYMENT, not damage (plan 1.2), so it is validated on its own
+            // terms rather than folded into the damage checks above. 100 or
+            // more could never leave 1 HP for a caster whose own cost equals
+            // or exceeds their bar, which is not a cast this game can pay for
+            // under any board state -- refused as an authoring mistake rather
+            // than left to refuse itself silently at every single cast.
+            if (raw.healthCostPercent < 0 || raw.healthCostPercent >= 100)
+            {
+                error = $"{label}: healthCostPercent is {raw.healthCostPercent} — it must be 0 (no cost) or a " +
+                        "positive percent under 100, since 100 or more could never leave the caster 1 HP.";
+                return false;
+            }
+
             if (!TryResolveDamageInstances(raw, label, isRestorative, out var instances, out error))
             {
                 return false;
+            }
+
+            // ---- milestone B: requires/consumes status and the Reclaim split
+            //
+            // Three related but independent authoring facts, checked here
+            // (after damageInstances has resolved, so the checks below can
+            // read `instances` rather than the raw array a second time).
+
+            if (!TryParseOptionalStatus(raw.requiresStatus, label, "requiresStatus", out var requiresStatus, out error))
+            {
+                return false;
+            }
+
+            if (requiresStatus.HasValue && targeting != SkillTargeting.SingleEnemy)
+            {
+                error = $"{label}: requiresStatus only means anything on a SingleEnemy skill, not {targeting} — " +
+                        "there is no single target to ask the question about.";
+                return false;
+            }
+
+            if (!TryParseOptionalStatus(raw.consumesStatus, label, "consumesStatus", out var consumesStatus, out error))
+            {
+                return false;
+            }
+
+            bool authorsConsumedPackets = raw.damageInstancesIfConsumed != null && raw.damageInstancesIfConsumed.Length > 0;
+            if (consumesStatus.HasValue != authorsConsumedPackets)
+            {
+                error = $"{label}: consumesStatus and damageInstancesIfConsumed must be authored together — " +
+                        "one names what is spent, the other what a landed hit deals once it is.";
+                return false;
+            }
+
+            DamageInstance[] instancesIfConsumed = Array.Empty<DamageInstance>();
+            if (consumesStatus.HasValue)
+            {
+                if (effect != SkillEffect.DamageSingle || instances.Length == 0)
+                {
+                    error = $"{label}: consumesStatus only means anything on a DamageSingle skill that also " +
+                            "authors an ordinary damageInstances to fall back to when the target does not carry it.";
+                    return false;
+                }
+
+                if (!TryResolveDamagePackets(raw.damageInstancesIfConsumed, label, "damageInstancesIfConsumed",
+                        out instancesIfConsumed, out error))
+                {
+                    return false;
+                }
+            }
+
+            bool authorsDetonationSplit = raw.detonationSplit != null && raw.detonationSplit.Length > 0;
+            if ((raw.detonationPercent > 0) != authorsDetonationSplit)
+            {
+                error = $"{label}: detonationPercent and detonationSplit must be authored together — " +
+                        "one is the markup, the other is what the marked-up total is divided across.";
+                return false;
+            }
+
+            DamageType[] detonationSplit = Array.Empty<DamageType>();
+            if (raw.detonationPercent > 0)
+            {
+                if (effect != SkillEffect.Reclaim)
+                {
+                    error = $"{label}: detonationPercent/detonationSplit only mean anything on a Reclaim skill, " +
+                            $"not {effect} — every other damage effect deals a packet the ordinary way.";
+                    return false;
+                }
+
+                var splitTypes = new DamageType[raw.detonationSplit.Length];
+                for (int i = 0; i < raw.detonationSplit.Length; i++)
+                {
+                    if (!TryParseDamageType(raw.detonationSplit[i], out splitTypes[i]))
+                    {
+                        error = $"{label}: detonationSplit entry #{i + 1} has an unknown type " +
+                                $"'{raw.detonationSplit[i]}'. Valid options: " +
+                                $"{string.Join(", ", System.Enum.GetNames(typeof(DamageType)))}, Frost.";
+                        return false;
+                    }
+                }
+
+                detonationSplit = splitTypes;
+            }
+
+            if (effect == SkillEffect.Reclaim)
+            {
+                if (raw.detonationPercent <= 0)
+                {
+                    error = $"{label}: a Reclaim skill needs a positive detonationPercent — its damage IS the " +
+                            "consumed total marked up, and there is no sensible default for that.";
+                    return false;
+                }
+
+                if (!requiresStatus.HasValue)
+                {
+                    error = $"{label}: a Reclaim skill needs a requiresStatus — casting it against a target " +
+                            "carrying nothing would detonate nothing, and that is a refusal, not a resolution.";
+                    return false;
+                }
+
+                if (instances.Length > 0)
+                {
+                    error = $"{label}: a Reclaim skill authors no damageInstances of its own — its packets are " +
+                            "built at resolution from the consumed total, not from the row.";
+                    return false;
+                }
+
+                if (raw.power > 0 || raw.flatAmount > 0)
+                {
+                    error = $"{label}: a Reclaim skill's damage is the consumed total marked up once — power and " +
+                            "flatAmount are never read by it.";
+                    return false;
+                }
             }
 
             if (!TryResolveStatus(raw, label, out var appliesStatus, out int statusMagnitude, out int statusDuration, out error))
@@ -654,7 +789,9 @@ namespace PrincesPalace.Domain.Content
                 poolTiers,
                 raw.placeholder, raw.placeholderNote ?? "",
                 raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction,
-                raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "");
+                raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "",
+                raw.healthCostPercent, requiresStatus, consumesStatus, instancesIfConsumed,
+                raw.detonationPercent, detonationSplit);
             error = null;
             return true;
         }
@@ -1031,20 +1168,39 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            var resolved = new DamageInstance[raw.damageInstances.Length];
-            for (int i = 0; i < raw.damageInstances.Length; i++)
+            return TryResolveDamagePackets(raw.damageInstances, label, "damageInstances", out instances, out error);
+        }
+
+        // THE SHARED LOOP behind damageInstances and damageInstancesIfConsumed
+        // (milestone B) -- one place that parses a type, refuses a
+        // non-positive amount and reports which field and which index, rather
+        // than two copies free to drift about what "a packet that deals
+        // nothing" means.
+        private static bool TryResolveDamagePackets(RawDamageInstance[] raw, string label, string fieldName,
+            out DamageInstance[] instances, out string error)
+        {
+            instances = System.Array.Empty<DamageInstance>();
+            error = null;
+
+            if (raw == null || raw.Length == 0)
             {
-                var packet = raw.damageInstances[i];
+                return true;
+            }
+
+            var resolved = new DamageInstance[raw.Length];
+            for (int i = 0; i < raw.Length; i++)
+            {
+                var packet = raw[i];
                 if (packet == null || !TryParseDamageType(packet.type, out var type))
                 {
-                    error = $"{label}: damage instance #{i + 1} has an unknown type '{packet?.type}'. " +
+                    error = $"{label}: {fieldName} #{i + 1} has an unknown type '{packet?.type}'. " +
                             $"Valid options: {string.Join(", ", System.Enum.GetNames(typeof(DamageType)))}, Frost.";
                     return false;
                 }
 
                 if (packet.amount <= 0)
                 {
-                    error = $"{label}: damage instance #{i + 1} ({type}) deals {packet.amount} — " +
+                    error = $"{label}: {fieldName} #{i + 1} ({type}) deals {packet.amount} — " +
                             "a packet that deals nothing should be removed rather than authored.";
                     return false;
                 }
@@ -1053,6 +1209,32 @@ namespace PrincesPalace.Domain.Content
             }
 
             instances = resolved;
+            return true;
+        }
+
+        // "requiresStatus"/"consumesStatus" (milestone B): a StatusEffectType
+        // name, optional, matched case-insensitively -- the same shape
+        // StatusAuthoring.TryResolve's own appliesStatus parse uses, without
+        // the magnitude/duration pair that field alone needs.
+        private static bool TryParseOptionalStatus(string text, string label, string fieldName,
+            out StatusEffectType? parsed, out string error)
+        {
+            parsed = null;
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return true;
+            }
+
+            if (!System.Enum.TryParse<StatusEffectType>(text.Trim(), ignoreCase: true, out var status))
+            {
+                error = $"{label}: {fieldName} '{text}' isn't valid. Valid options: " +
+                        $"{string.Join(", ", System.Enum.GetNames(typeof(StatusEffectType)))}.";
+                return false;
+            }
+
+            parsed = status;
             return true;
         }
 

@@ -40,15 +40,16 @@ namespace PrincesPalace.Domain.Combat
         // callers key their bonus off the RETURN VALUE, not off calling
         // IsMarked first and ConsumeMark second, which would be two reads
         // of the same question and an easy place for the two to disagree.
+        //
+        // A ONE-LINE CALL TO StatusEffects.TrySpend (plan 1.8) rather than
+        // its own removal any more -- Marked has exactly one live entry per
+        // target (StackPolicyOf refreshes it), so "the first entry of this
+        // type" and "the mark" are the same question, and this keeps its own
+        // name and its own contract for the sixteen call sites that already
+        // key off it.
         public static bool ConsumeMark(CombatantState target)
         {
-            if (target == null) return false;
-
-            var mark = target.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Marked);
-            if (mark == null) return false;
-
-            target.Statuses.Remove(mark);
-            return true;
+            return target != null && StatusEffects.TrySpend(target.Statuses, StatusEffectType.Marked, out _);
         }
     }
 }

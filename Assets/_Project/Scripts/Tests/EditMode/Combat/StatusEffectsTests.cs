@@ -795,5 +795,52 @@ namespace PrincesPalace.Domain.Tests
                     $"{type} answered with an element; if it deals damage now, say which in ElementOf");
             }
         }
+
+        // ---- TrySpend, milestone B (plan 1.8) -------------------------------
+
+        [Test]
+        public void TrySpend_ReportsTheEntryItRemoved()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Marked, 0, 99);
+
+            bool spent = StatusEffects.TrySpend(target.Statuses, StatusEffectType.Marked, out var entry);
+
+            Assert.IsTrue(spent);
+            Assert.IsNotNull(entry);
+            Assert.AreEqual(StatusEffectType.Marked, entry.Type);
+            Assert.IsFalse(target.Statuses.Any(s => s.Type == StatusEffectType.Marked));
+        }
+
+        [Test]
+        public void TrySpend_NoMatchingEntry_ReportsFalseAndTouchesNothing()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Protect, 10, 3);
+
+            bool spent = StatusEffects.TrySpend(target.Statuses, StatusEffectType.Poison, out var entry);
+
+            Assert.IsFalse(spent);
+            Assert.IsNull(entry);
+            Assert.AreEqual(1, target.Statuses.Count, "the unrelated Protect entry must survive untouched");
+        }
+
+        // ONE ENTRY, NOT EVERY ENTRY -- a caller after the whole pile (like
+        // StatusCombos.SpendPoisonIfMatched) loops this itself; TrySpend does
+        // not loop for it.
+        [Test]
+        public void TrySpend_OnAPile_RemovesOnlyTheFirstEntry()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 5);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 2, 3);
+
+            bool spent = StatusEffects.TrySpend(target.Statuses, StatusEffectType.Poison, out var entry);
+
+            Assert.IsTrue(spent);
+            Assert.AreEqual(4, entry.Magnitude, "the FIRST entry, not the pile's total");
+            Assert.AreEqual(1, target.Statuses.Count(s => s.Type == StatusEffectType.Poison),
+                "the second instance must still be standing");
+        }
     }
 }

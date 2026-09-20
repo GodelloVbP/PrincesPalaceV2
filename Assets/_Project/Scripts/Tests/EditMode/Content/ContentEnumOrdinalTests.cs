@@ -44,6 +44,7 @@ namespace PrincesPalace.Domain.Tests
             { "GiftHaste", 12 },
             { "Summon", 13 },
             { "HealSingle", 14 },
+            { "Reclaim", 15 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>

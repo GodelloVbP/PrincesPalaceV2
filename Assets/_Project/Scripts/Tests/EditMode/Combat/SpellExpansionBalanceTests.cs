@@ -204,5 +204,191 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(12, EnemyTurnsInTheNext(30, 25, 25, 25),
                 "and three buy five -- the stacking model is what makes a second and third cast worth it");
         }
+
+        // ---- milestone B: Ashen Reckoning vs recasting Bite, vs an ordinary
+        // ---- Nature detonation ------------------------------------------------
+
+        private static ResolvedSkill Bite() =>
+            new ResolvedSkill("vipers_bite", "Viper's Bite", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 7, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Poison, 3) }, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Poison, statusMagnitude: 3, statusDuration: 3);
+
+        private static ResolvedSkill Reckoning() =>
+            new ResolvedSkill("ashen_reckoning", "Ashen Reckoning", "", "hero", 1, SkillEffect.Reclaim,
+                SkillTargeting.SingleEnemy, 10, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Vulnerable, statusMagnitude: 20, statusDuration: 1,
+                requiresStatus: StatusEffectType.Poison, detonationPercent: 150,
+                detonationSplit: new[] { DamageType.Poison, DamageType.Fire });
+
+        // AN ORDINARY NATURE HIT, shaped like the existing Root Strike/mud_burst
+        // family -- a fixed Nature packet with no status of its own, so its
+        // only interaction with an existing Poison is the ordinary 100%
+        // detonation every Nature/Poison hit already carries (D2).
+        private static ResolvedSkill NatureHit() =>
+            new ResolvedSkill("root_strike_test", "Root Strike", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 6, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Nature, 10) }, SpellPresentation.None, 0);
+
+        // Casts ONE skill against a fresh, undefended dummy that already
+        // carries the given Poison (none, if magnitude is 0), and reports the
+        // damage landed and the Poison left standing afterward.
+        private static (int damage, int poisonMagnitude, int poisonTurns) CastAgainstPoisoned(
+            ResolvedSkill skill, int poisonMagnitude, int poisonTurns)
+        {
+            var caster = Caster(LowAnchorAttack);
+            var dummy = Dummy(speed: 1);
+            dummy.PhysicalDefense = 0;
+            dummy.MagicalDefense = 0;
+            if (poisonMagnitude > 0)
+            {
+                dummy.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, poisonMagnitude, poisonTurns));
+            }
+
+            var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { skill }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { caster }, new[] { dummy }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(11))
+            {
+                DamageVarianceRange = 0f,
+            };
+
+            int before = dummy.CurrentHealth;
+            session.CastSkill(0, dummy);
+            int dealt = before - dummy.CurrentHealth;
+
+            var poison = dummy.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Poison);
+            return (dealt, poison?.Magnitude ?? 0, poison?.TurnsRemaining ?? 0);
+        }
+
+        // MEASURED 2026-09-20, against an undefended target, variance off. Each
+        // line starts from a fresh Bite cast (packet 3, leaves Poison 3/3) and
+        // asks what the SECOND cast is worth against exactly that Poison.
+        //
+        //   line                    2nd cast          damage    total (2 casts)   mana (2 casts)
+        //   Bite / Bite             Bite               12         15                14
+        //   Bite / Reckoning        Ashen Reckoning    14         17                17
+        //   Bite / Root Strike      ordinary Nature    19         22                13
+        //
+        // (2nd-cast damage: Bite = packet 3 + detonation 9 = 12; Reckoning =
+        // (3x3=9) marked up 150% = 13.5 -> 14, no packet of its own; Root
+        // Strike = packet 10 + ordinary 100% detonation 9 = 19.)
+        //
+        // THE FINDING, reported rather than tuned: on a bare stack (one 3/3
+        // Poison), Ashen Reckoning is worth MORE than a Bite recast (14 vs 12)
+        // for three more mana, and an ordinary Nature-typed hit that happens
+        // to detonate the same pile deals more still (19) for one LESS mana
+        // than Reckoning -- because Root Strike's own packet (10) is bigger
+        // than either Poison-shaped alternative's. That is not a flaw in
+        // Reckoning's arithmetic: the premium (150%) is the only lever it
+        // has over an ordinary detonation, and 50% of a single 3/3 stack's
+        // worth (9) is 4.5, which does not close a 10-point packet gap on its
+        // own. Reckoning's case is the STACKED pile Bite alone cannot reach in
+        // one cast (three Bites deposit three independent 3/3 instances a
+        // single Reckoning detonates AT ONCE for 150% of their SUM), and the
+        // Vulnerable it leaves behind, neither of which this single-stack
+        // comparison exercises. Left at the prototype 150; the owner's call
+        // is whether the premium should rise to make a one-stack Reckoning
+        // competitive with a bigger fixed packet on its own, or whether its
+        // case is deliberately the multi-stack one.
+        [Test]
+        public void AshenReckoningOnASingleBiteStack_BeatsARecastButNotAFreshNaturePacket()
+        {
+            var freshBite = CastAgainstPoisoned(Bite(), poisonMagnitude: 0, poisonTurns: 0);
+            Assert.AreEqual(3, freshBite.damage, "the bare packet, nothing to detonate yet");
+            Assert.AreEqual(3, freshBite.poisonMagnitude);
+            Assert.AreEqual(3, freshBite.poisonTurns);
+
+            var recast = CastAgainstPoisoned(Bite(), freshBite.poisonMagnitude, freshBite.poisonTurns);
+            Assert.AreEqual(12, recast.damage, "packet 3 + the old stack's worth (3x3=9)");
+
+            var reckoning = CastAgainstPoisoned(Reckoning(), freshBite.poisonMagnitude, freshBite.poisonTurns);
+            Assert.AreEqual(14, reckoning.damage, "150% of the same 9 -- 13.5 rounds up to 14 -- no packet of its own");
+
+            var natureHit = CastAgainstPoisoned(NatureHit(), freshBite.poisonMagnitude, freshBite.poisonTurns);
+            Assert.AreEqual(19, natureHit.damage, "packet 10 + the ordinary 100% detonation of the same 9");
+
+            Assert.Greater(reckoning.damage, recast.damage, "the premium beats a plain recast on the same stack");
+            Assert.Less(reckoning.damage, natureHit.damage,
+                "but not a fixed packet with no Poison shape of its own -- Reckoning's case is the multi-stack pile, not this one");
+        }
+
+        // ---- milestone B: Blackglass Spear vs Lightning Bolt --------------------
+
+        private static ResolvedSkill BlackglassSpear() =>
+            new ResolvedSkill("blackglass_spear", "Blackglass Spear", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 12, 0, false, 0, 0, ignoresDefense: true,
+                new[] { new DamageInstance(DamageType.Void, 13) }, SpellPresentation.None, 0,
+                healthCostPercent: 5);
+
+        private static ResolvedSkill LightningBolt() =>
+            new ResolvedSkill("lightning_bolt", "Lightning Bolt", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 11, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Lightning, 10) }, SpellPresentation.None, 0);
+
+        // Casts one skill against a dummy carrying the given broad defense
+        // (physical/magical), affinity left Neutral -- both compared spells
+        // are non-physical and neither Void nor Lightning is either enemy's
+        // authored weakness/resistance (enemies.json: rust_knight is
+        // Arcane-weak/Physical-resistant, gloom_moth is Fire-weak/Ice-
+        // resistant), so Neutral is the honest reading of what these two
+        // packets actually meet on either body.
+        private static int LandedAgainstDefended(ResolvedSkill skill, int physicalDefense, int magicalDefense)
+        {
+            var caster = Caster(LowAnchorAttack);
+            var dummy = Dummy(speed: 1);
+            dummy.PhysicalDefense = physicalDefense;
+            dummy.MagicalDefense = magicalDefense;
+
+            var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { skill }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { caster }, new[] { dummy }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(11))
+            {
+                DamageVarianceRange = 0f,
+            };
+
+            int before = dummy.CurrentHealth;
+            session.CastSkill(0, dummy);
+            return before - dummy.CurrentHealth;
+        }
+
+        // MEASURED 2026-09-20, against the two named enemies' own authored
+        // broad defense (enemies.json), variance off.
+        //
+        //   target                     phys def   mag def   Blackglass (Void 13)   Lightning Bolt (Ltng 10)
+        //   rust_knight (defended)     35         5         13                     9
+        //   gloom_moth (fragile)       5          10        13                     9
+        //
+        // THE FINDING: rust_knight's own "high defence" is PHYSICAL (35);
+        // its MagicalDefense is a modest 5, and both compared spells are
+        // already non-physical, so ignoresDefense buys Blackglass Spear only
+        // a small edge here (13 vs 9) rather than a dramatic one -- the
+        // bypass matters most against a MAGICALLY armoured body, which
+        // neither of the owner's two named enemies actually is. gloom_moth's
+        // bigger MagicalDefense (10 against rust_knight's 5) reads as the
+        // SAME landed 9 for Lightning Bolt -- CombatMath.AfterResistance's
+        // integer division floors 10x100/105 (9.52) and 10x100/110 (9.09) to
+        // the same 9, a rounding coincidence at this particular packet size,
+        // not a claim that the two bodies resist equally. What "fragile"
+        // actually changes is time-to-kill against gloom_moth's low 45 max
+        // health, which this harness does not model (that is
+        // `tools/bot.ps1`'s half of the pair). Reported rather than tuned:
+        // the owner's own account of "a defended enemy" may want a body with
+        // real MagicalDefense (there is none in the shipped roster above
+        // single digits except ember_hound/beetle's low tens) for this
+        // comparison to say what the brief intends.
+        [Test]
+        public void BlackglassSpearVsLightningBolt_OnTheTwoNamedEnemies()
+        {
+            Assert.AreEqual(13, LandedAgainstDefended(BlackglassSpear(), physicalDefense: 35, magicalDefense: 5),
+                "rust_knight: ignoresDefense means its 5 MagicalDefense never applies");
+            Assert.AreEqual(9, LandedAgainstDefended(LightningBolt(), physicalDefense: 35, magicalDefense: 5),
+                "rust_knight: Lightning Bolt still pays the 5 MagicalDefense, softened by the resistance curve");
+
+            Assert.AreEqual(13, LandedAgainstDefended(BlackglassSpear(), physicalDefense: 5, magicalDefense: 10),
+                "gloom_moth: the same 13, defense bypassed either way");
+            Assert.AreEqual(9, LandedAgainstDefended(LightningBolt(), physicalDefense: 5, magicalDefense: 10),
+                "gloom_moth: reads the same 9 as rust_knight here -- integer division floors both, see this test's own header");
+        }
     }
 }

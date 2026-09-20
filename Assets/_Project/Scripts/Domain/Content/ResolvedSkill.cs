@@ -159,6 +159,66 @@ namespace PrincesPalace.Domain.Content
         // it already does for items and relics.
         public string IconPath = "";
 
+        // ---- milestone B: consumption and health payment (plan §4) -------
+
+        // Percent of the CASTER'S OWN max health paid as a cost, ceiling-
+        // rounded, alongside mana (plan 1.2) -- Blackglass Spear's blood
+        // price. 0, the default, is every skill that has ever existed.
+        // Validated together with ManaCost/ResourceCost by
+        // SkillResolution.CanAfford and paid directly by HealthCost.Pay,
+        // never through the damage funnel -- see HealthCost's own header for
+        // why.
+        public int HealthCostPercent;
+
+        // THE PAIR THAT REPLACES A NULLABLE, same convention Status/HasStatus
+        // above already uses and for the identical reason: Unity's
+        // serializer has no support for Nullable<T> at all, so a bare
+        // `StatusEffectType? RequiresStatus` field looks correct in every
+        // fixture built by hand in C# and comes back silently null off every
+        // ScriptableObject the content build actually writes -- exactly the
+        // failure that stays invisible until a real fight loads the asset. A
+        // Reclaim/requires row with no live player-facing case would have
+        // shipped with this bug undetected by the domain test suite, which
+        // never serializes a ResolvedSkill through Unity at all.
+        public StatusEffectType RequiresStatusType;
+        public bool HasRequiresStatus;
+
+        // A board-state refusal (plan 1.1/1.8): the TARGET must carry this
+        // status or the cast is refused before anything is paid, the same
+        // shape Shatter-with-no-wards already is. Null for every skill but
+        // Ashen Reckoning, which requires Poison.
+        public StatusEffectType? RequiresStatus => HasRequiresStatus ? (StatusEffectType?)RequiresStatusType : null;
+
+        // Same nullable-avoidance pair as RequiresStatus above.
+        public StatusEffectType ConsumesStatusType;
+        public bool HasConsumesStatus;
+
+        // The general status a landed hit spends (plan 1.8, 2.4) -- Crownfall
+        // reads and consumes StatusEffectType.Marked through this, never the
+        // Drowned Lantern's own private mark set. Null for every skill that
+        // does not consume anything on landing.
+        public StatusEffectType? ConsumesStatus => HasConsumesStatus ? (StatusEffectType?)ConsumesStatusType : null;
+
+        // THE HEAVIER PACKET LIST a fixed-damage skill resolves with INSTEAD
+        // OF DamageInstances, when the target is found to carry
+        // ConsumesStatus at the moment of the read (plan 2.4) -- Crownfall's
+        // 12 Arcane in place of its ordinary 7. Empty for every skill but
+        // one authoring ConsumesStatus.
+        public DamageInstance[] DamageInstancesIfConsumed = Array.Empty<DamageInstance>();
+
+        // THE PREMIUM PERCENT a Reclaim effect's detonation is marked up by
+        // (plan D2/1.6) -- Ashen Reckoning's 150. Meaningless on anything but
+        // a Reclaim row, which the resolver requires to author it explicitly
+        // (there is no sensible default for "how much bonus this spell's
+        // whole damage IS").
+        public int DetonationPercent;
+
+        // THE ORDERED LIST OF TYPES a Reclaim effect's consumed total is
+        // split across (plan 1.7) -- Ashen Reckoning's [Poison, Fire], with
+        // the odd point going to whichever type is FIRST in this list. Empty
+        // for anything but a Reclaim row.
+        public DamageType[] DetonationSplit = Array.Empty<DamageType>();
+
         // WHERE THIS SKILL CAN BE AIMED. See RawSkillEntry.meleeReach /
         // reachSlots for the two authored spellings, and Reach for why the
         // KIND matters and not only the mask.
@@ -390,9 +450,23 @@ namespace PrincesPalace.Domain.Content
             // same positional-argument reason every block above gives.
             int percentOfCasterMaxHealth = 0, int wardTurns = 0,
             // APPENDED LAST OF ALL AGAIN (spell book art), same reason.
-            string iconPath = "")
+            string iconPath = "",
+            // APPENDED LAST OF ALL AGAIN (milestone B: consumption and
+            // health payment), same positional-argument reason every block
+            // above gives.
+            int healthCostPercent = 0, StatusEffectType? requiresStatus = null,
+            StatusEffectType? consumesStatus = null, DamageInstance[] damageInstancesIfConsumed = null,
+            int detonationPercent = 0, DamageType[] detonationSplit = null)
         {
             IconPath = iconPath ?? "";
+            HealthCostPercent = healthCostPercent;
+            HasRequiresStatus = requiresStatus.HasValue;
+            RequiresStatusType = requiresStatus ?? default;
+            HasConsumesStatus = consumesStatus.HasValue;
+            ConsumesStatusType = consumesStatus ?? default;
+            DamageInstancesIfConsumed = damageInstancesIfConsumed ?? Array.Empty<DamageInstance>();
+            DetonationPercent = detonationPercent;
+            DetonationSplit = detonationSplit ?? Array.Empty<DamageType>();
             ResourceSpendCap = resourceSpendCap;
             SpendsAllPrimary = spendsAllPrimary;
             PercentOfMaxHealthPerPoint = percentOfMaxHealthPerPoint;

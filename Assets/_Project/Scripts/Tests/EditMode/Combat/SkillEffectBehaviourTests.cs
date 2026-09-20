@@ -350,6 +350,28 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
                 Assert.AreEqual(before + 1, encounter.Enemies.Count);
             }),
+
+            // Built by hand rather than through this file's Skill() helper --
+            // Reclaim has no power/flatAmount of its own, and its authoring
+            // surface (requiresStatus/detonationPercent/detonationSplit) is
+            // the same one SkillEntryResolver refuses without.
+            new Row(SkillEffect.Reclaim, "the poisoned target's health drops and its Poison is gone", () =>
+            {
+                var hero = Hero();
+                var foe = Foe();
+                foe.Statuses.Add(new ActiveStatus(StatusEffectType.Poison, 10, 2));
+                var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+                var skill = new ResolvedSkill("coverage", "Coverage", "", "hero", 1, SkillEffect.Reclaim,
+                    SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0,
+                    requiresStatus: StatusEffectType.Poison, detonationPercent: 150,
+                    detonationSplit: new[] { DamageType.Poison, DamageType.Fire });
+                var session = Session(encounter, Kit(skill));
+
+                Assert.IsTrue(session.CastSkill(0, foe), "the cast was refused");
+                Assert.Less(foe.CurrentHealth, foe.MaxHealth);
+                Assert.IsFalse(foe.Statuses.Any(s => s.Type == StatusEffectType.Poison));
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -485,6 +507,17 @@ namespace PrincesPalace.Domain.Tests
                     turns = 3,
                     attackPercent = 50,
                 };
+            }
+
+            // A Reclaim skill's damage IS the consumed total marked up --
+            // requiresStatus/detonationPercent/detonationSplit are the whole
+            // authoring surface, the same way BuffParty's status trio above
+            // is the whole of what makes THAT effect nonempty.
+            if (effect == SkillEffect.Reclaim)
+            {
+                raw.requiresStatus = "Poison";
+                raw.detonationPercent = 150;
+                raw.detonationSplit = new[] { "Poison", "Fire" };
             }
 
             return raw;

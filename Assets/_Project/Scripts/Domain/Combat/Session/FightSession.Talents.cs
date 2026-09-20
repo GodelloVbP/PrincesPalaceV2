@@ -420,7 +420,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // That is the same courtesy the "can't pay for it" branch extends, and
         // it matters more here: both are conditional on board state the player
         // can misread.
-        private bool CanResolveSkill(CombatantState actor, ResolvedSkill skill, out string refusal)
+        private bool CanResolveSkill(CombatantState actor, ResolvedSkill skill, CombatantState target, out string refusal)
         {
             refusal = null;
 
@@ -434,6 +434,20 @@ namespace PrincesPalace.Domain.Combat.Session
                 refusal = cooling == 1
                     ? $"{skill.DisplayName} is ready next turn."
                     : $"{skill.DisplayName} is ready in {cooling} turns.";
+                return false;
+            }
+
+            // REQUIRES-STATUS (plan 1.1/2.5): a board-state refusal about the
+            // TARGET, the exact shape "Shatter with no wards" already is --
+            // conditional on something the player can misread, and refused
+            // before a point of mana or a turn is spent on a cast that would
+            // visibly detonate nothing. Ashen Reckoning is the one author
+            // today (requiresStatus: "Poison"); the check reads generically
+            // off whatever status a future skill names.
+            if (skill.RequiresStatus.HasValue
+                && (target == null || !target.Statuses.Any(s => s.Type == skill.RequiresStatus.Value)))
+            {
+                refusal = $"{target?.Name ?? "That target"} carries no {skill.RequiresStatus.Value} for {skill.DisplayName} to reclaim.";
                 return false;
             }
 

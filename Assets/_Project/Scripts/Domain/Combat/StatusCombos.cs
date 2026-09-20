@@ -50,33 +50,41 @@ namespace PrincesPalace.Domain.Combat
         // ONE FIGURE, ONE RETURN, and therefore one DealDamage and one ledger
         // row upstairs -- the alternative, a bonus per instance, would record
         // the same detonation three times and would round a premium three
-        // times once ResolveDetonation grows one (plan 1.6, milestone B).
-        public static int SpendPoisonIfMatched(CombatantState target, DamageType incomingType)
+        // times over.
+        //
+        // premiumPercent (plan D2/1.6, milestone B): applied ONCE to the
+        // summed worth, never per instance -- three instances each marked up
+        // and then added would round three times and quietly pay a different
+        // figure for the same board than one instance worth the same total.
+        // Defaults to 100, which is every ordinary Nature/Poison hit and is
+        // exactly today's arithmetic; Ashen Reckoning is the one caller that
+        // passes something else.
+        public static int SpendPoisonIfMatched(CombatantState target, DamageType incomingType, int premiumPercent = 100)
         {
             if (target == null || (incomingType != DamageType.Nature && incomingType != DamageType.Poison))
             {
                 return 0;
             }
 
-            int bonus = 0;
-            foreach (var poison in target.Statuses)
+            // TRYSPEND IN A LOOP, not a foreach over the list -- this both
+            // reads and REMOVES each instance as it goes, which is what makes
+            // "every instance, in one consumption" (D3/1.6) hold for a pile of
+            // any size without a second pass to clear what the first one
+            // already summed. A zero-magnitude entry is still consumed here,
+            // the same as the old RemoveAll-on-the-degenerate-case did: a
+            // Poison worth nothing is not a Poison the next hit should find.
+            int worth = 0;
+            while (StatusEffects.TrySpend(target.Statuses, StatusEffectType.Poison, out var spent))
             {
-                if (poison.Type != StatusEffectType.Poison) continue;
-                bonus += poison.Magnitude * poison.TurnsRemaining;
+                worth += spent.Magnitude * spent.TurnsRemaining;
             }
 
-            if (bonus <= 0)
+            if (worth <= 0)
             {
-                // Still clears a pile of zero-magnitude entries: a Poison worth
-                // nothing is not a Poison the next hit should find. Cheap, and
-                // it keeps "detonating twice does nothing" true for the
-                // degenerate case too.
-                target.Statuses.RemoveAll(s => s.Type == StatusEffectType.Poison);
                 return 0;
             }
 
-            target.Statuses.RemoveAll(s => s.Type == StatusEffectType.Poison);
-            return bonus;
+            return Rounding.AwayFromZero(worth * premiumPercent / 100f);
         }
     }
 }

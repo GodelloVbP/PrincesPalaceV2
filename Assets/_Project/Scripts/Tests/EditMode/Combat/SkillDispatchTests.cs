@@ -193,6 +193,79 @@ namespace PrincesPalace.Domain.Tests
                 "not merged with the old entry's turns -- it was already gone (detonated) by the time this applied");
         }
 
+        // ---- ignoresDefense on the FIXED-PACKET path, milestone B (plan 1.3) -
+
+        // ResolveDamageInstances used to omit ignoresDefense entirely, so a
+        // fixed-packet spell's flag was inert -- true on the row, false at
+        // every resolution. Blackglass Spear is the first live content that
+        // would have hit this silently.
+        private static ResolvedSkill FixedPacketSkill(DamageType type, int amount, bool ignoresDefense) =>
+            new ResolvedSkill("test", "Fixed Packet", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, ignoresDefense,
+                new[] { new DamageInstance(type, amount) }, SpellPresentation.None, 0);
+
+        [Test]
+        public void AFixedPacketSpellWithIgnoresDefense_TakesNoMagicalDefenceTerm()
+        {
+            var withFlag = FixedPacketSkill(DamageType.Void, 13, ignoresDefense: true);
+            var withoutFlag = FixedPacketSkill(DamageType.Void, 13, ignoresDefense: false);
+
+            var armoured = Foe("Armoured");
+            armoured.MagicalDefense = 20;
+            var (defended, _, defendedEncounter) = Fight(Kit(skills: new[] { withoutFlag }), null, armoured);
+            int beforeDefended = defendedEncounter.Enemies[0].CurrentHealth;
+            defended.CastSkill(0, defendedEncounter.Enemies[0]);
+            int dealtWithBroadDefense = beforeDefended - defendedEncounter.Enemies[0].CurrentHealth;
+
+            var bypassTarget = Foe("Armoured");
+            bypassTarget.MagicalDefense = 20;
+            var (bypassed, _, bypassedEncounter) = Fight(Kit(skills: new[] { withFlag }), null, bypassTarget);
+            int beforeBypassed = bypassedEncounter.Enemies[0].CurrentHealth;
+            bypassed.CastSkill(0, bypassedEncounter.Enemies[0]);
+            int dealtIgnoringDefense = beforeBypassed - bypassedEncounter.Enemies[0].CurrentHealth;
+
+            Assert.AreEqual(13, dealtIgnoringDefense, "the raw packet, with MagicalDefense zeroed out entirely");
+            Assert.Less(dealtWithBroadDefense, dealtIgnoringDefense,
+                "the un-flagged packet must still be reduced by the same MagicalDefense -- proving the " +
+                "difference is the flag, not the fixture");
+        }
+
+        [Test]
+        public void AFixedPacketSpellWithIgnoresDefense_StillTakesTypedResistance()
+        {
+            var skill = FixedPacketSkill(DamageType.Void, 13, ignoresDefense: true);
+            var resistant = Foe("Warded");
+            resistant.MagicalDefense = 20; // ignored by the flag
+            resistant.TypedResistance.Void = 100; // NEVER skipped -- a separate term
+            var (session, _, encounter) = Fight(Kit(skills: new[] { skill }), null, resistant);
+            int before = encounter.Enemies[0].CurrentHealth;
+
+            session.CastSkill(0, encounter.Enemies[0]);
+
+            int dealt = before - encounter.Enemies[0].CurrentHealth;
+            Assert.Less(dealt, 13, "100 Void resistance must still soften the packet even with defense ignored");
+            Assert.Greater(dealt, 0, "resistance softens on a curve; it does not zero the hit");
+        }
+
+        [Test]
+        public void AFixedPacketSpellWithIgnoresDefense_StillTakesTheWardPool()
+        {
+            var skill = FixedPacketSkill(DamageType.Void, 13, ignoresDefense: true);
+            var warded = Foe("Warded");
+            warded.MagicalDefense = 20; // bypassed by the flag
+            StatusEffects.ApplyWard(warded.Statuses, points: 5, turns: 2, source: warded);
+            var (session, _, encounter) = Fight(Kit(skills: new[] { skill }), null, warded);
+            int before = encounter.Enemies[0].CurrentHealth;
+
+            session.CastSkill(0, encounter.Enemies[0]);
+
+            int dealt = before - encounter.Enemies[0].CurrentHealth;
+            Assert.AreEqual(13 - 5, dealt,
+                "the 5-point ward pool is the LAST thing between the raw packet and health -- " +
+                "ignoresDefense has no say over it");
+            Assert.AreEqual(0, StatusEffects.WardPoints(warded), "the ward absorbed exactly its 5 points and is spent");
+        }
+
         [Test]
         public void DamageAllHitsEveryLivingEnemy()
         {

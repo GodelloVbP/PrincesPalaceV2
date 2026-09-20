@@ -145,5 +145,52 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(30, bonus);
             Assert.AreEqual(2, target.Statuses.Count, "Vulnerable and Protect should both still be there");
         }
+
+        // ---- the premium parameter, milestone B (plan D2/1.6) -----------------
+
+        [Test]
+        public void APremiumOfOneFifty_ReportsHalfAgain_AndStillConsumesOnce()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 2); // worth 20
+
+            int bonus = StatusCombos.SpendPoisonIfMatched(target, DamageType.Poison, premiumPercent: 150);
+
+            Assert.AreEqual(30, bonus, "150% of the reported worth");
+            Assert.IsFalse(target.Statuses.Exists(s => s.Type == StatusEffectType.Poison));
+        }
+
+        // THE PREMIUM APPLIES ONCE TO THE SUM, NOT ONCE PER INSTANCE (1.6):
+        // three instances each marked up and added would round three times
+        // and could quietly pay a different figure than one instance worth
+        // the same total.
+        [Test]
+        public void APremiumOverThreeStacks_RoundsOnceOnTheTotal()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 4, 5); // 20
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 2, 3); // 6
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 7, 1); // 7
+            // Sum 33; at 150% that is 49.5, which Rounding.AwayFromZero takes
+            // to 50 in ONE call. Rounding each instance's own 150% first
+            // (30, 9, 11 -- 10.5 rounds up) and adding would total 50 here
+            // too, so this pins the TOTAL rather than the rounding path; the
+            // premium test above (a single instance) is what a per-instance
+            // rounding bug would actually be caught by disagreeing on.
+            int bonus = StatusCombos.SpendPoisonIfMatched(target, DamageType.Nature, premiumPercent: 150);
+
+            Assert.AreEqual(50, bonus, "150% applied ONCE to the summed 33, not three times to 20/6/7");
+        }
+
+        [Test]
+        public void DefaultPremium_BehavesExactlyAsBeforeMilestoneB()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 10, 3);
+
+            int bonus = StatusCombos.SpendPoisonIfMatched(target, DamageType.Nature);
+
+            Assert.AreEqual(30, bonus, "an unauthored premium is 100 -- exactly today's arithmetic");
+        }
     }
 }

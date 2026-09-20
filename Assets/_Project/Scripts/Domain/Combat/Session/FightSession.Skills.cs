@@ -107,7 +107,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // not a parallel one for typed spells.
             if (chosen != null) return CastSkill(chosen, target);
 
-            if (!SkillResolution.CanAfford(actor, skill.ManaCost, skill.ResourceCost))
+            // MANA, SIGNATURE AND HEALTH, VALIDATED TOGETHER (plan 1.1/1.2):
+            // a cast that could pay one and not another must spend neither.
+            if (!SkillResolution.CanAfford(actor, skill.ManaCost, skill.ResourceCost, skill.HealthCostPercent))
             {
                 AppendMessage($"{actor.Name} cannot pay for {skill.DisplayName}.");
                 return false;
@@ -117,8 +119,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // detonate and a Gift with nobody to give it to are both
             // conditional on board state the player can misread, and eating the
             // resource AND the turn for a cast that visibly did nothing is the
-            // worst possible answer.
-            if (!CanResolveSkill(actor, skill, out string refusal))
+            // worst possible answer. `target` is threaded through as of
+            // milestone B for requiresStatus (Ashen Reckoning) -- a
+            // board-state refusal about the TARGET, which the two effects
+            // above never needed to ask about.
+            if (!CanResolveSkill(actor, skill, target, out string refusal))
             {
                 AppendMessage(refusal);
                 return false;
@@ -147,6 +152,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 : skill.ManaCost;
 
             ChargeSkillMana(actor, primarySpent);
+
+            // PAID DIRECTLY, NOT THROUGH DealDamage (plan 1.2) -- a health
+            // cost is a payment, not incoming damage: no ward, no
+            // Protect/Vulnerable, no relic mechanic, no ledger Took row, and
+            // it can never itself settle a death (HealthCost.CanPay already
+            // refused a cast that would leave less than 1 HP, above).
+            HealthCost.Pay(actor, skill.HealthCostPercent);
 
             // Spent alongside the mana, and for the same reason it is spent
             // here rather than at the end: the cast is committed at this point.
@@ -325,6 +337,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.DamageAll:
                     ResolveDamageAll(actor, skill, resourceSpent, poolTier);
+                    break;
+
+                case SkillEffect.Reclaim:
+                    ResolveReclaim(actor, skill, target);
                     break;
 
                 case SkillEffect.HealSelf:
@@ -640,13 +656,24 @@ namespace PrincesPalace.Domain.Combat.Session
             // since drained.
             string castLabel = PoolTierResolution.Label(skill.DisplayName, poolTier);
 
+            // CROWNFALL'S PACKET SWAP (plan 2.4, 1.8): A READ, never a
+            // consume -- Marks.IsMarked-shaped, run BEFORE the roll so the
+            // choice of packet list cannot itself depend on anything the
+            // roll changes. The actual spend (step 6) happens after the hit
+            // has landed, below, on the same side of the dodge check
+            // RelicsAfterSwing already sits on -- a dodged Crownfall consumes
+            // nothing (1.8's own rule).
+            bool consumesStatusPresent = skill.HasConsumesStatus
+                && target.Statuses.Any(s => s.Type == skill.ConsumesStatus);
+            var packets = consumesStatusPresent ? skill.DamageInstancesIfConsumed : skill.DamageInstances;
+
             int damage;
             if (skill.HasFixedDamage)
             {
                 // A spell with authored packets deals exactly what it says, per
                 // element, and reports the split.
                 var detail = new StringBuilder();
-                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances);
+                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances, packets);
 
                 // Swift: rolled ONCE for the whole multi-packet cast inside
                 // ResolveDamageInstances -- see that method's own header and
@@ -707,6 +734,20 @@ namespace PrincesPalace.Domain.Combat.Session
             // does. A swing is a swing.
             ApplyFinalDamage(actor, target, damage);
 
+            // STEP 6 OF 2.4: the consume, on a LANDED hit only -- both dodge
+            // arms above already returned before this line, and a lethal hit
+            // still reaches it (ApplyFinalDamage does not stop for death), so
+            // "the mark is consumed on the blow that killed" is this line
+            // running unconditionally on anything that was not evaded. Spends
+            // the GENERAL status through the same StatusEffects.TrySpend seam
+            // Marks.ConsumeMark now calls -- never the Drowned Lantern's own
+            // private _marked set below, which is an independent mechanic
+            // (1.8).
+            if (consumesStatusPresent)
+            {
+                StatusEffects.TrySpend(target.Statuses, skill.ConsumesStatus.Value, out _);
+            }
+
             // The Drowned Lantern: a damaging spell marks whatever it lands
             // on, for an attack to cash in later.
             ApplyMark(actor, target);
@@ -718,6 +759,94 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 ApplySkillStatus(skill, target, actor);
                 ApplyQueuePush(actor, skill, target);
+            }
+        }
+
+        // ASHEN RECKONING (plan 2.5, SkillEffect.Reclaim). No packet of its
+        // own: `damage` does not exist until a target's Poison has been
+        // consumed, which is why this is a member rather than a
+        // DamageSingle variant (D10) -- HasFixedDamage is false and
+        // skill.DamageInstances is empty for a Reclaim row.
+        private void ResolveReclaim(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            target = target ?? _encounter.OpponentsOf(actor).FirstOrDefault();
+            if (target == null) return;
+
+            BeginBeat(actor, target, isCast: true);
+            RecordSpellPresentation(skill);
+
+            // DODGE, ONCE, BEFORE ANYTHING IS CONSUMED (2.5 step 3). Rolled
+            // here rather than inside a shared packet resolver, because by
+            // the time ResolveDamageInstances would roll it the Poison this
+            // cast lives on would already be gone -- a dodged Reckoning must
+            // leave the target's Poison standing untouched.
+            if (DamagePipeline.RollDodge(target, actor, _rng))
+            {
+                RecordMiss();
+                AppendMessage($"{target.Name} dodges {actor.Name}'s {skill.DisplayName}!");
+                return;
+            }
+
+            // ONE DETONATION AT THE SKILL'S OWN PREMIUM (1.6/1.7/D2): every
+            // Poison instance on the target, summed, removed in one
+            // consumption, the premium applied once to the total. No caster
+            // scaling here -- the figure IS the snapshot Poison already took,
+            // marked up once.
+            int worth = StatusCombos.SpendPoisonIfMatched(target, DamageType.Poison, skill.DetonationPercent);
+            if (worth <= 0)
+            {
+                // Reachable only for a Poison pile that summed to exactly
+                // zero (every live instance's own Magnitude was 0) --
+                // CanResolveSkill's requiresStatus refusal already turned
+                // away a target carrying none at all. Nothing to split,
+                // nothing to deal, and no status: the ordinary "landed on
+                // nothing" shape every other effect already has.
+                AppendMessage($"{actor.Name}'s {skill.DisplayName} finds nothing left in {target.Name} to reclaim.");
+                return;
+            }
+
+            var split = ConsumedTotalSplit.Split(worth, skill.DetonationSplit);
+
+            // EACH PACKET RESOLVES INDEPENDENTLY (1.7), with
+            // resolveDetonation LEFT NULL -- the consumption already
+            // happened above, so the Poison-typed half of this very split
+            // cannot re-enter SpendPoisonIfMatched and eat what it is itself
+            // carrying (AshenReckoningTests.
+            // TheReckoningsPoisonHalf_TriggersNoSecondDetonation).
+            var detail = new StringBuilder();
+            int total = 0;
+            foreach (var packet in split)
+            {
+                var outcome = DamagePipeline.AfterDefences(
+                    packet.amount, packet.type, target,
+                    affinity: AffinityOf(target),
+                    varianceRange: DamageVarianceRange,
+                    rng: _rng,
+                    resolveWard: ResolveWard,
+                    attacker: actor,
+                    dodgeAlreadyResolved: true,
+                    resolveDetonation: null);
+
+                DepleteBreakShield(target, outcome.Effectiveness);
+                total += outcome.Damage;
+                detail.Append($" {outcome.Damage} {packet.type}{EffectivenessSuffix(outcome.Effectiveness)}");
+            }
+
+            AppendMessage($"{actor.Name}'s {skill.DisplayName} tears {worth} out of {target.Name} and returns it for {total}! -{detail}");
+
+            // ONE DEATH SETTLEMENT ACROSS THE SPLIT (1.7): ApplyFinalDamage
+            // runs once, on the packets' sum -- the same shape every other
+            // fixed-packet spell already uses for a multi-typed cast
+            // (ResolveDamageSingle's HasFixedDamage arm), not something this
+            // spell invents.
+            ApplyFinalDamage(actor, target, total);
+
+            ApplyMark(actor, target);
+            MagicMarkerApplyMark(actor, target);
+
+            if (target.IsAlive)
+            {
+                ApplySkillStatus(skill, target, actor);
             }
         }
 
@@ -968,8 +1097,14 @@ namespace PrincesPalace.Domain.Combat.Session
             return total;
         }
 
+        // `packets` DEFAULTS TO THE SKILL'S OWN, and is overridable for
+        // exactly one reason (plan 2.4): Crownfall reads whether the target
+        // is Marked BEFORE this call and hands in the heavier
+        // damageInstancesIfConsumed list instead of skill.DamageInstances --
+        // everything else about resolving those packets (dodge once, scale
+        // once, resolve each through AfterDefences) is identical either way.
         private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target,
-            StringBuilder detail, out bool dodged)
+            StringBuilder detail, out bool dodged, DamageInstance[] packets = null)
         {
             dodged = DamagePipeline.RollDodge(target, actor, _rng);
             if (dodged)
@@ -980,7 +1115,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int total = 0;
             float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
 
-            foreach (var instance in skill.DamageInstances)
+            foreach (var instance in packets ?? skill.DamageInstances)
             {
                 float elementalMultiplier = 1f + ElementalDamagePercentFor(actor, instance.type) / 100f;
                 int scaled = System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier * elementalMultiplier));
@@ -991,6 +1126,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     attacker: actor,
+                    // THE REPAIR (plan 1.3/1.6 item 1): this call used to omit
+                    // ignoresDefense entirely, so a fixed-packet spell's flag
+                    // was inert -- true on the raw entry, false at every
+                    // resolution, and nobody the wiser because no live
+                    // content had authored the combination until Blackglass
+                    // Spear. The scaled path (ResolveDamageSingle's `else`
+                    // arm, just below in this file) already passed it; this
+                    // is the one call that did not.
+                    ignoresDefense: skill.IgnoresDefense,
                     dodgeAlreadyResolved: true,
                     resolveDetonation: ResolveDetonation);
 

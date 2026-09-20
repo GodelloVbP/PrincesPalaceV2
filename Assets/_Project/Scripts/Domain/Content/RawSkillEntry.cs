@@ -446,6 +446,53 @@ namespace PrincesPalace.Domain.Content
         // fallback the brief names instead of inventing one.
         [ContentDoc("Required together with placeholder: why this skill exists undesigned.")]
         public string placeholderNote = "";
+
+        // ---- milestone B: consumption and health payment (plan §4) -------
+
+        // Percent of the CASTER'S OWN max health paid, ceiling-rounded,
+        // alongside manaCost -- Blackglass Spear's blood price (plan 1.2). 0,
+        // the default, is every skill that has ever existed. Validated with
+        // the other costs in one refusal, and paid directly rather than
+        // through the damage funnel -- see HealthCost's own header.
+        [ContentDoc("Percent of the caster's own max health paid as a cost, alongside manaCost; 0 means none. Rounds up.")]
+        public int healthCostPercent;
+
+        // One of Domain.Combat.StatusEffectType, matched case-insensitively.
+        // The TARGET must carry this status or the cast is refused before
+        // anything is paid -- Ashen Reckoning's "Poison" (plan 1.1/1.8).
+        // Empty means no such requirement, which is every skill but one.
+        [ContentDoc("A StatusEffectType the target must already carry, or the cast is refused before anything is paid; empty means no requirement.")]
+        public string requiresStatus = "";
+
+        // One of Domain.Combat.StatusEffectType, matched case-insensitively.
+        // A landed hit spends the FIRST entry of this status off the target
+        // (plan 1.8, 2.4) -- Crownfall's "Marked", read through the general
+        // Marks facility rather than any relic's own private tracking.
+        // Required together with damageInstancesIfConsumed.
+        [ContentDoc("A StatusEffectType a landed hit consumes off the target; required together with damageInstancesIfConsumed.")]
+        public string consumesStatus = "";
+
+        // The heavier packet list resolved INSTEAD OF damageInstances when
+        // the target is found to carry consumesStatus at the moment of the
+        // read (plan 2.4) -- Crownfall's 12 Arcane in place of its ordinary
+        // 7. Required together with consumesStatus, and meaningless without
+        // an ordinary damageInstances to fall back to.
+        [ContentDoc("The packet list used instead of damageInstances when the target carries consumesStatus; required together with consumesStatus.")]
+        public RawDamageInstance[] damageInstancesIfConsumed = Array.Empty<RawDamageInstance>();
+
+        // The percent a Reclaim effect's one detonation is marked up by
+        // before it is split (plan D2/1.6) -- Ashen Reckoning's 150. Required
+        // (and must be positive) on a Reclaim row; meaningless on any other
+        // effect, which authors nothing here.
+        [ContentDoc("The premium percent a Reclaim effect's detonation is marked up by; required and positive on a Reclaim row, meaningless elsewhere.")]
+        public int detonationPercent;
+
+        // The ordered list of DamageType names a Reclaim effect's consumed
+        // total is split across (plan 1.7) -- Ashen Reckoning's
+        // ["Poison", "Fire"], with the odd point going to whichever type is
+        // FIRST in this list. Required together with detonationPercent.
+        [ContentDoc("The ordered DamageType names a Reclaim effect's consumed total is split across, odd point to the first; required together with detonationPercent.")]
+        public string[] detonationSplit = Array.Empty<string>();
     }
 
     // One tier of a poolTiers ladder -- see RawSkillEntry.poolTiers.

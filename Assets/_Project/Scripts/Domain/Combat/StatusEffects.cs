@@ -370,6 +370,29 @@ namespace PrincesPalace.Domain.Combat
             statuses.RemoveAll(s => s.Type == StatusEffectType.Provoked);
         }
 
+        // ONE FACILITY FOR "remove the first entry of this type and report
+        // whether there was one" (plan 1.8), generalising the shape
+        // Marks.ConsumeMark already had so Crownfall and Ashen Reckoning need
+        // no bespoke consume of their own. The caller keys its bonus off the
+        // RETURN VALUE and the spent entry's own Magnitude/TurnsRemaining,
+        // never off a separate presence read followed by a second call --
+        // Marks.ConsumeMark's own header already argued this for the mark,
+        // and it holds for every other spendable status just as well.
+        //
+        // REMOVES EXACTLY ONE ENTRY, not every one of the type. Poison stacks
+        // (StackPolicyOf), and StatusCombos.SpendPoisonIfMatched calls this in
+        // a LOOP to eat a whole pile one instance at a time -- a caller that
+        // wants every instance of a type asks for that itself, the same way
+        // Tick already loops the list rather than this method looping for it.
+        public static bool TrySpend(List<ActiveStatus> statuses, StatusEffectType type, out ActiveStatus spent)
+        {
+            spent = statuses?.FirstOrDefault(s => s.Type == type);
+            if (spent == null) return false;
+
+            statuses.Remove(spent);
+            return true;
+        }
+
         // However far Protect stacks, a combatant can never be made
         // literally unhittable by a buff — the same floor
         // ScalingProfile.MinimumMultiplier and every max(1, ...) in

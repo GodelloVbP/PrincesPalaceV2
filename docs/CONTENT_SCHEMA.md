@@ -194,7 +194,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `iconPath` | string | `""` | Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
-| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle |
+| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle, Reclaim |
 | `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party, SingleAlly |
 | `manaCost` | int | `-1` | Mana spent to cast; a skill must cost this and/or resourceCost. |  |
 | `resourceCost` | int | `-1` | How much of the owner's signature resource a cast consumes. |  |
@@ -234,6 +234,12 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `poolTiers` | RawPoolTier[] (below) | `[]` | Ascending fractions of the owner's primary pool this skill can spend for extra damage; the highest tier the caster can afford fires automatically. |  |
 | `placeholder` | bool | `false` | Whether this skill's design has not been written yet; never player-selectable and never drawn by a monster, and may author no effect fields at all. |  |
 | `placeholderNote` | string | `""` | Required together with placeholder: why this skill exists undesigned. |  |
+| `healthCostPercent` | int | `0` | Percent of the caster's own max health paid as a cost, alongside manaCost; 0 means none. Rounds up. |  |
+| `requiresStatus` | string | `""` | A StatusEffectType the target must already carry, or the cast is refused before anything is paid; empty means no requirement. |  |
+| `consumesStatus` | string | `""` | A StatusEffectType a landed hit consumes off the target; required together with damageInstancesIfConsumed. |  |
+| `damageInstancesIfConsumed` | RawDamageInstance[] (below) | `[]` | The packet list used instead of damageInstances when the target carries consumesStatus; required together with consumesStatus. |  |
+| `detonationPercent` | int | `0` | The premium percent a Reclaim effect's detonation is marked up by; required and positive on a Reclaim row, meaningless elsewhere. |  |
+| `detonationSplit` | string[] | `[]` | The ordered DamageType names a Reclaim effect's consumed total is split across, odd point to the first; required together with detonationPercent. |  |
 
 ## spells.json -- `RawSpellTierEntry`
 

@@ -1935,6 +1935,60 @@ Reckoning and against ordinary detonation) is milestone B's, because two of the
 three scripted lines need spells B introduces. Its milestone A behaviour is
 pinned by `VipersBiteTests` instead.
 
+### Measured values — milestone B, 2026-09-20
+
+Instrument: `SpellExpansionBalanceTests.cs`, extended with B's two pairs.
+
+**Ashen Reckoning vs a Bite recast vs an ordinary Nature detonation.** One
+Bite cast (packet 3, leaves Poison 3/3), then one of three second casts
+against exactly that stack, undefended target, variance off:
+
+| line | 2nd cast damage | total (2 casts) | mana (2 casts) |
+|---|---|---|---|
+| Bite / Bite | 12 (packet 3 + detonation 9) | 15 | 14 |
+| Bite / Ashen Reckoning | 14 (150% of 9, rounded up) | 17 | 17 |
+| Bite / ordinary Nature hit | 19 (packet 10 + ordinary 100% detonation 9) | 22 | 13 |
+
+**Finding, reported rather than tuned.** On a single 3/3 stack, Reckoning
+beats a plain Bite recast (14 vs 12) for three more mana, but a fixed Nature
+packet that happens to detonate the same pile deals more still (19) for
+*less* mana than Reckoning — because that packet's own 10 is bigger than
+either Poison-shaped number. The 150% premium is Reckoning's only lever over
+an ordinary 100% detonation, and half of a single 3/3 stack's worth (9) is
+4.5, which does not close a ten-point packet gap. This is not evidence
+against the spell: its case is the pile a single Bite cannot reach in one
+turn — three Bites deposit three independent instances, and one Reckoning
+detonates their SUM at 150% in one hit, plus the Vulnerable it leaves behind
+— neither of which a single-stack comparison exercises. Left at the
+prototype 150; the owner's call is whether the premium should rise to make a
+one-stack Reckoning competitive with a bigger fixed packet on its own terms,
+or whether its case is deliberately the multi-stack one.
+
+**Blackglass Spear vs Lightning Bolt**, against the owner's own two named
+enemies' authored broad defense (`enemies.json`), undefended-elsewise,
+variance off:
+
+| target | phys def | mag def | Blackglass (Void 13) | Lightning Bolt (Ltng 10) |
+|---|---|---|---|---|
+| `rust_knight` (defended) | 35 | 5 | 13 | 9 |
+| `gloom_moth` (fragile) | 5 | 10 | 13 | 9 |
+
+**Finding, reported rather than tuned.** `rust_knight`'s own "high defence"
+is *physical* (35); its MagicalDefense is a modest 5, and both compared
+spells are already non-physical, so `ignoresDefense` buys Blackglass Spear a
+small edge here (13 vs 9) rather than a dramatic one — the bypass matters
+most against a magically-armoured body, which neither of the owner's two
+named enemies actually is. The two targets reading identically for Lightning
+Bolt (9 and 9) is a rounding coincidence of `CombatMath.AfterResistance`'s
+integer division at this packet size (10×100/105=9.52 and 10×100/110=9.09
+both floor to 9), not a claim that the two bodies resist alike. What
+"fragile" actually changes — `gloom_moth`'s low 45 max health and its speed —
+is a time-to-kill question this harness does not model; that half of the
+pair is `tools/bot.ps1`'s. If the owner's intent for "a defended enemy" is a
+body with real *magical* defense, none in the shipped roster clears single
+digits except `ember_hound`/the beetle's low tens, and the comparison would
+read very differently against one of those.
+
 ---
 
 **Where `tools/bot.ps1` covers it, use it** — it plays whole runs and its

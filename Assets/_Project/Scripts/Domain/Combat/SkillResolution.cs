@@ -177,6 +177,18 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.Summon:
                     return 0;
 
+                // No number to preview -- Ashen Reckoning's whole damage is a
+                // TARGET's consumed Poison marked up (StatusCombos.
+                // SpendPoisonIfMatched, ConsumedTotalSplit), not a figure
+                // built from power/flatAmount/resourceSpent. This signature
+                // carries no consumable status to read, so it cannot honestly
+                // answer anything but zero; the skill-detail card's POWER row
+                // is one of the readers this milestone did not extend to ask
+                // the target-aware question instead (see PLAN_SPELL_EXPANSION
+                // milestone B's status line).
+                case SkillEffect.Reclaim:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }
@@ -342,7 +354,13 @@ namespace PrincesPalace.Domain.Combat
         // affordability from this side had no way to find that sentence, and
         // an unexplained mismatch between what the menu refuses and what the
         // charge takes reads as a bug every time it is rediscovered.
-        public static bool CanAfford(CombatantState actor, int manaCost, int resourceCost)
+        // healthCostPercent JOINS MANA AND SIGNATURE IN THIS ONE CALL (plan
+        // 1.1/1.2): a cast that can pay one cost and not another must spend
+        // NEITHER, and the only way to guarantee that is to validate every
+        // cost before any of them is charged. Defaults to 0, which is every
+        // skill authored before Blackglass Spear and is a no-op check
+        // (HealthCost.CanPay is trivially true for a non-positive percent).
+        public static bool CanAfford(CombatantState actor, int manaCost, int resourceCost, int healthCostPercent = 0)
         {
             if (actor == null)
             {
@@ -350,6 +368,11 @@ namespace PrincesPalace.Domain.Combat
             }
 
             if (actor.PrimaryPool == null || !actor.PrimaryPool.CanSpend(manaCost))
+            {
+                return false;
+            }
+
+            if (!HealthCost.CanPay(actor, healthCostPercent))
             {
                 return false;
             }

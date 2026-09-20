@@ -258,6 +258,14 @@ MonoBehaviour:
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 
+    HealthCostPercent: 0
+    RequiresStatusType: 0
+    HasRequiresStatus: 0
+    ConsumesStatusType: 0
+    HasConsumesStatus: 0
+    DamageInstancesIfConsumed: []
+    DetonationPercent: 0
+    DetonationSplit: 
     Reach:
       Kind: 0
       RankMask: 0
