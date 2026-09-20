@@ -1689,6 +1689,76 @@ with its own migration test (Appendix B).
 
 ### Milestone B — consumption and health payment
 
+> **STATUS: LANDED 2026-09-20**, on `workflow-2026-09-19`.
+> `26b7fd9e` the mechanics, content and tests; `3573b566` the five scenes and
+> the Chakra Petch font, regenerated after a stale sync-back unrelated to this
+> milestone (fileID churn only, verified by identical object/component counts
+> against HEAD).
+>
+> **What landed.** `StatusEffects.TrySpend` (1.8), generalising
+> `Marks.ConsumeMark`'s own shape; `StatusCombos.SpendPoisonIfMatched`'s
+> premium parameter, looped over `TrySpend` to eat a whole stacked pile in one
+> consumption; `ConsumedTotalSplit`, a pure function for 1.7's odd-point-first
+> split; `HealthCost`, a narrow payment facility validated alongside mana in
+> one `SkillResolution.CanAfford` call and paid by a direct write outside the
+> damage funnel; the `ResolveDamageInstances` `ignoresDefense` repair (1.3);
+> `CanResolveSkill`'s new `requiresStatus` refusal, threaded a `target`
+> parameter to ask it; `SkillEffect.Reclaim` (D10, appended after
+> `HealSingle`); and Crownfall, Ashen Reckoning and Blackglass Spear as
+> complete slices with placeholder `vfx.layers`.
+>
+> **Two bugs found in review rather than shipped.**
+>
+> - `ResolvedSkill.RequiresStatus`/`ConsumesStatus` were authored as bare
+>   `StatusEffectType?` fields. Unity's serializer has no support for
+>   `Nullable<T>`, so both came back silently `null` off every generated
+>   ScriptableObject -- invisible to the whole domain test suite, which builds
+>   `ResolvedSkill` by hand in C# and never serializes one through Unity.
+>   Caught by inspecting the generated `.asset` YAML directly, not by a test.
+>   Fixed with the `Type`/`Has*` backing-field pair `AppliesStatus` already
+>   uses.
+> - `SkillOptionsFor`'s `Affordable` flag did not carry `HealthCostPercent`,
+>   so Blackglass Spear read as legal whenever its mana was covered even when
+>   the health cost would be refused at cast time. `GreedyAggressivePolicy`
+>   scores a fixed-packet skill as positive damage and calls
+>   `RecordProgress` on picking it -- the repeat guard built for a
+>   zero-scoring skill never engages for a "damaging" cast that is actually
+>   always refused, and `BalanceBotSmokeTests` caught the resulting 60-command
+>   stall (seed 5, GreedyAggressive) on the first full-gate run. Fixed at the
+>   seam `SkillOptionsFor` already is; the gate was re-run afterward and
+>   passed clean.
+>
+> **Deviations from the plan, stated rather than left implicit.**
+>
+> - `DealsDamage()` (the Gift: Fury spend gate) does **not** include
+>   `Reclaim` -- Ashen Reckoning's damage carries no caster-scaling term for
+>   Empowered to boost, so spending it on this cast would burn the player's
+>   buff for nothing. Not named in the plan either way; recorded as the
+>   author's reading.
+> - `SkillResolution.Amount`/`PreviewSkillPower` answer `Reclaim` with `0`,
+>   matching Provoke/Transform/Summon's own "nothing to preview" shape. No
+>   target-aware "would this consume" number was built for the skill-detail
+>   card -- `PreviewSkillPower` takes no target at all, extending its
+>   signature is a bigger surface change than this milestone's scope, and
+>   nothing in the acceptance list names a HUD number for it.
+> - `tools/preview.ps1 -Spell ashen_reckoning` is refused outright:
+>   `Scripts/Core/PreviewFight.cs` allows only eight `SkillEffect`s and
+>   `Reclaim` is not one of them (the same shape Gilded Aegis/`Ward` hit in
+>   milestone A). Not staged with `screenshot.ps1 -Runtime` either, for the
+>   same reason milestone A gave for a harder case: building a poisoned
+>   target through that harness is out of this pass's scope. Crownfall and
+>   Blackglass Spear previewed cleanly; see the report for what their impact
+>   frames show.
+>
+> **Gate.** `run_tests_parallel.ps1 -BuildContent -BuildScenes`: EditMode
+> 4047/4050 (0 failed, 3 skipped), PlayMode 1276/1328 (0 failed, 52 skipped).
+> The four previously-stale-scene failures
+> (`FightSubmenuAffordabilityTests` x2, `ScreenWiringTests`,
+> `ShopGamepadNavigationTests`) are gone. `dotnet test tools/domain-tests`:
+> 4027/4030 (3 pre-existing skips), 0 failed.
+>
+> **Measured values.** Section 5's own subsection, below.
+
 **Scope.** `StatusEffects.TrySpend` (1.8); the detonation premium parameter and
 split (1.6, 1.7); health-cost validation and payment (1.2); the
 `ResolveDamageInstances` `ignoresDefense` repair (1.3); Crownfall, Ashen
