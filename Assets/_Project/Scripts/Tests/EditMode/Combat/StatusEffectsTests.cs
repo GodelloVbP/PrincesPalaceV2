@@ -102,6 +102,51 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // THE THIRD TABLE (milestone D). A content row that names a status is
+        // required to author a magnitude for it -- unless it has none, in
+        // which case it is required NOT to. A member with no answer here would
+        // throw the moment anybody authored it.
+        [Test]
+        public void EveryStatusTypeAnswersCarriesMagnitude()
+        {
+            var all = (StatusEffectType[])System.Enum.GetValues(typeof(StatusEffectType));
+            Assert.GreaterOrEqual(all.Length, 12, "the sweep found fewer members than this game ships");
+
+            foreach (var type in all)
+            {
+                Assert.DoesNotThrow(() => StatusEffects.CarriesMagnitude(type),
+                    $"{type} does not say whether it has a magnitude an author could write");
+            }
+        }
+
+        // The judgement itself, written down. NOT the same line StackPolicyOf
+        // draws: Empowered and Feared both refresh rather than stacking and
+        // both carry a real number, so a test that asserted the two tables
+        // agreed would be asserting a coincidence.
+        [Test]
+        public void TheGatesCarryNoMagnitudeAndTheQuantitiesDo()
+        {
+            foreach (var gate in new[]
+                     {
+                         StatusEffectType.Stun, StatusEffectType.Provoked,
+                         StatusEffectType.Rooted, StatusEffectType.Marked,
+                     })
+            {
+                Assert.IsFalse(StatusEffects.CarriesMagnitude(gate), $"{gate} is a gate, not a quantity");
+            }
+
+            foreach (var quantity in new[]
+                     {
+                         StatusEffectType.Poison, StatusEffectType.Regen, StatusEffectType.Protect,
+                         StatusEffectType.Vulnerable, StatusEffectType.Chilled, StatusEffectType.Shielded,
+                         StatusEffectType.Empowered, StatusEffectType.Feared,
+                     })
+            {
+                Assert.IsTrue(StatusEffects.CarriesMagnitude(quantity),
+                    $"{quantity} carries a number something reads off the entry");
+            }
+        }
+
         // The families themselves, as a literal table. DurationClock is a
         // judgement about each status and this is where that judgement is
         // written down in a form that fails when somebody moves a member.

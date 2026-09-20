@@ -446,6 +446,25 @@ namespace PrincesPalace.Domain.Combat.Session
                 return false;
             }
 
+            // A PHYSICAL MOVE THE ACTOR MAY NOT MAKE (plan 1.10, milestone D).
+            //
+            // SECOND, AND THE POSITION IS THE PRECEDENCE RULE. It sits after
+            // the cooldown -- still the cheapest, still board-independent --
+            // and BEFORE every question about the target, so an actor whose
+            // only remaining option is a charge it cannot make reads as "no
+            // legal action" rather than "no target". Getting that order wrong
+            // would tell a shackled player their target was wrong.
+            //
+            // THE SAME PREDICATE THE MENU GREYED THE ROW WITH, so a row that
+            // looked pressable and a cast that spends nothing cannot come
+            // apart, and the sentence the player reads is the same one either
+            // way.
+            if (!CombatActions.IsLegalFor(actor, skill, out string restricted))
+            {
+                refusal = restricted;
+                return false;
+            }
+
             // REQUIRES-STATUS (plan 1.1/2.5): a board-state refusal about the
             // TARGET, the exact shape "Shatter with no wards" already is --
             // conditional on something the player can misread, and refused

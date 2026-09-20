@@ -510,7 +510,7 @@ public static class ContentBuilder
 
         return Build<RawSkillEntry, ResolvedSkill, SkillDefinition>(
             "BuildSkills", "Assets/_Project/ContentData/skills.json", SkillsPath, "skills",
-            json => JsonUtility.FromJson<RawSkillFile>(json).skills,
+            ParseSkillsWithPhysicalMoveStamped,
             Resolve,
 
             // ONE ASSIGNMENT, not thirty-four. The asset stores the resolved
@@ -519,6 +519,77 @@ public static class ContentBuilder
             // `bookOnly`/`bookTier` on the way back out. See SkillDefinition.
             (asset, skill) => asset.SetData(skill),
             skill => skill.Id);
+    }
+
+    // THE ONE PARSE OF skills.json, and the one place that can tell an
+    // omitted `physicalMove` from an authored `false` (plan D7).
+    //
+    // WHY A SECOND DESERIALISATION RATHER THAN A SCANNER. JsonUtility
+    // overwrites only the fields a row actually contains and leaves the C#
+    // initialiser standing otherwise -- which is the whole sentinel convention
+    // RawSkillEntry's own header describes, and the reason `-1` works for an
+    // int. A bool has no spare value to reserve, so the sentinel is supplied
+    // from OUTSIDE the type: parse the same text a second time into a probe
+    // whose default is the OPPOSITE, and the two parses agree on exactly the
+    // rows that stated a value. Nothing hand-parses JSON, and the answer comes
+    // from the same deserialiser production uses, so it cannot disagree with
+    // it about what a row says.
+    //
+    // THE VACUITY GUARD IS THE SHAPE CHECK. A probe that came back a different
+    // length, or out of order, would stamp every row's answer onto its
+    // neighbour and could quietly mark the whole catalogue "stated" -- so a
+    // mismatch refuses the build rather than stamping anything. The count of
+    // damage rows itself is pinned in PhysicalMoveAuditTests, where a literal
+    // belongs (docs/CODE_STANDARDS.md 8).
+    private static RawSkillEntry[] ParseSkillsWithPhysicalMoveStamped(string json)
+    {
+        var entries = JsonUtility.FromJson<RawSkillFile>(json)?.skills ?? System.Array.Empty<RawSkillEntry>();
+        var probe = JsonUtility.FromJson<PhysicalMoveProbeFile>(json)?.skills
+                    ?? System.Array.Empty<PhysicalMoveProbe>();
+
+        if (probe.Length != entries.Length)
+        {
+            Debug.LogError("BuildSkills: the physicalMove probe read " + probe.Length +
+                           " rows where the catalogue has " + entries.Length +
+                           " -- the omitted/authored stamp would be meaningless, so nothing was parsed.");
+            return System.Array.Empty<RawSkillEntry>();
+        }
+
+        for (int i = 0; i < entries.Length; i++)
+        {
+            if (entries[i] == null) continue;
+
+            if (probe[i] == null || probe[i].id != entries[i].id)
+            {
+                Debug.LogError("BuildSkills: the physicalMove probe's row " + i + " is '" +
+                               (probe[i]?.id ?? "(null)") + "' where the catalogue's is '" + entries[i].id +
+                               "' -- nothing was parsed.");
+                return System.Array.Empty<RawSkillEntry>();
+            }
+
+            // They agree only when the row said something. Unstated leaves the
+            // real parse at its `false` and the probe at its `true`.
+            entries[i].physicalMoveOmitted = entries[i].physicalMove != probe[i].physicalMove;
+        }
+
+        return entries;
+    }
+
+    [System.Serializable]
+    private class PhysicalMoveProbeFile
+    {
+        public PhysicalMoveProbe[] skills = System.Array.Empty<PhysicalMoveProbe>();
+    }
+
+    [System.Serializable]
+    private class PhysicalMoveProbe
+    {
+        public string id = "";
+
+        // TRUE, which is the whole trick: RawSkillEntry's own field defaults
+        // false, so a row that authored neither value leaves the two parses
+        // disagreeing and that disagreement IS "the author said nothing".
+        public bool physicalMove = true;
     }
 
     // Authored outside this file (Assets/_Project/ContentData/items.json),

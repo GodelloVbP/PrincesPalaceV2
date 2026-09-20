@@ -211,8 +211,15 @@ namespace PrincesPalace.Domain.Content
             }
         }
 
-        private static IEnumerable<FieldInfo> InstanceFields(Type t) =>
-            t.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        // [NonSerialized] IS NOT CONTENT, so it is not in the schema and does
+        // not need a [ContentDoc]. A field the serialiser never fills cannot
+        // be written in a JSON file, so documenting it would describe a knob
+        // an author does not have -- RawSkillEntry.physicalMoveOmitted is a
+        // parse-time stamp, not a row's field. The test that enforces the
+        // [ContentDoc] rule reads this same helper, so the two cannot drift.
+        public static IEnumerable<FieldInfo> InstanceFields(Type t) =>
+            t.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+             .Where(f => !f.IsNotSerialized);
 
         private static Type ElementType(Type t) => t.IsArray ? t.GetElementType() : t;
 

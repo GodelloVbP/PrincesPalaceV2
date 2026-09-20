@@ -37,9 +37,28 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (statusMagnitude <= 0)
+            // MAGNITUDE IS REQUIRED ONLY WHERE THERE IS ONE TO GIVE.
+            //
+            // The rule used to be "required and positive, always", and for a
+            // gate like Stun or Rooted there is no honest number to write --
+            // `grapple` satisfied it with a `statusMagnitude: 1` that nothing
+            // reads, and Velvet Shackles' Rooted would have needed the same
+            // lie. StatusEffects.CarriesMagnitude is the one table that says
+            // which statuses have a number of their own; both halves below
+            // read it, so an author cannot be made to invent a magnitude and
+            // cannot quietly drop a real one.
+            if (StatusEffects.CarriesMagnitude(parsed))
             {
-                error = $"{label}: appliesStatus is set to {parsed}, so statusMagnitude is required and must be positive.";
+                if (statusMagnitude <= 0)
+                {
+                    error = $"{label}: appliesStatus is set to {parsed}, so statusMagnitude is required and must be positive.";
+                    return false;
+                }
+            }
+            else if (statusMagnitude > 0)
+            {
+                error = $"{label}: {parsed} carries no magnitude of its own -- it is a gate, not a quantity -- " +
+                        $"so statusMagnitude {statusMagnitude} would be read by nothing. Author statusDuration alone.";
                 return false;
             }
 

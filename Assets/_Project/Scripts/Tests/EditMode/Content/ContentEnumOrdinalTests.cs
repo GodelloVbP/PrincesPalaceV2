@@ -48,6 +48,12 @@ namespace PrincesPalace.Domain.Tests
             // Milestone C, appended together after Reclaim.
             { "Hasten", 16 },
             { "SwapAllies", 17 },
+            // Milestone D. Plan D10 listed Afflict FIRST of the five spell-
+            // expansion members; the three above landed in milestones B and C
+            // while it waited for D, so it appends behind them rather than
+            // renumbering them. "Never insert" is the rule the generated
+            // assets depend on; the plan's ordering was not.
+            { "Afflict", 18 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>

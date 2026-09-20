@@ -691,6 +691,147 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.IsTrue(resolved[0].HasPoolTiers);
         }
+
+        // ---- the physicalMove lint (plan D7, milestone D) ------------------
+        //
+        // physicalMoveOmitted is a PARSE-TIME STAMP, not an authored field: it
+        // defaults false ("stated") so an entry built in code is never accused
+        // of omitting something it had no file to omit it from, and only
+        // ContentBuilder's probe parse of the real skills.json ever sets it.
+        // These tests set it by hand, which is exactly what that parse does.
+
+        [Test]
+        public void ADamageRowThatOmitsPhysicalMove_IsRefusedByName()
+        {
+            var entry = Minimal("silent_swing");
+            entry.effect = "DamageSingle";
+            entry.physicalMoveOmitted = true;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "an unclassified damage row must not build");
+            Assert.IsTrue(errors.Any(e => e.Contains("silent_swing") && e.Contains("physicalMove")),
+                "and the refusal must name the row and the field: " + string.Join("; ", errors));
+        }
+
+        [Test]
+        public void AnAoeRowThatOmitsPhysicalMove_IsRefusedToo()
+        {
+            var entry = Minimal("silent_sweep");
+            entry.effect = "DamageAll";
+            entry.physicalMoveOmitted = true;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "the rule is asked through SkillEffects.IsDamagePipeline, not of one effect");
+        }
+
+        // THE VACUITY GUARD, from the other side: the lint must not fire on a
+        // row it has no business asking. A ward, a heal, a shout and a summon
+        // are not moves, and making forty rows restate that would turn a
+        // decision into noise.
+        [Test]
+        public void ANonDamageRowThatOmitsPhysicalMove_IsAcceptedUnclassified()
+        {
+            var ward = Minimal("quiet_ward");
+            ward.effect = "Ward";
+            ward.flatAmount = 20;
+            ward.physicalMoveOmitted = true;
+
+            var heal = Minimal("quiet_heal");
+            heal.effect = "HealSelf";
+            heal.flatAmount = 20;
+            heal.physicalMoveOmitted = true;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { ward, heal }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsFalse(resolved[0].PhysicalMove, "and an unstated classification is 'not a move'");
+            Assert.IsFalse(resolved[1].PhysicalMove);
+        }
+
+        [Test]
+        public void AStatedClassificationReachesTheResolvedSkill()
+        {
+            var swing = Minimal("stated_swing");
+            swing.effect = "DamageSingle";
+            swing.physicalMove = true;
+
+            var cast = Minimal("stated_cast");
+            cast.effect = "DamageSingle";
+            cast.physicalMove = false;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { swing, cast }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsTrue(resolved[0].PhysicalMove);
+            Assert.IsFalse(resolved[1].PhysicalMove);
+        }
+
+        // ---- Afflict, and the magnitude table it needed --------------------
+
+        [Test]
+        public void AnAfflictWithNoStatus_IsRefused()
+        {
+            var entry = Minimal("empty_afflict");
+            entry.effect = "Afflict";
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "the status IS the spell");
+            Assert.IsTrue(errors.Any(e => e.Contains("empty_afflict") && e.Contains("appliesStatus")),
+                string.Join("; ", errors));
+        }
+
+        // A GATE NEEDS NO MAGNITUDE, and until milestone D the resolver
+        // insisted on one -- `grapple` satisfied it with a `statusMagnitude: 1`
+        // that nothing reads. StatusEffects.CarriesMagnitude is the one table
+        // that decides, and both halves of the rule read it.
+        [Test]
+        public void AStatusThatCarriesNoMagnitude_NeedsNone()
+        {
+            var entry = Minimal("bind");
+            entry.effect = "Afflict";
+            entry.appliesStatus = "Rooted";
+            entry.statusDuration = 2;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(StatusEffectType.Rooted, resolved[0].Status);
+            Assert.AreEqual(2, resolved[0].StatusDuration);
+        }
+
+        [Test]
+        public void AMagnitudeAuthoredOnAGate_IsRefusedRatherThanIgnored()
+        {
+            var entry = Minimal("bind_hard");
+            entry.effect = "Afflict";
+            entry.appliesStatus = "Rooted";
+            entry.statusMagnitude = 40;
+            entry.statusDuration = 2;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "a number nothing reads is an author believing they tuned something");
+            Assert.IsTrue(errors.Any(e => e.Contains("bind_hard") && e.Contains("magnitude")),
+                string.Join("; ", errors));
+        }
+
+        [Test]
+        public void AStatusThatDoesCarryAMagnitude_StillRequiresOne()
+        {
+            var entry = Minimal("chill");
+            entry.effect = "DamageSingle";
+            entry.physicalMove = false;
+            entry.appliesStatus = "Chilled";
+            entry.statusDuration = 2;
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok, "Chilled's percentage is a real quantity and may not be dropped");
+            Assert.IsTrue(errors.Any(e => e.Contains("statusMagnitude")), string.Join("; ", errors));
+        }
     }
 
     public class SkillResolutionTests
@@ -977,6 +1118,5 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StageApproach.Hold, resolved[0].Approach);
             Assert.AreEqual(StageApproach.Hold, resolved[1].Approach);
         }
-
     }
 }

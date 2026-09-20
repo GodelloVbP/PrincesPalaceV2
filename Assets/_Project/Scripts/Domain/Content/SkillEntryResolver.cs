@@ -742,6 +742,23 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // AN AFFLICT IS ITS STATUS AND NOTHING ELSE (plan 2.10, milestone
+            // D), so a row that authors none is a cast that spends mana, plays
+            // a beat and changes nothing -- the same shape the Hasten refusal
+            // just above catches. Same reasoning as "a skill must cost
+            // something": the author believes they wrote a spell.
+            //
+            // THE DURATION IS NOT CHECKED HERE. StatusEffects.Apply floors
+            // turns at 1 (StatusEffect.cs), so an unauthored duration is a
+            // one-turn affliction rather than a no-op, and refusing it would
+            // be inventing a content rule the engine does not have.
+            if (effect == SkillEffect.Afflict && !appliesStatus.HasValue)
+            {
+                error = $"{label}: an Afflict skill needs appliesStatus — the status IS the spell, " +
+                        "and a row without one casts, pays and does nothing.";
+                return false;
+            }
+
             // Same "this field has no meaning on that effect" rule
             // ignoresDefense and queuePushSlots already follow. A heal or an
             // AOE has no single front-ranked target for the rule to ask
@@ -752,6 +769,36 @@ namespace PrincesPalace.Domain.Content
             if (raw.meleeReach && targeting != SkillTargeting.SingleEnemy)
             {
                 error = $"{label}: meleeReach only means anything on a SingleEnemy skill, not {targeting}.";
+                return false;
+            }
+
+            // A DAMAGE ROW MUST SAY WHETHER IT IS A PHYSICAL MOVE (plan D7).
+            //
+            // THE ONE FIELD WHOSE DEFAULT IS REFUSED RATHER THAN TAKEN, and
+            // deliberately so: every other bool here means something harmless
+            // when omitted, while an unstated physicalMove silently classifies
+            // a new sword-swing as a cast, and the only symptom is a shackled
+            // monster quietly swinging anyway. There is nothing to derive it
+            // from -- not the element, not the approach (boulder_slam, shear
+            // and battering_ram author none and are all physical) -- so the
+            // author is made to answer.
+            //
+            // DAMAGE ROWS ONLY, because they are where the question is live.
+            // A ward, a heal, a shout or a summon is not a move, and making
+            // forty rows restate that would make the required answer noise
+            // rather than a decision. A non-damage row may still author
+            // physicalMove (nothing here refuses it) -- the classification is
+            // about whether the actor moves to act, not about damage.
+            //
+            // physicalMoveOmitted is stamped by whoever parsed the FILE; an
+            // entry built in code reads as "stated" and is never accused. See
+            // RawSkillEntry.physicalMoveOmitted.
+            if (raw.physicalMoveOmitted && SkillEffects.IsDamagePipeline(effect))
+            {
+                error = $"{label}: a {effect} row must state physicalMove explicitly — true for a swing, " +
+                        "charge, lunge or thrown body blow, false for a cast. It cannot be derived from the " +
+                        "damage element (a flaming sword strike is physical; a rock thrown by magic need not be), " +
+                        "and Rooted refuses exactly the rows that say true.";
                 return false;
             }
 
@@ -823,7 +870,7 @@ namespace PrincesPalace.Domain.Content
                 raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "",
                 raw.healthCostPercent, requiresStatus, consumesStatus, instancesIfConsumed,
                 raw.detonationPercent, detonationSplit,
-                raw.advanceSlots);
+                raw.advanceSlots, raw.physicalMove);
             error = null;
             return true;
         }

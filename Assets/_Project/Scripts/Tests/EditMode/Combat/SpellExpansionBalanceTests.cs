@@ -592,5 +592,155 @@ namespace PrincesPalace.Domain.Tests
                 "and neither does a pull to the front -- this is the scheduler, not the spell");
         }
 
+        // ---- MILESTONE D: enemy actions DENIED by Velvet Shackles -------------
+        //
+        // A DIFFERENT METRIC FROM MILESTONE C'S, and the difference is the
+        // point. A delay or a Chill changes WHEN an enemy acts, so it is
+        // measured against a forecast window. A root changes WHETHER it acts,
+        // so it is measured by running its turns and counting the ones that
+        // resolved into nothing. Section 5 calls this "enemy actions allowed
+        // during a control rotation -- the metric the control loop lives or
+        // dies on"; denied is that number read from the other end.
+        //
+        // THE KITS BELOW MIRROR enemies.json ROW FOR ROW in the two things
+        // this measures -- which abilities are in the draw, at which weights,
+        // and whether each is a physical move -- and nothing else. Numbers and
+        // reaches are left out on purpose: the hero deals 1 into 100000 health,
+        // because a fight that ends mid-window measures the window's length
+        // rather than the spell. `bog_mud_burst`'s authored reachSlots [2,3] is
+        // one of the omissions: against a one-hero party it would zero-weight
+        // the cast for having nothing in reach, which is the front-rank rule
+        // being measured instead of the root.
+        private const int ShackleWindowTurns = 6;
+
+        private static (int acted, int denied) EnemyTurns(
+            int enemySpeed, float plainSwingWeight, IReadOnlyList<ResolvedSkill> abilities, bool shackled)
+        {
+            var hero = new CombatantState("Hero", true, 100000, 50, 1, 10);
+            var foe = new CombatantState("Foe", false, 100000, 10, 5, enemySpeed);
+
+            var pool = new List<EnemyAbility>();
+            if (plainSwingWeight > 0f)
+            {
+                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, plainSwingWeight));
+            }
+            foreach (var ability in abilities) pool.Add(EnemyAbility.Of(ability, 2f));
+
+            var source = new ResolvedEnemy("foe", "Foe", new StatBlock(), 0, 0, false,
+                DamageType.Physical, DamageType.Physical, 0);
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { null }, new List<EnemyKit> { new EnemyKit(source, false, pool) },
+                new SeededRandom(101)) { DamageVarianceRange = 0f };
+
+            // BEFORE Begin(), so the very first telegraph is already drawn
+            // against a shackled pool -- applying it later would measure one
+            // stale intent as well as the root.
+            if (shackled) StatusEffects.Apply(foe.Statuses, StatusEffectType.Rooted, 0, 99);
+            session.Begin();
+
+            int acted = 0;
+            int denied = 0;
+            for (int guard = 0; guard < 200 && acted + denied < ShackleWindowTurns; guard++)
+            {
+                session.ExecuteAttack(foe);
+                foreach (var beat in session.DrainBeats())
+                {
+                    if (beat.Actor == null || beat.Actor.IsPlayerSide) continue;
+                    if (beat.Messages.Any(m => m.Contains("rooted"))) denied++;
+                    else acted++;
+                }
+            }
+
+            return (acted, denied);
+        }
+
+        // MEASURED 2026-09-20. Enemy turns that resolved into an action, out of
+        // six, with and without Rooted:
+        //
+        //   enemy          kit                                no root   shackled
+        //   crystal_bat    plain swing only                    6 / 6     0 / 6
+        //   golem          boulder_slam only, attackWeight 0   6 / 6     0 / 6
+        //   bog_witch      swing (w3) + bog_mud_burst (w2)     6 / 6     6 / 6
+        //
+        // FINDING, REPORTED RATHER THAN TUNED: speed is not the axis, kit
+        // composition is. Velvet Shackles denies a whole turn only from an
+        // enemy with no non-physical option -- eleven of the sixteen rows in
+        // enemies.json (every one with no abilities list at all) plus golem,
+        // whose single ability is physical and whose attackWeight is 0.
+        // Against bog_witch it denies nothing: the witch simply casts every
+        // turn instead of mixing in swings, so what the 9 mana buys there is a
+        // DOWNGRADE of the turn rather than the loss of it. The same holds for
+        // forest_warden, which keeps `roar`, and for treant, which keeps
+        // `spore_cloud`; beetle keeps `shell_up`, which is a heal and so the
+        // one case where the substitute may serve the monster better than what
+        // it replaced.
+        [Test]
+        public void VelvetShacklesDeniesAWholeTurnOnlyFromAnEnemyWithNoCast()
+        {
+            var boulderSlam = new ResolvedSkill("boulder_slam", "Boulder Slam", "", "golem", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 10, false,
+                null, SpellPresentation.None, 0, physicalMove: true);
+            var bogMudBurst = new ResolvedSkill("bog_mud_burst", "Bog Mud Burst", "", "bog_witch", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 10, false,
+                null, SpellPresentation.None, 0, physicalMove: false);
+
+            var none = new List<ResolvedSkill>();
+
+            Assert.AreEqual((6, 0), EnemyTurns(15, 1f, none, shackled: false),
+                "crystal_bat baseline: every turn is a swing");
+            Assert.AreEqual((0, 6), EnemyTurns(15, 1f, none, shackled: true),
+                "and a swing is all it has, so a root takes every one of them");
+
+            Assert.AreEqual((6, 0), EnemyTurns(3, 0f, new List<ResolvedSkill> { boulderSlam }, shackled: false),
+                "golem baseline: attackWeight 0, so the slam is its whole turn");
+            Assert.AreEqual((0, 6), EnemyTurns(3, 0f, new List<ResolvedSkill> { boulderSlam }, shackled: true),
+                "a thrown boulder is a physical move, so the golem has nothing left at all");
+
+            Assert.AreEqual((6, 0), EnemyTurns(8, 3f, new List<ResolvedSkill> { bogMudBurst }, shackled: false),
+                "bog_witch baseline");
+            Assert.AreEqual((6, 0), EnemyTurns(8, 3f, new List<ResolvedSkill> { bogMudBurst }, shackled: true),
+                "a caster loses its swing and casts instead -- nine mana bought a downgrade, not a turn");
+        }
+
+        // THE SPELL AS AUTHORED buys exactly two of those turns, and the
+        // measurement above is per-turn, so the figure for the card is two
+        // actions denied against a physical-only enemy and none against a
+        // caster, for 9 mana.
+        [Test]
+        public void TwoAuthoredTurnsAreTwoDeniedActionsAgainstAPhysicalOnlyEnemy()
+        {
+            // SPEED 9 AGAINST THE HERO'S 10, the one-reply-per-action cadence
+            // RootedStatusTests established. The measurement above varies the
+            // enemy's authored speed because it counts a RATE; this one counts
+            // the two turns the spell actually buys, and a faster enemy would
+            // take both of them inside the player's first action and make the
+            // "and then it is free again" half unreadable.
+            var hero = new CombatantState("Hero", true, 100000, 50, 1, 10);
+            var foe = new CombatantState("Foe", false, 100000, 10, 5, 9);
+            var source = new ResolvedEnemy("foe", "Foe", new StatBlock(), 0, 0, false,
+                DamageType.Physical, DamageType.Physical, 0);
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { null }, new List<EnemyKit> { new EnemyKit(source, false) },
+                new SeededRandom(103)) { DamageVarianceRange = 0f };
+            session.Begin();
+            StatusEffects.Apply(foe.Statuses, StatusEffectType.Rooted, 0, 2);
+
+            int acted = 0;
+            int denied = 0;
+            for (int turn = 0; turn < 4; turn++)
+            {
+                session.ExecuteAttack(foe);
+                foreach (var beat in session.DrainBeats())
+                {
+                    if (beat.Actor == null || beat.Actor.IsPlayerSide) continue;
+                    if (beat.Messages.Any(m => m.Contains("rooted"))) denied++;
+                    else acted++;
+                }
+            }
+
+            Assert.AreEqual(2, denied, "two authored turns, two actions denied");
+            Assert.AreEqual(2, acted, "and the two turns after them are the enemy's own again");
+        }
+
     }
 }

@@ -151,6 +151,61 @@ namespace PrincesPalace.Domain.Combat
             }
         }
 
+        // DOES THIS STATUS HAVE A MAGNITUDE OF ITS OWN? The third table beside
+        // DurationClock and StackPolicyOf, and the one an AUTHOR has to know
+        // about: a content row that names a status is required to supply a
+        // positive magnitude, and for a gate rather than a quantity there is
+        // no honest number to supply.
+        //
+        // IT WAS NOT A TABLE UNTIL MILESTONE D, and the cost was visible in
+        // content before it was noticed: `grapple` authored
+        // `statusMagnitude: 1` for a Stun, a number nothing reads, purely to
+        // satisfy the required-and-positive rule. Velvet Shackles' Rooted made
+        // the second one, which is the project's own two-use bar for turning a
+        // workaround into a rule (docs/CODE_STANDARDS.md 10).
+        //
+        // NOT THE SAME LINE StackPolicyOf DRAWS, although it nearly is.
+        // Empowered refreshes rather than stacking and yet carries a real
+        // magnitude (CombatMath reads it off the entry), and Feared refreshes
+        // and carries Fear.VulnerablePercent. "Two of it means nothing" and
+        // "it has no number at all" are different claims, so they are
+        // different tables rather than one read twice.
+        //
+        // THROWS on an unhandled member, like DurationClock: a silent default
+        // here would either force a meaningless number onto an author or let a
+        // real magnitude be dropped, and both look like nothing.
+        // StatusEffectsTests.EveryStatusTypeAnswersCarriesMagnitude walks
+        // Enum.GetValues so a new member fails a test rather than a fight.
+        public static bool CarriesMagnitude(StatusEffectType type)
+        {
+            switch (type)
+            {
+                // A quantity or a percentage, read off the entry.
+                case StatusEffectType.Poison:
+                case StatusEffectType.Regen:
+                case StatusEffectType.Protect:
+                case StatusEffectType.Vulnerable:
+                case StatusEffectType.Chilled:
+                case StatusEffectType.Shielded:
+                case StatusEffectType.Empowered:
+                case StatusEffectType.Feared:
+                    return true;
+
+                // A gate or a token. It is on or it is not, and the only
+                // number it has is how long it lasts.
+                case StatusEffectType.Stun:
+                case StatusEffectType.Provoked:
+                case StatusEffectType.Rooted:
+                case StatusEffectType.Marked:
+                    return false;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type,
+                        "StatusEffects.CarriesMagnitude has no answer for this status -- an author would "
+                        + "either be made to invent a number it does not use or allowed to drop one it does.");
+            }
+        }
+
         // EVERY LIVE INSTANCE of one type on one combatant, in the order they
         // were applied. ONE WALK, so a magnitude reader, the HUD badge and a
         // consumer cannot disagree about what is on the board -- the same

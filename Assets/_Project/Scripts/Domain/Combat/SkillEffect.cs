@@ -162,6 +162,30 @@ namespace PrincesPalace.Domain.Combat
         //
         // APPENDED, never inserted -- see this enum's own header.
         SwapAllies,
+
+        // ONE ENEMY, THIS SKILL'S AUTHORED STATUS, NO DAMAGE -- Velvet
+        // Shackles (plan D10, 2.10, milestone D), with Censer of Embers and
+        // Thorn Tithe joining it in milestone E.
+        //
+        // A MEMBER RATHER THAN A DamageSingle THAT HAPPENS TO DEAL NOTHING,
+        // and the difference is visible to the player. A damage cast enters
+        // AfterDefences and can therefore be DODGED; an Afflict has no damage
+        // instance, never enters it, and so lands or is refused -- a two-turn
+        // root that silently misses a fifth of the time is a different spell
+        // from the one the card describes. It is also the difference between
+        // "0 damage" appearing over the target and nothing appearing at all.
+        //
+        // WHAT IT LANDS is entirely the row's appliesStatus / statusMagnitude
+        // / statusDuration, through the ApplyStatusTo seam (plan D6), so a
+        // second afflicting spell is a content row and no code.
+        //
+        // APPENDED, never inserted -- see this enum's own header. Plan D10
+        // listed it FIRST of the five, before Reclaim; Reclaim, Hasten and
+        // SwapAllies landed in milestones B and C while this one waited for D,
+        // so it appends behind them. The plan's ORDER was a convenience; its
+        // rule ("nothing is inserted or reordered") is the part that protects
+        // the generated assets, and that is what is kept.
+        Afflict,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

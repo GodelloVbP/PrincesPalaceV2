@@ -118,6 +118,14 @@ namespace PrincesPalace.Domain.Bot
         // 0 always exists and is always melee-reachable (Provoke aside, and
         // Provoke is player-side -- a provoked ENEMY is still reachable, it
         // is only the enemy's own choice of target that a taunt narrows).
+        // MILESTONE D PUT ONE CONDITION ON IT, and paid for it elsewhere. A
+        // rooted actor may not swing at all (plan 1.10), so Attack is no
+        // longer unconditional either -- but a rooted actor with nothing left
+        // never reaches a policy: FightSession.ResolveSkippedTurn forfeits its
+        // turn inside AutoResolveEnemyTurns, before control is handed back, so
+        // this list is still never asked for one. The guarantee is now
+        // "Attack, or the turn was already skipped".
+        //
         // See FightInvariants' "no legal action" check, which is what would
         // catch this claim going wrong.
         public static IReadOnlyList<FightAction> LegalActions(
@@ -133,9 +141,18 @@ namespace PrincesPalace.Domain.Bot
             // on a target CanReachEnemy then refuses, or deny a ranged skill a
             // target the real menu allows. Same primitive
             // FightController.Input's own click handler gates on.
-            foreach (var target in session.EligibleTargets(actor, Reach.Melee))
+            // AND THE SWING HAS TO BE LEGAL FOR THE ACTOR, not merely aimed at
+            // somebody reachable (plan 1.10, milestone D). Asked ONCE outside
+            // the loop: the answer is about the actor's statuses and does not
+            // change per target, and asking it per target would read as though
+            // it might.
+            bool canSwing = CombatActions.PlainAttackIsLegalFor(actor, out _);
+            if (canSwing)
             {
-                actions.Add(new FightAction(FightActionKind.Attack, target));
+                foreach (var target in session.EligibleTargets(actor, Reach.Melee))
+                {
+                    actions.Add(new FightAction(FightActionKind.Attack, target));
+                }
             }
 
             foreach (var option in session.SkillOptionsFor(actor))

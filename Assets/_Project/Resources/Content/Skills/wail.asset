@@ -52,7 +52,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 21
+    SortOrder: 22
     Status: 2
     HasStatus: 1
     StatusMagnitude: 50
@@ -118,6 +118,7 @@ MonoBehaviour:
     Reach:
       Kind: 0
       RankMask: 0
+    PhysicalMove: 0
     BookOnly: 0
     BookTier: 0
     Elements: []

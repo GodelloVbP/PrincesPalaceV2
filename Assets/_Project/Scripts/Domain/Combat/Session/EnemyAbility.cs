@@ -73,6 +73,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // by its power rather than by its label, because a label is content and
         // this is a rule.
         public bool IsPlainSwing => !HasSkill && Power == 1f;
+
+        // WHETHER ROOTED FORBIDS THIS ENTRY (plan 1.10). An authored ability
+        // answers from its own content row; a legacy attack is a swing and is
+        // physical by construction.
+        //
+        // IsLegacyAttack, NOT IsPlainSwing, and the widening is deliberate. A
+        // legacy scaled attack is the same body doing the same thing harder --
+        // there is no reading on which a root stops the swing but not the
+        // shoulder-charge version of it. Nothing in enemies.json authors one
+        // today (every monster either carries an abilities list or nothing at
+        // all), so this changes no live fight; it stops the rule being wrong
+        // the first time one is authored.
+        public bool IsPhysicalMove => HasSkill
+            ? CombatActions.IsPhysicalMove(Skill)
+            : CombatActions.PlainAttackIsPhysicalMove;
     }
 
     public static class EnemyAbilityDraw

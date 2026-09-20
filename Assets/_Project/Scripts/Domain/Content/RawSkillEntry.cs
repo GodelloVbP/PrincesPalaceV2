@@ -372,6 +372,43 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Whether the front-rank melee-reach rule applies to this SingleEnemy skill.")]
         public bool meleeReach;
 
+        // DOES THE ACTOR MOVE ITS BODY TO DO THIS? (plan D7/1.10.) A swing, a
+        // charge, a lunge, a thrown boulder: true. A cast, a shout, a cloud, a
+        // transformation: false. It is what Rooted forbids, so it decides
+        // whether a shackled actor may take this action at all.
+        //
+        // INDEPENDENT OF THE DAMAGE ELEMENT, which is the owner's own rule and
+        // the reason this is authored rather than derived. A flaming sword
+        // strike is physical and a rock hurled by magic need not be, so neither
+        // damageType nor damageInstances can answer it. Deriving it from
+        // `approach` was the other candidate and is wrong on three of the nine
+        // authored enemy abilities on day one -- boulder_slam, shear and
+        // battering_ram author no approach and are all plainly physical.
+        //
+        // DEFAULTS FALSE, and for a damage skill that default is REFUSED
+        // rather than taken: see physicalMoveOmitted just below and
+        // SkillEntryResolver's own check. A ward or a heal is obviously not a
+        // move and authors nothing.
+        [ContentDoc("Whether this action is a physical move (a swing, charge or lunge) that Rooted forbids; required on every damage row.")]
+        public bool physicalMove;
+
+        // NOT CONTENT: whether the author actually WROTE physicalMove on this
+        // row, stamped in by whoever parsed the file.
+        //
+        // A bool cannot carry the -1 / "" sentinel the rest of this class uses
+        // to tell "the author omitted this" from "the author wrote the default"
+        // -- false is both. So the one reader that holds the authored TEXT
+        // (ContentBuilder, through a probe parse whose default is the opposite)
+        // answers the question there and stamps it here, and the resolver keeps
+        // the refusal beside every other skill refusal rather than growing a
+        // second place where content is judged.
+        //
+        // DEFAULTS FALSE, meaning "stated", so an entry built in code -- every
+        // resolver test, every fixture -- is never accused of omitting a field
+        // it had no file to omit it from. Only a real parse can set it.
+        [NonSerialized]
+        public bool physicalMoveOmitted;
+
         // WHICH POSITIONS IN THE OPPOSING LINE THIS SKILL CAN BE AIMED AT,
         // COUNTED FROM THE FRONT AND 1-BASED. [2, 3] is "the back two only"
         // — a lobbed thing that cannot be aimed at what is right in front of

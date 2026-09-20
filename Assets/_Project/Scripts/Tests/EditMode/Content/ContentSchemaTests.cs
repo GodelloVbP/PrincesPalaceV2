@@ -48,7 +48,12 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (Type t in RawEntryTypes())
             {
-                foreach (FieldInfo f in t.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                // THROUGH ContentSchema's OWN WALK, not a second copy of it.
+                // The rule is "every field the schema describes is
+                // documented", so the set it describes and the set this
+                // checks have to be one set -- a [NonSerialized] parse-time
+                // stamp is in neither (see ContentSchema.InstanceFields).
+                foreach (FieldInfo f in ContentSchema.InstanceFields(t))
                 {
                     examined++;
                     if (f.GetCustomAttribute<ContentDocAttribute>() == null)

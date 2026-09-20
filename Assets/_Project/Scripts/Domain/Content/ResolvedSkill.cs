@@ -245,6 +245,17 @@ namespace PrincesPalace.Domain.Content
         // older asset reads as unrestricted rather than as nothing.
         public Reach Reach = Reach.Any;
 
+        // WHETHER THIS ACTION IS A PHYSICAL MOVE, and so whether Rooted
+        // forbids it (plan 1.10). Authored per row -- see
+        // RawSkillEntry.physicalMove for why it cannot be derived.
+        //
+        // NOT A REACH AND NOT AN ELEMENT, though it correlates with both.
+        // Reach says where a blow can land; this says whether the actor has to
+        // move its body to throw it, which is a question about the ACTOR and
+        // is why CombatActions asks it of the actor's statuses rather than of
+        // the target's rank.
+        public bool PhysicalMove;
+
         // See RawSkillEntry.bookOnly / bookTier.
         public bool BookOnly;
         public int BookTier;
@@ -472,8 +483,13 @@ namespace PrincesPalace.Domain.Content
             // APPENDED LAST OF ALL AGAIN (milestone C: initiative and
             // formation), same positional-argument reason every block above
             // gives.
-            int advanceSlots = 0)
+            int advanceSlots = 0,
+            // APPENDED LAST OF ALL AGAIN (milestone D: the physical-action
+            // restriction), same positional-argument reason every block above
+            // gives.
+            bool physicalMove = false)
         {
+            PhysicalMove = physicalMove;
             AdvanceSlots = advanceSlots;
             IconPath = iconPath ?? "";
             HealthCostPercent = healthCostPercent;

@@ -146,15 +146,20 @@ namespace PrincesPalace.Domain.Tests
 
             // UNLIKE Stun (ConsumeStun removes it outright, spent on the
             // skip), Rooted decays by TURN COUNT like Chilled/Protect -- and
-            // since plan D1 that count moves at the END of the bearer's turn,
-            // which this fixture does not reach. A 5-turn Rooted reads 5 here:
-            // not gone, and not yet aged, because the turn it is restricting
-            // has not finished.
+            // since plan D1 that count moves at the END of the bearer's turn.
+            // A 5-turn Rooted reads 4 here: the forfeited turn WAS the
+            // monster's turn, and it has ended by the time this line runs.
+            //
+            // IT READ 5 UNTIL MILESTONE D, and that was the bug rather than
+            // the rule. The turn-end clock only ran inside AdvanceAfterAction,
+            // which no monster turn and no skipped turn reaches, so a rooted
+            // monster forfeited, aged nothing, and forfeited again for ever --
+            // a root that fed itself. See FightSession.EndTurnStatusesForCurrent.
             var rooted = monster.Statuses.SingleOrDefault(s => s.Type == StatusEffectType.Rooted);
             Assert.IsNotNull(rooted, "a forfeited turn must not erase the turns of Rooted still owed -- " +
                                       "that would make forfeiting the turn Rooted's OWN escape hatch");
-            Assert.AreEqual(5, rooted.TurnsRemaining,
-                "not consumed like Stun, and not aged by a turn-start tick that no longer owns this clock");
+            Assert.AreEqual(4, rooted.TurnsRemaining,
+                "not consumed outright like Stun, and aged by exactly the one turn that was spent");
         }
 
         [Test]

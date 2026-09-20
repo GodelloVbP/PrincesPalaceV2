@@ -347,9 +347,66 @@ namespace PrincesPalace.Domain.Combat.Session
                     // the exact "legal-looking, actually refused" shape
                     // that stalls a greedy policy without a repeat guard.
                     SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost, s.HealthCostPercent),
-                    CooldownRemaining(actor, s.Id)))
+                    CooldownRemaining(actor, s.Id),
+
+                    // THE PHYSICAL-MOVE RESTRICTION JOINS THE ROW HERE (plan
+                    // 1.10, milestone D), beside affordability and the
+                    // cooldown, for the same reason healthCostPercent did:
+                    // every reader of this list -- the menu, the detail card,
+                    // the bot's legal menu -- otherwise has to remember to ask
+                    // a second question, and the one that forgets offers a
+                    // charge the dispatcher then refuses.
+                    //
+                    // LISTED AND GREYED, NOT DROPPED. It is the character's own
+                    // kit and the restriction is temporary; a list that changes
+                    // length while a status ticks is a list the player has to
+                    // re-read every turn. Same call the row builder's
+                    // `Restricted` flag and CanResolveSkill's own refusal make.
+                    !CombatActions.IsLegalFor(actor, s, out string restriction),
+                    restriction))
                 .Where(o => actor.AbilityScores.Meets(RequirementCurve.Apply(o.Skill.Requirements)))
                 .ToList();
+        }
+
+        // HAS A ROOTED CHARACTER ANY ACTION LEFT AT ALL? The player-side half
+        // of RootedActorHasNoLegalAction (plan 1.10, 2.10).
+        //
+        // ASKED OF THE SAME THREE QUERIES THE MENU AND THE BOT ASK, in the
+        // order the menu offers them: the plain attack, the kit, the two Move
+        // directions. Anything else would be a fourth opinion about what a
+        // character can do, and the failure mode is a turn silently forfeited
+        // while a legal row sat lit on screen.
+        //
+        // READINESS COUNTS, not only legality, and that is the one place this
+        // differs from the enemy arm (monsters pay nothing, so they have no
+        // readiness to ask about). The fallback exists to guarantee a turn can
+        // always END; a legality-only answer would leave a rooted character
+        // whose only legal casts are unaffordable staring at a menu of greyed
+        // rows with no way forward, which is the soft-lock the guarantee is
+        // for.
+        //
+        // THE SATCHEL IS INVISIBLE HERE, and that is a real limitation stated
+        // rather than hidden: the session is handed one consumable at a time
+        // (UseConsumable) and never the stock, so a forfeit could in principle
+        // step over a potion. It cannot happen in live content -- reaching
+        // this at all needs a rooted CHARACTER (nothing authors one; the sole
+        // Rooted source is a player weapon modifier that roots what it hits)
+        // whose entire kit is physical or unaffordable. If an enemy ever
+        // authors a root, the satchel has to come through the session first.
+        private bool RootedPlayerHasNoLegalAction(CombatantState actor)
+        {
+            if (CombatActions.PlainAttackIsLegalFor(actor, out _)
+                && EligibleTargets(actor, Reach.Melee).Count > 0)
+            {
+                return false;
+            }
+
+            foreach (var option in SkillOptionsFor(actor))
+            {
+                if (option.Ready) return false;
+            }
+
+            return !CanMove(actor, MoveDirection.Forward) && !CanMove(actor, MoveDirection.Back);
         }
 
         // Same question SkillOptionsFor's own filter answers -- does the
@@ -425,6 +482,18 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!CanReachEnemy(actor, Reach.Melee, target))
             {
                 AppendMessage($"{target.Name} is out of reach.");
+                return false;
+            }
+
+            // AND THE SWING ITSELF HAS TO BE LEGAL (plan 1.10, milestone D).
+            // Reach asked about the target's rank; this asks about the actor,
+            // and a rooted character may not swing at anybody however close
+            // they are standing. Here rather than only on the menu because a
+            // command can arrive past the menu -- the bot, a test, a click
+            // that raced a status landing -- and this is the last word.
+            if (!CombatActions.PlainAttackIsLegalFor(actor, out string blocked))
+            {
+                AppendMessage(blocked);
                 return false;
             }
 
@@ -995,15 +1064,34 @@ namespace PrincesPalace.Domain.Combat.Session
         // single bool would make the menu say the wrong one.
         public readonly int CooldownRemaining;
 
-        public bool Ready => Affordable && CooldownRemaining <= 0;
+        // A FOURTH REASON A ROW CANNOT BE PRESSED, kept apart from the other
+        // three for the reason they are kept apart from each other: "you
+        // cannot pay for this", "not yet" and "you are rooted and this is a
+        // charge" are three different sentences, and one bool would make the
+        // menu say the wrong one (plan 1.10).
+        //
+        // Answered by CombatActions, the same predicate the enemy draw and the
+        // dispatcher's own refusal read, so a greyed row and a refused cast
+        // can never disagree.
+        public readonly bool Restricted;
+
+        // Why, in the predicate's own words, and empty when it is not
+        // restricted. Carried rather than re-derived by the view: the sentence
+        // belongs to the rule, not to the widget drawing it.
+        public readonly string RestrictionReason;
+
+        public bool Ready => Affordable && CooldownRemaining <= 0 && !Restricted;
 
         public ResolvedSkillOption(int index, Content.ResolvedSkill skill, bool affordable,
-                                   int cooldownRemaining = 0)
+                                   int cooldownRemaining = 0, bool restricted = false,
+                                   string restrictionReason = "")
         {
             Index = index;
             Skill = skill;
             Affordable = affordable;
             CooldownRemaining = cooldownRemaining;
+            Restricted = restricted;
+            RestrictionReason = restrictionReason ?? "";
         }
     }
 }

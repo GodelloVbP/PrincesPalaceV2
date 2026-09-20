@@ -419,6 +419,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveSwapAllies(actor, targets);
                     break;
 
+                case SkillEffect.Afflict:
+                    ResolveAfflict(actor, skill, target);
+                    break;
+
                 case SkillEffect.HealSelf:
                 {
                     BeginBeat(actor, actor, isCast: true);
@@ -932,6 +936,35 @@ namespace PrincesPalace.Domain.Combat.Session
         // different arms of the resolution.
         private static CombatantState PrimaryTarget(IReadOnlyList<CombatantState> targets) =>
             targets != null && targets.Count > 0 ? targets[0] : null;
+
+        // VELVET SHACKLES AND EVERY AFFLICT AFTER IT (plan 2.10,
+        // SkillEffect.Afflict). One enemy, this row's authored status, no
+        // damage at all.
+        //
+        // IT IS FOUR LINES BECAUSE THE SEAM ALREADY DOES THE WORK.
+        // ApplySkillStatus reads appliesStatus / statusMagnitude /
+        // statusDuration off the row and goes through ApplyStatusTo (plan D6),
+        // which is where Chilled's speed bookkeeping and every future status's
+        // hangs -- so Censer of Embers and Thorn Tithe join this arm as
+        // content rows and no code, which is the whole reason Afflict is a
+        // member rather than three spell-shaped branches.
+        //
+        // NO DODGE ROLL, and that is a rule rather than an omission: with no
+        // damage instance the cast never enters AfterDefences, so an Afflict
+        // lands or was refused before payment. Nothing in between.
+        //
+        // THE TARGET IS LIVE BY CONSTRUCTION -- SingleEnemy targeting means
+        // CastSkill's reach gate has already refused a cast aimed at nobody,
+        // and ApplySkillStatus re-checks IsAlive anyway for the case where a
+        // rider killed the target between the two.
+        private void ResolveAfflict(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            if (target == null) return;
+
+            BeginBeat(actor, target, isCast: true);
+            RecordSpellPresentation(skill);
+            ApplySkillStatus(skill, target, actor);
+        }
 
         // BORROWED MOMENT (plan 2.7, SkillEffect.Hasten). The refusals have
         // already run -- CanResolveSkill has established that this ally is in

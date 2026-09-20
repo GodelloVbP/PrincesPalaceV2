@@ -621,6 +621,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 var actor = _encounter.Current;
                 AppendMessage($"{actor.Name} cannot act, sealed inside the shell.");
 
+                // A SEALED TURN IS STILL A TURN, and its statuses age with it
+                // -- the third of the three advances in this session, joining
+                // the player's action funnel and StepToNextTurn. See
+                // EndTurnStatusesForCurrent.
+                EndTurnStatusesForCurrent();
+
                 _encounter.AdvanceTurn();
                 GrantTurnStart();
                 AutoResolveEnemyTurns();

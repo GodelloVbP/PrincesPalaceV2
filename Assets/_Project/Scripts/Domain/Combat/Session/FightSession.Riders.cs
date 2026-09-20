@@ -38,6 +38,44 @@ namespace PrincesPalace.Domain.Combat.Session
         // about.
         private CombatantState _grantedExtraTurnTo;
 
+        // A TURN IS OVER, HOWEVER IT ENDED -- the one place the turn-end clock
+        // is wound, sitting immediately before every `_encounter.AdvanceTurn()`
+        // in the session.
+        //
+        // IT USED TO LIVE INSIDE AdvanceAfterAction, and that was a hole with
+        // a growing blast radius. AdvanceAfterAction is reached only by the
+        // four PLAYER commands (attack, cast, item, move); an enemy's turn and
+        // every skipped turn on either side advance through StepToNextTurn
+        // instead, and an egg's through AutoResolveEggTurns. So no AtTurnEnd
+        // status on a monster ever aged, and no skipped turn aged anything --
+        // which was invisible while wards were the only thing on this clock
+        // (a monster rarely wears one) and became live the moment plan D1
+        // moved Protect, Vulnerable, Chilled, Rooted and Marked onto it in
+        // milestone A. Winter's Rebuke's two-turn Chill was permanent;
+        // milestone D's two-turn Root would have been permanent AND
+        // self-sustaining, because a rooted monster with nothing legal
+        // forfeits, and a forfeited turn was exactly the kind that aged
+        // nothing. Found by TheSecondOfTwoShackledTurns_IsStillRestricted
+        // failing on its THIRD turn.
+        //
+        // SKIPPED WHEN THE SAME ACTOR IS ABOUT TO ACT AGAIN: an extra action
+        // is the SAME turn (AUDIT #113), so a trample chain must not age a
+        // ward once per swing.
+        //
+        // AND SKIPPED FOR A CORPSE. A combatant can die inside its own turn
+        // start (a poison tick) and reach the advance without ever acting;
+        // ageing its statuses would print "the shield around X fades" over a
+        // body. Nothing downstream reads a dead combatant's statuses, so there
+        // is nothing to age either.
+        private void EndTurnStatusesForCurrent()
+        {
+            var ending = _encounter?.Current;
+            if (ending == null || !ending.IsAlive) return;
+            if (_grantedExtraTurnTo != null && ReferenceEquals(_grantedExtraTurnTo, ending)) return;
+
+            TickStatusesAtTurnEnd(ending);
+        }
+
         // Everything after an action resolves: extra turns, then the schedule
         // moves on, then the next actor's turn-start bookkeeping.
         private void AdvanceAfterAction()
@@ -103,15 +141,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // here rather than at a turn's start -- see StatusEffects' own
             // WARDS header for why a ward is visible on the turn it protects
             // and every other duration is not.
-            //
-            // SKIPPED WHEN THE SAME ACTOR IS ABOUT TO ACT AGAIN, on exactly
-            // the rule the line below already states: an extra action is the
-            // SAME turn (AUDIT #113), so a trample chain must not age a ward
-            // once per swing.
-            if (_grantedExtraTurnTo == null || !ReferenceEquals(_grantedExtraTurnTo, _encounter.Current))
-            {
-                TickStatusesAtTurnEnd(_encounter.Current);
-            }
+            EndTurnStatusesForCurrent();
 
             _encounter.AdvanceTurn();
 

@@ -97,18 +97,25 @@ namespace PrincesPalace.Domain.Combat.Session
         // at resolution time (see ResolveEnemyAction), so this can adjust
         // weights but can never reshuffle or drop an entry.
         //
-        // PHASE D3: also where Rooted excludes the plain-attack entry. A
-        // rooted enemy loses its melee option and must draw from whatever
-        // skills remain -- the exact mirror of the front-rank rule gating the
+        // PHASE D3: also where Rooted excludes what the actor may not do. A
+        // rooted enemy loses its physical options and must draw from whatever
+        // remains -- the exact mirror of the front-rank rule gating the
         // PLAYER's own plain attack, just read off the ACTOR instead of the
-        // target. `IsPlainSwing` (not
-        // `IsLegacyAttack`) is the right predicate here: it is the same
-        // "ranged" line ResolveEnemyAction already draws for `usingSkill`
-        // (`!chosen.Value.IsPlainSwing`), which also treats a legacy scaled
-        // attack (authored SkillPower != 1, no real ResolvedSkill) as a
-        // skill rather than a melee swing. Zeroed with LegacyAttack, not
-        // EnemyAbility.Of, to keep HasSkill/Power intact for that entry --
-        // only its Weight moves.
+        // target.
+        //
+        // MILESTONE D WIDENED THE CONDITION AND NOTHING ELSE. It used to be
+        // `ability.IsPlainSwing`; it is now CombatActions.IsLegalFor over the
+        // ability's own classification, which the plain swing satisfies by
+        // construction -- so the old behaviour is a strict subset of this one
+        // and no monster that could act before is newly helpless for a reason
+        // other than its own authored kit. Asked through the shared predicate
+        // rather than restated here because the committed intent's
+        // re-validation and the player's menu have to give the same answer
+        // (plan 1.10).
+        //
+        // Zeroed in place, keeping HasSkill/Power/Label intact -- only Weight
+        // moves, because the index a draw commits to is looked back up against
+        // kit.Abilities at resolution time.
         //
         // AND WHERE NOTHING IS IN REACH. A SingleEnemy ability with no
         // eligible target is zero-weighted FOR THIS DRAW ONLY, the same
@@ -168,10 +175,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     continue;
                 }
 
-                if (rooted && ability.IsPlainSwing)
+                if (rooted && !CombatActions.IsLegalFor(enemy, ability.IsPhysicalMove, out _))
                 {
                     effective ??= new List<EnemyAbility>(abilities);
-                    effective[i] = EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
+                    effective[i] = ability.HasSkill
+                        ? EnemyAbility.Of(ability.Skill, 0f)
+                        : EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
                 }
             }
 
@@ -269,6 +278,19 @@ namespace PrincesPalace.Domain.Combat.Session
             var pool = EffectivePoolFor(enemy, kit?.Abilities);
             return EnemyAbilityDraw.Pick(pool, 0f) < 0;
         }
+
+        // THE SAME QUESTION, ASKED OF WHICHEVER SIDE THE ACTOR IS ON (plan
+        // 1.10, milestone D). One name for one question, two answers because
+        // the two sides keep their options in different places -- a monster's
+        // in a weighted ability pool, a character's in a kit plus two verbs.
+        //
+        // NEITHER ARM SPENDS A DRAW. The enemy arm passes a literal 0f to
+        // Pick; the player arm asks queries that never touch _rng. That is
+        // load-bearing: this runs at resolution time, after the telegraph, and
+        // a draw here would make a seeded run's shape depend on how often
+        // something got rooted.
+        private bool RootedActorHasNoLegalAction(CombatantState actor) =>
+            actor.IsPlayerSide ? RootedPlayerHasNoLegalAction(actor) : RootedEnemyHasNoLegalAction(actor);
 
         private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
                                         IReadOnlyList<EnemyAbility> pool, int chosen)
@@ -552,6 +574,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // asking twice costs a comparison.
             if (SettleIfOver()) return false;
 
+            // THE TURN-END CLOCK, wound here for the same reason
+            // AdvanceAfterAction winds it: this is a turn ending. Every
+            // monster turn and every skipped turn on either side leaves
+            // through this method rather than through the player's action
+            // funnel, so until milestone D neither aged a single AtTurnEnd
+            // status -- see EndTurnStatusesForCurrent's own header.
+            EndTurnStatusesForCurrent();
+
             _encounter.AdvanceTurn();
             GrantTurnStart();
             return !SettleIfOver();
@@ -593,17 +623,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // reason, and Stun's own message already covers "cannot act" without
         // needing to know why the pool would have been empty too.
         //
-        // ALSO GATED ON `!enemy.IsPlayerSide` -- ResolveSkippedTurn runs for
-        // BOTH sides (a stunned PLAYER's turn is skipped through this exact
-        // path too, per AutoResolveEnemyTurns' own header), but Rooted's pool
-        // machinery (SourceFor/EffectivePoolFor) only ever tracks an ENEMY's
-        // ability kit. SourceFor(player) is always null, which would make
-        // RootedEnemyHasNoLegalAction read as "helpless" unconditionally --
-        // forfeiting a player's ENTIRE turn, not merely disabling their
-        // plain-attack option, the moment anything ever applied Rooted to
-        // one. Nothing today does (see StatusEffectType.Rooted's own
-        // comment), but this guard is what keeps that true by construction
-        // rather than by accident.
+        // IT RUNS FOR BOTH SIDES NOW, and the `!enemy.IsPlayerSide` gate that
+        // used to sit here is gone with the reason for it. That gate existed
+        // because Rooted's pool machinery (SourceFor/EffectivePoolFor) only
+        // ever tracks an ENEMY's kit -- SourceFor(player) is null, which would
+        // have made the query read "helpless" unconditionally and forfeited a
+        // player's whole turn the moment anything rooted one. Milestone D
+        // gives the player side a real answer of its own
+        // (RootedPlayerHasNoLegalAction), so the question can be asked rather
+        // than dodged, which it now has to be: under Velvet Shackles a rooted
+        // player's plain attack is illegal too, so "Attack is always there"
+        // stopped being the thing that ends the turn (plan 1.10, 2.10).
+        //
+        // NOTHING IN LIVE CONTENT CAN REACH THE PLAYER ARM. The only authored
+        // Rooted source is a player weapon modifier that roots what it hits
+        // (modifiers.json, Sylvan), and every character's kit carries at least
+        // one non-physical skill -- so this is a guarantee that the turn can
+        // always end, not a situation the game produces. It is pinned that
+        // way round: a rooted player with a ready cast must NOT be forfeited.
         //
         // Reset and ConsumeStun both happen HERE, the instant the skip is
         // actually spent, rather than inside Deplete/Tick or on a timer, so
@@ -615,8 +652,8 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             bool isBroken = enemy.BreakShield != null && enemy.BreakShield.IsBroken;
             bool isStunned = StatusEffects.HasStun(enemy.Statuses);
-            bool isRootedHelpless = !isStunned && !enemy.IsPlayerSide && StatusEffects.HasRooted(enemy.Statuses)
-                                     && RootedEnemyHasNoLegalAction(enemy);
+            bool isRootedHelpless = !isStunned && StatusEffects.HasRooted(enemy.Statuses)
+                                     && RootedActorHasNoLegalAction(enemy);
             if (!isBroken && !isStunned && !isRootedHelpless) return false;
 
             if (isBroken) enemy.BreakShield.Reset();
@@ -628,7 +665,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     ? $"{enemy.Name} is still reeling and cannot act!"
                     : isStunned
                         ? $"{enemy.Name} is stunned and cannot act!"
-                        : $"{enemy.Name} is rooted with nothing to cast - it cannot act!");
+
+                        // SAID DIFFERENTLY FOR THE PLAYER, because "it" is not
+                        // what the player's own character is, and this is the
+                        // only line explaining why a turn they were expecting
+                        // to take went past them (plan 1.10: the HUD must say
+                        // why).
+                        : enemy.IsPlayerSide
+                            ? $"{enemy.Name} is rooted fast, with nothing left to cast!"
+                            : $"{enemy.Name} is rooted with nothing to cast - it cannot act!");
 
             return true;
         }
@@ -802,10 +847,24 @@ namespace PrincesPalace.Domain.Combat.Session
             // is drawn from the seeded stream to decide it. A committed SKILL
             // is never touched here, matching every other path in this
             // method that honours the telegraph outright.
-            if (chosen.HasValue && chosen.Value.IsPlainSwing && StatusEffects.HasRooted(enemy.Statuses))
+            //
+            // MILESTONE D: the same voiding now covers a committed SKILL that
+            // is a physical move, not only the plain swing. Velvet Shackles is
+            // cast on the player's turn against an enemy whose intent for that
+            // turn was drawn before the cast, so "the commitment is a charge
+            // the target may no longer make" is the ordinary case for this
+            // spell in the same way the stale plain swing was for Sylvan's
+            // Root -- and a telegraphed Barrel Roll that resolves anyway is
+            // the spell visibly not working. Asked through CombatActions so
+            // this site and EffectivePoolFor cannot disagree about what a
+            // shackled monster may do; the refusal sentence is the predicate's
+            // own, so the player reads one wording wherever it is refused.
+            if (chosen.HasValue && !CombatActions.IsLegalFor(enemy, chosen.Value.IsPhysicalMove, out string blocked))
             {
                 _intents.Remove(enemy);
-                AppendMessage($"{enemy.Name} is rooted and cannot follow through with the attack!");
+                AppendMessage(chosen.Value.IsPlainSwing
+                    ? $"{enemy.Name} is rooted and cannot follow through with the attack!"
+                    : blocked);
                 CommitBeat();
                 return;
             }

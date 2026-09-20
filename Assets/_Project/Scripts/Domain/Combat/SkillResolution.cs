@@ -201,6 +201,15 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.SwapAllies:
                     return 0;
 
+                // AN AFFLICT'S WHOLE PAYLOAD IS ITS STATUS, and a status's
+                // strength is its own authored magnitude and duration, neither
+                // of which is a quantity this function returns (it answers in
+                // points of damage, healing, shield or mana). Velvet Shackles
+                // delivers two turns, not a number -- the detail card says so
+                // in words, the same way Provoke's does.
+                case SkillEffect.Afflict:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }

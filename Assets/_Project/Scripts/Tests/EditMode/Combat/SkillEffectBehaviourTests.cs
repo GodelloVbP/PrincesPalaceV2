@@ -420,6 +420,26 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreSame(ally, encounter.PlayerParty[0], "the two did not trade slots");
                 Assert.AreSame(caster, encounter.PlayerParty[1]);
             }),
+
+            new Row(SkillEffect.Afflict, "the target carries the status the row named", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var foe = Foe();
+                var encounter = new CombatEncounter(new[] { caster }, new[] { foe });
+                var skill = new ResolvedSkill("coverage", "Velvet Shackles", "", "hero", 1,
+                    SkillEffect.Afflict, SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0,
+                    appliesStatus: StatusEffectType.Rooted, statusMagnitude: 0, statusDuration: 2);
+                var session = Session(encounter, Kit(skill));
+
+                int before = foe.CurrentHealth;
+                Assert.IsTrue(session.CastSkill(0, foe), "the cast was refused");
+
+                Assert.IsTrue(foe.Statuses.Any(s => s.Type == StatusEffectType.Rooted),
+                    "the authored status did not land");
+                Assert.AreEqual(before, foe.CurrentHealth,
+                    "an Afflict is the status and nothing else -- it must deal no damage");
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -576,6 +596,17 @@ namespace PrincesPalace.Domain.Tests
             if (effect == SkillEffect.Hasten)
             {
                 raw.advanceSlots = 2;
+            }
+
+            // An Afflict IS its status, exactly as BuffParty above is, so the
+            // resolver refuses a row without one. NO statusMagnitude: Rooted
+            // is a gate rather than a quantity and the resolver refuses a
+            // magnitude on one (StatusEffects.CarriesMagnitude), which is the
+            // same rule from the other side.
+            if (effect == SkillEffect.Afflict)
+            {
+                raw.appliesStatus = "Rooted";
+                raw.statusDuration = 2;
             }
 
             return raw;

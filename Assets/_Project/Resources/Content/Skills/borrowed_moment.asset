@@ -319,6 +319,7 @@ MonoBehaviour:
     Reach:
       Kind: 0
       RankMask: 0
+    PhysicalMove: 0
     BookOnly: 1
     BookTier: 2
     Elements: []

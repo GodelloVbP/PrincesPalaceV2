@@ -194,7 +194,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `iconPath` | string | `""` | Editor-time path to this skill's icon (Assets/_Project/Art/...); empty means no art, and the slot hides rather than showing a placeholder. Used today only by bookOnly skills, whose spell-book art carries the glyph baked in. |  |
 | `characterId` | string | `""` | The character this skill belongs to; required so it is never offered to everyone. |  |
 | `unlockLevel` | int | `-1` | The character level this skill becomes available at; see notes for the bookOnly exception. |  |
-| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle, Reclaim, Hasten, SwapAllies |
+| `effect` | string | `""` | Which SkillEffect this casts, matched case-insensitively. | DamageSingle, DamageAll, HealSelf, HealParty, RestorePartyMana, Provoke, Transform, Ward, Shatter, BuffParty, GiftMana, GiftFury, GiftHaste, Summon, HealSingle, Reclaim, Hasten, SwapAllies, Afflict |
 | `targeting` | string | `""` | Which SkillTargeting this hits; defaults to whatever the effect implies. | SingleEnemy, AllEnemies, Self, Party, SingleAlly |
 | `manaCost` | int | `-1` | Mana spent to cast; a skill must cost this and/or resourceCost. |  |
 | `resourceCost` | int | `-1` | How much of the owner's signature resource a cast consumes. |  |
@@ -229,6 +229,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `bookOnly` | bool | `false` | Whether this skill is learned from a shop book rather than by levelling. |  |
 | `bookTier` | int | `0` | The shop's price band (1-4) for this spell as a book; 0 means not book-eligible. |  |
 | `meleeReach` | bool | `false` | Whether the front-rank melee-reach rule applies to this SingleEnemy skill. |  |
+| `physicalMove` | bool | `false` | Whether this action is a physical move (a swing, charge or lunge) that Rooted forbids; required on every damage row. |  |
 | `reachSlots` | int[] | `[]` | Which 1-based positions in the enemy line this SingleEnemy skill may target; empty means anywhere. |  |
 | `elements` | RawElementChoice[] (below) | `[]` | Elements the player chooses between before targeting; each retypes every authored damage packet. |  |
 | `poolTiers` | RawPoolTier[] (below) | `[]` | Ascending fractions of the owner's primary pool this skill can spend for extra damage; the highest tier the caster can afford fires automatically. |  |

@@ -36,10 +36,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // bar for an answer that is not there.
         public readonly int CooldownRemaining;
 
-        public bool Affordable => CanPay && MeetsRequirement && CooldownRemaining <= 0;
+        // A FOURTH, same rule again (plan 1.10, milestone D): a rooted
+        // character's charge is not unaffordable and not on cooldown, and
+        // telling them either would send them to look at the wrong bar.
+        public readonly bool Restricted;
+
+        public bool Affordable => CanPay && MeetsRequirement && CooldownRemaining <= 0 && !Restricted;
 
         public SubmenuRow(string name, string meta, string cost, bool canPay, bool meetsRequirement,
-                          int manaCost, int cooldownRemaining = 0)
+                          int manaCost, int cooldownRemaining = 0, bool restricted = false)
         {
             Name = name;
             Meta = meta;
@@ -48,6 +53,7 @@ namespace PrincesPalace.Domain.Combat.Session
             MeetsRequirement = meetsRequirement;
             CooldownRemaining = cooldownRemaining;
             ManaCost = manaCost;
+            Restricted = restricted;
         }
     }
 
@@ -162,13 +168,22 @@ namespace PrincesPalace.Domain.Combat.Session
                     // one. A row showing "8 MP" that cannot be pressed is
                     // telling the player about the only thing that is NOT
                     // stopping them.
-                    option.CooldownRemaining > 0
-                        ? CooldownLabel(option.CooldownRemaining)
-                        : CostLabel(skill, resourceName, PrimaryTagOf(actor)),
+                    // THE COST COLUMN SAYS "ROOTED" AHEAD OF EITHER (plan
+                    // 1.10). A shackled row is not waiting and is not
+                    // unaffordable; showing "8 MP" or "2 turns" on it names
+                    // something that is not what is stopping the player, which
+                    // is the exact complaint the cooldown arm below was added
+                    // to answer.
+                    option.Restricted
+                        ? "Rooted"
+                        : option.CooldownRemaining > 0
+                            ? CooldownLabel(option.CooldownRemaining)
+                            : CostLabel(skill, resourceName, PrimaryTagOf(actor)),
                     option.Affordable,
                     meetsRequirement: true,
                     skill.ManaCost,
-                    cooldownRemaining: option.CooldownRemaining));
+                    cooldownRemaining: option.CooldownRemaining,
+                    restricted: option.Restricted));
             }
 
             return rows;
@@ -373,6 +388,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 // one shared word would create.
                 case SkillEffect.Hasten: return "HASTEN";
                 case SkillEffect.SwapAllies: return "SWAP";
+                // Not "ROOT", although Velvet Shackles is the only user today:
+                // the verb names the RESOLUTION SHAPE, and the next two
+                // Afflicts (Censer of Embers, Thorn Tithe) land Burn and
+                // Thorned. A word taken from this row's status would be a lie
+                // on the next row that shares the arm.
+                case SkillEffect.Afflict: return "AFFLICT";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +
