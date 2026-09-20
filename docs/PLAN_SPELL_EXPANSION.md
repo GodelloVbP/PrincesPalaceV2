@@ -1786,6 +1786,127 @@ Reckoning, Blackglass Spear.
 
 ### Milestone C — initiative and formation
 
+> **STATUS: LANDED 2026-09-20**, on `workflow-2026-09-19`.
+> `2b3356ca` the scheduler, the picker, the content and the tests.
+>
+> **What landed.** `PullForward`/`ApplyPullForward`/`ProjectPulled` and a
+> `ForecastPositionOf`/`ChargeOf` pair on `TurnOrder` (1.9); `PushBackAll`,
+> the batch whose destinations are all fixed against ONE pre-pass board, with
+> `PushBack` reduced to one arity of it; the four worked examples of 1.9
+> written before the operation and landed as `InitiativeDisplacementTests`;
+> the AOE batch delay in `ResolveDamageAll` over landed-hit survivors only;
+> the two-pick target state on `FightMenuState` with `Back()` dropping one
+> pick at a time; `SkillEffect.Hasten` and `SkillEffect.SwapAllies` (D10,
+> appended after `Reclaim`); `advanceSlots` end to end; and Borrowed Moment,
+> Gale Scythe and Palace Passage as complete slices with placeholder
+> `vfx.layers`.
+>
+> **Four decisions the plan did not make, made here and stated.**
+>
+> - **`CastSkillOnPicks`, not a `CastSkill` overload.** 1.12 says "`CastSkill`
+>   gains one overload taking `IReadOnlyList<CombatantState> targets`". C#
+>   cannot resolve `CastSkill(0, null)` between a `CombatantState` parameter
+>   and an `IReadOnlyList<CombatantState>` one, and that exact literal appears
+>   at some forty call sites across the suite -- every Self and Party cast in
+>   the game. Overloading would have turned each into a compile error and
+>   every future one into a trap. The requirement 1.12 was actually stating
+>   ("there is still exactly one dispatcher") is met: both names reach one
+>   body, and the single-target door is a list of one.
+> - **The bot SKIPS a two-pick cast, explicitly.** A `FightAction` carries one
+>   `Target`; giving it a second field that exactly one skill in the game
+>   would ever use is the hardcoded slot `docs/CODE_STANDARDS.md` section 10
+>   refuses. `FightAction.LegalActions` therefore drops any effect whose
+>   `SkillEffects.PicksRequired` is above one, with the reason written at the
+>   line. Skipped rather than offered-and-refused, which is milestone B's
+>   lesson: a policy that scores an action positively and never gets to spend
+>   it picks it again forever, and `BalanceBotSmokeTests` found that as a
+>   60-command stall rather than as a wrong answer. The cost is stated too --
+>   Palace Passage is outside the balance bot's reach and its value is
+>   measured by the focused harness instead.
+> - **The first pick is shown by its plate going INERT**, not by a "chosen"
+>   marker. A fourth plate state is a screen-tree change and this milestone
+>   did not take one; the prompt carries the count instead ("Choose ally 1 of
+>   2"). Named as a limitation rather than left to be noticed.
+> - **`EligibleAllies` gained a board-state filter for `Hasten`.**
+>   `AllyTargeting` answers what an effect accepts and has no schedule to
+>   read; "is there anywhere earlier for this ally to go" is board state, like
+>   reach, and belongs to the session. One predicate (`CanAdvanceInOrder`),
+>   two readers -- the rack's plates and `CanResolveSkill`'s refusal -- so the
+>   menu cannot offer a pick the cast then turns down.
+>
+> **Three bugs found in review rather than shipped.**
+>
+> - **An EMPTY pick list was accepted.** `foreach` over an empty list checks
+>   nothing, so a Ward handed `new CombatantState[0]` sailed past 1.1 step 2
+>   and landed on the caster -- exactly the auto-pick AUDIT #147 removed.
+>   Normalised at the top of `CastSkillOnPicks`; caught by
+>   `SkillDispatchTests.ACastHandedNoTargetAtAllIsRefused_ThroughEitherDoor`.
+> - **The pad could not complete a two-pick cast at all.** Submit with nothing
+>   hovered presses `PickableAllyPlates()[0]`, and that list did not exclude
+>   the ally pick 1 had already taken -- so the second press landed on the
+>   same plate, was refused as "already going", and a whole input method was
+>   quietly unable to cast one spell. Fixed at the shared helper, so the
+>   cursor, the marker and Submit skip the taken ally together.
+> - **Gale Scythe asked for three ground renderers.** Its placeholder dust
+>   layer authored `sort: "ground"` on an `AllEnemies` sweep, which needs one
+>   per body against `FightHudSpec.SpellGroundRenderers`'s two.
+>   `SpellPoolCapacityTests` caught it; the layer moved to `effects`.
+>
+> **Deviations from the plan, stated rather than left implicit.**
+>
+> - **1.9's worked example (d) says "E2 is removed from the order". It is
+>   not.** Nothing in this game calls `TurnOrder.RemoveCombatant` on a death;
+>   `Project` filters the defeated out of what it REPORTS and still simulates
+>   them, because they still consume a turn in the real schedule. The
+>   arithmetic the example states is unaffected -- E2's 88 is not STRICTLY
+>   below E1's 88, so it was never a level either survivor could fall past --
+>   and `InitiativeDisplacementTests.AMultiTargetDelayAfterADeath_-
+>   DisplacesEverySurvivorOnce` asserts the dead entry's charge is untouched
+>   rather than asserting it is gone.
+> - **The current-actor guard is new behaviour for `PushBack`.** 1.9 rule 2
+>   says the current action is never moved, and nothing enforced it before;
+>   `PushBack` would have accepted the acting combatant. No caller ever passed
+>   one, so this closes a hole rather than changing a behaviour, but it is a
+>   contract change to an existing method and is pinned by
+>   `NeitherOperationAcceptsTheCurrentActor`.
+> - **`queuePushSlots` is now legal on a `DamageAll` row.** The resolver
+>   refused it on anything but `DamageSingle`, and the refusal was honest at
+>   the time: the AOE branch applied status but never the push. It does
+>   something now, so the content rule follows the code.
+> - **`TurnOrder.ChargeOf` and `CombatEncounter.ChargeOf` are new read-only
+>   accessors with no production caller.** The displacement contract is
+>   written in charges -- every one of 1.9's worked examples states its answer
+>   as one -- and at the start of an encounter every charge is seeded from
+>   Speed, so one displacement level is a handful of points that reorders
+>   nobody yet. A test that could only read the ORDER would pass whether the
+>   delay landed on the right enemy, the wrong one, or none. Recorded as a
+>   deliberate test-facing read rather than smuggled in.
+> - **No picture.** Milestone C's gate asks for `tools/preview.ps1 -Spell
+>   gale_scythe` and `tools/screenshot.ps1 -Runtime`, and neither was run: a
+>   Unity Editor was open on this project for the whole pass (pid 27916 plus
+>   its import workers), which is the exact configuration that cost milestone
+>   B its `Resources/Content/` tree. `preview.ps1` routes through an open
+>   Editor when it finds one, and a content build through stale assemblies is
+>   what wiped that tree. The pictures are deferred; the acceptance they were
+>   to carry is covered by tests, and what a still could not have shown -- the
+>   tracker sliding -- is pinned numerically instead.
+> - **The owner did not confirm the pad path by hand.** It is proved instead
+>   by `PalacePassagePadTests`, four PlayMode cases driving the REAL
+>   `NavigationInputModule` through a scripted `BaseInput` on
+>   `inputOverride` -- the gamepad plan's own section 10 shape, on the seam
+>   its section 2 verifies API by API. What that cannot prove is repeat
+>   cadence (`Time.unscaledTime`, no `BaseInput` equivalent), which the
+>   gamepad plan already records as hardware-acceptance-only.
+>
+> **Gate.** ``run_tests_parallel.ps1 -BuildContent`: EditMode 4094/4097 (0 failed, 3 skipped), PlayMode 1280/1332 (0 failed, 52 skipped) -- the four new cases in PlayMode are `PalacePassagePadTests`. `-BuildScenes` was NOT needed and not run: no `[SerializeField]` and no screen tree changed. The one new `UiStrings` entry is set at runtime (`RefreshTargetPrompt`); the label `FightScreen` bakes for layout is still `TargetPrompt`, so `UiAudit` has nothing new to solve. `dotnet test tools/domain-tests`: 4067/4072, 3 pre-existing skips, 0 failed.`
+>
+> **Measured values.** Section 5's own subsection, below, and the headline is
+> not about either spell: **on the board a fight opens on, no displacement
+> moves anybody** -- not an advance, not a pull to the front, not a delay --
+> because charges are seeded from Speed and every actor still owes seventy to
+> ninety ticks. Gift: Haste has had this property since it shipped.
+
+
 **Scope.** `PullForward`/`ApplyPullForward`/`ProjectPulled` (1.9); the
 forecast-position definition and the four worked examples as tests; the AOE
 batch displacement; the two-pick target state (1.12); Borrowed Moment, Gale
