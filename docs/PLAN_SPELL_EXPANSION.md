@@ -878,29 +878,85 @@ legality query spends no draw, by construction.
 
 ### 1.11 Post-action hook
 
-One hook, fired once per completed action, for retaliation curses. It lives at
-the top of `AdvanceAfterAction` (`FightSession.Riders.cs:43-58`), which is the
-one place every action funnels through — `CastSkill` `:186`/`:190`, `Move`
-`FightSession.cs:515`, and the attack path.
+**CORRECTED during milestone E.** This section originally put the hook at the
+top of `AdvanceAfterAction`, on the claim that it is "the one place every
+action funnels through". That claim is false and was already known to be
+false by the time this section was written: milestone D's own fix
+(`FightSession.EndTurnStatusesForCurrent`, landed in `2c64a252`, recorded as
+AUDIT #193) exists precisely because `AdvanceAfterAction` is reached ONLY by
+the four PLAYER commands — `CastSkill` `:186`/`:190`, `Move`
+`FightSession.cs:515`, `UseItem`, and the attack path. A monster's turn and
+every skipped turn on either side advance through
+`FightSession.Enemies.StepToNextTurn` instead, and a sealed egg's through
+`AutoResolveEggTurns`. Thorn Tithe is cast on ENEMIES, so a hook that only
+ever fired from `AdvanceAfterAction` would never retaliate at all — the
+identical hole #193 closed for the turn-end clock, one milestone later, for a
+mid-turn hook instead of a turn-boundary one.
+
+**Where it actually lives: two call sites, one per side, not one shared
+seam.** "Completed action" cannot be recognised at a single point the way
+`EndTurnStatusesForCurrent` recognises "turn is ending" (that fix could sit
+immediately before all three `_encounter.AdvanceTurn()` calls because ending a
+turn is the same event on both sides; completing a PHYSICAL action is not,
+because the two sides resolve an action through entirely different methods
+with different early-return shapes). The hook is `FightSession.Riders
+.TriggerPhysicalMoveRetaliation(CombatantState actor)`, a private method with
+no re-entrant path back into itself, called from:
+
+- **The player side**: `AdvanceAfterAction(bool physicalMove)`, at its very
+  top — still the correct seam for the four player commands, since a refusal
+  returns before reaching it (1.1) and a free action never reaches it either
+  (`FightSession.Skills.cs:195-201`). Each of the four callers passes its own
+  known classification: `ExecuteAttack` always passes `true`
+  (`CombatActions.PlainAttackIsPhysicalMove`), `Move` always passes `false`
+  (it is a formation swap, not the `physicalMove` skill classification),
+  `CastSkillOnPicks` passes `CombatActions.IsPhysicalMove(skill)`, and
+  `UseItem` always passes `false`.
+- **The monster side**: `FightSession.Enemies.AutoResolveEnemyTurns`, called
+  right after `ResolveEnemyAction(current)` returns and before
+  `StepToNextTurn()` advances the clock. `ResolveEnemyAction` was widened from
+  `void` to `bool`, reporting exactly 1.11's own condition — every early
+  return (a forfeit, a re-pick that found nobody, a commitment
+  `CombatActions.IsLegalFor` now refuses) reports `false`; the "real skill"
+  branch reports the skill's own `IsPhysicalMove`; every path that reaches the
+  legacy scaled-attack section (a plain swing, or a pre-Afflict legacy
+  `skillPower` ability) reports `true` unconditionally, hit or miss alike,
+  because `EnemyAbility.IsPhysicalMove` answers `PlainAttackIsPhysicalMove`
+  for anything that is not a real, authored skill.
 
 **What counts as a completed physical move**: the actor took an action, that
 action was classified `PhysicalMove`, and it resolved. **A miss counts** — the
 owner's rule, and the natural reading: the actor moved. **An interrupted or
-rejected action does not**: a refusal returns before `AdvanceAfterAction` is
-reached at all (1.1), and a forfeited turn calls `ForfeitTurn`, not the action
-paths.
+rejected action does not**: a refusal returns before either calling seam is
+reached (1.1), and a forfeited turn calls `ForfeitTurn`, not the action paths,
+on both sides.
 
 **No recursion.** The retaliation deals damage; it is not an action and never
-sets the "an action completed" condition. The hook is entered with a re-entrancy
-guard that is structural rather than a flag: the retaliation is resolved by a
-dedicated method that the hook calls and that calls nothing which reaches
-`AdvanceAfterAction`. A retaliation that kills settles the death through
-`DealDamage` like any other (`FightSession.Ledger.cs:51-69`) and the fight-over
-check at `FightSession.Riders.cs:63-68` is already downstream of the hook.
+sets the "an action completed" condition. `TriggerPhysicalMoveRetaliation`
+opens no beat of its own action, spends no resource, starts no cooldown and
+calls nothing that reaches `AdvanceAfterAction`, `CastSkill`, `ExecuteAttack`
+or `Move` — the guard is structural (nothing wires it back in), not a
+re-entrancy flag. A retaliation that kills settles the death through
+`SettleDeath` like any other (`FightSession.Ledger.cs:319`), guarded so one
+tick's several damaging rows cannot double-settle the same death (D5's own
+consequence: a tick can now carry more than one row, and only the first row
+that observes the target newly dead may call `SettleDeath`).
 
 **A free action does not reach `AdvanceAfterAction`** (`FightSession.Skills.cs:
 195-201`), so a free-action cast triggers no retaliation. Palace Passage is a
 free action and is not a physical move, so this is consistent both ways.
+
+**Thorned's own second wrinkle**, not present in the plan's first draft:
+Thorned sits on the `AtTick` clock like every other DoT (1.4), so its FINAL
+instance is removed inside `StatusEffects.Tick` at the very turn it fires its
+last tick — at that turn's own START, before the actor has even acted. 2.12
+still promises a retaliation on that turn's action. `FightSession.Riders
+.TickStatuses` snapshots the live Thorned instances (the `ActiveStatus`
+objects themselves, which outlive their removal from the list) before calling
+`StatusEffects.Tick`, and `TriggerPhysicalMoveRetaliation` reads that snapshot
+back later in the same turn — the one piece of state that lets "the tick
+removed it" and "this turn still owes a retaliation" both be true without
+giving Thorned a clock of its own.
 
 **Empty case:** an actor carrying no retaliation curse runs nothing. **RNG:**
 none.
@@ -2090,6 +2146,21 @@ Tithe.
 - Tooltips show the actual tick strength, and a recast shows the new one.
 - One tick carrying two different damage types reports both, separately.
 
+**STATUS: LANDED, 2026-09-20.** `dotnet test tools/domain-tests`: 4122
+passed, 0 failed, 3 skipped (pre-existing, unrelated — two `[Ignore]`d
+balance-history assertions and one summoned-body reward case).
+`tools/run_tests_parallel.ps1 -BuildContent`: EditMode 4139/4142 passed (3
+skipped), PlayMode 1280/1332 passed (52 skipped), 0 failed, run before the
+three balance-harness tests below were added (dotnet-verified afterward
+against the identical shared source — see §7's own note). `tools/test.ps1
+combat`'s Unity half caught one real authoring bug before the full gate: an
+early `censer_of_embers` `vfx.layers` entry named `travelSeconds` while
+placed `target`, which `SpellVfxRecipeDriftTests`' own resolver refuses
+("a projectile leaves the caster") — fixed to `caster`. §1.11 above is
+corrected in place rather than superseded, since the plan's own claim about
+where the hook lives was simply wrong; see that section for the seam(s) it
+actually uses. §5 below records the measured values.
+
 ### Milestone F — Court and combined control
 
 **Scope.** `SkillEffect.Enthrall`, the boss/ordinary branch, the caster's
@@ -2428,6 +2499,75 @@ which the five monsters with authored kits mostly were not going to take anyway
 `forest_warden` their whole turn and their best ability respectively. That is a
 buff to one item modifier, delivered by a rule change, and it is recorded here
 rather than in a tuning pass because nothing in `modifiers.json` changed.
+
+---
+
+### Measured values — milestone E, 2026-09-20
+
+Instrument: `SpellExpansionBalanceTests.cs`, three new EditMode harnesses
+(`CensersThreeCastStack_OutpacesThreeLightningBoltsPerMana`,
+`ThornTitheVsDirectDamage_OnFastAndSlowPhysicalTargets`,
+`ThornTitheAgainstAPureCaster_EarnsOnlyTheOpeningTicks`). `tools/bot.ps1` was
+not used, for the same reason section 5 gives for every scripted-line pair:
+these need exact figures over a fixed sequence of casts, which a policy
+cannot reliably reproduce.
+
+**Censer of Embers' three-cast stack vs three Lightning Bolts, undefended
+target, variance off:**
+
+| spell | mana | total damage | per mana |
+|---|---|---|---|
+| Censer x3 (stacked) | 24 | 36 | 1.5 |
+| `lightning_bolt` x3 | 33 | 30 | 0.91 |
+
+Three stacked Burns beat three Lightning Bolts by a wide margin per mana
+**and** in absolute total, for less mana spent. Cooldown 2 means "turn one
+then turn three" (`SkillCooldownTests`' own words), so three casts actually
+span five of the caster's own turns — the casts do not overlap freely, and it
+does not matter: each instance still ticks three times at its own
+4-magnitude snapshot regardless of how the other two are timed (D3's
+independence), so the total is exactly `3 instances x 4 magnitude x 3 ticks =
+36` no matter what cadence the cooldown imposes. **Reported rather than
+tuned.** A DoT that stacks without a ladder or a cap earns exactly the
+property D3 itself names — "an applier adding one instance per turn
+plateaus... it does not run away" — but three instances across five turns is
+well short of that plateau, and the comparison this pair asks for is a
+snapshot at three, not the asymptote. The lever, if the owner wants one, is
+the cooldown: raising it to 3 would space the casts to match the DoT's own
+3-tick lifetime and remove the overlap entirely.
+
+**Thorn Tithe vs direct damage, fast and slow physical targets, one 10-mana
+cast run to its natural end (three affected turns):**
+
+| target | speed | total damage |
+|---|---|---|
+| fast (`crystal_bat`'s own speed) | 15 | 30 |
+| slow (`golem`/`treant`'s own speed) | 3 | 30 |
+
+**Finding, reported rather than tuned: the total is identical at both ends**
+— three opening ticks plus three retaliations, five each, six events of five,
+not a function of speed at all in an all-physical fixture where every one of
+the target's own turns both opens with a tick and resolves a physical swing.
+One 10-mana cast therefore already clears a single Blackglass Spear packet
+(9–14 depending on the defended enemy, `BlackglassSpearVsLightningBolt`) at
+either end, for a spell that also denies nothing and costs no further action
+after the first. This is the same axis milestone D already found for Velvet
+Shackles: **speed is not the axis, kit composition is.**
+
+**The real axis, measured separately: against a target with nothing physical
+in its kit, the retaliation never fires at all.**
+
+| target | total damage |
+|---|---|
+| physical (always swings) | 30 |
+| pure caster (always casts) | 15 |
+
+A caster-type target pays only the three opening ticks — a third less value
+for the identical 10 mana. The lever this suggests, if the owner wants one,
+is the same shape D9's "kit composition, not speed, decides a root's value"
+finding already offered for Velvet Shackles: nothing to tune here without a
+model change, since the classification (physical or not) is deliberately
+binary and the retaliation is doing exactly what 2.12 asks of it.
 
 ---
 

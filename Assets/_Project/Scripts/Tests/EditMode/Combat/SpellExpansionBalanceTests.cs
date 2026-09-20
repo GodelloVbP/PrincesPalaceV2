@@ -742,5 +742,220 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, acted, "and the two turns after them are the enemy's own again");
         }
 
+        // ---- milestone E: Censer of Embers' stack vs direct damage -------------
+
+        private static ResolvedSkill Censer() =>
+            new ResolvedSkill("censer_of_embers", "Censer of Embers", "", "sheep", 1,
+                SkillEffect.Afflict, SkillTargeting.SingleEnemy, 8, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Burn, statusMagnitude: 4, statusDuration: 3,
+                cooldownTurns: 2, physicalMove: false);
+
+        // MEASURED 2026-09-20, against an undefended target with variance off.
+        // Cooldown 2 means "turn one then turn three" (SkillCooldownTests'
+        // own words), so three casts take FIVE of the caster's own turns
+        // (1, 3, 5), with the caster's non-Physical Filler spending the two
+        // between them -- ExecuteAttack would deal its own damage to the same
+        // target this is measuring, so it is not the honest filler here.
+        //
+        //   spell                mana   total damage   per mana
+        //   Censer x3 (stacked)  24     36             1.5
+        //   lightning_bolt x3    33     30             0.91
+        //
+        // THE FINDING, reported rather than tuned: three stacked Burns beat
+        // three Lightning Bolts by a wide margin per mana (1.5 against 0.91)
+        // AND in absolute total (36 against 30) for less mana spent (24
+        // against 33), even though the cooldown SPACES the casts out to one
+        // every other turn rather than letting them overlap freely. Each
+        // instance still ticks three times at its own 4-magnitude snapshot
+        // regardless of how the other two are timed (D3's independence), so
+        // the total is exactly 3 instances x 4 magnitude x 3 ticks = 36 no
+        // matter the cadence the cooldown imposes. A DoT that stacks without
+        // a ladder or a cap earns exactly the property D3 itself names: "an
+        // applier adding one instance per turn plateaus... it does not run
+        // away" -- but three instances across five turns is well short of
+        // the plateau, and the comparison this pair asks for is a snapshot at
+        // three, not the asymptote. Left at the prototype figure.
+        [Test]
+        public void CensersThreeCastStack_OutpacesThreeLightningBoltsPerMana()
+        {
+            var caster = new CombatantState("Caster", true, 500, 200, LowAnchorAttack, 10);
+            var dummy = new CombatantState("Dummy", false, 100000, 10, 5, 9);
+            dummy.PhysicalDefense = 0;
+            dummy.MagicalDefense = 0;
+
+            var kit = new PlayerKit("sheep", CharacterRole.Support, new[] { Censer(), Filler() }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { caster }, new[] { dummy }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(17)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            int before = dummy.CurrentHealth;
+
+            // THREE CASTS ON TURNS 1, 3, 5 -- the Filler spends turns 2 and 4
+            // while the cooldown is still up.
+            Assert.IsTrue(session.CastSkill(0, dummy), "cast 0 must be accepted");
+            session.DrainBeats();
+            Assert.IsTrue(session.CastSkill(1, caster));
+            session.DrainBeats();
+            Assert.IsTrue(session.CastSkill(0, dummy), "cast 1 must be accepted once the cooldown clears");
+            session.DrainBeats();
+            Assert.IsTrue(session.CastSkill(1, caster));
+            session.DrainBeats();
+            Assert.IsTrue(session.CastSkill(0, dummy), "cast 2 must be accepted");
+            session.DrainBeats();
+
+            // AND ENOUGH FURTHER FILLER TURNS for every live instance to
+            // finish its three ticks.
+            for (int i = 0; i < 10 && dummy.Statuses.Any(s => s.Type == StatusEffectType.Burn); i++)
+            {
+                session.CastSkill(1, caster);
+                session.DrainBeats();
+            }
+
+            int total = before - dummy.CurrentHealth;
+            Assert.AreEqual(36, total, "three independent 4-magnitude, 3-tick Burns: 3 x 4 x 3");
+
+            int lightningTotal = 3 * LandedDamage(Packet("lightning_bolt", DamageType.Lightning, 10, 11), LowAnchorAttack);
+            Assert.AreEqual(30, lightningTotal, "fixture check: three Lightning Bolts at 10 each");
+
+            Assert.Greater(total / 24f, lightningTotal / 33f,
+                "the stack must beat direct damage per mana for this finding to be worth recording");
+        }
+
+        // ---- milestone E: Thorn Tithe vs direct damage, fast vs slow -----------
+
+        private static ResolvedSkill ThornTithe() =>
+            new ResolvedSkill("thorn_tithe", "Thorn Tithe", "", "sheep", 1,
+                SkillEffect.Afflict, SkillTargeting.SingleEnemy, 10, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Thorned, statusMagnitude: 5, statusDuration: 3,
+                cooldownTurns: 3, physicalMove: false);
+
+        // A NON-PHYSICAL, SELF-TARGETED FILLER for the caster's remaining
+        // turns -- ExecuteAttack would deal its OWN damage to the same
+        // target the tithe is measuring, and re-casting Thorn Tithe itself
+        // is refused by its own cooldown (a refusal spends no turn at all,
+        // per plan 1.1), which would leave the loop unable to advance the
+        // clock. This is the identical device ThornTitheTests' FillerHeal
+        // uses, at kit index 1 so index 0 stays Thorn Tithe.
+        private static ResolvedSkill Filler() =>
+            new ResolvedSkill("filler_heal", "Filler", "", "sheep", 1,
+                SkillEffect.HealSelf, SkillTargeting.Self, 0, 0, false, 0, 1, false,
+                null, SpellPresentation.None, 0, physicalMove: false);
+
+        // Runs the tithe to its natural end (three affected turns) against a
+        // target that spends every one of those turns on a PLAIN SWING --
+        // the physical move the retaliation is watching for -- and reports
+        // the total damage taken.
+        private static int TotalDamageOverThreeAffectedTurns(int targetSpeed)
+        {
+            var caster = new CombatantState("Caster", true, 500, 200, LowAnchorAttack, 10);
+            var target = new CombatantState("Target", false, 100000, 10, 5, targetSpeed);
+            target.PhysicalDefense = 0;
+            target.MagicalDefense = 0;
+
+            var kit = new PlayerKit("sheep", CharacterRole.Support, new[] { ThornTithe(), Filler() }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { caster }, new[] { target }),
+                new List<PlayerKit> { kit }, null, new SeededRandom(19)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            int before = target.CurrentHealth;
+            Assert.IsTrue(session.CastSkill(0, target));
+            session.DrainBeats();
+
+            // FURTHER TURNS, THE FILLER ONLY (the caster has nothing else to
+            // spend that does not touch the target), until Thorned falls off
+            // -- enough for both remaining opening ticks and every
+            // physical-move retaliation the three affected turns owe. The
+            // TARGET's own turns are a plain swing every time (no abilities
+            // authored), which is the physical move the hook is watching for.
+            for (int i = 0; i < 20 && target.Statuses.Any(s => s.Type == StatusEffectType.Thorned); i++)
+            {
+                session.CastSkill(1, caster);
+                session.DrainBeats();
+            }
+
+            return before - target.CurrentHealth;
+        }
+
+        // MEASURED 2026-09-20, against an undefended target, variance off,
+        // 10 mana, one cast. `crystal_bat` (speed 15) and `golem`/`treant`
+        // (speed 3) are section 5's own named fast/slow ends; this harness
+        // varies only the axis that matters to a RETALIATION -- how often the
+        // target's own physical move recurs relative to the tithe's fixed
+        // three-affected-turn window, not how often it recurs relative to the
+        // CASTER (Thorn Tithe's opening tick and the direct-damage comparison
+        // both ride the caster's own cast cadence identically; only the
+        // retaliation count depends on the target's own turn rate).
+        //
+        //   target speed   total damage   direct-damage comparison (Blackglass Spear, 10 mana, one packet)
+        //   15 (fast)      30             9-14 depending on the target's defence (BlackglassSpearVsLightningBolt)
+        //   3  (slow)      30             same
+        //
+        // THE FINDING, reported rather than tuned: the total is IDENTICAL at
+        // both ends (30 = three opening ticks plus three retaliations, five
+        // each -- six events of five, not a function of speed at all in this
+        // all-physical fixture, since every one of the target's own turns
+        // both opens with a tick AND resolves a physical swing). One 10-mana
+        // cast of Thorn Tithe therefore already clears a single Blackglass
+        // Spear packet at either end, for a spell that also denies nothing
+        // and costs no action beyond the first. Speed changes WHEN the
+        // target's turns land relative to the caster's, not HOW MANY of the
+        // three affected turns it gets to spend on a physical move here --
+        // the same axis milestone D already found for Velvet Shackles (kit
+        // composition, not speed, decides a root's value). Thorn Tithe's own
+        // axis is narrower still: against a target with nothing physical to
+        // do (a pure caster), the retaliation never fires at all and the
+        // total falls to 15 (three opening ticks only) -- recorded as the
+        // real fast/slow-equivalent finding below.
+        [Test]
+        public void ThornTitheVsDirectDamage_OnFastAndSlowPhysicalTargets()
+        {
+            int fast = TotalDamageOverThreeAffectedTurns(targetSpeed: 15);
+            int slow = TotalDamageOverThreeAffectedTurns(targetSpeed: 3);
+
+            Assert.AreEqual(30, fast, "3 opening ticks + 3 retaliations, 5 each, against a target that always swings");
+            Assert.AreEqual(30, slow, "identical -- both targets take a physical move every one of their own turns");
+        }
+
+        // THE REAL AXIS: a target with nothing physical in its kit never pays
+        // the retaliation half at all, so the same 10-mana cast is worth a
+        // third less against it than against a swinging target -- kit
+        // composition, not speed, decides Thorn Tithe's value, exactly as
+        // milestone D found for Velvet Shackles.
+        [Test]
+        public void ThornTitheAgainstAPureCaster_EarnsOnlyTheOpeningTicks()
+        {
+            var caster = new CombatantState("Caster", true, 500, 200, LowAnchorAttack, 10);
+            var casterFoe = new CombatantState("CasterFoe", false, 100000, 50, 5, 9);
+            casterFoe.PhysicalDefense = 0;
+            casterFoe.MagicalDefense = 0;
+
+            var cast = new ResolvedSkill("foe_cast", "Cackle", "", "foe", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 1, false,
+                null, SpellPresentation.None, 0, physicalMove: false);
+            var kit = new PlayerKit("sheep", CharacterRole.Support, new[] { ThornTithe(), Filler() }, null, null);
+            var session = new FightSession(new CombatEncounter(new[] { caster }, new[] { casterFoe }),
+                new List<PlayerKit> { kit },
+                new List<EnemyKit> { new EnemyKit(
+                    new ResolvedEnemy("foe", "foe", new StatBlock(), 0, 0, false,
+                        DamageType.Physical, DamageType.Physical, 0), false,
+                    new List<EnemyAbility> { EnemyAbility.Of(cast, 1_000_000f) }) },
+                new SeededRandom(23)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            int before = casterFoe.CurrentHealth;
+            Assert.IsTrue(session.CastSkill(0, casterFoe));
+            session.DrainBeats();
+
+            for (int i = 0; i < 20 && casterFoe.Statuses.Any(s => s.Type == StatusEffectType.Thorned); i++)
+            {
+                session.CastSkill(1, caster);
+                session.DrainBeats();
+            }
+
+            int total = before - casterFoe.CurrentHealth;
+            Assert.AreEqual(15, total, "three opening ticks only -- a caster with no physical move never retaliates");
+        }
     }
 }

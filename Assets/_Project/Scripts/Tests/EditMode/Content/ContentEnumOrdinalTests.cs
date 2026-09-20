@@ -79,6 +79,9 @@ namespace PrincesPalace.Domain.Tests
             { "Rooted", 9 },
             { "Marked", 10 },
             { "Feared", 11 },
+            // Milestone E.
+            { "Burn", 12 },
+            { "Thorned", 13 },
         };
 
         private static readonly Dictionary<string, int> DamageTypeOrdinals = new Dictionary<string, int>

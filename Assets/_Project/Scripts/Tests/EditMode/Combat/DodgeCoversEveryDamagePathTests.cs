@@ -398,7 +398,7 @@ namespace PrincesPalace.Domain.Tests
 
             var report = StatusEffects.Tick(target);
 
-            Assert.AreEqual(40, report.PoisonDamage,
+            Assert.AreEqual(40, report.Rows.Single(r => r.Status == StatusEffectType.Poison).ToHealth,
                 "a DoT tick never calls AfterDefences at all and so must apply in full regardless of dodge chance");
             Assert.AreEqual(960, target.CurrentHealth);
         }

@@ -95,8 +95,8 @@ namespace PrincesPalace.Domain.Tests
             { "spore_cloud", false },
             { "bog_mud_burst", false },
 
-            // The spell expansion. All thirteen are casts; these are the ten
-            // landed through milestone D.
+            // The spell expansion. All thirteen are casts; these are the
+            // twelve landed through milestone E.
             { "gilded_aegis", false },
             { "winters_rebuke", false },
             { "vipers_bite", false },
@@ -107,6 +107,8 @@ namespace PrincesPalace.Domain.Tests
             { "gale_scythe", false },
             { "palace_passage", false },
             { "velvet_shackles", false },
+            { "censer_of_embers", false },
+            { "thorn_tithe", false },
         };
 
         private static List<string> SkillBlocks() =>

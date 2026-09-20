@@ -171,6 +171,30 @@ namespace PrincesPalace.Domain.Combat
         // TWELFTH. See Fear's own header for the authored Magnitude
         // (vulnerable percent) and application API.
         Feared,
+
+        // Magnitude damage at the start of each of the holder's own turns,
+        // like Poison -- but MITIGATED, unlike Poison. StatusEffects
+        // .MitigationOf(Burn) answers AffinityOnly: a tick is reduced by
+        // resistance and amplified by weakness (StatusEffects.ElementOf
+        // answers Fire), with no flat defense, no ward, no Protect/
+        // Vulnerable and no variance. See plan 1.5 for the snapshot rule --
+        // the caster's own potency is folded in ONCE, at application, and
+        // never re-read.
+        //
+        // THIRTEENTH, spell-expansion milestone E. Censer of Embers is its
+        // one author today.
+        Burn,
+
+        // The mirror of Burn, Nature-typed instead of Fire, with a second
+        // damage moment Burn does not have: FightSession's post-action hook
+        // (plan 1.11) deals this same stored snapshot again after the
+        // holder completes a PHYSICAL MOVE of their own -- "whenever it
+        // strikes or charges" (Thorn Tithe's own tooltip). The holder is
+        // punished for moving, not whoever they moved against; the hook
+        // reads and damages THIS combatant, never a target.
+        //
+        // FOURTEENTH. Thorn Tithe is its one author today.
+        Thorned,
     }
 
     // WHEN A STATUS'S COUNTER MOVES -- the one question that decides how an
@@ -206,6 +230,29 @@ namespace PrincesPalace.Domain.Combat
         // is the rule wards have used since 2026-09-16, generalised to every
         // standing modifier.
         AtTurnEnd,
+    }
+
+    // HOW MUCH OF A HIT'S OWN DEFENCE STACK A DAMAGING STATUS'S TICK MEETS.
+    // A third table, beside DurationClock and StackingPolicy, and the one
+    // that answers plan 1.5's own question for the new DoTs: Poison has
+    // always ignored every defence entirely, and Burn/Thorned are not that --
+    // they meet the holder's elemental affinity, and nothing else.
+    //
+    // StatusEffects.MitigationOf(type) is the table; only a damaging status
+    // (one ElementOf answers) is ever asked, so it is not total over every
+    // StatusEffectType the way DurationClock is.
+    public enum StatusMitigation
+    {
+        // The tick's stored Magnitude reaches health unmodified. Poison's
+        // own arithmetic, preserved exactly (plan 1.5).
+        None,
+
+        // The tick's stored Magnitude meets ONLY the holder's elemental
+        // affinity for ElementOf(type) -- CombatMath.EffectivenessMultiplier,
+        // the same weak/resist curve a typed hit meets -- and nothing else:
+        // no flat defense, no typed resistance stat, no ward, no Protect/
+        // Vulnerable, no variance. Burn and Thorned both answer this.
+        AffinityOnly,
     }
 
     // WHAT A SECOND APPLICATION DOES. Owner's decision, 2026-09-20 -- "the

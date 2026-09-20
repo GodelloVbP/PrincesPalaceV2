@@ -38,6 +38,29 @@ namespace PrincesPalace.Domain.Combat.Session
         // about.
         private CombatantState _grantedExtraTurnTo;
 
+        // THORN TITHE'S OPENING TICK, SNAPSHOTTED BEFORE IT CAN BE REMOVED
+        // (plan 1.11/2.12). Thorned sits on the AtTick clock like every other
+        // DoT (1.4): its final instance is removed inside StatusEffects.Tick
+        // on the very turn it fires its last tick, at that turn's OWN START --
+        // before the actor has even acted. 2.12 still promises a retaliation
+        // on that turn's action, so TickStatuses captures the live instances
+        // here, before calling StatusEffects.Tick, and
+        // TriggerPhysicalMoveRetaliation reads them back later in the SAME
+        // turn. The instance OBJECTS outlive their removal from
+        // CombatantState.Statuses -- only the list forgets them -- so their
+        // Magnitude is exactly 1.5's stored snapshot, however long after
+        // application it is read.
+        //
+        // Keyed by actor rather than held as a single slot: nothing in this
+        // file assumes only one combatant's turn is ever "open" between a
+        // turn-start tick and that turn's action (a monster resolves inside
+        // one call, but the shape costs nothing to make correct regardless).
+        // Cleared to "no entry" the moment a turn-start tick finds no live
+        // Thorned, so a combatant who is never Thorned again cannot retaliate
+        // off a fight-old snapshot the next time they happen to swing.
+        private readonly Dictionary<CombatantState, List<ActiveStatus>> _thornedAtTurnStart =
+            new Dictionary<CombatantState, List<ActiveStatus>>();
+
         // A TURN IS OVER, HOWEVER IT ENDED -- the one place the turn-end clock
         // is wound, sitting immediately before every `_encounter.AdvanceTurn()`
         // in the session.
@@ -78,8 +101,26 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Everything after an action resolves: extra turns, then the schedule
         // moves on, then the next actor's turn-start bookkeeping.
-        private void AdvanceAfterAction()
+        //
+        // `physicalMove` IS PLAN 1.11'S POST-ACTION HOOK, for the PLAYER half
+        // of it -- see TriggerPhysicalMoveRetaliation's own header for why
+        // the hook does not live where the plan first put it, and
+        // FightSession.Enemies.AutoResolveEnemyTurns for the monster half,
+        // which never reaches this method at all. Every one of the four
+        // callers (ExecuteAttack, Move, CastSkillOnPicks, UseItem) already
+        // knows at its own call site whether what just happened was a
+        // physical move -- Move never is; a plain attack always is
+        // (CombatActions.PlainAttackIsPhysicalMove); a cast reads its own
+        // skill's authored classification (CombatActions.IsPhysicalMove) -- so
+        // this is the one place that fact and "an action just completed"
+        // meet, which is exactly 1.11's own definition of when the hook
+        // fires. FIRED FIRST, ahead of even the fight-over check below: a
+        // retaliation that kills the last enemy must be able to end the
+        // fight through the ordinary path, not slip past it.
+        private void AdvanceAfterAction(bool physicalMove = false)
         {
+            if (physicalMove) TriggerPhysicalMoveRetaliation(_encounter.Current);
+
             // Read-then-reset up front, unconditionally, so a flag can never
             // leak into a fight that is ending right here or a turn that has
             // not happened yet -- whichever path below runs, it starts clean.
@@ -526,7 +567,40 @@ namespace PrincesPalace.Domain.Combat.Session
                 return;
             }
 
+            // THE NEW-DOT SNAPSHOT (plan 1.5), taken HERE rather than at
+            // ResolveAfflict -- the whole reason Censer of Embers and Thorn
+            // Tithe cost content and no code (FightSession.Skills
+            // .ResolveAfflict's own comment) is that this seam is where
+            // Chilled's bookkeeping already lives, so a second damaging
+            // status with its own arithmetic joins it rather than teaching
+            // ResolveAfflict a third spell-shaped branch. `magnitude` is
+            // still the raw authored `intensityStep` on the way in; what is
+            // RECORDED is `intensityStep * SkillPowerMultiplierFor(source) *
+            // SpellScalingMultiplierFor(source)`, rounded away from zero and
+            // floored at 1 -- the exact arithmetic ResolveDamageInstances
+            // already uses for a fixed packet. The caster is never consulted
+            // again after this line; every later tick and every retaliation
+            // reads the stored figure off the entry itself.
+            if (type == StatusEffectType.Burn || type == StatusEffectType.Thorned)
+            {
+                magnitude = SnapshotDotMagnitude(magnitude, source);
+            }
+
             RecordStatus(recipient, type, magnitude, turns, source);
+        }
+
+        // See ApplyStatusTo's own comment for why this runs at the seam
+        // rather than at ResolveAfflict. `caster` is who PAID for the cast --
+        // null on the one path that authors a status with no caster at all
+        // (FightSession.Enemies.ResolveEnemyAction's on-hit `ApplyStatusTo`
+        // call, which passes no source), in which case there is no potency to
+        // fold in and the authored base stands, still floored at 1.
+        private int SnapshotDotMagnitude(int intensityStep, CombatantState caster)
+        {
+            float multiplier = caster != null
+                ? SkillPowerMultiplierFor(caster) * SpellScalingMultiplierFor(caster)
+                : 1f;
+            return System.Math.Max(1, Rounding.AwayFromZero(intensityStep * multiplier));
         }
 
         // The application itself plus the turn-end exemption, with no
@@ -577,7 +651,20 @@ namespace PrincesPalace.Domain.Combat.Session
             // disagree with it the day a second DoT lands.
             var preTick = SnapshotVitals();
 
-            var report = StatusEffects.Tick(actor);
+            // BEFORE THE TICK, and separate from preTick: Thorned's
+            // post-action retaliation (plan 1.11/2.12) can fire LATER this
+            // same turn, after this very call may already have removed the
+            // Thorned instance that pays for it -- Thorned is AtTick like
+            // every other DoT (1.4), so its final tick and its removal are
+            // the same pass. Snapshotting the live instances here, before
+            // StatusEffects.Tick touches anything, is what lets the third
+            // affected turn's action still be covered. See
+            // TriggerPhysicalMoveRetaliation's own header.
+            var thornedNow = StatusEffects.InstancesOf(actor, StatusEffectType.Thorned).ToList();
+            if (thornedNow.Count > 0) _thornedAtTurnStart[actor] = thornedNow;
+            else _thornedAtTurnStart.Remove(actor);
+
+            var report = StatusEffects.Tick(actor, AffinityOf(actor));
 
             // CHILLED'S TEARDOWN IS NOT HERE ANY MORE. It moved to
             // TickStatusesAtTurnEnd with the clock (plan D1): Chilled is an
@@ -588,13 +675,31 @@ namespace PrincesPalace.Domain.Combat.Session
             // that currently has a teardown at all.
             if (report.IsEmpty) return;
 
-            // GATED ON THE WHOLE TICK, not on the part that reached health. A
-            // signature pool spends itself before health does, so a tick a full
-            // Wool pool eats outright leaves PoisonDamage at zero -- and
-            // reading that as "nothing happened" is how five points of armour
-            // got spent with no line, no ledger row and no word to the pools.
-            if (report.PoisonDamage > 0 || report.PoisonAbsorbed > 0)
+            // ONE BEAT PER ROW (plan D5) -- a tick carrying two damage types
+            // (Poison and a fresh Burn, say) shows and records both,
+            // separately, rather than folding them into one number under one
+            // element. GATED ON THE WHOLE ROW, not on the part that reached
+            // health: a signature pool spending itself before health does
+            // still leaves ToHealth at zero, and reading that as "nothing
+            // happened" is how points of armour got spent with no line, no
+            // ledger row and no word to the pools.
+            //
+            // SETTLED AT MOST ONCE FOR THE WHOLE TICK, unlike the beat/message/
+            // ledger calls above, which run once per row. Every row's damage
+            // already landed inside StatusEffects.Tick, before this loop ever
+            // starts, so a target already dead when row 2 is reported did not
+            // die twice -- SettleDeath's own guard only refuses a target that
+            // is still ALIVE, not one settled a moment ago by row 1 in this
+            // same tick, so calling it again here would double the "went
+            // down" count for one body. `settled` is this method's own guard
+            // for that, the same shape DealDamage's wasAlive/now-dead check
+            // enforces on every other damage path.
+            bool settled = false;
+            foreach (var row in report.Rows)
             {
+                int amount = row.ToHealth + row.Absorbed;
+                if (amount <= 0) continue;
+
                 // THE TICK BECOMES A BEAT, so the stage plays it the way it
                 // plays every other blow: the hurt pose, the recoil, the
                 // flash tinted with the status's own element, the number.
@@ -604,28 +709,24 @@ namespace PrincesPalace.Domain.Combat.Session
                 // OPENED BEFORE THE LINES BELOW, so they land ON it rather
                 // than being retro-attached to whatever beat happened to be
                 // last (AppendMessage's own fallback). That is also what
-                // moves the poison line from the end of the PREVIOUS blow to
-                // the moment the tick is shown.
-                bool ownsBeat = BeginStatusTickBeat(
-                    actor, preTick, StatusEffectType.Poison,
-                    report.PoisonDamage + report.PoisonAbsorbed, isHealing: false);
+                // moves the line from the end of the PREVIOUS blow to the
+                // moment the tick is shown.
+                bool ownsBeat = BeginStatusTickBeat(actor, preTick, row.Status, amount, isHealing: false);
 
                 // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
                 // already uses ("attacks X for N damage!" followed by "X's Wool
                 // soaks M of it."). Printing the health figure instead would
-                // announce "suffers 0 poison damage!" for a tick the armour
-                // stopped, and leave the soak line with no antecedent for
-                // "it".
-                AppendMessage(
-                    $"{actor.Name} suffers {report.PoisonDamage + report.PoisonAbsorbed} poison damage!");
+                // announce "suffers 0 damage!" for a tick the armour stopped,
+                // and leave the soak line with no antecedent for "it".
+                AppendMessage($"{actor.Name} suffers {amount} {TickVerb(row.Status)} damage!");
 
-                if (report.PoisonAbsorbed > 0 && actor.SignaturePool != null)
+                if (row.Absorbed > 0 && actor.SignaturePool != null)
                 {
                     AppendMessage(
-                        $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {report.PoisonAbsorbed} of it.");
+                        $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {row.Absorbed} of it.");
                 }
 
-                // Counted as TAKEN and credited to nobody. The poison was
+                // Counted as TAKEN and credited to nobody. The status was
                 // applied turns ago by someone who may now be dead, and
                 // back-crediting it would put points in a column the player
                 // cannot account for against any blow they watched land.
@@ -633,8 +734,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Both halves handed over separately, exactly as the funnel's
                 // own Ledger.Took call does: what a pool ate was never taken by
                 // health, and folding the two into one number would double-count
-                // every absorbed point.
-                RecordUnattributedDamage(actor, report.PoisonDamage, report.PoisonAbsorbed);
+                // every absorbed point. ONCE PER ROW (plan D5) -- a tick
+                // carrying two damage types calls this twice, not once with a
+                // summed figure, so the ledger can still tell them apart.
+                RecordUnattributedDamage(actor, row.ToHealth, row.Absorbed);
 
                 // And if the tick killed, that death is settled with the same
                 // KillCredit.Nobody the comment above argues for -- WRITTEN
@@ -645,7 +748,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 // The call is a no-op on the Nobody branch by design; what it
                 // buys is that `grep SettleDeath` finds every death decision
                 // in the file family, this one included.
-                SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
+                if (!settled && !actor.IsAlive)
+                {
+                    SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
+                    settled = true;
+                }
 
                 // COMMITTED AFTER THE DEATH IS SETTLED, and that ordering is
                 // the point: SettleDeath records no beat of its own, so the
@@ -655,11 +762,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // swing.
                 if (ownsBeat) CommitBeat();
 
-                // The regen beat below, if there is one, opens on live vitals
-                // rather than on preTick -- the poison beat has already shown
-                // the drop and its Snapshot IS live state, so re-using
-                // preTick would make the second beat replay the first one's
-                // damage.
+                // The next row's beat, if there is one, opens on live vitals
+                // rather than on preTick -- this row's beat has already shown
+                // the drop and its Snapshot IS live state, so re-using preTick
+                // would make the next beat replay this one's damage.
                 preTick = null;
             }
 
@@ -690,6 +796,75 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{actor.Name}'s {expired} wears off.");
             }
+        }
+
+        // THE WORD A TICK'S OWN LOG LINE USES ("suffers N ___ damage!").
+        // Poison keeps its exact original wording; the new DoTs read their
+        // own type name lowercased, which is the same "no per-type table
+        // beyond what a name already says" rule StatusHud.SlugFor uses for
+        // its icon path.
+        private static string TickVerb(StatusEffectType type) =>
+            type == StatusEffectType.Poison ? "poison" : type.ToString().ToLowerInvariant();
+
+        // PLAN 1.11'S POST-ACTION HOOK, PLACED WHERE A COMPLETED ACTION IS
+        // ACTUALLY KNOWN ON BOTH SIDES OF THE FIGHT -- not at the top of
+        // AdvanceAfterAction, which is the plan's own first draft and is
+        // wrong for an enemy: AdvanceAfterAction is reached only by the four
+        // PLAYER commands (see EndTurnStatusesForCurrent's own header for the
+        // identical lesson D already paid for). Thorn Tithe is cast on
+        // ENEMIES, so a hook that only ever fired for the player would never
+        // retaliate at all. Called from two seams instead, one per side:
+        // AdvanceAfterAction (this file) for the four player commands, and
+        // FightSession.Enemies.AutoResolveEnemyTurns for a monster's own
+        // action -- both know, at the point they call this, whether what just
+        // happened was a completed PHYSICAL MOVE, which is 1.11's whole
+        // trigger condition.
+        //
+        // SELF-INFLICTED. Thorned punishes its OWN HOLDER for moving, not
+        // whoever they moved against -- "whenever it strikes or charges"
+        // (2.12's tooltip) names the cursed actor, not their target -- so
+        // this reads and damages `actor` itself.
+        //
+        // NOT AN ACTION. This method is called AFTER the action it reacts to
+        // has already fully resolved and its own beat committed; it opens no
+        // new one of its own (BeginStatusTickBeat), spends no resource,
+        // starts no cooldown and never calls AdvanceAfterAction, CastSkill,
+        // ExecuteAttack or Move -- so a retaliation that kills its holder
+        // cannot recurse into itself, which is the structural guard 1.11
+        // asks for rather than a re-entrancy flag.
+        //
+        // A REFUSED, FORFEITED OR FREE ACTION NEVER REACHES HERE AT ALL: a
+        // refusal returns before either calling seam is reached (1.1), a
+        // forfeited turn calls ForfeitTurn rather than an action path, and a
+        // free action does not reach AdvanceAfterAction (FightSession.Skills
+        // .cs). Nothing needs to check for those cases here because the
+        // caller already could not have called this method for one.
+        private void TriggerPhysicalMoveRetaliation(CombatantState actor)
+        {
+            if (actor == null || !actor.IsAlive) return;
+            if (!_thornedAtTurnStart.TryGetValue(actor, out var instances) || instances.Count == 0) return;
+
+            var preTick = SnapshotVitals();
+            var row = StatusEffects.ApplyDotDamage(actor, StatusEffectType.Thorned, instances, AffinityOf(actor));
+            if (!row.HasValue) return;
+
+            int amount = row.Value.ToHealth + row.Value.Absorbed;
+            if (amount <= 0) return;
+
+            bool ownsBeat = BeginStatusTickBeat(actor, preTick, StatusEffectType.Thorned, amount, isHealing: false);
+
+            AppendMessage($"{actor.Name}'s thorns lash back for {amount} damage!");
+
+            if (row.Value.Absorbed > 0 && actor.SignaturePool != null)
+            {
+                AppendMessage(
+                    $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {row.Value.Absorbed} of it.");
+            }
+
+            RecordUnattributedDamage(actor, row.Value.ToHealth, row.Value.Absorbed);
+            SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
+
+            if (ownsBeat) CommitBeat();
         }
 
         // A STATUS TICK THE STAGE CAN SEE, or false when something else already
@@ -781,6 +956,22 @@ namespace PrincesPalace.Domain.Combat.Session
         // the fixture applied stays exempt from every turn end forever and the
         // sweep looks broken when it is working exactly as written.
         public void CrossTurnBoundaryForTest() => _statusesAppliedThisTurn.Clear();
+
+        // ApplyChilledForTest's sibling (FightSession.SpeedBuffs.cs): the ONE
+        // status-application seam (plan D6), for a test that wants Burn or
+        // Thorned's snapshot arithmetic (plan 1.5) without a full skill cast.
+        // `source` is the caster whose SkillPowerMultiplier/SpellScaling the
+        // snapshot folds in -- pass one to test the scaling, or null to pin
+        // the "no caster, no potency" floor.
+        public void ApplyStatusToForTest(CombatantState recipient, StatusEffectType type,
+            int magnitude, int turns, CombatantState source = null) =>
+            ApplyStatusTo(recipient, type, magnitude, turns, source);
+
+        // Thorn Tithe's post-action hook (plan 1.11), driven directly for a
+        // test that wants the retaliation's own arithmetic without playing a
+        // whole physical action through CastSkill/ExecuteAttack.
+        public void TriggerPhysicalMoveRetaliationForTest(CombatantState actor) =>
+            TriggerPhysicalMoveRetaliation(actor);
 
     }
 }

@@ -16,6 +16,15 @@ namespace PrincesPalace.Domain.Tests
             return new CombatantState("Test", true, maxHealth, 10, 5, 5);
         }
 
+        // D5: TickReport carries typed rows rather than a PoisonDamage field.
+        // Every test written against the old field reads this instead.
+        // FirstOrDefault rather than Single: a tick with nothing left to deal
+        // reports no Poison row at all, and TickRow's default ToHealth (0) is
+        // the right answer for "a fourth tick landed" on an expired status,
+        // not a thrown exception.
+        private static int PoisonDamageOf(StatusEffects.TickReport report) =>
+            report.Rows.FirstOrDefault(r => r.Status == StatusEffectType.Poison).ToHealth;
+
         // ---- Apply / stacking ----------------------------------------------
 
         [Test]
@@ -216,7 +225,7 @@ namespace PrincesPalace.Domain.Tests
 
             var report = StatusEffects.Tick(target);
 
-            Assert.AreEqual(13, report.PoisonDamage, "the tick must be the sum of every live instance");
+            Assert.AreEqual(13, PoisonDamageOf(report), "the tick must be the sum of every live instance");
             Assert.AreEqual(187, target.CurrentHealth);
         }
 
@@ -228,13 +237,13 @@ namespace PrincesPalace.Domain.Tests
             StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 3, 3);
 
             var first = StatusEffects.Tick(target);
-            Assert.AreEqual(8, first.PoisonDamage);
+            Assert.AreEqual(8, PoisonDamageOf(first));
             CollectionAssert.AreEqual(new[] { StatusEffectType.Poison }, first.Expired,
                 "one instance ran out and one removal is what should be reported");
             Assert.AreEqual(1, target.Statuses.Count, "the longer instance went with the shorter one");
 
             var second = StatusEffects.Tick(target);
-            Assert.AreEqual(3, second.PoisonDamage, "the survivor must keep ticking at its own strength");
+            Assert.AreEqual(3, PoisonDamageOf(second), "the survivor must keep ticking at its own strength");
         }
 
         [Test]
@@ -373,7 +382,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(185, target.CurrentHealth, "three ticks of five, no more and no fewer");
             CollectionAssert.AreEqual(new[] { StatusEffectType.Poison }, third.Expired);
-            Assert.AreEqual(0, StatusEffects.Tick(target).PoisonDamage, "a fourth tick landed");
+            Assert.AreEqual(0, PoisonDamageOf(StatusEffects.Tick(target)), "a fourth tick landed");
         }
 
         [Test]
@@ -541,7 +550,7 @@ namespace PrincesPalace.Domain.Tests
 
             var report = StatusEffects.Tick(target);
 
-            Assert.AreEqual(40, report.PoisonDamage);
+            Assert.AreEqual(40, PoisonDamageOf(report));
             Assert.AreEqual(before - 40, target.CurrentHealth);
         }
 
@@ -562,7 +571,7 @@ namespace PrincesPalace.Domain.Tests
 
             var report = StatusEffects.Tick(target);
 
-            Assert.AreEqual(10, report.PoisonDamage,
+            Assert.AreEqual(10, PoisonDamageOf(report),
                 "a tick's flat Magnitude reaches health untouched -- defense is a DamagePipeline concern " +
                 "and a tick never enters that funnel");
         }
@@ -653,7 +662,7 @@ namespace PrincesPalace.Domain.Tests
 
             var report = StatusEffects.Tick(target);
 
-            Assert.AreEqual(30, report.PoisonDamage);
+            Assert.AreEqual(30, PoisonDamageOf(report));
             Assert.AreEqual(20, report.RegenHealed);
             Assert.AreEqual(500 - 30 + 20, target.CurrentHealth);
         }
@@ -756,7 +765,8 @@ namespace PrincesPalace.Domain.Tests
             // StatusEffects.Tick measures poison as HEALTH LOST, and
             // CombatMath.ApplyDamage spends the signature pool BEFORE health --
             // so a tick the pool ate in full reported zero. TickStatuses is
-            // gated on report.PoisonDamage > 0, which meant no log line, no
+            // gated on each row's `ToHealth + Absorbed` (D5's typed rows;
+            // ToHealth alone would have missed it), which meant no log line, no
             // RecordUnattributedDamage, no Ledger.Took absorbed column, and no
             // NoteDamageForPools: the exact bookkeeping d6814ce0 moved into one
             // funnel precisely so it could not be forgotten.
@@ -833,8 +843,13 @@ namespace PrincesPalace.Domain.Tests
 
             // NULL, not Physical. A status that deals no damage has no
             // element, and a caller must not have to know that Physical is
-            // the enum's zero to tell the two apart.
-            foreach (var type in all.Where(t => t != StatusEffectType.Poison))
+            // the enum's zero to tell the two apart. Burn (Fire) and Thorned
+            // (Nature) are the two new members that DO deal damage (plan
+            // 1.5) -- excluded here for the same reason Poison always was,
+            // and covered by their own assertions in NewDotTests.
+            foreach (var type in all.Where(t => t != StatusEffectType.Poison
+                                              && t != StatusEffectType.Burn
+                                              && t != StatusEffectType.Thorned))
             {
                 Assert.IsNull(StatusEffects.ElementOf(type),
                     $"{type} answered with an element; if it deals damage now, say which in ElementOf");

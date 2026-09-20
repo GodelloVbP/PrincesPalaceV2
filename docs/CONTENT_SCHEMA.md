@@ -79,7 +79,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `active` | bool | `true` | Whether this monster can actually spawn; false benches the entry without deleting it. |  |
 | `facing` | string | `"right"` | Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it. | Left, Right |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | VFX played over the target when this monster's skill lands; see SpellPresentation. |  |
-| `appliesStatus` | string | `""` | Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared |
+| `appliesStatus` | string | `""` | Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned |
 | `statusMagnitude` | int | `-1` | The magnitude of the applied status; required together with appliesStatus. |  |
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |
 | `avoidsFrontSlot` | bool | `false` | Whether this monster is never placed in the front stage slot when the room's other picks give an alternative. |  |
@@ -212,7 +212,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `cooldownTurns` | int | `0` | How many of the caster's own turns must pass before this skill can be cast again; 0 means no cooldown. |  |
 | `playerSelectable` | bool | `true` | Whether a player ever picks this from a menu, as against a monster-only skill drawn by weighted chance. |  |
 | `vfx` | SpellPresentation (below) | (zero -- see SpellPresentation) | How the skill looks and sounds when it resolves; see SpellPresentation. |  |
-| `appliesStatus` | string | `""` | Which StatusEffectType this skill applies on landing, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared |
+| `appliesStatus` | string | `""` | Which StatusEffectType this skill applies on landing, or empty for none. | Poison, Regen, Protect, Vulnerable, Stun, Shielded, Provoked, Empowered, Chilled, Rooted, Marked, Feared, Burn, Thorned |
 | `statusMagnitude` | int | `-1` | The magnitude of the applied status; required together with appliesStatus. |  |
 | `statusDuration` | int | `-1` | How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus. |  |
 | `requires` | string[] | `[]` | '<ability score> <amount>' lines gating whether this skill can be cast at all. |  |

@@ -189,6 +189,8 @@ namespace PrincesPalace.Domain.Combat
                 case StatusEffectType.Shielded:
                 case StatusEffectType.Empowered:
                 case StatusEffectType.Feared:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
                     return true;
 
                 // A gate or a token. It is on or it is not, and the only
@@ -971,6 +973,8 @@ namespace PrincesPalace.Domain.Combat
             switch (type)
             {
                 case StatusEffectType.Poison: return DamageType.Poison;
+                case StatusEffectType.Burn: return DamageType.Fire;
+                case StatusEffectType.Thorned: return DamageType.Nature;
 
                 // Everything else on the list changes a number, skips a turn
                 // or absorbs a hit. None of them deal damage of their own, so
@@ -982,35 +986,147 @@ namespace PrincesPalace.Domain.Combat
             }
         }
 
+        // HOW MUCH DEFENCE A DAMAGING STATUS'S TICK MEETS (plan 1.5/D4). Only
+        // ever asked of a type ElementOf answers -- a status with no element
+        // has no tick to mitigate -- so this is not walked by a vacuity-
+        // guarded "every member answers" test the way DurationClock is.
+        public static StatusMitigation MitigationOf(StatusEffectType type)
+        {
+            switch (type)
+            {
+                // Preserved exactly: Poison has never taken a defence term of
+                // any kind, and this plan does not touch that.
+                case StatusEffectType.Poison: return StatusMitigation.None;
+
+                // The new DoTs (plan 1.5): affinity only, no flat defense, no
+                // ward, no Protect/Vulnerable, no variance.
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
+                    return StatusMitigation.AffinityOnly;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type,
+                        "StatusEffects.MitigationOf was asked about a status with no element to mitigate -- "
+                        + "only a damaging status (ElementOf answers non-null) should ever reach here.");
+            }
+        }
+
+        // ONE DAMAGING STATUS FIGURE, MITIGATED AND DEALT -- the half of a
+        // tick both StatusEffects.Tick's turn-start pass and FightSession's
+        // post-action retaliation hook (plan 1.11) need identically, so a
+        // status cannot be mitigated one way on the clock and another way off
+        // it. `magnitude` is the raw stored snapshot (ActiveStatus.Magnitude);
+        // this applies MitigationOf(type) -- affinity only, for the new DoTs,
+        // nothing at all for Poison -- rounds away from zero and floors at 1,
+        // the same shape CombatMath.ApplyEffectiveness already uses for a
+        // typed hit.
+        private static int MitigatedTickAmount(int magnitude, StatusEffectType type, DamageType element,
+            ElementalAffinity affinity)
+        {
+            switch (MitigationOf(type))
+            {
+                case StatusMitigation.None:
+                    return magnitude;
+                case StatusMitigation.AffinityOnly:
+                    float multiplier = CombatMath.EffectivenessMultiplier(element, affinity);
+                    return CombatMath.ApplyEffectiveness(magnitude, multiplier);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type,
+                        "StatusEffects.MitigatedTickAmount has no arithmetic for this mitigation kind.");
+            }
+        }
+
+        // ONE ROW PER DAMAGING STATUS TYPE PER TICK (plan D5, closing AUDIT
+        // #188). A holder carrying three Poison instances and one Burn
+        // reports two rows -- Poison's summed across its three, Burn's alone
+        // -- never four, and never one row that tries to average two
+        // elements together. `ToHealth` and `Absorbed` are the same split
+        // PoisonDamage/PoisonAbsorbed used to keep: what left the pool
+        // versus what left health, so a signature pool eating a tick whole
+        // is still counted rather than reading as "nothing happened".
+        public readonly struct TickRow
+        {
+            public readonly StatusEffectType Status;
+            public readonly DamageType Element;
+            public readonly int ToHealth;
+            public readonly int Absorbed;
+
+            public TickRow(StatusEffectType status, DamageType element, int toHealth, int absorbed)
+            {
+                Status = status;
+                Element = element;
+                ToHealth = toHealth;
+                Absorbed = absorbed;
+            }
+        }
+
         public readonly struct TickReport
         {
-            // What reached HEALTH.
-            public readonly int PoisonDamage;
-
-            // And what the victim's signature pool ate before health was
-            // touched. Reported SEPARATELY, and reported at all, because
-            // PoisonDamage is measured as health lost: a tick a full Wool pool
-            // absorbs outright reduces it to zero, and a zero reads as "the
-            // poison did nothing" to every consumer. It did something -- it
-            // cost the holder five points of armour -- and the fight's
-            // bookkeeping (the absorbed ledger column, the pools' own
-            // "this turn was not idle" flag) is owed all of it.
-            public readonly int PoisonAbsorbed;
+            // One entry per damaging status TYPE this pass touched, never per
+            // instance -- StackPolicyOf already sums instances of one type
+            // into one badge (D3), and the report follows the same rule so a
+            // consumer cannot tell three Poisons and one big one apart, which
+            // is exactly the point.
+            public readonly IReadOnlyList<TickRow> Rows;
 
             public readonly int RegenHealed;
             public readonly IReadOnlyList<StatusEffectType> Expired;
 
-            public TickReport(int poisonDamage, int poisonAbsorbed, int regenHealed,
+            public TickReport(IReadOnlyList<TickRow> rows, int regenHealed,
                               IReadOnlyList<StatusEffectType> expired)
             {
-                PoisonDamage = poisonDamage;
-                PoisonAbsorbed = poisonAbsorbed;
+                Rows = rows;
                 RegenHealed = regenHealed;
                 Expired = expired;
             }
 
-            public bool IsEmpty =>
-                PoisonDamage == 0 && PoisonAbsorbed == 0 && RegenHealed == 0 && Expired.Count == 0;
+            public bool IsEmpty => Rows.Count == 0 && RegenHealed == 0 && Expired.Count == 0;
+        }
+
+        // THE SHARED HALF OF A TICK: sum, mitigate and deal ONE damaging
+        // status type's live instances to its holder, per instance (so
+        // absorption and the spike cap see the same sequence a turn-start
+        // tick always has), WITHOUT touching duration at all.
+        //
+        // `instances` IS NOT ALWAYS "whatever is on the combatant right now".
+        // Thorned's post-action retaliation (plan 1.11/2.12) fires AFTER the
+        // SAME turn's opening tick may already have removed the instance that
+        // paid for it -- Thorned is AtTick like every other DoT (1.4), so its
+        // final tick and its removal are the same pass, at that turn's own
+        // START, before the actor has even acted. FightSession snapshots the
+        // live instances before calling StatusEffects.Tick and hands that
+        // snapshot back here for the retaliation, which is what lets "the
+        // tick removed it" and "this turn still owes a retaliation" both be
+        // true without Thorned needing a clock of its own. The instance
+        // OBJECTS themselves outlive their removal from the list -- only the
+        // list forgets them -- so their Magnitude is exactly the stored
+        // snapshot 1.5 promises, read however long after application.
+        //
+        // Returns null when nothing of this type was live (or none of it had
+        // a positive Magnitude) -- the empty case, told apart from "dealt
+        // zero" the same way every other Tick-adjacent report does.
+        public static TickRow? ApplyDotDamage(CombatantState combatant, StatusEffectType type,
+            IEnumerable<ActiveStatus> instances, ElementalAffinity affinity)
+        {
+            var element = ElementOf(type);
+            if (combatant == null || element.HasValue == false) return null;
+
+            bool any = false;
+            int toHealth = 0;
+            int absorbed = 0;
+
+            foreach (var status in instances)
+            {
+                if (status.Type != type || status.Magnitude <= 0) continue;
+                any = true;
+
+                int amount = MitigatedTickAmount(status.Magnitude, type, element.Value, affinity);
+                int before = combatant.CurrentHealth;
+                absorbed += CombatMath.ApplyDamage(combatant, amount);
+                toHealth += before - combatant.CurrentHealth;
+            }
+
+            return any ? new TickRow(type, element.Value, toHealth, absorbed) : (TickRow?)null;
         }
 
         // WHEN THIS STATUS'S COUNTER MOVES. The one table, replacing the
@@ -1032,6 +1148,8 @@ namespace PrincesPalace.Domain.Combat
                 // reaching zero goes in that same pass: N authored = N ticks.
                 case StatusEffectType.Poison:
                 case StatusEffectType.Regen:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
                     return StatusClock.AtTick;
 
                 // Spent, not aged. ConsumeStun (Stun and Feared),
@@ -1064,48 +1182,55 @@ namespace PrincesPalace.Domain.Combat
             }
         }
 
-        // The start-of-turn tick: Poison and Regen apply their Magnitude
-        // through the SAME CombatMath.ApplyDamage/Heal every other source of
-        // damage or healing uses — a status is not a special case the pipeline
-        // has to know about twice — and the AtTick family's duration counts
-        // down by one of the HOLDER's own turns, anything reaching zero being
-        // removed in the same pass.
+        // The start-of-turn tick: every AtTick damaging status deals its
+        // Magnitude through the shared ApplyDotDamage half (Poison and the
+        // new DoTs alike -- a status is not a special case the pipeline has
+        // to know about twice), Regen heals through CombatMath.Heal, and the
+        // AtTick family's duration counts down by one of the HOLDER's own
+        // turns, anything reaching zero being removed in the same pass.
         //
         // ONLY THE AtTick FAMILY. It used to be every status except three
         // hand-listed exemptions and wards; the AtUse family has no clock at
         // all and the AtTurnEnd family is counted by TickAtTurnEnd. See
         // DurationClock.
         //
-        // EVERY INSTANCE TICKS. Poison stacks (StackPolicyOf), so a holder
-        // carrying three of them takes all three in this one pass and the
-        // report carries their sum -- the loop needed no change for that,
-        // which is the point of summing into locals rather than reading one
-        // entry.
-        public static TickReport Tick(CombatantState combatant)
+        // EVERY INSTANCE TICKS, GROUPED INTO ONE ROW PER TYPE (plan D5). A
+        // holder carrying three Poison instances and one Burn takes all four
+        // in this one pass and reports two rows -- Poison's sum, Burn's
+        // alone -- never four rows and never one row averaging two elements.
+        //
+        // `affinity` is the HOLDER's own (CombatMath.EffectivenessMultiplier's
+        // second argument) and defaults to Neutral, which is a no-op for
+        // Poison (MitigationOf(Poison) == None reads it never) and for every
+        // caller that predates the new DoTs -- FightSession is the one
+        // caller that must pass the real figure, because it is the only
+        // layer that can look one up (AffinityOf reads the session's own
+        // enemy-kit table, which this pure-Domain class cannot reach).
+        public static TickReport Tick(CombatantState combatant, ElementalAffinity affinity = default)
         {
-            int poisonDamage = 0;
-            int poisonAbsorbed = 0;
+            var rows = new List<TickRow>();
             int regenHealed = 0;
+
+            var damagingTypesThisTick = new List<StatusEffectType>();
+            foreach (var status in combatant.Statuses)
+            {
+                if (DurationClock(status.Type) != StatusClock.AtTick) continue;
+                if (!ElementOf(status.Type).HasValue) continue;
+                if (!damagingTypesThisTick.Contains(status.Type)) damagingTypesThisTick.Add(status.Type);
+            }
+
+            foreach (var type in damagingTypesThisTick)
+            {
+                var row = ApplyDotDamage(combatant, type,
+                    combatant.Statuses.Where(s => s.Type == type), affinity);
+                if (row.HasValue) rows.Add(row.Value);
+            }
 
             foreach (var status in combatant.Statuses)
             {
                 if (DurationClock(status.Type) != StatusClock.AtTick) continue;
 
-                if (status.Type == StatusEffectType.Poison && status.Magnitude > 0)
-                {
-                    int before = combatant.CurrentHealth;
-
-                    // ApplyDamage's return IS the absorbed figure (see its own
-                    // header -- "Returns how much a signature resource soaked
-                    // before health was touched"), so the split costs a local
-                    // and nothing else. Taken from the funnel rather than
-                    // measured off SignaturePool.Current, which counts POOL
-                    // POINTS and is not the same number whenever AbsorbPerPoint
-                    // is anything but one.
-                    poisonAbsorbed += CombatMath.ApplyDamage(combatant, status.Magnitude);
-                    poisonDamage += before - combatant.CurrentHealth;
-                }
-                else if (status.Type == StatusEffectType.Regen && status.Magnitude > 0)
+                if (status.Type == StatusEffectType.Regen && status.Magnitude > 0)
                 {
                     int before = combatant.CurrentHealth;
                     CombatMath.Heal(combatant, status.Magnitude);
@@ -1122,7 +1247,7 @@ namespace PrincesPalace.Domain.Combat
             combatant.Statuses.RemoveAll(
                 s => DurationClock(s.Type) == StatusClock.AtTick && s.TurnsRemaining <= 0);
 
-            return new TickReport(poisonDamage, poisonAbsorbed, regenHealed, expired);
+            return new TickReport(rows, regenHealed, expired);
         }
     }
 }

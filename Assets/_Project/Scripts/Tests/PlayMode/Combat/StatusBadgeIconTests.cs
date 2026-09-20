@@ -59,11 +59,29 @@ namespace PrincesPalace.PlayModeTests
         // exact trap EnemyIntentIconTests' own version of this test exists
         // to catch. The 256x256 check catches a fourth: a master dropped in
         // unresized, which would blow out every badge's layout math.
+        // BURN AND THORNED ARE A STATED GAP, NOT A REGRESSION (spell-expansion
+        // milestone E, docs/PLAN_SPELL_EXPANSION.md section 6's stage 5
+        // checklist): "register the key, let LoadSprite degrade to a blank
+        // slot with a warning until the art lands" -- the same convention
+        // Marks.IconKey documents for Marked before its own art shipped.
+        // Excluded from the hard "must load" half below for exactly that
+        // reason; TheIconPathsFollowTheRuntimeLoadingConvention still checks
+        // both of their paths shape correctly, unconditionally.
+        private static readonly StatusEffectType[] AwaitingArt =
+        {
+            StatusEffectType.Burn,
+            StatusEffectType.Thorned,
+        };
+
         [Test]
         public void EveryStatusIconResolvesToArtworkThatActuallyLoaded()
         {
             var paths = AllResourcePaths().ToList();
-            Assert.AreEqual(14, paths.Count, "expected twelve statuses plus two speed presentations");
+            Assert.AreEqual(16, paths.Count, "expected fourteen statuses plus two speed presentations");
+
+            var awaitingArtPaths = AwaitingArt
+                .Select(t => FightHudModel.StatusBadgeIcons.ResourceFor(t))
+                .ToHashSet();
 
             var missing = new List<string>();
             var wrongSize = new List<string>();
@@ -73,7 +91,7 @@ namespace PrincesPalace.PlayModeTests
                 var sprite = Resources.Load<Sprite>(path);
                 if (sprite == null)
                 {
-                    missing.Add(path);
+                    if (!awaitingArtPaths.Contains(path)) missing.Add(path);
                     continue;
                 }
 

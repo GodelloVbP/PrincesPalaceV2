@@ -283,7 +283,14 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             CommitBeat();
-            AdvanceAfterAction();
+
+            // PLAN 1.11'S POST-ACTION HOOK, the player half of it (see
+            // AdvanceAfterAction's own comment) -- this cast's OWN authored
+            // classification, not the effect it resolved to. A free-action
+            // cast never reaches this line at all (the early return above),
+            // so it is consistent both ways with Palace Passage being
+            // non-physical.
+            AdvanceAfterAction(physicalMove: CombatActions.IsPhysicalMove(skill));
             return true;
         }
 

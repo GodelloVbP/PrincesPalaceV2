@@ -963,6 +963,148 @@
       }
     },
     {
+      "id": "censer_of_embers",
+      "bookOnly": true,
+      "displayName": "Censer of Embers",
+      "description": "Burns for three turns. Cast it again and both fires burn.",
+      "characterId": "sheep",
+      "effect": "Afflict",
+      "physicalMove": false,
+      "targeting": "SingleEnemy",
+      "manaCost": 8,
+      "cooldownTurns": 2,
+      "bookTier": 2,
+      "appliesStatus": "Burn",
+      "statusMagnitude": 4,
+      "statusDuration": 3,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.3,
+        "layers": [
+          {
+            "id": "swing",
+            "render": "sprite",
+            "place": "caster-centre",
+            "at": "release",
+            "path": "Spells/prismatic_orb_fire_charge",
+            "seconds": 0.25,
+            "until": "once",
+            "size": 190,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.0
+          },
+          {
+            "id": "arc",
+            "render": "sprite",
+            "place": "caster",
+            "at": "release",
+            "offset": 0.1,
+            "travelSeconds": 0.2,
+            "path": "Spells/prismatic_orb_fire_wake",
+            "seconds": 0.2,
+            "until": "loop",
+            "size": 180,
+            "facing": "auto",
+            "sort": "effects",
+            "glow": 1.0
+          },
+          {
+            "id": "scatter",
+            "render": "sprite",
+            "place": "target",
+            "at": "hit",
+            "path": "Spells/prismatic_orb_fire_contact",
+            "seconds": 0.3,
+            "until": "once",
+            "size": 260,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.15,
+            "glow": 1.1
+          },
+          {
+            "id": "glow",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "offset": 0.15,
+            "path": "Spells/prismatic_orb_fire_core",
+            "seconds": 0.4,
+            "until": "hold",
+            "size": 160,
+            "facing": "none",
+            "sort": "effects",
+            "fade": 0.3,
+            "glow": 0.9
+          }
+        ]
+      }
+    },
+    {
+      "id": "thorn_tithe",
+      "bookOnly": true,
+      "displayName": "Thorn Tithe",
+      "description": "Thorns for three turns: damage at the start of each of its turns, and again whenever it strikes or charges.",
+      "characterId": "sheep",
+      "effect": "Afflict",
+      "physicalMove": false,
+      "targeting": "SingleEnemy",
+      "manaCost": 10,
+      "cooldownTurns": 3,
+      "bookTier": 3,
+      "appliesStatus": "Thorned",
+      "statusMagnitude": 5,
+      "statusDuration": 3,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.32,
+        "layers": [
+          {
+            "id": "twist",
+            "render": "sprite",
+            "place": "target",
+            "at": "release",
+            "path": "Spells/prismatic_orb_earth_drops",
+            "seconds": 0.28,
+            "until": "once",
+            "size": 220,
+            "facing": "auto",
+            "sort": "ground",
+            "glow": 0.9
+          },
+          {
+            "id": "close",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/prismatic_orb_earth_contact",
+            "seconds": 0.3,
+            "until": "once",
+            "size": 240,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.12,
+            "glow": 1.0
+          },
+          {
+            "id": "hold",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "offset": 0.18,
+            "path": "Spells/prismatic_orb_earth_core",
+            "seconds": 0.35,
+            "until": "hold",
+            "size": 200,
+            "facing": "none",
+            "sort": "ground",
+            "fade": 0.25
+          }
+        ]
+      }
+    },
+    {
       "id": "provoke",
       "displayName": "Provoke",
       "description": "Head down, eyes up. Whatever it was going to do, it is going to do it to you.",

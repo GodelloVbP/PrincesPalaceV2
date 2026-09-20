@@ -548,7 +548,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // so an extra turn earned by a kill retro-attaches to the blow that
             // earned it rather than opening a beat of its own.
             CommitBeat();
-            AdvanceAfterAction();
+
+            // ALWAYS PHYSICAL (CombatActions.PlainAttackIsPhysicalMove) --
+            // feeds plan 1.11's post-action hook, the player half of it (see
+            // AdvanceAfterAction's own comment).
+            AdvanceAfterAction(physicalMove: true);
             return true;
         }
 

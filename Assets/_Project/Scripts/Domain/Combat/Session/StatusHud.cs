@@ -137,6 +137,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Rooted: return "RTD";
                 case StatusEffectType.Marked: return "MRK";
                 case StatusEffectType.Feared: return "FER";
+                case StatusEffectType.Burn: return "BRN";
+                case StatusEffectType.Thorned: return "THN";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(type), type,
                         "StatusHud has no three-letter code for this status -- a badge would otherwise print nothing.");
@@ -201,6 +203,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Stun:
                 case StatusEffectType.Feared:
                 case StatusEffectType.Marked:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Thorned:
                     return Bucket.Harm;
                 case StatusEffectType.Provoked:
                 case StatusEffectType.Chilled:
@@ -228,6 +232,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Rooted: return 9;
                 case StatusEffectType.Marked: return 10;
                 case StatusEffectType.Feared: return 11;
+                // 12/13 are the speed presentations' own table indices
+                // (SpeedUpTableIndex/SpeedDownTableIndex below), 14 is the
+                // transformation's (TransformTableIndex above) -- Burn and
+                // Thorned pick up after all three rather than between them,
+                // so no existing sort key's Tier+Bucket+index triple can
+                // collide with a new one.
+                case StatusEffectType.Burn: return 15;
+                case StatusEffectType.Thorned: return 16;
                 default: return 98;
             }
         }
@@ -310,6 +322,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 // and stays correct if that ever authors differently.
                 case StatusEffectType.Feared:
                     return $"Feared -- {Wrap(positive, $"turn skipped and {magnitude}% more damage taken")}, {duration}";
+
+                // THE SUMMED, SNAPSHOTTED TICK STRENGTH -- summary.Magnitude
+                // is StatusEffects.MagnitudeOf's sum across live instances
+                // (D3), and each instance's own Magnitude is 1.5's snapshot,
+                // taken once at application and never re-read. A recast adds
+                // a second instance rather than restating the first, so this
+                // number is already the NEW sum the moment the badge next
+                // redraws -- there is nothing here for a recast to leave
+                // stale.
+                case StatusEffectType.Burn:
+                    return $"Burn -- {Wrap(positive, $"{magnitude} damage each turn start")}{stacks}, {duration}";
+                case StatusEffectType.Thorned:
+                    return $"Thorned -- {Wrap(positive, $"{magnitude} damage each turn start, and again after a physical move")}{stacks}, {duration}";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(summary), summary.Type,
                         "StatusHud has no tooltip for this status -- a badge would otherwise show nothing on hover.");

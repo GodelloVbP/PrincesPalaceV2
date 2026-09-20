@@ -532,7 +532,16 @@ namespace PrincesPalace.Domain.Combat.Session
                 // method's whole reason to return early.
                 if (current.IsPlayerSide) break;
 
-                ResolveEnemyAction(current);
+                // PLAN 1.11'S POST-ACTION HOOK, MONSTER HALF. ResolveEnemyAction
+                // reports whether a PHYSICAL MOVE actually completed --
+                // AutoResolveEnemyTurns never reaches AdvanceAfterAction, so
+                // this is the one seam that ever learns the fact for an enemy's
+                // own turn. Called AFTER the action's own beat is committed and
+                // BEFORE the turn-end clock, so a retaliation that kills its
+                // holder settles like any other death before StepToNextTurn
+                // asks whether the fight is over.
+                bool physicalMove = ResolveEnemyAction(current);
+                if (physicalMove) TriggerPhysicalMoveRetaliation(current);
 
                 if (!StepToNextTurn()) break;
             }
@@ -701,7 +710,19 @@ namespace PrincesPalace.Domain.Combat.Session
             CommitBeat();
         }
 
-        private void ResolveEnemyAction(CombatantState enemy)
+        // RETURNS WHETHER A PHYSICAL MOVE COMPLETED (plan 1.11). Every early
+        // return above the swing itself -- a forfeit, a re-pick that found
+        // nobody, a commitment CombatActions.IsLegalFor now refuses -- is an
+        // action that did NOT happen, and reports false; the "real skill"
+        // branch reports the skill's own classification; every path that
+        // reaches the legacy scaled-attack section (a plain swing, or a
+        // pre-Afflict legacy skillPower ability) is physical by construction
+        // (EnemyAbility.IsPhysicalMove's own comment: `!HasSkill` is always
+        // `CombatActions.PlainAttackIsPhysicalMove`), hit or miss alike --
+        // the owner's rule that a miss still counts (1.11). The one caller,
+        // AutoResolveEnemyTurns, is where this feeds plan 1.11's post-action
+        // retaliation hook for the monster side of the fight.
+        private bool ResolveEnemyAction(CombatantState enemy)
         {
             // A taunt overrides the AI's own pick entirely. Consumed further
             // down, once the swing has actually happened -- Provoke buys ONE
@@ -772,7 +793,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (promised == null)
                 {
                     ForfeitTurn(enemy, $"{enemy.Name} has nothing in reach - it cannot act!");
-                    return;
+                    return false;
                 }
             }
 
@@ -785,7 +806,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // stream keeps its shape -- it just draws over what is actually
             // in reach.
             var target = forced ?? promised ?? PickIntentTarget(enemy, committedAbility);
-            if (target == null) return;
+            if (target == null) return false;
 
             BeginBeat(enemy, target);
 
@@ -866,7 +887,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     ? $"{enemy.Name} is rooted and cannot follow through with the attack!"
                     : blocked);
                 CommitBeat();
-                return;
+                return false;
             }
 
             _intents.Remove(enemy);
@@ -914,7 +935,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // uses -- which is why enemy VFX worked at all and made this
                 // read as a content-wiring question rather than a dropped beat.
                 CommitBeat();
-                return;
+                return chosen.Value.IsPhysicalMove;
             }
 
             bool usingSkill = chosen.HasValue && !chosen.Value.IsPlainSwing;
@@ -989,7 +1010,16 @@ namespace PrincesPalace.Domain.Combat.Session
                     ? $"{enemy.Name} uses {source.SkillName} on {target.Name}, but it misses!"
                     : $"{enemy.Name} attacks {target.Name}, but it misses!");
                 CommitBeat();
-                return;
+
+                // ALWAYS PHYSICAL: reaching this branch at all means `chosen`
+                // is either null (no committed ability -- a plain swing by
+                // default) or a legacy, non-HasSkill entry, and
+                // EnemyAbility.IsPhysicalMove answers PlainAttackIsPhysicalMove
+                // for both (its own comment: "a legacy scaled attack is the
+                // same body doing the same thing harder"). The owner's rule
+                // that a miss still counts (1.11) is why this returns true
+                // rather than false.
+                return true;
             }
 
             damage = outcome.Damage;
@@ -1069,6 +1099,10 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             CommitBeat();
+
+            // ALWAYS PHYSICAL, for the identical reason the miss branch above
+            // returns true.
+            return true;
         }
 
         // The committed ability's own reach question, asked of one target.

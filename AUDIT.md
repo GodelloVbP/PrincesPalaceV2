@@ -2554,7 +2554,7 @@ of `BeginBeat` into `FightSession.Beats.cs` (a `NewBeat(...)` that builds and as
 stance work. Left undone because it is a pure refactor in a file the round was
 already changing for behaviour, and the two should not land in one commit.
 
-### 188. `TickReport` names poison specifically, so the second damage-over-time will not fit
+### ~~188. `TickReport` names poison specifically, so the second damage-over-time will not fit~~ — fixed in spell-expansion milestone E
 
 `StatusEffects.cs:764` and `:774` declare `PoisonDamage` and `PoisonAbsorbed` by
 name, `:789`'s "nothing happened" predicate walks them by name, and
@@ -2571,6 +2571,17 @@ only the REPORT is not.
 Not fixed here: a second DoT is not authored yet, and the shape of the replacement
 (a small list of `(element, dealt, absorbed)` versus a pair of dictionaries) is worth
 deciding against a real second case rather than against an imagined one.
+
+**Fixed, spell-expansion milestone E (plan D5).** `TickReport.Rows` is now
+`IReadOnlyList<TickRow>`, one row per damaging status TYPE per tick
+(`(StatusEffectType Status, DamageType Element, int ToHealth, int Absorbed)`),
+built by the shared `StatusEffects.ApplyDotDamage` half both the turn-start
+tick and Thorn Tithe's post-action retaliation call.
+`FightSession.Riders.TickStatuses` loops the rows instead of reading
+`PoisonDamage`/`PoisonAbsorbed` by name, and `RecordUnattributedDamage` is
+called once per row, not once per tick — the real second case (Burn) landed
+in the same milestone and is the one `StatusEffectsTests
+.OneTick_CarryingBurnAndPoison_ReportsBothRowsSeparately` pins.
 
 ### 189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats
 
