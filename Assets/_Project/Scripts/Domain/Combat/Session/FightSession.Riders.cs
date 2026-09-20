@@ -119,6 +119,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // fight through the ordinary path, not slip past it.
         private void AdvanceAfterAction(bool physicalMove = false)
         {
+            // Enemy actions release this in AutoResolveEnemyTurns. Player
+            // actions finish through this funnel instead, so clear the same
+            // one-action recovery before any early fight-over return.
+            _hardControlRecovery.Remove(_encounter.Current);
+
             if (physicalMove) TriggerPhysicalMoveRetaliation(_encounter.Current);
 
             // Read-then-reset up front, unconditionally, so a flag can never
@@ -561,6 +566,11 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (recipient == null) return;
 
+            // Keep repeat-control recovery at the shared status seam so an
+            // older relic, talent or modifier cannot bypass the spell-level
+            // guard by applying Rooted or Feared directly.
+            if (HardControlRecoveryBlocks(recipient, type)) return;
+
             if (type == StatusEffectType.Chilled)
             {
                 ApplyChilled(recipient, magnitude, turns, source);
@@ -588,6 +598,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
             RecordStatus(recipient, type, magnitude, turns, source);
         }
+
+        private bool HardControlRecoveryBlocks(CombatantState recipient, StatusEffectType type) =>
+            recipient != null
+            && (type == StatusEffectType.Rooted || type == StatusEffectType.Feared)
+            && _hardControlRecovery.Contains(recipient);
 
         // See ApplyStatusTo's own comment for why this runs at the seam
         // rather than at ResolveAfflict. `caster` is who PAID for the cast --

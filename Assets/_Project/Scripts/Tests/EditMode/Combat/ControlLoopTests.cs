@@ -85,5 +85,54 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(damageTaken, 0,
                 "three alternating control casters denied every enemy action for five rounds");
         }
+
+        [Test]
+        public void DirectHardControlCannotBypassRecoveryAfterAForcedSkip()
+        {
+            var hero = new CombatantState("Hero", true, 100, 0, 10, 20);
+            var foe = new CombatantState("Foe", false, 100, 0, 5, 10);
+            var session = Session(hero, foe);
+
+            session.ApplyStatusToForTest(foe, StatusEffectType.Stun, 0, 1, hero);
+            session.Begin();
+            session.DrainBeats();
+            Assert.IsTrue(session.ExecuteAttack(foe));
+            session.DrainBeats();
+
+            session.ApplyStatusToForTest(foe, StatusEffectType.Rooted, 0, 2, hero);
+
+            Assert.IsFalse(StatusEffects.HasRooted(foe.Statuses),
+                "the shared status seam bypassed hard-control recovery");
+        }
+
+        [Test]
+        public void PlayerHardControlRecoveryClearsAfterThePlayersNextRealAction()
+        {
+            var hero = new CombatantState("Hero", true, 100, 0, 10, 20);
+            var foe = new CombatantState("Foe", false, 100, 0, 1, 10);
+            var session = Session(hero, foe);
+
+            session.ApplyStatusToForTest(hero, StatusEffectType.Stun, 0, 1, foe);
+            session.Begin();
+            session.DrainBeats();
+            Assert.IsTrue(session.IsPlayerTurn);
+            Assert.IsTrue(session.ExecuteAttack(foe));
+            session.DrainBeats();
+
+            session.ApplyStatusToForTest(hero, StatusEffectType.Rooted, 0, 2, foe);
+
+            Assert.IsTrue(StatusEffects.HasRooted(hero.Statuses),
+                "a real player action did not release hard-control recovery");
+        }
+
+        private static FightSession Session(CombatantState hero, CombatantState foe)
+        {
+            var kit = new PlayerKit("hero", CharacterRole.Support,
+                System.Array.Empty<ResolvedSkill>(), null, DamageType.Physical);
+            var enemy = new ResolvedEnemy("foe", "Foe", default, 0, 0, false,
+                DamageType.Physical, DamageType.Physical, 0, attackType: DamageType.Physical);
+            return new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new[] { kit }, new[] { new EnemyKit(enemy, false) }, new SeededRandom(3));
+        }
     }
 }

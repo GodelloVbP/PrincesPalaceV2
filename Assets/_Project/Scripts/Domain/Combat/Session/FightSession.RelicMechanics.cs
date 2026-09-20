@@ -181,7 +181,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             foreach (var enemy in _encounter.LivingEnemies)
             {
-                Fear.Apply(enemy, FightTuning.WorldEndersCrownFearTurns, target);
+                ApplyStatusTo(enemy, StatusEffectType.Feared, Fear.VulnerablePercent,
+                    FightTuning.WorldEndersCrownFearTurns, target);
             }
 
             AppendMessage($"{target.Name}'s crown flares as they falter - every enemy recoils in fear!");

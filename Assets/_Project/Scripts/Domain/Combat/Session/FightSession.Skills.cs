@@ -1574,7 +1574,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     continue;
                 }
 
-                if (_hardControlRecovery.Contains(enemy))
+                if (HardControlRecoveryBlocks(enemy, StatusEffectType.Feared))
                 {
                     AppendMessage($"{enemy.Name} steels itself against another hard control.");
                 }
@@ -1610,8 +1610,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var type = skill.AppliesStatus.Value;
 
-            if ((type == StatusEffectType.Rooted || type == StatusEffectType.Feared)
-                && _hardControlRecovery.Contains(recipient))
+            if (HardControlRecoveryBlocks(recipient, type))
             {
                 AppendMessage($"{recipient.Name} resists another hard control until it acts.");
                 return;
