@@ -2146,7 +2146,7 @@ Tithe.
 - Tooltips show the actual tick strength, and a recast shows the new one.
 - One tick carrying two different damage types reports both, separately.
 
-**STATUS: LANDED, 2026-09-20.** `dotnet test tools/domain-tests`: 4122
+**STATUS: LANDED, 2026-09-20 (`fbbccc44`).** `dotnet test tools/domain-tests`: 4122
 passed, 0 failed, 3 skipped (pre-existing, unrelated — two `[Ignore]`d
 balance-history assertions and one summoned-body reward case).
 `tools/run_tests_parallel.ps1 -BuildContent`: EditMode 4139/4142 passed (3

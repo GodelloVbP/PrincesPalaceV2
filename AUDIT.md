@@ -2554,7 +2554,7 @@ of `BeginBeat` into `FightSession.Beats.cs` (a `NewBeat(...)` that builds and as
 stance work. Left undone because it is a pure refactor in a file the round was
 already changing for behaviour, and the two should not land in one commit.
 
-### ~~188. `TickReport` names poison specifically, so the second damage-over-time will not fit~~ — fixed in spell-expansion milestone E
+### ~~188. `TickReport` names poison specifically, so the second damage-over-time will not fit~~ — fixed in `fbbccc44`
 
 `StatusEffects.cs:764` and `:774` declare `PoisonDamage` and `PoisonAbsorbed` by
 name, `:789`'s "nothing happened" predicate walks them by name, and
