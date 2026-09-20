@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -150,6 +151,66 @@ namespace PrincesPalace.Domain.Combat.Session
         public bool IsPickingEnemy => IsTargeting && Side == TargetSide.Enemies;
         public bool IsPickingAlly => IsTargeting && Side == TargetSide.Allies;
 
+        // ---- two picks (plan 1.12) ------------------------------------------
+        //
+        // A REQUIRED PICK COUNT, NOT A SECOND DEPTH. Palace Passage asks for
+        // two allies and every other command asks for one; the question being
+        // asked is the same question twice, so it is the same depth twice.
+        // A MenuDepth.SecondTarget would have needed its own Back edge, its
+        // own prompt, its own painting rule and its own entry from Element
+        // depth -- four places for the two to disagree about what the player
+        // is looking at.
+        //
+        // AND THE PICKS LIVE HERE, not on the session. Nothing is written to
+        // the board until the last one is submitted, so a cancel at pick 1
+        // has nothing to clean up: the whole of "atomic cancellation" is that
+        // there is no half-cast anywhere to unwind. The session holds no
+        // pending-pick state between calls and is handed the finished list.
+        public int RequiredPicks { get; private set; } = 1;
+
+        private readonly List<CombatantState> _picks = new List<CombatantState>();
+
+        public IReadOnlyList<CombatantState> Picks => _picks;
+
+        // How many the player has committed so far -- "1 of 2" on the prompt.
+        public int PickCount => _picks.Count;
+
+        public bool NeedsAnotherPick => IsTargeting && _picks.Count < RequiredPicks;
+
+        // "Already picked" is one of the three illegal-ally cases (the other
+        // two, dead and not on my side, belong to the session), and it is the
+        // only one that exists solely because a cast is half made.
+        public bool HasPicked(CombatantState candidate) => candidate != null && _picks.Contains(candidate);
+
+        // Records one pick and says whether that was the LAST one, which is
+        // the caller's signal to commit. Returns false without recording for
+        // a null, for a repeat, or for a cast that is already full -- a
+        // refusal to record, never a silent overwrite.
+        public bool RecordPick(CombatantState target, out bool complete)
+        {
+            complete = false;
+            if (!IsTargeting || target == null || _picks.Contains(target) || _picks.Count >= RequiredPicks)
+            {
+                return false;
+            }
+
+            _picks.Add(target);
+            complete = _picks.Count >= RequiredPicks;
+            return true;
+        }
+
+        // Undoes the most recent pick and stays where it is. Cancel's first
+        // step at Target depth, and the reason Back() below never leaves the
+        // depth while a pick is still held: the owner's rule is that Cancel
+        // steps back ONE level, and a recorded pick is a level.
+        public bool DropLastPick()
+        {
+            if (_picks.Count == 0) return false;
+
+            _picks.RemoveAt(_picks.Count - 1);
+            return true;
+        }
+
         // ATTACK does not nest -- it jumps straight to picking a mark.
         public void OpenAttack()
         {
@@ -157,6 +218,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Depth = MenuDepth.Target;
             Side = TargetSide.Enemies;
             Selection = -1;
+            ForgetPicks();
             ForgetElement();
         }
 
@@ -172,6 +234,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = branch;
             Depth = MenuDepth.Sub;
             Selection = -1;
+            ForgetPicks();
             ForgetElement();
         }
 
@@ -200,11 +263,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // skill asks for an element is (EnterElementChoice's own note): this
         // type holds no content and asks no content question. Defaulted to
         // Enemies so every existing call site keeps its meaning unchanged.
-        public void EnterTargeting(TargetSide side = TargetSide.Enemies)
+        //
+        // `requiredPicks` is the CALLER'S read of the skill too
+        // (SkillEffects.PicksRequired), for the same reason the side is:
+        // this type holds no content. Defaulted to 1 so every existing call
+        // site keeps its meaning unchanged.
+        public void EnterTargeting(TargetSide side = TargetSide.Enemies, int requiredPicks = 1)
         {
             if (!IsOpen) return;
             Depth = MenuDepth.Target;
             Side = side;
+            RequiredPicks = requiredPicks < 1 ? 1 : requiredPicks;
+            _picks.Clear();
         }
 
         // Committing a SKILL that asks which element it is. WHETHER a skill
@@ -226,6 +296,12 @@ namespace PrincesPalace.Domain.Combat.Session
             ChosenElement = element;
             Depth = MenuDepth.Target;
             Side = side;
+
+            // An element skill is SingleEnemy and asks for one pick; said
+            // explicitly rather than left to whatever the last cast set,
+            // because a stale two-pick count here would stop a plain spell
+            // from ever committing.
+            ForgetPicks();
         }
 
         // One step back up the graph. Returns false at the root, where there is
@@ -236,6 +312,14 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (Depth)
             {
                 case MenuDepth.Target:
+                    // A RECORDED PICK IS A LEVEL, and Cancel steps back one
+                    // level (the owner's gamepad rule, 2026-09-18). So the
+                    // first Cancel at picks 1/2 drops that pick and stays on
+                    // the rack; only a Cancel with nothing held leaves the
+                    // depth. Nothing was spent to record it, so nothing is
+                    // refunded here -- see RequiredPicks' own header.
+                    if (DropLastPick()) return true;
+
                     // THE SIDE IS FORGOTTEN ON THE WAY OUT, unconditionally
                     // and before the branching below -- every arm of it
                     // leaves Target depth, and a Side left pointing at the
@@ -244,6 +328,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     // Backing out of an ally pick is otherwise identical to
                     // backing out of an enemy one, which is the contract.
                     Side = TargetSide.Enemies;
+                    ForgetPicks();
 
                     // BACK RETRACES THE WAY IN, whichever way that was. An
                     // element skill came through Element depth, so that is
@@ -295,6 +380,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = MenuBranch.None;
             Side = TargetSide.Enemies;
             Selection = -1;
+            ForgetPicks();
             ForgetElement();
         }
 
@@ -302,6 +388,16 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             ElementSelection = -1;
             ChosenElement = null;
+        }
+
+        // Back to one pick and none held. Called from every edge that leaves
+        // or re-enters Target depth, so a two-pick cast abandoned halfway
+        // cannot leave its count or its first ally behind for the next
+        // command to trip over.
+        private void ForgetPicks()
+        {
+            RequiredPicks = 1;
+            _picks.Clear();
         }
 
         // Which verb row is lit. Exactly one can be, so this is an index rather

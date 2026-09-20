@@ -365,6 +365,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 // the same word DamageSingle/DamageAll already read as, off a
                 // total the cast computes rather than authors.
                 case SkillEffect.Reclaim: return "DAMAGE";
+                // The two milestone C spells that move something other than a
+                // health bar. HASTEN is the turn order; SWAP is the field
+                // line. Deliberately two words rather than one shared
+                // "MOVE" -- the verb row already has a MOVE and it means the
+                // other one of these two, which is precisely the confusion
+                // one shared word would create.
+                case SkillEffect.Hasten: return "HASTEN";
+                case SkillEffect.SwapAllies: return "SWAP";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +

@@ -259,5 +259,86 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, order.PendingExtraTurns("a"),
                 "A combatant that left the fight must not keep turns waiting for it.");
         }
+
+        // ---- milestone C: the forecast's own definition (plan 1.9) ---------
+
+        [Test]
+        public void ProjectPutsTheCurrentActorFirst()
+        {
+            // THE FACT EVERY USE OF "FORECAST POSITION" TURNS ON, and the one
+            // the spell-expansion baseline never wrote down (plan section 7's
+            // own list of what the baseline is silent about, item 4). Index 0
+            // is the action HAPPENING, not the next one to happen, which is
+            // why an advance clips at 1 and why the current actor is never a
+            // legal displacement target.
+            //
+            // AND IT IS NOT MERELY "THE MOST CHARGED ONE FIRST": the current
+            // actor has just had a full threshold taken off it, so it is the
+            // LEAST charged entry on the board and still leads the list.
+            // SimulateForward adds it before the contest starts.
+            var order = new TurnOrder<string>();
+            order.AddCombatant("Slow", 5);
+            order.AddCombatant("Fast", 90);
+            order.Start();
+
+            Assert.AreEqual("Fast", order.Current, "fixture: the higher initiative opens");
+            Assert.Less(order.ChargeOf("Fast"), order.ChargeOf("Slow"),
+                "fixture: the actor holding the turn has spent its charge and is now the lowest");
+            Assert.AreEqual("Fast", order.Project(3)[0],
+                "index 0 is the current actor, whatever its charge");
+            Assert.AreEqual(0, order.ForecastPositionOf("Fast", 3));
+        }
+
+        [Test]
+        public void ProjectPulled_LeavesEveryRealChargeUnchanged()
+        {
+            // PREVIEW PURITY FOR THE SCHEDULE (plan 1.13). ProjectPulled runs
+            // the REAL displacement rule, which is the whole point of it --
+            // the tracker must show where a cast would actually land -- so
+            // the only thing standing between a hover and a committed
+            // initiative change is that the rule runs on Snapshot()'s copy.
+            // Pinned by charge rather than by order, because a mutation that
+            // moved an entry without reordering anybody would be invisible to
+            // an order assertion and is exactly the kind of bug a preview
+            // introduces.
+            var order = new TurnOrder<string>();
+            order.AddCombatant("Now", 99);
+            order.Start();
+            order.AddCombatant("High", 80);
+            order.AddCombatant("Low", 20);
+
+            float nowBefore = order.ChargeOf("Now");
+            float highBefore = order.ChargeOf("High");
+            float lowBefore = order.ChargeOf("Low");
+
+            var preview = order.ProjectPulled("Low", 2, 4);
+
+            Assert.IsNotEmpty(preview, "fixture: the preview produced nothing to look at");
+            Assert.AreEqual(nowBefore, order.ChargeOf("Now"), "a preview moved the current actor");
+            Assert.AreEqual(highBefore, order.ChargeOf("High"), "a preview moved an untargeted entry");
+            Assert.AreEqual(lowBefore, order.ChargeOf("Low"), "a preview committed the advance it was previewing");
+
+            // AND IT SHOWED SOMETHING DIFFERENT FROM THE PLAIN FORECAST, or
+            // the three assertions above would hold for a preview that had
+            // simply forgotten to apply the rule at all.
+            CollectionAssert.AreNotEqual(order.Project(4), preview,
+                "the preview and the plain forecast agree, so the advance was never simulated");
+        }
+
+        [Test]
+        public void ProjectPulled_OfTheCurrentActor_IsThePlainForecast()
+        {
+            // The preview refuses exactly what the operation refuses (1.9
+            // rule 2). A tracker that showed the caster's own turn moving --
+            // for a cast the session would then turn down -- is worse than no
+            // preview at all.
+            var order = new TurnOrder<string>();
+            order.AddCombatant("Now", 99);
+            order.Start();
+            order.AddCombatant("Other", 40);
+
+            CollectionAssert.AreEqual(order.Project(4), order.ProjectPulled("Now", 2, 4));
+        }
+
 }
 }

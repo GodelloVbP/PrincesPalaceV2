@@ -260,10 +260,39 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (!CanReachAlly(actor, ally)) continue;
                 if (!AllyTargeting.Accepts(skill.Effect, actor, ally)) continue;
 
+                // THE BOARD-STATE HALF, asked by the session because
+                // AllyTargeting has no schedule to read (its own header on
+                // where the split falls). An advance aimed at the ally who is
+                // already next is refused at cast (plan 1.9 rule 5), so
+                // offering their plate would be lighting a target the command
+                // then turns down -- the exact disagreement between "what the
+                // UI offers" and "what the session accepts" this whole
+                // function exists to prevent.
+                if (skill.Effect == SkillEffect.Hasten && !CanAdvanceInOrder(ally)) continue;
+
                 eligible.Add(ally);
             }
 
             return eligible;
+        }
+
+        // IS THERE ANYWHERE EARLIER FOR THIS COMBATANT TO GO?
+        //
+        // ONE RULE, TWO READERS -- the ally rack's plates (through
+        // EligibleAllies above) and CanResolveSkill's own refusal, which
+        // re-asks at commit because the schedule can move between a pick and
+        // a press. Stated once here so the two can never answer differently.
+        //
+        // POSITION 1, NOT 0. Index 0 of the forecast is the action happening
+        // right now (TurnOrder.Project's own header), so 1 is the earliest
+        // position any advance can reach and an actor already standing in it
+        // has nothing to buy. A combatant the forecast does not contain at
+        // all answers -1 and is refused for the same reason: there is no
+        // destination to compute.
+        public bool CanAdvanceInOrder(CombatantState combatant)
+        {
+            int position = _encounter.ForecastPositionOf(combatant);
+            return position > 1;
         }
 
         public PlayerKit KitFor(CombatantState combatant) =>

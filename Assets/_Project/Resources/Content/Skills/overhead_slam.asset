@@ -52,7 +52,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 25
+    SortOrder: 28
     Status: 0
     HasStatus: 0
     StatusMagnitude: 0
@@ -106,6 +106,7 @@ MonoBehaviour:
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 
+    AdvanceSlots: 0
     HealthCostPercent: 0
     RequiresStatusType: 0
     HasRequiresStatus: 0

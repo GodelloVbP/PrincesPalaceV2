@@ -827,7 +827,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // own stance was therefore posed "cast" regardless, silently.
                 // The pose now happens where the beat exists; see
                 // ResolveDamageSingle.
-                ResolveCharacterSkill(enemy, chosen.Value.Skill, target, 0);
+                ResolveCharacterSkill(enemy, chosen.Value.Skill, new[] { target }, 0);
 
                 // AND COMMITTED, which it was not.
                 //

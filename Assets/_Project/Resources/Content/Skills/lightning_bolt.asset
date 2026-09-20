@@ -110,6 +110,7 @@ MonoBehaviour:
     SummonCap: 0
     IconPath: Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt
       - Spell Book.png
+    AdvanceSlots: 0
     HealthCostPercent: 0
     RequiresStatusType: 0
     HasRequiresStatus: 0

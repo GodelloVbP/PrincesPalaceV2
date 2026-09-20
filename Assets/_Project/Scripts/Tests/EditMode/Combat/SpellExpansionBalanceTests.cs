@@ -390,5 +390,207 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(9, LandedAgainstDefended(LightningBolt(), physicalDefense: 5, magicalDefense: 10),
                 "gloom_moth: reads the same 9 as rust_knight here -- integer division floors both, see this test's own header");
         }
+
+        // ---- milestone C: initiative displacement, measured ------------------
+        //
+        // THE SAME INSTRUMENT MILESTONE A USED FOR THE CHILL -- enemy actions
+        // allowed inside a 30-turn forecast, read off CombatEncounter.
+        // UpcomingTurns -- so Gale Scythe's delay and Winter's Rebuke's Chill
+        // can be compared as two answers to one question rather than as two
+        // numbers that happen to be nearby.
+
+        private static int EnemyTurnsAfterSweeps(int window, int casts)
+        {
+            // THE REBUKE'S OWN BOARD, deliberately: hero speed 10, one enemy
+            // at speed 20. Reusing it is what makes the two rows comparable.
+            var hero = Caster(LowAnchorAttack);
+            var foe = Dummy(speed: 20);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var session = new FightSession(encounter, null, null, new SeededRandom(5));
+            session.Begin();
+
+            for (int i = 0; i < casts; i++) encounter.PushBack(foe, 1);
+
+            return encounter.UpcomingTurns(window).Count(c => !c.IsPlayerSide);
+        }
+
+        private static int EnemyTurnsOnAMatchedFieldAfterOneSweep(int window, bool sweep)
+        {
+            // AND AN EVENLY MATCHED FIELD, which is the board Gale Scythe is
+            // actually for: a full party, two enemies, nobody faster than
+            // anybody, and one cast delaying both enemies at once. Section
+            // 5's middle band in miniature.
+            var hero = new CombatantState("Hero", true, 500, 200, 40, 10);
+            var second = new CombatantState("Second", true, 500, 50, 20, 10);
+            var third = new CombatantState("Third", true, 500, 50, 20, 10);
+            var foeA = new CombatantState("FoeA", false, 100000, 10, 5, 10);
+            var foeB = new CombatantState("FoeB", false, 100000, 10, 5, 10);
+            var encounter = new CombatEncounter(new[] { hero, second, third }, new[] { foeA, foeB });
+            var session = new FightSession(encounter, null, null, new SeededRandom(5));
+            session.Begin();
+
+            if (sweep) encounter.PushBackAll(new[] { foeA, foeB }, 1);
+
+            return encounter.UpcomingTurns(window).Count(c => !c.IsPlayerSide);
+        }
+
+        // MEASURED 2026-09-20.
+        //
+        //   board                              no cast  1 cast  2  3
+        //   hero 10 vs one enemy 20            17       17      17 16
+        //   hero 10 vs two enemies at 10       12       10      -- --
+        //
+        // Set beside milestone A's Chill on the identical first board
+        // (17 / 16 / 15 / 12), the two control spells turn out to be
+        // complements rather than substitutes, and the reason is what each one
+        // moves. A Chill lowers the RATE, so it keeps paying for its whole
+        // duration and pays most against a fast actor. A delay is a ONE-OFF
+        // charge nudge, so a faster enemy earns it straight back before the
+        // window is out -- three Gale Scythes on a speed-20 enemy deny a single
+        // action, where one Rebuke denies one.
+        //
+        // What Gale Scythe has instead is BREADTH: on an evenly matched field
+        // it denies about one action per enemy it hits, and it hits everybody,
+        // so the two-enemy row is 2 denied for one cast at 11 mana. Against
+        // three it would be three.
+        //
+        // Not tuned, and this is the owner's call to make: as written, the
+        // spell is a crowd tool and reads on the card like a tempo tool. The
+        // honest one-line description of what it buys is "one action off each
+        // enemy you are keeping pace with", not "each one loses a place".
+        [Test]
+        public void GaleScythesDelayIsBreadthRatherThanDepth()
+        {
+            Assert.AreEqual(17, EnemyTurnsAfterSweeps(30, 0), "the undelayed baseline, the Rebuke's own board");
+            Assert.AreEqual(17, EnemyTurnsAfterSweeps(30, 1), "one sweep denies a fast enemy nothing at all");
+            Assert.AreEqual(17, EnemyTurnsAfterSweeps(30, 2), "nor does a second");
+            Assert.AreEqual(16, EnemyTurnsAfterSweeps(30, 3), "three of them deny one action");
+
+            Assert.AreEqual(12, EnemyTurnsOnAMatchedFieldAfterOneSweep(30, sweep: false),
+                "two evenly matched enemies, undelayed");
+            Assert.AreEqual(10, EnemyTurnsOnAMatchedFieldAfterOneSweep(30, sweep: true),
+                "one sweep across a matched field denies one action per enemy it hit");
+        }
+
+        // ---- Borrowed Moment against Gift: Haste ------------------------------
+
+        // A MID-FIGHT CHARGE LANDSCAPE, built on the queue directly, and the
+        // reason is the headline finding below: at the moment a fight OPENS,
+        // every charge is seeded from Speed and so sits in the low tens
+        // against a threshold of 100. A displacement moves an actor by a few
+        // points there, and every actor still needs seventy to ninety ticks --
+        // so nothing moves at all, for either spell. Measured on the opening
+        // board, Borrowed Moment, Gift: Haste and a Headbutt all buy exactly
+        // zero positions, which is a property of the SCHEDULER and not of any
+        // of the three.
+        //
+        // Charges 80 / 80 / 70 / 55 against a caster mid-action, every rate
+        // 1.0, is what the same field looks like two rounds in.
+        private static (int position, int turns) AllyAdvancedBy(string treatment, int window)
+        {
+            var order = new TurnOrder<string>();
+            order.AddCombatant("Caster", 99);
+            order.SetSpeed("Caster", 10);
+            order.Start();
+
+            foreach (var entry in new[] { ("Fast1", 80), ("Fast2", 80), ("Mid", 70), ("Ally", 55) })
+            {
+                order.AddCombatant(entry.Item1, entry.Item2);
+                order.SetSpeed(entry.Item1, 10);
+            }
+
+            if (treatment == "one") order.PullForward("Ally", 1);
+            if (treatment == "two") order.PullForward("Ally", 2);
+            if (treatment == "haste") order.PullToFront("Ally");
+
+            return (order.ForecastPositionOf("Ally", window),
+                order.Project(window).Count(a => a == "Ally"));
+        }
+
+        // MEASURED 2026-09-20. Ally's forecast position and its turn COUNT
+        // inside a 30-turn window:
+        //
+        //   treatment                 position  turns in 30
+        //   nothing                   4         6
+        //   Borrowed Moment, 1 slot   3         6
+        //   Borrowed Moment, 2 slots  1         6
+        //   Gift: Haste               1         6
+        //
+        // ACTIONS GAINED PER MANA IS ZERO, and that is the contract working
+        // rather than the spell failing (plan 1.9 rule 3): an advance buys a
+        // POSITION, never a turn. Six turns before, six turns after, at 8 mana
+        // a cast. The number section 5 asked for is therefore 0.00 actions per
+        // mana, and 0.375 POSITIONS per mana -- which is the honest unit and
+        // the one the tooltip already uses.
+        //
+        // AGAINST GIFT: HASTE the two land in the same place here, and the
+        // second slot is what gets them there: slot 1 clears Mid's 70, slot 2
+        // clears the 80 level, which holds two combatants and so is worth two
+        // positions at once. Gift: Haste reaches the same spot in one step and
+        // costs no mana at all.
+        //
+        // THE CASE FOR THE SPELL IS THEREFORE NOT POWER, and should not be
+        // priced as if it were. Gift: Haste is a Fragile Lamb talent paid for
+        // in wool, on one character, one strand deep; Borrowed Moment is a
+        // book any caster can hold. What the 8 mana buys is ACCESS, and on a
+        // board with three or more charge levels above the target it buys
+        // strictly less movement than the talent does. Left at the prototype
+        // 8/2; the owner's call is whether a book that matches a talent's
+        // effect at a mana price is the trade intended.
+        [Test]
+        public void BorrowedMomentBuysPositionsAndNeverActions()
+        {
+            Assert.AreEqual((4, 6), AllyAdvancedBy("none", 30), "the un-advanced baseline");
+            Assert.AreEqual((3, 6), AllyAdvancedBy("one", 30), "one slot clears one charge level");
+            Assert.AreEqual((1, 6), AllyAdvancedBy("two", 30),
+                "two slots clear a level holding two combatants, so the second slot is worth two positions");
+            Assert.AreEqual((1, 6), AllyAdvancedBy("haste", 30),
+                "Gift: Haste reaches the same place in one step and costs no mana");
+        }
+
+        [Test]
+        public void AtTheOpeningOfAFightNoDisplacementMovesAnybody()
+        {
+            // THE FINDING THAT MATTERS MORE THAN EITHER TABLE ABOVE, and it
+            // is about the scheduler rather than about milestone C: on a board
+            // whose charges are all freshly seeded from Speed, an advance, a
+            // pull-to-front and a delay are all worth zero positions, because
+            // a few points of charge is nothing against the seventy-odd ticks
+            // every actor still owes.
+            //
+            // Gift: Haste has had this property since it shipped -- it is
+            // included here precisely so the row cannot be read as something
+            // this milestone introduced. What makes Gift: Haste feel immediate
+            // in play is its talent (GiftAppliesImmediateTurn), not the pull.
+            // A FRESH BOARD PER TREATMENT, because a displacement is a write:
+            // the second treatment measured against the first one's board
+            // would be measuring both.
+            int PositionAfter(System.Action<CombatEncounter> treatment)
+            {
+                var party = new[]
+                {
+                    new CombatantState("Caster", true, 500, 200, 40, 14),
+                    new CombatantState("Ally", true, 500, 50, 20, 10),
+                    new CombatantState("Mid", true, 500, 50, 20, 12),
+                };
+                var foes = new[]
+                {
+                    new CombatantState("FoeA", false, 100000, 10, 5, 13),
+                    new CombatantState("FoeB", false, 100000, 10, 5, 11),
+                };
+                var encounter = new CombatEncounter(party, foes);
+                new FightSession(encounter, null, null, new SeededRandom(5)).Begin();
+
+                treatment?.Invoke(encounter);
+                return encounter.ForecastPositionOf(party[1]);
+            }
+
+            Assert.AreEqual(4, PositionAfter(null), "the ally opens fourth");
+            Assert.AreEqual(4, PositionAfter(e => e.PullForward(e.PlayerParty[1], 2)),
+                "a two-slot advance on an opening board moves nobody");
+            Assert.AreEqual(4, PositionAfter(e => e.PullToFront(e.PlayerParty[1])),
+                "and neither does a pull to the front -- this is the scheduler, not the spell");
+        }
+
     }
 }

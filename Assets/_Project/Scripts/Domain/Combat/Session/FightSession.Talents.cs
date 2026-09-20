@@ -420,9 +420,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // That is the same courtesy the "can't pay for it" branch extends, and
         // it matters more here: both are conditional on board state the player
         // can misread.
-        private bool CanResolveSkill(CombatantState actor, ResolvedSkill skill, CombatantState target, out string refusal)
+        //
+        // TAKES THE WHOLE PICK LIST since milestone C (plan 1.12), because
+        // two of its refusals are about picks rather than about the one
+        // target: Palace Passage refuses on EITHER ally being rooted, and it
+        // has to ask that at commit as well as at pick time, since a pick and
+        // a commit are different moments. Every other arm reads `target`, the
+        // first of the list, exactly as it always did.
+        private bool CanResolveSkill(CombatantState actor, ResolvedSkill skill,
+            IReadOnlyList<CombatantState> targets, out string refusal)
         {
             refusal = null;
+            var target = targets != null && targets.Count > 0 ? targets[0] : null;
 
             // STILL COOLING. First, because it is the cheapest question and the
             // one whose answer never depends on the board -- and because a
@@ -479,6 +488,54 @@ namespace PrincesPalace.Domain.Combat.Session
                     }
 
                     return true;
+
+                // BORROWED MOMENT WITH NOWHERE TO GO (plan 1.9 rule 5). The
+                // same shape as Shatter above: conditional on board state the
+                // player can misread, so it is refused before a point of mana
+                // is spent rather than resolving into a visible nothing.
+                //
+                // ASKED THROUGH CanAdvanceInOrder, which the ally rack's own
+                // plates are lit from -- so the menu cannot offer a pick this
+                // refuses, and the two cannot drift.
+                case SkillEffect.Hasten:
+                    if (target == null || !CanAdvanceInOrder(target))
+                    {
+                        refusal = target == null
+                            ? $"{skill.DisplayName} needs an ally to aim at."
+                            : $"{target.Name} is already next in the order.";
+                        return false;
+                    }
+
+                    return true;
+
+                // PALACE PASSAGE (plan 1.12, 2.9). Three refusals, all before
+                // payment, all about a board the player can misread.
+                //
+                // ROOTED IS ONE RULE READ OFF BOTH SIDES, which is what
+                // CanMove/Move already do for the verb: Rooted means "cannot
+                // change field position" and a swap changes two. Checked HERE
+                // rather than only at pick time because a pick and a commit
+                // are different moments -- a partner rooted in between must
+                // still refuse the cast (1.12).
+                case SkillEffect.SwapAllies:
+                {
+                    if (targets == null || targets.Count < 2 || targets[0] == null || targets[1] == null
+                        || ReferenceEquals(targets[0], targets[1]))
+                    {
+                        refusal = $"{skill.DisplayName} needs two different allies.";
+                        return false;
+                    }
+
+                    foreach (var pick in targets)
+                    {
+                        if (!StatusEffects.HasRooted(pick.Statuses)) continue;
+
+                        refusal = $"{pick.Name} is rooted.";
+                        return false;
+                    }
+
+                    return true;
+                }
 
                 default:
                     return true;

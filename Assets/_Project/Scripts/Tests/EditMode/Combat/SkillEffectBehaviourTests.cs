@@ -372,6 +372,54 @@ namespace PrincesPalace.Domain.Tests
                 Assert.Less(foe.CurrentHealth, foe.MaxHealth);
                 Assert.IsFalse(foe.Statuses.Any(s => s.Type == StatusEffectType.Poison));
             }),
+
+            new Row(SkillEffect.Hasten, "the chosen ally's forecast position moves earlier", () =>
+            {
+                // THE SPEEDS ARE THE FIXTURE, the same way Gift: Haste's are.
+                // An advance buys places, so it can only be SEEN on a board
+                // where the target has places to lose: 30/20/4 puts the
+                // caster first, a mid ally next and the target well behind
+                // both, which is a board where moving is visible and where
+                // the refusal arm (already at position 1) is not the one
+                // being exercised.
+                var caster = Hero("Caster", speed: 30);
+                var mid = Hero("Mid", speed: 20);
+                var back = Hero("Back", speed: 4);
+                var encounter = new CombatEncounter(new[] { caster, mid, back }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Borrowed Moment", "", "hero", 1,
+                    SkillEffect.Hasten, SkillTargeting.SingleAlly, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0, advanceSlots: 2);
+                var session = Session(encounter, Kit(skill));
+
+                int before = encounter.ForecastPositionOf(back);
+                Assert.Greater(before, 1, "fixture: the target has to start with places to gain");
+
+                Assert.IsTrue(session.CastSkill(0, back), "the cast was refused");
+                Assert.Less(encounter.ForecastPositionOf(back), before,
+                    "the ally did not move earlier in the order");
+            }),
+
+            new Row(SkillEffect.SwapAllies, "the two allies hold each other's field slots", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var ally = Hero("Ally", speed: 8);
+                var encounter = new CombatEncounter(new[] { caster, ally }, new[] { Foe() });
+                var skill = new ResolvedSkill("coverage", "Palace Passage", "", "hero", 1,
+                    SkillEffect.SwapAllies, SkillTargeting.SingleAlly, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.AreSame(caster, encounter.PlayerParty[0], "fixture: the caster opens at the front");
+
+                // THE TWO-PICK DOOR (plan 1.12). A swap has two ends, so the
+                // one-target CastSkill cannot express it -- this row is also
+                // the pin that the second door exists and reaches the same
+                // dispatcher.
+                Assert.IsTrue(session.CastSkillOnPicks(0, new[] { caster, ally }), "the cast was refused");
+
+                Assert.AreSame(ally, encounter.PlayerParty[0], "the two did not trade slots");
+                Assert.AreSame(caster, encounter.PlayerParty[1]);
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -518,6 +566,16 @@ namespace PrincesPalace.Domain.Tests
                 raw.requiresStatus = "Poison";
                 raw.detonationPercent = 150;
                 raw.detonationSplit = new[] { "Poison", "Fire" };
+            }
+
+            // A Hasten skill's whole payload is how many places it buys, and
+            // zero places is a cast that does nothing -- so the resolver
+            // refuses a row without it, the same way it refuses a heal with
+            // no amount. SwapAllies needs nothing: the two ends come from the
+            // picker, never from the row (plan 2.9).
+            if (effect == SkillEffect.Hasten)
+            {
+                raw.advanceSlots = 2;
             }
 
             return raw;

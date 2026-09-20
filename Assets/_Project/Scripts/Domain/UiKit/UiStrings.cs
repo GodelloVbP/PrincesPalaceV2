@@ -898,6 +898,17 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPromptAlly =
             UiString.Define("target_prompt_ally", "Choose an ally for {0}.", "Choose an ally for Ward.");
 
+        // THE TWO-PICK PROMPT (plan 1.12). The rack looks identical whether a
+        // cast wants one ally or two -- same depth, same plates, same cancel
+        // -- so the prompt is the only thing on screen that can say how many
+        // presses are left, and a player who does not know that is a player
+        // who thinks their first press did nothing. The counter is
+        // one-based and counts the pick being ASKED FOR, not the ones
+        // already made.
+        public static readonly UiString TargetPromptAllyOfMany =
+            UiString.Define("target_prompt_ally_of_many", "Choose ally {1} of {2} for {0}.",
+                "Choose ally 1 of 2 for Palace Passage.");
+
         // TransformStripTurns/TransformStripPermanent are GONE with the strip
         // itself (2026-09-09, the HUD-column pass). A transformation IS a
         // status on the character, so it reads out through the badge row on

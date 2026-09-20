@@ -45,6 +45,9 @@ namespace PrincesPalace.Domain.Tests
             { "Summon", 13 },
             { "HealSingle", 14 },
             { "Reclaim", 15 },
+            // Milestone C, appended together after Reclaim.
+            { "Hasten", 16 },
+            { "SwapAllies", 17 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>

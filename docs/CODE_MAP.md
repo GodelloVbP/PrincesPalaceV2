@@ -849,7 +849,7 @@ are plain logic; only the PAINTING needs Unity.
 
 | File | What it owns |
 |---|---|
-| `Domain/.../FightMenuState.cs` | the five menu edges, the selection, the mana preview |
+| `Domain/.../FightMenuState.cs` | the five menu edges, the selection, the mana preview; and since spell-expansion milestone C the required pick COUNT and the picks held so far -- `Target` depth asks for one pick or two, `Back()` drops one pick at a time before it leaves the depth, and nothing is written anywhere until the last pick is submitted, which is what makes a cancelled two-ally swap atomic by construction rather than by cleanup |
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else -- including `RefreshStatusBox`/`PlaceStatusBox`, the ONE status box (`FightScreen.BuildStatusBox`) that replaced the per-badge `StatusTooltip`: every status on one actor, one row each, hung under that actor |
 | `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place; also where Fight registers/unregisters itself on `NavigationInputModule`'s context stack and implements `IFightNavigationTarget` (see below) -- including `InspectMove`/`InspectStep`/`LeaveInspect`, the pad-only reading position that sits ON TOP of `MenuDepth.Root` and walks a ring of combatants no depth owns |

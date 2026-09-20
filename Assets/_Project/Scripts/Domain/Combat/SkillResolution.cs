@@ -189,6 +189,18 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.Reclaim:
                     return 0;
 
+                // No number to preview, and unlike Reclaim above there is no
+                // honest number these could grow later either: what Borrowed
+                // Moment and Palace Passage deliver is measured in PLACES and
+                // in field positions, not in points of anything this function
+                // returns. The detail card says what they do in words (its
+                // EFFECT verb and the authored description); a zero here is
+                // the same "nothing to preview" answer Provoke and Transform
+                // already give, not a gap.
+                case SkillEffect.Hasten:
+                case SkillEffect.SwapAllies:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }

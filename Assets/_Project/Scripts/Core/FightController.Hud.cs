@@ -435,7 +435,16 @@ namespace PrincesPalace
             if (!targeting) return;
 
             string name = CurrentDetail().Name;
-            if (_menu.IsPickingAlly) targetPromptLabel.Set(UiStrings.TargetPromptAlly, name);
+            if (_menu.IsPickingAlly && _menu.RequiredPicks > 1)
+            {
+                // WHICH PRESS THIS IS, because nothing else on the rack says
+                // so: the plates look the same for pick 1 and pick 2, and the
+                // first press of a Palace Passage is otherwise indistinguish-
+                // able from a press that did nothing (plan 1.12).
+                targetPromptLabel.Set(UiStrings.TargetPromptAllyOfMany, name,
+                    (_menu.PickCount + 1).ToString(), _menu.RequiredPicks.ToString());
+            }
+            else if (_menu.IsPickingAlly) targetPromptLabel.Set(UiStrings.TargetPromptAlly, name);
             else if (TargetingIsGroup()) targetPromptLabel.Set(UiStrings.TargetPromptGroup, name);
             else targetPromptLabel.Set(UiStrings.TargetPrompt, name);
         }
@@ -735,8 +744,20 @@ namespace PrincesPalace
                 var member = party != null && i < party.Count ? party[i] : null;
 
                 _plateOccupants[i] = member;
-                RefreshPcPlate(i, member, member != null && member == acting,
-                    picking, member != null && eligible.Contains(member));
+
+                // AN ALLY ALREADY PICKED READS AS UNPICKABLE, which is how a
+                // two-pick cast shows the player what they have chosen so far
+                // without a new node in the screen tree (plan 1.12's third
+                // illegal case). HasPicked is false for every one-pick cast
+                // ever made, so this line changes nothing for them.
+                //
+                // THE LIMITATION, stated rather than left to be noticed: the
+                // first pick goes INERT rather than lighting up as "chosen".
+                // A distinct chosen-marker is a fourth plate state and a
+                // screen-tree change, which this milestone deliberately did
+                // not take -- the prompt carries the count instead.
+                bool pickable = member != null && eligible.Contains(member) && !_menu.HasPicked(member);
+                RefreshPcPlate(i, member, member != null && member == acting, picking, pickable);
             }
 
             RefreshSecondLifeBadge();
@@ -2403,6 +2424,28 @@ namespace PrincesPalace
                 }
             }
 
+            // THE SAME GHOST ON THE ALLY RACK, for an advance (plan 1.9,
+            // 2.7). An advance is the one thing in this game whose entire
+            // effect IS the tracker, so a player who cannot see where the
+            // cast would land before committing it is being asked to buy
+            // something invisible.
+            //
+            // ONE HOVERED ALLY, the same gate the push side uses: advanceSlots
+            // only means anything on a SingleAlly skill, so there is nothing
+            // to preview until a plate is actually being pointed at. Nothing
+            // here commits anything -- ProjectPulled runs on a Snapshot (plan
+            // 1.13).
+            int advanceSlots = SelectedSkillAdvanceSlots();
+            if (advanceSlots > 0 && _menu.IsPickingAlly && _hoveredAllyIndex >= 0)
+            {
+                var hovered = PartyMemberOnPlate(_hoveredAllyIndex);
+                if (hovered != null && hovered.IsAlive)
+                {
+                    previewed = new List<CombatantState>(_session.Encounter.UpcomingTurnsPulled(
+                        hovered, advanceSlots, initiativeIcons.Length));
+                }
+            }
+
             for (int i = 0; i < initiativeIcons.Length; i++)
             {
                 bool filled = i < previewed.Count;
@@ -2480,6 +2523,20 @@ namespace PrincesPalace
             if (row < 0 || row >= options.Count) return 0;
 
             return options[row].Skill.QueuePushSlots;
+        }
+
+        // The ally-side twin of SelectedSkillPushSlots, read the same way off
+        // the same selected row so the two ghosts cannot disagree about which
+        // skill the player is holding.
+        private int SelectedSkillAdvanceSlots()
+        {
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return 0;
+
+            var options = SkillOptions(_session.Current);
+            int row = _menu.Selection;
+            if (row < 0 || row >= options.Count) return 0;
+
+            return options[row].Skill.AdvanceSlots;
         }
 
         // ---- what the model needs -------------------------------------------

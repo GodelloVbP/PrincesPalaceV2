@@ -2059,6 +2059,84 @@ body with real *magical* defense, none in the shipped roster clears single
 digits except `ember_hound`/the beetle's low tens, and the comparison would
 read very differently against one of those.
 
+### Measured values — milestone C, 2026-09-20
+
+Instrument: `SpellExpansionBalanceTests.cs`, extended with C's two pairs. The
+queue-control half reuses milestone A's own instrument and milestone A's own
+board — enemy actions allowed inside a 30-turn `UpcomingTurns` forecast, hero
+speed 10 against one enemy at speed 20 — so Gale Scythe's delay and Winter's
+Rebuke's Chill are two answers to one question rather than two numbers that
+happen to sit near each other. `tools/bot.ps1` was not used, for the reason §5
+already gives: it reports damage and survival, not actions denied, and it
+cannot script "the same board with and without one cast".
+
+**Gale Scythe vs queue control.** Enemy actions allowed in 30 turns:
+
+| board | no cast | 1 cast | 2 casts | 3 casts |
+|---|---|---|---|---|
+| hero 10 vs one enemy at 20 (milestone A's board) | 17 | **17** | 17 | 16 |
+| party of three at 10 vs two enemies at 10 | 12 | **10** | — | — |
+| *for comparison, Chilled 25% on the first board* | 17 | 16 | 15 | 12 |
+
+**Finding, reported rather than tuned: a delay and a Chill are complements,
+and the difference is what each one moves.** A Chill lowers the *rate*, so it
+keeps paying for its whole duration and pays most against a fast actor. A
+delay is a one-off charge nudge, so a faster enemy earns it straight back —
+three Gale Scythes against a speed-20 enemy deny a single action, where one
+Winter's Rebuke denies one. What Gale Scythe has instead is **breadth**: on an
+evenly matched field it denies about one action per enemy it hits, and it hits
+everybody, so two enemies is two actions denied for one 11-mana cast and three
+would be three. The owner's call is whether the card should say so. As
+authored it reads as a tempo tool ("each one loses a place") and measures as a
+crowd tool; the honest one-line description of what it buys is *one action off
+each enemy you are keeping pace with*.
+
+**Borrowed Moment vs Gift: Haste.** The ally's forecast position and its turn
+*count* inside a 30-turn window, measured on a mid-fight charge landscape
+(charges 80 / 80 / 70, ally at 55, caster mid-action, every rate 1.0):
+
+| treatment | ally's position | ally's turns in 30 |
+|---|---|---|
+| nothing | 4 | 6 |
+| Borrowed Moment, 1 slot | 3 | 6 |
+| Borrowed Moment, 2 slots (as authored) | **1** | **6** |
+| Gift: Haste | 1 | 6 |
+
+**Actions gained per mana is 0.00, and that is the contract holding rather
+than the spell failing** (1.9 rule 3): an advance buys a position, never a
+turn. Six turns before, six after, at 8 mana a cast. The honest unit is
+**0.375 positions per mana**, which is what the tooltip already promises. The
+second slot is what reaches position 1: slot 1 clears the 70, slot 2 clears
+the 80 level, which holds two combatants and is therefore worth two positions
+at once.
+
+**Finding, reported rather than tuned: Borrowed Moment lands in exactly the
+same place as Gift: Haste here, and Gift: Haste costs no mana.** What the 8
+mana buys is *access* — Gift: Haste is a Fragile Lamb talent paid for in wool,
+on one character, one strand deep, while Borrowed Moment is a book any caster
+can hold. On a board with three or more charge levels above the target it buys
+strictly less movement than the talent does, because `PullToFront` clears every
+level in one step. Left at the prototype 8 mana / 2 slots; the owner's call is
+whether a book that matches a talent's effect at a mana price is the trade
+intended, or whether the slot count should rise.
+
+**The finding that matters more than either table, and it is about the
+scheduler rather than about milestone C.** On the board a fight *opens* on,
+**no displacement moves anybody at all** — not an advance, not a pull to the
+front, not a delay. Charges are seeded from Speed (`TurnOrder.Start`), so the
+whole field sits between 0 and 40 against a threshold of 100 and every actor
+still owes seventy to ninety ticks; a few points of charge is nothing against
+that. Measured: an ally fourth in the opening forecast is still fourth after a
+two-slot advance *and* after a `PullToFront`. This is pinned as
+`SpellExpansionBalanceTests.AtTheOpeningOfAFightNoDisplacementMovesAnybody`,
+with Gift: Haste included in the row precisely so it cannot be read as
+something this milestone introduced — Gift: Haste has had this property since
+it shipped, and what makes it feel immediate in play is its
+`GiftAppliesImmediateTurn` talent rather than the pull. **Consequence for every
+initiative spell in this plan:** they are turn-two-onwards tools, and a player
+who opens with one will see nothing happen. Not tuned, and not fixable inside
+a spell — the lever, if the owner wants one, is the seed itself.
+
 ---
 
 **Where `tools/bot.ps1` covers it, use it** — it plays whole runs and its

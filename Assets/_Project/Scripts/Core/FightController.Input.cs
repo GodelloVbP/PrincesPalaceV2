@@ -195,6 +195,19 @@ namespace PrincesPalace
 
         public int HoveredAllyIndexForTest => _hoveredAllyIndex;
 
+        // HOW FAR INTO A TWO-PICK CAST THE MENU IS, for the pad tests (plan
+        // 1.12). The same ...ForTest seam FocusedVerbForTest already opens,
+        // and read-only for the same reason: the gamepad path has no other
+        // way to say "the first press was recorded and the cast has NOT
+        // committed", and that distinction is precisely the one a pad bug
+        // would blur -- a Submit that both opened the picker and confirmed
+        // its first pick looks, from outside, like a picker that works.
+        public int PicksHeldForTest => _menu.PickCount;
+
+        public int PicksRequiredForTest => _menu.RequiredPicks;
+
+        public bool IsPickingAllyForTest => _menu.IsPickingAlly;
+
         private void OnAllyHovered(int plate)
         {
             if (_hoveredAllyIndex == plate) return;
@@ -367,15 +380,37 @@ namespace PrincesPalace
             // than for anything currently photographable.
             if (!_menu.IsTargeting) return;
 
-            if (_menu.Side == TargetSide.Allies) ConfirmTarget(TargetSide.Allies, FirstEligibleAlly());
+            if (_menu.Side == TargetSide.Allies)
+            {
+                // ONE CONFIRM PER PICK THE CAST NEEDS. A two-pick skill is
+                // still waiting on the rack after the first press (plan
+                // 1.12), so a preview that pressed once would photograph a
+                // half-made cast rather than the spell. Bounded by
+                // RequiredPicks rather than looping until it commits, so a
+                // squad too small to supply a second pick stops rather than
+                // spinning.
+                for (int pick = 0; pick < _menu.RequiredPicks && _menu.IsTargeting; pick++)
+                {
+                    ConfirmTarget(TargetSide.Allies, NextEligibleAlly());
+                }
+            }
             else OnEnemyPressed(FirstLivingEnemyIndex());
         }
 
-        private CombatantState FirstEligibleAlly()
+        // The first squadmate this cast will accept that it has not already
+        // been given. Only the preview harness picks for the player -- a real
+        // cast is refused outright for a null target (AUDIT #147) -- so the
+        // "not already picked" half lives here rather than in the session.
+        private CombatantState NextEligibleAlly()
         {
             var skill = SelectedSkill();
             var eligible = _session.EligibleAllies(_session.Current, skill);
-            return eligible.Count > 0 ? eligible[0] : null;
+            foreach (var ally in eligible)
+            {
+                if (!_menu.HasPicked(ally)) return ally;
+            }
+
+            return null;
         }
 
         private int FirstLivingEnemyIndex()
@@ -636,7 +671,16 @@ namespace PrincesPalace
                     // one cancel, and BACK lands on the skill list either way.
                     if (targeting == Domain.Combat.SkillTargeting.SingleAlly)
                     {
-                        _menu.EnterTargeting(TargetSide.Allies);
+                        // HOW MANY PICKS IS THE EFFECT'S ANSWER, not the
+                        // row's and not this method's (plan 1.12;
+                        // SkillEffects.PicksRequired is the one place it
+                        // lives). Palace Passage stops twice on the same rack
+                        // at the same depth; everything else stops once, and
+                        // the count of 1 is what makes that literally the
+                        // same code path rather than a preserved special
+                        // case.
+                        _menu.EnterTargeting(TargetSide.Allies,
+                            Domain.Combat.SkillEffects.PicksRequired(options[index].Skill.Effect));
                         RefreshUi();
                         return;
                     }
@@ -749,7 +793,46 @@ namespace PrincesPalace
                     return;
                 }
 
-                _session.CastSkill(options[row].Index, target, _menu.ChosenElement);
+                // THE THIRD ILLEGAL CASE, and the only one that exists solely
+                // because a cast is half made (plan 1.12's state table): dead
+                // and wrong-side are refused above by EligibleAllies, but
+                // "you already picked them" is a fact about this cast, so the
+                // menu is the one that knows it. Refused with a sentence
+                // rather than silently ignored, for the same reason every
+                // other arm of this method says something.
+                if (_menu.HasPicked(target))
+                {
+                    _session.AppendMessage($"{target.Name} is already going.");
+                    RefreshUi();
+                    return;
+                }
+
+                // NOTHING IS WRITTEN UNTIL THE LAST PICK. A first pick on a
+                // two-pick cast records and repaints and stops -- no mana, no
+                // cooldown, no free-action lock, no swap -- which is what
+                // makes a cancel here cost nothing by construction rather
+                // than by cleanup (plan 1.12).
+                if (!_menu.RecordPick(target, out bool complete)) return;
+
+                if (!complete)
+                {
+                    // AND THE STICK LETS GO OF THE ALLY IT JUST TOOK. The
+                    // cursor is a hover, and a hover on somebody this cast can
+                    // no longer accept is a hover the player cannot act on --
+                    // leaving it there would put the focus marker on a plate
+                    // whose Submit is a refusal. Cleared to -1 so the "nothing
+                    // hovered presses the first pickable one" rule takes over,
+                    // which is the same reasoning OnBackPressed already gives
+                    // for clearing it on the way out.
+                    _hoveredAllyIndex = -1;
+                    RefreshUi();
+                    return;
+                }
+
+                // ONE CAST, WITH EVERY PICK IT COLLECTED. A one-pick skill
+                // hands over a list of one and reaches the identical
+                // dispatcher -- see FightSession.CastSkillOnPicks.
+                _session.CastSkillOnPicks(options[row].Index, _menu.Picks, _menu.ChosenElement);
                 AfterResolution();
                 return;
             }
@@ -1793,7 +1876,21 @@ namespace PrincesPalace
             for (int i = 0; i < pcPlates.Length; i++)
             {
                 var member = PartyMemberOnPlate(i);
-                if (member != null && eligible.Contains(member)) pickable.Add(i);
+
+                // AN ALLY ALREADY PICKED IS NOT PICKABLE (plan 1.12), and this
+                // is the line that keeps the PAD path reachable rather than
+                // merely tidy. Submit with nothing hovered presses
+                // `pickable[0]`; without this the second press of a two-pick
+                // cast would land on the ally the first one took, be refused
+                // as "already going", and the cast could never be completed
+                // from a controller at all -- a whole input method quietly
+                // unable to cast one spell.
+                //
+                // ONE RULE, THREE READERS: this list is what Submit presses,
+                // what the stick cycles through (CycleTarget) and what the
+                // focus marker stands on, so all three skip the taken ally
+                // together.
+                if (member != null && eligible.Contains(member) && !_menu.HasPicked(member)) pickable.Add(i);
             }
 
             return pickable;

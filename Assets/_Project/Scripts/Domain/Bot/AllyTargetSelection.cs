@@ -56,7 +56,7 @@ namespace PrincesPalace.Domain.Bot
                 if (preferred.ContainsKey(action.SkillIndex)) continue;
 
                 preferred[action.SkillIndex] =
-                    Preferred(skill.Effect, actor, session.EligibleAllies(actor, skill));
+                    Preferred(skill.Effect, actor, session.EligibleAllies(actor, skill), session);
             }
 
             if (preferred == null) return legal;
@@ -84,8 +84,14 @@ namespace PrincesPalace.Domain.Bot
         //
         // Null for an empty list, which a caller reaches only for a skill
         // LegalActions therefore emitted no action for at all.
+        // `session` is APPENDED AND OPTIONAL: only the queue-order rule
+        // needs a board to read, and every existing caller (and every
+        // existing test) asks a question that does not. A null session makes
+        // that one rule fall back to party order, which is the same answer
+        // the default arm gives.
         public static CombatantState Preferred(
-            SkillEffect effect, CombatantState actor, IReadOnlyList<CombatantState> candidates)
+            SkillEffect effect, CombatantState actor, IReadOnlyList<CombatantState> candidates,
+            FightSession session = null)
         {
             if (candidates == null || candidates.Count == 0) return null;
 
@@ -121,6 +127,21 @@ namespace PrincesPalace.Domain.Bot
                 // heal like anyone else.
                 case SkillEffect.HealSingle:
                     return candidates.OrderByDescending(a => a.MaxHealth - a.CurrentHealth).First();
+
+                // FURTHEST BACK FIRST. An advance buys places, and the ally
+                // with the most places to gain is the only one for whom the
+                // whole of what the cast paid for can land -- the same
+                // "biggest hole first" reading Gift: Mana and Mend already
+                // take, measured in queue positions instead of in points.
+                //
+                // THE LIST IS ALREADY FILTERED to allies who have somewhere
+                // to go (FightSession.EligibleAllies asks CanAdvanceInOrder),
+                // so this never has to consider the refused case. Stable, so
+                // a tie falls back to party order.
+                case SkillEffect.Hasten:
+                    return candidates
+                        .OrderByDescending(a => session == null ? 0 : session.Encounter.ForecastPositionOf(a))
+                        .First();
 
                 // Gift: Fury and Gift: Haste say nothing about a resource --
                 // one applies Empowered, the other moves a turn up the order

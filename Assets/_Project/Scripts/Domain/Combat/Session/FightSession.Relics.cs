@@ -214,7 +214,7 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, target, isCast: true);
             AppendMessage($"{actor.Name}'s First Rune flares - the spell lands again!");
 
-            ResolveCharacterSkillInner(actor, skill, target, resourceSpent, poolTier);
+            ResolveCharacterSkillInner(actor, skill, new[] { target }, resourceSpent, poolTier);
         }
 
         // ---- the drowned lantern's mark ---------------------------------------------

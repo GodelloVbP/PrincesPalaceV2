@@ -493,6 +493,20 @@ namespace PrincesPalace.Domain.Content
         // FIRST in this list. Required together with detonationPercent.
         [ContentDoc("The ordered DamageType names a Reclaim effect's consumed total is split across, odd point to the first; required together with detonationPercent.")]
         public string[] detonationSplit = Array.Empty<string>();
+
+        // ---- milestone C: initiative and formation (plan section 4) ------
+
+        // How many places EARLIER in the turn queue this skill moves its
+        // target -- Borrowed Moment's 2 (plan 1.9, 2.7). The exact mirror of
+        // queuePushSlots above, and expressed in the same unit for the same
+        // reason: a place is a place to a player, while a charge number means
+        // something different to a fast combatant than to a slow one.
+        //
+        // REQUIRED AND POSITIVE ON A Hasten ROW, meaningless on every other
+        // effect -- an advance of zero places is a cast that does nothing,
+        // which is a content error rather than a cheap spell.
+        [ContentDoc("How many places earlier in the turn queue this skill moves its target; required and positive on a Hasten row, meaningless elsewhere.")]
+        public int advanceSlots;
     }
 
     // One tier of a poolTiers ladder -- see RawSkillEntry.poolTiers.

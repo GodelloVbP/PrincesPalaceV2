@@ -183,6 +183,31 @@ namespace PrincesPalace.Domain.Bot
                 // AllyTargetSelection states what is preferred. That split is
                 // what keeps RandomLegal genuinely uniform over the real menu
                 // rather than over a menu somebody already narrowed for it.
+                // A TWO-PICK CAST IS SKIPPED, EXPLICITLY AND WITH A REASON
+                // (plan 1.12; SkillEffects.PicksRequired is the one place
+                // that count lives). A FightAction carries ONE Target, and
+                // Palace Passage needs two ends -- so the bot cannot express
+                // this command without the action type growing a second
+                // target field that exactly one skill in the game would ever
+                // use, which is the hardcoded slot docs/CODE_STANDARDS.md
+                // section 10 exists to refuse.
+                //
+                // SKIPPED, NOT OFFERED-AND-REFUSED, and the difference is the
+                // whole point of writing it here. Milestone B shipped a skill
+                // the bot could pick and the session always refused, and
+                // BalanceBotSmokeTests found it as a 60-command STALL rather
+                // than as a wrong answer: a policy that scores an action
+                // positively and never gets to spend it will pick it again
+                // next turn, forever. An action the legal menu never contains
+                // cannot stall anything.
+                //
+                // WHAT THIS COSTS: Palace Passage is outside the balance
+                // bot's reach, so its tempo value is measured by the focused
+                // harness (plan section 5) and not by whole runs. Said out
+                // loud here because a silently unreachable skill is the half
+                // of this decision that would otherwise hide.
+                if (SkillEffects.PicksRequired(option.Skill.Effect) > 1) continue;
+
                 if (option.Skill.Targeting == SkillTargeting.SingleAlly)
                 {
                     foreach (var ally in session.EligibleAllies(actor, option.Skill))

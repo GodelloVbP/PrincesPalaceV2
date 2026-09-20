@@ -40,7 +40,37 @@ namespace PrincesPalace.Domain.Combat
 
                 case SkillEffect.GiftFury:
                 case SkillEffect.GiftHaste:
+                // BORROWED MOMENT JOINS THE TWO GIFTS, and the plan named it
+                // as joining them (2.7: "the caster is excluded, the same
+                // rule the three Gifts already use"). The reason is stronger
+                // here than there, though: forecast index 0 IS the action the
+                // caster is taking right now, so advancing yourself has no
+                // destination that exists -- it is not merely a waste, it is
+                // undefined (1.9 rule 2).
+                //
+                // WHETHER THERE IS ANYWHERE FOR THIS ALLY TO GO is a
+                // different question and deliberately not asked here: it
+                // needs the schedule, which is board state, and this class
+                // answers only the effect's own shape. FightSession.
+                // EligibleAllies asks the board half, the same way it already
+                // asks CanReachAlly.
+                case SkillEffect.Hasten:
                     return !ReferenceEquals(candidate, caster);
+
+                // PALACE PASSAGE TAKES ANYBODY ON THE CASTER'S SIDE,
+                // themselves included -- swapping into a squadmate's place is
+                // the most obvious use of it, and "the caster may not be one
+                // of the two" would make a two-person party unable to cast it
+                // at all. It is the default arm's answer, written out because
+                // a reader arriving from the Gift cases above will expect the
+                // exclusion and should be told it does not apply.
+                //
+                // THE SECOND PICK NOT BEING THE FIRST is not this predicate's
+                // job either: it is a fact about a cast in progress, not
+                // about who the effect accepts, and it lives in the picker
+                // and in the session's commit-time refusal.
+                case SkillEffect.SwapAllies:
+                    return true;
 
                 // Ward, and whatever single-ally effect is authored next --
                 // a heal aimed at one squadmate is the obvious one, and

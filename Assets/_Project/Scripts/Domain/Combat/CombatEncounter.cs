@@ -227,6 +227,24 @@ namespace PrincesPalace.Domain.Combat
             return _turnOrder.ProjectPushed(pushedActor, slots, count, combatant => combatant.IsAlive);
         }
 
+        // The ally-side twin of UpcomingTurnsPushed: what the tracker would
+        // read if `pulledActor` were advanced. Nothing here commits anything
+        // either -- TurnOrder.ProjectPulled runs on a Snapshot (plan 1.13).
+        public IReadOnlyList<CombatantState> UpcomingTurnsPulled(CombatantState pulledActor, int slots, int count)
+        {
+            if (count <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
+            }
+
+            if (IsOver)
+            {
+                return new List<CombatantState>();
+            }
+
+            return _turnOrder.ProjectPulled(pulledActor, slots, count, combatant => combatant.IsAlive);
+        }
+
         // Grants `actor` an immediate extra turn — the same actor is Current
         // again right after this one finishes, instead of the schedule moving
         // on. A thin pass-through onto TurnOrder.GrantExtraTurn: the queue is
@@ -258,6 +276,69 @@ namespace PrincesPalace.Domain.Combat
         {
             return _turnOrder.PushBack(actor, slots);
         }
+
+        // Several actors delayed by one cast, every destination measured
+        // against the board as it stood before any of them moved -- Gale
+        // Scythe (plan 1.9 rule 1). Same thin pass-through reasoning as
+        // PushBack above: the queue owns the rule, this only exposes it.
+        //
+        // Returns how many actually moved, so a caller can say "and each one
+        // it hit loses a place" only about the ones that did.
+        public int PushBackAll(IReadOnlyList<CombatantState> actors, int slots = 1)
+        {
+            return _turnOrder.PushBackAll(actors, slots);
+        }
+
+        // One actor advanced `slots` places -- Borrowed Moment, and the
+        // mirror of PushBack. Distinct from PullToFront, which is the Lamb's
+        // "act next" and jumps every level at once.
+        public bool PullForward(CombatantState actor, int slots)
+        {
+            return _turnOrder.PullForward(actor, slots);
+        }
+
+        // WHERE A COMBATANT SITS IN THE FORECAST THE TRACKER DRAWS, counting
+        // the living only, with index 0 the actor acting right now.
+        //
+        // THE SAME FILTER UpcomingTurns USES, because this answers a question
+        // about the list the player is looking at: an advance is refused for
+        // an ally who is already the next NAME ON THE TRACKER, and a corpse
+        // the tracker never draws must not be the thing standing between
+        // them and position 1.
+        public int ForecastPositionOf(CombatantState combatant, int window = 0)
+        {
+            if (combatant == null || IsOver) return -1;
+
+            return _turnOrder.ForecastPositionOf(combatant, window > 0 ? window : ForecastWindow,
+                c => c.IsAlive);
+        }
+
+        // WHAT A COMBATANT'S CHARGE IS RIGHT NOW, read-only, straight off the
+        // queue.
+        //
+        // THE UNIT THE DISPLACEMENT CONTRACT IS WRITTEN IN. Every one of
+        // 1.9's worked examples states its answer as a charge, and at the
+        // start of an encounter a charge is seeded from Speed -- so every
+        // combatant sits well under the threshold and one displacement level
+        // is a few points, which is real but reorders nobody yet. A test that
+        // could only read the ORDER would therefore be blind to a delay that
+        // landed on the wrong enemy, or on none.
+        public float ChargeOf(CombatantState combatant) => _turnOrder.ChargeOf(combatant);
+
+        // HOW FAR AHEAD THE SCHEDULE HAS TO BE SIMULATED before EVERY living
+        // combatant has appeared at least once.
+        //
+        // WHY IT IS A MULTIPLE AND NOT THE ROSTER SIZE. Charge rates are
+        // clamped to [0.35, 2.5] (SpeedScale), so the fastest thing on the
+        // field earns at most 2.5/0.35 -- a little over seven -- turns for
+        // every one the slowest earns. Eight per combatant plus a couple of
+        // turns of slack is therefore an upper bound rather than a guess, and
+        // a window that fell short would report "not in the order" for a very
+        // slow ally and silently refuse an advance that is perfectly legal.
+        //
+        // NOT the tracker's own length: the tracker shows what fits on
+        // screen, and this is a question about the schedule.
+        public int ForecastWindow => System.Math.Max(8, (_party.Count + _enemies.Count) * 8 + 2);
 
         // Hurries `actor` to the front of the queue — the Lamb's Gift: Haste,
         // and the mirror of PushBack above. Same thin pass-through reasoning.

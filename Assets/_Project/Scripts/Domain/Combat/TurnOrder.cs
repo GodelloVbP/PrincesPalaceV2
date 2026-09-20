@@ -283,23 +283,124 @@ namespace PrincesPalace.Domain.Combat
         //
         // Returns false if the actor is not in the order, so a caller cannot
         // silently push something that has already been removed.
+        //
+        // ONE ARITY OF PushBackAll, not a second implementation of the same
+        // rule: a single push IS a batch of one, and for a batch of one the
+        // "every destination is fixed before the first one moves" rule below
+        // is a no-op. Two arities, one path -- the same shape CastSkill uses
+        // for its own one-target and two-target doors.
         public bool PushBack(TActor actor, int slots)
         {
-            var entry = _entries.FirstOrDefault(e => EqualityComparer<TActor>.Default.Equals(e.Actor, actor));
-            if (entry == null)
+            return PushBackAll(new[] { actor }, slots) > 0;
+        }
+
+        // A DELAY APPLIED TO SEVERAL ACTORS AT ONCE, with every destination
+        // computed against the board as it stood BEFORE any of them moved
+        // (docs/PLAN_SPELL_EXPANSION.md 1.9 rule 1) -- Gale Scythe's sweep,
+        // which delays every enemy it actually hit.
+        //
+        // WHY NOT JUST LOOP PushBack. Applied one at a time, the second
+        // target measures itself against the first target's NEW charge and
+        // lands somewhere the player was never shown: two enemies a level
+        // apart would concertina into each other instead of both dropping
+        // one level. 1.9's own worked example (d) is exactly that board, and
+        // its stated answer is the pre-pass one.
+        //
+        // Returns HOW MANY were actually displaced. An actor not in the order
+        // is skipped rather than throwing -- the batch runs after deaths have
+        // settled, and "this one is gone" is an ordinary outcome there, not
+        // an error (1.9 rule 6).
+        public int PushBackAll(IReadOnlyList<TActor> actors, int slots)
+        {
+            return DisplaceAll(actors, slots, ApplyPushBack);
+        }
+
+        // THE EXACT MIRROR OF PushBack, and Borrowed Moment's whole
+        // mechanic. Each slot raises the actor to just above the least-
+        // charged entry ABOVE them -- one charge LEVEL per slot, the same
+        // unit a push drops by -- and a slot with nothing above it to pass
+        // changes nothing, which is the clip.
+        //
+        // NOT PullToFront. That one is the Fragile Lamb's "act next" special
+        // case: it jumps every level at once and has its own talent and its
+        // own tests. An advance buys the number of places it says it buys
+        // and can be refused for having none to buy (1.9 rule 5), which is a
+        // different promise to the player.
+        //
+        // IT CANNOT BUY A TURN. The destination is always one point above an
+        // existing charge, and every existing charge is below the threshold
+        // (whoever crossed it is already acting), so an advance can never
+        // itself put an entry over the line -- see PullToFront's own header
+        // on why crossing it would be worth "a turn and a half" rather than
+        // a position.
+        public bool PullForward(TActor actor, int slots)
+        {
+            return DisplaceAll(new[] { actor }, slots, ApplyPullForward) > 0;
+        }
+
+        // The shared half of the two batch operations: resolve the actors,
+        // compute each destination against ONE pre-pass copy of the board,
+        // and only then write.
+        //
+        // A FRESH COPY PER TARGET, not one copy shared across the loop. The
+        // rule reads the whole list on every slot, so a shared copy would
+        // leak the first target's destination into the second's measurement
+        // -- the very thing the pre-pass exists to prevent.
+        //
+        // THE CURRENT ACTOR IS NEVER A TARGET (1.9 rule 2). Index 0 of the
+        // forecast is the action happening right now; moving its entry would
+        // either replay it or drop it, and no caller in this game wants
+        // either. Refused the same way a missing actor is, with a false
+        // rather than a throw.
+        private int DisplaceAll(IReadOnlyList<TActor> actors, int slots, Action<List<Entry>, Entry, int> rule)
+        {
+            if (actors == null || actors.Count == 0)
             {
-                return false;
+                return 0;
             }
 
-            ApplyPushBack(_entries, entry, slots);
-            return true;
+            var baseline = Snapshot();
+            var destinations = new List<KeyValuePair<Entry, float>>(actors.Count);
+
+            foreach (var actor in actors)
+            {
+                var entry = _entries.FirstOrDefault(e => EqualityComparer<TActor>.Default.Equals(e.Actor, actor));
+                if (entry == null || (_current != null && ReferenceEquals(entry, _current)))
+                {
+                    continue;
+                }
+
+                var sim = baseline.Select(e => new Entry
+                {
+                    Actor = e.Actor,
+                    Initiative = e.Initiative,
+                    Charge = e.Charge,
+                    Rate = e.Rate,
+                }).ToList();
+
+                var simEntry = sim.FirstOrDefault(e => EqualityComparer<TActor>.Default.Equals(e.Actor, actor));
+                if (simEntry == null)
+                {
+                    continue;
+                }
+
+                rule(sim, simEntry, slots);
+                destinations.Add(new KeyValuePair<Entry, float>(entry, simEntry.Charge));
+            }
+
+            foreach (var destination in destinations)
+            {
+                destination.Key.Charge = destination.Value;
+            }
+
+            return destinations.Count;
         }
 
         // The displacement PushBack applies to the real queue, factored out
         // so ProjectPushed can run the identical rule against a SIMULATED
         // copy -- see its own header. `entries` is whichever list `entry`
-        // actually belongs to; the real `_entries` for PushBack itself, a
-        // throwaway snapshot for a preview.
+        // actually belongs to; a throwaway copy for the batch above and for
+        // a preview.
         private static void ApplyPushBack(List<Entry> entries, Entry entry, int slots)
         {
             for (int i = 0; i < Math.Max(1, slots); i++)
@@ -320,6 +421,82 @@ namespace PrincesPalace.Domain.Combat
 
                 entry.Charge = below == float.MinValue ? entry.Charge - TurnThreshold : below - 1f;
             }
+        }
+
+        // ApplyPushBack read upside down, and deliberately shaped to be
+        // diffable against it: "greatest strictly below, minus one" becomes
+        // "least strictly above, plus one".
+        //
+        // THE ONE PLACE THE TWO ARE NOT MIRRORS is the nobody-there branch.
+        // A push with nobody below still means something -- the combatant
+        // already going last can be made to go a whole turn later, which is
+        // what taking a full threshold off says. An advance with nobody
+        // above has nothing left to say: it is already the next action, and
+        // any further movement would have to cross the threshold and buy a
+        // turn. So it clips instead (1.9 rule 4).
+        private static void ApplyPullForward(List<Entry> entries, Entry entry, int slots)
+        {
+            for (int i = 0; i < Math.Max(1, slots); i++)
+            {
+                float above = float.MaxValue;
+                foreach (var other in entries)
+                {
+                    if (ReferenceEquals(other, entry) || other.Charge <= entry.Charge)
+                    {
+                        continue;
+                    }
+
+                    if (other.Charge < above)
+                    {
+                        above = other.Charge;
+                    }
+                }
+
+                if (above == float.MaxValue)
+                {
+                    return;
+                }
+
+                entry.Charge = above + 1f;
+            }
+        }
+
+        // WHAT AN ENTRY'S CHARGE IS RIGHT NOW, read-only.
+        //
+        // The displacement contract is written in charges -- every one of
+        // 1.9's four worked examples states its answer as a number on this
+        // scale -- and a test that could only assert the resulting ORDER
+        // would pass for a destination that is wrong but happens to sort the
+        // same way. float.NaN for an actor that is not in the order, which is
+        // the same "there is nothing there" the -1 sentinels elsewhere mean
+        // and cannot be confused with a real charge.
+        public float ChargeOf(TActor actor)
+        {
+            var entry = _entries.FirstOrDefault(e => EqualityComparer<TActor>.Default.Equals(e.Actor, actor));
+            return entry == null ? float.NaN : entry.Charge;
+        }
+
+        // WHERE AN ACTOR SITS IN THE FORECAST, or -1 if it does not appear
+        // inside `count` turns at all.
+        //
+        // ITS FIRST APPEARANCE. A fast combatant legitimately appears more
+        // than once in one window (Project's own header, and
+        // UpcomingTurnsTests pins a five-turn window holding one actor three
+        // times); the position a displacement is measured against is the
+        // soonest it acts, because that is the turn a player is trying to
+        // move. 1.9's worked example (b) is this case and nothing else.
+        //
+        // INDEX 0 IS THE CURRENT ACTOR, which is the fact the whole of 1.9
+        // turns on and the one the baseline document never wrote down.
+        public int ForecastPositionOf(TActor actor, int count, Func<TActor, bool> include = null)
+        {
+            var forecast = Project(count, include);
+            for (int i = 0; i < forecast.Count; i++)
+            {
+                if (EqualityComparer<TActor>.Default.Equals(forecast[i], actor)) return i;
+            }
+
+            return -1;
         }
 
         private readonly Dictionary<TActor, int> _extraTurns = new Dictionary<TActor, int>();
@@ -480,6 +657,42 @@ namespace PrincesPalace.Domain.Combat
             if (pushed != null)
             {
                 ApplyPushBack(sim, pushed, slots);
+            }
+
+            var pendingExtras = new Dictionary<TActor, int>(_extraTurns);
+            var simCurrent = _current != null ? sim.FirstOrDefault(e => Equals(e.Actor, _current.Actor)) : null;
+
+            return SimulateForward(sim, simCurrent, pendingExtras, count, include);
+        }
+
+        // ProjectPushed's mirror, and Borrowed Moment's hover preview: where
+        // the tracker would read if this ally were advanced `slots` places,
+        // shown before the cast is committed.
+        //
+        // IT CANNOT TOUCH THE REAL SCHEDULE, by construction rather than by
+        // care (plan 1.13): ApplyPullForward runs on the Snapshot() copy
+        // Project itself simulates forward from, one line below. The preview
+        // and the resolution therefore run the identical rule, which is the
+        // whole reason ApplyPullForward is a static over a list rather than
+        // a method over `_entries`.
+        //
+        // THE CURRENT ACTOR IS NOT PREVIEWABLE either, matching the real
+        // operation's own refusal -- a preview that showed a movement the
+        // cast would then refuse is worse than no preview.
+        public IReadOnlyList<TActor> ProjectPulled(TActor pulledActor, int slots, int count,
+            Func<TActor, bool> include = null)
+        {
+            if (count <= 0 || _entries.Count == 0)
+            {
+                return new List<TActor>();
+            }
+
+            var sim = Snapshot();
+            var pulled = sim.FirstOrDefault(e => Equals(e.Actor, pulledActor));
+            bool isCurrent = _current != null && Equals(_current.Actor, pulledActor);
+            if (pulled != null && !isCurrent)
+            {
+                ApplyPullForward(sim, pulled, slots);
             }
 
             var pendingExtras = new Dictionary<TActor, int>(_extraTurns);

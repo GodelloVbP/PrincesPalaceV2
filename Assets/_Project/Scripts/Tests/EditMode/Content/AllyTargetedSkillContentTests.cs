@@ -96,6 +96,15 @@ namespace PrincesPalace.Domain.Tests
                 // Spell expansion milestone A. A ward like the four above and
                 // it rides the same Ward arm, which already reads its target.
                 "gilded_aegis",
+
+                // Spell expansion milestone C, and the first two rows here
+                // that are NOT wards or heals. Borrowed Moment's Hasten arm
+                // reads its target to advance it; Palace Passage's SwapAllies
+                // arm reads TWO -- it is the one row in the game whose
+                // SingleAlly targeting stops the picker twice, and how many
+                // times is the effect's answer (SkillEffects.PicksRequired),
+                // never the row's.
+                "borrowed_moment", "palace_passage",
             };
 
             var strays = ByIdFromContent()

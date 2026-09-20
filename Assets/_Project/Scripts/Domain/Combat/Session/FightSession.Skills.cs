@@ -42,10 +42,57 @@ namespace PrincesPalace.Domain.Combat.Session
             return CastSkill(kit.Skills[index], target, element);
         }
 
+        // THE TWO-PICK DOOR, by kit index -- the arity Palace Passage needs
+        // (plan 1.12). Every other command still comes through CastSkill
+        // above and is a list of one on the other side of it.
+        //
+        // A DIFFERENT NAME RATHER THAN AN OVERLOAD, which is a deviation from
+        // the plan's own wording and is forced rather than chosen. C# cannot
+        // resolve `CastSkill(0, null)` between a CombatantState parameter and
+        // an IReadOnlyList<CombatantState> one, and that literal appears at
+        // some forty call sites across the suite for every Self and Party
+        // cast in the game. Overloading would have turned each of them into a
+        // compile error and every future one into a trap. The requirement the
+        // plan was actually stating -- "there is still exactly one
+        // dispatcher" -- is met: both names reach the same body, and the
+        // single-target one is a list of one.
+        public bool CastSkillOnPicks(int index, IReadOnlyList<CombatantState> picks, DamageType? element = null)
+        {
+            var actor = Current;
+            var kit = KitFor(actor);
+            if (kit == null || index < 0 || index >= kit.Skills.Count) return false;
+
+            return CastSkillOnPicks(kit.Skills[index], picks, element);
+        }
+
+        // A NULL TARGET STAYS A ONE-ELEMENT LIST HOLDING NULL, not an empty
+        // one: "you did not aim this" and "this cast takes no target" are
+        // different refusals, and the ally branch below tells them apart by
+        // the difference.
         public bool CastSkill(ResolvedSkill skill, CombatantState target, DamageType? element = null)
+        {
+            return CastSkillOnPicks(skill, new[] { target }, element);
+        }
+
+        public bool CastSkillOnPicks(ResolvedSkill skill, IReadOnlyList<CombatantState> targets,
+            DamageType? element = null)
         {
             var actor = Current;
             if (actor == null) return false;
+
+            // AN EMPTY LIST IS A CAST NOBODY AIMED, which is the same thing
+            // as a null target and must refuse the same way (AUDIT #147: "a
+            // caller that hands this nothing has failed to ask"). Normalised
+            // here, once, rather than guarded at each refusal below -- caught
+            // by SkillDispatchTests.ACastHandedNoTargetAtAllIsRefused_-
+            // ThroughEitherDoor, which found a Ward quietly landing on the
+            // caster because `foreach` over an empty list checks nothing.
+            if (targets == null || targets.Count == 0) targets = new CombatantState[] { null };
+
+            // THE FIRST PICK IS "THE" TARGET for everything that has ever
+            // read one. A two-pick cast's second ally is read only by the
+            // resolution that knows what to do with it.
+            var target = PrimaryTarget(targets);
 
             // THE REACH CHECK COMES FIRST -- ahead of the cost check, the
             // resolvability check, the cooldown and the beat. A cast the
@@ -80,15 +127,26 @@ namespace PrincesPalace.Domain.Combat.Session
             // below is where those live -- underneath the cooldown check, so
             // a gift that could not have been cast this turn anyway says so
             // rather than complaining about the squad.
+            //
+            // EVERY PICK, NOT ONE (plan 1.1 step 2 under 1.12). The existing
+            // single-pick case is a list of one and behaves identically; a
+            // Palace Passage whose SECOND ally is a corpse or a stranger is
+            // refused here for the same reason and with the same sentence as
+            // one whose first is.
             if (skill.Targeting == SkillTargeting.SingleAlly)
             {
                 var candidates = EligibleAllies(actor, skill);
-                if (candidates.Count > 0 && !candidates.Contains(target))
+                if (candidates.Count > 0)
                 {
-                    AppendMessage(target == null
-                        ? $"{skill.DisplayName} needs an ally to aim at."
-                        : $"{target.Name} cannot take {skill.DisplayName}.");
-                    return false;
+                    foreach (var pick in targets)
+                    {
+                        if (candidates.Contains(pick)) continue;
+
+                        AppendMessage(pick == null
+                            ? $"{skill.DisplayName} needs an ally to aim at."
+                            : $"{pick.Name} cannot take {skill.DisplayName}.");
+                        return false;
+                    }
                 }
             }
 
@@ -105,7 +163,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // no further choice (see its own header), so this recursion runs
             // the identical path every other skill takes -- one cast pipeline,
             // not a parallel one for typed spells.
-            if (chosen != null) return CastSkill(chosen, target);
+            if (chosen != null) return CastSkillOnPicks(chosen, targets);
 
             // MANA, SIGNATURE AND HEALTH, VALIDATED TOGETHER (plan 1.1/1.2):
             // a cast that could pay one and not another must spend neither.
@@ -123,7 +181,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // milestone B for requiresStatus (Ashen Reckoning) -- a
             // board-state refusal about the TARGET, which the two effects
             // above never needed to ask about.
-            if (!CanResolveSkill(actor, skill, target, out string refusal))
+            if (!CanResolveSkill(actor, skill, targets, out string refusal))
             {
                 AppendMessage(refusal);
                 return false;
@@ -184,7 +242,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // never got to open.
             RefreshAttackBonus(actor, spendingGift: DealsDamage(skill));
 
-            ResolveCharacterSkill(actor, skill, target, PointsSpent(skill, resourceSpent, primarySpent), poolTier);
+            ResolveCharacterSkill(actor, skill, targets, PointsSpent(skill, resourceSpent, primarySpent), poolTier);
 
             // SOURCED by the actor. The relic's shield and the Lamb's Ward are
             // the same status, and an unsourced one would be a ward whose
@@ -307,16 +365,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // Every skill effect, resolved from data. Damage goes through
         // CombatMath like everything else, so a target with its own signature
         // resource soaks it exactly as it would any other hit.
-        private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill, CombatantState target,
-            int resourceSpent, PoolTierResolution.Result poolTier = default)
+        // TAKES THE WHOLE PICK LIST, not one target, since milestone C. Every
+        // arm but SwapAllies reads only the first of them, and does so
+        // through the `target` local below so the bodies are untouched -- a
+        // two-pick cast is the one case where the second pick is a fact about
+        // the resolution rather than about the aiming.
+        private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill,
+            IReadOnlyList<CombatantState> targets, int resourceSpent,
+            PoolTierResolution.Result poolTier = default)
         {
+            var target = PrimaryTarget(targets);
+
             // ONE CAST, one advance of the counter, however many things it
             // lands on. See FightSession.Potency.
             RelicsBeforeCast(actor);
 
             try
             {
-                ResolveCharacterSkillInner(actor, skill, target, resourceSpent, poolTier);
+                ResolveCharacterSkillInner(actor, skill, targets, resourceSpent, poolTier);
             }
             finally
             {
@@ -326,9 +392,11 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill, CombatantState target,
-            int resourceSpent, PoolTierResolution.Result poolTier)
+        private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill,
+            IReadOnlyList<CombatantState> targets, int resourceSpent, PoolTierResolution.Result poolTier)
         {
+            var target = PrimaryTarget(targets);
+
             switch (skill.Effect)
             {
                 case SkillEffect.DamageSingle:
@@ -341,6 +409,14 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.Reclaim:
                     ResolveReclaim(actor, skill, target);
+                    break;
+
+                case SkillEffect.Hasten:
+                    ResolveHasten(actor, skill, target);
+                    break;
+
+                case SkillEffect.SwapAllies:
+                    ResolveSwapAllies(actor, targets);
                     break;
 
                 case SkillEffect.HealSelf:
@@ -850,6 +926,100 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // THE FIRST PICK OF A CAST, or null when there is none. One reading
+        // of "the target", so a cast handed an empty list and a cast handed a
+        // list holding null cannot start meaning different things to
+        // different arms of the resolution.
+        private static CombatantState PrimaryTarget(IReadOnlyList<CombatantState> targets) =>
+            targets != null && targets.Count > 0 ? targets[0] : null;
+
+        // BORROWED MOMENT (plan 2.7, SkillEffect.Hasten). The refusals have
+        // already run -- CanResolveSkill has established that this ally is in
+        // the order and is not already at forecast position 1 -- so this is
+        // the movement and the sentence about it, and nothing else.
+        //
+        // NO DAMAGE, NO STATUS, NOTHING LEFT BEHIND: the whole cast is a
+        // position, which is why it carries no dodge roll, no ledger row and
+        // no mark.
+        private void ResolveHasten(CombatantState actor, ResolvedSkill skill, CombatantState target)
+        {
+            if (target == null) return;
+
+            BeginBeat(actor, target, isCast: true);
+            RecordSpellPresentation(skill);
+
+            int before = _encounter.ForecastPositionOf(target);
+            if (!_encounter.PullForward(target, skill.AdvanceSlots))
+            {
+                return;
+            }
+
+            int after = _encounter.ForecastPositionOf(target);
+
+            // SAYS WHERE THEY LANDED, not how many slots were spent. A slot
+            // moves past a charge LEVEL, so one slot can be worth two places
+            // when two combatants are tied and worth none when the level
+            // above is already the next action -- the number the player can
+            // check against the tracker is the one worth printing.
+            int places = before < 0 || after < 0 ? 0 : before - after;
+            AppendMessage(places > 0
+                ? $"{target.Name} moves {places} place{(places == 1 ? "" : "s")} earlier in the order."
+                : $"{target.Name} is hurried, but there is nowhere earlier to go.");
+        }
+
+        // PALACE PASSAGE (plan 2.9/1.12, SkillEffect.SwapAllies). Two allies
+        // trade FIELD places -- not turn-order places -- as the caster's one
+        // free action.
+        //
+        // REUSES Move's WHOLE MECHANISM and adds nothing to it: the same
+        // SwapPartySlots, the same NoteDeliberateMove pair with the acting
+        // character named, and the same recomputed-not-stored formation
+        // (CombatEncounter.LivingRankOf). What differs from Move is only who
+        // chooses the pair and what it costs, and both of those were settled
+        // before this method was reached.
+        //
+        // THE ROOTED REFUSAL IS NOT HERE. It is a CanResolveSkill refusal, so
+        // it spends nothing -- see 1.12. By the time this runs the cast is
+        // committed and the swap must happen.
+        private void ResolveSwapAllies(CombatantState actor, IReadOnlyList<CombatantState> targets)
+        {
+            if (targets == null || targets.Count < 2) return;
+
+            var party = _encounter.PlayerParty;
+            int first = IndexInParty(party, targets[0]);
+            int second = IndexInParty(party, targets[1]);
+            if (first < 0 || second < 0 || first == second) return;
+
+            BeginBeat(actor, targets[0], isCast: true);
+            SetStance(actor, Stances.Idle);
+
+            if (!_encounter.SwapPartySlots(first, second)) return;
+
+            AppendMessage($"{targets[0].Name} and {targets[1].Name} step through and trade places.");
+
+            // BOTH figures moved, and the note is fired for both with the
+            // CASTER as the acting character -- Sparring Buckler pays whoever
+            // acted for a move that changed any position, Sparring Saber pays
+            // only the one who chose to move. On a Passage the chooser is the
+            // caster, who may not be either of the two travellers, and
+            // NoteDeliberateMove's own header is what says that distinction
+            // is the point of the pair.
+            NoteDeliberateMove(targets[0], actor);
+            NoteDeliberateMove(targets[1], actor);
+        }
+
+        private static int IndexInParty(IReadOnlyList<CombatantState> party, CombatantState member)
+        {
+            if (party == null || member == null) return -1;
+
+            for (int i = 0; i < party.Count; i++)
+            {
+                if (ReferenceEquals(party[i], member)) return i;
+            }
+
+            return -1;
+        }
+
         private void ResolveDamageAll(CombatantState actor, ResolvedSkill skill, int resourceSpent,
             PoolTierResolution.Result poolTier = default)
         {
@@ -899,6 +1069,14 @@ namespace PrincesPalace.Domain.Combat.Session
             // why it cannot be derived from the beats either way.
             int largestLanded = 0;
 
+            // WHO ACTUALLY TOOK A HIT, for the queue delay this sweep may
+            // carry (Gale Scythe, plan 2.8 step 5). Collected rather than
+            // re-derived afterwards, because "was hit" is not a question the
+            // board can answer once the cast is over: a dodger and a
+            // survivor who was struck look identical from the outside, and
+            // only one of them loses a place.
+            var struckAndLanded = new List<CombatantState>();
+
             foreach (var enemy in _encounter.OpponentsOf(actor).ToList())
             {
                 // An earlier enemy THIS SAME SWEEP already fell to might have
@@ -938,6 +1116,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                     ApplyFinalDamage(actor, enemy, packetTotal);
                     RecordTargetResult(enemy, packetTotal);
+                    struckAndLanded.Add(enemy);
 
                     largestLanded = System.Math.Max(packetTotal, largestLanded);
                     RecordBeatAmount(largestLanded);
@@ -1022,6 +1201,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 ApplyFinalDamage(actor, enemy, landed);
 
                 RecordTargetResult(enemy, landed);
+                struckAndLanded.Add(enemy);
 
                 largestLanded = System.Math.Max(landed, largestLanded);
                 RecordBeatAmount(largestLanded);
@@ -1042,6 +1222,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     ApplySkillStatus(skill, enemy, actor);
                 }
             }
+
+            // AFTER EVERY ENEMY HAS RESOLVED AND EVERY DEATH HAS SETTLED
+            // (plan 1.9 rule 6, 2.8 steps 4-5). Not inside the loop: a
+            // destination computed while the sweep was still killing things
+            // would be measured against a board the player never sees.
+            ApplyQueuePushAll(actor, skill, struckAndLanded);
 
             AppendMessage(summary.ToString());
         }
@@ -1254,9 +1440,55 @@ namespace PrincesPalace.Domain.Combat.Session
         // push, no cancel.
         private void ApplyQueuePush(CombatantState actor, ResolvedSkill skill, CombatantState target)
         {
-            if (skill.QueuePushSlots <= 0 || target == null || !target.IsAlive) return;
-            if (!_encounter.PushBack(target, skill.QueuePushSlots)) return;
+            ApplyQueuePushAll(actor, skill, new[] { target });
+        }
 
+        // THE SAME DELAY OVER SEVERAL TARGETS AT ONCE -- Gale Scythe's sweep
+        // (plan 2.8), and the arity the Black Ram's Headbutt is a list of one
+        // of. Two arities, one rule, for the same reason CastSkill has two:
+        // the single-target path was here first and must not change.
+        //
+        // SURVIVORS ONLY, AND ONE FORECAST (1.9 rules 1 and 6). The dead are
+        // filtered here rather than by the caller because "is this one still
+        // standing" is a question about the board at the moment of the
+        // displacement, and the caller's list was assembled while the sweep
+        // was still resolving. CombatEncounter.PushBackAll then fixes every
+        // destination against the board as it stood before any of them moved.
+        //
+        // IN FORECAST ORDER, which changes nothing about where anybody lands
+        // -- the destinations are computed independently -- and everything
+        // about the order the lines are printed in. The log is read against
+        // the tracker, so it reads in the tracker's order.
+        private void ApplyQueuePushAll(CombatantState actor, ResolvedSkill skill,
+            IReadOnlyList<CombatantState> targets)
+        {
+            if (skill.QueuePushSlots <= 0 || targets == null || targets.Count == 0) return;
+
+            var survivors = targets.Where(t => t != null && t.IsAlive).Distinct().ToList();
+            if (survivors.Count == 0) return;
+
+            if (survivors.Count > 1)
+            {
+                var forecast = _encounter.UpcomingTurns(_encounter.ForecastWindow).ToList();
+                survivors = survivors
+                    .OrderBy(t =>
+                    {
+                        int at = forecast.IndexOf(t);
+                        return at < 0 ? int.MaxValue : at;
+                    })
+                    .ToList();
+            }
+
+            if (_encounter.PushBackAll(survivors, skill.QueuePushSlots) == 0) return;
+
+            foreach (var survivor in survivors)
+            {
+                ApplyQueuePushTo(actor, survivor);
+            }
+        }
+
+        private void ApplyQueuePushTo(CombatantState actor, CombatantState target)
+        {
             AppendMessage($"{target.Name} is knocked back down the order.");
 
             // NO SPARRING NOTE. A push moves the target down the TURN ORDER,

@@ -185,5 +185,89 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(17, hero.BonusAttackPercent,
                 "PreviewSkillPower borrows this field and puts it back in a finally -- see its own header");
         }
+
+        // ---- milestone C: the schedule is a board too (plan 1.13) ----------
+
+        private static readonly string[] MilestoneCSpellIds =
+            { "borrowed_moment", "gale_scythe", "palace_passage" };
+
+        private static List<ResolvedSkill> TheThreeOfC() => new List<ResolvedSkill>
+        {
+            new ResolvedSkill("borrowed_moment", "Borrowed Moment", "", "hero", 1, SkillEffect.Hasten,
+                SkillTargeting.SingleAlly, 8, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0, advanceSlots: 2),
+            new ResolvedSkill("gale_scythe", "Gale Scythe", "", "hero", 1, SkillEffect.DamageAll,
+                SkillTargeting.AllEnemies, 11, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Wind, 5) }, SpellPresentation.None, 0,
+                queuePushSlots: 1),
+            new ResolvedSkill("palace_passage", "Palace Passage", "", "hero", 1, SkillEffect.SwapAllies,
+                SkillTargeting.SingleAlly, 7, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0, freeAction: true),
+        };
+
+        [Test]
+        public void APreviewOfEveryMilestoneCSpellLeavesTheScheduleAndTheFieldAsItFoundThem()
+        {
+            // THE NEW SURFACE THIS MILESTONE ADDED to preview purity is the
+            // SCHEDULE. Milestone A and B's spells could only have spent a
+            // status, a mark or a resource; these three can move an initiative
+            // entry and a field slot, and neither of those is anywhere in the
+            // list the earlier test checks.
+            var skills = TheThreeOfC();
+            Assert.AreEqual(MilestoneCSpellIds.Length, skills.Count,
+                "vacuity guard: the cast set and the milestone's spell list have drifted apart");
+
+            var (session, hero, foe) = Fight(skills);
+            var encounter = session.Encounter;
+
+            float heroCharge = encounter.ChargeOf(hero);
+            float foeCharge = encounter.ChargeOf(foe);
+            var partyBefore = encounter.PlayerParty.ToList();
+            int heroMana = hero.CurrentMana;
+            int foeHealth = foe.CurrentHealth;
+
+            foreach (var skill in skills)
+            {
+                session.PreviewSkillPower(hero, skill);
+            }
+
+            Assert.AreEqual(heroCharge, encounter.ChargeOf(hero), "a preview moved the caster's own turn");
+            Assert.AreEqual(foeCharge, encounter.ChargeOf(foe), "a preview delayed an enemy");
+            CollectionAssert.AreEqual(partyBefore, encounter.PlayerParty.ToList(),
+                "a preview swapped two field slots");
+            Assert.AreEqual(heroMana, hero.CurrentMana, "a preview spent mana");
+            Assert.AreEqual(foeHealth, foe.CurrentHealth, "a preview dealt damage");
+        }
+
+        [Test]
+        public void TheTrackersAdvanceGhostCommitsNothing()
+        {
+            // THE ONE PREVIEW IN THIS MILESTONE THAT RUNS THE REAL RULE.
+            // PreviewSkillPower above cannot touch the schedule because it
+            // never looks at it; UpcomingTurnsPulled has to, because its whole
+            // job is showing where a cast would land. What keeps it honest is
+            // that the rule runs on Snapshot()'s copy -- see
+            // TurnOrderTests.ProjectPulled_LeavesEveryRealChargeUnchanged for
+            // the same claim one layer down.
+            var hero = Hero();
+            var ally = new CombatantState("Ally", true, 500, 50, 40, 4);
+            var foe = Foe();
+            var encounter = new CombatEncounter(new[] { hero, ally }, new[] { foe });
+            new FightSession(encounter, new List<PlayerKit>
+            {
+                new PlayerKit("hero", CharacterRole.Tank, TheThreeOfC(), null, null),
+            }, null, new SeededRandom(7)).Begin();
+
+            float allyCharge = encounter.ChargeOf(ally);
+            var plain = encounter.UpcomingTurns(6).ToList();
+
+            var ghost = encounter.UpcomingTurnsPulled(ally, 2, 6);
+
+            Assert.IsNotEmpty(ghost, "fixture: the ghost showed nothing");
+            Assert.AreEqual(allyCharge, encounter.ChargeOf(ally), "the ghost committed the advance");
+            CollectionAssert.AreEqual(plain, encounter.UpcomingTurns(6).ToList(),
+                "the real forecast changed after a hover");
+        }
+
     }
 }

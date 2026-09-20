@@ -1,0 +1,329 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: gale_scythe
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  data:
+    Id: gale_scythe
+    DisplayName: Gale Scythe
+    Description: Wind damage to every enemy, and each one it hits loses a place in
+      the order.
+    CharacterId: sheep
+    UnlockLevel: 2147483647
+    Effect: 1
+    Targeting: 1
+    ManaCost: 11
+    ResourceCost: 0
+    SpendsAllResource: 0
+    ResourceSpendCap: 0
+    SpendsAllPrimary: 0
+    PercentOfMaxHealthPerPoint: 0
+    FreeAction: 0
+    PercentOfCasterMaxHealth: 0
+    WardTurns: 1
+    Power: 0
+    FlatAmount: 0
+    IgnoresDefense: 0
+    DamageInstances:
+    - type: 8
+      amount: 5
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+      layers:
+      - id: draw
+        render: sprite
+        place: caster-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/prismatic_orb_wind_charge
+        seconds: 0.3
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 230
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.1
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: crescent
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: release
+        offset: 0
+        path: Spells/prismatic_orb_wind_core
+        seconds: 0.26
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 320
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.2
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: cut
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: Spells/prismatic_orb_wind_contact
+        seconds: 0.28
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 300
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0.22
+        glow: 1.3
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: dust
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0.14
+        path: Spells/prismatic_orb_earth_drops
+        seconds: 0.32
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0.2
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 260
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.3
+    SortOrder: 14
+    Status: 0
+    HasStatus: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 1
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+      spritePath: 
+      hit:
+        vfx:
+          path: 
+          seconds: 0.6
+          impactFrame: 3
+          anchor: 
+          size: 380
+          departFrame: 0
+          impactX: -1
+          impactY: -1
+          sfxPath: 
+          groundPath: 
+          groundSeconds: 0
+          groundImpactFrame: 0
+          groundAspect: 0
+          groundImpactY: -1
+          castSfxPath: 
+          layers: []
+          layerFormat: 0
+          hitCueSeconds: 0
+        shake: 0
+        hitStopSeconds: 0
+    CooldownTurns: 3
+    PlayerSelectable: 1
+    Shake: 0
+    Approach: 0
+    Stance: 
+    ApproachStance: 
+    WindupStance: 
+    SummonEnemyId: 
+    SummonCap: 0
+    IconPath: 
+    AdvanceSlots: 0
+    HealthCostPercent: 0
+    RequiresStatusType: 0
+    HasRequiresStatus: 0
+    ConsumesStatusType: 0
+    HasConsumesStatus: 0
+    DamageInstancesIfConsumed: []
+    DetonationPercent: 0
+    DetonationSplit: 
+    Reach:
+      Kind: 0
+      RankMask: 0
+    BookOnly: 1
+    BookTier: 2
+    Elements: []
+    PoolTiers: []
+    Placeholder: 0
+    PlaceholderNote: 

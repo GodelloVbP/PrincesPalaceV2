@@ -208,7 +208,10 @@ namespace PrincesPalace.Domain.Content
                     || !string.IsNullOrWhiteSpace(raw.consumesStatus)
                     || (raw.damageInstancesIfConsumed != null && raw.damageInstancesIfConsumed.Length > 0)
                     || raw.detonationPercent != 0
-                    || (raw.detonationSplit != null && raw.detonationSplit.Length > 0);
+                    || (raw.detonationSplit != null && raw.detonationSplit.Length > 0)
+                    // AND MILESTONE C'S ONE, same reason once more: a
+                    // stand-in may not quietly author a turn-order advance.
+                    || raw.advanceSlots != 0;
 
                 if (authorsAnEffectField)
                 {
@@ -694,20 +697,48 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            // A queue push only means anything on a skill that resolves
-            // against one enemy. On a heal or an AOE there is no single
-            // target to knock back, so an authored value would silently do
-            // nothing — the same reading ignoresDefense already gets.
-            if (raw.queuePushSlots != 0 && effect != SkillEffect.DamageSingle)
+            // A queue push only means anything on a skill that deals damage
+            // to somebody: on a heal there is nobody to knock back, so an
+            // authored value would silently do nothing — the same reading
+            // ignoresDefense already gets.
+            //
+            // DamageAll JOINED DamageSingle HERE IN MILESTONE C. It was
+            // refused until Gale Scythe (plan 2.8), and the refusal was
+            // honest at the time: the AOE branch applied status but not the
+            // push, so an authored value on a sweep really would have done
+            // nothing. It does something now (ResolveDamageAll's batch
+            // delay), so the content rule follows the code rather than the
+            // other way round. Asked through SkillEffects.IsDamagePipeline
+            // so a third damage effect cannot quietly disagree with this
+            // list.
+            if (raw.queuePushSlots != 0 && !SkillEffects.IsDamagePipeline(effect))
             {
-                error = $"{label}: queuePushSlots only means anything on a DamageSingle skill, not {effect}.";
+                error = $"{label}: queuePushSlots only means anything on a damage skill, not {effect}.";
                 return false;
             }
 
             if (raw.queuePushSlots < 0)
             {
                 error = $"{label}: queuePushSlots is {raw.queuePushSlots} — a negative push would pull the target FORWARD in the queue, " +
-                        "which no skill in this design does. Use a positive number.";
+                        "which no skill in this design does. Use advanceSlots on a Hasten skill instead.";
+                return false;
+            }
+
+            // THE MIRROR OF THE TWO ABOVE, for the advance (plan 1.9, 2.7).
+            // A Hasten row must author a positive advanceSlots -- an advance
+            // of zero places is a cast that visibly does nothing -- and
+            // nothing else may author one at all, because no other
+            // resolution reads it.
+            if (raw.advanceSlots != 0 && effect != SkillEffect.Hasten)
+            {
+                error = $"{label}: advanceSlots only means anything on a Hasten skill, not {effect}.";
+                return false;
+            }
+
+            if (effect == SkillEffect.Hasten && raw.advanceSlots <= 0)
+            {
+                error = $"{label}: a Hasten skill needs a positive advanceSlots — moving an ally zero places " +
+                        "earlier is a cast that spends mana and changes nothing.";
                 return false;
             }
 
@@ -791,7 +822,8 @@ namespace PrincesPalace.Domain.Content
                 raw.resourceSpendCap, raw.spendsAllPrimary, raw.percentOfMaxHealthPerPoint, raw.freeAction,
                 raw.percentOfCasterMaxHealth, raw.wardTurns, raw.iconPath ?? "",
                 raw.healthCostPercent, requiresStatus, consumesStatus, instancesIfConsumed,
-                raw.detonationPercent, detonationSplit);
+                raw.detonationPercent, detonationSplit,
+                raw.advanceSlots);
             error = null;
             return true;
         }
@@ -1302,6 +1334,14 @@ namespace PrincesPalace.Domain.Content
                 case SkillEffect.Ward:
                 case SkillEffect.GiftMana:
                 case SkillEffect.GiftFury:
+                // MILESTONE C'S TWO JOIN THE ALLY RACK. Borrowed Moment aims
+                // at one squadmate and Palace Passage at two, and the SIDE is
+                // the only thing SkillTargeting says -- how many picks the
+                // side is asked for is the effect's own answer
+                // (SkillEffects.PicksRequired), never an authored field, so
+                // both rows read SingleAlly and only one of them stops twice.
+                case SkillEffect.Hasten:
+                case SkillEffect.SwapAllies:
                 case SkillEffect.GiftHaste: return SkillTargeting.SingleAlly;
                 default: return SkillTargeting.SingleEnemy;
             }

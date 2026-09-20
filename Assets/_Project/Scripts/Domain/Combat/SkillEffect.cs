@@ -128,6 +128,40 @@ namespace PrincesPalace.Domain.Combat
         // APPENDED, never inserted -- see this enum's own header on why
         // (SkillDefinition stores this as a raw int).
         Reclaim,
+
+        // ONE OTHER ALLY MOVED EARLIER IN THE ORDER -- Borrowed Moment (plan
+        // D10, 2.7, milestone C). No damage, no status, nothing left on the
+        // board: the whole cast is a position.
+        //
+        // A MEMBER RATHER THAN A FIELD ON A GIFT. Gift: Haste is the closest
+        // thing that already exists and it is a different promise -- it hands
+        // an ally the very next action, unconditionally, and is priced as a
+        // Wool talent. This buys a stated number of PLACES, can be refused
+        // for having none to buy (1.9 rule 5), and previews where it would
+        // land before it is committed. Expressing that as "GiftHaste with a
+        // slots field" would make one member mean two schedules.
+        //
+        // APPENDED, never inserted -- see this enum's own header.
+        Hasten,
+
+        // TWO ALLIES TRADE FIELD PLACES, as the caster's one free action --
+        // Palace Passage (plan D10, 2.9, 1.12, milestone C).
+        //
+        // THE ONLY EFFECT IN THE GAME THAT NEEDS TWO PICKS, and the pick
+        // COUNT is read off the effect here (SkillEffects.PicksRequired)
+        // rather than authored on the row: one more content number would let
+        // a row ask for three picks that no resolution can use.
+        //
+        // A MEMBER RATHER THAN AN EXTENSION OF THE MOVE VERB. Move is "the
+        // current actor trades with the nearest living ally in one
+        // direction" and costs the turn; this is "any two allies trade" and
+        // costs a cast. They share their whole mechanism -- SwapPartySlots,
+        // the Rooted rule read off both sides, the NoteDeliberateMove pair --
+        // and differ in who chooses and what it costs, which is exactly the
+        // split between a verb and a skill.
+        //
+        // APPENDED, never inserted -- see this enum's own header.
+        SwapAllies,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier
@@ -138,6 +172,22 @@ namespace PrincesPalace.Domain.Combat
     {
         public static bool IsDamagePipeline(SkillEffect effect) =>
             effect == SkillEffect.DamageSingle || effect == SkillEffect.DamageAll;
+
+        // HOW MANY TARGETS A CAST OF THIS EFFECT HAS TO CARRY, and the one
+        // place that answer lives (plan 1.12).
+        //
+        // A PROPERTY OF THE EFFECT, NOT OF THE CONTENT ROW. Palace Passage
+        // needs two because a swap needs two ends; nothing an author could
+        // write would make a third pick resolvable, so there is no field to
+        // author it with and no way for a row to disagree with the
+        // resolution about how many clicks it takes.
+        //
+        // READ BY THREE: the menu (how many picks before it commits), the
+        // session (how many it validates and refuses on), and the bot's legal
+        // menu (which arity of command it can build). One rule, three
+        // readers -- the shape this file's own IsDamagePipeline exists for.
+        public static int PicksRequired(SkillEffect effect) =>
+            effect == SkillEffect.SwapAllies ? 2 : 1;
     }
 
     // Who a skill is aimed at. Kept separate from the effect because the

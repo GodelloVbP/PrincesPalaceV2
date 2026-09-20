@@ -1090,5 +1090,60 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(250, before - foe.CurrentHealth,
                 "the cast still got the empowerment the previews quoted");
         }
+
+        // ---- milestone C: two arities, one dispatcher (plan 1.12) ---------
+
+        [Test]
+        public void EverySinglePickSkillStillCastsThroughTheOneTargetOverload()
+        {
+            // THE REGRESSION THIS MILESTONE COULD HAVE CAUSED, and the one
+            // worth a test of its own: a second door into CastSkill is only
+            // safe if the first one still reaches the identical path. Every
+            // caller in the game, the bot and this suite uses the one-target
+            // form; if it had quietly become a different code path, the
+            // failure would show up as "one spell behaves oddly" months
+            // later rather than here.
+            //
+            // ASSERTED AS AN IDENTITY, not as a spot check: the same board,
+            // the same skill and the same seed cast through each door have to
+            // leave the same numbers behind.
+            var skill = Skill(SkillEffect.DamageSingle, "Jab", damageInstances:
+                new[] { new DamageInstance(DamageType.Fire, 9) });
+
+            var (throughOne, _, oneEncounter) = Fight(Kit(skills: new[] { skill }));
+            var oneFoe = oneEncounter.Enemies[0];
+            Assert.IsTrue(throughOne.CastSkill(0, oneFoe), "the one-target door refused an ordinary cast");
+
+            var (throughList, _, listEncounter) = Fight(Kit(skills: new[] { skill }));
+            var listFoe = listEncounter.Enemies[0];
+            Assert.IsTrue(throughList.CastSkillOnPicks(0, new[] { listFoe }),
+                "the pick-list door refused the same cast");
+
+            Assert.AreEqual(oneFoe.CurrentHealth, listFoe.CurrentHealth,
+                "the two doors into CastSkill produced different damage");
+            Assert.AreEqual(oneFoe.MaxHealth - oneFoe.CurrentHealth > 0, true,
+                "fixture: neither cast dealt anything, so the comparison proves nothing");
+        }
+
+        [Test]
+        public void ACastHandedNoTargetAtAllIsRefused_ThroughEitherDoor()
+        {
+            // A NULL TARGET STAYS A REFUSAL (AUDIT #147), and an EMPTY pick
+            // list has to read the same way rather than as "this cast takes
+            // no target". The two are one line apart in CastSkill and the
+            // distinction is invisible at a call site, so it is pinned.
+            var ward = Skill(SkillEffect.Ward, "Ward", flatAmount: 20);
+            var ally = Hero("Ally", speed: 1);
+            var (session, hero, _) = Fight(Kit(skills: new[] { ward }), Hero(speed: 30));
+            var encounter = new CombatEncounter(new[] { hero, ally }, new[] { Foe() });
+            var twoUp = new FightSession(encounter, new List<PlayerKit> { Kit(skills: new[] { ward }) },
+                null, new SeededRandom(3));
+
+            Assert.IsFalse(twoUp.CastSkillOnPicks(0, new CombatantState[0]),
+                "an empty pick list is a cast nobody aimed, not a cast with no target");
+            Assert.AreSame(hero, twoUp.Current, "the refusal spent the turn");
+            Assert.IsFalse(StatusEffects.IsWarded(hero), "the refusal warded somebody anyway");
+        }
+
     }
 }

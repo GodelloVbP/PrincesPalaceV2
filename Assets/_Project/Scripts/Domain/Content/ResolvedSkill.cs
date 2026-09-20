@@ -159,6 +159,18 @@ namespace PrincesPalace.Domain.Content
         // it already does for items and relics.
         public string IconPath = "";
 
+        // ---- milestone C: initiative and formation (plan §4) -------------
+
+        // See RawSkillEntry.advanceSlots. How many places EARLIER in the turn
+        // queue a Hasten cast moves its target -- the mirror of
+        // QueuePushSlots, and 0 for every effect but Hasten. A plain int
+        // rather than a nullable for the same reason every other number on
+        // this type is one: Unity's serializer has no Nullable<T> support at
+        // all, and 0 is not a legitimate authored value here (the resolver
+        // refuses it on a Hasten row), so it needs no telling apart from
+        // "unauthored".
+        public int AdvanceSlots;
+
         // ---- milestone B: consumption and health payment (plan §4) -------
 
         // Percent of the CASTER'S OWN max health paid as a cost, ceiling-
@@ -456,8 +468,13 @@ namespace PrincesPalace.Domain.Content
             // above gives.
             int healthCostPercent = 0, StatusEffectType? requiresStatus = null,
             StatusEffectType? consumesStatus = null, DamageInstance[] damageInstancesIfConsumed = null,
-            int detonationPercent = 0, DamageType[] detonationSplit = null)
+            int detonationPercent = 0, DamageType[] detonationSplit = null,
+            // APPENDED LAST OF ALL AGAIN (milestone C: initiative and
+            // formation), same positional-argument reason every block above
+            // gives.
+            int advanceSlots = 0)
         {
+            AdvanceSlots = advanceSlots;
             IconPath = iconPath ?? "";
             HealthCostPercent = healthCostPercent;
             HasRequiresStatus = requiresStatus.HasValue;
