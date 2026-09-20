@@ -2183,6 +2183,20 @@ the party-wide control-loop harness.
   narrowly specified repeat-control resistance lands, **before** this milestone
   closes.
 
+**STATUS: LANDED, 2026-09-20.** Court resolves ordinary and authored-boss
+targets through separate branches, exposes its caster in both cases, and names
+the boss fallback on the pre-cast detail card. The initial five-round harness
+found the named failure exactly: three alternating casters allowed **0 enemy
+actions**. A narrow recovery rule now prevents a new Fear/Rooted application
+after a hard-control skip until that combatant completes one real action; it
+does not shorten the standing status that earned the skip. The identical
+harness then allowed **1 enemy action** (10 damage) across fifteen player turns.
+The ordinary three-enemy preview was captured successfully after teaching the
+preview planner that `Enthrall` needs no fabricated prerequisite. The preview
+CLI has no enemy-override option for a spell capture, so `hollow_choir`'s visual
+variant remains a stated tooling limitation; its authored-boss branch is pinned
+through `CourtOfWhispersTests` instead.
+
 ---
 
 ## 5. Balance gate
@@ -2568,6 +2582,25 @@ is the same shape D9's "kit composition, not speed, decides a root's value"
 finding already offered for Velvet Shackles: nothing to tune here without a
 model change, since the classification (physical or not) is deliberately
 binary and the retaliation is doing exactly what 2.12 asks of it.
+
+### Measured values — milestone F, 2026-09-20
+
+Instrument: `ControlLoopTests.AlternatingCastersCannotDenyEveryEnemyTurnAcrossFiveRounds`,
+a real `FightSession` driven for fifteen player turns (five turns per caster)
+with Court of Whispers, Velvet Shackles, Winter's Rebuke and Gale Scythe
+available to each caster. It counts enemy action beats, rather than deriving a
+result from cooldown arithmetic.
+
+| rule | enemy actions allowed | damage dealt to party |
+|---|---:|---:|
+| no repeat-control recovery | **0** | 0 |
+| one real action before new Fear/Rooted | **1** | 10 |
+
+The zero-action baseline is the plan's explicit stop condition, so it was not
+reported and shipped unchanged. The recovery rule is deliberately narrower
+than control immunity: a two-turn Root still supplies both authored affected
+turns, Chill and initiative displacement still land normally, and only a new
+hard-control application waits for the target to act once.
 
 ---
 

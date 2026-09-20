@@ -440,6 +440,23 @@ namespace PrincesPalace.Domain.Tests
                 Assert.AreEqual(before, foe.CurrentHealth,
                     "an Afflict is the status and nothing else -- it must deal no damage");
             }),
+
+            new Row(SkillEffect.Enthrall, "the ordinary enemy carries Fear and the caster is exposed", () =>
+            {
+                var caster = Hero("Caster", speed: 30);
+                var foe = Foe();
+                var encounter = new CombatEncounter(new[] { caster }, new[] { foe });
+                var skill = new ResolvedSkill("coverage", "Court of Whispers", "", "hero", 1,
+                    SkillEffect.Enthrall, SkillTargeting.AllEnemies, 0, 0, false, 0, 0, false,
+                    null, SpellPresentation.None, 0,
+                    appliesStatus: StatusEffectType.Vulnerable, statusMagnitude: 20, statusDuration: 1,
+                    queuePushSlots: 2);
+                var session = Session(encounter, Kit(skill));
+
+                Assert.IsTrue(session.CastSkill(0, null), "the cast was refused");
+                Assert.IsTrue(foe.Statuses.Any(s => s.Type == StatusEffectType.Feared));
+                Assert.IsTrue(caster.Statuses.Any(s => s.Type == StatusEffectType.Vulnerable));
+            }),
         };
 
         // ---- the four consumers, one case per member -----------------------
@@ -607,6 +624,14 @@ namespace PrincesPalace.Domain.Tests
             {
                 raw.appliesStatus = "Rooted";
                 raw.statusDuration = 2;
+            }
+
+            if (effect == SkillEffect.Enthrall)
+            {
+                raw.appliesStatus = "Vulnerable";
+                raw.statusMagnitude = 20;
+                raw.statusDuration = 1;
+                raw.queuePushSlots = 2;
             }
 
             return raw;

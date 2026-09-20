@@ -54,6 +54,7 @@ namespace PrincesPalace.Domain.Tests
             // renumbering them. "Never insert" is the rule the generated
             // assets depend on; the plan's ordering was not.
             { "Afflict", 18 },
+            { "Enthrall", 19 },
         };
 
         private static readonly Dictionary<string, int> SkillTargetingOrdinals = new Dictionary<string, int>

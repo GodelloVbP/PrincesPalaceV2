@@ -14,6 +14,11 @@ namespace PrincesPalace.Domain.Combat.Session
     // ordinary branching logic over ordinary data and belongs here.
     public sealed partial class FightSession
     {
+        // A combatant that has just lost an action to hard control must take
+        // one real action before a NEW Fear/Rooted application can lock it
+        // again. The standing status still pays every turn it authored; this
+        // blocks only party-wide reapplication after those turns are spent.
+        private readonly HashSet<CombatantState> _hardControlRecovery = new HashSet<CombatantState>();
         // The word shown when a monster is telegraphing nothing special. Not a
         // UiString: it is compared against, and it is a sentinel before it is
         // a label.
@@ -541,6 +546,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // holder settles like any other death before StepToNextTurn
                 // asks whether the fight is over.
                 bool physicalMove = ResolveEnemyAction(current);
+                _hardControlRecovery.Remove(current);
                 if (physicalMove) TriggerPhysicalMoveRetaliation(current);
 
                 if (!StepToNextTurn()) break;
@@ -667,6 +673,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (isBroken) enemy.BreakShield.Reset();
             if (isStunned) StatusEffects.ConsumeStun(enemy.Statuses);
+            if (isStunned || isRootedHelpless) _hardControlRecovery.Add(enemy);
 
             ForfeitTurn(enemy, isBroken && isStunned
                 ? $"{enemy.Name} is stunned AND still reeling - it cannot act!"

@@ -430,6 +430,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveAfflict(actor, skill, target);
                     break;
 
+                case SkillEffect.Enthrall:
+                    ResolveEnthrall(actor, skill);
+                    break;
+
                 case SkillEffect.HealSelf:
                 {
                     BeginBeat(actor, actor, isCast: true);
@@ -1555,6 +1559,44 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        private void ResolveEnthrall(CombatantState actor, ResolvedSkill skill)
+        {
+            var enemies = _encounter.OpponentsOf(actor).Where(e => e != null && e.IsAlive).ToList();
+            BeginBeat(actor, enemies.FirstOrDefault(), isCast: true);
+            RecordSpellPresentation(skill);
+
+            var bosses = new List<CombatantState>();
+            foreach (var enemy in enemies)
+            {
+                if (SourceFor(enemy)?.Source?.IsBoss == true)
+                {
+                    bosses.Add(enemy);
+                    continue;
+                }
+
+                if (_hardControlRecovery.Contains(enemy))
+                {
+                    AppendMessage($"{enemy.Name} steels itself against another hard control.");
+                }
+                else
+                {
+                    Fear.Apply(enemy, Fear.DefaultTurns, actor);
+                    AppendMessage($"{enemy.Name} recoils from the whispering court.");
+                }
+            }
+
+            if (bosses.Count > 0)
+            {
+                _encounter.PushBackAll(bosses, skill.QueuePushSlots);
+                foreach (var boss in bosses)
+                {
+                    AppendMessage($"{boss.Name} resists the fear but is delayed.");
+                }
+            }
+
+            ApplySkillStatus(skill, actor, actor);
+        }
+
         // Applies whatever status this skill carries to whoever its own effect
         // just resolved against -- a damage effect's status lands on the enemy
         // it hit, a heal effect's on whoever was healed.
@@ -1567,6 +1609,13 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!skill.AppliesStatus.HasValue || recipient == null || !recipient.IsAlive) return;
 
             var type = skill.AppliesStatus.Value;
+
+            if ((type == StatusEffectType.Rooted || type == StatusEffectType.Feared)
+                && _hardControlRecovery.Contains(recipient))
+            {
+                AppendMessage($"{recipient.Name} resists another hard control until it acts.");
+                return;
+            }
 
             // THROUGH THE SEAM, not through StatusEffects.Apply. This line read
             // `StatusEffects.Apply(...)` until 2026-09-20 and was the latent

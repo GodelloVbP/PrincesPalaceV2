@@ -67,6 +67,10 @@ namespace PrincesPalace
             SkillEffect.BuffParty,
             SkillEffect.Summon,
             SkillEffect.Transform,
+            // Court needs no fabricated prerequisite: a normal three-enemy
+            // field shows Fear and the caster's drawback, while the focused
+            // domain test owns the authored-boss fallback branch.
+            SkillEffect.Enthrall,
         };
 
         // WHICH ELEMENT A PREVIEW CASTS, and what its art therefore is.

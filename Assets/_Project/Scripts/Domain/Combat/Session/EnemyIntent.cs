@@ -162,6 +162,7 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (effect)
             {
                 case SkillEffect.DamageAll:
+                case SkillEffect.Enthrall:
                     return EnemyIntentScope.AllOpponents;
 
                 case SkillEffect.HealSelf:

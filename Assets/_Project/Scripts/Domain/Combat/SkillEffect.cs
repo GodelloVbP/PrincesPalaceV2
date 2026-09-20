@@ -186,6 +186,15 @@ namespace PrincesPalace.Domain.Combat
         // rule ("nothing is inserted or reordered") is the part that protects
         // the generated assets, and that is what is kept.
         Afflict,
+
+        // EVERY LIVING ENEMY, branching on authored boss identity. Ordinary
+        // enemies take Fear; bosses cannot be feared and are delayed in the
+        // initiative order instead. Court of Whispers also exposes its
+        // caster, which is why this is one resolution shape rather than a
+        // BuffParty row aimed at the other side.
+        //
+        // APPENDED, never inserted -- generated assets store this ordinal.
+        Enthrall,
     }
 
     // ONE PLACE FOR "IS THIS A DAMAGE EFFECT", so the pipeline the pool-tier

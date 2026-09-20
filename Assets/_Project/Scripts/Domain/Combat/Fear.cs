@@ -17,6 +17,7 @@ namespace PrincesPalace.Domain.Combat
         public const string IconKey = "Assets/_Project/Art/Items/Relics/Processed/status_feared.png";
 
         public const int VulnerablePercent = 25;
+        public const int DefaultTurns = 1;
 
         public static void Apply(CombatantState target, int durationTurns, CombatantState source = null)
         {

@@ -1105,6 +1105,58 @@
       }
     },
     {
+      "_comment": "MILESTONE F of docs/PLAN_SPELL_EXPANSION.md, section 2.13. Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price. PLACEHOLDER PRESENTATION reuses shipped spell layers until the surrounding-court atlas lands.",
+      "id": "court_of_whispers",
+      "bookOnly": true,
+      "displayName": "Court of Whispers",
+      "description": "Terrifies ordinary enemies for a turn. Bosses are only delayed. You are left open.",
+      "characterId": "sheep",
+      "effect": "Enthrall",
+      "physicalMove": false,
+      "targeting": "AllEnemies",
+      "manaCost": 14,
+      "cooldownTurns": 4,
+      "bookTier": 3,
+      "queuePushSlots": 2,
+      "appliesStatus": "Vulnerable",
+      "statusMagnitude": 20,
+      "statusDuration": 1,
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.38,
+        "layers": [
+          {
+            "id": "court",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "release",
+            "path": "Spells/prismatic_orb_earth_core",
+            "seconds": 0.55,
+            "until": "hold",
+            "size": 300,
+            "facing": "none",
+            "sort": "effects",
+            "fade": 0.25,
+            "glow": 0.8
+          },
+          {
+            "id": "whisper",
+            "render": "sprite",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/prismatic_orb_earth_contact",
+            "seconds": 0.35,
+            "until": "once",
+            "size": 340,
+            "facing": "none",
+            "sort": "effects",
+            "punch": 0.08,
+            "glow": 1.0
+          }
+        ]
+      }
+    },
+    {
       "id": "provoke",
       "displayName": "Provoke",
       "description": "Head down, eyes up. Whatever it was going to do, it is going to do it to you.",

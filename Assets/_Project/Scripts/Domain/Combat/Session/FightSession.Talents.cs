@@ -499,6 +499,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
             switch (skill.Effect)
             {
+                case SkillEffect.Enthrall:
+                    if (!_encounter.OpponentsOf(actor).Any(enemy => enemy != null && enemy.IsAlive))
+                    {
+                        refusal = $"{skill.DisplayName} has nobody left to enthrall.";
+                        return false;
+                    }
+
+                    return true;
+
                 case SkillEffect.Shatter:
                     if (WardsCastBy(actor).Count == 0)
                     {

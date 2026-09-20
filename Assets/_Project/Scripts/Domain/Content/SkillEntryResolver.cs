@@ -711,7 +711,9 @@ namespace PrincesPalace.Domain.Content
             // other way round. Asked through SkillEffects.IsDamagePipeline
             // so a third damage effect cannot quietly disagree with this
             // list.
-            if (raw.queuePushSlots != 0 && !SkillEffects.IsDamagePipeline(effect))
+            if (raw.queuePushSlots != 0
+                && !SkillEffects.IsDamagePipeline(effect)
+                && effect != SkillEffect.Enthrall)
             {
                 error = $"{label}: queuePushSlots only means anything on a damage skill, not {effect}.";
                 return false;
@@ -1350,7 +1352,8 @@ namespace PrincesPalace.Domain.Content
         {
             switch (effect)
             {
-                case SkillEffect.DamageAll: return SkillTargeting.AllEnemies;
+                case SkillEffect.DamageAll:
+                case SkillEffect.Enthrall: return SkillTargeting.AllEnemies;
                 case SkillEffect.HealSelf: return SkillTargeting.Self;
                 case SkillEffect.HealParty:
                 case SkillEffect.RestorePartyMana:

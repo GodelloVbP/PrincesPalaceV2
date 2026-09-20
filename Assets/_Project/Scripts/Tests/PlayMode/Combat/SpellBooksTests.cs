@@ -30,6 +30,14 @@ namespace PrincesPalace.PlayModeTests
         // is the lowest tier and therefore cheapest to reason about.
         private const string SkillId = "mud_burst";
 
+        private static readonly string[] ExpansionBookIds =
+        {
+            "gilded_aegis", "winters_rebuke", "vipers_bite", "crownfall",
+            "ashen_reckoning", "blackglass_spear", "borrowed_moment", "gale_scythe",
+            "palace_passage", "velvet_shackles", "censer_of_embers", "thorn_tithe",
+            "court_of_whispers",
+        };
+
         private string _root;
 
         [SetUp]
@@ -58,6 +66,40 @@ namespace PrincesPalace.PlayModeTests
         {
             RunManager.Run.unassignedSpellBooks ??= new List<string>();
             RunManager.Run.unassignedSpellBooks.Add(skillId);
+        }
+
+        [Test]
+        public void NoneOfTheThirteenIsOfferedToAFuryCharacter()
+        {
+            RunManager.StartRun(4242UL);
+
+            foreach (string id in ExpansionBookIds)
+            {
+                GiveOneUnassignedCopy(id);
+                Assert.AreEqual(ShopOutcome.Refused, RunOrchestrator.LearnSpell("bear", id).Outcome, id);
+                CollectionAssert.DoesNotContain(
+                    ContentDatabase.AvailableSkillsFor(new Character { definitionId = "bear", level = 99 })
+                        .Select(skill => skill.id).ToList(), id, id);
+            }
+        }
+
+        [Test]
+        public void AllThirteenSurviveASaveAndReloadOneAtATime()
+        {
+            foreach (string id in ExpansionBookIds)
+            {
+                RunManager.StartRun(4242UL);
+                RunManager.Run.learnedSpells.Clear();
+                RunManager.Run.unassignedSpellBooks.Clear();
+                GiveOneUnassignedCopy(id);
+                Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(CharacterId, id).Outcome, id);
+                Assert.IsTrue(SaveSlotManager.SaveCurrent(), id);
+
+                var loaded = SaveSystem.Load(0);
+
+                Assert.That(loaded.activeRun.learnedSpells,
+                    Has.Some.Matches<LearnedSpellEntry>(entry => entry.characterId == CharacterId && entry.skillId == id), id);
+            }
         }
 
         // ---- who can hold a book at all (plan P6) -------------------------------

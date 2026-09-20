@@ -96,7 +96,7 @@ namespace PrincesPalace.Domain.Tests
             { "bog_mud_burst", false },
 
             // The spell expansion. All thirteen are casts; these are the
-            // twelve landed through milestone E.
+            // twelve landed through milestone E, plus Court in F.
             { "gilded_aegis", false },
             { "winters_rebuke", false },
             { "vipers_bite", false },
@@ -109,6 +109,7 @@ namespace PrincesPalace.Domain.Tests
             { "velvet_shackles", false },
             { "censer_of_embers", false },
             { "thorn_tithe", false },
+            { "court_of_whispers", false },
         };
 
         private static List<string> SkillBlocks() =>

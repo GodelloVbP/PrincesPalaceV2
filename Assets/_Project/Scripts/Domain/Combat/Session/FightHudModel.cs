@@ -394,6 +394,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Thorned. A word taken from this row's status would be a lie
                 // on the next row that shares the arm.
                 case SkillEffect.Afflict: return "AFFLICT";
+                case SkillEffect.Enthrall: return "ENTHRALL";
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
                         "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +
@@ -475,6 +476,7 @@ namespace PrincesPalace.Domain.Combat.Session
             SkillEffect.GiftMana => true,
             SkillEffect.GiftFury => true,
             SkillEffect.GiftHaste => true,
+            SkillEffect.Enthrall => true,
             _ => false,
         };
 
@@ -507,7 +509,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // Same fix as the row's meta line, and it has to be the same words
             // or the panel and the row it describes disagree in front of the
             // player.
-            panel.Stats.Add(("TARGET", ReachFor(skill.Targeting)));
+            panel.Stats.Add(("TARGET", skill.Effect == SkillEffect.Enthrall
+                ? "ALL ENEMIES; BOSSES DELAYED"
+                : ReachFor(skill.Targeting)));
             panel.Stats.Add(("EFFECT", VerbFor(skill.Effect)));
             panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
             panel.DamageType = DamageTypeLabel(session, actor, skill);

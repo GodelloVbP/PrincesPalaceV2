@@ -52,7 +52,7 @@ MonoBehaviour:
       layers: []
       layerFormat: 0
       hitCueSeconds: 0
-    SortOrder: 34
+    SortOrder: 35
     Status: 2
     HasStatus: 1
     StatusMagnitude: 50

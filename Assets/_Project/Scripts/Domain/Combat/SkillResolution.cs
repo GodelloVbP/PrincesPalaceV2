@@ -208,6 +208,7 @@ namespace PrincesPalace.Domain.Combat
                 // delivers two turns, not a number -- the detail card says so
                 // in words, the same way Provoke's does.
                 case SkillEffect.Afflict:
+                case SkillEffect.Enthrall:
                     return 0;
 
                 default:
