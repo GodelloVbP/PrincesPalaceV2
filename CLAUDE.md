@@ -17,7 +17,7 @@ milestone name like "M137" means the wrong project's context — stop.
 Unity 6 (6000.5.7f1), URP with a Renderer 2D, C#, turn-based roguelike dungeon crawler.
 uGUI with TextMeshPro (`TMP_Text`/`Button`/`Image`); Hades-style painterly art direction.
 
-## How work happens
+## How work happens (Claude Code routing)
 
 Fable 5.1 orchestrates only: reads files, runs `git status`, writes briefs,
 launches agents, judges reports. Fable NEVER edits, runs tests, or writes
@@ -29,10 +29,12 @@ Four agent types, each pinned to one model, plus the built-in
 
 | Type | Model | Use when |
 |---|---|---|
-| `reader` | Haiku | Locate a file, extract a fact, one bounded read-only question. |
-| `implementer` | Sonnet | Own one issue end to end: diagnose, implement, test, correct. |
+| `reader` | Haiku | Locate files and extract facts. Returns file paths, line numbers, and relevant excerpts. Never interprets or diagnoses. |
+| `implementer` | Sonnet | Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
 | `verifier` | Sonnet | Run one named gate once, report pass/fail. |
 | `architect` | Opus | Architectural change: brief names the change, affected contracts/lifecycles, failure risks. |
+
+**Handoff pattern:** Reader outputs `file.cs:123-145` + excerpt. Implementer's brief includes that exact location and excerpt, so implementer reads only what's necessary. This avoids re-reading the codebase and maximizes cache reuse.
 
 Workers cannot launch agents. Opus REQUIRES a brief naming all three things
 above, scoped to only that portion, or it refuses. Max three active agents
@@ -69,7 +71,10 @@ there. `Raw*Entry` fields, defaults, and the enum names they parse against:
 ## Verification
 
 - Iterate: `tools/test.ps1 <area>` or `tools/test.ps1 -Changed`.
-- Before commit: `tools/run_tests_parallel.ps1` (full gate).
+- Select the commit gate by change class in `docs/TESTING.md`. Game/runtime,
+  editor, content, generated artifact, test, and dependency changes use
+  `tools/run_tests_parallel.ps1`; agent/workflow prose or configuration alone
+  uses its documented focused policy gate and an independent verifier.
 - Add `-BuildScenes` when a `[SerializeField]` or a screen tree changed, and
   again before committing it; `-BuildContent` likewise for content.
 - Commit only test-passing checkpoints.
