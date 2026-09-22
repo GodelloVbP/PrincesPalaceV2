@@ -92,6 +92,11 @@ namespace PrincesPalace.Domain.Combat
         // cost the rest of them nothing, not even a zero-capacity instance.
         public BreakShield BreakShield;
 
+        // Cumulative physical armour permanently removed during this fight.
+        // The live PhysicalDefense field is still the authority for damage;
+        // this counter exists so inspect/status UI can explain why it changed.
+        public int PermanentPhysicalDefenseShred;
+
         // Every rule this combatant's unlocked talents contribute to the
         // fight, flattened once at encounter build time — see
         // TalentEffectSet. Never null: the shared Empty instance is the

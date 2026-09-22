@@ -823,7 +823,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Through the shared tail rather than its own copy of it, so a
             // character skill's kill earns the same riders a plain attack's
             // does. A swing is a swing.
-            ApplyFinalDamage(actor, target, damage);
+            ApplyFinalDamage(actor, target, damage, CombatActions.IsPhysicalMove(skill));
 
             // STEP 6 OF 2.4: the consume, on a LANDED hit only -- both dodge
             // arms above already returned before this line, and a lethal hit
@@ -930,7 +930,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // fixed-packet spell already uses for a multi-typed cast
             // (ResolveDamageSingle's HasFixedDamage arm), not something this
             // spell invents.
-            ApplyFinalDamage(actor, target, total);
+            ApplyFinalDamage(actor, target, total, CombatActions.IsPhysicalMove(skill));
 
             ApplyMark(actor, target);
             MagicMarkerApplyMark(actor, target);
@@ -1158,7 +1158,7 @@ namespace PrincesPalace.Domain.Combat.Session
                         continue;
                     }
 
-                    ApplyFinalDamage(actor, enemy, packetTotal);
+                    ApplyFinalDamage(actor, enemy, packetTotal, CombatActions.IsPhysicalMove(skill));
                     RecordTargetResult(enemy, packetTotal);
                     struckAndLanded.Add(enemy);
 
@@ -1242,7 +1242,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // KitFor(actor)?.AttackType -> SourceFor(actor)?.Source.
                 // AttackType -> Physical) -- so this still counts as the
                 // CAST's type, not the caster's swing, exactly as before.
-                ApplyFinalDamage(actor, enemy, landed);
+                ApplyFinalDamage(actor, enemy, landed, CombatActions.IsPhysicalMove(skill));
 
                 RecordTargetResult(enemy, landed);
                 struckAndLanded.Add(enemy);

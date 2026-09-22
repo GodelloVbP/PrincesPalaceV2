@@ -42,6 +42,8 @@ namespace PrincesPalace.Domain.UiKit
         // CycleTarget/CycleTargetFromPad.
         void InspectMove(int delta);
 
+        void EnterCharacterSelect();
+
         // WHAT THE PAD IS POINTING AT RIGHT NOW -- the verb plate, the
         // submenu row, the enemy plate or the ally plate, whichever this
         // fight's menu depth makes the live one. Null while there is nothing

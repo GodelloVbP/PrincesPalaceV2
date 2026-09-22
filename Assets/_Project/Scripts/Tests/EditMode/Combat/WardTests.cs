@@ -575,15 +575,16 @@ namespace PrincesPalace.Domain.Tests
             var attacker = new CombatantState("Shawn", true, 200, 30, 10, 8);
             var target = new CombatantState("Golem", false, 300, 0, 5, 4);
 
-            // 10 attack, raw, with no bonus.
-            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack, no bonus: the 1.2x basic-attack coefficient alone.
+            // 10 * 1.2 = 12.
+            Assert.AreEqual(12, CombatMath.ComputeAttackDamage(attacker, target));
 
             attacker.BonusAttackPercent = 100;
 
-            // Doubling the attack to 20, folded in before the (now absent)
-            // scale, same place weapon scaling lands: exactly double, since
-            // nothing sits between the bonus and the raw figure any more.
-            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
+            // Doubling the attack bonus stacks with the 1.2x basic-attack
+            // coefficient, folded in before the (now absent) scale, same
+            // place weapon scaling lands: 10 * 1.2 * 2.00 = 24.
+            Assert.AreEqual(24, CombatMath.ComputeAttackDamage(attacker, target));
         }
     }
 

@@ -262,15 +262,20 @@ namespace PrincesPalace.PlayModeTests
         public void NoobF1_vs_HollowChoir_Step8()
         {
             // §P intended: raw 10, afterDef 8, TTK ~22, bossDmg 30, hitsToDie
-            // ~12 -- "dies ~halfway". raw/afterDef reproduce §P exactly.
+            // ~12 -- "dies ~halfway". Those raw/afterDef figures predate the
+            // 1.2x basic-attack coefficient (CombatMath.
+            // BasicAttackPowerMultiplier): WP 9, M 1.12 (grade C at WIS 14),
+            // raw = round(9 * 1.12 * 1.2) = round(12.096) = 12; afterDef =
+            // 12 * 100 / (100 + 25 MDEF) = 1200 / 125 = 9 (integer division).
             // TTK reads higher than §P's own ~22 because AssertFight applies
             // the x1.5 rotation multiplier uniformly, while §P's own table
-            // gives the Noob row "no rotation" (Eff/action = the raw 8, not
-            // 8 x 1.5 = 12) to represent a noob misplaying it -- with that
-            // nuance applied by hand, Ceiling(178/8) = 23, right next to
-            // §P's own ~22.
+            // gives the Noob row "no rotation" (Eff/action = the raw
+            // afterDef, not afterDef x 1.5) to represent a noob misplaying
+            // it -- with that nuance applied by hand, Ceiling(178/9) = 20,
+            // close to §P's own ~22. AssertFight's own x1.5 rotation
+            // multiplier instead gives Ceiling(178/13.5) = 14, below.
             AssertFight("Noob@F1 vs hollow_choir@8", NoobF1(), () => HollowChoirAt(8), DamageType.Nature,
-                expectedBossHp: 178, expectedRaw: 10, expectedAfterDef: 8, expectedTtk: 15,
+                expectedBossHp: 178, expectedRaw: 12, expectedAfterDef: 9, expectedTtk: 14,
                 expectedBossDmg: 29, expectedHitsToDie: 13);
         }
 
@@ -278,11 +283,14 @@ namespace PrincesPalace.PlayModeTests
         public void CompetentF1_vs_HollowChoir_Step8()
         {
             // §P intended: raw 14, afterDef 11, TTK ~10.5, bossDmg 28,
-            // hitsToDie ~13 -- "survives on heals, ~50 HP margin". Every
-            // figure lands within one point of §P's own -- this profile
-            // gets the rotation §P assumed, unlike the Noob row above.
+            // hitsToDie ~13 -- "survives on heals, ~50 HP margin". Those
+            // raw/afterDef figures predate the 1.2x basic-attack coefficient
+            // (CombatMath.BasicAttackPowerMultiplier): WP 12, M 1.15 (grade C
+            // at WIS 15), raw = round(12 * 1.15 * 1.2) = round(16.56) = 17;
+            // afterDef = 17 * 100 / (100 + 25 MDEF) = 1700 / 125 = 13
+            // (integer division).
             AssertFight("Competent@F1 vs hollow_choir@8", CompetentF1(), () => HollowChoirAt(8), DamageType.Nature,
-                expectedBossHp: 178, expectedRaw: 14, expectedAfterDef: 11, expectedTtk: 11,
+                expectedBossHp: 178, expectedRaw: 17, expectedAfterDef: 13, expectedTtk: 10,
                 expectedBossDmg: 28, expectedHitsToDie: 13);
         }
 
@@ -311,8 +319,11 @@ namespace PrincesPalace.PlayModeTests
             double effAction = afterDef * 1.5;
             int ttk = (int)Math.Ceiling(rat.MaxHealth / effAction);
 
-            Assert.AreEqual(14, raw);
-            Assert.AreEqual(14, afterDef, "rat has 0 MagicalDefense -- unmitigated");
+            // WP 12, M 1.15 (grade C at WIS 15), the 1.2x basic-attack
+            // coefficient (CombatMath.BasicAttackPowerMultiplier): raw =
+            // round(12 * 1.15 * 1.2) = round(16.56) = 17.
+            Assert.AreEqual(17, raw);
+            Assert.AreEqual(17, afterDef, "rat has 0 MagicalDefense -- unmitigated");
             Assert.AreEqual(3, ttk, "inside §P's 2-4 action trash band");
         }
 
@@ -332,20 +343,24 @@ namespace PrincesPalace.PlayModeTests
                 raw, DamageType.Nature, rat, affinity, NoVariance, null, null, player).Damage;
             int ttk = (int)Math.Ceiling(rat.MaxHealth / (afterDef * 1.5));
 
-            Assert.AreEqual(99, raw);
-            Assert.AreEqual(99, afterDef);
+            // WP 58, M 1.7 (grade A at WIS 20), the 1.2x basic-attack
+            // coefficient: raw = round(58 * 1.7 * 1.2) = round(118.32) = 118.
+            Assert.AreEqual(118, raw);
+            Assert.AreEqual(118, afterDef);
             Assert.AreEqual(4, ttk, "the drift §P designed: 3 at F1 -> 4 at F5");
         }
 
         [Test]
         public void TankyTrash_GolemAtFloorFive_CompetentProfile()
         {
-            // §P intended band: ~5-7 actions for the trash-tank. Real: 6,
+            // §P intended band: ~5-7 actions for the trash-tank. Real: 5,
             // inside the band -- golem is authored weak to Nature
             // (enemies.json's own weakness list), which EffectivenessMultiplier
             // applies (x1.5, rounded away from zero) BEFORE the
-            // MagicalDefense mitigation: 99 -> 148.5 -> 149 -> 149x100/110
-            // = 135.45 -> 135.
+            // MagicalDefense mitigation. WP 58, M 1.7 (grade A at WIS 20),
+            // the 1.2x basic-attack coefficient: raw = round(58 * 1.7 * 1.2)
+            // = round(118.32) = 118 -> 118 * 1.5 = 177 exactly (no rounding
+            // tie) -> 177 x 100 / 110 = 17700 / 110 = 160 (integer division).
             var (golem, affinity, _) = RealEnemy("golem", step: 36);
             Assert.AreEqual(1080, golem.MaxHealth, "golem HP at step 36");
 
@@ -355,10 +370,10 @@ namespace PrincesPalace.PlayModeTests
                 raw, DamageType.Nature, golem, affinity, NoVariance, null, null, player);
             int ttk = (int)Math.Ceiling(golem.MaxHealth / (outcome.Damage * 1.5));
 
-            Assert.AreEqual(99, raw);
+            Assert.AreEqual(118, raw);
             Assert.AreEqual(1.5f, outcome.Effectiveness, 0.0001f, "golem is weak to Nature");
-            Assert.AreEqual(135, outcome.Damage, "the weakness bonus outweighs golem's MagicalDefense (10)");
-            Assert.AreEqual(6, ttk, "inside §P's 5-7 action tanky-trash band");
+            Assert.AreEqual(160, outcome.Damage, "the weakness bonus outweighs golem's MagicalDefense (10)");
+            Assert.AreEqual(5, ttk, "inside §P's 5-7 action tanky-trash band");
         }
 
         [Test]
@@ -369,17 +384,22 @@ namespace PrincesPalace.PlayModeTests
             // FightEncounterAdapter.Build(isElite: true), StatBlock.
             // ScaledForElite).
             //
-            // REAL: 36 -- more than THREE TIMES §P's own ceiling, the
-            // largest single discrepancy this file found post-fix. Under the
-            // live x5 this used to read 7 (deceptively close to §P's band,
-            // for the wrong reason -- the x5 was masking it). LowTalent@F2's
-            // own raw basic is small (13) against a modestly-defended,
-            // now-correctly-scaled elite pair (MagicalDefense 6, HP 316
-            // each): afterDef floors to 12, so effAction is only 18 against
-            // 632 combined HP. Flagged in the session report as a genuine
-            // balance gap worth the designer's attention -- either the elite
-            // DEF multiplier or LowTalent's own assumed weapon tier is the
-            // likely lever (both live in §T), not a formula bug.
+            // REAL: 29 -- more than TWO AND A HALF TIMES §P's own ceiling,
+            // the largest single discrepancy this file found post-fix (it
+            // was 36 before the 1.2x basic-attack coefficient
+            // (CombatMath.BasicAttackPowerMultiplier) landed -- the
+            // coefficient closes some of the gap but does not erase it).
+            // Under the live x5 this used to read 7 (deceptively close to
+            // §P's band, for the wrong reason -- the x5 was masking it).
+            // LowTalent@F2's own raw basic: WP 12, M 1.12 (grade C at WIS
+            // 14), raw = round(12 * 1.12 * 1.2) = round(16.128) = 16,
+            // against a modestly-defended, now-correctly-scaled elite pair
+            // (MagicalDefense 6, HP 316 each): afterDef = 16 * 100 / 106 =
+            // 1600 / 106 = 15 (integer division), so effAction is 22.5
+            // against 632 combined HP. Flagged in the session report as a
+            // genuine balance gap worth the designer's attention -- either
+            // the elite DEF multiplier or LowTalent's own assumed weapon
+            // tier is the likely lever (both live in §T), not a formula bug.
             var (eliteTreant, affinity, _) = RealEnemy("treant", step: 12, isElite: true);
 
             var player = LowTalentF2();
@@ -391,10 +411,10 @@ namespace PrincesPalace.PlayModeTests
             int ttkPair = (int)Math.Ceiling(2 * eliteTreant.MaxHealth / effAction);
 
             Assert.AreEqual(316, eliteTreant.MaxHealth, "elite treant HP at step 12 (x1.40, then depth-scaled)");
-            Assert.AreEqual(13, raw);
-            Assert.AreEqual(12, afterDef, "elite treant's MagicalDefense (5 x1.15 = 6, rounded)");
-            Assert.AreEqual(36, ttkPair,
-                "total actions to clear both treants -- more than 3x §P's ~9-11 band, see this test's own comment");
+            Assert.AreEqual(16, raw);
+            Assert.AreEqual(15, afterDef, "elite treant's MagicalDefense (5 x1.15 = 6, rounded)");
+            Assert.AreEqual(29, ttkPair,
+                "total actions to clear both treants -- more than 2.5x §P's ~9-11 band, see this test's own comment");
         }
 
         // ---- the weapon-vs-armour invariant ---------------------------------
@@ -426,11 +446,20 @@ namespace PrincesPalace.PlayModeTests
             int dmgAtT4 = CombatMath.ComputeAttackDamage(
                 Wielder(WeaponPower.Compute(29, 0), wisdomScore: 17, ScalingGrade.B), null);
 
-            Assert.AreEqual(30, dmgAtT3);
-            Assert.AreEqual(39, dmgAtT4);
+            // M 1.35 (grade B at WIS 17), the 1.2x basic-attack coefficient:
+            // dmgAtT3 = round(22 * 1.35 * 1.2) = round(35.64) = 36.
+            // dmgAtT4 = round(29 * 1.35 * 1.2) = round(46.98) = 47.
+            Assert.AreEqual(36, dmgAtT3);
+            Assert.AreEqual(47, dmgAtT4);
 
+            // 47 / 36 = 1.30555... -- no longer the exact 1.30 the
+            // pre-coefficient rounded figures (39/30) happened to land on;
+            // rounding each side to a whole number before dividing does not
+            // preserve the unrounded 29/22 = 1.31818... ratio exactly, with
+            // or without the 1.2x coefficient (which itself cancels out of
+            // that unrounded ratio). Still comfortably inside §P's own band.
             double ratio = dmgAtT4 / (double)dmgAtT3;
-            Assert.AreEqual(1.30, ratio, 0.0001, "+1 staff tier, T3 -> T4");
+            Assert.AreEqual(1.305556, ratio, 0.0001, "+1 staff tier, T3 -> T4");
             Assert.GreaterOrEqual(ratio, 1.30, "§P: +1 weapon tier should be worth at least +30% damage");
             Assert.LessOrEqual(ratio, 1.37, "§P: +1 weapon tier should be worth at most +37% damage");
         }
@@ -479,9 +508,18 @@ namespace PrincesPalace.PlayModeTests
             int dmgBefore = CombatMath.ComputeAttackDamage(Wielder(wp, wisdomScore: 10 + 7 + wisAtT7, grade), null);
             int dmgAfter = CombatMath.ComputeAttackDamage(Wielder(wp, wisdomScore: 10 + 7 + wisAtT8, grade), null);
 
-            Assert.AreEqual(160, dmgBefore);
-            Assert.AreEqual(165, dmgAfter);
+            // WIS 22 -> M 1.6; WIS 23 -> M 1.65 (grade B). The 1.2x
+            // basic-attack coefficient (CombatMath.
+            // BasicAttackPowerMultiplier): dmgBefore = round(100 * 1.6 *
+            // 1.2) = round(192) = 192 exactly; dmgAfter = round(100 * 1.65 *
+            // 1.2) = round(198) = 198 exactly.
+            Assert.AreEqual(192, dmgBefore);
+            Assert.AreEqual(198, dmgAfter);
 
+            // Both figures scale evenly by the 1.2x coefficient with no
+            // rounding fuzz (192 and 198 land on whole numbers), so the
+            // ratio is unchanged from the pre-coefficient 165/160: a
+            // constant multiplier on both sides of a ratio cancels out.
             double ratio = dmgAfter / (double)dmgBefore;
             Assert.AreEqual(1.03125, ratio, 0.001, "T7 -> T8's real +1 Wisdom, applied through grade B");
             Assert.LessOrEqual(ratio, 1.12, "§P: a full armour-tier upgrade should be worth at most +12% damage");
@@ -512,9 +550,16 @@ namespace PrincesPalace.PlayModeTests
             int dmgBefore = CombatMath.ComputeAttackDamage(Wielder(wp, wisdomScore: 10 + 10 + wisAtT5, grade), null);
             int dmgAfter = CombatMath.ComputeAttackDamage(Wielder(wp, wisdomScore: 10 + 10 + wisAtT6, grade), null);
 
-            Assert.AreEqual(170, dmgBefore);
-            Assert.AreEqual(205, dmgAfter);
+            // WIS 20 -> M 1.7; WIS 25 -> M 2.05 (grade A). The 1.2x
+            // basic-attack coefficient: dmgBefore = round(100 * 1.7 * 1.2) =
+            // round(204) = 204 exactly; dmgAfter = round(100 * 2.05 * 1.2) =
+            // round(246) = 246 exactly.
+            Assert.AreEqual(204, dmgBefore);
+            Assert.AreEqual(246, dmgAfter);
 
+            // Both figures scale evenly by the 1.2x coefficient with no
+            // rounding fuzz (204 and 246 land on whole numbers), so the
+            // ratio is unchanged from the pre-coefficient 205/170.
             double ratio = dmgAfter / (double)dmgBefore;
             Assert.AreEqual(1.2059, ratio, 0.001, "T5 -> T6's real +5 Wisdom jump, applied through grade A");
             Assert.Greater(ratio, 1.12,

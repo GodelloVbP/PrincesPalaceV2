@@ -64,13 +64,13 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(menu.IsOpen, "Start should open the system menu from the hub (the owner's 2026-09-19 call moved this off Cancel)");
 
-            yield return PressTabPrev(); // wraps from the first visible tab to the last one, MainMenu
+            yield return PressTriggerLeft(); // wraps from the first visible tab to the last one, MainMenu (owner's 2026-09-19 hardware-round call moved tab-stepping off LB/RB onto LT/RT)
 
             Assert.AreEqual(SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu), menu.SelectedIndex,
-                "one TabPrev from the default tab should wrap to the last visible tab, MainMenu, outside a run");
+                "one TriggerLeft pull from the default tab should wrap to the last visible tab, MainMenu, outside a run");
 
             AssertSelectedName("ExitTitle",
-                "the shoulder shortcut should land inside the new pane on its own entry -- Title, the first " +
+                "the trigger shortcut should land inside the new pane on its own entry -- Title, the first " +
                 "row of ExitsScreen's List");
 
             yield return PressSubmit(); // ExitsController.Press(0) -- arms Title, does not yet leave

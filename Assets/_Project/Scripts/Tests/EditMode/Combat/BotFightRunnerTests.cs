@@ -196,8 +196,14 @@ namespace PrincesPalace.Domain.Tests
         {
             // Chip damage against a large pool: hundreds of commands, every
             // one of them progress.
+            //
+            // Foe health raised from 900 to 1200 for the 1.2x basic-attack
+            // coefficient (CombatMath.BasicAttackPowerMultiplier): hero's
+            // swing is round(4 * 1.0 * 1.2) = 5, not the old 4, so 900 HP
+            // would finish in 180 commands -- under the 200 floor this test
+            // exists to clear. 1200 / 5 = 240 commands, comfortably past it.
             var hero = Fighter("Hero", true, maxHealth: 5000, attack: 4, speed: 10);
-            var foe = Fighter("Foe", false, maxHealth: 900, attack: 1, speed: 1);
+            var foe = Fighter("Foe", false, maxHealth: 1200, attack: 1, speed: 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))

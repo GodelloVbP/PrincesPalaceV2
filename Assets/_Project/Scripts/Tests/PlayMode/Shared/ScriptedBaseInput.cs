@@ -25,6 +25,7 @@ namespace PrincesPalace.PlayModeTests
         public float Horizontal;
         public bool SubmitDown;
         public bool CancelDown;
+        public bool CharacterSelectDown;
 
         // The shoulder-shortcut axes (docs/GAMEPAD_NAVIGATION_PLAN.md phase
         // 3, item 2; ProjectSettings/InputManager.asset's own TabPrev/
@@ -68,6 +69,7 @@ namespace PrincesPalace.PlayModeTests
             if (buttonName == "TabPrev") return TabPrevDown;
             if (buttonName == "TabNext") return TabNextDown;
             if (buttonName == "SystemMenu") return SystemMenuDown;
+            if (buttonName == "Jump") return CharacterSelectDown;
             return false;
         }
 
@@ -80,6 +82,7 @@ namespace PrincesPalace.PlayModeTests
             TabPrevDown = false;
             TabNextDown = false;
             SystemMenuDown = false;
+            CharacterSelectDown = false;
         }
     }
 }

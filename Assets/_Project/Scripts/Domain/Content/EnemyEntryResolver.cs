@@ -40,16 +40,17 @@ namespace PrincesPalace.Domain.Content
         // party WITHOUT the right element still breaks a boss in roughly a
         // dozen ordinary hits rather than needing dozens, while a party that
         // found the matchup roughly halves that. At this project's health
-        // scale that lands the Dungeon Warden (600 HP) around 15 and the
-        // weakest active monster, the Bog Witch (160 HP), around 4 — a real
-        // but short fight either way, never a single hit and never a grind.
-        private const float BreakShieldPerHealth = 1f / 40f;
+        // scale that lands the Dungeon Warden (600 HP) around 60 and the
+        // weakest active monster, the Bog Witch (160 HP), around 16. The old
+        // 1/40 rate let a three-character party break ordinary enemies every
+        // round; four times the meter quarters that stagger frequency.
+        private const float BreakShieldPerHealth = 1f / 10f;
 
         // However low maxHealth is authored, a stagger meter this thin would
         // break on the very first hit and read as broken content rather than
         // as a fast monster. Everything above roughly 80 HP already clears
         // this floor through the formula alone.
-        private const int MinimumBreakShieldPoints = 2;
+        private const int MinimumBreakShieldPoints = 8;
 
         public static bool TryResolveAll(IReadOnlyList<RawEnemyEntry> entries, out List<ResolvedEnemy> resolved, out List<string> errors)
         {

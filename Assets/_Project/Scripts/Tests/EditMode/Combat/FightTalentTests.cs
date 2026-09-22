@@ -49,11 +49,12 @@ namespace PrincesPalace.Domain.Tests
         // one of 100 makes it 80.
         private const int FixtureWardPoints = 40;
 
-        private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null) =>
+        private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null,
+            bool physicalMove = false) =>
             new ResolvedSkill("t", name, "", "hero", 1, effect,
                 SkillEntryResolver.DefaultTargetingFor(effect),
                 0, 0, false, 100, effect == SkillEffect.Ward ? FixtureWardPoints : 0,
-                false, null, SpellPresentation.None, 0, transform: transform);
+                false, null, SpellPresentation.None, 0, transform: transform, physicalMove: physicalMove);
 
         private static PlayerKit Kit(params ResolvedSkill[] skills) =>
             new PlayerKit("hero", CharacterRole.Tank, skills, null, null);
@@ -533,8 +534,73 @@ namespace PrincesPalace.Domain.Tests
             session.ExecuteAttack(foe);
 
             Assert.AreEqual(7, foe.PhysicalDefense);
-            Assert.AreEqual(7, foe.MagicalDefense);
+            Assert.AreEqual(10, foe.MagicalDefense,
+                "a physical armour shred must not also weaken magical defense");
             Assert.IsTrue(Messages(session).Any(m => m.Contains("permanently")));
+            var row = FightHudModel.StatusRowsFor(session, foe).Single(r => r.Code == "ARM");
+            StringAssert.Contains("-3 Physical Defense", row.Tooltip);
+        }
+
+        [Test]
+        public void SharpHornsDoesNotTriggerFromANonPhysicalSpell()
+        {
+            var ram = Hero("Ram");
+            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            var foe = Foe();
+            foe.PhysicalDefense = 10;
+
+            var spell = Skill(SkillEffect.DamageSingle, "Shadow Bolt", physicalMove: false);
+            var (session, _) = Fight(new[] { ram }, new[] { foe }, Kit(spell));
+
+            session.CastSkill(0, foe);
+
+            Assert.AreEqual(10, foe.PhysicalDefense);
+            Assert.AreEqual(0, foe.PermanentPhysicalDefenseShred);
+        }
+
+        [Test]
+        public void SharpHornsTriggersFromAPhysicalSkill()
+        {
+            var ram = Hero("Ram");
+            Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
+            var foe = Foe();
+            foe.PhysicalDefense = 10;
+
+            var slam = Skill(SkillEffect.DamageSingle, "Slam", physicalMove: true);
+            var (session, _) = Fight(new[] { ram }, new[] { foe }, Kit(slam));
+
+            session.CastSkill(0, foe);
+
+            Assert.AreEqual(7, foe.PhysicalDefense);
+            Assert.AreEqual(3, foe.PermanentPhysicalDefenseShred);
+        }
+
+        [Test]
+        public void AuthoredBlackRamAttackBonusRaisesTheNextBasicSwing()
+        {
+            var ram = Hero("Shawn", attack: 40);
+            ram.AbilityScores = new AbilityScoreBlock(12, 10, 14, 12, 8, 10);
+            ram.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
+            var foe = Foe(health: 10000);
+            foe.PhysicalDefense = 0;
+            foe.MagicalDefense = 0;
+
+            var grant = new TransformGrant
+            {
+                displayName = "the Black Ram", turns = 3, attackPercent = 50,
+                speedPercent = 30, temporaryHealthPercent = 25, splashPercent = 50,
+            };
+            var (session, _) = Fight(new[] { ram }, new[] { foe },
+                Kit(Skill(SkillEffect.Transform, "Black Ram Mode", grant)));
+
+            int before = CombatMath.ComputeAttackDamage(ram, foe);
+            session.CastSkill(0, null);
+            int after = CombatMath.ComputeAttackDamage(ram, foe);
+
+            Assert.AreEqual(55, before);
+            Assert.AreEqual(82, after,
+                "the authored +50% Attack transform did not reach the plain-swing formula");
+            Assert.Greater(after, before);
         }
 
         [Test]
@@ -618,8 +684,8 @@ namespace PrincesPalace.Domain.Tests
         // this pins is not a corner: with three monsters, once the middle one
         // died the splash used to be dead for the rest of the fight.
         //
-        // Literal: attack 100, splash 40% of the damage dealt, so the neighbour
-        // takes 40 off its 1000000.
+        // Literal: player basic power makes attack 100 land for 120; splash is
+        // 40% of damage dealt, so the neighbour takes 48 off its 1000000.
         [Test]
         public void ASplashReachesTheMonsterStandingBesideTheVictim()
         {
@@ -640,7 +706,7 @@ namespace PrincesPalace.Domain.Tests
 
             session.ExecuteAttack(a);
 
-            Assert.AreEqual(999960, c.CurrentHealth,
+            Assert.AreEqual(999952, c.CurrentHealth,
                 "the monster standing beside the victim took nothing: the splash walked off the corpse's list index");
         }
 

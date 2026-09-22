@@ -91,28 +91,29 @@ namespace PrincesPalace.PlayModeTests
             int enemyHpBefore = _session.Encounter.Enemies[0].CurrentHealth;
 
             yield return PressSubmit(); // ATTACK at Root skips straight to targeting
-            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest, "fixture: nothing is hovered at a fresh target pick");
 
-            // PICK A TARGET WITH MOVE, TWO UPS NOT ONE (2026-09-19, the
-            // gate's own bug, fixed today): CycleTargetFromPad now treats a
-            // fresh, nothing-hovered pick as if enemy 0 were ALREADY hovered
-            // -- the marker sits there and Submit would hit it
-            // (FightFocusMarkerTests' own "the marker sits on the figure
-            // Submit would land on") -- so the first Up steps one slot DEEPER
-            // from that implicit 0, to enemy 1, rather than landing on 0
-            // itself (FightGamepadNavigationTests'
+            // A FRESH TARGET PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
+            // now (owner's 2026-09-19 hardware-round call), not -1 -- Up at
+            // Target depth opens the hovered enemy's intent instead of
+            // cycling (FightGamepadNavigationTests'
             // FirstPressOnAFreshTargetPickTreatsEnemyZeroAsHovered pins the
-            // same rule directly). Enemy 1 is not reachable by a melee ATTACK
-            // (FightGamepadNavigationTests' own header on CanReachEnemy), so
-            // this round needs a SECOND Up to wrap back to the reachable
-            // front enemy before it can confirm anything.
-            yield return MoveUp();
-            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
-                "one Up at target depth should hover one slot deeper than the implicit enemy 0");
-
-            yield return MoveUp();
+            // same rule directly), so this round cycles with DOWN instead.
             Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
-                "a second Up wraps back to the first living enemy, the one ATTACK can actually reach");
+                "a fresh target pick explicitly hovers the front living enemy");
+
+            // PICK A TARGET WITH MOVE, TWO DOWNS NOT ONE: Down steps one slot
+            // NEARER, which from the front enemy (0) wraps to the deepest
+            // living enemy (1) first. Enemy 1 is not reachable by a melee
+            // ATTACK (FightGamepadNavigationTests' own header on
+            // CanReachEnemy), so this round needs a SECOND Down to wrap back
+            // to the reachable front enemy before it can confirm anything.
+            yield return MoveDown();
+            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
+                "one Down at target depth should wrap from the front enemy to the deepest living one");
+
+            yield return MoveDown();
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "a second Down wraps back to the first living enemy, the one ATTACK can actually reach");
 
             yield return PressSubmit(); // confirm the attack on the hovered enemy
 
@@ -128,7 +129,12 @@ namespace PrincesPalace.PlayModeTests
             // LITERAL, pinned rather than recomputed from the damage formula
             // under test (docs/CODE_STANDARDS.md's own formula-pinning
             // rule) -- SeededRandom(3) against this exact hero/enemy pair.
-            Assert.AreEqual(6, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
+            // MOVED FROM 6 TO 8: CombatMath.BasicAttackPowerMultiplier
+            // (1.2x on a player's plain swing, landed concurrently with this
+            // nav change) raises the raw swing before it ever reaches this
+            // formula -- unrelated to the nav-mapping fix this test file is
+            // actually about.
+            Assert.AreEqual(8, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
                 "the exact damage this seeded attack deals");
         }
     }

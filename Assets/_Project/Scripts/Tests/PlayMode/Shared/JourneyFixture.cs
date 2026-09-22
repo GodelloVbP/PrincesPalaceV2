@@ -80,6 +80,13 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
         }
 
+        // RB/LB -- pages SECTIONS/CHARACTERS (dossier paging, StepCharacter
+        // on the talent screen) since the owner's 2026-09-19 hardware-round
+        // call moved TAB-stepping onto the triggers below. Keep this name
+        // (rather than PressShoulderNext/Prev) only because callers that
+        // actually want to page a section, not a tab, still read clearly
+        // with it -- a caller that means "step the TAB" must use
+        // PressTriggerRight/Left instead.
         protected IEnumerator PressTabNext()
         {
             Input.TabNextDown = true;
@@ -89,6 +96,34 @@ namespace PrincesPalace.PlayModeTests
         protected IEnumerator PressTabPrev()
         {
             Input.TabPrevDown = true;
+            yield return DriveFrame();
+        }
+
+        // LT/RT -- steps TABS (system-menu tab strip; talent constellations/
+        // paths) since the owner's 2026-09-19 hardware-round call. A level,
+        // not an edge (ScriptedBaseInput's own header): armed-by-default
+        // (NavigationInputModule's _triggerLeftArmed/_triggerRightArmed both
+        // start true) means a single frame at 1f registers the press even
+        // with no frame at 0f first, but the frame that drops it back to 0f
+        // has to be DRIVEN too, not merely set, or TriggerPressed never
+        // re-reads the axis to re-arm -- a second call landing on top of an
+        // unread 0 would find `armed` still false from the first pull and
+        // silently do nothing (caught by
+        // FocusMemoryGamepadNavigationTests' two-pulls-to-the-third-tab
+        // claim).
+        protected IEnumerator PressTriggerRight()
+        {
+            Input.TriggerRight = 1f;
+            yield return DriveFrame();
+            Input.TriggerRight = 0f;
+            yield return DriveFrame();
+        }
+
+        protected IEnumerator PressTriggerLeft()
+        {
+            Input.TriggerLeft = 1f;
+            yield return DriveFrame();
+            Input.TriggerLeft = 0f;
             yield return DriveFrame();
         }
 

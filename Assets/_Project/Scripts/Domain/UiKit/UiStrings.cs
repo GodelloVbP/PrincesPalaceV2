@@ -50,6 +50,8 @@ namespace PrincesPalace.Domain.UiKit
         // meets the reward's name before the button, and the two have to be
         // recognisably the same thing.
         public static readonly UiString TalentRespec = UiString.Define("talent.respec", "RESPEC");
+        public static readonly UiString TalentRespecLocked =
+            UiString.Define("talent.respec_locked", "RESPEC · REWARD 8");
 
         // THE PANEL'S OWN VOCABULARY. Six kickers for six states, and a reason
         // for each of the three that refuse -- the state in a word above the

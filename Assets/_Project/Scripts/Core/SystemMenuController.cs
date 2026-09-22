@@ -242,7 +242,8 @@ namespace PrincesPalace
                 // second one that could answer differently.
                 _navContext = new NavContext(entry: null, selectables: null, cancel: Close,
                     claimant: ActivePaneCancelClaim, tabStrip: () => this,
-                    systemMenu: CloseUnlessTheActivePaneClaimsIt);
+                    systemMenu: CloseUnlessTheActivePaneClaimsIt,
+                    sectionStrip: ActivePaneSectionStrip);
             }
 
             // PushIfAbsent, not Push: this context outlives its time on the
@@ -401,6 +402,12 @@ namespace PrincesPalace
         {
             var activePane = ActivePane();
             return activePane == null ? null : activePane.GetComponentInChildren<INavCancelClaim>();
+        }
+
+        private INavSectionStrip ActivePaneSectionStrip()
+        {
+            var activePane = ActivePane();
+            return activePane == null ? null : activePane.GetComponentInChildren<INavSectionStrip>();
         }
 
         // WHAT START DOES WHILE THIS MENU IS TOP. It is NavContext.RaiseCancel's
@@ -592,8 +599,11 @@ namespace PrincesPalace
             if (embersValue != null) embersValue.SetContent($"EMBERS  {save?.EmberTotal() ?? 0}");
         }
 
-        // THE SHOULDER SHORTCUT (INavTabStrip, plan phase 3 item 2) --
-        // wraps through the SAME _visible list RefreshNavLinks' own Rail
+        // THE TRIGGER SHORTCUT (INavTabStrip) -- owner's 2026-09-19
+        // hardware-round call moved tab-stepping from the shoulders to
+        // LT/RT, freeing LB/RB for section/character paging (see
+        // ActivePaneSectionStrip below). Wraps through the SAME _visible
+        // list RefreshNavLinks' own Rail
         // wires and the SAME Select(index) each tab Button's onClick calls,
         // never a second "what is the next tab" computation (this
         // interface's own header on why). _visible is INDICES into

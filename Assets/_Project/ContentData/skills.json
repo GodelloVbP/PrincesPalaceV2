@@ -141,7 +141,7 @@
             "impactY": 0.063,
             "facing": "none",
             "sort": "ground",
-            "glow": 1.0
+            "glow": 1
           },
           {
             "id": "erupt",
@@ -189,7 +189,7 @@
       "bookTier": 3
     },
     {
-      "_comment": "MILESTONE A of docs/PLAN_SPELL_EXPANSION.md, section 2.1. Every number here is marked prototype in that document and is tuning, not specification. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship, so the cast reads on the stage before its own sheet exists -- the atlas under Art/Sheets/Spells/Gilded Aegis is stage 5's work. No iconPath yet for the same reason; an empty one hides the slot rather than drawing a placeholder.",
+      "_comment": "MILESTONE A of docs/PLAN_SPELL_EXPANSION.md, section 2.1. Every number here is marked prototype in that document and is tuning, not specification.",
       "id": "gilded_aegis",
       "bookOnly": true,
       "displayName": "Gilded Aegis",
@@ -206,56 +206,57 @@
       "bookTier": 1,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.28,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "gather",
+            "id": "ritual",
             "render": "sprite",
             "place": "caster-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_earth_charge",
-            "seconds": 0.3,
+            "path": "Spells/gilded_aegis",
+            "seconds": 0.72,
             "until": "once",
-            "size": 240,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.1
-          },
-          {
-            "id": "plate",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "offset": 0.02,
-            "path": "Spells/prismatic_orb_earth_core",
-            "seconds": 0.26,
-            "travelSeconds": 0.26,
-            "until": "loop",
-            "size": 200,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.2
-          },
-          {
-            "id": "seat",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_earth_contact",
-            "seconds": 0.34,
-            "until": "once",
-            "size": 300,
+            "size": 330,
+            "impactX": 0.5,
+            "impactY": 0.5,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.18,
-            "glow": 1.3,
-            "fade": 0.12
+            "punch": 0.1,
+            "glow": 1.15,
+            "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "caster-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/gilded_aegis_particles",
+              "burst": 10,
+              "spreadDegrees": 150,
+              "aimDegrees": 90,
+              "speedMin": 45,
+              "speedMax": 150,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -280,
+              "lifeMin": 0.28,
+              "lifeMax": 0.5,
+              "sizeMin": 0.12,
+              "sizeMax": 0.28,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1164
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE A, section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled is the FIRST content row in the game to author it, and it only slows anyone because ApplySkillStatus now goes through FightSession.ApplyStatusTo (plan D6). statusDuration 2 means two of the target's turns fully affected, the turn-end clock plan D1 put every standing modifier on. Placeholder presentation, as above. No reachSlots: a spell book reaches the whole line, the way mud_burst and lightning_bolt already do.",
+      "_comment": "MILESTONE A, section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled is the FIRST content row in the game to author it, and it only slows anyone because ApplySkillStatus now goes through FightSession.ApplyStatusTo (plan D6). statusDuration 2 means two of the target's turns fully affected, the turn-end clock plan D1 put every standing modifier on.",
       "id": "winters_rebuke",
       "bookOnly": true,
       "displayName": "Winter's Rebuke",
@@ -278,58 +279,57 @@
       "bookTier": 2,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.28,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "craze",
-            "render": "sprite",
-            "place": "caster",
-            "at": "release",
-            "path": "Spells/prismatic_orb_water_charge",
-            "seconds": 0.28,
-            "until": "once",
-            "size": 260,
-            "facing": "auto",
-            "sort": "ground",
-            "glow": 1.1
-          },
-          {
-            "id": "sheet",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "offset": 0.02,
-            "path": "Spells/prismatic_orb_water_core",
-            "seconds": 0.26,
-            "travelSeconds": 0.26,
-            "until": "loop",
-            "size": 210,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.2
-          },
-          {
-            "id": "rime",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/frost_flare",
-            "seconds": 0.36,
+            "at": "release",
+            "path": "Spells/winters_rebuke",
+            "seconds": 0.72,
             "until": "once",
-            "size": 320,
+            "size": 340,
             "impactX": 0.5,
-            "impactY": 0.18,
+            "impactY": 0.46,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.2,
-            "glow": 1.35,
+            "punch": 0.22,
+            "glow": 1.25,
             "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/winters_rebuke_particles",
+              "burst": 14,
+              "spreadDegrees": 55,
+              "aimDegrees": 270,
+              "speedMin": 80,
+              "speedMax": 230,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -520,
+              "lifeMin": 0.28,
+              "lifeMax": 0.55,
+              "sizeMin": 0.12,
+              "sizeMax": 0.3,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1358
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE A, section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies. Placeholder presentation: the jaws are the owner's priority visual and are stage 5's work; mud_burst's flat lance stands in for the travel until the real sheet is sliced.",
+      "_comment": "MILESTONE A, section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies.",
       "id": "vipers_bite",
       "bookOnly": true,
       "displayName": "Viper's Bite",
@@ -352,56 +352,57 @@
       "bookTier": 1,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.28,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "coil",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_wind_charge",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 250,
-            "facing": "auto",
-            "sort": "ground",
-            "glow": 1.05
-          },
-          {
-            "id": "jaws",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "offset": 0.02,
-            "path": "Spells/mud_burst",
-            "seconds": 0.26,
-            "travelSeconds": 0.26,
-            "until": "loop",
-            "size": 240,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.15
-          },
-          {
-            "id": "venom",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_earth_drops",
-            "seconds": 0.4,
+            "at": "release",
+            "path": "Spells/vipers_bite",
+            "seconds": 0.72,
             "until": "once",
-            "size": 300,
+            "size": 350,
+            "impactX": 0.5,
+            "impactY": 0.49,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.24,
+            "punch": 0.25,
             "glow": 1.2,
-            "fade": 0.16
+            "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/vipers_bite_particles",
+              "burst": 12,
+              "spreadDegrees": 80,
+              "aimDegrees": 270,
+              "speedMin": 65,
+              "speedMax": 190,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -620,
+              "lifeMin": 0.3,
+              "lifeMax": 0.58,
+              "sizeMin": 0.12,
+              "sizeMax": 0.3,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1067
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.4. Every number here is marked prototype in that document and is tuning, not specification. consumesStatus/damageInstancesIfConsumed read and spend the GENERAL Marked status (Marks.cs), never the Drowned Lantern's own private mark set. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship; the atlas under Art/Sheets/Spells/Crownfall is stage 5's work. No iconPath yet for the same reason.",
+      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.4. Every number here is marked prototype in that document and is tuning, not specification. consumesStatus/damageInstancesIfConsumed read and spend the GENERAL Marked status (Marks.cs), never the Drowned Lantern's own private mark set.",
       "id": "crownfall",
       "bookOnly": true,
       "displayName": "Crownfall",
@@ -427,68 +428,57 @@
       "bookTier": 1,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.3,
+        "hitCueSeconds": 0.36,
         "layers": [
           {
-            "id": "circlet",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_wind_charge",
-            "seconds": 0.28,
+            "path": "Spells/crownfall",
+            "seconds": 0.72,
             "until": "once",
-            "size": 200,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.1
-          },
-          {
-            "id": "tip",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "release",
-            "offset": 0.15,
-            "path": "Spells/prismatic_orb_wind_core",
-            "seconds": 0.2,
-            "until": "loop",
-            "size": 210,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.05
-          },
-          {
-            "id": "shatter",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_fire_contact",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 280,
-            "facing": "auto",
-            "sort": "effects",
-            "punch": 0.2,
-            "glow": 1.25
-          },
-          {
-            "id": "fade",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "offset": 0.15,
-            "path": "Spells/prismatic_orb_wind_drops",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 240,
+            "size": 340,
+            "impactX": 0.5,
+            "impactY": 0.34,
             "facing": "none",
             "sort": "effects",
-            "fade": 0.18
+            "punch": 0.22,
+            "glow": 1.2,
+            "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/crownfall_particles",
+              "burst": 16,
+              "spreadDegrees": 100,
+              "aimDegrees": 260,
+              "speedMin": 90,
+              "speedMax": 260,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -700,
+              "lifeMin": 0.28,
+              "lifeMax": 0.52,
+              "sizeMin": 0.1,
+              "sizeMax": 0.27,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 873
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.5. Every number here is marked prototype in that document and is tuning, not specification. requiresStatus/detonationPercent/detonationSplit build the Reclaim effect's whole damage from a consumed Poison pile; see StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit. No damageInstances of its own -- the packets are computed at resolution. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship; the atlas under Art/Sheets/Spells/Ashen Reckoning is stage 5's work. No iconPath yet for the same reason.",
+      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.5. Every number here is marked prototype in that document and is tuning, not specification. requiresStatus/detonationPercent/detonationSplit build the Reclaim effect's whole damage from a consumed Poison pile; see StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit. No damageInstances of its own -- the packets are computed at resolution.",
       "id": "ashen_reckoning",
       "bookOnly": true,
       "displayName": "Ashen Reckoning",
@@ -499,7 +489,10 @@
       "manaCost": 10,
       "requiresStatus": "Poison",
       "detonationPercent": 150,
-      "detonationSplit": ["Poison", "Fire"],
+      "detonationSplit": [
+        "Poison",
+        "Fire"
+      ],
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 20,
       "statusDuration": 1,
@@ -507,68 +500,57 @@
       "bookTier": 3,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.45,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "extract",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_earth_drops",
-            "seconds": 0.3,
+            "path": "Spells/ashen_reckoning",
+            "seconds": 0.72,
             "until": "once",
-            "size": 220,
-            "facing": "auto",
-            "sort": "ground",
-            "glow": 1.0
-          },
-          {
-            "id": "ignite",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "release",
-            "offset": 0.15,
-            "path": "Spells/prismatic_orb_fire_charge",
-            "seconds": 0.25,
-            "until": "once",
-            "size": 230,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.15
-          },
-          {
-            "id": "burst",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/cinderfault_eruption",
-            "seconds": 0.35,
-            "until": "once",
-            "size": 320,
-            "facing": "auto",
-            "sort": "effects",
-            "punch": 0.2,
-            "glow": 1.3
-          },
-          {
-            "id": "ash",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "offset": 0.2,
-            "path": "Spells/prismatic_orb_fire_wake",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 260,
+            "size": 360,
+            "impactX": 0.5,
+            "impactY": 0.5,
             "facing": "none",
-            "sort": "ground",
-            "fade": 0.2
+            "sort": "effects",
+            "punch": 0.22,
+            "glow": 1.3,
+            "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/ashen_reckoning_particles",
+              "burst": 18,
+              "spreadDegrees": 175,
+              "aimDegrees": 85,
+              "speedMin": 80,
+              "speedMax": 260,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -500,
+              "lifeMin": 0.32,
+              "lifeMax": 0.62,
+              "sizeMin": 0.11,
+              "sizeMax": 0.29,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1455
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.6. Every number here is marked prototype in that document and is tuning, not specification. healthCostPercent is validated together with manaCost and paid directly (HealthCost), never through the damage funnel. ignoresDefense depends on the milestone B repair to ResolveDamageInstances (plan 1.3) -- without it this packet's bypass is inert. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship; the atlas under Art/Sheets/Spells/Blackglass Spear is stage 5's work. No iconPath yet for the same reason.",
+      "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.6. Every number here is marked prototype in that document and is tuning, not specification. healthCostPercent is validated together with manaCost and paid directly (HealthCost), never through the damage funnel. ignoresDefense depends on the milestone B repair to ResolveDamageInstances (plan 1.3) -- without it this packet's bypass is inert.",
       "id": "blackglass_spear",
       "bookOnly": true,
       "displayName": "Blackglass Spear",
@@ -590,69 +572,57 @@
       "bookTier": 3,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.4,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "bead",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_water_charge",
-            "seconds": 0.22,
-            "until": "once",
-            "size": 180,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.0
-          },
-          {
-            "id": "shaft",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "offset": 0.18,
-            "travelSeconds": 0.22,
-            "path": "Spells/lightning_bolt",
-            "seconds": 0.22,
-            "until": "loop",
-            "size": 220,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.1
-          },
-          {
-            "id": "through",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_wind_contact",
-            "seconds": 0.26,
+            "at": "release",
+            "path": "Spells/blackglass_spear",
+            "seconds": 0.72,
             "until": "once",
-            "size": 260,
-            "facing": "auto",
+            "size": 350,
+            "impactX": 0.56,
+            "impactY": 0.46,
+            "facing": "none",
             "sort": "effects",
-            "punch": 0.18,
-            "glow": 1.15
+            "punch": 0.2,
+            "glow": 1.1,
+            "fade": 0.14
           },
           {
-            "id": "powder",
-            "render": "sprite",
-            "place": "caster-centre",
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
             "at": "hit",
-            "offset": 0.05,
-            "path": "Spells/prismatic_orb_water_wake",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 200,
-            "facing": "none",
-            "sort": "ground",
-            "fade": 0.2
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/blackglass_spear_particles",
+              "burst": 15,
+              "spreadDegrees": 115,
+              "aimDegrees": 330,
+              "speedMin": 100,
+              "speedMax": 300,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -720,
+              "lifeMin": 0.28,
+              "lifeMax": 0.55,
+              "sizeMin": 0.1,
+              "sizeMax": 0.26,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1552
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE C of docs/PLAN_SPELL_EXPANSION.md, section 2.7. Every number here is marked prototype in that document and is tuning, not specification. advanceSlots is measured in PLACES, not in charge -- one slot moves past one charge LEVEL, so two combatants tied at a level are jumped together and a slot with nobody above it clips (plan 1.9). No damage, no status, nothing left on the board: the whole cast is a position. It is refused outright, before payment, when the chosen ally is already next in the order. PLACEHOLDER PRESENTATION: the layers below reuse sprite folders that already ship; the atlas under Art/Sheets/Spells/Borrowed Moment is stage 5's work. No iconPath yet for the same reason.",
+      "_comment": "MILESTONE C of docs/PLAN_SPELL_EXPANSION.md, section 2.7. Every number here is marked prototype in that document and is tuning, not specification. advanceSlots is measured in PLACES, not in charge -- one slot moves past one charge LEVEL, so two combatants tied at a level are jumped together and a slot with nobody above it clips (plan 1.9). No damage, no status, nothing left on the board: the whole cast is a position. It is refused outright, before payment, when the chosen ally is already next in the order.",
       "id": "borrowed_moment",
       "bookOnly": true,
       "displayName": "Borrowed Moment",
@@ -667,68 +637,57 @@
       "bookTier": 2,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.26,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "clock",
+            "id": "ritual",
             "render": "sprite",
             "place": "caster-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_wind_charge",
-            "seconds": 0.32,
+            "path": "Spells/borrowed_moment",
+            "seconds": 0.72,
             "until": "once",
-            "size": 240,
-            "facing": "auto",
+            "size": 330,
+            "impactX": 0.5,
+            "impactY": 0.5,
+            "facing": "none",
             "sort": "effects",
-            "glow": 1.15
+            "punch": 0.12,
+            "glow": 1.2,
+            "fade": 0.14
           },
           {
-            "id": "sweep",
-            "render": "sprite",
+            "id": "settle",
+            "render": "emitter",
             "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_wind_core",
-            "seconds": 0.24,
-            "travelSeconds": 0.24,
-            "until": "loop",
-            "size": 200,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.1
-          },
-          {
-            "id": "flare",
-            "render": "sprite",
-            "place": "target-centre",
             "at": "hit",
-            "path": "Spells/prismatic_orb_wind_contact",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 280,
-            "facing": "none",
             "sort": "effects",
-            "punch": 0.16,
-            "glow": 1.25
-          },
-          {
-            "id": "unwind",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "offset": 0.16,
-            "path": "Spells/prismatic_orb_wind_drops",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 240,
-            "facing": "none",
-            "sort": "effects",
-            "fade": 0.18
+            "emitter": {
+              "path": "Spells/borrowed_moment_particles",
+              "burst": 11,
+              "spreadDegrees": 170,
+              "aimDegrees": 90,
+              "speedMin": 45,
+              "speedMax": 145,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": 180,
+              "lifeMin": 0.35,
+              "lifeMax": 0.7,
+              "sizeMin": 0.1,
+              "sizeMax": 0.25,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1455
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE C, section 2.8. queuePushSlots on a DamageAll row is NEW: the AOE branch applied status but never the push until this milestone, so the resolver refused the field on anything but DamageSingle and now accepts it on either damage effect. The delay is batched AFTER every enemy has resolved and every death has settled, over landed-hit survivors only -- a dodger keeps its place (plan 1.9 rule 6). Wind 5 per enemy, each checked against that enemy's own affinity. PLACEHOLDER PRESENTATION as above; the atlas under Art/Sheets/Spells/Gale Scythe is stage 5's work.",
+      "_comment": "MILESTONE C, section 2.8. queuePushSlots on a DamageAll row is NEW: the AOE branch applied status but never the push until this milestone, so the resolver refused the field on anything but DamageSingle and now accepts it on either damage effect. The delay is batched AFTER every enemy has resolved and every death has settled, over landed-hit survivors only -- a dodger keeps its place (plan 1.9 rule 6). Wind 5 per enemy, each checked against that enemy's own affinity.",
       "id": "gale_scythe",
       "bookOnly": true,
       "displayName": "Gale Scythe",
@@ -752,65 +711,54 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "draw",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_wind_charge",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 230,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.1
-          },
-          {
-            "id": "crescent",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_wind_core",
-            "seconds": 0.26,
+            "path": "Spells/gale_scythe",
+            "seconds": 0.72,
             "until": "once",
-            "size": 320,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.2
-          },
-          {
-            "id": "cut",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_wind_contact",
-            "seconds": 0.28,
-            "until": "once",
-            "size": 300,
-            "facing": "auto",
-            "sort": "effects",
-            "punch": 0.22,
-            "glow": 1.3
-          },
-          {
-            "id": "dust",
-            "render": "sprite",
-            "place": "target-centre",
-            "at": "hit",
-            "offset": 0.14,
-            "path": "Spells/prismatic_orb_earth_drops",
-            "seconds": 0.32,
-            "until": "once",
-            "size": 260,
+            "size": 380,
+            "impactX": 0.51,
+            "impactY": 0.48,
             "facing": "none",
-            "_sortComment": "effects, not ground: a GROUND layer on an AllEnemies sweep needs one renderer per body, and FightHudSpec.SpellGroundRenderers reserves 2 (SpellPoolCapacityTests caught the third). Dust under three pairs of feet is a stage-5 question for the real atlas, not a pool the placeholder gets to widen.",
             "sort": "effects",
-            "fade": 0.2
+            "punch": 0.24,
+            "glow": 1.2,
+            "fade": 0.14
+          },
+          {
+            "id": "settle",
+            "render": "emitter",
+            "place": "target-centre",
+            "at": "hit",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/gale_scythe_particles",
+              "burst": 16,
+              "spreadDegrees": 75,
+              "aimDegrees": 15,
+              "speedMin": 130,
+              "speedMax": 340,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -350,
+              "lifeMin": 0.25,
+              "lifeMax": 0.48,
+              "sizeMin": 0.1,
+              "sizeMax": 0.27,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1067
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE C, section 2.9. TWO PICKS, and the count is NOT authored: SkillEffects.PicksRequired reads it off the effect, because one more content number would let a row ask for three picks no resolution can use (plan 2.9). freeAction true is the caster's one free action a turn, the same lock Tuck In already uses. Either ally being Rooted refuses the cast before payment, the identical rule CanMove/Move read off both sides. PLACEHOLDER PRESENTATION: the owner's priority visual is a door beside each of the two allies, which is stage 5's atlas under Art/Sheets/Spells/Palace Passage; the layers below stand in with shipped sprites.",
+      "_comment": "MILESTONE C, section 2.9. TWO PICKS, and the count is NOT authored: SkillEffects.PicksRequired reads it off the effect, because one more content number would let a row ask for three picks no resolution can use (plan 2.9). freeAction true is the caster's one free action a turn, the same lock Tuck In already uses. Either ally being Rooted refuses the cast before payment, the identical rule CanMove/Move read off both sides.",
       "id": "palace_passage",
       "bookOnly": true,
       "displayName": "Palace Passage",
@@ -825,67 +773,57 @@
       "bookTier": 2,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.24,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "doorway",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_earth_charge",
-            "seconds": 0.34,
-            "until": "once",
-            "size": 240,
-            "facing": "none",
-            "sort": "effects",
-            "glow": 1.15
-          },
-          {
-            "id": "threshold",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_earth_core",
-            "seconds": 0.28,
-            "until": "loop",
-            "size": 220,
+            "path": "Spells/palace_passage",
+            "seconds": 0.72,
+            "until": "once",
+            "size": 390,
+            "impactX": 0.5,
+            "impactY": 0.48,
             "facing": "none",
             "sort": "effects",
-            "glow": 1.1
+            "punch": 0.12,
+            "glow": 1.15,
+            "fade": 0.14
           },
           {
-            "id": "arrive",
-            "render": "sprite",
+            "id": "settle",
+            "render": "emitter",
             "place": "target-centre",
             "at": "hit",
-            "path": "Spells/prismatic_orb_earth_contact",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 280,
-            "facing": "none",
             "sort": "effects",
-            "punch": 0.14,
-            "glow": 1.2
-          },
-          {
-            "id": "close",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "hit",
-            "offset": 0.18,
-            "path": "Spells/prismatic_orb_earth_drops",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 230,
-            "facing": "none",
-            "sort": "effects",
-            "fade": 0.2
+            "emitter": {
+              "path": "Spells/palace_passage_particles",
+              "burst": 12,
+              "spreadDegrees": 155,
+              "aimDegrees": 90,
+              "speedMin": 55,
+              "speedMax": 175,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -300,
+              "lifeMin": 0.35,
+              "lifeMax": 0.65,
+              "sizeMin": 0.11,
+              "sizeMax": 0.28,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1358
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE D, section 2.10. SkillEffect.Afflict: one enemy, this row's authored status, no damage -- so there is no damage instance, AfterDefences is never entered and the root cannot be dodged. statusDuration 2 is two EFFECTIVE turns under the milestone-A duration model (Rooted is AtTurnEnd, so the second turn's action is still restricted). The root now forbids every action classified physicalMove, on both sides, plus the formation Move it always forbade (plan 1.10). No scaling of any kind: a two-turn root is two turns from anyone, which is what keeps this a control spell rather than a damage spell in disguise. PLACEHOLDER PRESENTATION: the owner's priority visual is a dark ribbon that uncoils, crosses low and cinches at the target's legs, which is stage 5's atlas under Art/Sheets/Spells/Velvet Shackles; the layers below stand in with shipped sprites.",
+      "_comment": "MILESTONE D, section 2.10. SkillEffect.Afflict: one enemy, this row's authored status, no damage -- so there is no damage instance, AfterDefences is never entered and the root cannot be dodged. statusDuration 2 is two EFFECTIVE turns under the milestone-A duration model (Rooted is AtTurnEnd, so the second turn's action is still restricted). The root now forbids every action classified physicalMove, on both sides, plus the formation Move it always forbade (plan 1.10). No scaling of any kind: a two-turn root is two turns from anyone, which is what keeps this a control spell rather than a damage spell in disguise.",
       "id": "velvet_shackles",
       "bookOnly": true,
       "displayName": "Velvet Shackles",
@@ -901,63 +839,51 @@
       "statusDuration": 2,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.26,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "uncoil",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "path": "Spells/prismatic_orb_water_charge",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 200,
-            "facing": "none",
-            "sort": "effects",
-            "glow": 0.9
-          },
-          {
-            "id": "cross",
-            "render": "sprite",
-            "place": "caster-centre",
-            "at": "release",
-            "offset": 0.16,
-            "travelSeconds": 0.26,
-            "path": "Spells/prismatic_orb_water_wake",
-            "seconds": 0.26,
-            "until": "loop",
-            "size": 200,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 0.95
-          },
-          {
-            "id": "cinch",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
-            "at": "arrival",
-            "path": "Spells/prismatic_orb_water_contact",
-            "seconds": 0.32,
+            "at": "release",
+            "path": "Spells/velvet_shackles",
+            "seconds": 0.72,
             "until": "once",
-            "size": 260,
+            "size": 350,
+            "impactX": 0.5,
+            "impactY": 0.5,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.12,
-            "glow": 1.05
+            "punch": 0.14,
+            "glow": 1.05,
+            "fade": 0.14
           },
           {
-            "id": "hold",
-            "render": "sprite",
+            "id": "settle",
+            "render": "emitter",
             "place": "target-centre",
             "at": "hit",
-            "offset": 0.2,
-            "path": "Spells/prismatic_orb_water_core",
-            "seconds": 0.36,
-            "until": "loop",
-            "size": 210,
-            "facing": "none",
             "sort": "effects",
-            "fade": 0.25
+            "emitter": {
+              "path": "Spells/velvet_shackles_particles",
+              "burst": 10,
+              "spreadDegrees": 130,
+              "aimDegrees": 90,
+              "speedMin": 45,
+              "speedMax": 145,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -260,
+              "lifeMin": 0.35,
+              "lifeMax": 0.65,
+              "sizeMin": 0.1,
+              "sizeMax": 0.25,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1455
+            }
           }
         ]
       }
@@ -982,61 +908,48 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "swing",
+            "id": "ritual",
             "render": "sprite",
-            "place": "caster-centre",
+            "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_fire_charge",
-            "seconds": 0.25,
+            "path": "Spells/censer_of_embers",
+            "seconds": 0.72,
             "until": "once",
-            "size": 190,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.0
-          },
-          {
-            "id": "arc",
-            "render": "sprite",
-            "place": "caster",
-            "at": "release",
-            "offset": 0.1,
-            "travelSeconds": 0.2,
-            "path": "Spells/prismatic_orb_fire_wake",
-            "seconds": 0.2,
-            "until": "loop",
-            "size": 180,
-            "facing": "auto",
-            "sort": "effects",
-            "glow": 1.0
-          },
-          {
-            "id": "scatter",
-            "render": "sprite",
-            "place": "target",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_fire_contact",
-            "seconds": 0.3,
-            "until": "once",
-            "size": 260,
+            "size": 350,
+            "impactX": 0.5,
+            "impactY": 0.46,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.15,
-            "glow": 1.1
+            "punch": 0.16,
+            "glow": 1.18,
+            "fade": 0.14
           },
           {
-            "id": "glow",
-            "render": "still",
+            "id": "settle",
+            "render": "emitter",
             "place": "target-centre",
             "at": "hit",
-            "offset": 0.15,
-            "path": "Spells/prismatic_orb_fire_core",
-            "seconds": 0.4,
-            "until": "hold",
-            "size": 160,
-            "facing": "none",
             "sort": "effects",
-            "fade": 0.3,
-            "glow": 0.9
+            "emitter": {
+              "path": "Spells/censer_of_embers_particles",
+              "burst": 18,
+              "spreadDegrees": 110,
+              "aimDegrees": 80,
+              "speedMin": 70,
+              "speedMax": 220,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -480,
+              "lifeMin": 0.35,
+              "lifeMax": 0.7,
+              "sizeMin": 0.1,
+              "sizeMax": 0.27,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1552
+            }
           }
         ]
       }
@@ -1058,54 +971,57 @@
       "statusDuration": 3,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.32,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "twist",
-            "render": "sprite",
-            "place": "target",
-            "at": "release",
-            "path": "Spells/prismatic_orb_earth_drops",
-            "seconds": 0.28,
-            "until": "once",
-            "size": 220,
-            "facing": "auto",
-            "sort": "ground",
-            "glow": 0.9
-          },
-          {
-            "id": "close",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
-            "at": "hit",
-            "path": "Spells/prismatic_orb_earth_contact",
-            "seconds": 0.3,
+            "at": "release",
+            "path": "Spells/thorn_tithe",
+            "seconds": 0.72,
             "until": "once",
-            "size": 240,
+            "size": 350,
+            "impactX": 0.5,
+            "impactY": 0.4,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.12,
-            "glow": 1.0
+            "punch": 0.16,
+            "glow": 1.05,
+            "fade": 0.14
           },
           {
-            "id": "hold",
-            "render": "still",
+            "id": "settle",
+            "render": "emitter",
             "place": "target-centre",
             "at": "hit",
-            "offset": 0.18,
-            "path": "Spells/prismatic_orb_earth_core",
-            "seconds": 0.35,
-            "until": "hold",
-            "size": 200,
-            "facing": "none",
-            "sort": "ground",
-            "fade": 0.25
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/thorn_tithe_particles",
+              "burst": 13,
+              "spreadDegrees": 150,
+              "aimDegrees": 85,
+              "speedMin": 55,
+              "speedMax": 185,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": -600,
+              "lifeMin": 0.3,
+              "lifeMax": 0.58,
+              "sizeMin": 0.11,
+              "sizeMax": 0.28,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1067
+            }
           }
         ]
       }
     },
     {
-      "_comment": "MILESTONE F of docs/PLAN_SPELL_EXPANSION.md, section 2.13. Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price. PLACEHOLDER PRESENTATION reuses shipped spell layers until the surrounding-court atlas lands.",
+      "_comment": "MILESTONE F of docs/PLAN_SPELL_EXPANSION.md, section 2.13. Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price.",
       "id": "court_of_whispers",
       "bookOnly": true,
       "displayName": "Court of Whispers",
@@ -1123,35 +1039,51 @@
       "statusDuration": 1,
       "vfx": {
         "layerFormat": 1,
-        "hitCueSeconds": 0.38,
+        "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "court",
+            "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
             "at": "release",
-            "path": "Spells/prismatic_orb_earth_core",
-            "seconds": 0.55,
-            "until": "hold",
-            "size": 300,
+            "path": "Spells/court_of_whispers",
+            "seconds": 0.72,
+            "until": "once",
+            "size": 400,
+            "impactX": 0.5,
+            "impactY": 0.43,
             "facing": "none",
             "sort": "effects",
-            "fade": 0.25,
-            "glow": 0.8
+            "punch": 0.1,
+            "glow": 1.1,
+            "fade": 0.14
           },
           {
-            "id": "whisper",
-            "render": "sprite",
+            "id": "settle",
+            "render": "emitter",
             "place": "target-centre",
             "at": "hit",
-            "path": "Spells/prismatic_orb_earth_contact",
-            "seconds": 0.35,
-            "until": "once",
-            "size": 340,
-            "facing": "none",
             "sort": "effects",
-            "punch": 0.08,
-            "glow": 1.0
+            "emitter": {
+              "path": "Spells/court_of_whispers_particles",
+              "burst": 12,
+              "spreadDegrees": 180,
+              "aimDegrees": 90,
+              "speedMin": 35,
+              "speedMax": 125,
+              "inherit": 0,
+              "drag": 1.8,
+              "gravity": 40,
+              "lifeMin": 0.42,
+              "lifeMax": 0.8,
+              "sizeMin": 0.12,
+              "sizeMax": 0.3,
+              "spinMin": -180,
+              "spinMax": 180,
+              "fadeFrom": 0.55,
+              "endScale": 0.72,
+              "seed": 1649
+            }
           }
         ]
       }
@@ -1467,7 +1399,10 @@
         "impactY": 0.52
       },
       "cooldownTurns": 2,
-      "reachSlots": [2, 3],
+      "reachSlots": [
+        2,
+        3
+      ],
       "playerSelectable": false
     },
     {
@@ -1486,8 +1421,17 @@
       "windupStance": "overhead",
       "stance": "slam",
       "poolTiers": [
-        { "spend": 0.5, "damageMultiplier": 2, "shake": 0.6 },
-        { "spend": 1.0, "damageMultiplier": 4, "shake": 1.0, "hitStopSeconds": 0.18 }
+        {
+          "spend": 0.5,
+          "damageMultiplier": 2,
+          "shake": 0.6
+        },
+        {
+          "spend": 1,
+          "damageMultiplier": 4,
+          "shake": 1,
+          "hitStopSeconds": 0.18
+        }
       ]
     },
     {
@@ -1534,9 +1478,9 @@
           "shake": 0.6
         },
         {
-          "spend": 1.0,
+          "spend": 1,
           "damageMultiplier": 4,
-          "shake": 1.0,
+          "shake": 1,
           "hitStopSeconds": 0.18
         }
       ]
@@ -1655,7 +1599,16 @@
                   "spinMax": 120,
                   "fadeFrom": 0.6,
                   "endScale": 0.75,
-                  "weights": [15, 18, 8, 12, 12, 8, 15, 2]
+                  "weights": [
+                    15,
+                    18,
+                    8,
+                    12,
+                    12,
+                    8,
+                    15,
+                    2
+                  ]
                 }
               },
               {
@@ -1686,7 +1639,7 @@
                   "aimDegrees": 90,
                   "speedMin": 150,
                   "speedMax": 420,
-                  "drag": 2.0,
+                  "drag": 2,
                   "gravity": -2400,
                   "lifeMin": 0.22,
                   "lifeMax": 0.36,
@@ -1696,7 +1649,16 @@
                   "spinMax": 260,
                   "fadeFrom": 0.55,
                   "endScale": 0.7,
-                  "weights": [15, 18, 8, 12, 12, 8, 15, 2]
+                  "weights": [
+                    15,
+                    18,
+                    8,
+                    12,
+                    12,
+                    8,
+                    15,
+                    2
+                  ]
                 }
               }
             ]
@@ -1773,7 +1735,7 @@
                   "lifeMin": 0.22,
                   "lifeMax": 0.38,
                   "sizeMin": 0.5,
-                  "sizeMax": 1.0,
+                  "sizeMax": 1,
                   "spinMin": -180,
                   "spinMax": 180,
                   "fadeFrom": 0.6,
@@ -1808,7 +1770,7 @@
                   "aimDegrees": 115,
                   "speedMin": 160,
                   "speedMax": 520,
-                  "drag": 2.0,
+                  "drag": 2,
                   "gravity": -1600,
                   "lifeMin": 0.18,
                   "lifeMax": 0.34,
@@ -2010,7 +1972,7 @@
                   "speedMin": 110,
                   "speedMax": 260,
                   "inherit": 0.4,
-                  "drag": 1.0,
+                  "drag": 1,
                   "gravity": -50,
                   "lifeMin": 0.12,
                   "lifeMax": 0.22,

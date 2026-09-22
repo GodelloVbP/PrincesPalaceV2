@@ -765,6 +765,14 @@ namespace PrincesPalace.Domain.Combat.Session
                     actor.Transformation.TurnsRemaining, actor.Transformation.IsPermanent));
             }
 
+            if (actor.PermanentPhysicalDefenseShred > 0)
+            {
+                rows.Add(new StatusRow(
+                    "ARM", "armor_shred",
+                    $"-{actor.PermanentPhysicalDefenseShred} Physical Defense for this fight.",
+                    isPositive: false, counter: -1, sortKey: 45));
+            }
+
             if (session != null)
             {
                 var kit = session.KitFor(actor);

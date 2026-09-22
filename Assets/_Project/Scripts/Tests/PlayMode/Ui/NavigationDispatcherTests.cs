@@ -43,6 +43,7 @@ namespace PrincesPalace.PlayModeTests
             public int ConfirmFocusCalls;
             public int OnBackPressedCalls;
             public int InspectMoveCalls;
+            public int CharacterSelectCalls;
             public Action OnConfirm;
 
             public void MoveFocus(int delta) => MoveFocusCalls++;
@@ -53,6 +54,7 @@ namespace PrincesPalace.PlayModeTests
             // one frame's input reaches, and a fourth member that could be
             // reached has to be visible to them.
             public void InspectMove(int delta) => InspectMoveCalls++;
+            public void EnterCharacterSelect() => CharacterSelectCalls++;
 
             public void ConfirmFocus()
             {

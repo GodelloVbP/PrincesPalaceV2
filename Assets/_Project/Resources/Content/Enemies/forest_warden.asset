@@ -28,7 +28,7 @@ MonoBehaviour:
     Weaknesses: 0100000002000000
     Resistances: 0000000004000000
     SortOrder: 15
-    BreakShieldPoints: 3
+    BreakShieldPoints: 11
     StageScale: 1.5
     SlotSpan: 1
     SpritePath: Enemies/forest_warden

@@ -144,6 +144,7 @@ namespace PrincesPalace
         // every call site (ScriptedBaseInput's own test double included).
         private const string TabPrevButton = "TabPrev";
         private const string TabNextButton = "TabNext";
+        private const string CharacterSelectButton = "Jump";
 
         // THE OVERARCHING MENU'S OWN BUTTON -- Start on a pad, not B (the
         // owner's 2026-09-19 call). InputManager.asset binds escape and
@@ -256,19 +257,22 @@ namespace PrincesPalace
             // closing the menu around the player.
             if (!systemMenuHandled && input.GetButtonDown(cancelButton)) topAtStart.RaiseCancel();
 
-            // THE SHOULDER SHORTCUT (plan section 7's "Tabs" contract,
-            // phase 3 item 2), offered the same way and off the same
-            // topAtStart -- a context with no tab strip (INavTabStrip)
-            // absorbs this silently (NavContext.RaiseTabStep's own no-op).
-            // Read through `input`, never UnityEngine.Input directly, same
-            // seam every other value this dispatcher reads goes through
-            // (plan section 2).
-            if (input.GetButtonDown(TabPrevButton)) topAtStart.RaiseTabStep(-1);
-            else if (input.GetButtonDown(TabNextButton)) topAtStart.RaiseTabStep(1);
+            // THE SHOULDER SHORTCUT (INavSectionStrip) -- owner's 2026-09-19
+            // hardware-round call: LB/RB page sections/characters (dossier
+            // paging, StepCharacter on the talent screen), not tabs. Offered
+            // off the same topAtStart Cancel is -- a context with no
+            // section strip (INavSectionStrip) absorbs this silently
+            // (NavContext.RaiseSectionStep's own no-op). Read through
+            // `input`, never UnityEngine.Input directly, same seam every
+            // other value this dispatcher reads goes through (plan section
+            // 2).
+            if (input.GetButtonDown(TabPrevButton)) topAtStart.RaiseSectionStep(-1);
+            else if (input.GetButtonDown(TabNextButton)) topAtStart.RaiseSectionStep(1);
 
-            // THE TRIGGER SHORTCUT (INavSectionStrip), beside the shoulders
-            // and absorbed the same way by a context that declares no
-            // section strip.
+            // THE TRIGGER SHORTCUT (INavTabStrip) -- owner's 2026-09-19
+            // hardware-round call: LT/RT step the tab strip (system-menu
+            // tabs, talent constellations/paths), beside the shoulders and
+            // absorbed the same way by a context that declares no tab strip.
             //
             // Both edges are READ before either is spent, unlike the
             // shoulders' plain if/else: TriggerPressed re-arms as well as
@@ -279,8 +283,8 @@ namespace PrincesPalace
             // both would otherwise step there and straight back.
             bool leftPulled = TriggerPressed(TriggerLeftAxis, ref _triggerLeftArmed);
             bool rightPulled = TriggerPressed(TriggerRightAxis, ref _triggerRightArmed);
-            if (leftPulled) topAtStart.RaiseSectionStep(-1);
-            else if (rightPulled) topAtStart.RaiseSectionStep(1);
+            if (leftPulled) topAtStart.RaiseTabStep(-1);
+            else if (rightPulled) topAtStart.RaiseTabStep(1);
 
             // RE-READ HERE, deliberately -- this is not the same "capture
             // once" rule Cancel-dispatch above follows, and conflating the
@@ -628,6 +632,7 @@ namespace PrincesPalace
             // back -- which at Root is now nothing at all.
             bool systemMenuHandled = input.GetButtonDown(SystemMenuButton) && top.RaiseSystemMenu();
 
+            if (input.GetButtonDown(CharacterSelectButton)) target.EnterCharacterSelect();
             if (input.GetButtonDown(submitButton)) target.ConfirmFocus();
             if (!systemMenuHandled && input.GetButtonDown(cancelButton)) target.OnBackPressed();
 

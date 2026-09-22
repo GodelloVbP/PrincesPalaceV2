@@ -182,8 +182,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(menu, "the Fight scene carries no SystemMenuController");
             Assert.IsTrue(menu.IsOpen, "Start should have opened the system menu");
 
-            yield return PressTabPrev(); // the pad's own shortcut -- wraps to MainMenu, landing on ExitTitle (its own entry)
-            AssertSelectedName("ExitTitle", "the shoulder shortcut should land on the MainMenu pane's own entry");
+            yield return PressTriggerLeft(); // the pad's own tab shortcut (owner's 2026-09-19 hardware-round call moved this off LB/RB onto LT/RT) -- wraps to MainMenu, landing on ExitTitle (its own entry)
+            AssertSelectedName("ExitTitle", "the trigger shortcut should land on the MainMenu pane's own entry");
 
             var exits = Object.FindAnyObjectByType<ExitsController>(FindObjectsInactive.Include);
             Assert.IsNotNull(exits, "the MainMenu pane has no ExitsController");
@@ -468,11 +468,11 @@ namespace PrincesPalace.PlayModeTests
             AssertSelectedName("StartRunGate", "fixture: the hub's own declared entry, with nothing else open");
             int stackCountBefore = NavigationInputModule.Contexts.Count;
 
-            yield return PressTabNext(); // Hub's own NavContext declares no tabStrip -- NavContext.RaiseTabStep no-ops
+            yield return PressTriggerRight(); // Hub's own NavContext declares no tabStrip -- NavContext.RaiseTabStep no-ops (owner's 2026-09-19 hardware-round call moved tab-stepping onto the triggers)
 
-            AssertSelectedName("StartRunGate", "a shoulder press over a context with no tab strip must select nothing");
+            AssertSelectedName("StartRunGate", "a trigger pull over a context with no tab strip must select nothing");
             Assert.AreEqual(stackCountBefore, NavigationInputModule.Contexts.Count,
-                "a shoulder press over a context with no tab strip must not push or pop anything either");
+                "a trigger pull over a context with no tab strip must not push or pop anything either");
         }
 
         // ---- (g) Fight top, a mouse click on a verb, then one stick frame --------
@@ -522,16 +522,17 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Click(Node("Verb0")); // the mouse's own click fires OnVerbPressed(0) -> OpenAttack -> targeting
 
-            Assert.AreEqual(-1, fight.HoveredEnemyIndexForTest,
-                "the click should have opened targeting fresh -- nothing hovered yet");
+            // A FRESH TARGET PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
+            // now (owner's 2026-09-19 hardware-round call), not -1.
+            Assert.AreEqual(0, fight.HoveredEnemyIndexForTest,
+                "the click should have opened targeting on the front living enemy already hovered");
             Assert.IsNull(EventSystem.current.currentSelectedGameObject,
                 "Fight nulls selection every frame it is top -- true the very next frame after a mouse click too");
 
             yield return MoveDown(); // ONE stick frame
 
             Assert.AreEqual(0, fight.HoveredEnemyIndexForTest,
-                "one stick Move should have hovered the first living enemy, exactly once -- not stayed at -1 " +
-                "and not skipped past it");
+                "one stick Move should have kept the sole living enemy hovered -- one candidate wraps to itself");
         }
     }
 }

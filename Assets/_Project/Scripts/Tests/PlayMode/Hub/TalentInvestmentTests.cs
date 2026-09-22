@@ -2,6 +2,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -279,7 +280,7 @@ namespace PrincesPalace.PlayModeTests
         // the respec node and never opened the reward screen has not got it
         // yet, and pressing collect is what hands it over.
         [UnityTest]
-        public IEnumerator TheRespecIsHiddenUntilTheTrackGrantsIt()
+        public IEnumerator TheRespecStaysVisibleAndExplainsItsRewardGateUntilGranted()
         {
             yield return OpenTheTree();
             var talents = Object.FindAnyObjectByType<TalentController>();
@@ -293,22 +294,28 @@ namespace PrincesPalace.PlayModeTests
             talents.Refresh();
             yield return null;
 
-            Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
-                "a level-7 character is shown a respec they have not earned");
+            var respec = ButtonNamed(talents, "TalentRespecButton");
+            Assert.IsTrue(respec.gameObject.activeSelf,
+                "the locked respec vanished, so the player cannot discover where it went");
+            Assert.IsFalse(respec.interactable);
+            StringAssert.Contains("REWARD 8", respec.GetComponentInChildren<TMP_Text>().text);
 
             character.level = 8;
             talents.Refresh();
             yield return null;
 
-            Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
+            Assert.IsTrue(respec.gameObject.activeSelf);
+            Assert.IsFalse(respec.interactable,
                 "reaching level 8 handed over the respec without the player collecting it");
+            StringAssert.Contains("REWARD 8", respec.GetComponentInChildren<TMP_Text>().text);
 
             character.claimedTrackLevel = 8;
             talents.Refresh();
             yield return null;
 
-            Assert.IsTrue(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
+            Assert.IsTrue(respec.gameObject.activeSelf,
                 "collecting level 8 granted the respec and the button is still hidden");
+            Assert.AreEqual("RESPEC", respec.GetComponentInChildren<TMP_Text>().text);
         }
 
         [UnityTest]

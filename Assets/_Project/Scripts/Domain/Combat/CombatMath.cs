@@ -9,6 +9,13 @@ namespace PrincesPalace.Domain.Combat
     // trivially unit-testable without needing a running fight.
     public static class CombatMath
     {
+        // A plain swing is deliberately useful but remains behind authored
+        // skills. Skills carry their own Power/tier multipliers; basics get
+        // this one modest coefficient and no mana/resource rider.
+        public const float BasicAttackPowerMultiplier = 1.2f;
+
+        private static readonly ScalingSet UnarmedStrengthScaling =
+            ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.B);
         // Fallback only — used when no per-character spell tier applies
         // (a non-player CombatantState with no Character behind it; enemies
         // never use Skill today, but FightController.SkillManaCostFor keeps
@@ -84,7 +91,21 @@ namespace PrincesPalace.Domain.Combat
         // combat path — see its own header.
         public static int ComputeAttackDamage(CombatantState attacker, CombatantState target)
         {
-            return Math.Max(1, ScaledAttack(attacker, attacker.WeaponScaling, 1f));
+            // Enemy attacks retain their authored balance. The basic-action
+            // coefficient and STR fallback are player-side rules.
+            if (!attacker.IsPlayerSide)
+            {
+                return Math.Max(1, ScaledAttack(attacker, attacker.WeaponScaling, 1f));
+            }
+
+            // A real weapon owns its scaling completely. The fallback exists
+            // only for an unarmed/neutral profile with real authored scores,
+            // so STR never double-scales a sword and legacy/default fixtures
+            // with an all-zero score block do not acquire a hidden penalty.
+            var scaling = attacker.WeaponScaling.IsNeutral && attacker.AbilityScores.strength > 0
+                ? UnarmedStrengthScaling
+                : attacker.WeaponScaling;
+            return Math.Max(1, ScaledAttack(attacker, scaling, BasicAttackPowerMultiplier));
         }
 
         // How much of a target's broad Defense (PhysicalDefense or

@@ -21,7 +21,7 @@ namespace PrincesPalace
     // uses, never from a second computation -- a sheet that recomputed its own
     // figures would eventually disagree with the battle, and the player would be
     // right either way.
-    public class CharacterDossierController : MonoBehaviour, INavPaneEntry, INavCancelClaim
+    public class CharacterDossierController : MonoBehaviour, INavPaneEntry, INavCancelClaim, INavSectionStrip
     {
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text subLine;
@@ -1376,6 +1376,8 @@ namespace PrincesPalace
             _alreadyKnownRefusal = false;
             Refresh();
         }
+
+        public void StepSection(int direction) => Step(direction);
 
         private static List<Character> Squad()
         {

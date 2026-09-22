@@ -450,6 +450,14 @@ namespace PrincesPalace
             {
                 case 0:
                     _menu.OpenAttack();
+
+                    // A FRESH PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY
+                    // (owner's 2026-09-19 hardware-round call) -- not left at
+                    // -1 for MoveFocus/ConfirmFocus to treat as an implicit
+                    // 0. OpenAttack always lands on the enemy rack (its own
+                    // header: "does not nest -- it jumps straight to picking
+                    // a mark"), so there is no ally branch to guard here.
+                    _hoveredEnemyIndex = FirstLivingEnemyIndex();
                     break;
 
                 case 1:
@@ -475,6 +483,7 @@ namespace PrincesPalace
                         break;
                     }
                     _menu.OpenBranch(MenuBranch.Skill);
+                    SelectFirstCurrentRow();
                     break;
 
                 case 2:
@@ -487,6 +496,7 @@ namespace PrincesPalace
                         break;
                     }
                     _menu.OpenBranch(MenuBranch.Item);
+                    SelectFirstCurrentRow();
                     break;
 
                 case 3:
@@ -503,10 +513,17 @@ namespace PrincesPalace
                         break;
                     }
                     _menu.OpenBranch(MenuBranch.Move);
+                    SelectFirstCurrentRow();
                     break;
             }
 
             RefreshUi();
+        }
+
+        private void SelectFirstCurrentRow()
+        {
+            var rows = CurrentRows();
+            if (rows.Count > 0) _menu.Select(0, rows[0].ManaCost);
         }
 
         private void OnRowHovered(int index)
@@ -565,6 +582,7 @@ namespace PrincesPalace
                 // else.
                 if (elementSkill.Targeting == Domain.Combat.SkillTargeting.SingleAlly)
                 {
+                    _hoveredAllyIndex = -1;
                     _menu.EnterTargeting(TargetSide.Allies);
                 }
 
@@ -679,6 +697,7 @@ namespace PrincesPalace
                         // the count of 1 is what makes that literally the
                         // same code path rather than a preserved special
                         // case.
+                        _hoveredAllyIndex = -1;
                         _menu.EnterTargeting(TargetSide.Allies,
                             Domain.Combat.SkillEffects.PicksRequired(options[index].Skill.Effect));
                         RefreshUi();
@@ -687,6 +706,10 @@ namespace PrincesPalace
                 }
             }
 
+            // A FRESH PICK HOVERS THE FRONT LIVING ENEMY EXPLICITLY (owner's
+            // 2026-09-19 hardware-round call), the same reason OpenAttack's
+            // own branch above sets it rather than leaving -1.
+            _hoveredEnemyIndex = FirstLivingEnemyIndex();
             _menu.EnterTargeting();
             RefreshUi();
         }
@@ -1062,6 +1085,7 @@ namespace PrincesPalace
         {
             _menu.Reset();
             _hoveredAllyIndex = -1;
+            _hoveredEnemyIndex = -1;
 
             // AND THE PAD IS BACK ON THE VERBS. A round resolving under a
             // player who was reading a monster's statuses is the fight moving
@@ -1069,6 +1093,9 @@ namespace PrincesPalace
             // on an actor the moment _isBusy cleared, on a turn the player
             // arrived at fresh.
             _inspecting = false;
+            _characterSelecting = false;
+            _inspectingIntent = false;
+            _targetIntentEnemyIndex = -1;
 
             // SET BEFORE THE REPAINT, not after. RefreshMenuChrome (below)
             // includes RefreshVerbs, which now hides ATTACK/SKILL/ITEM/HOLD
@@ -1413,11 +1440,13 @@ namespace PrincesPalace
             // to a verb the player never saw themselves choose.
             if (IsInspecting)
             {
-                InspectStep(delta);
+                InspectVerticalStep(delta);
                 return;
             }
 
             _inspecting = false;
+            _characterSelecting = false;
+            _inspectingIntent = false;
 
             // THE PAD'S OWN FLIP, NOT MoveFocus' -- MoveFocus is the frozen
             // focus model (this file's own "ONE INPUT MODEL" header) and
@@ -1453,10 +1482,26 @@ namespace PrincesPalace
             // pad entry point and InspectMove's own Target branch.
             if (_menu.Depth == MenuDepth.Target)
             {
+                if (_menu.Side == TargetSide.Enemies)
+                {
+                    if (IsTargetIntentInspection)
+                    {
+                        if (delta > 0) SetTargetIntentInspection(false);
+                        return;
+                    }
+
+                    if (delta < 0)
+                    {
+                        SetTargetIntentInspection(true);
+                        return;
+                    }
+                }
+
                 CycleTargetFromPad(-delta);
                 return;
             }
 
+            _targetIntentEnemyIndex = -1;
             MoveFocus(delta);
         }
 
@@ -1468,15 +1513,24 @@ namespace PrincesPalace
             // there is nothing for Submit to confirm -- pressing it must not
             // fall through to Root's own ConfirmFocus and open ATTACK on the
             // monster the player was only reading.
-            if (IsInspecting) return;
+            if (IsInspecting || IsTargetIntentInspection) return;
 
             _inspecting = false;
+            _characterSelecting = false;
+            _inspectingIntent = false;
+            _targetIntentEnemyIndex = -1;
             ConfirmFocus();
         }
 
         void IFightNavigationTarget.OnBackPressed()
         {
             if (_session == null || _isBusy) return;
+
+            if (IsTargetIntentInspection)
+            {
+                SetTargetIntentInspection(false);
+                return;
+            }
 
             // BEFORE _menu.Back(), and that order is the whole of it: B at
             // Root is "nothing happens" by the owner's own 2026-09-19 call,
@@ -1533,6 +1587,12 @@ namespace PrincesPalace
             // being brought up outside a pick (a Hud change, not this file's).
             if (InspectedStop(out var inspected))
             {
+                if (_inspectingIntent && !inspected.IsAlly && enemyIntentIcons != null
+                    && inspected.Index >= 0 && inspected.Index < enemyIntentIcons.Length)
+                {
+                    return enemyIntentIcons[inspected.Index];
+                }
+
                 return inspected.IsAlly
                     ? AllyFigureOrPlate(inspected.Index)
                     : EnemyFigureOrPlate(inspected.Index);
@@ -1552,6 +1612,17 @@ namespace PrincesPalace
                     return NodeAt(submenuRows, _menu.RowSelection);
 
                 case MenuDepth.Target:
+                    if (IsTargetIntentInspection)
+                    {
+                        int intentIndex = _hoveredEnemyIndex >= 0
+                            ? _hoveredEnemyIndex
+                            : FirstLivingEnemyIndex();
+                        if (enemyIntentIcons != null && intentIndex >= 0 && intentIndex < enemyIntentIcons.Length)
+                        {
+                            return enemyIntentIcons[intentIndex];
+                        }
+                    }
+
                     if (_menu.Side == TargetSide.Allies)
                     {
                         int plate = _hoveredAllyIndex;
@@ -1914,6 +1985,17 @@ namespace PrincesPalace
         // that would then have to be given a meaning on every mouse path,
         // every Back(), and in FightHudModel.
         private bool _inspecting;
+        private bool _characterSelecting;
+        private bool _inspectingIntent;
+        // Target selection needs its own intent state. Root inspection also
+        // uses _inspectingIntent and is refreshed with the actor ring; sharing
+        // that flag made a pending target lose its return point between input
+        // frames even while its intent icon still held focus.
+        private int _targetIntentEnemyIndex = -1;
+        private bool IsTargetIntentInspection =>
+            _menu.Depth == MenuDepth.Target
+            && _menu.Side == TargetSide.Enemies
+            && _targetIntentEnemyIndex >= 0;
 
         // WHO THE PAD WAS LAST READING, kept across a leave so that stepping
         // back onto the row returns to the same actor rather than to the
@@ -1989,6 +2071,20 @@ namespace PrincesPalace
             return ring;
         }
 
+        private List<InspectStop> PartyInspectRing()
+        {
+            var ring = new List<InspectStop>();
+            if (pcPlates == null) return ring;
+
+            for (int i = 0; i < pcPlates.Length; i++)
+            {
+                var member = PartyMemberOnPlate(i);
+                if (member != null && member.IsAlive) ring.Add(new InspectStop(member, true, i));
+            }
+
+            return ring;
+        }
+
         // THE RING'S ONE RULE, as arithmetic, so the two callers below cannot
         // disagree about it and a test can pin it without a scene:
         //
@@ -2024,6 +2120,8 @@ namespace PrincesPalace
         {
             if (_menu.Depth == MenuDepth.Target)
             {
+                if (IsTargetIntentInspection) SetTargetIntentInspection(false);
+
                 // THE ENEMY RACK RUNS OUTWARD, UNMIRRORED (FightStageAnchors:
                 // Near.X 300 -> Far.X 660), so Right (raw +1, straight off
                 // ProcessFight) already points at "further right on stage,
@@ -2053,6 +2151,7 @@ namespace PrincesPalace
 
             if (IsInspecting)
             {
+                if (_inspectingIntent) SetIntentInspection(false);
                 InspectStep(delta);
                 return;
             }
@@ -2073,7 +2172,7 @@ namespace PrincesPalace
 
         private void InspectStep(int delta)
         {
-            var ring = InspectRing();
+            var ring = _characterSelecting ? PartyInspectRing() : InspectRing();
 
             // A cursor that is no longer on the ring (its owner died while
             // being read) is picked back up at the front rather than dropped:
@@ -2092,6 +2191,81 @@ namespace PrincesPalace
             RefreshUi();
         }
 
+        private void InspectVerticalStep(int delta)
+        {
+            if (_inspectingIntent)
+            {
+                if (delta > 0) SetIntentInspection(false);
+                return;
+            }
+
+            if (delta < 0 && InspectedStop(out var current) && !current.IsAlly)
+            {
+                SetIntentInspection(true);
+                return;
+            }
+
+            InspectStep(delta);
+        }
+
+        private void SetTargetIntentInspection(bool shown)
+        {
+            int index = shown
+                ? (_hoveredEnemyIndex >= 0 ? _hoveredEnemyIndex : FirstLivingEnemyIndex())
+                : _targetIntentEnemyIndex;
+
+            if (shown)
+            {
+                _targetIntentEnemyIndex = index;
+            }
+            else
+            {
+                if (_targetIntentEnemyIndex >= 0) _hoveredEnemyIndex = _targetIntentEnemyIndex;
+                _targetIntentEnemyIndex = -1;
+            }
+
+            ShowIntentTooltip(index, shown);
+        }
+
+        void IFightNavigationTarget.EnterCharacterSelect()
+        {
+            if (_session == null || _isBusy || _menu.Depth != MenuDepth.Root) return;
+
+            if (_characterSelecting && IsInspecting)
+            {
+                LeaveInspect();
+                return;
+            }
+
+            var party = PartyInspectRing();
+            if (party.Count == 0) return;
+
+            SetIntentInspection(false);
+            _characterSelecting = true;
+            _inspectCursor = party[0].Actor;
+            _inspecting = true;
+            RefreshUi();
+        }
+
+        private void SetIntentInspection(bool shown)
+        {
+            _inspectingIntent = shown;
+            if (!shown)
+            {
+                if (intentTooltip != null) intentTooltip.SetShown(false);
+                return;
+            }
+
+            if (!InspectedStop(out var stop) || stop.IsAlly)
+            {
+                _inspectingIntent = false;
+                if (intentTooltip != null) intentTooltip.SetShown(false);
+                return;
+            }
+
+            ShowIntentTooltip(stop.Index, true);
+        }
+
         // True when there was an inspection to leave, so the caller can spend
         // the press on it. _inspectCursor is deliberately NOT cleared -- it is
         // the "or the remembered one" half of re-entering.
@@ -2107,6 +2281,8 @@ namespace PrincesPalace
             }
 
             _inspecting = false;
+            _characterSelecting = false;
+            SetIntentInspection(false);
             RefreshUi();
             return true;
         }
@@ -2185,7 +2361,7 @@ namespace PrincesPalace
             stop = default;
             if (!IsInspecting || _session == null || _isBusy || _session.IsOver) return false;
 
-            var ring = InspectRing();
+            var ring = _characterSelecting ? PartyInspectRing() : InspectRing();
             int at = IndexOnRing(ring, _inspectCursor);
             if (at < 0) return false;
 

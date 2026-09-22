@@ -28,7 +28,7 @@ MonoBehaviour:
     Weaknesses: 0100000005000000
     Resistances: 0000000002000000
     SortOrder: 12
-    BreakShieldPoints: 4
+    BreakShieldPoints: 16
     StageScale: 1
     SlotSpan: 1
     SpritePath: Enemies/beetle

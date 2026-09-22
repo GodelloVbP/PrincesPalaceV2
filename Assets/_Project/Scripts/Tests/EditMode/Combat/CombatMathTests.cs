@@ -36,9 +36,11 @@ namespace PrincesPalace.Domain.Tests
             var lightlyArmoured = MakeCombatant(physicalDefense: 3);
             var heavilyArmoured = MakeCombatant(physicalDefense: 500);
 
-            // 10 attack, no grades -> 1.0x, regardless of either target.
-            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, lightlyArmoured));
-            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, heavilyArmoured));
+            // 10 attack, no grades -> 1.0x scaling, times the 1.2x
+            // basic-attack coefficient: 10 * 1.2 = 12, regardless of either
+            // target.
+            Assert.AreEqual(12, CombatMath.ComputeAttackDamage(attacker, lightlyArmoured));
+            Assert.AreEqual(12, CombatMath.ComputeAttackDamage(attacker, heavilyArmoured));
         }
 
         [Test]
@@ -253,8 +255,9 @@ namespace PrincesPalace.Domain.Tests
             var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
             var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
-            // No WeaponScaling authored -> neutral 1.0x. 20 attack, raw.
-            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
+            // No WeaponScaling authored -> neutral 1.0x, times the 1.2x
+            // basic-attack coefficient: 20 * 1.2 = 24.
+            Assert.AreEqual(24, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -266,9 +269,10 @@ namespace PrincesPalace.Domain.Tests
             attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // S at Strength 20 is 2.00x: 20 attack becomes 40, raw. No
-            // defense term and no DamageScale touch this any more.
-            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
+            // S at Strength 20 is 2.00x, times the 1.2x basic-attack
+            // coefficient: 20 * 2.00 * 1.2 = 48. No defense term and no
+            // DamageScale touch this any more.
+            Assert.AreEqual(48, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         // PROPORTIONAL MITIGATION used to be a property of ComputeAttackDamage
@@ -329,8 +333,9 @@ namespace PrincesPalace.Domain.Tests
             // Strong, and not at all clever.
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // The swing gets the Strength: 20 * 2.00 = 40, raw.
-            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
+            // The swing gets the Strength, times the 1.2x basic-attack
+            // coefficient: 20 * 2.00 * 1.2 = 48.
+            Assert.AreEqual(48, CombatMath.ComputeAttackDamage(attacker, target));
             // The cast does not: Intelligence is neutral, so only the tier's
             // 1.5x applies. 20 * 1.5 = 30, raw.
             Assert.AreEqual(30, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));

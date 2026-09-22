@@ -81,7 +81,8 @@ namespace PrincesPalace.PlayModeTests
             int enemyHpBefore = _session.Encounter.Enemies[0].CurrentHealth;
 
             yield return Click(Node("Verb0")); // ATTACK at Root skips straight to targeting
-            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest, "fixture: nothing is hovered at a fresh target pick");
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "a fresh target pick explicitly hovers the front living enemy (owner's 2026-09-19 call), not -1");
 
             // ONE CLICK, NOT A HOVER-THEN-CONFIRM PAIR: OnEnemyPressed is the
             // same "FOUR SURFACES, ONE CONFIRM" handler the pad's Submit
@@ -97,8 +98,11 @@ namespace PrincesPalace.PlayModeTests
 
             // LITERAL, pinned the same as the pad file: the input mode does
             // not change what SeededRandom(3) rolls against this exact
-            // hero/enemy pair.
-            Assert.AreEqual(6, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
+            // hero/enemy pair. MOVED FROM 6 TO 8 alongside it --
+            // CombatMath.BasicAttackPowerMultiplier (1.2x on a player's
+            // plain swing) landed concurrently with this nav change and is
+            // unrelated to it.
+            Assert.AreEqual(8, enemyHpBefore - _session.Encounter.Enemies[0].CurrentHealth,
                 "the exact damage this seeded attack deals, mouse-only same as on the pad");
         }
     }

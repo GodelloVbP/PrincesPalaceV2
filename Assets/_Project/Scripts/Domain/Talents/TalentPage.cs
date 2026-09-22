@@ -155,15 +155,7 @@ namespace PrincesPalace.Domain.Talents
             // prerequisites explicitly and they match TalentSkeleton.Parents
             // for all 294 authored talents. The skeleton is the cheaper of the
             // two to walk and the one this layer can see.
-            foreach (int parent in TalentSkeleton.Parents[slot])
-            {
-                string parentId = tree.IdAt(path, parent);
-
-                // A prerequisite the content never authored cannot be met, so
-                // everything above it is unreachable rather than free.
-                if (string.IsNullOrEmpty(parentId)) return Refusal.PrerequisiteMissing;
-                if (unlocked == null || !unlocked.Contains(parentId)) return Refusal.PrerequisiteMissing;
-            }
+            if (!MeetsPrerequisites(tree, path, slot, unlocked)) return Refusal.PrerequisiteMissing;
 
             // THE GATE, WHICH NOTHING WAS CHECKING.
             //
@@ -203,6 +195,68 @@ namespace PrincesPalace.Domain.Talents
             if (embers < here.Cost) return Refusal.NotEnoughEmbers;
 
             return Refusal.None;
+        }
+
+        private static bool MeetsPrerequisites(
+            TalentTree tree, int path, int slot, IReadOnlyCollection<string> unlocked)
+        {
+            int[] parents = TalentSkeleton.Parents[slot];
+            if (parents.Length == 0) return true;
+            if (unlocked == null) return false;
+
+            // THE FIRST CONVERGENCE IS A TWO-STRAND FUSION. One strand must
+            // actually reach the merge, while a second only has to be lit;
+            // the authored 9-Ember gate below supplies the rest of the price.
+            // At shipped costs that is exactly 6 on one completed strand plus
+            // 1+2 on a second. Requiring every direct parent made it 18 and
+            // consumed so much of the 30-Ember lifetime cap that the ultimate
+            // could not be reached.
+            if (TalentSkeleton.Kind[slot] == "merge" && parents.Length > 1)
+            {
+                int completed = 0;
+                int touched = 0;
+                foreach (int parent in parents)
+                {
+                    string parentId = tree.IdAt(path, parent);
+                    if (!string.IsNullOrEmpty(parentId) && unlocked.Contains(parentId)) completed++;
+
+                    int dx = TalentSkeleton.DxSlot[parent];
+                    bool strandTouched = false;
+                    for (int candidate = 0; candidate < slot; candidate++)
+                    {
+                        if (TalentSkeleton.Depth[candidate] <= 0 || TalentSkeleton.DxSlot[candidate] != dx) continue;
+                        string id = tree.IdAt(path, candidate);
+                        if (!string.IsNullOrEmpty(id) && unlocked.Contains(id))
+                        {
+                            strandTouched = true;
+                            break;
+                        }
+                    }
+                    if (strandTouched) touched++;
+                }
+
+                return completed >= 1 && touched >= 2;
+            }
+
+            // A capstone is the culmination of ONE post-convergence branch.
+            // Its authored 20-spent gate remains the price; forcing all three
+            // direct parents made it exceed the lifetime budget.
+            if (TalentSkeleton.Kind[slot] == "cap" && parents.Length > 1)
+            {
+                foreach (int parent in parents)
+                {
+                    string id = tree.IdAt(path, parent);
+                    if (!string.IsNullOrEmpty(id) && unlocked.Contains(id)) return true;
+                }
+                return false;
+            }
+
+            foreach (int parent in parents)
+            {
+                string id = tree.IdAt(path, parent);
+                if (string.IsNullOrEmpty(id) || !unlocked.Contains(id)) return false;
+            }
+            return true;
         }
 
         public static bool CanInvest(

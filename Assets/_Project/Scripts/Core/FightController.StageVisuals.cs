@@ -608,6 +608,12 @@ namespace PrincesPalace
         {
             InspectEnemyAt(index, entered);
 
+            ShowIntentTooltip(index, entered);
+        }
+
+        private void ShowIntentTooltip(int index, bool entered)
+        {
+
             if (intentTooltip == null) return;
 
             if (!entered)

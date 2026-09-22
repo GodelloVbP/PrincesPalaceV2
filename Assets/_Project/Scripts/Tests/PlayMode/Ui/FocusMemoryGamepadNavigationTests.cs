@@ -34,7 +34,7 @@ namespace PrincesPalace.PlayModeTests
     // moveRepeatDelay, JourneyFixture.Move's own header) silently drops a
     // second chained Move inside 0.5s. Move below pays that settle once for
     // every caller rather than each test rediscovering the drop; everything
-    // else here is reached by Submit, Cancel or the tab shoulder, none of
+    // else here is reached by Submit, Cancel or the tab trigger, none of
     // which read that gate.
     public class FocusMemoryGamepadNavigationTests
     {
@@ -115,9 +115,17 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
         }
 
-        private IEnumerator PressTabNext()
+        // LT/RT step tabs since the owner's 2026-09-19 hardware-round call
+        // (LB/RB were reassigned to section/character paging) -- a level,
+        // not an edge, so the pulse returns it to 0 AND drives that frame
+        // too (JourneyFixture.PressTriggerRight's own header on why an
+        // unread 0 leaves TriggerPressed's `armed` flag stuck false for the
+        // next pull).
+        private IEnumerator PressTriggerRight()
         {
-            _input.TabNextDown = true;
+            _input.TriggerRight = 1f;
+            yield return DriveFrame();
+            _input.TriggerRight = 0f;
             yield return DriveFrame();
         }
 
@@ -197,18 +205,18 @@ namespace PrincesPalace.PlayModeTests
             yield return PressSystemMenu();
             Assert.IsTrue(menu.IsOpen, "fixture: Start should open the system menu from the hub");
 
-            // Two shoulder presses, each of which lands INSIDE the new pane
+            // Two trigger pulls, each of which lands INSIDE the new pane
             // rather than on its tab (SystemMenuController.StepTab's own
             // contract), so this reaches the THIRD visible tab's pane -- read
             // off VisibleTabs rather than hardcoded, since which tabs are
             // visible depends on whether a descent is under way.
             var visible = menu.VisibleTabs.ToList();
             Assert.GreaterOrEqual(visible.Count, 3, "fixture: this claim needs at least three visible tabs");
-            yield return PressTabNext();
-            yield return PressTabNext();
+            yield return PressTriggerRight();
+            yield return PressTriggerRight();
 
             Assert.AreEqual(visible[2], menu.SelectedIndex,
-                "fixture: two TabNext presses off the first visible tab should select the third");
+                "fixture: two TriggerRight pulls off the first visible tab should select the third");
 
             var insideThePane = EventSystem.current.currentSelectedGameObject;
             Assert.IsNotNull(insideThePane, "fixture: a shoulder press should leave something selected");

@@ -106,6 +106,25 @@ namespace PrincesPalace.PlayModeTests
                 "the hold never completed after the repeats, so a mashed key locked the control out");
         }
 
+        [UnityTest]
+        public IEnumerator GamepadSubmitUsesTheSameHoldToAbandonConfirmation()
+        {
+            yield return OpenThePane("Map", withRun: true);
+
+            var hold = Hold();
+            _exits.DriveGamepadAbandonHold(true);
+            hold.Advance(ExitsController.HoldSeconds * 0.9f);
+            _exits.DriveGamepadAbandonHold(false);
+            CollectionAssert.IsEmpty(_navigated, "releasing Submit before the hold completes must preserve the run");
+
+            _exits.DriveGamepadAbandonHold(true);
+            hold.Advance(ExitsController.HoldSeconds);
+            yield return null;
+
+            CollectionAssert.AreEqual(new[] { Navigation.Hub }, _navigated,
+                "holding Submit on Abandon should use the existing confirmed abandon path");
+        }
+
         // ---- E2: the second hold starts from zero -----------------------------------
 
         // Asserted on the FILL, not only on the outcome. SystemMenuExitsTests'

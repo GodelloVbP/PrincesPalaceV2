@@ -58,6 +58,71 @@ namespace PrincesPalace.Domain.Tests
             return tree;
         }
 
+        private static TalentTree ShippedPriceShape()
+        {
+            var tree = new TalentTree();
+            for (int i = 0; i < TalentSkeleton.SlotCount; i++)
+            {
+                int depth = TalentSkeleton.Depth[i];
+                int cost = depth == 0 || depth == 4 || depth == 8
+                    ? 0
+                    : depth <= 3 ? depth : depth - 3;
+                int gate = i == 10 ? 9 : i == 20 ? 20 : 0;
+                tree.Set(Path, i, new TalentSlot($"t{i}", $"Star {i}", "", cost, gate));
+            }
+            return tree;
+        }
+
+        [Test]
+        public void FirstConvergenceUnlocksWithNineSpentAcrossTwoStrands()
+        {
+            var tree = ShippedPriceShape();
+            var owned = new HashSet<string>
+            {
+                // One completed strand: 1 + 2 + 3 = 6.
+                "t0", "t1", "t4", "t7",
+                // Two tiers lit on a second strand: 1 + 2 = 3.
+                "t2", "t5",
+            };
+
+            Assert.AreEqual(9, TalentPage.SpentOn(tree, Path, owned));
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, Path, 10, owned, embers: 0, budget: 21));
+        }
+
+        [Test]
+        public void FirstConvergenceStillNeedsOneCompletedStrandAndTwoDistinctStrands()
+        {
+            var tree = ShippedPriceShape();
+
+            var oneStrandOnly = new HashSet<string> { "t0", "t1", "t4", "t7" };
+            Assert.AreEqual(TalentPage.Refusal.PrerequisiteMissing,
+                TalentPage.Evaluate(tree, Path, 10, oneStrandOnly, embers: 99, budget: 24));
+
+            var twoIncomplete = new HashSet<string> { "t0", "t1", "t4", "t2", "t5", "t3", "t6" };
+            Assert.AreEqual(TalentPage.Refusal.PrerequisiteMissing,
+                TalentPage.Evaluate(tree, Path, 10, twoIncomplete, embers: 99, budget: 18));
+        }
+
+        [Test]
+        public void CapstoneIsReachableAtTwentySpentThroughOneCompletedBranch()
+        {
+            var tree = ShippedPriceShape();
+            var owned = new HashSet<string>
+            {
+                // First convergence at 9 spent.
+                "t0", "t1", "t4", "t7", "t2", "t5", "t10",
+                // One complete post-convergence branch: +2 +3 +4 = 18.
+                "t11", "t14", "t17",
+                // Two more spent elsewhere reaches the authored 20 gate.
+                "t12",
+            };
+
+            Assert.AreEqual(20, TalentPage.SpentOn(tree, Path, owned));
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, Path, 20, owned, embers: 0, budget: 10));
+        }
+
         // Every parent of `slot`, and their parents, all the way down.
         private static HashSet<string> Ancestry(TalentTree tree, int slot)
         {

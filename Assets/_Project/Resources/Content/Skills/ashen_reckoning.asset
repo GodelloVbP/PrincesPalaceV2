@@ -51,174 +51,74 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: extract
+      - id: ritual
         render: sprite
         place: target-centre
         follow: 0
         at: release
         offset: 0
-        path: Spells/prismatic_orb_earth_drops
-        seconds: 0.3
+        path: Spells/ashen_reckoning
+        seconds: 0.72
         fps: 0
         startFrame: 0
         until: once
-        fade: 0
+        fade: 0.14
         dx: 0
         dy: 0
         scale: 1
-        size: 220
-        facing: auto
-        sort: ground
-        align: 
-        punch: 0
-        glow: 1
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: ignite
-        render: sprite
-        place: target-centre
-        follow: 0
-        at: release
-        offset: 0.15
-        path: Spells/prismatic_orb_fire_charge
-        seconds: 0.25
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 230
-        facing: auto
-        sort: effects
-        align: 
-        punch: 0
-        glow: 1.15
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: burst
-        render: sprite
-        place: target-centre
-        follow: 0
-        at: hit
-        offset: 0
-        path: Spells/cinderfault_eruption
-        seconds: 0.35
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 320
-        facing: auto
-        sort: effects
-        align: 
-        punch: 0.2
-        glow: 1.3
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: ash
-        render: sprite
-        place: target-centre
-        follow: 0
-        at: hit
-        offset: 0.2
-        path: Spells/prismatic_orb_fire_wake
-        seconds: 0.3
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0.2
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 260
+        size: 360
         facing: none
-        sort: ground
+        sort: effects
+        align: 
+        punch: 0.22
+        glow: 1.3
+        impactX: 0.5
+        impactY: 0.5
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: settle
+        render: emitter
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        facing: 
+        sort: effects
         align: 
         punch: 0
         glow: 0
@@ -228,31 +128,31 @@ MonoBehaviour:
         travelSeconds: 0
         travelDelay: 0
         emitter:
-          path: 
+          path: Spells/ashen_reckoning_particles
           rate: 0
-          burst: 0
+          burst: 18
           window: 0
           sourceDx: 0
           sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
+          spreadDegrees: 175
+          aimDegrees: 85
+          speedMin: 80
+          speedMax: 260
           inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
+          drag: 1.8
+          gravity: -500
+          lifeMin: 0.32
+          lifeMax: 0.62
+          sizeMin: 0.11
+          sizeMax: 0.29
+          spinMin: -180
+          spinMax: 180
+          fadeFrom: 0.55
+          endScale: 0.72
+          seed: 1455
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.45
+      hitCueSeconds: 0.3
     SortOrder: 11
     Status: 3
     HasStatus: 1

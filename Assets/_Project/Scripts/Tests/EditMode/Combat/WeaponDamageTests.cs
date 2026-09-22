@@ -73,10 +73,40 @@ namespace PrincesPalace.Domain.Tests
         {
             var wielder = Wielder(WeaponPower.Compute(SwordT5AttackAtTier, 0), ScalingGrade.A);
 
-            // M = 1 + 0.07 x (20 - 10) = 1.7. WP = 45.
-            // raw = AwayFromZero(45 x 1.7) = AwayFromZero(76.5) = 77.
-            // ComputeAttackDamage = max(1, 77) = 77.
-            Assert.AreEqual(77, CombatMath.ComputeAttackDamage(wielder, null));
+            // M = 1 + 0.07 x (20 - 10) = 1.7. WP = 45. The 1.2x basic-attack
+            // coefficient applies before the single away-from-zero rounding:
+            // raw = AwayFromZero(45 x 1.7 x 1.2) = AwayFromZero(91.8) = 92.
+            // ComputeAttackDamage = max(1, 92) = 92.
+            Assert.AreEqual(92, CombatMath.ComputeAttackDamage(wielder, null));
+        }
+
+        [Test]
+        public void AnUnarmedBasicAttackStillScalesModestlyWithStrength()
+        {
+            var bjorn = new CombatantState("Bjorn", true, 260, 10, 10, 8)
+            {
+                AbilityScores = new AbilityScoreBlock(12, 12, 14, 8, 8, 10),
+                WeaponScaling = ScalingSet.None,
+            };
+
+            // Baseline basic power is 1.2x, and the unarmed STR-B fallback is
+            // 1 + (12 - 10) * .05 = 1.10: 10 * 1.2 * 1.10 = 13.2 -> 13.
+            Assert.AreEqual(13, CombatMath.ComputeAttackDamage(bjorn, null));
+        }
+
+        [Test]
+        public void AuthoredWeaponScalingIsNotStackedWithTheUnarmedStrengthFallback()
+        {
+            var bjorn = new CombatantState("Bjorn", true, 260, 10, 45, 8)
+            {
+                AbilityScores = new AbilityScoreBlock(12, 12, 14, 8, 8, 10),
+                WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A),
+            };
+
+            // One authored A grade: 1 + 2 * .07 = 1.14. With 1.2x basic
+            // power, 45 * 1.14 * 1.2 = 61.56 -> 62. A stacked B fallback
+            // would produce 67 and fail this guard.
+            Assert.AreEqual(62, CombatMath.ComputeAttackDamage(bjorn, null));
         }
 
         [Test]
@@ -84,10 +114,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var wielder = Wielder(WeaponPower.Compute(SwordT5AttackAtTier, 10), ScalingGrade.A);
 
-            // WP = 113 (pinned above). raw = AwayFromZero(113 x 1.7)
-            // = AwayFromZero(192.1) = 192.
-            // ComputeAttackDamage = max(1, 192) = 192.
-            Assert.AreEqual(192, CombatMath.ComputeAttackDamage(wielder, null));
+            // WP = 113 (pinned above). The 1.2x basic-attack coefficient
+            // applies before the single away-from-zero rounding:
+            // raw = AwayFromZero(113 x 1.7 x 1.2) = AwayFromZero(230.52) = 231.
+            // ComputeAttackDamage = max(1, 231) = 231.
+            Assert.AreEqual(231, CombatMath.ComputeAttackDamage(wielder, null));
         }
 
         // ---- DisplayDamage: the weapon card's DMG number (D7.2) --------------

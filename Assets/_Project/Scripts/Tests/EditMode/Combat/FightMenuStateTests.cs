@@ -760,17 +760,20 @@ namespace PrincesPalace.Domain.Tests
             //
             // POWER is CombatMath.ComputeAttackDamage(actor, null), not the
             // raw Attack stat verbatim -- hero.Attack is 20, no grades
-            // authored, so a swing with nothing else in play reads 20 (no
-            // DamageScale multiplies it any more; fixed 2026-08-26, see
-            // ComputeAttackDamage's own header), matching exactly what a real
-            // Strike against this hero would deal before mitigation.
+            // authored, so neutral WeaponScaling/the unarmed-STR fallback at
+            // Strength 10 contributes 0, and the 1.2x basic-attack
+            // coefficient is the only thing that moves it: round(20 * 1.0 *
+            // 1.2) = 24 (no DamageScale multiplies it any more; fixed
+            // 2026-08-26, see ComputeAttackDamage's own header), matching
+            // exactly what a real Strike against this hero would deal
+            // before mitigation.
             var (_, hero) = Fight();
 
             var panel = FightHudModel.DetailForStrike(hero);
 
             Assert.AreEqual("Strike", panel.Name);
             Assert.AreEqual(5, panel.Stats.Count, "the column has five fixed rows");
-            Assert.AreEqual("20", panel.Stats[1].Value,
+            Assert.AreEqual("24", panel.Stats[1].Value,
                 "it describes THIS actor's swing, not a generic one");
         }
 

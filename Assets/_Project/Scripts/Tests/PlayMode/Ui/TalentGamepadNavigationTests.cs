@@ -242,23 +242,26 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // OWNER HARDWARE PLAY-TEST, 2026-09-19: "RB LB scrolls you between
-        // different talent trees." RB/LB were already project-wide shoulder
-        // shortcuts (ProjectSettings/InputManager.asset's TabNext/TabPrev,
+        // different talent trees" -- since reassigned, same hardware round,
+        // to the TRIGGERS (LT/RT are project-wide trigger shortcuts,
+        // ProjectSettings/InputManager.asset's TriggerLeft/TriggerRight,
         // read by NavigationInputModule.Process, offered to whichever
-        // context is top via NavContext.RaiseTabStep/INavTabStrip) before
-        // TalentController implemented the interface -- StepTab is StepPath
-        // verbatim, so the shoulder and the on-screen paging arrows can
-        // never disagree about where a page lands.
+        // context is top via NavContext.RaiseTabStep/INavTabStrip), freeing
+        // RB/LB for section/character paging below -- TalentController
+        // implements the interface with StepTab as StepPath verbatim, so
+        // the trigger and the on-screen paging arrows can never disagree
+        // about where a page lands.
         [UnityTest]
         public IEnumerator TabNext_StepsToTheNextConstellation_AndEntersItsRoot()
         {
             yield return LoadTheTree();
 
-            _input.TabNextDown = true;
+            _input.TriggerRight = 1f;
             yield return DriveFrame();
+            _input.TriggerRight = 0f;
 
             Assert.AreEqual(Node("Orb1_0"), EventSystem.current.currentSelectedGameObject,
-                "RB should page to constellation 1 (StepPath(1)) and reselect that path's own root -- " +
+                "RT should page to constellation 1 (StepPath(1)) and reselect that path's own root -- " +
                 "the same out-of-declared-set reselection every context gets when RefreshOrbNavigation " +
                 "rebuilds the selectable set around the new path");
         }
@@ -268,11 +271,12 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadTheTree();
 
-            _input.TabPrevDown = true;
+            _input.TriggerLeft = 1f;
             yield return DriveFrame();
+            _input.TriggerLeft = 0f;
 
             Assert.AreEqual(Node("Orb0_0"), EventSystem.current.currentSelectedGameObject,
-                "paging is a clamped line (ConstellationLayout.Step), not a loop -- LB at the first " +
+                "paging is a clamped line (ConstellationLayout.Step), not a loop -- LT at the first " +
                 "constellation should leave the selection exactly where it was (StepPath's own early-out " +
                 "when Step(...) returns the same index)");
         }
@@ -308,14 +312,13 @@ namespace PrincesPalace.PlayModeTests
 
             var emberText = Node("TalentEmberCount").GetComponent<TMPro.TMP_Text>();
             Assert.AreEqual("5 EMBERS", emberText.text,
-                "fixture: character 0 (5 embers) should be showing before the trigger");
+                "fixture: character 0 (5 embers) should be showing before the shoulder");
 
-            _input.TriggerRight = 1f;
+            _input.TabNextDown = true;
             yield return DriveFrame();
-            _input.TriggerRight = 0f;
 
             Assert.AreEqual("40 EMBERS", emberText.text,
-                "RT (StepSection(1) -> StepCharacter(1)) should page to character 1 and repaint its own embers");
+                "RB (StepSection(1) -> StepCharacter(1)) should page to character 1 and repaint its own embers");
         }
 
         [UnityTest]
@@ -333,13 +336,34 @@ namespace PrincesPalace.PlayModeTests
 
             var emberText = Node("TalentEmberCount").GetComponent<TMPro.TMP_Text>();
 
-            _input.TriggerLeft = 1f;
+            _input.TabPrevDown = true;
             yield return DriveFrame();
-            _input.TriggerLeft = 0f;
 
             Assert.AreEqual("5 EMBERS", emberText.text,
-                "paging is a clamped line, not a loop -- LT at character 0 should leave the selection " +
+                "paging is a clamped line, not a loop -- LB at character 0 should leave the selection " +
                 "exactly where it was (StepCharacter's own Step(...) clamp)");
+        }
+
+        [UnityTest]
+        public IEnumerator DownFromTheSelectedCapstoneReturnsToItsTreeParent()
+        {
+            yield return LoadTheTree();
+
+            var capstone = Node("Orb0_20");
+            Assert.IsNotNull(capstone, "fixture: path zero needs its capstone orb");
+            EventSystem.current.SetSelectedGameObject(capstone);
+            capstone.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            yield return null;
+
+            _input.Vertical = -1f;
+            yield return DriveFrame();
+            _input.Vertical = 0f;
+
+            var selected = EventSystem.current.currentSelectedGameObject;
+            Assert.IsNotNull(selected, "Down from the capstone should stay in the tree");
+            StringAssert.StartsWith("Orb0_", selected.name,
+                "Down from the capstone must follow the constellation toward its parent, not jump to Invest");
+            Assert.AreNotEqual("Orb0_20", selected.name, "Down should actually leave the capstone");
         }
 
         [UnityTest]

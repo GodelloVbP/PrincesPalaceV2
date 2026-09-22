@@ -28,7 +28,7 @@ MonoBehaviour:
     Weaknesses: 01000000
     Resistances: 0200000004000000
     SortOrder: 13
-    BreakShieldPoints: 8
+    BreakShieldPoints: 32
     StageScale: 1.45
     SlotSpan: 2
     SpritePath: Enemies/treant

@@ -44,6 +44,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, FightController.Wrap(7, 0));
         }
 
+        [Test]
+        public void FightNavigationContractOffersACharacterSelectButton()
+        {
+            Assert.IsNotNull(typeof(IFightNavigationTarget).GetMethod("EnterCharacterSelect"),
+                "Y/Triangle needs a dispatcher-owned fight action, not a second raw-input poll");
+        }
+
         private IEnumerator LoadFight()
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
@@ -76,6 +83,58 @@ namespace PrincesPalace.PlayModeTests
             _fight.MoveFocus(1);
             _fight.MoveFocus(1);
             Assert.AreEqual(3, _fight.FocusedVerbForTest, "wraps to MOVE, the top of the column");
+        }
+
+        [UnityTest]
+        public IEnumerator CharacterSelectStartsOnTheFrontLivingPartyMember()
+        {
+            yield return StandUpAFight();
+
+            var method = typeof(IFightNavigationTarget).GetMethod("EnterCharacterSelect");
+            Assert.IsNotNull(method, "the fight navigation contract has no Y/Triangle action");
+            method.Invoke((IFightNavigationTarget)_fight, null);
+            yield return null;
+
+            StringAssert.StartsWith("PartyHitArea", FocusName((IFightNavigationTarget)_fight),
+                "Y/Triangle should enter the existing party portrait/figure controls, not the enemy ring");
+        }
+
+        [UnityTest]
+        public IEnumerator UpFromAnInspectedEnemyMovesFocusToItsIntent()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.InspectMove(1);
+            yield return null;
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad), "precondition: the enemy itself is focused");
+
+            pad.MoveFocus(-1);
+            yield return null;
+
+            Assert.AreEqual("EnemyIntent0", FocusName(pad),
+                "Up from an enemy should focus the intent icon above that same enemy");
+            Assert.IsTrue(IsShown("IntentTooltip"), "focusing the intent icon should reveal its readable details");
+        }
+
+        [UnityTest]
+        public IEnumerator UpFromATargetedEnemyInspectsIntentWithoutLosingThePendingAttack()
+        {
+            yield return StandUpAFight();
+
+            var pad = (IFightNavigationTarget)_fight;
+            pad.ConfirmFocus();
+            yield return null;
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad), "precondition: ATTACK targets the front enemy");
+
+            pad.MoveFocus(-1);
+            yield return null;
+            Assert.AreEqual("EnemyIntent0", FocusName(pad));
+            Assert.IsTrue(IsShown("TargetPrompt"), "intent inspection must preserve the pending attack");
+
+            pad.MoveFocus(1);
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad), "Down returns to the same pending target");
+            Assert.IsTrue(IsShown("TargetPrompt"), "returning from intent must not cancel the pending attack");
         }
 
         [UnityTest]
@@ -127,8 +186,8 @@ namespace PrincesPalace.PlayModeTests
             _fight.MoveFocus(1);
             int second = _fight.HoveredEnemyIndexForTest;
 
-            Assert.AreEqual(0, first, "a first \"next\" press from no hover lands on the first living enemy");
-            Assert.AreEqual(1, second, "a second \"next\" press steps to the next living enemy");
+            Assert.AreEqual(1, first, "a fresh target pick starts on the front enemy, so next reaches enemy 1");
+            Assert.AreEqual(0, second, "a second next press wraps back to the front living enemy");
         }
 
         // THE OTHER HALF OF THE SAME FIX: a first "previous" press from no
@@ -184,15 +243,16 @@ namespace PrincesPalace.PlayModeTests
             var pad = (IFightNavigationTarget)_fight;
             pad.ConfirmFocus();
             yield return null;
-            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest,
-                "precondition: nothing hovered, the marker reads FocusedElement's implicit enemy 0");
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "a fresh target pick explicitly selects the front living enemy");
 
-            // UP: ProcessFight hands the wrapper raw -1, which Target depth
-            // negates to +1 (CycleTarget's "deeper" direction) -- one slot
-            // deeper than the enemy 0 a fresh pick already implies.
+            // UP opens the intent attached to the currently hovered enemy;
+            // target cycling remains on Left/Right while the pending attack
+            // stays intact.
             pad.MoveFocus(-1);
-            Assert.AreEqual(1, _fight.HoveredEnemyIndexForTest,
-                "first Up from a fresh pick steps one slot deeper than the implicit enemy 0, not onto it again");
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "opening intent must keep the front enemy as the pending target");
+            Assert.AreEqual("EnemyIntent0", FocusName(pad));
 
             // A WHOLE NEW SCENE, not Back-then-re-enter: _hoveredEnemyIndex is
             // a mouse-hover latch (OnEnemyUnhovered's own comment) that
@@ -203,7 +263,8 @@ namespace PrincesPalace.PlayModeTests
             pad = (IFightNavigationTarget)_fight;
             pad.ConfirmFocus();
             yield return null;
-            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest, "precondition: a new pick, nothing hovered yet");
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "a new pick must forget the old selector and return to the front living enemy");
 
             // DOWN: raw +1, negated to -1 (CycleTarget's "nearer" direction)
             // -- wraps to the deepest living enemy, the same place a SECOND
@@ -345,7 +406,6 @@ namespace PrincesPalace.PlayModeTests
 
             // And it stays with the focus as the stick walks the rack: enemy
             // 1 carries nothing, so the box has nothing to show and goes.
-            _fight.MoveFocus(1);
             _fight.MoveFocus(1);
             yield return null;
 

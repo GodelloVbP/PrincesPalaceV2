@@ -56,12 +56,18 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
 
-            // Plain swing: max(1, hero.Attack * 1.0) = 20, no defense = 20.
-            // Elemental rider: max(1, Rounding.AwayFromZero(20 * 20 / 100f))
-            // = max(1, 4) = 4, then through DamagePipeline.AfterDefences
-            // against a target with zero Fire resistance/defense and neutral
-            // affinity -- unmitigated, so it lands as the full 4.
-            Assert.AreEqual(100 - 24, foe.CurrentHealth,
+            // Plain swing: max(1, ComputeAttackDamage) = round(20 * 1.0 * 1.2)
+            // = 24 (neutral WeaponScaling/unarmed-STR fallback at Strength
+            // 10 contributes 0, times the 1.2x basic-attack coefficient), no
+            // defense on the foe = 24.
+            // Elemental rider: it is a FOREIGN element (Fire vs. this hit's
+            // Physical), so it is sized off actor.Attack, the raw stat, not
+            // the scaled swing -- max(1, Rounding.AwayFromZero(20 * 20 /
+            // 100f)) = max(1, 4) = 4, then through DamagePipeline.
+            // AfterDefences against a target with zero Fire
+            // resistance/defense and neutral affinity -- unmitigated, so it
+            // lands as the full 4.
+            Assert.AreEqual(100 - 28, foe.CurrentHealth,
                 "the elemental on-hit rider must land ON TOP OF the plain swing, not replace it");
 
             // Typed correctly: the plain swing counts as Physical (no kit, no
@@ -70,7 +76,7 @@ namespace PrincesPalace.Domain.Tests
             // "Other" (CombatMath.IsPhysical draws the same physical/not-physical
             // line DamagePipeline itself does).
             var line = session.Ledger.For("Hero");
-            Assert.AreEqual(20, line.PhysicalDealt, "the plain swing's own 20 damage");
+            Assert.AreEqual(24, line.PhysicalDealt, "the plain swing's own 24 damage");
             Assert.AreEqual(4, line.OtherDealt, "the Fire rider's own 4 damage, typed as non-physical");
         }
 
@@ -96,14 +102,18 @@ namespace PrincesPalace.Domain.Tests
             var bareSession = Session(new CombatEncounter(new[] { bareHero }, new[] { bare }));
             bareSession.ExecuteAttack(bare);
 
-            // Elemental raw = max(1, Rounding.AwayFromZero(20*20/100f)) = 4.
-            // Plain swing (Physical, no resistance either side) lands the
-            // same 20 on both targets; the elemental rider is the only
+            // Elemental raw is a FOREIGN element (Fire vs. this hit's
+            // Physical), so it is sized off actor.Attack, the raw stat:
+            // max(1, Rounding.AwayFromZero(20*20/100f)) = 4.
+            // Plain swing (Physical, no resistance either side) = round(20 *
+            // 1.0 * 1.2) = 24 on both targets (neutral WeaponScaling/
+            // unarmed-STR fallback contributes 0, times the 1.2x
+            // basic-attack coefficient); the elemental rider is the only
             // figure that differs. R/(R+100) at R=100 halves it:
             // max(1, 4*100/200) = 2.
-            Assert.AreEqual(1000 - 20 - 2, resisted.CurrentHealth,
+            Assert.AreEqual(1000 - 24 - 2, resisted.CurrentHealth,
                 "Fire resistance must reduce the elemental rider, not just the plain swing");
-            Assert.AreEqual(1000 - 20 - 4, bare.CurrentHealth,
+            Assert.AreEqual(1000 - 24 - 4, bare.CurrentHealth,
                 "fixture check: with no resistance the elemental rider lands its full, unmitigated 4");
         }
 
@@ -130,18 +140,22 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
 
-            // Same-element bonus = Rounding.AwayFromZero(117 * 41 / 100f)
-            //                    = Rounding.AwayFromZero(47.97) = 48.
-            // Total landed = 117 (plain swing, no defense) + 48 = 165 --
-            // the exact "117 arcane, +41% -> 165" figure named in the bug.
-            Assert.AreEqual(1000 - 165, foe.CurrentHealth,
+            // Plain swing = round(117 * 1.0 * 1.2) = round(140.4) = 140
+            // (neutral WeaponScaling/unarmed-STR fallback contributes 0,
+            // times the 1.2x basic-attack coefficient), not the raw 117 --
+            // this is a SAME-element affix, so it scales `damage`, the hit's
+            // own already-landed figure, not actor.Attack.
+            // Same-element bonus = Rounding.AwayFromZero(140 * 41 / 100f)
+            //                    = Rounding.AwayFromZero(57.4) = 57.
+            // Total landed = 140 (plain swing, no defense) + 57 = 197.
+            Assert.AreEqual(1000 - 197, foe.CurrentHealth,
                 "a same-element affix must scale the hit it rode in on, not add a small Attack-sized proc");
 
             // No separate "bonus Physical damage" proc line, and no split
-            // ledger entry -- the whole 165 counts as ONE hit of the actor's
+            // ledger entry -- the whole 197 counts as ONE hit of the actor's
             // own type, same as a plain swing with no modifier would.
             var line = session.Ledger.For("Hero");
-            Assert.AreEqual(165, line.PhysicalDealt, "the boosted hit is still all Physical, all on the swing's own bucket");
+            Assert.AreEqual(197, line.PhysicalDealt, "the boosted hit is still all Physical, all on the swing's own bucket");
             Assert.AreEqual(0, line.OtherDealt, "a same-element bonus must not also count as a foreign-element rider");
         }
 
@@ -154,7 +168,10 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
 
-            Assert.AreEqual(100 - 20, foe.CurrentHealth, "no modifier equipped, no bonus damage");
+            // Plain swing = round(20 * 1.0 * 1.2) = 24 (neutral
+            // WeaponScaling/unarmed-STR fallback contributes 0, times the
+            // 1.2x basic-attack coefficient).
+            Assert.AreEqual(100 - 24, foe.CurrentHealth, "no modifier equipped, no bonus damage");
             Assert.AreEqual(0, session.Ledger.For("Hero").OtherDealt);
         }
 
@@ -245,17 +262,19 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
             session.ExecuteAttack(foe);
 
-            // Swing damage 20 (no defense on the foe); heal =
-            // Rounding.AwayFromZero(20 * 15/100f) = Rounding.AwayFromZero(3.0) = 3.
-            Assert.AreEqual(53, hero.CurrentHealth, "50 + 3 healed from the lifesteal rider");
+            // Swing damage = round(20 * 1.0 * 1.2) = 24 (no defense on the
+            // foe; neutral WeaponScaling/unarmed-STR fallback contributes 0,
+            // times the 1.2x basic-attack coefficient); heal =
+            // Rounding.AwayFromZero(24 * 15/100f) = Rounding.AwayFromZero(3.6) = 4.
+            Assert.AreEqual(54, hero.CurrentHealth, "50 + 4 healed from the lifesteal rider");
         }
 
         [Test]
         public void Lifesteal_NeverHealsPastMaxHealth()
         {
             var hero = Fighter("Hero", true, maxHealth: 100, attack: 20, speed: 10);
-            // 98, not 95: the heal is now 3 (see the test above), so the
-            // starting health has to sit within 3 of the cap for this
+            // 98, not 95: the heal is now 4 (see the test above), so the
+            // starting health has to sit within 4 of the cap for this
             // fixture to still actually exercise the clamp rather than
             // landing under it unclamped.
             hero.CurrentHealth = 98;

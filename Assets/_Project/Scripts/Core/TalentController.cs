@@ -456,26 +456,19 @@ namespace PrincesPalace
             var character = Current;
             if (character == null) return;
 
-            // HIDDEN until earned, not greyed out -- the same call the
-            // Reckoning's reroll makes. A disabled button for a reward the
-            // player has never heard of reads as something broken rather than
-            // as something unearned.
-            //
-            // Interactable only when there is something to give back, so
-            // pressing it is never a no-op the player has to interpret.
+            // VISIBLE BEFORE IT IS EARNED, with the reward gate on the label.
+            // Hiding it made the feature look removed. Once earned it is
+            // interactable only when there is something to give back, so a
+            // press is never a no-op the player has to interpret.
             if (respecButton != null)
             {
                 bool earned = HasEarnedARespec(character);
-                respecButton.SetShown(earned);
-                if (earned)
-                {
-                    respecButton.interactable =
-                        character.HasAnythingToRespec(ContentDatabase.SpentBy(character));
-                    // Same seam as InvestButton above: RespecButton is themed
-                    // (Violet) now, so the interactable flag needs the plate
-                    // repainted explicitly.
-                    respecButton.GetComponent<ThemedButtonState>()?.Refresh();
-                }
+                respecButton.SetShown(true);
+                respecButton.interactable = earned
+                    && character.HasAnythingToRespec(ContentDatabase.SpentBy(character));
+                respecButton.GetComponentInChildren<TMP_Text>(includeInactive: true)
+                    ?.Set(earned ? UiStrings.TalentRespec : UiStrings.TalentRespecLocked);
+                respecButton.GetComponent<ThemedButtonState>()?.Refresh();
             }
 
             var unlocked = Unlocked;
@@ -1060,18 +1053,18 @@ namespace PrincesPalace
         // has one call site to update.
         private void HandleCancel() => Navigation.Go(Navigation.Hub);
 
-        // THE SHOULDER SHORTCUT (INavTabStrip, plan phase 3 item 2; owner
-        // hardware round 2, 2026-09-19: "RB LB scrolls you between
-        // different talent trees"). StepTab IS StepPath, verbatim -- the
+        // THE TRIGGER SHORTCUT (INavTabStrip, plan phase 3 item 2; owner
+        // hardware round 2, 2026-09-19: LT/RT scrolls you between
+        // different talent trees). StepTab IS StepPath, verbatim -- the
         // same rule INavCancelClaim/INavTabStrip's own header states for
-        // every implementor: the shoulder press and the on-screen arrow
+        // every implementor: the trigger pull and the on-screen arrow
         // both have to run through the ONE "what is the next path"
         // computation, or they could disagree about where the clamp lands.
         public void StepTab(int direction) => StepPath(direction);
 
-        // THE TRIGGER SHORTCUT (INavSectionStrip; owner hardware round 2,
+        // THE SHOULDER SHORTCUT (INavSectionStrip; owner hardware round 2,
         // 2026-09-19: "To go to the next character or prior you can press
-        // LT or RT"). StepSection IS StepCharacter, verbatim, for the same
+        // LB or RB"). StepSection IS StepCharacter, verbatim, for the same
         // "one computation, never two" reason StepTab is StepPath above it.
         public void StepSection(int direction) => StepCharacter(direction);
 
@@ -1200,20 +1193,27 @@ namespace PrincesPalace
                 }
             }
 
-            // THE DETAIL ACTIONS, re-resolved here -- overriding the skeleton's
-            // own Down/Up for exactly the selected orb, appended AFTER the
-            // skeleton links so it wins (RuntimeNavWiring.Apply writes links
-            // in order, a later one for the same node+direction replaces the
-            // earlier). Every other orb keeps its ordinary tree Down/Up --
-            // only the orb whose detail is actually on screen gains a way
-            // down into it, and only while investButton is worth reaching:
-            // NOT gated on `investButton.gameObject.activeSelf` here, the
-            // same call RewardTrackController.WireNodes makes for its own
-            // collect button ("DOWN FROM EVERY DISC... Unity never routes a
-            // Move onto an inactive Selectable" -- true here whether or not a
+            // THE DETAIL ACTION, re-resolved here -- overriding the skeleton's
+            // own Down/Up for the selected orb, appended AFTER the skeleton
+            // links so it wins (RuntimeNavWiring.Apply writes links in order,
+            // a later one for the same node+direction replaces the earlier).
+            // ONLY when that orb has no skeleton parent of its own (owner's
+            // "Ultimate Down" call, 2026-09-19 hardware round: Down from a
+            // selected orb follows the constellation to its skeleton parent;
+            // it is only a ROOT orb -- one with nothing below it in the tree
+            // -- whose Down instead reaches Invest). Every other orb keeps
+            // its ordinary tree Down/Up, gated the same way this method
+            // already gates it: only while investButton is worth reaching,
+            // NOT on `investButton.gameObject.activeSelf`, the same call
+            // RewardTrackController.WireNodes makes for its own collect
+            // button ("DOWN FROM EVERY DISC... Unity never routes a Move
+            // onto an inactive Selectable" -- true here whether or not a
             // selection exists to begin with, so a hidden or NotAuthored
-            // investButton is simply never reached).
-            if (_selectedSlot >= 0)
+            // investButton is simply never reached). Reachable from Invest's
+            // own Up regardless, and from the right-arrow column above,
+            // since a root orb with no skeleton parent has no other Down
+            // link to conflict with.
+            if (_selectedSlot >= 0 && _skeletonDownParent[_selectedSlot] < 0)
             {
                 var selectedOrb = OrbAt(_selectedSlot);
                 if (selectedOrb != null && investButton != null)

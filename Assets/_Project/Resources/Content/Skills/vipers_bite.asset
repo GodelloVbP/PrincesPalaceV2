@@ -52,29 +52,29 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: coil
+      - id: ritual
         render: sprite
-        place: caster-centre
+        place: target-centre
         follow: 0
         at: release
         offset: 0
-        path: Spells/prismatic_orb_wind_charge
-        seconds: 0.3
+        path: Spells/vipers_bite
+        seconds: 0.72
         fps: 0
         startFrame: 0
         until: once
-        fade: 0
+        fade: 0.14
         dx: 0
         dy: 0
         scale: 1
-        size: 250
-        facing: auto
-        sort: ground
+        size: 350
+        facing: none
+        sort: effects
         align: 
-        punch: 0
-        glow: 1.05
-        impactX: -1
-        impactY: -1
+        punch: 0.25
+        glow: 1.2
+        impactX: 0.5
+        impactY: 0.49
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -102,108 +102,58 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: jaws
-        render: sprite
-        place: caster-centre
-        follow: 0
-        at: release
-        offset: 0.02
-        path: Spells/mud_burst
-        seconds: 0.26
-        fps: 0
-        startFrame: 0
-        until: loop
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 240
-        facing: auto
-        sort: effects
-        align: 
-        punch: 0
-        glow: 1.15
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0.26
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: venom
-        render: sprite
+      - id: settle
+        render: emitter
         place: target-centre
         follow: 0
         at: hit
         offset: 0
-        path: Spells/prismatic_orb_earth_drops
-        seconds: 0.4
+        path: 
+        seconds: 0
         fps: 0
         startFrame: 0
-        until: once
-        fade: 0.16
+        until: 
+        fade: 0
         dx: 0
         dy: 0
         scale: 1
-        size: 300
-        facing: none
+        size: 0
+        facing: 
         sort: effects
         align: 
-        punch: 0.24
-        glow: 1.2
+        punch: 0
+        glow: 0
         impactX: -1
         impactY: -1
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
         emitter:
-          path: 
+          path: Spells/vipers_bite_particles
           rate: 0
-          burst: 0
+          burst: 12
           window: 0
           sourceDx: 0
           sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
+          spreadDegrees: 80
+          aimDegrees: 270
+          speedMin: 65
+          speedMax: 190
           inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
+          drag: 1.8
+          gravity: -620
+          lifeMin: 0.3
+          lifeMax: 0.58
+          sizeMin: 0.12
+          sizeMax: 0.3
+          spinMin: -180
+          spinMax: 180
+          fadeFrom: 0.55
+          endScale: 0.72
+          seed: 1067
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.28
+      hitCueSeconds: 0.3
     SortOrder: 9
     Status: 0
     HasStatus: 1

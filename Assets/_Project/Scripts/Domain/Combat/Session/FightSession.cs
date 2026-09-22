@@ -720,7 +720,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             AppendMessage($"{verbPhrase} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             RecordActorVoice(actor);
-            ApplyFinalDamage(actor, target, damage);
+            ApplyFinalDamage(actor, target, damage, physicalMove: true);
 
             // Runic's tempo rider: a PLAIN swing (this method, never a skill
             // cast -- see CastSkill, which never calls this)
@@ -751,7 +751,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // and pay out whatever a kill owes on top of the ledger's own row.
         // The row and the rider flag are DealDamage's, not this method's --
         // see SettleDeath (FightSession.Ledger.cs) for why they moved.
-        private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage)
+        private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage, bool physicalMove)
         {
             // Read once and reused below for the modifier riders -- see
             // ApplyModifierOnHitRiders' own header on why a rider needs to
@@ -764,7 +764,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Sharp Horns T3 leaves its mark on a target that SURVIVED. Not on
             // a corpse: shredding the armour of something already dead is a log
             // line about nothing.
-            ApplyDefenseShred(actor, target);
+            ApplyDefenseShred(actor, target, physicalMove);
 
             // Black Ram Mode splashes on every landed hit, kill or no kill --
             // unlike Trample's kill splash just below, which is a different rule

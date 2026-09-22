@@ -28,7 +28,7 @@ MonoBehaviour:
     Weaknesses: 0500000008000000
     Resistances: 0600000007000000
     SortOrder: 5
-    BreakShieldPoints: 2
+    BreakShieldPoints: 8
     StageScale: 1
     SlotSpan: 1
     SpritePath: Enemies/bog_witch

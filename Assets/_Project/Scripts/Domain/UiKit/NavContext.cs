@@ -113,18 +113,20 @@ namespace PrincesPalace.Domain.UiKit
             Cancel?.Invoke();
         }
 
-        // THE SHOULDER SHORTCUT'S ONLY EFFECT, offered to whichever context
-        // is top the same way Cancel is (NavigationInputModule's own
+        // THE TRIGGER SHORTCUT'S ONLY EFFECT (owner's 2026-09-19 hardware-
+        // round call: LT/RT step tabs), offered to whichever context is top
+        // the same way Cancel is (NavigationInputModule's own
         // ordinary-context branch calls both off `topAtStart`). A no-op
         // when this context declares no tab strip -- Hub, RelicDraft, the
         // glossary and every other context built without a `tabStrip`
-        // argument answer null here, so a shoulder press on any of them is
+        // argument answer null here, so a trigger pull on any of them is
         // simply absorbed, not routed anywhere by accident.
         public void RaiseTabStep(int direction) => _tabStrip?.Invoke()?.StepTab(direction);
 
-        // THE TRIGGER SHORTCUT'S ONLY EFFECT, offered off `topAtStart` the
-        // same way RaiseTabStep is and absorbed the same way by a context
-        // that declares no section strip.
+        // THE SHOULDER SHORTCUT'S ONLY EFFECT (owner's 2026-09-19 hardware-
+        // round call: LB/RB step sections/characters), offered off
+        // `topAtStart` the same way RaiseTabStep is and absorbed the same
+        // way by a context that declares no section strip.
         public void RaiseSectionStep(int direction) => _sectionStrip?.Invoke()?.StepSection(direction);
 
         // THE START BUTTON'S ONLY EFFECT. Absorbed, not forwarded, by a

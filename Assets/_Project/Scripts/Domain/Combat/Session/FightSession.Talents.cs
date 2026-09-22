@@ -775,24 +775,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // rather than allowed negative: below zero it would start ADDING damage
         // through CombatMath's subtraction, a different mechanic than the one
         // authored.
-        private void ApplyDefenseShred(CombatantState actor, CombatantState target)
+        private void ApplyDefenseShred(CombatantState actor, CombatantState target, bool physicalMove)
         {
             int shred = actor?.Talents.Best(TalentEffectType.ShredDefenseOnHit) ?? 0;
-            if (shred <= 0 || target == null || !target.IsAlive) return;
-            if (target.PhysicalDefense <= 0 && target.MagicalDefense <= 0) return;
+            if (!physicalMove || shred <= 0 || target == null || !target.IsAlive) return;
+            if (target.PhysicalDefense <= 0) return;
 
-            // A FLAT WRITE TO BOTH broad Defenses, floored at 0 each -- there
-            // is no longer one generic `Defense` field for this to shred, so
-            // the same magnitude lands on both PhysicalDefense and
-            // MagicalDefense rather than being split or doubled.
             int beforePhysical = target.PhysicalDefense;
-            int beforeMagical = target.MagicalDefense;
             target.PhysicalDefense = System.Math.Max(0, target.PhysicalDefense - shred);
-            target.MagicalDefense = System.Math.Max(0, target.MagicalDefense - shred);
-
-            int shredded = (beforePhysical - target.PhysicalDefense) + (beforeMagical - target.MagicalDefense);
+            int shredded = beforePhysical - target.PhysicalDefense;
             if (shredded > 0)
             {
+                target.PermanentPhysicalDefenseShred += shredded;
                 AppendMessage($"{actor.Name}'s horns leave {target.Name}'s guard {shredded} thinner - permanently.");
             }
         }

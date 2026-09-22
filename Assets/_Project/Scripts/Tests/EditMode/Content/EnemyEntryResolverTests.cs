@@ -103,8 +103,9 @@ namespace PrincesPalace.Domain.Tests
         {
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(maxHealth: 600) }, out var resolved, out _);
 
-            // 600 * (1/40) = 15, per EnemyEntryResolver.BreakShieldPerHealth.
-            Assert.AreEqual(15, resolved[0].BreakShieldPoints);
+            // 600 * (1/10) = 60. The old 15-point meter broke four times as
+            // often, which let a three-character party keep enemies reeling.
+            Assert.AreEqual(60, resolved[0].BreakShieldPoints);
         }
 
         [Test]
@@ -112,7 +113,7 @@ namespace PrincesPalace.Domain.Tests
         {
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(maxHealth: 1) }, out var resolved, out _);
 
-            Assert.GreaterOrEqual(resolved[0].BreakShieldPoints, 2,
+            Assert.GreaterOrEqual(resolved[0].BreakShieldPoints, 8,
                 "A monster this fragile should still get a real, if small, stagger meter rather than breaking on the first hit");
         }
 

@@ -120,8 +120,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void BeetleAndTreant_KeepTheirAuthoredBreakShield()
         {
-            Assert.AreEqual(4, Resolved["beetle"].BreakShieldPoints, "beetle: breakShieldPoints");
-            Assert.AreEqual(8, Resolved["treant"].BreakShieldPoints, "treant: breakShieldPoints");
+            Assert.AreEqual(16, Resolved["beetle"].BreakShieldPoints, "beetle: breakShieldPoints");
+            Assert.AreEqual(32, Resolved["treant"].BreakShieldPoints, "treant: breakShieldPoints");
         }
 
         // The bog witch's affinity pair, pinned because it is the one row on

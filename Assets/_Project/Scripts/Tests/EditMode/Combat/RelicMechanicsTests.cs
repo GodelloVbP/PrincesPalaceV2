@@ -933,8 +933,14 @@ namespace PrincesPalace.Domain.Tests
             session.ExecuteAttack(foe);
 
             int damageDealt = 999999 - foe.CurrentHealth;
-            Assert.AreEqual(20, damageDealt, "20 Attack, no defense, no variance -- an exact 20-point swing");
-            Assert.AreEqual(52, hero.CurrentHealth, "10% of 20 = 2, healed on top of 50");
+            // 20 Attack, no defense, no variance, neutral WeaponScaling/
+            // unarmed-STR fallback (contributes 0 at Strength 10) times the
+            // 1.2x basic-attack coefficient: round(20 * 1.0 * 1.2) = 24.
+            Assert.AreEqual(24, damageDealt, "20 Attack at the 1.2x basic-attack coefficient -- a 24-point swing");
+            // 10% of 24 = Rounding.AwayFromZero(2.4) = 2, healed on top of
+            // 50 -- unchanged from the pre-1.2x figure by coincidence of
+            // rounding (2.4 still rounds down to 2, same as the old 2.0).
+            Assert.AreEqual(52, hero.CurrentHealth, "10% of 24 = 2, healed on top of 50");
         }
     }
 }

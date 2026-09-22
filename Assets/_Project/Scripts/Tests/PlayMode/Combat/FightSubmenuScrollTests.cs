@@ -197,9 +197,9 @@ namespace PrincesPalace.PlayModeTests
 
             var viewport = Rect("SubmenuViewport");
 
-            // Selection opens at -1, so the first step lands on row 0 and the
-            // twelfth on row 11 -- the last entry in the satchel.
-            for (int i = 0; i < SatchelSize; i++)
+            // Row 0 is visibly selected as soon as the list opens, so eleven
+            // steps reach row 11 -- the last entry in the satchel.
+            for (int i = 0; i < SatchelSize - 1; i++)
             {
                 _fight.MoveFocus(1);
                 yield return null;
@@ -233,7 +233,7 @@ namespace PrincesPalace.PlayModeTests
             var viewport = Rect("SubmenuViewport");
             float resting = content.anchoredPosition.y;
 
-            for (int i = 0; i < SatchelSize; i++)
+            for (int i = 0; i < SatchelSize - 1; i++)
             {
                 _fight.MoveFocus(1);
                 yield return null;

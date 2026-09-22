@@ -126,11 +126,24 @@ namespace PrincesPalace.PlayModeTests
             yield return MoveUp(); // root -> the centre tier-1 child (the convergence convention)
             AssertSelectedName("Orb0_2", "Up from the root should reach the centre tier-1 stone");
 
-            yield return PressSubmit(); // OnOrbPressed -> selects this orb, reveals the detail panel
-            yield return MoveDown(); // Down from the SELECTED orb reaches InvestButton
+            yield return PressSubmit(); // OnOrbPressed -> selects this orb (refused, so no auto-kindle), reveals the detail panel
+
+            // Down from a tier-1 orb now follows the constellation to its
+            // skeleton parent (the root) rather than reaching InvestButton --
+            // the owner's "Ultimate Down" call, 2026-09-19 hardware round:
+            // only a root orb (no skeleton parent) links Down to Invest. This
+            // is a focus move only (no click), so _selectedSlot stays on the
+            // tier-1 orb -- reaching InvestButton from here now goes through
+            // the root's own Left/Right arrow links instead (the right-arrow
+            // column production change 4 keeps Invest reachable from).
+            yield return MoveDown();
+            AssertSelectedName("Orb0_0", "Down from a selected tier-1 orb should follow the tree to its root");
+
+            yield return MoveRight(); // root -> nextPathButton (one-wide tier's own side link)
+            yield return MoveRight(); // nextPathButton -> InvestButton (the right-arrow column)
             AssertSelectedName("InvestButton", "should be standing on InvestButton before the refused press");
 
-            yield return PressSubmit(); // Kindle() -> TalentOps.Kindle refuses: PrerequisiteMissing
+            yield return PressSubmit(); // Kindle() -> TalentOps.Kindle refuses: PrerequisiteMissing, still against the tier-1 orb
 
             Assert.AreEqual(0, character.unlockedTalentIds.Count,
                 "a tier-1 orb pressed before its root is unlocked should not have kindled anything");

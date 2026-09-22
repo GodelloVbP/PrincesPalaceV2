@@ -61,20 +61,22 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
-        // Steps the tab strip with the shoulder shortcut (phase 3 item 2)
-        // rather than Move -- a required action in its own right (section
-        // 13's own checklist: "stick across every tab... with the shoulder
-        // buttons... as well as Move"), and the more direct of the two paths
-        // this segment could take. Capped rather than unbounded: a strip
-        // that never reaches Options is this test's own failure to report,
-        // not an infinite loop to hang the suite on.
+        // Steps the tab strip with the trigger shortcut (phase 3 item 2;
+        // reassigned from the shoulders to the triggers by the owner's
+        // 2026-09-19 hardware-round call) rather than Move -- a required
+        // action in its own right (section 13's own checklist: "stick
+        // across every tab... with the shoulder buttons... as well as
+        // Move"), and the more direct of the two paths this segment could
+        // take. Capped rather than unbounded: a strip that never reaches
+        // Options is this test's own failure to report, not an infinite
+        // loop to hang the suite on.
         private IEnumerator StepTabsUntilOptions()
         {
             int optionsIndex = SystemMenuTabs.IndexOf(SystemMenuTab.Options);
             int guard = 0;
             while (_menu.SelectedIndex != optionsIndex && guard < 8)
             {
-                yield return PressTabNext();
+                yield return PressTriggerRight();
                 guard++;
             }
 

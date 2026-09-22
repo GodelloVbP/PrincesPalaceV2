@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
 
@@ -64,6 +65,7 @@ namespace PrincesPalace
         private float _armedFor;
 
         private HoldToConfirm _hold;
+        private bool _gamepadHoldActive;
 
         // Exposed for tests: "which exit is armed" is the whole of the
         // two-press rule, and asserting it beats asserting a label.
@@ -263,12 +265,32 @@ namespace PrincesPalace
 
         private void Update()
         {
+            bool selected = abandonHold != null && EventSystem.current != null
+                && EventSystem.current.currentSelectedGameObject == abandonHold.gameObject;
+            if (NavigationInputModule.LastInputWasPad && selected && Input.GetButton("Submit"))
+            {
+                _gamepadHoldActive = true;
+                DriveGamepadAbandonHold(true);
+            }
+            else if (_gamepadHoldActive)
+            {
+                _gamepadHoldActive = false;
+                DriveGamepadAbandonHold(false);
+            }
+
             if (_armed < 0) return;
 
             // UNSCALED. This pane only ever runs while the menu has the game
             // paused at timeScale 0, so Time.deltaTime here is exactly zero and
             // an armed exit would stay armed forever.
             Advance(Time.unscaledDeltaTime);
+        }
+
+        public void DriveGamepadAbandonHold(bool held)
+        {
+            if (_hold == null) return;
+            if (held) _hold.Begin();
+            else _hold.Cancel();
         }
 
         // Split from Update so it can be tested without waiting out four

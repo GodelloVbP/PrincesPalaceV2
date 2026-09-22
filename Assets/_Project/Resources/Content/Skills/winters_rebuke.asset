@@ -52,114 +52,14 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: craze
-        render: sprite
-        place: caster
-        follow: 0
-        at: release
-        offset: 0
-        path: Spells/prismatic_orb_water_charge
-        seconds: 0.28
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 260
-        facing: auto
-        sort: ground
-        align: 
-        punch: 0
-        glow: 1.1
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: sheet
-        render: sprite
-        place: caster-centre
-        follow: 0
-        at: release
-        offset: 0.02
-        path: Spells/prismatic_orb_water_core
-        seconds: 0.26
-        fps: 0
-        startFrame: 0
-        until: loop
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 210
-        facing: auto
-        sort: effects
-        align: 
-        punch: 0
-        glow: 1.2
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0.26
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: rime
+      - id: ritual
         render: sprite
         place: target-centre
         follow: 0
-        at: hit
+        at: release
         offset: 0
-        path: Spells/frost_flare
-        seconds: 0.36
+        path: Spells/winters_rebuke
+        seconds: 0.72
         fps: 0
         startFrame: 0
         until: once
@@ -167,14 +67,14 @@ MonoBehaviour:
         dx: 0
         dy: 0
         scale: 1
-        size: 320
+        size: 340
         facing: none
         sort: effects
         align: 
-        punch: 0.2
-        glow: 1.35
+        punch: 0.22
+        glow: 1.25
         impactX: 0.5
-        impactY: 0.18
+        impactY: 0.46
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -202,8 +102,58 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
+      - id: settle
+        render: emitter
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        facing: 
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: Spells/winters_rebuke_particles
+          rate: 0
+          burst: 14
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 55
+          aimDegrees: 270
+          speedMin: 80
+          speedMax: 230
+          inherit: 0
+          drag: 1.8
+          gravity: -520
+          lifeMin: 0.28
+          lifeMax: 0.55
+          sizeMin: 0.12
+          sizeMax: 0.3
+          spinMin: -180
+          spinMax: 180
+          fadeFrom: 0.55
+          endScale: 0.72
+          seed: 1358
+          weights: []
       layerFormat: 1
-      hitCueSeconds: 0.28
+      hitCueSeconds: 0.3
     SortOrder: 8
     Status: 8
     HasStatus: 1

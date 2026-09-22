@@ -24,14 +24,16 @@ namespace PrincesPalace.Domain.UiKit
         bool ClaimCancel();
     }
 
-    // FIRST -- and only -- OFFER OF A TAB-STEP PRESS: the shoulder-button
+    // FIRST -- and only -- OFFER OF A TAB-STEP PRESS: the trigger (LT/RT)
     // shortcut docs/GAMEPAD_NAVIGATION_PLAN.md section 7's "Tabs" contract
-    // asks for (plan phase 3, item 2). Same shape as INavCancelClaim right
-    // above it and for the identical reason: a context declares this by
-    // implementing it, and a context that does not (every one but
-    // SystemMenu's) simply never sees the press -- NavContext.RaiseTabStep
-    // no-ops when its own tab-strip provider is null, so nothing has to
-    // remember to check "am I a tab strip" at the call site.
+    // asks for (plan phase 3, item 2; reassigned from the shoulders to the
+    // triggers by the owner's 2026-09-19 hardware-round call). Same shape
+    // as INavCancelClaim right above it and for the identical reason: a
+    // context declares this by implementing it, and a context that does not
+    // (every one but SystemMenu's) simply never sees the press --
+    // NavContext.RaiseTabStep no-ops when its own tab-strip provider is
+    // null, so nothing has to remember to check "am I a tab strip" at the
+    // call site.
     //
     // Contract: StepTab moves the selection ONE step, wrapping, in the
     // given direction (-1 previous tab, +1 next), through the SAME
@@ -43,10 +45,11 @@ namespace PrincesPalace.Domain.UiKit
         void StepTab(int direction);
     }
 
-    // FIRST -- and only -- OFFER OF A SECTION-STEP PRESS: the trigger
-    // shortcut (LT/RT), the same shape as INavTabStrip right above it and
-    // declared the same way, by a context that has a second axis of
-    // navigation ABOVE its tabs. A screen that does not implement it never
+    // FIRST -- and only -- OFFER OF A SECTION-STEP PRESS: the shoulder
+    // shortcut (LB/RB, reassigned from the triggers by the owner's
+    // 2026-09-19 hardware-round call), the same shape as INavTabStrip right
+    // above it and declared the same way, by a context that has a second
+    // axis of navigation ABOVE its tabs. A screen that does not implement it never
     // sees the press, because NavContext.RaiseSectionStep no-ops when its
     // own section-strip provider is null.
     //

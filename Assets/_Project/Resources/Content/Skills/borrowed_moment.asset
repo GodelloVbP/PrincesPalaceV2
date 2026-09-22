@@ -51,29 +51,29 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: clock
+      - id: ritual
         render: sprite
         place: caster-centre
         follow: 0
         at: release
         offset: 0
-        path: Spells/prismatic_orb_wind_charge
-        seconds: 0.32
+        path: Spells/borrowed_moment
+        seconds: 0.72
         fps: 0
         startFrame: 0
         until: once
-        fade: 0
+        fade: 0.14
         dx: 0
         dy: 0
         scale: 1
-        size: 240
-        facing: auto
+        size: 330
+        facing: none
         sort: effects
         align: 
-        punch: 0
-        glow: 1.15
-        impactX: -1
-        impactY: -1
+        punch: 0.12
+        glow: 1.2
+        impactX: 0.5
+        impactY: 0.5
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -101,123 +101,23 @@ MonoBehaviour:
           endScale: 1
           seed: 0
           weights: []
-      - id: sweep
-        render: sprite
+      - id: settle
+        render: emitter
         place: caster-centre
         follow: 0
-        at: release
+        at: hit
         offset: 0
-        path: Spells/prismatic_orb_wind_core
-        seconds: 0.24
+        path: 
+        seconds: 0
         fps: 0
         startFrame: 0
-        until: loop
+        until: 
         fade: 0
         dx: 0
         dy: 0
         scale: 1
-        size: 200
-        facing: auto
-        sort: effects
-        align: 
-        punch: 0
-        glow: 1.1
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0.24
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: flare
-        render: sprite
-        place: target-centre
-        follow: 0
-        at: hit
-        offset: 0
-        path: Spells/prismatic_orb_wind_contact
-        seconds: 0.3
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 280
-        facing: none
-        sort: effects
-        align: 
-        punch: 0.16
-        glow: 1.25
-        impactX: -1
-        impactY: -1
-        aspect: 0
-        travelSeconds: 0
-        travelDelay: 0
-        emitter:
-          path: 
-          rate: 0
-          burst: 0
-          window: 0
-          sourceDx: 0
-          sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
-          inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
-          weights: []
-      - id: unwind
-        render: sprite
-        place: target-centre
-        follow: 0
-        at: hit
-        offset: 0.16
-        path: Spells/prismatic_orb_wind_drops
-        seconds: 0.3
-        fps: 0
-        startFrame: 0
-        until: once
-        fade: 0.18
-        dx: 0
-        dy: 0
-        scale: 1
-        size: 240
-        facing: none
+        size: 0
+        facing: 
         sort: effects
         align: 
         punch: 0
@@ -228,31 +128,31 @@ MonoBehaviour:
         travelSeconds: 0
         travelDelay: 0
         emitter:
-          path: 
+          path: Spells/borrowed_moment_particles
           rate: 0
-          burst: 0
+          burst: 11
           window: 0
           sourceDx: 0
           sourceDy: 0
-          spreadDegrees: 0
-          aimDegrees: 0
-          speedMin: 0
-          speedMax: 0
+          spreadDegrees: 170
+          aimDegrees: 90
+          speedMin: 45
+          speedMax: 145
           inherit: 0
-          drag: 0
-          gravity: 0
-          lifeMin: 0
-          lifeMax: 0
-          sizeMin: 1
-          sizeMax: 1
-          spinMin: 0
-          spinMax: 0
-          fadeFrom: 1
-          endScale: 1
-          seed: 0
+          drag: 1.8
+          gravity: 180
+          lifeMin: 0.35
+          lifeMax: 0.7
+          sizeMin: 0.1
+          sizeMax: 0.25
+          spinMin: -180
+          spinMax: 180
+          fadeFrom: 0.55
+          endScale: 0.72
+          seed: 1455
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.26
+      hitCueSeconds: 0.3
     SortOrder: 13
     Status: 0
     HasStatus: 0
