@@ -6,11 +6,21 @@ handoffs (`run_map`, `relic_screen`, `shop`, `talent_tree`, `battle_ui`).
 
 ## When a handoff is required
 
-Any new screen, or any major rework of an existing screen's layout or
-interaction model. Not required for a bug fix, a balance tweak, or an
-additive change that doesn't change a screen's structure.
+Use the full handoff below for a novel screen or a major rework with new layout,
+interaction, state, or economy risk. Use the short form for a screen that
+follows an established project pattern and does not introduce those risks.
+A handoff is not required for a bug fix, a balance tweak, or an additive change
+that doesn't change a screen's structure.
 
-## Required README sections
+## Short form for established-pattern screens
+
+Record: overview and precedent screen; authoritative files; layout deltas at
+1920x1080; states/interactions that differ from the precedent; engine notes;
+explicit out-of-scope; and acceptance evidence. Expand to the full form if any
+novel layout, interaction, state, or economy decision appears during design or
+implementation.
+
+## Full README sections
 
 The handoffs that shipped fastest and needed the fewest clarification
 rounds were the ones that pre-answered questions before they were asked.

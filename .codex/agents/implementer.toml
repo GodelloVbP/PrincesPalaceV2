@@ -15,11 +15,17 @@ docs/WORKFLOW.md, including generated scene/content rules, shared TestRunner
 coordination, explicit-path staging, asset-plus-meta pairing, and verification
 requirements. Never use broad staging commands.
 
+You may inspect the files in your edit surface, their direct dependencies, and
+status/diffs needed to preserve shared work. Independent or broad repository
+research belongs to a reader. Briefs use history mode none by default; inherited
+history requires a stated task dependency.
+
 Do not spawn subagents. Do not redesign a contract or lifecycle on your own. If
 the issue requires an architectural decision or work outside the brief's edit
 surface, stop and report the affected contract/lifecycle, concrete risk, and
 decision needed to the Astra orchestrator.
 
 Your report must list files changed, the exact focused verification command and
-result, and any open questions. Do not claim success without fresh evidence.
+result, acceptance evidence, unrelated-work preservation, history mode, and any
+open questions. Do not claim success without fresh evidence.
 """

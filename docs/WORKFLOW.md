@@ -45,7 +45,19 @@ References: (path + section -- never pasted text)
 Verification: (exact command)
 Stop conditions: report at completion, at a blocker that changes the plan,
   or when a rule seems wrong.
+History mode: none, or inherited (with reason)
 ```
+
+Independent workers start with minimal history (`fork_turns = "none"`) by
+default. The brief carries compact current state plus the policy references
+needed for the assignment. Inherit history only when the work depends on prior
+conversation that cannot be represented compactly; state why in the brief.
+
+Launch checklist: one bounded objective; one owner and exact edit surface;
+compact current state; path-and-section references; selected verification from
+`docs/TESTING.md`; stop conditions; history mode. Completion checklist: changed
+files or read evidence; exact command and result; acceptance evidence; preserved
+unrelated work; open questions; history mode.
 
 Fable keeps a task record per session: acceptance, owner, edit surface,
 dependencies, status. Combine tightly coupled issues into one assignment.
@@ -55,7 +67,10 @@ an owner while its context on the issue is still relevant.
 ## 3. Ownership and context renewal
 
 The owner does diagnosis, implementation, focused tests, and correction for
-its issue. When its context is largely obsolete at a natural checkpoint it
+its issue. A reader performs independent research. An implementer may read its
+owned files, direct dependencies, and status/diffs needed to preserve shared
+work; it does not need a separate reader for those implementation-local facts.
+When its context is largely obsolete at a natural checkpoint it
 writes a state record to the scratchpad (findings, decisions, files
 changed, verification results, next action); Fable ends the assignment and
 starts a fresh owner from the record.
@@ -82,7 +97,9 @@ tokens; the average worker turn carries ~212K tokens of context):
 - Reuse recorded findings (`AUDIT.md`, prior state records) before
   re-investigating something already known.
 - Briefs reference a path + section, never paste the text.
-- Report once: at completion, or at a plan-changing blocker.
+- Report once: at completion, or at a plan-changing blocker. Include history
+  mode, files changed or `file:line` evidence, exact verification and result,
+  acceptance evidence, unrelated-work preservation, and open questions.
 - Screenshots only when the brief names a visual acceptance condition —
   smallest set that proves it, conclusion stated in the report.
 - Shell searches (`find`/`grep`/`rg` in Bash) MUST name a root
@@ -93,13 +110,17 @@ tokens; the average worker turn carries ~212K tokens of context):
 ## 5. Verification
 
 The implementer runs focused tests while editing. Once editing is stable,
-one verifier runs the full gate exactly once, in one foreground call, and
-reports the state it verified (HEAD sha + uncommitted file list). Prefer a
-fresh verifier when the owner's context is already large.
+one verifier runs the selected change-class gate exactly once, in one
+foreground call, and reports the state it verified (HEAD sha + uncommitted file
+list). `docs/TESTING.md` is the canonical gate matrix. Game/runtime/editor,
+content, generated artifact, test, and dependency changes require the full
+Unity gate. Agent/workflow prose or configuration alone uses the focused policy
+gate and does not run Unity. Prefer a fresh verifier when the owner's context
+is already large.
 
-Rerun the gate WHEN: relevant code, content, generated artifacts, test
-config or dependencies changed; a failure was fixed; the earlier result was
-incomplete or invalid. Not a reason: time passed, reassurance.
+Rerun the gate WHEN: files relevant to the selected gate changed after its
+snapshot; a failure was fixed; the earlier result was incomplete or invalid.
+Hook-specific triggers still apply. Not a reason: time passed, reassurance.
 
 `-BuildScenes`/`-BuildContent` only on their documented triggers
 (`docs/TESTING.md`). No progress polling — block on the gate with a long
@@ -133,7 +154,7 @@ Two sessions can share one working tree and one TestRunner pair.
 ## 8. Lifecycle and bugs
 
 Feature lifecycle: design gate for real scope (confirm shape/economy before
-code; smaller work uses the intent header, §2) -> handoff doc
+code; smaller work uses the intent header, §2) -> risk-scaled handoff when required
 (`docs/handoffs/<slug>/`, shape: `docs/HANDOFF_TEMPLATE.md`) -> build ->
 gap audit (`GAP_AUDIT.md`, same folder) -> verify (§5, plus screenshot for
 UI-visible changes) -> land -> update `docs/CODE_MAP.md` if a screen,

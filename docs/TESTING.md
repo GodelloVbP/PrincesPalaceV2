@@ -47,13 +47,30 @@ Triage order, cheapest first:
 Every Unity launch in `tools/` goes through `Start-UnityQuiet` in
 `tools/unity_path.ps1` -- never `Start-Process` on `Unity.exe` directly.
 
+### Canonical final-gate matrix
+
+Select one row for the complete change set. If several rows apply, use the
+strongest gate. A gate snapshot is invalid as soon as a file relevant to that
+gate changes. Hook-specific checks and the build triggers below remain additive.
+
+| Change class | Final gate |
+|---|---|
+| Game/runtime/editor code; content or generated artifacts; Unity tests or test tooling; game/package/dependency configuration | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1`, plus every applicable `-BuildScenes`/`-BuildContent`, screenshot, focus, schema, or tooling check below |
+| Agent definitions, orchestration configuration, or workflow/prose docs only | Focused syntax/format checks for the touched formats, scoped `git diff --check`, and scoped diff review against the acceptance list; then one independent verifier runs that named policy gate. Do not run Unity solely for this class. |
+
+Agent/workflow configuration means files that configure agents or their process
+(for example `AGENTS.md`, `.codex/agents/*.toml`, and workflow documentation).
+Unity/game configuration means files consumed by the game, Editor, build,
+packages, tests, or runtime; it belongs to the full-gate row even when its
+format is prose-like or declarative.
+
 | Situation | Command |
 |---|---|
 | Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng` -- each a FOLDER under `Tests/EditMode/` and `Tests/PlayMode/`, so a test's area is simply where its file sits; `-List` shows every class with its area, marking each `[D]` or `[U]` for its host) |
 | ... and how long that takes | Depends on whether the slice needs Unity. All-`[D]` runs under `dotnet test`, no Editor: ~4s (`test.ps1 wool` was ~12s, is 3.7s). Any `[U]` class boots Unity; any PlayMode class makes the slice PlayMode-bound -- `test.ps1 combat` is ~110s either way (47/122 classes are PlayMode, 93s of the run). The EditMode half of a mixed slice still costs nothing extra |
 | Checking the fast host against the slow one | `tools/test.ps1 <slice> -Unity` forces the whole slice through Unity. Use when a dotnet result looks wrong, or after touching `tools/domain-tests`. Both hosts compile the same files, not the same NUnit (Unity ships 3.5, the host pins 3.14) -- `tools/domain-tests/README.md` |
 | Iterating across several touched files, not sure which area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Changed` -- maps uncommitted changes (tracked + untracked) to the areas/classes they affect, prints the mapping used. A file it cannot map is a hard refusal (exit 2), never a quiet subset. Forces the full suite instead of a slice: every `.asmdef`, anything under `Tests/**/Shared/`, the scenes, `tools/`, and the five `Editor/` generators (`ContentBuilder`, `GenerationRun`, `PipelineBuilder`, `StanceSpriteImporter`, `PreviewRequestWatcher`) |
-| Before any commit | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~5m40s: 17s sync, then EditMode and PlayMode concurrently, PlayMode 311s of it). **Does not build the scenes** -- see below. **Refuses to run at all** on any of five: a test file outside an area folder, anything deeper than one folder inside one, a testable file in `Shared/`, two files declaring the same class name, or a test file declaring a class discovery never saw. Each names the file and the class; no bypass flag; the fix is usually a `git mv` |
+| Before committing a full-gate-row change | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~5m40s: 17s sync, then EditMode and PlayMode concurrently, PlayMode 311s of it). **Does not build the scenes** -- see below. **Refuses to run at all** on any of five: a test file outside an area folder, anything deeper than one folder inside one, a testable file in `Shared/`, two files declaring the same class name, or a test file declaring a class discovery never saw. Each names the file and the class; no bypass flag; the fix is usually a `git mv` |
 | Changed the discovery/area code in `tools/test_areas.ps1` | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -List -SelfCheck` (<1s). Runs against `tools/test_areas_fixture/` (ten files broken eight ways on purpose, two controls that must NOT be refused), asserts each of the five refusals fires on its case and does not fire on a neighbouring non-case, plus the exact count of each list. Prints `SELF-CHECK: ok` or names every miss and exits 1 |
 | Wrote a test class whose name already exists, or a generic/nested fixture | Rename it. NUnit reports a generic fixture as `Foo<Int32>` and a nested one as `Outer+Inner`; every filter this repo builds (Unity's `-testFilter`, dotnet's `FullyQualifiedName`) is the bare declared name, so none can be selected by any run. All three are refused rather than accommodated |
 | Changed `Domain/` or `Tests/EditMode/` and want to know the fast host still compiles | `dotnet build tools/domain-tests` (~2s warm). `tools/githooks/pre-commit` runs this for you when either is staged |
