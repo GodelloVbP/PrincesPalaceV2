@@ -36,6 +36,15 @@ namespace PrincesPalace.Domain.Tests
         // The property that still matters is that nothing is UNREACHABLE, and
         // these three are it: the window is on screen, the top of the list can
         // be scrolled to, and so can the bottom.
+        // WINDOW-PER-COUNT now (2026-09-22), not the static ViewportCentreY/
+        // ViewportHeight -- the container GROWS TO FIT up to RowsInView rows
+        // (FightController.AnchorSubmenuRows' own header), so the window a
+        // row actually has to land inside is ViewportCentreYFor(shown), not
+        // the STATIC tree's own oversized BuildReservationRows placeholder.
+        // The two agreed by construction before this rework (ContentY had
+        // only one ViewportCentreY to read); they no longer do, so mixing
+        // them here would pin a window this test never actually sees a row
+        // drawn against.
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(5)]
@@ -46,8 +55,8 @@ namespace PrincesPalace.Domain.Tests
         {
             int shown = FightSubmenuLayout.VisibleCount(requested);
 
-            float windowTop = FightSubmenuLayout.ViewportCentreY + FightSubmenuLayout.ViewportHeight * 0.5f;
-            float windowBottom = FightSubmenuLayout.ViewportCentreY - FightSubmenuLayout.ViewportHeight * 0.5f;
+            float windowTop = FightSubmenuLayout.ViewportCentreYFor(shown) + FightSubmenuLayout.ViewportHeightFor(shown) * 0.5f;
+            float windowBottom = FightSubmenuLayout.ViewportCentreYFor(shown) - FightSubmenuLayout.ViewportHeightFor(shown) * 0.5f;
 
             Assert.Less(windowTop, CanvasHalfHeight, "the list's window runs off the top of the canvas");
             Assert.Greater(windowBottom, -CanvasHalfHeight, "the list's window runs off the bottom");
@@ -60,22 +69,22 @@ namespace PrincesPalace.Domain.Tests
             // the bottom, which full scroll shows. If either falls outside the
             // window at the scroll that is supposed to reveal it, it cannot be
             // reached at all -- which is the failure the original test was for.
-            AssertInsideWindow(RowAt(shown, 0, 0f), 0, "scroll 0 must show the top of the list");
-            AssertInsideWindow(RowAt(shown, shown - 1, range), shown - 1,
+            AssertInsideWindow(RowAt(shown, 0, 0f), 0, shown, "scroll 0 must show the top of the list");
+            AssertInsideWindow(RowAt(shown, shown - 1, range), shown - 1, shown,
                 "full scroll must show the bottom of the list");
         }
 
         // A row's absolute y: the window, plus where the content sits inside it,
         // plus the row's fixed slot in the pool.
         private static float RowAt(int count, int index, float scroll) =>
-            FightSubmenuLayout.ViewportCentreY
+            FightSubmenuLayout.ViewportCentreYFor(count)
             + FightSubmenuLayout.ContentY(count, scroll)
             + FightSubmenuLayout.RowYInContent(index);
 
-        private static void AssertInsideWindow(float y, int index, string why)
+        private static void AssertInsideWindow(float y, int index, int count, string why)
         {
-            float top = FightSubmenuLayout.ViewportCentreY + FightSubmenuLayout.ViewportHeight * 0.5f;
-            float bottom = FightSubmenuLayout.ViewportCentreY - FightSubmenuLayout.ViewportHeight * 0.5f;
+            float top = FightSubmenuLayout.ViewportCentreYFor(count) + FightSubmenuLayout.ViewportHeightFor(count) * 0.5f;
+            float bottom = FightSubmenuLayout.ViewportCentreYFor(count) - FightSubmenuLayout.ViewportHeightFor(count) * 0.5f;
 
             Assert.LessOrEqual(y + FightSubmenuLayout.RowHeight * 0.5f, top + 0.01f,
                 $"row {index} sits above the window - {why}");
@@ -133,15 +142,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(5, 0f), 0.01f);
         }
 
-        // Twelve rows against an eight-row window: four rows' worth of travel.
-        // 184, DOWN FROM 216 (RowHeight 48->40, balance-bot item 5,
-        // 2026-09-03) -- still not the 160 four rows at 40px suggest, for the
-        // same reason as before: travel is measured in PIXELS and twelve rows
-        // carry eleven gaps against the window's seven.
+        // Twelve rows against a FIVE-row window (RowsInView, down from eight,
+        // 2026-09-22): seven rows' worth of travel. 322, not the 280 seven
+        // rows at 40px suggest, for the same reason as before: travel is
+        // measured in PIXELS and twelve rows carry eleven gaps against the
+        // window's four.
         [Test]
         public void AListLongerThanTheWindowScrollsByTheDifference()
         {
-            Assert.AreEqual(184f, FightSubmenuLayout.ScrollRange(12), 0.01f);
+            Assert.AreEqual(322f, FightSubmenuLayout.ScrollRange(12), 0.01f);
         }
 
         // SCROLL ZERO IS THE TOP OF THE LIST, which is the inversion worth
@@ -151,8 +160,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ScrollZeroShowsTheTopOfTheListAndFullScrollTheBottom()
         {
-            Assert.AreEqual(-184f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
-            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 184f), 0.01f);
+            Assert.AreEqual(-322f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 322f), 0.01f);
         }
 
         // The thumb is the visible fraction of the list, floored so it stays
@@ -160,25 +169,30 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThumbShowsHowMuchOfTheListIsOnScreen()
         {
-            // 240.01, DOWN FROM 282.67 (RowHeight 48->40, balance-bot item 5,
-            // 2026-09-03), and still not a round number for the same reason:
-            // the thumb is the visible fraction of the content BY HEIGHT (362
-            // of 546), and twelve rows carry eleven gaps against the window's
-            // seven. Pinned at the real number, because the tidy one would
-            // mean the thumb was measuring rows rather than pixels and would
-            // drift the moment the gap changed.
-            Assert.AreEqual(240.01f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
+            // 91.9, DOWN FROM 240.01 (RowsInView 8->5, 2026-09-22) -- the
+            // thumb is the visible fraction of the content BY HEIGHT (224 of
+            // 546 now, not 362 of 546), and twelve rows carry eleven gaps
+            // against the window's four. Pinned at the real number, because
+            // the tidy one would mean the thumb was measuring rows rather
+            // than pixels and would drift the moment the gap changed.
+            Assert.AreEqual(91.9f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
                 "the thumb must be the visible fraction of the content's height");
 
             // ABOVE AND BELOW THE VIEWPORT'S OWN CENTRE, not the container's.
             // The back row sits in the container's bottom padding, so the two
-            // centres are 27px apart and a bare sign test against zero would
+            // centres are 23px apart and a bare sign test against zero would
             // pass for the wrong reason at one end and fail at the other.
+            // ViewportOffsetInContainer (the STATIC property) still answers
+            // this correctly for ANY count -- the offset algebraically
+            // cancels every ViewportHeight-dependent term (see
+            // ViewportOffsetInContainerFor's own derivation), so it is the
+            // same 23px whether the window is RowsInView's five rows or
+            // BuildReservationRows' eight.
             float middle = FightSubmenuLayout.ViewportOffsetInContainer;
 
             Assert.Greater(FightSubmenuLayout.ThumbCentreY(12, 0f), middle,
                 "at the top of the list the thumb sits high");
-            Assert.Less(FightSubmenuLayout.ThumbCentreY(12, 184f), middle,
+            Assert.Less(FightSubmenuLayout.ThumbCentreY(12, 322f), middle,
                 "at the bottom it sits low");
         }
 

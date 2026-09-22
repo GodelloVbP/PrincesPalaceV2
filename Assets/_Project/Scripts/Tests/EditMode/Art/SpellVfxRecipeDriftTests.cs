@@ -41,8 +41,19 @@ namespace PrincesPalace.Domain.Tests
         private static string RecipeDir() =>
             Path.Combine(Root(), "Assets", "_Project", "Art", "Sheets", "recipes");
 
-        private static string SpellsRoot() =>
-            Path.Combine(Root(), "Assets", "_Project", "Resources", "Spells");
+        // GENERAL RATHER THAN Spells-ROOTED. `vfx.Path` is already a full
+        // Resources-relative folder ("Spells/frost_flare", "Vfx/impact_burst"
+        // alike -- see SpellLayer.path's own [ContentDoc]), so resolving it
+        // against Resources/ directly is both simpler than and a superset of
+        // what this used to do: stripping a leading "Spells/" and re-adding
+        // it via a Spells-only root landed on the identical path for spell
+        // art and silently mis-resolved anything else to Resources/Spells/
+        // Vfx/impact_burst, a folder that has never existed. First noticed
+        // when trunk_slam authored `Vfx/impact_burst` as a layer's own path
+        // -- see HouseVfxIds' header for why that reference is new, not the
+        // art.
+        private static string ResourcesRoot() =>
+            Path.Combine(Root(), "Assets", "_Project", "Resources");
 
         private sealed class SkillVfx
         {
@@ -165,6 +176,36 @@ namespace PrincesPalace.Domain.Tests
             return ids;
         }
 
+        // THE HOUSE'S OWN SHARED CONTACT LANGUAGE -- a third provenance, beside
+        // a spell's recipe and hand_assembled.json's "no tool can remake".
+        // Neither of those two fits: `tools/make_contact_fx.py` draws these
+        // from arithmetic (a polar-coordinate falloff), so there is no atlas
+        // for slice_spell_sheet.py to cut a recipe from, and calling them
+        // "hand-assembled, not reproducible" would be false -- that script's
+        // own header is the recorded invocation, and re-running it reproduces
+        // them exactly. They also fail hand_assembled.json's OWN mechanism a
+        // different way: HandAssembledArtTests.FramesDir hard-codes
+        // Resources/Spells/<id>, and these live under Resources/Vfx/, so
+        // registering them there would report a missing directory rather than
+        // a mismatched hash.
+        //
+        // Literal ids rather than a reference to Core's ContactCues class,
+        // for the reason this file has none of Core's dependencies today:
+        // this project mirrors into the engine-free domain-tests build
+        // (`tools/domain-tests`), and a UnityEngine-rooted assembly is not on
+        // its reference list. Two ids, matching ContactCues.ImpactBurstPath
+        // and .SlashArcPath's own basenames -- if a third house primitive
+        // joins them, it goes here too.
+        //
+        // FIRST NEEDED when trunk_slam authored `Vfx/impact_burst` directly
+        // as a layer's own `path`: every beat before this one that used this
+        // art reached it through PlayContactFx's hardcoded fallback, which
+        // this lint never walks -- only a skill's OWN authored vfx block is
+        // scanned. Authoring the house's default as a skill's own choice is
+        // new, not the art.
+        private static readonly HashSet<string> HouseVfxIds =
+            new HashSet<string>(StringComparer.Ordinal) { "impact_burst", "slash_arc" };
+
         private static HashSet<string> HandAssembledIds()
         {
             string register = Path.Combine(Root(), "Assets", "_Project", "Art", "Sheets", "hand_assembled.json");
@@ -200,7 +241,7 @@ namespace PrincesPalace.Domain.Tests
                 int slash = id.LastIndexOf('/');
                 if (slash >= 0) id = id.Substring(slash + 1);
 
-                if (recipes.Contains(id) || handAssembled.Contains(id)) continue;
+                if (recipes.Contains(id) || handAssembled.Contains(id) || HouseVfxIds.Contains(id)) continue;
 
                 orphans.Add($"{vfx.SkillId}'s {vfx.Field} '{vfx.Path}'");
             }
@@ -236,10 +277,7 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (var vfx in blocks)
             {
-                string folder = Path.Combine(SpellsRoot(),
-                    vfx.Path.StartsWith("Spells/", StringComparison.OrdinalIgnoreCase)
-                        ? vfx.Path.Substring("Spells/".Length).Replace('/', Path.DirectorySeparatorChar)
-                        : vfx.Path.Replace('/', Path.DirectorySeparatorChar));
+                string folder = Path.Combine(ResourcesRoot(), vfx.Path.Replace('/', Path.DirectorySeparatorChar));
 
                 if (!Directory.Exists(folder))
                 {
@@ -427,8 +465,7 @@ namespace PrincesPalace.Domain.Tests
             // folder are two independent questions rather than one shared one.
             foreach (var group in byFolder)
             {
-                string folder = Path.Combine(SpellsRoot(),
-                    group.Key.Substring(group.Key.IndexOf('/') + 1).Replace('/', Path.DirectorySeparatorChar));
+                string folder = Path.Combine(ResourcesRoot(), group.Key.Replace('/', Path.DirectorySeparatorChar));
                 int frames = Directory.Exists(folder) ? Directory.GetFiles(folder, "f*.png").Length : 0;
 
                 foreach (var sharer in group)

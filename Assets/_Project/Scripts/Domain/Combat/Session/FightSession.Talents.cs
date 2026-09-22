@@ -187,6 +187,21 @@ namespace PrincesPalace.Domain.Combat.Session
         private int ResolveWard(CombatantState target, int damage)
         {
             var outcome = StatusEffects.ConsumeWard(target, damage);
+
+            // CombatBeat.Absorbed's OTHER write site (the first is
+            // FightSession.Ledger.ApplyAndCountDamage, for a signature
+            // pool's own absorb) -- both shield kinds report through the
+            // one field this way, additively, so a beat that found ward AND
+            // signature-pool cover in the same swing reports the sum of
+            // both rather than whichever happened to write last. Reuses
+            // outcome.Absorbed, already computed by ConsumeWard two lines
+            // up; nothing here recomputes an absorption figure. Recorded
+            // whether or not there were any Hits to walk below -- a hit
+            // with nothing left to drain (ASecondHit_FindsWhateverTheFirst
+            // OneLeft, WardTests) reports outcome.Absorbed == 0 anyway, so
+            // this line is a no-op for it without needing its own guard.
+            RecordAbsorbed(outcome.Absorbed);
+
             if (outcome.Hits.Count == 0) return outcome.Damage;
 
             foreach (var hit in outcome.Hits)

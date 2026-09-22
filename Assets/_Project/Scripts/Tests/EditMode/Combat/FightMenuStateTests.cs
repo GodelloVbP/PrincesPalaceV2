@@ -715,19 +715,22 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("20", FightHudModel.PowerLabel(session, hero, skill));
         }
 
-        // The "-" list is meant to be COMPLETE: every effect
-        // SkillResolution.Amount has no number for at all. Summon was missing
-        // from it, so a summon's card would have promised "0 POWER" -- which
-        // reads as "this does nothing" -- for an ability that makes the fight
-        // one monster bigger. Unreachable today (the one authored Summon
-        // belongs to an enemy), which is exactly why nothing caught it.
+        // The HasNoPreviewablePower list is meant to be COMPLETE: every
+        // effect SkillResolution.Amount has no number for at all. Summon was
+        // missing from it, so a summon's card would have promised "0 POWER"
+        // -- which reads as "this does nothing" -- for an ability that makes
+        // the fight one monster bigger. Unreachable today (the one authored
+        // Summon belongs to an enemy), which is exactly why nothing caught
+        // it. "" now, not "-" -- the 2026-09-22 detail-card rework changed
+        // the convention for an inapplicable POWER row from a printed dash
+        // to an omitted (empty, hidden) one; see PowerLabel's own header.
         [Test]
         public void ASummonHasNoPreviewableNumberEither()
         {
             var summon = Skill("roar", "Roar", effect: SkillEffect.Summon);
             var (session, hero) = Fight(summon);
 
-            Assert.AreEqual("-", FightHudModel.PowerLabel(session, hero, summon));
+            Assert.AreEqual("", FightHudModel.PowerLabel(session, hero, summon));
         }
 
         [Test]
@@ -772,34 +775,63 @@ namespace PrincesPalace.Domain.Tests
             var panel = FightHudModel.DetailForStrike(hero);
 
             Assert.AreEqual("Strike", panel.Name);
-            Assert.AreEqual(5, panel.Stats.Count, "the column has five fixed rows");
-            Assert.AreEqual("24", panel.Stats[1].Value,
+            Assert.AreEqual("24", StatValue(panel, "POWER"),
                 "it describes THIS actor's swing, not a generic one");
         }
 
-        [Test]
-        public void ASkillsDetailPanelFillsAllFiveStatRows()
+        // Looks a stat up BY KEY, never by index -- panel.Stats is COMPACT
+        // now (2026-09-22 rework #2: a stat that does not apply is not added
+        // at all, so which physical row anything lands on moves with what
+        // else is present). Fails loudly, naming every key actually present,
+        // rather than throwing IndexOutOfRange or silently reading the wrong
+        // row's value.
+        private static string StatValue(DetailPanel panel, string key)
         {
-            var skill = Skill("a", "Alpha", manaCost: 5, power: 12);
+            foreach (var stat in panel.Stats)
+            {
+                if (stat.Key == key) return stat.Value;
+            }
+
+            Assert.Fail($"no \"{key}\" stat on this card. Present: " +
+                        string.Join(", ", panel.Stats.Select(s => s.Key)));
+            return null;
+        }
+
+        private static bool HasStat(DetailPanel panel, string key) => panel.Stats.Any(s => s.Key == key);
+
+        [Test]
+        public void ASkillsDetailPanelCompactsAwayWhicheverStatsDontApply()
+        {
+            // manaCost 5 + a fixed physical packet gives two of the five
+            // conditional rows something to say (MANA, DEFENSE) alongside
+            // the three that always apply (TARGET, EFFECT, SCALES) -- COST
+            // and COOLDOWN don't apply to this particular skill, and the
+            // point is that they are simply absent, not present-and-empty
+            // in the middle of the list.
+            var skill = Skill("a", "Alpha", manaCost: 5, power: 12,
+                packets: new[] { new DamageInstance(DamageType.Physical, 12) });
             var (session, hero) = Fight(skill);
 
             var panel = FightHudModel.DetailForSkill(session, hero, skill);
 
             Assert.AreEqual("Alpha", panel.Name);
-            Assert.AreEqual(5, panel.Stats.Count);
-            CollectionAssert.AreEqual(new[] { "COST", "POWER", "TARGET", "EFFECT", "SCALES" },
-                panel.Stats.Select(s => s.Key).ToArray());
+            CollectionAssert.AreEqual(
+                new[] { "MANA", "POWER", "DEFENSE", "TARGET", "EFFECT", "SCALES" },
+                panel.Stats.Select(s => s.Key).ToArray(),
+                "COST and COOLDOWN don't apply to this skill and must be compacted away, not left empty mid-list");
         }
 
         [Test]
-        public void ADetailCardOnCooldownShowsThatInsteadOfItsCost()
+        public void ADetailCardShowsBothItsCostAndItsCooldownWhileWaiting()
         {
-            // The bug this pins: mud_burst genuinely has a cooldown authored
-            // in content, and nothing anywhere on the fight screen ever said
-            // so -- the card kept showing its mana cost as though it were
-            // freely castable. COST already knows how to say "not yet" for a
-            // skill the row model gates the same way (see SkillRows' own
-            // comment); this is that same rule reaching the detail card.
+            // The bug this used to pin: mud_burst genuinely has a cooldown
+            // authored in content, and nothing anywhere on the fight screen
+            // ever said so -- the card kept showing its mana cost as though
+            // it were freely castable. The fix used to make COST say the
+            // wait INSTEAD of the cost; the 2026-09-22 rework gives cooldown
+            // its own row so a player can see both facts (what it costs,
+            // when it will be ready again) at once, neither one hiding the
+            // other.
             var skill = new ResolvedSkill("cd", "Cooldown Bolt", "Waits between casts.", "hero", 1,
                 SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5,
                 resourceCost: 0, spendsAllResource: false, power: 0, flatAmount: 10,
@@ -809,15 +841,19 @@ namespace PrincesPalace.Domain.Tests
             var foe = session.Encounter.Enemies[0];
 
             var before = FightHudModel.DetailForSkill(session, hero, skill);
-            Assert.AreEqual("5 MP", before.Stats[0].Value,
-                "fixture: not yet cast, so this should read its plain cost");
+            Assert.AreEqual("5 MP", StatValue(before, "MANA"),
+                "fixture: not yet cast, so mana always reads");
+            Assert.AreEqual("2 TURNS", StatValue(before, "COOLDOWN"),
+                "the authored cooldown length reads BEFORE the skill is ever on cooldown, not only once it is");
 
             Assert.IsTrue(session.CastSkill(skill, foe), "fixture: the cast itself must succeed to arm the cooldown");
 
             var after = FightHudModel.DetailForSkill(session, hero, skill);
-            Assert.AreNotEqual("5 MP", after.Stats[0].Value,
-                "a skill actually on cooldown must not still read its mana cost as though it were castable");
-            StringAssert.Contains("TURN", after.Stats[0].Value);
+            Assert.AreEqual("5 MP", StatValue(after, "MANA"),
+                "the cast still costs the same mana whether or not it happens to be ready");
+            StringAssert.Contains("2 TURNS", StatValue(after, "COOLDOWN"));
+            StringAssert.Contains("LEFT", StatValue(after, "COOLDOWN"),
+                "waiting on it must ALSO say how much longer, not just the authored length again");
         }
 
         [Test]
@@ -828,8 +864,7 @@ namespace PrincesPalace.Domain.Tests
 
             var panel = FightHudModel.DetailForStrike(hero);
 
-            Assert.AreEqual("SCALES", panel.Stats[4].Key);
-            Assert.AreEqual("STR", panel.Stats[4].Value);
+            Assert.AreEqual("STR", StatValue(panel, "SCALES"));
         }
 
         [Test]
@@ -845,7 +880,72 @@ namespace PrincesPalace.Domain.Tests
 
             var panel = FightHudModel.DetailForSkill(session, hero, heal);
 
-            Assert.AreEqual("-", panel.Stats[4].Value);
+            Assert.AreEqual("-", StatValue(panel, "SCALES"));
+        }
+
+        [Test]
+        public void APowerlessEffectOmitsThePowerRowEntirely()
+        {
+            // The rework's rule: a stat that does not apply is OMITTED, never
+            // shown as "-" or "0" -- POWER used to print "-" for Provoke,
+            // Transform and the rest of HasNoPreviewablePower's list. Rework
+            // #2 goes further: the row is not merely blanked, it is not in
+            // Stats at ALL, so Rally's card is compact rather than an
+            // eight-row card with a hole in the middle of it.
+            var provoke = Skill("p", "Rally", effect: SkillEffect.Provoke);
+            var (session, hero) = Fight(provoke);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, provoke);
+
+            Assert.IsFalse(HasStat(panel, "POWER"), "Rally has nothing to preview; POWER must not appear at all");
+            Assert.IsFalse(HasStat(panel, "DEFENSE"), "a non-damaging skill has no defense interaction to state");
+            CollectionAssert.AreEqual(new[] { "MANA", "TARGET", "EFFECT", "SCALES" },
+                panel.Stats.Select(s => s.Key).ToArray(),
+                "a compact four-row card, not an eight-row one with four gaps");
+        }
+
+        [Test]
+        public void ADamagingSkillsDefenseRowNamesThePhysicalOrMagicalSplit()
+        {
+            var physical = Skill("a", "Alpha", packets: new[] { new DamageInstance(DamageType.Physical, 10) });
+            var magical = Skill("b", "Beta", packets: new[] { new DamageInstance(DamageType.Fire, 10) });
+            var (session, hero) = Fight(physical, magical);
+
+            Assert.AreEqual("PHYSICAL", StatValue(FightHudModel.DetailForSkill(session, hero, physical), "DEFENSE"));
+            Assert.AreEqual("MAGICAL", StatValue(FightHudModel.DetailForSkill(session, hero, magical), "DEFENSE"));
+        }
+
+        [Test]
+        public void ASkillThatIgnoresDefenseSaysSoInsteadOfNamingEither()
+        {
+            var skill = new ResolvedSkill("ig", "Pierce", "Ignores armour entirely.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5,
+                resourceCost: 0, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: true, damageInstances: null, presentation: SpellPresentation.None,
+                sortOrder: 0);
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("IGNORES DEFENSE", StatValue(panel, "DEFENSE"));
+        }
+
+        [Test]
+        public void AHealthCostSkillNamesTheActualHpAmountNotThePercent()
+        {
+            var skill = new ResolvedSkill("hc", "Blood Toll", "Pays in blood.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 0,
+                resourceCost: 0, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: false, damageInstances: null, presentation: SpellPresentation.None,
+                sortOrder: 0, healthCostPercent: 5);
+            var (session, hero) = Fight(skill);
+            hero.CurrentHealth = hero.MaxHealth;
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            int expected = HealthCost.AmountFor(hero.MaxHealth, 5);
+            Assert.AreEqual($"{expected} HP", StatValue(panel, "COST"));
+            Assert.IsFalse(HasStat(panel, "MANA"), "this skill spends no mana; MANA must not appear");
         }
 
         // ---- DamageType: the skill model exposes it, FightHudModel resolves it --

@@ -102,6 +102,54 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float Row1CentreY = GridTop - RowHeight * 0.5f;
         private const float Row2CentreY = GridBottom + RowHeight * 0.5f;
 
+        // ---- the merged keeper/detail/actions column (owner ask #3, 2026-09-22) ----
+        //
+        // COL3 SPANS BOTH ROWS, the same way GEAR already spans both narrow
+        // columns horizontally (BuildGearPanel). The old shape was two
+        // panels: a "SHOPKEEPER" row with a portrait placeholder and a
+        // one-line detail label, and a "SHOP" row of actions underneath. The
+        // portrait was always a stopgap ("a portrait slot with no portrait
+        // yet") and a "roughly square, ~420x420" comparison panel needs more
+        // height than either row alone has, so this pass retires the
+        // placeholder and merges the two panels rather than shrinking
+        // Relic/Book/Gear's own tuned metrics to make room -- the model
+        // rule's other sanctioned lever (CLAUDE.md brief, "Model rules").
+        private const float TallColHeight = RowHeight * 2f + RowGap;
+        private const float TallColCentreY = (Row1CentreY + Row2CentreY) * 0.5f;
+        private const float TallHeaderCentreY = TallColHeight * 0.5f - PanelPad - PanelHeaderHeight * 0.5f;
+        private const float TallContentTop = TallHeaderCentreY - PanelHeaderHeight * 0.5f - PanelHeaderGap;
+        private const float TallContentBottom = -TallColHeight * 0.5f + PanelPad;
+
+        // The character picker: an arrow either side of a name, the same
+        // shape CharacterDossierScreen's own column A uses (Ui.Pager plus a
+        // runtime name label) -- ShopController implements INavSectionStrip
+        // so LB/RB reach it the same way the dossier's shoulders do.
+        private const float PickerRowHeight = 40f;
+        private const float PickerGap = 16f;
+        private const float PickerCentreY = TallContentTop - PickerRowHeight * 0.5f;
+        private const float PickerArrowSize = 34f;
+
+        // The comparison panel: "roughly square and readable" per the
+        // owner's own words. ItemComparisonPanel is the reusable builder;
+        // this is just where the shop puts one.
+        private const float DetailPanelSize = 420f;
+        private const float DetailPanelTitleHeight = 30f;
+        private const float DetailTop = PickerCentreY - PickerRowHeight * 0.5f - PickerGap;
+        private const float DetailCentreY = DetailTop - DetailPanelSize * 0.5f;
+        private const float DetailBottom = DetailCentreY - DetailPanelSize * 0.5f;
+
+        // Gold, then BUY/PACK/LEAVE, hard against the panel's own bottom
+        // edge exactly as they always were. THREE STACKED FULL-WIDTH ROWS NO
+        // LONGER FIT under a 420-tall comparison panel (measured: it would
+        // need ~14px MORE than is left) -- BUY and PACK go side by side
+        // instead, LEAVE stays full width below them, which is the two-per-
+        // row shape BuildKeeperPanel actually builds.
+        private const float DetailToActionsGap = 24f;
+        private const float ActionsTop = DetailBottom - DetailToActionsGap;
+        private const float ActionsGoldHeight = 62f;
+        private const float ActionsPairWidth = 300f;
+        private const float ActionsPairGap = 16f;
+
         // 532 + 24 + 532 + 24 + 696 = 1808 = the full inner width. The wide
         // column is the prototype's 1.3fr rounded to a whole number that
         // closes the row exactly -- an fr that does not add up leaves a
@@ -235,9 +283,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef GoldLabel;
         public NodeRef LeaveButton;
         public NodeRef LeaveButtonLabel;
-        public NodeRef DetailLabel;
         public NodeRef BuyButton;
         public NodeRef PackButton;
+
+        // The character picker (owner ask #3) -- defaults to the party
+        // leader, stepped by the arrows or by LB/RB via
+        // ShopController.StepSection.
+        public NodeRef CharacterName;
+        public NodeRef PrevCharacterButton;
+        public NodeRef NextCharacterButton;
+
+        // THE ONE BOX FOR "WHAT THE SHOP IS TELLING THE PLAYER RIGHT NOW"
+        // (docs/CODE_STANDARDS.md §10 -- one authoritative place, not a
+        // second box next to the first one). The old one-line
+        // "ShopDetailLabel" retires: ShopDetailPanelBody carries the
+        // refusal/empty-selection/relic/book-description text it used to
+        // (ShopController.PaintDetail), AND the full gear comparison
+        // (ItemDescription.ComparisonBody) for a selected gear card --
+        // ShopScreenRefusalTests and the two Journey tests were updated to
+        // read the new node name.
+        public NodeRef DetailPanelRoot;
+        public NodeRef DetailTitle;
+        public NodeRef DetailBody;
 
         public NodeRef GearHeader;
         public NodeRef GearReroll;
@@ -288,11 +355,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 out screen.BookHeader, out screen.BookReroll, out screen.BookRerollLabel,
                 screen.BookCards));
 
+            // Col3 (SHOPKEEPER/DETAIL/ACTIONS) spans BOTH rows -- see that
+            // panel's own header for why the old two-panel, portrait-slot
+            // shape was retired rather than shrunk to fit a comparison panel
+            // around it. Added after Row 1's other two panels so the
+            // character picker and BUY/PACK/LEAVE keep reading top to bottom
+            // in the child list the way they read on screen.
             children.Add(screen.BuildKeeperPanel());
 
-            // Row 2: GEAR spanning both narrow columns, then the actions panel.
+            // Row 2: GEAR spanning both narrow columns.
             children.Add(screen.BuildGearPanel());
-            children.Add(screen.BuildActionsPanel());
 
             children.Add(screen.BuildPackModal());
 
@@ -307,10 +379,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the lot. `reroll` is null for the two panels that have no shelf to
         // reroll, and when it is present the header label gives up exactly the
         // width the button takes so A1 never sees them touch.
+        // `height` defaults to RowHeight (every existing caller) -- the
+        // merged keeper/detail/actions column (BuildKeeperPanel) is the one
+        // caller that spans two rows and needs its own header line solved
+        // against a taller box instead.
         private static List<UiNode> PanelFrame(string name, UiString header, float width,
-            out NodeRef headerRef, UiNode reroll)
+            out NodeRef headerRef, UiNode reroll, float? height = null)
         {
-            var size = new UiVec(width, RowHeight);
+            float h = height ?? RowHeight;
+            var size = new UiVec(width, h);
+            float headerCentreY = h * 0.5f - PanelPad - PanelHeaderHeight * 0.5f;
 
             var parts = new List<UiNode>
             {
@@ -322,7 +400,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float labelWidth = reroll == null ? inner : inner - RerollWidth - RerollGap;
 
             var label = Ui.Label(name + "Header", header, new UiVec(labelWidth, PanelHeaderHeight), 34,
-                    HeadingText, Place.At(-inner * 0.5f + labelWidth * 0.5f, HeaderCentreY))
+                    HeadingText, Place.At(-inner * 0.5f + labelWidth * 0.5f, headerCentreY))
                 .Styled(TypographyRole.FunctionalHeading)
                 .TextAligned(UiTextAlign.Left);
             headerRef = label;
@@ -403,86 +481,65 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiSize.Fixed(GearWidth, RowHeight), parts);
         }
 
-        // SHOPKEEPER: a portrait slot with no portrait yet, and under it the
-        // selected card's detail line. The detail is here rather than floating
-        // over the cards because a runtime-positioned overlay is a rect the
-        // layout audit cannot solve -- see this class's own header.
+        // SHOPKEEPER / DETAIL / ACTIONS, merged (owner ask #3, 2026-09-22):
+        // the character picker, the selected gear card's comparison panel
+        // (ItemComparisonPanel) and the shop's own BUY/PACK/LEAVE, one
+        // column spanning the full grid height. See this class's own
+        // "merged keeper/detail/actions column" header above for why the
+        // old two-panel, portrait-slot shape was retired instead of shrunk
+        // to fit a 420-tall panel around it.
         private UiNode BuildKeeperPanel()
         {
             var parts = PanelFrame("ShopKeeperPanel", UiStrings.ShopSectionKeeper, WideColWidth,
-                out _, null);
+                out _, null, TallColHeight);
 
             float inner = WideColWidth - PanelPad * 2f;
-            const float DetailHeight = 74f;
-            const float SlotGap = 16f;
-            float slotHeight = ContentHeight - DetailHeight - SlotGap;
 
-            var pending = Ui.Label("ShopKeeperPending", UiStrings.ShopKeeperPending,
-                    new UiVec(inner - 32f, 36f), 24, QuietText, Place.At(0f, 0f))
-                .Styled(TypographyRole.Body)
-                .AsDecor();
+            // ---- the character picker --------------------------------------
+            var characterName = Ui.Label("ShopCharacterName", UiString.Runtime,
+                new UiVec(inner - (PickerArrowSize + 16f) * 2f, PickerRowHeight), 20, DetailText,
+                Place.At(0f, PickerCentreY));
+            CharacterName = characterName;
+            parts.Add(characterName);
 
-            parts.Add(Ui.OutlineBox("ShopKeeperSlot",
-                Place.At(0f, ContentTop - slotHeight * 0.5f),
-                new UiVec(inner, slotHeight), GoldPlateFill, PanelRim, new[] { pending }));
+            var pager = Ui.Pager(
+                "ShopPrevCharacter", Place.At(-inner * 0.5f + PickerArrowSize * 0.5f, PickerCentreY),
+                "ShopNextCharacter", Place.At(inner * 0.5f - PickerArrowSize * 0.5f, PickerCentreY),
+                new UiVec(PickerArrowSize, PickerArrowSize), 16);
+            PrevCharacterButton = pager.Prev;
+            NextCharacterButton = pager.Next;
+            parts.Add(pager.Prev);
+            parts.Add(pager.Next);
 
-            var detail = Ui.Label("ShopDetailLabel", UiStrings.ShopDetailEmpty,
-                    new UiVec(inner, DetailHeight), 22, DetailText,
-                    Place.At(0f, ContentBottom + DetailHeight * 0.5f))
-                .Styled(TypographyRole.Body)
-                .TextAligned(UiTextAlign.TopLeft);
-            DetailLabel = detail;
-            parts.Add(detail);
+            // ---- the comparison panel (ItemComparisonPanel) ----------------
+            var detail = ItemComparisonPanel.Build("ShopDetailPanel",
+                Place.At(0f, DetailCentreY), new UiVec(DetailPanelSize, DetailPanelSize),
+                DetailPanelTitleHeight, 20, HeadingText, 15, DetailText);
+            DetailPanelRoot = detail.Panel;
+            DetailTitle = detail.Title;
+            DetailBody = detail.Body;
+            parts.Add(detail.Panel);
 
-            return Ui.Panel("ShopKeeperPanel", Place.At(Col3CentreX, Row1CentreY),
-                UiSize.Fixed(WideColWidth, RowHeight), parts);
-        }
+            // ---- gold, buy/pack, leave --------------------------------------
+            //
+            // TWO PER ROW rather than the old three stacked full-width rows:
+            // a 420-tall comparison panel leaves this block less headroom
+            // than three stacked FiveByOne plates need, so BUY and PACK sit
+            // side by side (Ui.PlateNominalSizeFor keeps the requested WIDTH
+            // and only adjusts height to a valid plate aspect, same as every
+            // other call site) and LEAVE stays full width below them, hard
+            // against the panel's bottom edge exactly as it always was.
+            float goldY = ActionsTop - ActionsGoldHeight * 0.5f;
+            float goldBottom = goldY - ActionsGoldHeight * 0.5f;
 
-        // SHOP: the gold total on its own plate, then the three controls that
-        // are not a card -- BUY, PACK and, hard against the bottom edge with
-        // the design's own gap above it, LEAVE.
-        private UiNode BuildActionsPanel()
-        {
-            var parts = PanelFrame("ShopActionsPanel", UiStrings.ShopSectionActions, WideColWidth,
-                out _, null);
+            var pairSize = Ui.PlateNominalSizeFor(ActionsPairWidth, 74f);
+            var leaveSize = Ui.PlateNominalSizeFor(372f, 74f);
 
-            float inner = WideColWidth - PanelPad * 2f;
-            const float GoldPlateHeight = 62f;
+            float actionsAvailable = goldBottom - TallContentBottom;
+            float actionGap = (actionsAvailable - pairSize.Y - leaveSize.Y) * 0.5f;
 
-            // ONE SHAPE FOR ALL THREE ACTIONS now (this pass, superseding
-            // INT-1's own fix above the one it recorded next to this
-            // comment): INT-1 narrowed Buy/Pack to 372 (Row6x1 at their old
-            // 62 tall) and Leave to 456 (Row6x1 at its old 76 tall) to clear
-            // ThemedButtonAspectLintTests, which cleared the lint but left
-            // the column reading as two different widths for three actions
-            // that are all "press this to act". FiveByOne at 372 wide is
-            // what a shared 372/74-ish rect already resolves to on its own
-            // (Ui.PlateNominalSizeFor picks the shape - no .Plate()
-            // override needed), so this is the SAME width INT-1 already
-            // settled on for two of the three, carried to all three at one
-            // honest aspect instead of two.
-            var actionSize = Ui.PlateNominalSizeFor(372f, 74f);
-
-            // THE THREE ROWS NO LONGER SHARE ONE GAP CONSTANT with the gold
-            // plate above them, because they are no longer the same height
-            // as it (GoldPlateHeight 62 vs actionSize.Y ~74.4) -- gapping all
-            // four by one literal would either overflow ContentBottom or
-            // leave the gaps visibly uneven. actionGap is instead SOLVED for
-            // the space actually available (from the gold plate's own
-            // bottom edge down to ContentBottom) so the three action rows
-            // plus their two internal gaps plus the gap under the gold plate
-            // land exactly flush with the panel's bottom edge, the same
-            // "hard against the bottom edge" rule LEAVE always followed --
-            // it is just no longer a literal 16, because 16 was tuned
-            // against heights this pass retired.
-            float goldY = ContentTop - GoldPlateHeight * 0.5f;
-            float goldBottom = goldY - GoldPlateHeight * 0.5f;
-            float actionsAvailable = goldBottom - ContentBottom;
-            float actionGap = (actionsAvailable - actionSize.Y * 3f) / 3f;
-
-            float buyY = goldBottom - actionGap - actionSize.Y * 0.5f;
-            float packY = buyY - actionSize.Y - actionGap;
-            float leaveY = ContentBottom + actionSize.Y * 0.5f;
+            float pairY = goldBottom - actionGap - pairSize.Y * 0.5f;
+            float leaveY = TallContentBottom + leaveSize.Y * 0.5f;
 
             var gold = Ui.Label("ShopGoldLabel", UiStrings.ShopGold, new UiVec(inner - 24f, 48f), 36,
                     GoldText, Place.At(0f, 0f))
@@ -490,48 +547,31 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             GoldLabel = gold;
 
-            // FULL WIDTH, kept -- not narrowed to the actions' own 372.
-            // ShopGoldPlate is a flat Ui.OutlineBox (fill+rim, no plate art),
-            // so it was never subject to ThemedButtonAspectLintTests and has
-            // no aspect to clear; it was already wider than Buy/Pack/Leave
-            // before this pass (640 against their 372/456), so a narrower
-            // action column under a full-width total is the SAME
-            // relationship this panel already had, not a new one this pass
-            // introduces. Narrowing it to 372 to match would be a second,
-            // unrelated proportion change with no lint forcing it - left for
-            // the owner's eyes at the capture review instead.
             parts.Add(Ui.OutlineBox("ShopGoldPlate", Place.At(0f, goldY),
-                new UiVec(inner, GoldPlateHeight), GoldPlateFill, PanelRim, new[] { gold }));
+                new UiVec(inner, ActionsGoldHeight), GoldPlateFill, PanelRim, new[] { gold }));
 
-            // Themed(Gold)/Themed(Silver), owner's HQ-kit instruction
-            // (2026-09-07). Centred rather than stretched, so the visible
-            // dead space either side of each 372-wide plate reads as a
-            // deliberately narrower CTA over the gold total's own full-width
-            // bar rather than as a mis-measured box. WORTH THE OWNER'S EYES:
-            // three actions each about 40% narrower than the column that
-            // holds them is a real proportion change, not just an aspect
-            // fix -- flagged for the capture review this pass ends with.
-            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, actionSize, 28,
-                    Place.At(0f, buyY))
+            float pairHalfGap = ActionsPairGap * 0.5f;
+            var buy = Ui.Button("ShopBuyButton", UiStrings.ShopBuy, pairSize, 26,
+                    Place.At(-(pairSize.X * 0.5f + pairHalfGap), pairY))
                 .Themed(ButtonTheme.Gold);
             BuyButton = buy;
             parts.Add(buy);
 
-            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, actionSize, 28,
-                    Place.At(0f, packY))
+            var pack = Ui.Button("ShopPackButton", UiStrings.ShopPack, pairSize, 26,
+                    Place.At(pairSize.X * 0.5f + pairHalfGap, pairY))
                 .Themed(ButtonTheme.Silver);
             PackButton = pack;
             parts.Add(pack);
 
-            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, actionSize, 32,
+            var leave = Ui.Button("ShopLeaveButton", UiStrings.ShopLeave, leaveSize, 32,
                     Place.At(0f, leaveY))
                 .Themed(ButtonTheme.Silver);
             LeaveButton = leave;
             LeaveButtonLabel = Ui.CaptionOf(leave);
             parts.Add(leave);
 
-            return Ui.Panel("ShopActionsPanel", Place.At(Col3CentreX, Row2CentreY),
-                UiSize.Fixed(WideColWidth, RowHeight), parts);
+            return Ui.Panel("ShopKeeperPanel", Place.At(Col3CentreX, TallColCentreY),
+                UiSize.Fixed(WideColWidth, TallColHeight), parts);
         }
 
         // ---- one offer card ---------------------------------------------------

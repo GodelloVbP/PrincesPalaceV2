@@ -1187,6 +1187,25 @@ public static class ScreenRegistry
 
         controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
 
+        // NO CountBindings: packSortTabs is built directly off
+        // dossier.PackFilterTabs, the very list it is meant to agree with,
+        // so a count check here would only compare that list with itself --
+        // same reasoning as attributeRowSteps immediately below, and as
+        // WireOptions' own rows line. Stated explicitly now rather than
+        // left as a bare KnownOffenders allowlist entry with no comment on
+        // the site itself to say why.
+
+        // AttributeRow (Core/CharacterDossierController.cs), attached HERE at
+        // build time -- the exact seam WireOptions above uses for OptionRow.
+        // Not one of UiAutoBind's five bindable types, so it is filled
+        // explicitly rather than skipped silently.
+        controller.attributeRowSteps = dossier.AttributeRowSteps.Select(result.Attach<AttributeRow>).ToArray();
+
+        // NO CountBindings, same reason WireOptions' own rows line states:
+        // attributeRowSteps is built directly off dossier.AttributeRowSteps,
+        // the very list it is meant to agree with, so a count check here
+        // would only compare that list with itself.
+
         // NO PORTRAIT ARRAY, and its absence is the point. Every character with
         // a portraitPath used to be baked here as an IconEntry, which made the
         // scene a photograph of the roster: a character authored after the last

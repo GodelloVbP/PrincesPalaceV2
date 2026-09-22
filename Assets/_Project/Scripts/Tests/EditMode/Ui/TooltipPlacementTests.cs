@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -237,6 +238,78 @@ namespace PrincesPalace.Domain.Tests
 
                 Assert.GreaterOrEqual(clearance, 0f,
                     $"card {i}'s tooltip overlaps the card it is describing");
+            }
+        }
+
+        // ---- against the dossier's real geometry, at the new 420x420 size ---
+
+        // ITEM-MODIFIER PLAN / "roughly square tooltips" (2026-09-22):
+        // BuildTooltip moved off its old 300x480 sliver onto
+        // ItemComparisonPanel's shared 420x420 shape. Beside's own clamp is
+        // general (AcrossAWholeBlockOfAnchors above already proves both axes
+        // for arbitrary geometry) but a panel this much wider deserves its
+        // own pin against the two anchors furthest from centre: the
+        // rightmost pack cell (column A, hugging the left wall) and the
+        // lowest equipment slot on EACH file (column B, a left-file and a
+        // right-file anchor exercise opposite branches of the right/left
+        // check). DossierLayout's own methods, not restated literals, so a
+        // future layout change cannot silently invalidate this pin without
+        // the numbers here moving with it.
+        private const float DossierMargin = 8f;
+
+        private static void AssertInsideDossier(UiVec at, float tooltipHalf)
+        {
+            float halfW = DossierLayout.HalfWidth;
+            float halfH = DossierLayout.HalfHeight;
+
+            Assert.GreaterOrEqual(at.X - tooltipHalf, -halfW + DossierMargin, "left edge inside the dossier");
+            Assert.LessOrEqual(at.X + tooltipHalf, halfW - DossierMargin, "right edge inside the dossier");
+            Assert.GreaterOrEqual(at.Y - tooltipHalf, -halfH + DossierMargin, "bottom edge inside the dossier");
+            Assert.LessOrEqual(at.Y + tooltipHalf, halfH - DossierMargin, "top edge inside the dossier");
+        }
+
+        [Test]
+        public void TheDossierTooltipAt420_StaysInsideThePanelBesideTheRightmostPackSlot()
+        {
+            float halfW = DossierLayout.HalfWidth;
+            float halfH = DossierLayout.HalfHeight;
+
+            int rightmostColumn = (int)DossierLayout.PackColumns - 1;
+            float anchorX = DossierLayout.ColumnACentreX + DossierLayout.PackCellCentreX(rightmostColumn);
+            float anchorY = DossierLayout.PackCellCentreY(0);
+
+            var at = TooltipPlacement.Beside(
+                anchorX, anchorY, DossierLayout.PackCellWidth, DossierLayout.PackCellHeight,
+                420f, 420f,
+                -halfW + DossierMargin, halfW - DossierMargin,
+                -halfH + DossierMargin, halfH - DossierMargin);
+
+            AssertInsideDossier(at, 210f);
+        }
+
+        [Test]
+        public void TheDossierTooltipAt420_StaysInsideThePanelBesideTheLowestEquipmentSlot()
+        {
+            float halfW = DossierLayout.HalfWidth;
+            float halfH = DossierLayout.HalfHeight;
+
+            // Legs (left file) and Shoes (right file) share the lowest
+            // authored row (SlotGeometry's own top: 452 for both), which is
+            // exactly why both are checked here rather than one: a left-file
+            // anchor tries "right, into the mannequin" first and a
+            // right-file anchor tries "right, off the panel" first, and only
+            // running both proves the clamp holds for either starting side.
+            foreach (var slot in new[] { EquipmentSlot.Legs, EquipmentSlot.Shoes })
+            {
+                var anchor = DossierLayout.SlotAt(slot);
+
+                var at = TooltipPlacement.Beside(
+                    anchor.X, anchor.Y, DossierLayout.SlotSize, DossierLayout.SlotSize,
+                    420f, 420f,
+                    -halfW + DossierMargin, halfW - DossierMargin,
+                    -halfH + DossierMargin, halfH - DossierMargin);
+
+                AssertInsideDossier(at, 210f);
             }
         }
     }

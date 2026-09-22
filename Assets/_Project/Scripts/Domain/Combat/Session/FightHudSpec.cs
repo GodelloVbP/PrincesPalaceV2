@@ -105,9 +105,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // the resource's own maximum. FightCapacityPinTests' pin went with
         // it -- there is nothing left for a signature capacity to overflow.
 
-        // The detail column's fixed stat rows: cost, power, target, effect,
-        // scales.
-        public const int DetailStatRows = 5;
+        // The detail column's MAXIMUM stat rows -- how many PHYSICAL row
+        // slots the tree reserves, not how many any one card shows. The
+        // canonical order FightHudModel can draw from is MANA, COST
+        // (resource/health), COOLDOWN, POWER, DEFENSE, TARGET, EFFECT,
+        // SCALES (eight), but FightHudModel.DetailPanel.Stats is COMPACT: a
+        // stat that does not apply to what is hovered is not added at all
+        // (2026-09-22 rework #2), so a skill using only three of the eight
+        // paints a three-row card, not an eight-row one with five gaps.
+        // FightController.Hud.cs's RefreshDetail paints panel.Stats[i] into
+        // physical row i for i < Stats.Count and hides the rest -- the same
+        // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows use.
+        public const int DetailStatRows = 8;
 
         // Attack / Skill / Item / Hold Back. RUN was removed -- see
         // FightScreen.BuildVerbColumn's own comment -- rather than joining

@@ -141,6 +141,11 @@ namespace PrincesPalace.Domain.Combat.Session
             int toHealth = amount - result.Absorbed;
             if (toHealth < 0) toHealth = 0;
 
+            // CombatBeat.Absorbed's one write site -- see its own header.
+            // Reuses result.Absorbed, already computed two lines up; nothing
+            // here recomputes an absorption figure.
+            RecordAbsorbed(result.Absorbed);
+
             // Berserker's Vest: getting hit shortens every one of the
             // wearer's own active cooldowns by 1, once per turn. Gated on
             // toHealth (POST-absorb), not the raw amount -- a hit a shield

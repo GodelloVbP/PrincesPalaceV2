@@ -749,5 +749,63 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         public static bool StatListFits(int count) => count <= MaxStatRows();
+
+        // ---- the attributes panel (modal, covers the whole dossier) -------------
+        //
+        // Sized well inside Width/Height (1600x804) rather than filling the
+        // pane edge to edge, so Ui.Modal's own dimmer reads as "the dossier,
+        // interrupted" instead of a second opaque screen -- the same reason
+        // TalentScreen's respec dialog and every other Ui.Modal content node
+        // in this project sits centred at less than the full canvas.
+        public const float AttributesCardWidth = 1240f;
+        public const float AttributesCardHeight = 700f;
+        public const float AttributesContentWidth = AttributesCardWidth - 96f;   // 48px margin a side
+
+        public const float AttributesHeaderHeight = 40f;
+        public const float AttributesSubHeaderHeight = 26f;
+        public const float AttributesRowHeight = 88f;
+        public const float AttributesRowGap = 10f;
+
+        // The steppers sit at the row's own right edge, mouse-only siblings
+        // of the row's Left/Right/Submit handling -- same "child buttons
+        // beside the thing they adjust" shape the compact grid's own plus/
+        // minus already use, just two DOSSIER STEP buttons side by side
+        // instead of stacked in a cell's corner (this row is 1000+px wide,
+        // not an 86px cell).
+        public const float AttributesStepSize = 32f;
+        public const float AttributesStepGap = 10f;
+
+        public static float AttributesTop => AttributesCardHeight * 0.5f - 30f;
+        public static float AttributesSubHeaderY => AttributesTop - AttributesHeaderHeight;
+        public static float AttributesRowsTop =>
+            AttributesSubHeaderY - AttributesSubHeaderHeight - 16f;
+
+        public static float AttributesRowCentreY(int row) =>
+            AttributesRowsTop - AttributesRowHeight * (row + 0.5f) - AttributesRowGap * row;
+
+        // The two steppers' local X, right-aligned within the row.
+        public static float AttributesStepPlusX =>
+            AttributesContentWidth * 0.5f - AttributesStepSize * 0.5f;
+
+        public static float AttributesStepMinusX =>
+            AttributesStepPlusX - AttributesStepSize - AttributesStepGap;
+
+        // What is left for the row's own text (name/value line, then the
+        // effect line beneath it) once the steppers' own column, plus a
+        // 24px gap ahead of it, is spoken for.
+        private const float AttributesStepGutter = 24f;
+
+        public static float AttributesTextRight =>
+            AttributesStepMinusX - AttributesStepSize * 0.5f - AttributesStepGutter;
+
+        public static float AttributesTextWidth =>
+            AttributesTextRight - (-AttributesContentWidth * 0.5f);
+
+        // The text box is NOT centred on the row (cx=0) the way Skills'
+        // name/description labels are -- it has to make room for the
+        // steppers at the row's right edge, so its own centre sits left of
+        // zero by half of what the stepper column and its gutter took.
+        public static float AttributesTextCentreX =>
+            (-AttributesContentWidth * 0.5f + AttributesTextRight) * 0.5f;
     }
 }

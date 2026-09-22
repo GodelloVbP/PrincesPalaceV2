@@ -80,7 +80,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static string DetailText() =>
-            Named("ShopDetailLabel")?.GetComponent<TMP_Text>()?.text ?? "";
+            Named("ShopDetailPanelBody")?.GetComponent<TMP_Text>()?.text ?? "";
 
         [UnityTest]
         public IEnumerator BuyingACardYouCannotAffordSaysWhy()

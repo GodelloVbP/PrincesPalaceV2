@@ -108,7 +108,8 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book.png
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book
+      - 48x48.png
     AdvanceSlots: 0
     HealthCostPercent: 0
     RequiresStatusType: 0

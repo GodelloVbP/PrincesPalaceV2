@@ -66,6 +66,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 350
+        fit: 
         facing: none
         sort: effects
         align: 
@@ -116,6 +117,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
+        fit: 
         facing: 
         sort: effects
         align: 
@@ -205,7 +207,8 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: 
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Censer of Embers/Censer of Embers
+      - Spell Book - 48x48.png
     AdvanceSlots: 0
     HealthCostPercent: 0
     RequiresStatusType: 0

@@ -194,12 +194,86 @@ namespace PrincesPalace.EditModeTests
 
             foreach (var entry in shelf)
             {
-                // Pinned against §2c's literal, not against a recomputed
-                // formula: a tier-2, +2, one-affix piece is 71 gold.
-                Assert.AreEqual(71, entry.price);
+                // Pinned against ShopPricingTests' own literal (2026-09-22
+                // retable, GearBase/GearPerTier 21/5), not against a
+                // recomputed formula: a tier-2, +2, one-affix piece is 79
+                // gold. The candidate pool is all tier 2, so the tier-boosted
+                // TARGET this rolls against (RollGear's own concern) cannot
+                // move which tier actually prices here.
+                Assert.AreEqual(79, entry.price);
                 Assert.AreEqual(2, entry.plus);
                 Assert.AreEqual((int)RiftTier.RiftTouched, entry.riftTier);
             }
+        }
+
+        // "GEAR ROLLS ONE TIER ABOVE THE MAP'S FLOOR TIER" (owner ask,
+        // 2026-09-22). A pool spanning tiers 0-4 at a depth whose floor tier
+        // is 0 (depthStep 8) should draw from AROUND tier 1, not tier 0 --
+        // proven by asserting NONE of the drawn candidates undercut the old,
+        // un-boosted target.
+        [Test]
+        public void GearTargetsOneTierAboveTheFloorTier()
+        {
+            var pool = Enumerable.Range(0, 5)
+                .SelectMany(tier => Enumerable.Range(0, 6).Select(i => new ItemOffer($"item_{tier}_{i}", tier)))
+                .ToList();
+
+            var tiersSeen = new HashSet<int>();
+            for (ulong seed = 0; seed < 20; seed++)
+            {
+                var shelf = ShopStock.RollGear(pool, depthStep: 8, maxTier: 10, Hone(1), Stream(seed));
+                foreach (var entry in shelf.Where(e => !e.noOffer))
+                {
+                    tiersSeen.Add(int.Parse(entry.contentId.Split('_')[1]));
+                }
+            }
+
+            // FloorTier(8) is 0. Un-boosted, ItemOfferTable.Choose's own
+            // TierSpread (1) can never reach past tier 1 from a target of 0.
+            // Boosted to target 1 (ShopStock.GearTierBoost), the band opens
+            // up to tier 2 on its very first (unwidened) pass -- so a tier-2
+            // card turning up anywhere across 20 seeds is something the
+            // UN-boosted code could not have produced at all, not merely a
+            // sample that happens to be consistent with the boost.
+            Assert.IsTrue(tiersSeen.Contains(2),
+                "20 seeds never once reached tier 2 -- the shelf is still targeting the un-boosted floor tier.");
+
+            // And the boost is capped, not unbounded: TierSpread (1) around
+            // a boosted target of 1 cannot reach tier 3.
+            Assert.IsFalse(tiersSeen.Contains(3),
+                "the shelf reached a tier the boosted band should not cover.");
+        }
+
+        // "EVERY GEAR ENTRY CARRIES AT LEAST A +1 OR ONE MODIFIER" (owner
+        // ask, 2026-09-22). `Hone(0)` is the stand-in every OTHER test in
+        // this file uses for "nothing rolled" -- proving the shelf refuses
+        // to ship it bare is the point of THIS test, not a reason to avoid
+        // the stand-in the others already share.
+        [Test]
+        public void NoGearEntryIsABareCommon()
+        {
+            var shelf = ShopStock.RollGear(Pool(30), 8, 10, Hone(0), Stream(2));
+
+            foreach (var entry in shelf.Where(e => !e.noOffer))
+            {
+                Assert.IsTrue(entry.plus >= 1 || entry.modifiers.Count > 0,
+                    $"{entry.contentId} rolled +{entry.plus} with {entry.modifiers.Count} affixes -- a bare common.");
+            }
+        }
+
+        // The quality floor's forced fallback (+1) must never fight the
+        // affordability floor's own guarantee -- both have to hold on the
+        // SAME final card. `Hone(0)` never rolls a plus or a modifier on its
+        // own, so the quality floor's forced +1 is the only thing standing
+        // between this shelf and a bare common, and the price it produces is
+        // exactly what NormalFightPayoutAnchor was raised to cover.
+        [Test]
+        public void TheForcedQualityFloorNeverBreaksTheAffordabilityGuarantee()
+        {
+            var shelf = ShopStock.RollGear(Pool(30), 8, 10, Hone(0), Stream(6));
+
+            Assert.LessOrEqual(shelf.Where(e => !e.noOffer).Min(e => e.price),
+                ShopPricing.NormalFightPayoutAnchor);
         }
 
         [Test]

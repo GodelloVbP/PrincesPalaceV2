@@ -28,12 +28,45 @@ namespace PrincesPalace
         // square and preserveAspect fits the drawing inside it", which is what
         // every sheet before the ground fault was drawn for; an authored aspect
         // is for art whose box must differ from the frame.
-        private static Vector2 BoxForLayer(SpellLayer layer)
+        //
+        // `targetFootprint` IS INERT UNLESS `fit: target` IS AUTHORED --
+        // every call site before this field existed passes 1f and gets exactly
+        // today's box back. SpellLayerRules.CheckPlacement is what keeps a
+        // caller from ever having a footprint worth reading for a layer that
+        // does not fit against one, so this function does not have to ask
+        // which placement it was given.
+        private static Vector2 BoxForLayer(SpellLayer layer, float targetFootprint)
         {
             float size = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
                          * (layer.scale > 0f ? layer.scale : 1f);
+            if (layer.Fit == SpellFit.Target) size *= targetFootprint;
             float aspect = layer.aspect;
             return aspect > 0f ? new Vector2(size, size / aspect) : new Vector2(size, size);
+        }
+
+        // THE SAME MEASURE StageStandOff READS OFF AN ACTOR TO CLOSE A GAP --
+        // RefreshStage composes it once, at AnchorOne, as `FightStageAnchors.
+        // SlotScale(rank, count) * the enemy's own authored StageScale`, and
+        // writes it onto the slot's localScale; the animator's BaseScale is
+        // that same number sampled off the RESTING pose rather than the live
+        // one, which is what FightBeatPlayer.ScaleOf and PlayContactFx's own
+        // ContactBoxFor already read for the identical reason: the struck
+        // target's localScale is mid-squash on the very frame an effect is
+        // being placed, and BaseScale is not. One number, three readers, so a
+        // fourth (`fit: target`) is a call site rather than a second formula.
+        //
+        // FALLS BACK TO THE SLOT'S OWN localScale for a combatant with no
+        // animator wired (a synthetic fixture), and to 1 for a zero or
+        // unanchored scale -- the same "not yet anchored" floor ContactBoxFor
+        // uses, so a fit layer on an unplaced slot draws at its authored size
+        // rather than at nothing.
+        private float TargetFootprint(CombatantState target, RectTransform targetRect)
+        {
+            var animator = target != null ? AnimatorFor(target) : null;
+            float scale = animator != null
+                ? Mathf.Abs(animator.BaseScale.x)
+                : targetRect != null ? Mathf.Abs(targetRect.localScale.x) : 1f;
+            return scale > 0.01f ? scale : 1f;
         }
 
         // A per-pixel scan of every frame of a sheet, asked for on every cast.
@@ -216,9 +249,10 @@ namespace PrincesPalace
             // caster-side its placement is -- `caster` says where the box
             // starts, and a cast reaching three enemies needs three boxes
             // leaving the same point.
-            var targetRect = instance.TargetIndex >= 0 && instance.TargetIndex < struck.Count
-                ? SlotFor(struck[instance.TargetIndex])
-                : struck.Count > 0 ? SlotFor(struck[0]) : null;
+            var targetCombatant = instance.TargetIndex >= 0 && instance.TargetIndex < struck.Count
+                ? struck[instance.TargetIndex]
+                : struck.Count > 0 ? struck[0] : null;
+            var targetRect = SlotFor(targetCombatant);
 
             var on = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels
                 ? casterRect ?? targetRect
@@ -235,7 +269,8 @@ namespace PrincesPalace
                 return;
             }
 
-            var box = BoxForLayer(layer);
+            float footprint = layer.Fit == SpellFit.Target ? TargetFootprint(targetCombatant, targetRect) : 1f;
+            var box = BoxForLayer(layer, footprint);
             var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
 
             // A NON-TRAVELLING `caster` OR `caster-centre` PLACEMENT used to

@@ -162,6 +162,50 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> AttributeMinuses = new List<NodeRef>();
         public NodeRef UnspentPoints;
 
+        // The compact grid's own opener -- see BuildColumnC's own comment.
+        public NodeRef AttributesRow;
+
+        // The attributes panel (owner item: "dedicated attributes screen
+        // showing stat effects, with mouse/gamepad allocation and
+        // reallocation"). A fifth Ui.Modal-covered state, same
+        // row+panel+close shape Pack/Spells/Skills/Track already use, except
+        // this one covers the WHOLE dossier rather than column A alone --
+        // its content (six rows of numbers AND prose) does not fit column
+        // C's 400px, and a modal already dims/blocks everything behind it by
+        // definition (Ui.Modal's own header), so there is nothing column A
+        // or B could still usefully show while it is open.
+        //
+        // Rows are in EXACTLY _cellOrder's order (CharacterDossierController
+        // -- dominant score first), the same order the compact grid above
+        // already uses, so a row's index means the same score in both
+        // places and Spend(int)/Refund(int) need no second overload.
+        public NodeRef AttributesPanel;
+        public NodeRef AttributesCloseButton;
+        public NodeRef AttributesUnspentPoints;
+
+        // Shown only while a run is in progress -- the same refund lock
+        // CharacterDossierController.Refund already enforces
+        // (lockedForFight || InDescent). Inactive otherwise.
+        public NodeRef AttributesLockNote;
+
+        // One row per ability score. AttributeRowSteps is the row itself --
+        // a plain Panel at build time, promoted to a Button-derived
+        // AttributeRow component in ScreenRegistry.WireDossier (the exact
+        // shape OptionRow/ScreenRegistry.WireOptions already uses for a
+        // Left/Right-adjustable row) so a focused row answers Left/Right as
+        // refund/spend and Submit as spend, matching
+        // Core/OptionsController's stepper rows without copying that class.
+        public List<NodeRef> AttributeRowSteps = new List<NodeRef>();
+
+        // ONE LINE, not two -- the score and its invested count are folded
+        // into this same label ("STR 18 - 4 invested", PaintAttributesPanel)
+        // rather than a second column fighting AttributeRowEffects for the
+        // same row width.
+        public List<NodeRef> AttributeRowNames = new List<NodeRef>();
+        public List<NodeRef> AttributeRowEffects = new List<NodeRef>();
+        public List<NodeRef> AttributeRowPluses = new List<NodeRef>();
+        public List<NodeRef> AttributeRowMinuses = new List<NodeRef>();
+
         // Indexed by SheetStats.Derived.
         public List<NodeRef> StatRows = new List<NodeRef>();
         public List<NodeRef> StatNames = new List<NodeRef>();
@@ -234,8 +278,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // controller's own arm-one-panel-at-a-time rule).
             children.Add(screen.BuildSkillsPanel());
 
-            // And the tooltip over everything.
+            // And the tooltip over everything -- except the attributes
+            // panel, declared after it below, which is a MODAL and has to
+            // sit over the tooltip too (it dims and blocks the whole screen
+            // by definition; the controller also closes any open tooltip
+            // the moment it opens, so the two are never live at once, but
+            // draw order still has to agree with that intent).
             children.Add(screen.BuildTooltip());
+
+            // THE ATTRIBUTES PANEL, last, so it covers everything above --
+            // see AttributesPanel's own comment for why this one dims the
+            // whole dossier rather than only column A the way Pack/Spells/
+            // Skills/Track do.
+            children.Add(screen.BuildAttributesPanel());
 
             // NO OUTER FRAME (balance-bot item 2, 2026-09-03) -- the Blue 2:1
             // container 2f3ccd0 wrapped this pane in was "the big blue
@@ -1097,10 +1152,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             float cx = DossierLayout.ColumnCCentreX;
 
-            yield return Ui.Label("DossierAttributesLabel", UiStrings.OverlayAttributes,
-                new UiVec(160f, 20f), 10, TextFaint,
-                Place.At(cx - DossierLayout.ContentCWidth * 0.5f + 80f,
-                         DossierLayout.ColumnCTop - 10f)).AsDecor();
+            // WAS a plain decorative label. Now the opener for the
+            // attributes panel (owner item: "dedicated attributes screen
+            // showing stat effects") -- same rect, same text, so promoting
+            // it costs the header row no new space. Same row+panel shape as
+            // Pack/Spells/Skills/Track's own openers (DeclareColumnARows'
+            // own header), just this one lives in column C instead of A
+            // because that is where the thing it opens already is.
+            var attributesRow = Ui.Button("DossierAttributesRow", UiStrings.OverlayAttributes,
+                    new UiVec(160f, 20f), 10,
+                    Place.At(cx - DossierLayout.ContentCWidth * 0.5f + 80f,
+                             DossierLayout.ColumnCTop - 10f))
+                .NoChrome();
+            AttributesRow = attributesRow;
+            yield return attributesRow;
 
             yield return Ui.Solid("DossierAttributesRule", Rule,
                 new UiVec(DossierLayout.ContentCWidth, 1f),
@@ -1226,50 +1291,199 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
         }
 
+        // ---- the attributes panel (modal) ----------------------------------------------
+        //
+        // "Dedicated attributes screen showing stat effects, with
+        // mouse/gamepad allocation and reallocation" -- the owner item this
+        // panel exists for. Six rows, one per ability score, EACH row
+        // showing the score, the invested points, and what it does in
+        // numbers pulled from AbilityEffectDescriptions (Domain/Stats) --
+        // the same derivation functions combat itself reads, never a
+        // restated figure. Rows are painted by
+        // CharacterDossierController.PaintAttributesPanel in EXACTLY
+        // _cellOrder's order, the same order the compact grid already uses,
+        // so Spend(int)/Refund(int) need no second overload for this panel.
+        private UiNode BuildAttributesPanel()
+        {
+            const float cx = 0f;
+            var children = new List<UiNode>();
+
+            // Flush to the content edge -- offset by exactly the box's own
+            // half-width, same convention BuildColumnC's header label uses
+            // against ContentCWidth, so the box's left edge lands ON the
+            // content edge rather than at an arbitrary offset that can
+            // overhang it (AUDIT: the first version of this offset by a
+            // flat 90px against a 300px-wide box and overhung the card by
+            // 12px at every aspect).
+            const float titleWidth = 280f;
+            children.Add(Ui.Label("DossierAttributesTitle", UiStrings.DossierAttributesTitle,
+                    new UiVec(titleWidth, 26f), 18, AccentHi,
+                    Place.At(cx - DossierLayout.AttributesContentWidth * 0.5f + titleWidth * 0.5f,
+                             DossierLayout.AttributesTop))
+                .AsDecor());
+
+            var closeShape = Ui.PlateShapeFor(110f, 28f);
+            var closeSize = new UiVec(28f * Ui.PlateAspect(closeShape), 28f);
+            var close = Ui.Button("DossierAttributesClose", UiStrings.OverlayPackClose, closeSize, 15,
+                    Place.At(cx + DossierLayout.AttributesContentWidth * 0.5f - closeSize.X * 0.5f,
+                             DossierLayout.AttributesTop - 2f))
+                .Themed(ButtonTheme.Silver);
+            AttributesCloseButton = close;
+            children.Add(close);
+
+            children.Add(Ui.Solid("DossierAttributesHeaderRule", Rule,
+                new UiVec(DossierLayout.AttributesContentWidth, 1f),
+                Place.At(cx, DossierLayout.AttributesTop - 26f)).AsDecor());
+
+            // Points waiting, on its own line -- same words PaintStatSpending
+            // already puts on the compact grid's own UnspentPoints label, so
+            // the two can never disagree about what "3 points" means. Same
+            // flush-to-content-edge convention as the title above.
+            const float unspentWidth = 280f;
+            var unspent = Ui.Label("DossierAttributesUnspentPoints", UiString.Runtime,
+                    new UiVec(unspentWidth, 22f), 14, Accent,
+                    Place.At(cx - DossierLayout.AttributesContentWidth * 0.5f + unspentWidth * 0.5f,
+                             DossierLayout.AttributesSubHeaderY))
+                .AsDecor()
+                .TextAligned(UiTextAlign.TopLeft);
+            AttributesUnspentPoints = unspent;
+            children.Add(unspent);
+
+            // Why a minus might not be doing anything, spoken rather than
+            // left for the player to guess at a quiet button -- see
+            // DossierAttributesLocked's own comment. Inactive by default;
+            // the controller shows it only while the lock actually applies.
+            var lockNote = Ui.Label("DossierAttributesLockNote", UiStrings.DossierAttributesLocked,
+                    new UiVec(DossierLayout.AttributesContentWidth * 0.5f - 20f, 22f), 13, TextDim,
+                    Place.At(cx + DossierLayout.AttributesContentWidth * 0.25f + 10f,
+                             DossierLayout.AttributesSubHeaderY))
+                .AsDecor()
+                .Inactive()
+                .TextAligned(UiTextAlign.Right);
+            AttributesLockNote = lockNote;
+            children.Add(lockNote);
+
+            children.Add(Ui.Solid("DossierAttributesSubHeaderRule", RuleSoft,
+                new UiVec(DossierLayout.AttributesContentWidth, 1f),
+                Place.At(cx, DossierLayout.AttributesRowsTop + 6f)).AsDecor());
+
+            float textCx = DossierLayout.AttributesTextCentreX;
+            float textWidth = DossierLayout.AttributesTextWidth;
+
+            // NAME/EFFECT Y ARE ROW-LOCAL, not absolute -- both labels are
+            // children of `row` below, positioned relative to ITS centre
+            // (0,0 in its own local space), the same relative-offset
+            // convention DossierAttrValue{i}/DossierAttrKey{i} already use
+            // against their own cell.
+            float nameY = DossierLayout.AttributesRowHeight * 0.5f - 20f;
+            float effectY = nameY - 16f - 4f - 18f;
+
+            for (int i = 0; i < SheetStats.Abilities.Length; i++)
+            {
+                float y = DossierLayout.AttributesRowCentreY(i);
+
+                // THE ROW ITSELF: a plain Panel in the tree (no Button, no
+                // Selectable) -- ScreenRegistry.WireDossier promotes it to
+                // an AttributeRow (CharacterDossierController's own
+                // Button-derived component) at build time, the exact shape
+                // ScreenRegistry.WireOptions already uses for OptionRow.
+                // Building it as a Button here instead would leave a SECOND
+                // Selectable fighting the first one over the same
+                // GameObject the moment WireDossier attaches AttributeRow.
+                var row = Ui.Panel($"DossierAttrRow{i}",
+                        Place.At(cx, y),
+                        UiSize.Fixed(DossierLayout.AttributesContentWidth, DossierLayout.AttributesRowHeight - 2f))
+                    .NoChrome();
+
+                var name = Ui.Label($"DossierAttrRowName{i}", UiString.Runtime,
+                        new UiVec(textWidth, 20f), 16, Text, Place.At(textCx, nameY))
+                    .Inactive().AsDecor()
+                    .TextAligned(UiTextAlign.TopLeft);
+
+                var effect = Ui.Label($"DossierAttrRowEffect{i}", UiString.Runtime,
+                        new UiVec(textWidth, 40f), 13, TextDim, Place.At(textCx, effectY))
+                    .Inactive().AsDecor()
+                    .TextAligned(UiTextAlign.TopLeft);
+
+                // The two steppers, children of the row like the compact
+                // grid's own plus/minus -- a click routes to whichever one
+                // is actually under the pointer because uGUI hit-tests the
+                // deeper object first, so they take clicks meant for them
+                // even though the row beneath spans the same area.
+                var minus = Ui.Button($"DossierAttrRowMinus{i}", UiStrings.DossierRefundPoint,
+                        new UiVec(DossierLayout.AttributesStepSize, DossierLayout.AttributesStepSize), 16,
+                        Place.At(DossierLayout.AttributesStepMinusX, 0f))
+                    .NoChrome()
+                    .Inactive();
+
+                var plus = Ui.Button($"DossierAttrRowPlus{i}", UiStrings.DossierSpendPoint,
+                        new UiVec(DossierLayout.AttributesStepSize, DossierLayout.AttributesStepSize), 16,
+                        Place.At(DossierLayout.AttributesStepPlusX, 0f))
+                    .NoChrome()
+                    .Inactive();
+
+                // CHILDREN of the row, not siblings over it -- same
+                // containment DossierAttrCell{i} already uses for its own
+                // value/key labels and plus/minus (that comment's own
+                // reasoning: a child is contained by construction, so the
+                // overlap audit and uGUI's own hit routing both agree it
+                // belongs to the row rather than fighting it for the same
+                // rect).
+                row.Children.Add(name);
+                row.Children.Add(effect);
+                row.Children.Add(minus);
+                row.Children.Add(plus);
+
+                AttributeRowSteps.Add(row);
+                AttributeRowNames.Add(name);
+                AttributeRowEffects.Add(effect);
+                AttributeRowPluses.Add(plus);
+                AttributeRowMinuses.Add(minus);
+
+                children.Add(row);
+            }
+
+            var card = Ui.Sprite("DossierAttributesCard", null, Place.At(0f, 0f),
+                    UiSize.Fixed(DossierLayout.AttributesCardWidth, DossierLayout.AttributesCardHeight))
+                .Coloured(PackGround);
+            foreach (var child in children) card.Children.Add(child);
+
+            var modal = Ui.Modal("DossierAttributesModal", "#05030AD9", card).Inactive();
+            AttributesPanel = modal;
+            return modal;
+        }
+
         // ---- the shared tooltip --------------------------------------------------------
 
-        // 300x480, not 280x280. It used to hold a one-line item summary and a
-        // wide-short box suited that; a pack item's tooltip is
-        // ItemDescription.ComparisonBody now (bonuses, requirement, a
-        // VS.-EQUIPPED delta per changed stat, cascade notes) -- the same
-        // content routinely runs to eight or ten lines, and the old 84px-tall
-        // body clipped or overflowed almost everything it was asked to show.
+        // OWNER ITEM (2026-09-22): "readable, roughly square item tooltips
+        // replacing the purple rectangles". The bespoke 300x480 sliver above
+        // (its own history is in git log, not restated here) is retired in
+        // favour of ItemComparisonPanel -- the shop's own reference shape,
+        // #1D1226F2 fill + Ui.Rim hairline at ~420x420, title font 20, body
+        // font 15 -- rather than a second hand-tuned rectangle. ONE builder,
+        // two callers: ShopScreen's ShopDetailPanel and this DossierTooltip.
         //
-        // ITEM-MODIFIER PLAN PHASE E: grown again, from 280x280, for the new
-        // AFFIXES section ComparisonBody/CardSummary can now append -- a
-        // three-slot Convergent item can add a heading plus up to three
-        // modifier lines on top of the content that already ran to ten
-        // lines, and the box that already regularly ran close to full would
-        // have started clipping the moment the first real modifier dropped.
-        // Grown in BOTH axes (280->300 wide, 280->380 tall): width buys back
-        // some of the extra wrap a modifier's longer sentences cost, height
-        // buys the extra lines outright.
-        //
-        // ITEM-MODIFIER PLAN PHASE F: 380 -> 480. The AFFIXES section is a
-        // comparison now (ItemDescription.ModifierComparisonLines) -- a
-        // three-slot Convergent candidate swapped against a fully different
-        // three-slot Convergent item currently worn can print its own three
-        // lines PLUS three trailing "Losing: <name>" lines, where before the
-        // section topped out at three lines total. The loss lines are short
-        // (a single "Losing: Frosty", not a wrapped effect sentence), so the
-        // body only needed 50px more (320->370) to hold them -- but the panel
-        // grows by 100 because it is centred on Place.At(0,0) and the extra
-        // 50px has to come out of BOTH edges to keep the body's own top
-        // anchored where it already was, next to the title. The other 50px
-        // is unused headroom above the title, not a second helping of text.
+        // The name prefix IS the node-name contract: ItemComparisonPanel.Build
+        // emits "<prefix>", "<prefix>Title" and "<prefix>Body", so passing
+        // "DossierTooltip" reproduces the exact three names
+        // CharacterDossierController's ShowTooltip/PlaceTooltip and
+        // TooltipPlacement.Beside already key off -- no controller change
+        // needed. Inactive().AsDecor() are re-applied here because Build's
+        // own caller (ShopScreen) wants a STANDING panel, always active; a
+        // hover tooltip is the opposite by construction (Ui.Tooltip's own
+        // header explains why: hidden until hovered, and never allowed to
+        // steal the click meant for the thing underneath it).
         private UiNode BuildTooltip()
         {
-            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(280f, 26f), 18, AccentHi,
-                Place.At(0f, 168f)).AsDecor();
-            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(280f, 370f), 13, TextDim,
-                    Place.At(0f, -39f)).AsDecor()
-                .TextAligned(UiTextAlign.TopLeft);
+            var built = ItemComparisonPanel.Build("DossierTooltip", Place.At(0f, 0f),
+                new UiVec(420f, 420f), titleHeight: 30f,
+                titleFontSize: 20, titleHex: AccentHi,
+                bodyFontSize: 15, bodyHex: TextDim);
 
-            TooltipTitle = title;
-            TooltipBody = body;
+            TooltipTitle = built.Title;
+            TooltipBody = built.Body;
 
-            var panel = Ui.Tooltip("DossierTooltip", null, "#1D1226F2", Place.At(0f, 0f),
-                UiSize.Fixed(300f, 480f), title, body);
+            var panel = built.Panel.Inactive().AsDecor();
             Tooltip = panel;
             return panel;
         }

@@ -55,6 +55,25 @@ namespace PrincesPalace
         private const float HealPeakAlpha = 0.75f;
         private static readonly Color HealTint = new Color(0.45f, 0.95f, 0.55f, 1f);
 
+        // A BARRIER TAKING THE BLOW -- a third kind of news, so a third
+        // tint: not the impact's white/typed pulse (nothing reached health)
+        // and not the heal's green (nothing was mended). FightHudPalette.
+        // WardBright, the same cyan the health bar's own ward segment
+        // paints, so the flash and the segment it is reporting on cannot
+        // read as two different colours for one shield.
+        //
+        // HOLD/FADE SIT BETWEEN THE IMPACT'S AND THE HEAL'S: a shield
+        // taking a hit is not as sudden as a blow connecting (nothing
+        // actually struck flesh) and not as soft as being mended, so it
+        // borrows neither pair outright.
+        private const float BarrierHoldSeconds = 0.08f;
+        private const float BarrierFadeSeconds = 0.30f;
+        private const float BarrierPeakAlpha = 0.85f;
+        private static readonly Color BarrierTint = ParseOrWhite(FightHudPalette.WardBright);
+
+        private static Color ParseOrWhite(string hex) =>
+            ColorUtility.TryParseHtmlString(hex, out var parsed) ? parsed : Color.white;
+
         [SerializeField] internal Image image;
 
         // Assignable from a test harness that builds its own canvas. The scene
@@ -119,6 +138,11 @@ namespace PrincesPalace
         private static readonly Pulse[] HealOnly =
             { new Pulse(HealTint, HealHoldSeconds, HealFadeSeconds, HealPeakAlpha) };
 
+        private static readonly Pulse BarrierPulse =
+            new Pulse(BarrierTint, BarrierHoldSeconds, BarrierFadeSeconds, BarrierPeakAlpha);
+
+        private static readonly Pulse[] BarrierOnly = { BarrierPulse };
+
         public void Flash() => Flash(WhiteOnly);
 
         // THE FLASH, WEARING THE ELEMENT THAT CAUSED IT. Owner 2026-09-19:
@@ -128,6 +152,25 @@ namespace PrincesPalace
         public void Flash(DamageType type) => Flash(PulsesFor(type));
 
         public void FlashHeal() => Flash(HealOnly);
+
+        // A SHIELD ATE THE WHOLE BLOW: the barrier is the only news, so it
+        // is the only pulse -- there is no hit underneath it to open with.
+        public void FlashBarrier() => Flash(BarrierOnly);
+
+        // A SHIELD ATE PART OF THE BLOW: the ordinary (or typed) flash
+        // still opens it, because the hit landed and mattered, and the
+        // barrier rides in AFTER as a third pulse -- the identical
+        // "residue trails the impact" arrangement Flash(DamageType) already
+        // uses for an element (TypedPeakAlpha's own header), extended by
+        // one more pulse rather than given a second mechanism.
+        public void FlashPartiallyWarded(DamageType type)
+        {
+            var hit = PulsesFor(type);
+            var withBarrier = new Pulse[hit.Length + 1];
+            hit.CopyTo(withBarrier, 0);
+            withBarrier[hit.Length] = BarrierPulse;
+            Flash(withBarrier);
+        }
 
         // WHAT A TYPE FLASHES, AS DATA, and the pure seam the numbers are
         // pinned through: no scene, no coroutine, no frame, the same posture

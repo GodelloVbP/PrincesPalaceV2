@@ -97,5 +97,31 @@ namespace PrincesPalace.Domain.UiKit
         // resolver's error message and for the tests that pin the three
         // shipped rows. Not used to BUILD a path -- content owns that.
         public const string ResourceRoot = "Plates/";
+
+        // THE ENEMY PLATE'S OWN HEAD ZONE -- same idea as HeadZoneFrac above
+        // (isolate the head so a small badge reads as a face rather than a
+        // smear), a DIFFERENT axis because the source art is a different
+        // shape. A PC plate is a wide banner with the head embossed into its
+        // right end, pre-authored that way by normalize_pc_plates.py, so
+        // HeadZoneFrac reserves a fraction of WIDTH and nothing at runtime
+        // has to crop anything. An enemy's idle stance is a tall, standing
+        // full-body pose with no such banner behind it -- StanceSpriteFor
+        // hands back whatever the content pipeline authored, unnormalised --
+        // so the icon has to crop the TOP fraction of the sprite's HEIGHT
+        // instead, at paint time (FightController.Hud.RefreshEnemyPlates),
+        // to get the same "mostly head" reading out of a 34x34 badge that
+        // the party column gets for free from its art.
+        //
+        // NOT MEASURED like HeadZoneFrac is: there is no per-enemy plate
+        // asset to run a measuring tool against, only the same idle sprite
+        // the stage already draws at full size. 0.35 is a judgement call --
+        // enough of a standing figure's top to carry head, ears/horns and
+        // some shoulder for a creature whose head alone would be a handful
+        // of pixels, not so much that the icon reads as a body again. Every
+        // enemy shares one constant for the reason PcPlateArt.HeadZoneFrac
+        // takes the WORST case across three PCs rather than one per
+        // character: a badge that changed crop with its occupant would be a
+        // second rule for the player to learn per monster.
+        public const float EnemyIconHeadZoneFrac = 0.35f;
     }
 }

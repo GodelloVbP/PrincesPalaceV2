@@ -14,7 +14,12 @@ namespace PrincesPalace.Domain.Combat
         // this one modest coefficient and no mana/resource rider.
         public const float BasicAttackPowerMultiplier = 1.2f;
 
-        private static readonly ScalingSet UnarmedStrengthScaling =
+        // INTERNAL rather than private -- the attributes-panel effect text
+        // (Domain/Stats/AbilityEffectDescriptions.cs) names this exact
+        // fallback when a character's weapon slot is neutral, so the panel's
+        // "no weapon: unarmed STR-B" line reads the same grade this method
+        // actually swings with rather than a second, hand-typed "B".
+        internal static readonly ScalingSet UnarmedStrengthScaling =
             ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.B);
         // Fallback only — used when no per-character spell tier applies
         // (a non-player CombatantState with no Character behind it; enemies

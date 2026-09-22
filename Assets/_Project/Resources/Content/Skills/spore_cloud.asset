@@ -49,9 +49,64 @@ MonoBehaviour:
       groundAspect: 0
       groundImpactY: -1
       castSfxPath: 
-      layers: []
-      layerFormat: 0
-      hitCueSeconds: 0
+      layers:
+      - id: spores
+        render: emitter
+        place: formation
+        follow: 0
+        at: release
+        offset: 0
+        path: 
+        seconds: 0
+        fps: 0
+        startFrame: 0
+        until: 
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 0
+        fit: 
+        facing: 
+        sort: effects
+        align: level
+        punch: 0
+        glow: 0
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: Spells/thorn_tithe_particles
+          rate: 11
+          burst: 0
+          window: 0.9
+          sourceDx: 0
+          sourceDy: 140
+          spreadDegrees: 360
+          aimDegrees: 270
+          speedMin: 15
+          speedMax: 45
+          inherit: 0
+          drag: 0.4
+          gravity: -40
+          lifeMin: 0.9
+          lifeMax: 1.4
+          sizeMin: 0.35
+          sizeMax: 0.7
+          spinMin: -60
+          spinMax: 60
+          fadeFrom: 0.7
+          endScale: 0.9
+          seed: 4471
+          weights:
+          - 0.15
+          - 0.3
+          - 0.15
+          - 0.4
+      layerFormat: 1
+      hitCueSeconds: 0.35
     SortOrder: 38
     Status: 0
     HasStatus: 1

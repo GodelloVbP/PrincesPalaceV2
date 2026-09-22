@@ -142,6 +142,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyPlateNames = new List<NodeRef>();
         public List<NodeRef> EnemyPlateHps = new List<NodeRef>();
         public List<NodeRef> EnemyPlateHpFills = new List<NodeRef>();
+
+        // THE AFTERIMAGE, drawn UNDER EnemyPlateHpFills so a hit reads as a
+        // chunk taken off the bar rather than a snap -- FightController.Hud's
+        // UpdateGhostFill eases this one down to meet the live fill over
+        // GhostFillDecaySeconds. HpDeep rather than a new token: a darker
+        // shade of the same hue reads as "the health that WAS here" without
+        // introducing a fourth colour to this one bar.
+        public List<NodeRef> EnemyPlateGhostFills = new List<NodeRef>();
+
+        // THE WARD SEGMENT, drawn OVER both of the above -- sized ward/maxHP
+        // and clamped, starting where the HP fill ends (SetWardFill). Hidden
+        // outright with no ward up, the same "only an elite/boss carries a
+        // BreakShield at all" rule EnemyPlateBreakTracks already follows.
+        public List<NodeRef> EnemyPlateWardFills = new List<NodeRef>();
+
         public List<NodeRef> EnemyPlateTags = new List<NodeRef>();
         public List<NodeRef> EnemyPlateReticles = new List<NodeRef>();
         public List<NodeRef> EnemyPlateBreakTracks = new List<NodeRef>();
@@ -210,6 +225,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PcSignatures = new List<NodeRef>();
         public List<NodeRef> PcHpValues = new List<NodeRef>();
         public List<NodeRef> PcHpFills = new List<NodeRef>();
+
+        // The party column's own afterimage and ward segment -- same
+        // mechanism and same reasoning as EnemyPlateGhostFills/
+        // EnemyPlateWardFills above, one bar, one rule for both plate kinds.
+        public List<NodeRef> PcGhostFills = new List<NodeRef>();
+        public List<NodeRef> PcWardFills = new List<NodeRef>();
+
         public List<NodeRef> PcMpValues = new List<NodeRef>();
         public List<NodeRef> PcMpFills = new List<NodeRef>();
 
@@ -1198,14 +1220,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // must match, which is two equations in two unknowns.
                 // Re-solve them BOTH whenever either box's height moves.
                 //
-                // Solved for the 2026-09-10 sizes -- hp 34 tall (13pt, up
-                // from 27 at 10pt), bar 7, plate half-height 65:
-                //   barY = -topY - 13.5   (equal outer margins)
-                //   topY - barY = 28.5    (the 8px gap)
-                // giving topY 7.5 (unmoved) and barY -21 (from -17.5), with
-                // 40.5 of margin above and below. The HP box grew by 7 and
-                // the gap paid for half of it.
-                const float topY = 7.5f;
+                // RE-SOLVED for the 2026-09-22 bar bump -- hp still 34 tall,
+                // bar now 9 (up from 7, "if the audit allows" -- UiAudit is
+                // what caught the first, height-only attempt at this: it
+                // moved the bar's own half-height without re-running either
+                // equation, and TheEnemyPlateTopRowAndBarAreCentredWithNo
+                // BlankBand caught the resulting 1px asymmetry), plate
+                // half-height 65:
+                //   barY = -topY - 12.5   (equal outer margins, barHalf 4.5)
+                //   topY - barY = 29.5    (the 8px gap, barHalf 4.5)
+                // giving topY 8.5 (from 7.5) and barY -21 (unmoved), with
+                // 39.5 of margin above and below -- down 1 from 40.5, which
+                // is the whole 2px the bar grew split evenly across both
+                // margins.
+                const float topY = 8.5f;
                 const float barY = -21f;
 
                 // 72 WIDE, 11PT RATHER THAN THE OLD 86/13PT: BRK now lives
@@ -1253,7 +1281,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     FightHudPalette.EnemyHpText, Place.At(rowRight, topY, new UiVec(1f, 0.5f)))
                     .TextAligned(UiTextAlign.Right);
 
+                // THE AFTERIMAGE, UNDER the live fill in this list's order --
+                // see EnemyPlateGhostFills' own header. Starts equal to the
+                // fill (both anchor-stretched to Place.Stretch() at build
+                // time, before the first repaint ever runs) so nothing
+                // flashes a false chunk on the very first paint.
+                var ghostFill = Ui.Solid($"EnemyPlate{i}GhostFill", FightHudPalette.HpDeep,
+                    Place.Stretch(), UiSize.Fill);
+
                 var fill = Ui.Solid($"EnemyPlate{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
+
+                // THE WARD SEGMENT, over both -- see EnemyPlateWardFills' own
+                // header. Inactive at build time: SetWardFill only shows it
+                // once a real ward exists, the same rule the break meter
+                // below already follows.
+                var wardFill = Ui.Solid($"EnemyPlate{i}WardFill", FightHudPalette.WardBright,
+                        Place.Stretch(), UiSize.Fill)
+                    .Inactive();
+
+                // ONE LAYERED GROUP, the same mechanism Ui.Meter uses for its
+                // own fill-plus-caption stack -- three fills sharing one
+                // rect are meant to overlap, so this states that once rather
+                // than UiAudit refusing each pair.
+                Ui.Layered(ghostFill, fill, wardFill);
 
                 // BRK'S ONLY REMAINING HOME, and it has moved DOWN a row
                 // (2026-09-10). Phase 3 retired every other status to the
@@ -1288,8 +1338,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float barCentreX = (barLeft + barRight) * 0.5f;
                 float barWidth = barRight - barLeft;
 
+                // 9 PX, UP FROM 7 (this pass, "if the audit allows" -- it
+                // does: the row's own 11px of margin above/below (see
+                // topY/barY's header) absorbs 2px with room left, and
+                // UiAudit's four-aspect sweep is the gate that would have
+                // said otherwise).
                 var bar = Ui.Panel($"EnemyPlate{i}Bar",
-                        Place.At(barCentreX, barY), UiSize.Fixed(barWidth, 7f), fill)
+                        Place.At(barCentreX, barY), UiSize.Fixed(barWidth, 9f), ghostFill, fill, wardFill)
                     .Coloured(FightHudPalette.Track);
 
                 // A 12px square rotated 45 degrees, pinned just outside the
@@ -1323,6 +1378,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 EnemyPlateNames.Add(name);
                 EnemyPlateHps.Add(hp);
                 EnemyPlateHpFills.Add(fill);
+                EnemyPlateGhostFills.Add(ghostFill);
+                EnemyPlateWardFills.Add(wardFill);
                 EnemyPlateTags.Add(tags);
                 EnemyPlateReticles.Add(reticle);
                 EnemyPlateBreakTracks.Add(breakTrack);
@@ -1724,6 +1781,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     FightHudPalette.Track, FightHudPalette.HpRim,
                     FightHudPalette.HpBright, FightHudPalette.HpShade, hpValue);
 
+                // THE AFTERIMAGE AND THE WARD SEGMENT, on the party bar too --
+                // one rule for both plate kinds (PcGhostFills/PcWardFills'
+                // own header). Ui.Meter has no door for a layer UNDER its own
+                // fill, so this reaches into the track's children directly,
+                // the same way this file already reaches into a button's own
+                // Children below (EnemyPlateFrames.Add(frame.Children.
+                // FirstOrDefault())) -- inserted rather than appended, so
+                // the ghost sits BEHIND hp.Fill instead of covering it.
+                var pcGhostFill = Ui.Solid($"PcPlate{i}HpGhostFill", FightHudPalette.HpDeep,
+                    Place.Stretch(), UiSize.Fill);
+                var pcWardFill = Ui.Solid($"PcPlate{i}HpWardFill", FightHudPalette.WardBright,
+                        Place.Stretch(), UiSize.Fill)
+                    .Inactive();
+
+                hp.Track.Children.Insert(0, pcGhostFill);
+                hp.Track.Children.Insert(hp.Track.Children.IndexOf(hp.Fill) + 1, pcWardFill);
+
+                // hpValue TOO -- Ui.Meter already declared fill+hpValue as
+                // one layered group internally; these two new fills sit in
+                // that exact same stack and need the same waiver, or the
+                // audit sees an UNDECLARED overlap against the caption that
+                // Ui.Meter's own Layered call never mentioned them to.
+                Ui.Layered(pcGhostFill, hp.Fill, pcWardFill, hpValue);
+
                 var mp = Ui.Meter($"PcPlate{i}MpBar", $"PcPlate{i}MpFill",
                     Place.At(PcPoolBarCentreX, PcBarRowY), new UiVec(PcBarW, PcBarH),
                     FightHudPalette.TrackMp, FightHudPalette.MpRim,
@@ -1765,6 +1846,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 PcSignatures.Add(signature);
                 PcHpValues.Add(hpValue);
                 PcHpFills.Add(hp.Fill);
+                PcGhostFills.Add(pcGhostFill);
+                PcWardFills.Add(pcWardFill);
                 PcMpValues.Add(mpValue);
                 PcMpFills.Add(mp.Fill);
                 PcMpShades.Add(mp.Shade);
@@ -2254,139 +2337,210 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // empty below a short description; moving it out of the middle of the
         // battlefield and shrinking it is the actual request, not a like-for-
         // like reposition.
-        private const float DetailW = 340f;
+        // WIDER, on request -- 340 read the body text at a squint from the
+        // couch; this is the width a 15pt body line needs to hold three
+        // lines without wrapping to five. Grows toward the battlefield
+        // centre (DetailX is anchored off the screen's own right edge, same
+        // as always), so a collision this opens is with the enemy rack, not
+        // with anything to its right -- UiAudit's four-aspect pass is what
+        // would catch it, and the fix is to move the column, never to
+        // AllowOverlap it (see BuildDetailColumn's own header).
+        private const float DetailW = 460f;
         private const float DetailRightMargin = 40f;
         private const float DetailBottomMargin = 40f;
         private static float DetailX => (960f - DetailRightMargin) - DetailW * 0.5f;
 
-        // HALF the old height, on request -- the old box was tuned for four
-        // stat rows and a lot of empty middle; this one carries five (SCALES
-        // joined COST/POWER/TARGET/EFFECT) in half the space, so the padding
-        // below is retuned alongside the height rather than left to overflow
-        // it.
-        //
-        // BIGGER THAN THE CONTAINER'S HALF BY ITS OWN FRAME'S BLEED, same
-        // reason as before: panel_violet is a 9-slice whose art does not reach
-        // its own edges (3.32% top, 3.12% bottom, measured off the file), so
-        // the RECT has to be bigger than the drawn frame by that margin for
-        // the frame itself to land on the intended box.
-        private const float PanelBleedY = 0.0332f + 0.0312f;
-        private static float DetailH => (FightSubmenuLayout.ContainerHeight * 0.5f) / (1f - PanelBleedY);
+        // ITS OWN HEIGHT RULE now, not half of the submenu container's --
+        // that borrowing tied the detail card's size to a number that (post
+        // FightSubmenuLayout.RowsInView's own rework) now moves with how
+        // many rows a character's list happens to show, which the detail
+        // card must never do: a three-skill actor's card has to stay exactly
+        // as tall as a twelve-skill actor's, since both can carry all eight
+        // stat rows plus a three-line body. So this sums what the CONTENT
+        // needs directly -- top pad, name+kind, three lines of the new body
+        // font, the divider, FightHudSpec.DetailStatRows rows at their own
+        // pitch, bottom pad -- rather than deriving from a neighbour's own
+        // unrelated number.
+        private const float DetailTopPad = 18f;
+        private const float DetailBottomPad = 18f;
+        private const float DetailNameBlockH = 46f;
+        private const float DetailBodyMinH = 64f;
+        private const float DetailBodyToStatsGap = 20f;
+        private const float DetailStatPitch = 20f;
+
+        // public, not private: FightController.Hud.cs's RefreshDetail reads
+        // these to narrow/restore a stat row's key and value boxes at
+        // runtime, so the element tag riding POWER's CURRENT row (whichever
+        // one that is -- Stats is compact now, see BuildDetailColumn's own
+        // header) always has the same amount of freed middle to sit in,
+        // wherever it lands.
+        public const float DetailStatKeyWidth = 190f;
+        public const float DetailStatValueWidth = 170f;
+        public const float DetailStatKeyWidthNarrow = 80f;
+        public const float DetailStatValueWidthNarrow = 110f;
+        public const float DetailDamageTypeWidth = 210f;
+
+        private static float DetailH =>
+            DetailTopPad + DetailNameBlockH + DetailBodyMinH + DetailBodyToStatsGap
+            + FightHudSpec.DetailStatRows * DetailStatPitch + DetailBottomPad;
+
         private static float DetailY => -(540f - DetailBottomMargin) + DetailH * 0.5f;
 
-        // Where the drawn frame actually is, which is what the contents have to
-        // stay inside. Everything below measures from these rather than from the
-        // rect, because the rect's corners are empty pixels.
-        private static float DetailFrameTop => DetailH * (0.5f - 0.0332f);
-        private static float DetailFrameBottom => -DetailH * (0.5f - 0.0312f);
+        // NO BLEED CORRECTION any more -- panel_violet's 9-slice transparent
+        // margin is gone with the sprite itself (see BuildDetailColumn's own
+        // header); a flat fill plus a hairline Rim draws exactly on the rect
+        // it is given, so the frame IS the rect on every edge.
+        private static float DetailFrameTop => DetailH * 0.5f;
+        private static float DetailFrameBottom => -DetailH * 0.5f;
 
         // A PERSISTENT third column rather than a hover tooltip: arrowing
         // through options lets the player compare without re-hovering, and a
         // tooltip that vanishes the moment the cursor moves cannot be compared
         // against anything.
+        // A DARK, NEAR-OPAQUE PLATE, not panel_violet -- the owner's ask was
+        // legibility over ornament: a body line read against the violet
+        // panel's own busy paint at 1920x1080 without leaning in. #1D1226F2
+        // is the same near-black-plum the kit's OWN tooltip already uses
+        // (CharacterDossierScreen.BuildTooltip, ReckoningScreen's offer
+        // tooltip) for exactly this reason, so this is the kit's existing
+        // "read this" surface, not a new one invented for this card. The
+        // hairline Rim (FightHudPalette.Hairline, the same edge DetailDivider
+        // already draws) replaces the ornate frame's own border -- no darker
+        // panel sprite exists under Art/UI/Panels for this card's aspect, so
+        // there is no frame art to keep (see this method's own header
+        // elsewhere for the Glob that confirmed it).
+        private const string DetailFillHex = "#1D1226F2";
+
+        // A PERSISTENT third column rather than a hover tooltip: arrowing
+        // through options lets the player compare without re-hovering, and a
+        // tooltip that vanishes the moment the cursor moves cannot be compared
+        // against anything.
+        //
+        // THE OUTER NODE STAYS A PLAIN (non-Decor) Panel, not Ui.Tooltip's
+        // AsDecor ground -- Ui.Tooltip marks its whole subtree Decor, which
+        // UiAudit's sibling-overlap check (A1) skips entirely, and this card
+        // is the one place that check has to stay live: it is what would
+        // catch the wider column reaching into the enemy rack, and the model
+        // rule for that failure is "move it", never "exempt it" (see
+        // DetailW's own comment). Only the flat fill and the Rim border are
+        // marked Decor -- they are paint, not content, the same split
+        // Options/Party/RunStats already draw their own bordered cards with.
         private UiNode BuildDetailColumn()
         {
+            float contentW = DetailW - 44f;
             float left = -DetailW * 0.5f + 22f;
-            float top = DetailFrameTop - 10f;
+            float top = DetailFrameTop - DetailTopPad;
 
-            // THE STATS ARE A FOOTER, MEASURED FROM THE BOTTOM, same as
-            // before -- retuned smaller and tighter for a box half the height
-            // carrying a fifth row (SCALES) the old one didn't.
-            // 36, not 16: a live capture showed the fifth row (SCALES) sitting
-            // ON the panel's own ornate bottom border, half-hidden behind its
-            // decoration. DetailFrameBottom already backs off the sprite's
-            // measured transparent bleed, but the DRAWN border line itself
-            // sits further inward than that bleed alone accounts for -- this
-            // margin is empirical, from looking at the actual render, not
-            // derived from the sprite measurement above it.
-            float statBottom = DetailFrameBottom + 36f;
-            float statPitch = 18f;
-            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * statPitch + 12f;
+            // MEASURED FROM THE BOTTOM, same as before -- statBottom is a
+            // plain DetailBottomPad off the rect's own edge now, not an
+            // empirical fudge against an ornate border's drawn line: a flat
+            // fill plus a 1px Rim has no decoration for a row to sit on top
+            // of.
+            float statBottom = DetailFrameBottom + DetailBottomPad;
+            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * DetailStatPitch + 10f;
 
-            var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(296f, 20f), 17,
-                FightHudPalette.TextPrimary, Place.At(left, top - 10f, new UiVec(0f, 0.5f)));
-            var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(296f, 14f), 11,
-                FightHudPalette.GoldLight, Place.At(left, top - 28f, new UiVec(0f, 0.5f)));
+            var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(contentW, 22f), 18,
+                FightHudPalette.TextPrimary, Place.At(left, top - 12f, new UiVec(0f, 0.5f)));
+            var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(contentW, 14f), 11,
+                FightHudPalette.GoldLight, Place.At(left, top - 32f, new UiVec(0f, 0.5f)));
 
             // TOP-ALIGNED IN A TALL BOX. Centred, a one-line description sat in
             // the middle of the space and a three-line one started higher --
             // the block moved every time the text wrapped, which is exactly
             // what a reader uses the first line's position to track.
-            float bodyTop = top - 38f;
-            float bodyHeight = bodyTop - (dividerY + 8f);
-            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(296f, bodyHeight), 13,
+            //
+            // 15, UP FROM 13 -- the owner's ask: readable at 1920x1080
+            // without leaning in. Body text is the one thing on this card a
+            // player actually reads sentence by sentence, rather than scans
+            // for a number, so it is the one label that earns a size bump
+            // the stat rows (scanned, not read) do not need.
+            float bodyTop = top - DetailNameBlockH;
+            float bodyHeight = bodyTop - (dividerY + 10f);
+            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(contentW, bodyHeight), 15,
                     FightHudPalette.TextSecondary,
                     Place.At(left, bodyTop - bodyHeight * 0.5f, new UiVec(0f, 0.5f)))
                 .TextAligned(UiTextAlign.TopLeft);
-            var divider = Ui.Solid("DetailDivider", FightHudPalette.Hairline, new UiVec(296f, 1f),
+            var divider = Ui.Solid("DetailDivider", FightHudPalette.Hairline, new UiVec(contentW, 1f),
                 Place.At(0f, dividerY));
 
             DetailName = name;
             DetailKind = kind;
             DetailBody = body;
 
-            var keys = new[]
-            {
-                UiStrings.DetailStatCost, UiStrings.DetailStatPower,
-                UiStrings.DetailStatTarget, UiStrings.DetailStatEffect,
-                UiStrings.DetailStatScaling,
-            };
+            // POOLED ROWS, NOT EIGHT FIXED KEYS (2026-09-22 rework #2). A
+            // row's KEY is now UiString.Runtime, same as its value already
+            // was -- FightHudModel's Stats list is COMPACT (only the facts
+            // that apply to whatever is hovered, in canonical order, with
+            // nothing left as an empty placeholder in the middle), so which
+            // physical row paints POWER moves with what else is present.
+            // FightController.Hud.cs's RefreshDetail writes both the key and
+            // the value into row i from panel.Stats[i], and hides row i
+            // entirely once i reaches panel.Stats.Count -- the same
+            // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows
+            // already use, not a restatement of it.
+            //
+            // WIDTH IS UNIFORM AT BUILD TIME. Every row starts at the normal
+            // key/value width; RefreshDetail narrows exactly the row that
+            // currently carries "POWER" (and restores every other row to
+            // full width, since these are pooled and a PREVIOUS panel may
+            // have narrowed a different index) -- see DetailStatKeyWidth/
+            // DetailStatKeyWidthNarrow's own header and RefreshDetail's.
+            var fill = Ui.Solid("DetailColumnFill", DetailFillHex, new UiVec(DetailW, DetailH),
+                Place.At(0f, 0f)).AsDecor();
 
-            // keys[1] -- see the DetailDamageType comment in the loop below.
-            const int PowerStatRowIndex = 1;
+            var children = new List<UiNode> { fill, name, kind, body, divider };
+            children.AddRange(Ui.Rim("DetailColumn", new UiVec(DetailW, DetailH), FightHudPalette.Hairline));
 
-            var children = new List<UiNode> { name, kind, body, divider };
             for (int i = 0; i < FightHudSpec.DetailStatRows; i++)
             {
-                float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * statPitch;
+                float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * DetailStatPitch;
 
-                // THE POWER ROW GIVES UP WIDTH ON BOTH SIDES, for the element
-                // tag that rides it. Five stat rows already fill DetailStatRows
-                // (FightMenuStateTests pins Stats at exactly five by index), so
-                // there is no sixth row to give the skill's DamageType its own
-                // line -- it has to fit on an existing one, and POWER is the
-                // one line a damaging skill's element actually describes.
-                // "POWER" is the shortest of the five key words, so it is the
-                // row whose key box can afford to lose the most.
-                bool isPowerRow = i == PowerStatRowIndex;
-                float keyW = isPowerRow ? 60f : 170f;
-                float valueW = isPowerRow ? 80f : 120f;
-
-                var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(keyW, 16f), 12,
+                var key = Ui.Label($"DetailStatKey{i}", UiString.Runtime, new UiVec(DetailStatKeyWidth, 16f), 12,
                     FightHudPalette.TextMuted, Place.At(left, y, new UiVec(0f, 0.5f)));
 
-                // 120 wide, not v1's 170: at 170 this box began at x -22 and the
-                // key's box reaches 22.
-                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(valueW, 16f), 13,
+                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(DetailStatValueWidth, 16f), 13,
                     FightHudPalette.GoldLight, Place.At(DetailW * 0.5f - 22f, y, new UiVec(1f, 0.5f)));
 
                 DetailStatKeys.Add(key);
                 DetailStatValues.Add(value);
                 children.Add(key);
                 children.Add(value);
-
-                if (isPowerRow)
-                {
-                    // Spans the freed middle -- from just right of the
-                    // narrowed key box to just left of the narrowed value
-                    // box, so it can never collide with either at any of the
-                    // four audited aspects. Empty content for a non-damaging
-                    // skill (FightController.RefreshDetail hides it), which
-                    // is why it takes no key label of its own: a key beside
-                    // an empty value reads as a bug, not as "no element".
-                    var damageType = Ui.Label("DetailDamageType", UiString.Runtime,
-                            new UiVec(148f, 16f), 11, FightHudPalette.TextMuted,
-                            Place.At(left + keyW + 4f, y, new UiVec(0f, 0.5f)))
-                        .Styled(TypographyRole.TacticalData);
-                    DetailDamageType = damageType;
-                    children.Add(damageType);
-                }
             }
 
-            var column = Ui.Sprite("DetailColumn", PanelViolet,
-                Place.At(DetailX, DetailY),
-                UiSize.Fixed(DetailW, DetailH));
-            foreach (var child in children) column.Children.Add(child);
+            // ONE SHARED TAG, repositioned at runtime to ride whichever row
+            // currently paints POWER (RefreshDetailDamageType reads that
+            // row's own key label Y, since rows never move -- only their
+            // content, and for one row at a time, their width, do). X is a
+            // CONSTANT regardless of which row that is: it always rides the
+            // NARROW key width, the only width the tag is ever shown beside.
+            //
+            // RESTS ON ROW 0'S OWN LINE at build time -- there is no padding
+            // strip left tall enough to park a 16px label clear of both the
+            // card's own edge and the nearest row (DetailBottomPad is sized
+            // for VISUAL breathing room under the last stat, not for hiding
+            // an extra element), so the declared rest position genuinely
+            // does overlap a row's key/value until RefreshDetailDamageType
+            // moves it at runtime -- exactly the case UiAudit's own
+            // SiblingOverlap message names as the reason AllowOverlap
+            // exists: "meant to sit on top of each other" here reads as
+            // "one of them is Inactive and always relocated before either
+            // is ever shown together", which is what makes it true rather
+            // than a dead exemption (UiAudit's A7 catches those).
+            float tagRestY = statBottom + (FightHudSpec.DetailStatRows - 1) * DetailStatPitch;
+            var tag = Ui.Label("DetailDamageType", UiString.Runtime,
+                    new UiVec(DetailDamageTypeWidth, 16f), 11, FightHudPalette.TextMuted,
+                    Place.At(left + DetailStatKeyWidthNarrow + 4f, tagRestY, new UiVec(0f, 0.5f)))
+                .Styled(TypographyRole.TacticalData)
+                .Inactive()
+                .AllowOverlap("hidden placeholder rest position -- FightController.Hud.cs's " +
+                    "RefreshDetailDamageType relocates this Inactive tag onto whichever row currently " +
+                    "carries POWER before it is ever shown, so its build-time spot on row 0's own line " +
+                    "is never actually visible alongside that row's content");
+            DetailDamageType = tag;
+            children.Add(tag);
+
+            var column = Ui.Panel("DetailColumn", Place.At(DetailX, DetailY),
+                UiSize.Fixed(DetailW, DetailH), children.ToArray());
             column.Inactive();
             column.Opening();
             DetailColumn = column;

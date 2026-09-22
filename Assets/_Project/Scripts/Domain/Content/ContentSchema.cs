@@ -108,6 +108,7 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(SpellLayer), nameof(SpellLayer.facing))] = typeof(SpellFacing),
                 [(typeof(SpellLayer), nameof(SpellLayer.sort))] = typeof(SpellSort),
                 [(typeof(SpellLayer), nameof(SpellLayer.align))] = typeof(SpellAlign),
+                [(typeof(SpellLayer), nameof(SpellLayer.fit))] = typeof(SpellFit),
             };
 
         private static readonly StringComparer NameOrder = StringComparer.Ordinal;

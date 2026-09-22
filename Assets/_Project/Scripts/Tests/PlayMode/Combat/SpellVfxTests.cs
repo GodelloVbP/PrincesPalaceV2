@@ -495,13 +495,20 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the scene half -------------------------------------------------------
 
-        private IEnumerator LoadFight() => LoadFight(1);
+        private IEnumerator LoadFight() => LoadFight(1, 1f);
+
+        private IEnumerator LoadFight(int enemyCount) => LoadFight(enemyCount, 1f);
 
         // ENEMY COUNT AS A PARAMETER, because a test that skips is a test that
         // reads as coverage without being any. The splash case needs more than
         // one thing on the stage and the default fixture fields exactly one, so
         // it called Assert.Ignore and the capability shipped unverified.
-        private IEnumerator LoadFight(int enemyCount)
+        // STAGE SCALE AS A PARAMETER, for the one suite that needs an enemy
+        // authoring something other than the fixture's own default of 1 --
+        // fit: target reads this exact number (composed with the slot's own
+        // depth curve) off the struck target, and every other test in this
+        // file wants the identical stage it always got.
+        private IEnumerator LoadFight(int enemyCount, float stageScale)
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
@@ -539,7 +546,7 @@ namespace PrincesPalace.PlayModeTests
             var enemyKits = foes
                 .Select(f => new EnemyKit(new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name,
                     new StatBlock(), 5, 3, false,
-                    DamageType.Physical, DamageType.Physical, 0), false))
+                    DamageType.Physical, DamageType.Physical, 0, stageScale: stageScale), false))
                 .ToList();
 
             var session = new FightSession(encounter, new List<PlayerKit> { kit },
@@ -1224,6 +1231,73 @@ namespace PrincesPalace.PlayModeTests
                 },
             };
         }
+
+        // ---- fit: target -----------------------------------------------------
+
+        private CombatBeat FitTargetBeat()
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation
+                {
+                    layerFormat = 1,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            render = "sprite",
+                            place = "target-centre",
+                            at = "release",
+                            path = "Vfx/impact_burst",
+                            seconds = 0.24f,
+                            size = 200f,
+                            fit = "target",
+                        },
+                    },
+                },
+            };
+        }
+
+        // PINNED AS A RATIO, NOT AGAINST A COMPUTED EXPECTED SIZE -- a test
+        // that multiplied `size` by FightStageAnchors.SlotScale itself would
+        // be restating BoxForLayer's own formula rather than checking it
+        // (docs/CODE_STANDARDS.md gotcha 5). A single front-row enemy carries
+        // the identical rank-depth term at both stageScale values, so it
+        // cancels out of the ratio and only the authored stageScale is left
+        // to explain the difference.
+        [UnityTest]
+        public IEnumerator FitTargetScalesTheBoxByTheStruckTargetsStageFootprint()
+        {
+            const float bigStageScale = 1.45f;
+
+            yield return LoadFight(1, 1f);
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(FitTargetBeat());
+            yield return null;
+            float atOne = _player.Image.rectTransform.sizeDelta.x;
+
+            yield return LoadFight(1, bigStageScale);
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(FitTargetBeat());
+            yield return null;
+            float atBig = _player.Image.rectTransform.sizeDelta.x;
+
+            Assert.AreEqual(bigStageScale, atBig / atOne, 0.02f,
+                "fit: target must scale the box by exactly the target's authored stageScale -- Thorn " +
+                "Tithe's ritual on an Elder Treant (stageScale 1.45) must cover its body, not read as a " +
+                "patch sized for a rat");
+        }
+
+        // fit: none (the default) is the case every OTHER test in this file
+        // already pins by never authoring the word -- AnOrdinaryEffectAfterA
+        // MirroredOneIsNotItselfMirrored alone asserts sizeDelta.x == 380
+        // against the unauthored default, on a stageScale-1 fixture. Nothing
+        // here restates that; this suite's whole addition is the multiplier.
 
         // The stage's ground line under a combatant, in the effect pool's own
         // coordinates -- the slot's bottom edge, which is what the figures

@@ -78,6 +78,9 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span.")]
         public float size;
 
+        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's own stage footprint -- its rank depth times its authored stageScale). Blank means none. Legal only where a single struck target is resolved: place target or target-centre.")]
+        public string fit = "";
+
         [ContentDoc("Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto.")]
         public string facing = "";
 
@@ -167,6 +170,7 @@ namespace PrincesPalace.Domain.Content
             dy = dy,
             scale = scale,
             size = size,
+            fit = fit,
             facing = facing,
             sort = sort,
             align = align,
@@ -187,6 +191,7 @@ namespace PrincesPalace.Domain.Content
         public SpellFacing Facing => SpellFacingNames.Parse(facing);
         public SpellSort Sort => SpellSortNames.Parse(sort);
         public SpellAlign Align => SpellAlignNames.Parse(align);
+        public SpellFit Fit => SpellFitNames.Parse(fit);
 
         // The id this layer rides, or empty when it does not ride one. Read
         // rather than re-split at each of the four call sites that need it.

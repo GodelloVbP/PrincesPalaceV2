@@ -104,15 +104,52 @@ namespace PrincesPalace.Domain.UiKit
         // code is that "how many rows exist" and "how many are on screen" stop
         // being the same number, which they were only ever by accident.
 
-        // How many rows fit in the viewport at a time.
+        // How many rows fit in the viewport AT MOST -- the CAP a list grows
+        // to before it scrolls, not a fixed reservation every list pays for
+        // whether it needs it or not.
         //
-        // EIGHT, down from nine, and the ninth went to the back row. The
-        // container's outer footprint is unchanged, so the choice was between
-        // taking a row's worth of height off the list or growing the panel
-        // downward past the verb column it stands beside. A list that scrolls
-        // loses nothing by being one row shorter; a panel that overhangs its
-        // neighbour is wrong at every list length.
-        public const int RowsInView = 8;
+        // FIVE, down from eight (owner's ask, 2026-09-22): the container's
+        // own visible height now follows the actual row count up to this
+        // many rows (see VisibleRows/ViewportHeightFor and
+        // FightController.AnchorSubmenuRows' own header for how), so a
+        // three-skill character's box is three rows tall rather than
+        // reserving five empty slots' worth of dead frame under it. This
+        // constant is still what the TREE is built at (the widest the box
+        // is ever allowed to get) -- FightScreen.BuildSubmenuColumn sizes
+        // the static frame from it, and the runtime resize can only shrink
+        // toward a shorter list, never grow past what was built.
+        public const int RowsInView = 5;
+
+        // How many of `count` rows the viewport actually shows before it
+        // must scroll for the rest -- VisibleCount above (pool-clamped)
+        // answers "how many row RECTS exist to scroll to"; this answers "how
+        // tall does the window get", which is capped far sooner. Floored at
+        // 1 so an empty list still reserves one row's worth of frame rather
+        // than collapsing to nothing.
+        public static int VisibleRows(int count)
+        {
+            if (count < 1) return 1;
+            return count > RowsInView ? RowsInView : count;
+        }
+
+        // WHAT THE STATIC TREE IS ACTUALLY BUILT AT, and it is NOT RowsInView
+        // -- kept apart on purpose (2026-09-22), because FrameWidth below is
+        // DERIVED from this height through the kit's fixed 3:4 art, and the
+        // frame has to stay wide enough for the row/scrollbar content
+        // (~362px, ContainerWidth's own inset) at whatever height it is
+        // built at. Building at RowsInView's own five rows was tried first
+        // and failed TheFightScreenAuditsCleanAtEveryFrame: a 5-row-tall
+        // frame's 3:4-matched width comes out narrower than the fixed-width
+        // rows inside it, so the content overflowed its own container at
+        // every aspect. Eight is the number already proven to clear that
+        // floor (it was RowsInView's own value before this rework). The
+        // static tree is never what the player actually sees, though --
+        // FightController.AnchorSubmenuRows shrinks the real frame down to
+        // RowsInView's own cap the moment any real actor's skill count is
+        // known, before a frame is ever drawn to the screen, so this number
+        // is pure build-time plumbing and never a design decision about how
+        // the list looks.
+        private const int BuildReservationRows = 8;
 
         // How many row rects the tree emits. The list SCROLLS now, so this is
         // no longer "as many as fit" -- it is as many as a character can ever
@@ -133,13 +170,29 @@ namespace PrincesPalace.Domain.UiKit
         // gameplay rule means any hole in that rule silently eats rows.
         public const int PoolSize = 24;
 
-        public static float ViewportHeight => ColumnHeight(RowsInView);
+        // BuildReservationRows, NOT RowsInView -- see that constant's own
+        // header for why the static tree's own reservation has to stay
+        // bigger than the runtime cap.
+        public static float ViewportHeight => ColumnHeight(BuildReservationRows);
 
         // The viewport's bottom edge is the last row's bottom edge, which is
         // RowsBottom exactly -- RowY puts the final row's centre half a row
         // above it. So a list that fits is framed precisely where it already
         // sat, and nothing moves for the common case.
         public static float ViewportCentreY => RowsBottom + ViewportHeight * 0.5f;
+
+        // The viewport's own height for a list of `count` rows, capped at
+        // RowsInView -- what makes the container GROW TO FIT rather than
+        // reserve a fixed footprint. FightController.AnchorSubmenuRows reads
+        // this (and everything below derived from it) every time the
+        // submenu opens or its branch/count changes, and resizes the actual
+        // frame/viewport RectTransforms to match -- see that method's own
+        // header for why only height moves and width never does.
+        public static float ViewportHeightFor(int count) => ColumnHeight(VisibleRows(count));
+
+        // Same bottom-anchoring RowsBottom already describes, just for
+        // whatever height ViewportHeightFor(count) comes out to.
+        public static float ViewportCentreYFor(int count) => RowsBottom + ViewportHeightFor(count) * 0.5f;
 
         // Padding inside the container, and the strip the scrollbar runs in.
         public const float ContainerPad = 10f;
@@ -153,6 +206,15 @@ namespace PrincesPalace.Domain.UiKit
         // Padding, the list, a gap, and the back row.
         public static float ContainerHeight =>
             ContainerPad * 2f + ViewportHeight + RowGap + BackRowHeight;
+
+        public static float ContainerHeightFor(int count) =>
+            ContainerPad * 2f + ViewportHeightFor(count) + RowGap + BackRowHeight;
+
+        public static float ContainerCentreYFor(int count) =>
+            ContainerBottom + ContainerHeightFor(count) * 0.5f;
+
+        public static float ViewportOffsetInContainerFor(int count) =>
+            ViewportCentreYFor(count) - ContainerCentreYFor(count);
 
         // The row's own content width -- ONE COPY, because the art frame below
         // (built in FightScreen.BuildSubmenuFrame) has to size itself from the
@@ -221,6 +283,22 @@ namespace PrincesPalace.Domain.UiKit
         public static float FrameHeight =>
             ContainerHeight / (1f - FrameInset.Top - FrameInset.Bottom);
 
+        public static float FrameHeightFor(int count) =>
+            ContainerHeightFor(count) / (1f - FrameInset.Top - FrameInset.Bottom);
+
+        // WIDTH NEVER MOVES, whatever count the runtime resize is asked
+        // for -- FrameWidth reads the STATIC (BuildReservationRows) height
+        // only, and there is no FrameWidthFor(count) beside it. A row is
+        // RowWidth (240) wide regardless of how many of them there are, so
+        // the frame cannot narrow below what the fixed-width content needs
+        // without clipping it; only FrameHeightFor shrinks per count (see
+        // FightController.AnchorSubmenuRows' own header, and
+        // BuildReservationRows' own header for why the STATIC height itself
+        // cannot simply become RowsInView's five either). Holding width
+        // fixed also means ContainerX, SubmenuX and every row/viewport/
+        // scrollbar offset solved from them at build time stay correct at
+        // any row count -- only Y coordinates and heights are ever touched
+        // at runtime.
         public static float FrameWidth =>
             Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, FrameHeight).X;
 
@@ -235,7 +313,13 @@ namespace PrincesPalace.Domain.UiKit
         public static float FrameCentreY =>
             Ui.CentreYForVisibleBottom(VisibleBottomLine, FrameHeight, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour).Bottom);
 
+        public static float FrameCentreYFor(int count) =>
+            Ui.CentreYForVisibleBottom(VisibleBottomLine, FrameHeightFor(count),
+                Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour).Bottom);
+
         public static float FrameTop => FrameCentreY + FrameHeight * 0.5f;
+
+        public static float FrameTopFor(int count) => FrameCentreYFor(count) + FrameHeightFor(count) * 0.5f;
 
         // The content inset's OWN centre, which is not the frame's centre once
         // the top and bottom insets differ (4.5% vs 4%) -- half that 0.5% of
@@ -251,12 +335,19 @@ namespace PrincesPalace.Domain.UiKit
         // bottom edge, which is the part that is actually pinned.
         public static float ContainerCentreY => ContainerBottom + ContainerHeight * 0.5f;
 
-        // How far the list can travel. Zero when everything fits, which is also
-        // what hides the bar.
+        // How far the list can travel. Zero when everything fits, which is
+        // also what hides the bar. Compared against RowsInView's OWN window
+        // (ColumnHeight(RowsInView)), NOT the static (BuildReservationRows)
+        // ViewportHeight -- the runtime viewport this is describing is
+        // ALWAYS resized to RowsInView's cap the moment a real actor is
+        // bound (ResizeSubmenuContainer, in FightController.cs), so the
+        // scroll threshold has to agree with that actual size, not with the
+        // oversized placeholder the static tree happens to be built at.
         public static float ScrollRange(int count)
         {
+            float window = ColumnHeight(RowsInView);
             float content = ColumnHeight(VisibleCount(count));
-            float over = content - ViewportHeight;
+            float over = content - window;
 
             return over > 0f ? over : 0f;
         }
@@ -303,12 +394,22 @@ namespace PrincesPalace.Domain.UiKit
         //   BACK, which is where every list ends however long it is.
         //
         //   THE SCROLL itself, which only ever moves a list too long to fit.
+        // ViewportCentreYFor(count), NOT the static ViewportCentreY -- the
+        // viewport this content sits inside is whatever height/position
+        // AnchorSubmenuRows resized it to for THIS `count` (see that
+        // method's own header), so the LOCAL offset that lands the pool
+        // correctly inside it has to be measured against that same, possibly
+        // shrunk, centre. Identical to the static term whenever count >=
+        // RowsInView (VisibleRows clamps both to the same figure there), so
+        // every existing caller passing a long list is unaffected -- only a
+        // list shorter than RowsInView, which never scrolls anyway, reads a
+        // different number here.
         public static float ContentY(int count, float scroll)
         {
             int shown = VisibleCount(count);
             float bottomAnchor = -(PoolSize - shown) * RowPitch;
 
-            return ContentCentreY - ViewportCentreY + bottomAnchor + ContentOffsetY(count, scroll);
+            return ContentCentreY - ViewportCentreYFor(count) + bottomAnchor + ContentOffsetY(count, scroll);
         }
 
         // Where the scrolled content sits, given how far down the list the
@@ -338,13 +439,18 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         // The thumb's height for `count` rows: the visible fraction of the
-        // content, floored so it stays grabbable.
+        // content, floored so it stays grabbable. Measured against
+        // RowsInView's OWN window, same reason ScrollRange is -- the thumb
+        // only ever appears once the runtime viewport has actually been
+        // resized to that cap (ResizeSubmenuContainer), never at the static
+        // tree's own oversized BuildReservationRows footprint.
         public static float ThumbHeight(int count)
         {
+            float window = ColumnHeight(RowsInView);
             float content = ColumnHeight(VisibleCount(count));
-            if (content <= ViewportHeight || content <= 0f) return ViewportHeight;
+            if (content <= window || content <= 0f) return window;
 
-            float height = ViewportHeight * (ViewportHeight / content);
+            float height = window * (window / content);
             return height < ThumbMinHeight ? ThumbMinHeight : height;
         }
 
@@ -360,18 +466,24 @@ namespace PrincesPalace.Domain.UiKit
 
         // Where the thumb's centre sits, in CONTAINER coordinates. The track is
         // the viewport's own height, so the thumb reads as the visible window
-        // over the whole list.
+        // over the whole list. ViewportOffsetInContainerFor(count), not the
+        // static ViewportOffsetInContainer -- same reason ThumbHeight reads
+        // RowsInView's window instead of the static one: the track/thumb this
+        // describes only ever shows once ResizeSubmenuContainer has already
+        // moved the real viewport there.
         public static float ThumbCentreY(int count, float scroll)
         {
-            float travel = ViewportHeight - ThumbHeight(count);
+            float window = ColumnHeight(RowsInView);
+            float travel = window - ThumbHeight(count);
             float range = ScrollRange(count);
-            if (travel <= 0f || range <= 0f) return ViewportOffsetInContainer;
+            float resting = ViewportOffsetInContainerFor(count);
+            if (travel <= 0f || range <= 0f) return resting;
 
             float fraction = scroll / range;
             if (fraction < 0f) fraction = 0f;
             if (fraction > 1f) fraction = 1f;
 
-            return ViewportOffsetInContainer + travel * 0.5f - fraction * travel;
+            return resting + travel * 0.5f - fraction * travel;
         }
 
         // Turning a grab on the track into a scroll: where the pointer sits
@@ -436,9 +548,24 @@ namespace PrincesPalace.Domain.UiKit
         // own comment), so the old ContainerCentreY + ContainerHeight * 0.5f
         // would land the header deep inside the painted border instead of
         // above it.
+        // STILL IGNORES `count` -- the parameter is kept only because
+        // BuildSubmenuColumn's one build-time call already passes one
+        // (PoolSize), and this answers the STATIC tree's own header
+        // position, off the STATIC FrameTop (BuildReservationRows), same as
+        // always. HeaderYFor below is the count-AWARE twin AnchorSubmenuRows
+        // actually wants once a real actor's skill count is known.
         public static float HeaderY(int count)
         {
             return FrameTop + 16f;
+        }
+
+        // The header's position for a REAL row count, off the frame's own
+        // (possibly shrunk) top edge -- FrameTopFor(count), not the static
+        // FrameTop. This is what tracks the container as it grows to fit a
+        // short list or caps at RowsInView for a long one.
+        public static float HeaderYFor(int count)
+        {
+            return FrameTopFor(count) + 16f;
         }
 
         // Total vertical extent a list of `count` rows occupies. The builder

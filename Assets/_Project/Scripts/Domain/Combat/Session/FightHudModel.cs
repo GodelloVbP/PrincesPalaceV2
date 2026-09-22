@@ -422,6 +422,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // number's unit is that pool's own shortTag. Prints "6 MP" for
         // everyone shipped today, and does so by reading the row rather than
         // by agreeing with it.
+        //
+        // STILL COMBINED, for the SUBMENU ROW alone -- a row is one line of
+        // text ("6 MP + 3 WOOL"), and splitting it the way the detail card's
+        // rework below did would cost the row a second line it has no room
+        // for. The detail card builds its own MANA and COST rows from
+        // ManaCostLabel/ResourceOrHealthCostLabel instead of this.
         public static string CostLabel(ResolvedSkill skill, string resourceName, string primaryTag)
         {
             string resource = string.IsNullOrWhiteSpace(resourceName) ? "" : " " + resourceName.ToUpperInvariant();
@@ -434,6 +440,76 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (skill.ResourceCost > 0) return $"{skill.ResourceCost}{resource}";
             return skill.ManaCost > 0 ? skill.ManaCost + primary : "FREE";
+        }
+
+        // MANA ALONE, for the detail card's own MANA row (2026-09-22 rework)
+        // -- resource and health payments moved to their own
+        // ResourceOrHealthCostLabel row below, because "5 MP + 3 WOOL"
+        // sharing one value string is exactly
+        // the "two facts, one line" packing the owner's rework asked to stop
+        // doing. "" (never "FREE") when the skill spends no mana at all --
+        // FREE was true when this was the ONLY cost row a skill could ever
+        // show; now an empty MANA row simply does not apply, and the row
+        // is hidden rather than printed, same as every other inapplicable
+        // stat on this card.
+        public static string ManaCostLabel(ResolvedSkill skill, string primaryTag)
+        {
+            if (skill.ManaCost <= 0) return "";
+
+            string primary = string.IsNullOrWhiteSpace(primaryTag) ? "" : " " + primaryTag.ToUpperInvariant();
+            return skill.ManaCost + primary;
+        }
+
+        // The OTHER payment a skill can ask for: its signature resource, or
+        // (Blackglass Spear's shape) a slice of the caster's own health.
+        // MUTUALLY EXCLUSIVE in every skill authored today -- nothing both
+        // spends a resource and pays in blood -- so one row states whichever
+        // applies rather than guessing which to prefer if a future skill
+        // ever authored both.
+        //
+        // HealthCost.AmountFor is the SAME ceiling-rounded HP figure the
+        // actual payment charges (HealthCost.Pay), not healthCostPercent
+        // restated raw -- a player comparing "11 HP" here against the
+        // number their health bar drops by after casting must see the same
+        // number, not a percentage they would have to do the arithmetic on
+        // themselves.
+        public static string ResourceOrHealthCostLabel(ResolvedSkill skill, CombatantState actor, string resourceName)
+        {
+            if (skill.ResourceCost > 0)
+            {
+                string resource = string.IsNullOrWhiteSpace(resourceName) ? "" : " " + resourceName.ToUpperInvariant();
+                return skill.ResourceCost + resource;
+            }
+
+            if (skill.HealthCostPercent > 0)
+            {
+                int amount = HealthCost.AmountFor(actor?.MaxHealth ?? 0, skill.HealthCostPercent);
+                return amount > 0 ? amount + " HP" : "";
+            }
+
+            return "";
+        }
+
+        // The COOLDOWN row: the authored length, ALWAYS, for any skill that
+        // has one -- not only while it happens to be waiting. A card that
+        // only ever mentioned a cooldown once the skill was already
+        // unusable told the player nothing about a skill they had not cast
+        // yet; this is the fact a player needs BEFORE they commit to a
+        // resource-hungry skill with a long wait behind it, not just after.
+        //
+        // REMAINING JOINS IT, not replaces it, while the skill is actually
+        // cooling -- the two facts (how long it waits, how much longer THIS
+        // time) are both true at once and the old card could only ever say
+        // one, which is what "instead of its cost" in the test this
+        // replaces used to mean: the wait and the mana cost fought over the
+        // same one line. They have their own rows now, so neither has to
+        // give way to the other.
+        public static string CooldownRowLabel(int cooldownTurns, int remaining)
+        {
+            if (cooldownTurns <= 0) return "";
+
+            string authored = CooldownLabel(cooldownTurns);
+            return remaining > 0 ? $"{authored} ({CooldownLabel(remaining)} LEFT)" : authored;
         }
 
         // What the cost column prints beside a primary-pool number. Falls
@@ -480,9 +556,15 @@ namespace PrincesPalace.Domain.Combat.Session
             _ => false,
         };
 
+        // "" (never "0" or "-") for a skill with no previewable power at
+        // all -- see HasNoPreviewablePower's own header for why 0 lies here.
+        // The dash used to carry that meaning; the rework's rule ("a stat
+        // that does not apply is omitted, never shown as - or 0") means the
+        // whole POWER row is now absent instead, so this returns "" and lets
+        // DetailForSkill leave the row out.
         public static string PowerLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
         {
-            if (HasNoPreviewablePower(skill.Effect)) return "-";
+            if (HasNoPreviewablePower(skill.Effect)) return "";
             return session == null ? "0" : session.PreviewSkillPower(actor, skill).ToString();
         }
 
@@ -495,20 +577,34 @@ namespace PrincesPalace.Domain.Combat.Session
                 Body = skill.Description ?? "",
             };
 
-            // THE COST ROW SAYS THE WAIT INSTEAD, while there is one -- the
-            // exact rule the submenu row's own cost column already follows
-            // (see SkillRows above). Without this, mud_burst's card showed
-            // "8 MP" whether or not it could actually be cast, which is how a
-            // relic/skill that genuinely does have a cooldown reads as having
-            // none: nothing on this card ever said so.
-            int cooldown = session?.CooldownRemaining(actor, skill.Id) ?? 0;
-            panel.Stats.Add(("COST", cooldown > 0 ? CooldownLabel(cooldown) : CostLabel(skill, resourceName, PrimaryTagOf(actor))));
-            panel.Stats.Add(("POWER", PowerLabel(session, actor, skill)));
+            // COMPACT, IN THIS ORDER -- MANA, COST, COOLDOWN, POWER, DEFENSE
+            // ONLY WHEN THEY APPLY, then TARGET/EFFECT/SCALES always. A stat
+            // that does not apply is not added at all (2026-09-22 rework
+            // #2), rather than added with an empty value at a fixed slot --
+            // a skill that skips four of the five conditional rows gets a
+            // compact five-row card, not a five-row gap in an eight-row one.
+            // FightController.Hud.cs's RefreshDetail paints panel.Stats[i]
+            // into physical row i for i in 0..Count-1 and hides the rest, so
+            // WHICH physical row ends up labelled POWER now varies with what
+            // else is present -- RefreshDetailDamageType finds that row by
+            // key, at runtime, rather than assuming a fixed index.
+            int cooldownRemaining = session?.CooldownRemaining(actor, skill.Id) ?? 0;
+            string primaryTag = PrimaryTagOf(actor);
+
+            AddIfApplicable(panel.Stats, "MANA", ManaCostLabel(skill, primaryTag));
+            AddIfApplicable(panel.Stats, "COST", ResourceOrHealthCostLabel(skill, actor, resourceName));
+            AddIfApplicable(panel.Stats, "COOLDOWN", CooldownRowLabel(skill.CooldownTurns, cooldownRemaining));
+            AddIfApplicable(panel.Stats, "POWER", PowerLabel(session, actor, skill));
+            AddIfApplicable(panel.Stats, "DEFENSE", DefenseLabel(session, actor, skill));
 
             // Both of these printed the enum: "SINGLEENEMY" and "DAMAGESINGLE".
             // Same fix as the row's meta line, and it has to be the same words
             // or the panel and the row it describes disagree in front of the
-            // player.
+            // player. ALWAYS ADDED -- TARGET/EFFECT/SCALES are not part of
+            // the owner's "omit if inapplicable" rule (that rule names power,
+            // mana, health/resource cost, cooldown and the defense
+            // interaction specifically); SCALES keeps its own pre-existing
+            // "-" convention for a skill with no scaling formula.
             panel.Stats.Add(("TARGET", skill.Effect == SkillEffect.Enthrall
                 ? "ALL ENEMIES; BOSSES DELAYED"
                 : ReachFor(skill.Targeting)));
@@ -518,43 +614,81 @@ namespace PrincesPalace.Domain.Combat.Session
             return panel;
         }
 
-        // The skill's damage type, as a display string: "Fire", "Arcane", a
-        // "/"-joined list for a multi-packet spell that authors more than
-        // one (frost_flare: Fire and Ice), or "" for a skill that deals no
-        // typed damage at all.
-        //
-        // FIXED-DAMAGE PACKETS ANSWER FROM THE SKILL ALONE -- each one
-        // already carries its own authored type (ResolvedSkill.
-        // DamageInstances), no caster needed. A non-fixed damaging skill
-        // (Power/FlatAmount scaled off Attack) has no authored type of its
-        // own -- it rides the CASTER's own attackType at cast time, the
-        // identical resolve ScalingLabelForSkill just above already needs a
-        // session+actor for, so this reads it the same way rather than
-        // inventing a second answer to "what element is this cast".
-        public static string DamageTypeLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
+        // Adds (key, value) only when value is non-empty -- the single seam
+        // every compacted stat (MANA, COST, COOLDOWN, POWER, DEFENSE) goes
+        // through, so "omit rather than print a dash or a zero" is stated
+        // once rather than re-decided at each call site.
+        private static void AddIfApplicable(List<(string Key, string Value)> stats, string key, string value)
         {
-            if (!skill.IsDamaging) return "";
+            if (!string.IsNullOrEmpty(value)) stats.Add((key, value));
+        }
 
-            // A CHOICE NOT YET MADE LISTS THE CHOICES, joined the same way a
-            // multi-packet spell's types already are -- the row is answering
-            // "what element is this", and "all four, you pick" is the true
-            // answer until one is picked. Once it is, the card is built on
-            // AsElement's copy, which offers nothing further and falls through
-            // to the fixed-packet branch below with one type in it.
+        // The damage type(s) this cast actually carries, resolved the ONE
+        // way every reader of "what element is this" needs -- DamageTypeLabel
+        // (the POWER row's own element tag) and DefenseLabel (which broad
+        // defense answers it) used to each re-derive this from the skill by
+        // hand and could disagree about it by construction. Empty for a
+        // non-damaging skill, and for a non-fixed damaging skill with no
+        // actor/session in hand to read the caster's attackType from.
+        private static IReadOnlyList<DamageType> ResolvedDamageTypesFor(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            if (!skill.IsDamaging) return System.Array.Empty<DamageType>();
+
+            // A CHOICE NOT YET MADE LISTS THE CHOICES, same as DamageTypeLabel
+            // always has -- see that method's own header, kept here verbatim
+            // now that both readers share this resolve.
             if (skill.HasElementChoice)
             {
-                return string.Join("/", skill.Elements.Where(e => e != null).Select(e => e.Type));
+                return skill.Elements.Where(e => e != null).Select(e => e.Type).ToArray();
             }
 
             if (skill.HasFixedDamage)
             {
-                var types = skill.DamageInstances.Select(i => i.type).Distinct();
-                return string.Join("/", types);
+                return skill.DamageInstances.Select(i => i.type).Distinct().ToArray();
             }
 
-            if (session == null || actor == null) return "";
-            var castType = session.ActorAttackType(actor) ?? DamageType.Physical;
-            return castType.ToString();
+            if (session == null || actor == null) return System.Array.Empty<DamageType>();
+            return new[] { session.ActorAttackType(actor) ?? DamageType.Physical };
+        }
+
+        // The skill's damage type, as a display string: "Fire", "Arcane", a
+        // "/"-joined list for a multi-packet spell that authors more than
+        // one (frost_flare: Fire and Ice), or "" for a skill that deals no
+        // typed damage at all.
+        public static string DamageTypeLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            var types = ResolvedDamageTypesFor(session, actor, skill);
+            return types.Count == 0 ? "" : string.Join("/", types);
+        }
+
+        // The DEFENSE row: which of the target's two broad stats actually
+        // answers this cast (CombatMath.IsPhysical draws the same Physical-
+        // or-everything-else line DamageTypeLabel's own header already
+        // describes), and the one rider that matters more than either --
+        // IgnoresDefense means neither one touches it at all, which is a
+        // different fact than "which one", not a third value squeezed onto
+        // the same line as one of the other two.
+        //
+        // ArmorPenetration/talent-driven shred (the "ARM" badge FightHudModel's
+        // StatusRowsFor already paints, see its own header) is NOT read
+        // here -- that is a property of the ATTACKER across every swing they
+        // throw, permanent for the fight, and belongs on the character's own
+        // status row rather than restated on every one of their skills'
+        // cards. IgnoresDefense is the only defense-interaction rider a
+        // SKILL itself authors (ResolvedSkill.IgnoresDefense), so it is the
+        // only one this row states.
+        private static string DefenseLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            if (!skill.IsDamaging) return "";
+            if (skill.IgnoresDefense) return "IGNORES DEFENSE";
+
+            var types = ResolvedDamageTypesFor(session, actor, skill);
+            if (types.Count == 0) return "";
+
+            bool anyPhysical = types.Any(CombatMath.IsPhysical);
+            bool anyMagical = types.Any(t => !CombatMath.IsPhysical(t));
+            if (anyPhysical && anyMagical) return "PHYSICAL/MAGICAL";
+            return anyPhysical ? "PHYSICAL" : "MAGICAL";
         }
 
         // Which ability score this skill's damage actually rides, for the
@@ -652,8 +786,15 @@ namespace PrincesPalace.Domain.Combat.Session
                 Kind = "ATTACK",
                 Body = "A plain swing at one enemy in reach.",
             };
-            panel.Stats.Add(("COST", "FREE"));
-            panel.Stats.Add(("POWER", actor == null ? "0" : CombatMath.ComputeAttackDamage(actor, null).ToString()));
+
+            // SAME CANONICAL ORDER DetailForSkill fills, compacted the same
+            // way -- a plain swing costs nothing and waits on nothing, so
+            // MANA/COST/COOLDOWN are simply not added (never "FREE"; see
+            // AddIfApplicable's own header for why omission is the
+            // convention now). POWER and DEFENSE always apply to a Strike.
+            AddIfApplicable(panel.Stats, "POWER",
+                actor == null ? "" : CombatMath.ComputeAttackDamage(actor, null).ToString());
+            panel.Stats.Add(("DEFENSE", "PHYSICAL"));
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
             panel.Stats.Add(("SCALES", actor == null ? "-" : ScalingLabel(actor.WeaponScaling)));
@@ -942,8 +1083,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 Kind = "ITEM",
                 Body = body,
             };
+
+            // SAME CANONICAL ORDER, compacted -- an item spends a charge,
+            // not mana, a resource or a cooldown wait, and previews no power
+            // or defense interaction, so MANA/COOLDOWN/POWER/DEFENSE are not
+            // added at all. SCALES never applied to an item even before this
+            // rework (no row existed for it); it stays that way.
             panel.Stats.Add(("COST", "1"));
-            panel.Stats.Add(("POWER", "-"));
             panel.Stats.Add(("TARGET", "SELF"));
 
             // "-", not "MANA", when the pool refuses it. The EFFECT cell is

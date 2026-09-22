@@ -89,7 +89,7 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(go => go.name == name && go.scene.IsValid());
 
         private static string ShopDetailText() =>
-            NamedInScene("ShopDetailLabel")?.GetComponent<TMP_Text>()?.text ?? "";
+            NamedInScene("ShopDetailPanelBody")?.GetComponent<TMP_Text>()?.text ?? "";
 
         private IEnumerator ReachTheShop(ulong seed)
         {

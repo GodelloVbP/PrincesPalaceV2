@@ -133,12 +133,17 @@ namespace PrincesPalace.PlayModeTests
             var panel = fight.CurrentDetailForTest();
             Assert.AreEqual("Provoke", panel.Name, "fixture: the hovered row is not Provoke's own panel");
 
-            var power = panel.Stats.FirstOrDefault(s => s.Key == "POWER");
-            Assert.AreEqual("POWER", power.Key, "fixture: the detail card has no POWER stat at all");
-            Assert.AreEqual("-", power.Value,
+            // NOT PRESENT AT ALL now (2026-09-22 rework #2) -- Stats is
+            // compact, so Provoke's card never adds a POWER entry in the
+            // first place. It used to be added with an empty Value (still
+            // hidden, but present at a fixed slot); the balance-bot bug this
+            // test pins is about the THROW, not about which of those two
+            // shapes POWER's absence takes, so this only has to prove it
+            // never crashed and never claims a number Provoke doesn't have.
+            Assert.IsFalse(panel.Stats.Any(s => s.Key == "POWER"),
                 "Provoke has no number to preview -- the whole action is redirecting who gets " +
-                "attacked, not a health bar moving -- so the card should read '-' rather than a " +
-                "'0' that reads as \"this does nothing\"");
+                "attacked, not a health bar moving -- so the row must be OMITTED entirely rather " +
+                "than a '-' or a '0' that reads as \"this does nothing\"");
         }
     }
 }

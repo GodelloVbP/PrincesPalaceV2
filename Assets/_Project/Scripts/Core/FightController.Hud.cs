@@ -390,20 +390,54 @@ namespace PrincesPalace
             detailKind.SetContent(panel.Kind);
             detailBody.SetContent(panel.Body);
 
+            // COMPACT NOW (2026-09-22 rework #2): panel.Stats holds ONLY the
+            // facts that apply to whatever is hovered, in canonical order --
+            // FightHudModel.AddIfApplicable's own header. Row i is painted
+            // from panel.Stats[i] for i < Count and hidden past it, the same
+            // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows
+            // already use -- KEY AND VALUE BOTH, since a row's key is no
+            // longer a fixed label baked at build time (BuildDetailColumn's
+            // own header): whichever physical row happens to hold "POWER"
+            // this time is found below, by key, not assumed by index.
+            int powerRow = -1;
             for (int i = 0; i < detailStatValues.Length; i++)
             {
                 bool has = i < panel.Stats.Count;
                 detailStatValues[i].SetContent(has ? panel.Stats[i].Value : "");
 
-                // The key goes with it. A stat row is a pair, and half a pair is
-                // a label pointing at nothing.
                 if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
                 {
+                    detailStatKeys[i].SetContent(has ? panel.Stats[i].Key : "");
                     detailStatKeys[i].gameObject.SetShown(has);
                 }
+
+                if (has && powerRow < 0 && panel.Stats[i].Key == "POWER") powerRow = i;
+
+                // NARROW EXACTLY THIS ROW, restore every other -- these
+                // labels are pooled, so a PREVIOUS panel may have narrowed a
+                // different index than this one does, and a row that is no
+                // longer POWER's must not keep yesterday's width.
+                SetDetailStatRowWidth(i, narrow: has && i == powerRow);
             }
 
-            RefreshDetailDamageType(panel.DamageType);
+            RefreshDetailDamageType(panel.DamageType, powerRow);
+        }
+
+        private void SetDetailStatRowWidth(int i, bool narrow)
+        {
+            if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
+            {
+                var rect = detailStatKeys[i].rectTransform;
+                float w = narrow ? FightScreen.DetailStatKeyWidthNarrow : FightScreen.DetailStatKeyWidth;
+                rect.sizeDelta = new Vector2(w, rect.sizeDelta.y);
+            }
+
+            if (i < detailStatValues.Length && detailStatValues[i] != null)
+            {
+                var rect = detailStatValues[i].rectTransform;
+                float w = narrow ? FightScreen.DetailStatValueWidthNarrow : FightScreen.DetailStatValueWidth;
+                rect.sizeDelta = new Vector2(w, rect.sizeDelta.y);
+            }
         }
 
         // "Fire", "Poison", a "/"-joined "Fire/Ice" or "" -- see FightHudModel.
@@ -411,13 +445,24 @@ namespace PrincesPalace
         // the FIRST element of a joined list gets a colour; CombatBeat (and
         // so this card) has no way to show two colours on one word, and the
         // label itself still names every element the skill authors.
-        private void RefreshDetailDamageType(string label)
+        //
+        // RIDES powerRow'S OWN Y, whatever physical row that happens to be
+        // this time -- rows never move (BuildDetailColumn builds them at
+        // fixed pool positions), only their content and, for the row that
+        // currently holds POWER, their width do, so reading that row's own
+        // key label's CURRENT anchoredPosition.y is the single source for
+        // where the tag belongs; no formula here can drift from where the
+        // row it describes actually is.
+        private void RefreshDetailDamageType(string label, int powerRow)
         {
             if (detailDamageType == null) return;
 
-            bool has = !string.IsNullOrEmpty(label);
+            bool has = powerRow >= 0 && !string.IsNullOrEmpty(label)
+                       && detailStatKeys != null && powerRow < detailStatKeys.Length && detailStatKeys[powerRow] != null;
             detailDamageType.gameObject.SetShown(has);
             if (!has) return;
+
+            MoveToY(detailDamageType, detailStatKeys[powerRow].rectTransform.anchoredPosition.y);
 
             detailDamageType.SetContent(label.ToUpperInvariant());
 
@@ -504,6 +549,57 @@ namespace PrincesPalace
         private static readonly Color EliteBossPlateTint = Hex(FightHudPalette.BorderGold);
         private static readonly Color EliteBossNameTint = Hex(FightHudPalette.GoldText);
         private static readonly Color EnemyNameNormal = Hex(FightHudPalette.EnemyName);
+
+        // ---- ward + ghost fill surfaces (health bar polish pass) --------------
+        //
+        // BOUND BY FIELD NAME off FightScreen's NodeRef lists of the same
+        // name, exactly the mechanism FightController.cs's own header on
+        // pcPlates describes for every other plate surface -- UiAutoBind
+        // matches an Image[] to a list called the same thing with no
+        // ScreenRegistry code needed. Declared here rather than in
+        // FightController.cs because this pass's edit surface is this file;
+        // partial classes make the physical file a filing choice, not a
+        // binding one.
+        [SerializeField] internal Image[] enemyPlateGhostFills;
+        [SerializeField] internal Image[] enemyPlateWardFills;
+        [SerializeField] internal Image[] pcGhostFills;
+        [SerializeField] internal Image[] pcWardFills;
+
+        // Cropped-to-the-head copies of whatever StanceSpriteFor hands back,
+        // keyed by the SOURCE sprite so two enemies sharing one idle art
+        // (two rats) share one crop rather than each repaint minting a new
+        // Sprite object. Never cleared: the whole run's monster roster is a
+        // small, content-bounded set, so the cache's ceiling is "one entry
+        // per distinct enemy idle sprite this session has drawn", not
+        // "one per repaint".
+        private readonly Dictionary<Sprite, Sprite> _enemyIconHeadCrops = new Dictionary<Sprite, Sprite>();
+
+        // THE CROP ITSELF -- the top PcPlateArt.EnemyIconHeadZoneFrac of the
+        // sprite's own height, full width, as a NEW Sprite over the SAME
+        // texture. Sprite.Create needs no Read/Write-enabled texture for
+        // this: it references a sub-rect of the existing texture for
+        // rendering, the same trick a spritesheet slicer uses, so nothing
+        // about the source asset's import settings has to change.
+        private Sprite EnemyIconHeadCrop(Sprite full)
+        {
+            if (full == null) return null;
+
+            if (_enemyIconHeadCrops.TryGetValue(full, out var cropped) && cropped != null)
+            {
+                return cropped;
+            }
+
+            var rect = full.rect;
+            float headHeight = Mathf.Max(1f, rect.height * PcPlateArt.EnemyIconHeadZoneFrac);
+
+            // Texture space is Y-up from the BOTTOM of the rect, so the top
+            // of the sprite is the last `headHeight` pixels of it.
+            var cropRect = new Rect(rect.x, rect.yMax - headHeight, rect.width, headHeight);
+            cropped = Sprite.Create(full.texture, cropRect, new Vector2(0.5f, 1f), full.pixelsPerUnit);
+
+            _enemyIconHeadCrops[full] = cropped;
+            return cropped;
+        }
 
         private void RefreshEnemyPlates()
         {
@@ -614,6 +710,20 @@ namespace PrincesPalace
                 enemyPlateNames[i].SetContent(i < names.Count ? names[i] : enemy.Name);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, enemy.CurrentHealth, enemy.MaxHealth);
                 SetFill(enemyPlateHpFills[i], enemy.CurrentHealth, enemy.MaxHealth);
+
+                if (Has(enemyPlateGhostFills, i))
+                {
+                    EnsureGhostRoutineArray(ref _enemyGhostRoutines, enemyPlates.Length);
+                    UpdateGhostFill(enemyPlateGhostFills[i], enemy.CurrentHealth, enemy.MaxHealth,
+                        ref _enemyGhostRoutines[i]);
+                }
+
+                if (Has(enemyPlateWardFills, i))
+                {
+                    SetWardFill(enemyPlateWardFills[i], enemy.CurrentHealth, enemy.MaxHealth,
+                        StatusEffects.WardPoints(enemy));
+                }
+
                 enemyPlateTags[i].SetContent(FightHudModel.EnemyStatusLine(enemy, _session));
 
                 // Only an elite or boss carries a BreakShield at all -- the
@@ -626,16 +736,21 @@ namespace PrincesPalace
                     if (shield != null) SetFill(enemyPlateBreakFills[i], shield.Current, shield.Max);
                 }
 
-                // The actor's own idle art, fitted into the plate. Reusing the
-                // stage sprite rather than authoring plate icons is what makes
-                // the two impossible to disagree.
+                // The actor's own idle art, fitted into the plate -- but
+                // CROPPED to its head zone first (PcPlateArt.
+                // EnemyIconHeadZoneFrac's own header), not the whole stance
+                // squashed into a 34x34 square. Reusing the stage sprite
+                // rather than authoring plate icons is what makes the two
+                // impossible to disagree; the crop is the one thing the
+                // stage sprite does not already have to do for itself.
                 if (Has(enemyPlateIcons, i))
                 {
                     var art = StanceSpriteFor(enemy, FightSession.Stances.Idle);
-                    enemyPlateIcons[i].gameObject.SetShown(art != null);
-                    if (art != null)
+                    var headArt = EnemyIconHeadCrop(art);
+                    enemyPlateIcons[i].gameObject.SetShown(headArt != null);
+                    if (headArt != null)
                     {
-                        enemyPlateIcons[i].sprite = art;
+                        enemyPlateIcons[i].sprite = headArt;
                         enemyPlateIcons[i].preserveAspect = true;
                     }
                 }
@@ -859,6 +974,17 @@ namespace PrincesPalace
                 pcHpValues[i].Set(UiStrings.HealthValue, member.CurrentHealth, member.MaxHealth);
             }
             if (Has(pcHpFills, i)) SetFill(pcHpFills[i], member.CurrentHealth, member.MaxHealth);
+
+            if (Has(pcGhostFills, i))
+            {
+                EnsureGhostRoutineArray(ref _pcGhostRoutines, pcPlates.Length);
+                UpdateGhostFill(pcGhostFills[i], member.CurrentHealth, member.MaxHealth, ref _pcGhostRoutines[i]);
+            }
+
+            if (Has(pcWardFills, i))
+            {
+                SetWardFill(pcWardFills[i], member.CurrentHealth, member.MaxHealth, StatusEffects.WardPoints(member));
+            }
 
             // THE TAG COMES OFF THE POOL, not out of UiStrings (plan P7). A
             // member with no pool cannot happen -- PrimaryPool is never null
@@ -1184,6 +1310,154 @@ namespace PrincesPalace
             float d = Mathf.Abs(Mathf.Repeat(phase - centre + 0.5f, 1f) - 0.5f);
             if (d >= PoolPulseBeatHalfWidth) return 0f;
             return 0.5f * (1f + Mathf.Cos(Mathf.PI * d / PoolPulseBeatHalfWidth));
+        }
+
+        // ---- the ward segment ---------------------------------------------------
+        //
+        // A SECOND FILL ON THE SAME BAR, sized ward/maxHP and clamped, drawn
+        // starting where the HP fill ends -- so a shield reads as bonus
+        // effective health tacked onto the bar rather than as a tint over
+        // health that is already there. StatusEffects.WardPoints is the pool
+        // every Ward status (Magical Shield, the Fragile Lamb's Ward, every
+        // other shield -- see WardTests) shares; this reads it fresh every
+        // repaint the same way the HP fill reads CurrentHealth fresh, rather
+        // than caching anything.
+        private static void SetWardFill(Image ward, int current, int max, int wardPoints)
+        {
+            if (ward == null) return;
+
+            if (max <= 0 || wardPoints <= 0)
+            {
+                ward.gameObject.SetShown(false);
+                return;
+            }
+
+            float hpFrac = Mathf.Clamp01(current / (float)max);
+            float endFrac = Mathf.Clamp01(hpFrac + wardPoints / (float)max);
+
+            bool visible = endFrac > hpFrac;
+            ward.gameObject.SetShown(visible);
+            if (!visible) return;
+
+            var rect = (RectTransform)ward.transform;
+            rect.anchorMin = new Vector2(hpFrac, 0f);
+            rect.anchorMax = new Vector2(endFrac, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        // ---- the "recent damage" ghost fill -------------------------------------
+        //
+        // A trailing fill that STAYS at the pre-hit fraction and eases down to
+        // meet the live one over GhostFillDecaySeconds, so a hit reads as a
+        // CHUNK taken out of the bar rather than the fill simply snapping to
+        // its new, smaller size. The live HP fill always jumps immediately
+        // (SetFill, unchanged) -- this is purely the afterimage behind it,
+        // drawn UNDER the live fill in the node tree (see FightScreen's own
+        // ordering) so the chunk reads as "what was just lost", not as a
+        // preview of anything.
+        //
+        // A COROUTINE PER PLATE rather than a per-frame Update() entry
+        // (compare RefreshPoolPulse's arithmetic-over-the-clock shape just
+        // above): this is a one-shot ease that starts and stops with a hit
+        // rather than a continuous idle loop, and every call site that would
+        // drive an Update() tick for it (FightController.Input.cs) sits
+        // outside this pass's edit surface. StartCoroutine needs nothing
+        // from that file -- it is a MonoBehaviour method available on this
+        // partial class already.
+        private const float GhostFillDecaySeconds = 0.4f;
+
+        private Coroutine[] _enemyGhostRoutines;
+        private Coroutine[] _pcGhostRoutines;
+
+        private static void EnsureGhostRoutineArray(ref Coroutine[] routines, int length)
+        {
+            if (routines == null || routines.Length != length)
+            {
+                routines = new Coroutine[length];
+            }
+        }
+
+        // `shown` is read straight off the ghost Image's OWN current anchor
+        // rather than tracked in a parallel field: whatever the ghost is
+        // visually at right now (mid-ease from an earlier hit, or resting at
+        // the live value) is the only honest starting point for a new one,
+        // and a separate "last target" float would drift from it the moment
+        // two hits landed close together.
+        private void UpdateGhostFill(Image ghost, int current, int max, ref Coroutine routine)
+        {
+            if (ghost == null) return;
+
+            float liveFraction = max <= 0 ? 0f : Mathf.Clamp01(current / (float)max);
+            float shown = ((RectTransform)ghost.transform).anchorMax.x;
+
+            // A DROP: the ghost holds the higher, pre-hit value and eases
+            // down to meet the new one. Restarted rather than queued if a
+            // second hit lands before the first ease finishes -- the ghost
+            // keeps easing from wherever it visually is toward the newest
+            // target, which is what "recent damage" means for a flurry.
+            //
+            // TWO GUARDS, NOT ONE -- isActiveAndEnabled catches the ordinary
+            // case (a plate hidden or a controller disabled), and
+            // gameObject.scene.isLoaded catches the one FightTeardown
+            // LifecycleTests actually exercises: FightBeatPlayer.OnDisable's
+            // own teardown (AUDIT #106 -- see its own header) fires ONE
+            // last RefreshUi from FightBeatPlayer.EndFight while the OLD
+            // scene is unloading UNDERNEATH a "FightPanel" that Unity has
+            // not flagged activeInHierarchy=false for yet (destruction, not
+            // SetActive(false), is what is happening to it) -- so
+            // isActiveAndEnabled alone still reads true right here.
+            // Scene.isLoaded flips the moment the unload STARTS, which is
+            // the earlier and, for this exact race, the correct signal.
+            // Unity refuses StartCoroutine on either state and logs an
+            // error the teardown tests do not expect; snapping straight to
+            // the live value is the graceful-degradation answer this house
+            // already gives everywhere else: no ease to show, no player
+            // watching it.
+            if (liveFraction < shown - 0.0005f)
+            {
+                if (!isActiveAndEnabled || !gameObject.scene.isLoaded)
+                {
+                    if (routine != null) routine = null;
+                    SetFillFraction(ghost, liveFraction);
+                    return;
+                }
+
+                if (routine != null) StopCoroutine(routine);
+                routine = StartCoroutine(EaseGhostFill(ghost, shown, liveFraction));
+                return;
+            }
+
+            // A HEAL, or the first paint of a fresh occupant: nothing to
+            // trail, so the ghost simply tracks the live value with no lag.
+            if (routine != null)
+            {
+                StopCoroutine(routine);
+                routine = null;
+            }
+
+            SetFillFraction(ghost, liveFraction);
+        }
+
+        private IEnumerator EaseGhostFill(Image ghost, float from, float to)
+        {
+            float elapsed = 0f;
+
+            while (elapsed < GhostFillDecaySeconds)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / GhostFillDecaySeconds);
+
+                // Ease OUT: fast at first (the chunk reads immediately),
+                // settling into the new level rather than arriving at a
+                // constant rate.
+                float eased = 1f - (1f - t) * (1f - t);
+                SetFillFraction(ghost, Mathf.Lerp(from, to, eased));
+
+                yield return null;
+            }
+
+            SetFillFraction(ghost, to);
         }
 
         // RefreshTransformStrip is GONE (2026-09-09). The strip it painted was
@@ -2763,9 +3037,20 @@ namespace PrincesPalace
             if (fill == null) return;
 
             float fraction = max <= 0 ? 0f : Mathf.Clamp01(current / (float)max);
+            SetFillFraction(fill, fraction);
+        }
+
+        // THE RAW HALF OF SetFill ABOVE, split out so the ghost fill (which
+        // has no current/max of its own -- it eases toward a FRACTION, not a
+        // pair of live numbers) can share the same anchor-stretch mechanics
+        // rather than a second copy of them.
+        private static void SetFillFraction(UnityEngine.UI.Image fill, float fraction)
+        {
+            if (fill == null) return;
+
             var rect = (RectTransform)fill.transform;
             rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(fraction, 1f);
+            rect.anchorMax = new Vector2(Mathf.Clamp01(fraction), 1f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
         }

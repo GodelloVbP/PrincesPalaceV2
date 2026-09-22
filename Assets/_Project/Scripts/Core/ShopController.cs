@@ -23,14 +23,35 @@ namespace PrincesPalace
     // BUY, commits. Unaffordable cards stay selectable for inspection --
     // only BUY can refuse, and it refuses through RunOrchestrator's own
     // ShopResult rather than a client-side guess at affordability.
-    public class ShopController : MonoBehaviour
+    //
+    // INavSectionStrip (owner ask #3, 2026-09-22): LB/RB step the character
+    // picker the same way the dossier's shoulders page its own roster --
+    // StepSection is the ONE path both the shoulder buttons and the
+    // on-screen arrows call, so they cannot disagree about where wrap lands.
+    public class ShopController : MonoBehaviour, INavSectionStrip
     {
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal Button leaveButton;
         [SerializeField] internal TMP_Text leaveButtonLabel;
-        [SerializeField] internal TMP_Text detailLabel;
         [SerializeField] internal Button buyButton;
         [SerializeField] internal Button packButton;
+
+        // The character picker (owner ask #3): who the comparison panel
+        // below is comparing a selected gear card AGAINST. Defaults to the
+        // party leader (ActiveSquad()[0]) exactly the way
+        // CharacterDossierController's own _index starts at 0.
+        [SerializeField] internal TMP_Text characterName;
+        [SerializeField] internal Button prevCharacterButton;
+        [SerializeField] internal Button nextCharacterButton;
+
+        // The comparison panel (ItemComparisonPanel). detailPanelRoot is
+        // shown only for a valid, non-refused GEAR selection; every other
+        // state (nothing selected, a refusal, a relic/book card) paints
+        // into detailBody alone the way the old single-line detail label
+        // always did -- see PaintDetail's own header.
+        [SerializeField] internal GameObject detailPanelRoot;
+        [SerializeField] internal TMP_Text detailTitle;
+        [SerializeField] internal TMP_Text detailBody;
 
         // The card art, and the three lookup tables it comes from. A skill
         // with no authored iconPath (most skills, still, since only the four
@@ -91,6 +112,12 @@ namespace PrincesPalace
         private int _selectedSection = -1;
         private int _selectedIndex = -1;
 
+        // Which party member the comparison panel scores a selected gear
+        // card against (owner ask #3). Reset to 0 -- the party leader -- on
+        // every Open(), the same "start on the leader" default the dossier
+        // itself resets to when nothing says otherwise.
+        private int _charIndex;
+
         private bool _leaveArmed;
         private bool _packOpen;
         private int _packPage;
@@ -116,6 +143,7 @@ namespace PrincesPalace
 
             _selectedSection = -1;
             _selectedIndex = -1;
+            _charIndex = 0;
             _leaveArmed = false;
             _packOpen = false;
             _packPage = 0;
@@ -147,6 +175,9 @@ namespace PrincesPalace
             if (buyButton != null) buyButton.onClick.AddListener(Buy);
             if (packButton != null) packButton.onClick.AddListener(OpenPack);
             if (leaveButton != null) leaveButton.onClick.AddListener(Leave);
+
+            if (prevCharacterButton != null) prevCharacterButton.onClick.AddListener(() => StepCharacter(-1));
+            if (nextCharacterButton != null) nextCharacterButton.onClick.AddListener(() => StepCharacter(1));
 
             if (packCloseButton != null) packCloseButton.onClick.AddListener(ClosePack);
             if (packPrevButton != null) packPrevButton.onClick.AddListener(() => StepPackPage(-1));
@@ -192,6 +223,33 @@ namespace PrincesPalace
             _refusal = default;
             Paint();
         }
+
+        // ---- the character picker (owner ask #3) ------------------------------
+        //
+        // Mirrors CharacterDossierController.Squad()/Step() deliberately:
+        // same source (ActiveSquad, filtered of nulls), same wrap-by-modulo,
+        // same "index 0 is the default" posture -- a second, differently-
+        // shaped picker here would be a second thing for a player to learn.
+        private static List<Character> Squad()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            return save == null ? new List<Character>() : save.ActiveSquad().Where(c => c != null).ToList();
+        }
+
+        private void StepCharacter(int by)
+        {
+            var squad = Squad();
+            if (squad.Count == 0) return;
+
+            _charIndex = (_charIndex + by + squad.Count) % squad.Count;
+            Paint();
+        }
+
+        // INavSectionStrip: the SAME path the on-screen arrows call, so a
+        // gamepad shoulder press and a mouse click can never disagree about
+        // where wrap lands (INavCancelClaim.cs's own contract for this
+        // interface).
+        public void StepSection(int direction) => StepCharacter(direction);
 
         // ---- saying why a mutation did nothing (AUDIT #115) ------------------
         //
@@ -383,9 +441,48 @@ namespace PrincesPalace
             PaintSection(ShopStock.RelicSection, relicCards, relicIcons, relicArt, relicNames, relicMetas,
                 relicPrices, relicReroll, relicRerollLabel);
 
+            PaintCharacterPicker();
             PaintDetail(run);
             PaintPack();
             RefreshNavigation();
+        }
+
+        // ---- the character picker (owner ask #3) ------------------------------
+        private void PaintCharacterPicker()
+        {
+            var squad = Squad();
+
+            // Hidden below two members -- CharacterDossierController's own
+            // threshold and its own reasoning: a control that answers a
+            // click by not moving is worse than one that is not there.
+            bool canPage = squad.Count > 1;
+            if (prevCharacterButton != null && prevCharacterButton.gameObject.activeSelf != canPage)
+                prevCharacterButton.gameObject.SetActive(canPage);
+            if (nextCharacterButton != null && nextCharacterButton.gameObject.activeSelf != canPage)
+                nextCharacterButton.gameObject.SetActive(canPage);
+
+            if (characterName == null) return;
+
+            if (squad.Count == 0)
+            {
+                characterName.SetContent("");
+                return;
+            }
+
+            if (_charIndex >= squad.Count) _charIndex = 0;
+            var definition = ContentDatabase.GetCharacter(squad[_charIndex].definitionId);
+            string name = definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
+                ? squad[_charIndex].definitionId
+                : definition.Data.DisplayName;
+            characterName.SetContent(name);
+        }
+
+        private Character SelectedCharacter()
+        {
+            var squad = Squad();
+            if (squad.Count == 0) return null;
+            if (_charIndex >= squad.Count) _charIndex = 0;
+            return squad[_charIndex];
         }
 
         private void PaintSection(int section, Button[] cards, Image[] icons, IconEntry[] art,
@@ -444,6 +541,18 @@ namespace PrincesPalace
             }
         }
 
+        // Graceful degradation on missing content is the house style
+        // (CLAUDE.md's own "Conventions"): an id with no matching
+        // ModifierDefinition, or no authored DisplayName, prints the raw id
+        // rather than dropping it from the list.
+        private static string AffixDisplayName(string modifierId)
+        {
+            var modifier = ContentDatabase.GetModifier(modifierId);
+            return modifier == null || string.IsNullOrEmpty(modifier.Data.DisplayName)
+                ? modifierId
+                : modifier.Data.DisplayName;
+        }
+
         private (string name, string meta) DescribeEntry(ShopStockEntry entry)
         {
             switch (entry.kind)
@@ -452,8 +561,16 @@ namespace PrincesPalace
                 {
                     var item = ContentDatabase.GetItem(entry.contentId);
                     string name = item?.displayName ?? entry.contentId;
-                    string meta = UiStrings.ShopGearMeta.Format(item?.tier ?? 0, entry.plus,
-                        entry.modifiers?.Count ?? 0);
+                    // VISIBLE AFFIXES (owner ask #2): the card names its
+                    // modifiers, not just how many there are. What each one
+                    // DOES, in numbers, is more than this line can hold --
+                    // that is ModifierAffixLines.LinePairs' text, and it
+                    // lives in the selected card's comparison panel
+                    // (PaintDetail) instead of being crammed in here.
+                    string affixNames = entry.modifiers != null && entry.modifiers.Count > 0
+                        ? string.Join(", ", entry.modifiers.Select(AffixDisplayName))
+                        : UiStrings.ShopGearMetaNoAffix.Format();
+                    string meta = UiStrings.ShopGearMeta.Format(item?.tier ?? 0, entry.plus, affixNames);
                     return (name, meta);
                 }
                 case ShopEntryKind.Relic:
@@ -475,43 +592,94 @@ namespace PrincesPalace
             }
         }
 
+        // THE ONE BOX FOR "WHAT THE SHOP IS TELLING THE PLAYER RIGHT NOW"
+        // (ShopScreen.DetailBody's own header). Three shapes, same priority
+        // order the old single-line label always used:
+        //
+        //   1. a refusal, or the pack/empty-selection placeholder -- plain
+        //      text in detailBody, panel hidden (nothing to compare).
+        //   2. a relic or book -- the old name/meta/description line, same
+        //      text, same box (a comparison needs an equip slot; neither
+        //      kind has one).
+        //   3. a gear card -- detailTitle gets its name, the panel shows,
+        //      and detailBody carries ItemDescription.ComparisonBody: the
+        //      item's stats, its affix lines (owner ask #2's full numbers)
+        //      and the delta against whatever SelectedCharacter() has
+        //      equipped in that slot (owner ask #3).
         private void PaintDetail(RunSnapshot run)
         {
-            if (detailLabel == null) return;
+            if (detailTitle != null) detailTitle.SetContent("");
+            SetDetailPanelActive(false);
 
-            // AHEAD OF THE DESCRIPTION, and ahead of the pack check too: a
+            if (detailBody == null) return;
+
+            // AHEAD OF EVERYTHING ELSE, and ahead of the pack check too: a
             // sell is refused from inside the pack modal, and a refusal
             // nobody can see is what #115 was.
             if (_refusal.IsValid)
             {
-                detailLabel.Set(_refusal);
+                detailBody.Set(_refusal);
                 return;
             }
 
             if (_packOpen || _selectedSection < 0)
             {
-                detailLabel.Set(UiStrings.ShopDetailEmpty);
+                detailBody.Set(UiStrings.ShopDetailEmpty);
                 return;
             }
 
             var entry = EntryAt(_selectedSection, _selectedIndex);
             if (entry == null)
             {
-                detailLabel.Set(UiStrings.ShopDetailEmpty);
+                detailBody.Set(UiStrings.ShopDetailEmpty);
                 return;
             }
 
-            string description = entry.kind switch
+            if (entry.kind == ShopEntryKind.Gear)
             {
-                ShopEntryKind.Gear => ContentDatabase.GetItem(entry.contentId)?.description ?? "",
-                ShopEntryKind.Relic => ContentDatabase.GetRelic(entry.contentId)?.Data.Description ?? "",
-                _ => ContentDatabase.GetSkill(entry.contentId)?.Data.Description ?? "",
-            };
+                PaintGearComparison(entry);
+                return;
+            }
+
+            string description = entry.kind == ShopEntryKind.Relic
+                ? ContentDatabase.GetRelic(entry.contentId)?.Data.Description ?? ""
+                : ContentDatabase.GetSkill(entry.contentId)?.Data.Description ?? "";
 
             var (name, meta) = DescribeEntry(entry);
-            detailLabel.SetContent(string.IsNullOrEmpty(description)
+            detailBody.SetContent(string.IsNullOrEmpty(description)
                 ? $"{name} - {meta}"
                 : $"{name} - {meta} - {description}");
+        }
+
+        // A picked character and a resolvable item are both required for a
+        // comparison to mean anything -- with either missing, this degrades
+        // to the SAME plain name/meta line a relic or book gets, rather than
+        // showing a panel that compares against nobody.
+        private void PaintGearComparison(ShopStockEntry entry)
+        {
+            var item = ContentDatabase.GetItem(entry.contentId);
+            var character = SelectedCharacter();
+
+            if (item == null || character == null)
+            {
+                var (name, meta) = DescribeEntry(entry);
+                detailBody.SetContent($"{name} - {meta}");
+                return;
+            }
+
+            if (detailTitle != null) detailTitle.SetContent(item.displayName ?? entry.contentId);
+
+            var riftTier = (RiftTier)entry.riftTier;
+            detailBody.SetContent(ItemDescription.ComparisonBody(character, item, entry.plus,
+                riftTier, entry.modifiers));
+
+            SetDetailPanelActive(true);
+        }
+
+        private void SetDetailPanelActive(bool active)
+        {
+            if (detailPanelRoot != null && detailPanelRoot.activeSelf != active)
+                detailPanelRoot.SetActive(active);
         }
 
         private void PaintPack()
@@ -671,7 +839,7 @@ namespace PrincesPalace
             // is a second, independent press exactly as it is on the map.
             if (_navContext == null)
                 _navContext = new NavContext(entry: null, selectables: null, cancel: HandleCancel,
-                    systemMenu: HandleSystemMenu);
+                    systemMenu: HandleSystemMenu, sectionStrip: () => this);
 
             // PushIfAbsent, not Push: this context outlives its time on the
             // stack now (see PopNavContext), so re-entering the shop puts the

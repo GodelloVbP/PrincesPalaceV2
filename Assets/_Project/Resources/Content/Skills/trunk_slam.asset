@@ -49,9 +49,60 @@ MonoBehaviour:
       groundAspect: 0
       groundImpactY: -1
       castSfxPath: 
-      layers: []
-      layerFormat: 0
-      hitCueSeconds: 0
+      layers:
+      - id: slam
+        render: sprite
+        place: target
+        follow: 0
+        at: hit
+        offset: 0
+        path: Vfx/impact_burst
+        seconds: 0.28
+        fps: 0
+        startFrame: 0
+        until: once
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 340
+        fit: 
+        facing: none
+        sort: effects
+        align: 
+        punch: 0
+        glow: 0.9
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      layerFormat: 1
+      hitCueSeconds: 0.14
     SortOrder: 37
     Status: 0
     HasStatus: 0
@@ -102,7 +153,7 @@ MonoBehaviour:
     Approach: 1
     Stance: trunk_slam
     ApproachStance: 
-    WindupStance: 
+    WindupStance: attack
     SummonEnemyId: 
     SummonCap: 0
     IconPath: 

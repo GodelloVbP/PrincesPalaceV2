@@ -832,6 +832,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | `follow` | `false` | Re-read the anchor every tick rather than sampling it once when the layer opens. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
 | `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
+| `fit` | `none` | `none` (the authored `size`, verbatim) or `target` (multiply by the struck target's own stage footprint). Refused everywhere but `target`/`target-centre` -- see below. |
 | `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
@@ -857,6 +858,23 @@ ends sit at different depths and are drawn at different sizes), and rotates the
 box onto it; the sheet's `impactY` correction then moves along the box's own up
 rather than along screen +Y. The geometry is `Domain.Stage.FormationSpan` and is
 pinned with literals by `FormationSpanTests`.
+
+**`fit: target` is a multiplier, not a replacement.** `size` (or the
+`DefaultSize` fallback) is still the base number; `fit: target` multiplies it
+by the struck target's own composed stage scale -- the same number
+`AnchorOne` writes onto that target's slot, its rank's depth curve times its
+authored `stageScale` -- read off the target's resting pose (`StageActorAnimator
+.BaseScale`) rather than its live one, for the identical reason `ContactBoxFor`
+and `StageStandOff`'s `ScaleOf` already read that pose instead of a squashing
+`localScale`. Thorn Tithe's ritual authored a fixed 350 and read as a small
+patch on the Elder Treant (`stageScale` 1.45): `fit: target` is the field, not
+a Thorn Tithe special case, so any layer of any spell may author it. Legal
+only on `target` and `target-centre` -- the two placements that resolve one
+struck body -- and refused everywhere else (`formation` measures a span over
+every struck body at once and has no single target to read a footprint off;
+`caster`/`caster-centre` without travel never touch a target's rect either),
+the same "refused rather than silently doing nothing" rule `align` and `size`
+already follow off a formation layer.
 
 **Bloom is reachable and nothing reaches it without `glow`.** Every
 precondition is already true -- `supportsHDR` on the pipeline asset, `render

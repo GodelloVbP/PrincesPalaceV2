@@ -250,6 +250,29 @@ namespace PrincesPalace.Domain.Rewards
         // expensive shelf, not a hang (assumption 11).
         public const int AffordabilityRedraws = 8;
 
+        // "BETTER-QUALITY, MORE EXPENSIVE STOCK" (owner ask, 2026-09-22).
+        //
+        // The gear shelf targets one tier ABOVE the map's own floor tier,
+        // capped at whatever content actually goes up to -- a shop is a
+        // reason to have gold, not a mirror of what a fight already pays at
+        // this depth. Kept as a target-tier OFFSET rather than a second
+        // FloorTier table: RarityTable still owns "what a depth is worth"
+        // (its own header says so), this only says the shop reads one rung
+        // higher on that same table than a fight reward would.
+        public const int GearTierBoost = 1;
+
+        // NO BARE COMMONS: every gear entry on the shelf carries at least a
+        // +1 or one rolled affix. Enforced the same way the affordability
+        // floor is -- a bounded re-draw of the one axis that changed, never
+        // a second roll shape -- so `rollOne` stays the single seam the shop
+        // and the fight reward share (see RollGear's own header). Small
+        // relative to AffordabilityRedraws: a "was this bare" check is a
+        // near coin-flip against RarityTable's own plus/rift curves at any
+        // depth that ships real modifiers, so it rarely needs more than one
+        // or two attempts, and the FORCED +1 fallback below exists precisely
+        // so the loop can still be bounded when it does not.
+        public const int QualityRedraws = 4;
+
         public static int PriceOf(ItemOffer offer) =>
             ShopPricing.GearPrice(offer.Tier, offer.Plus, (int)offer.RiftTier);
 
@@ -278,11 +301,14 @@ namespace PrincesPalace.Domain.Rewards
             // EncounterClass.Normal is the caller's business (a shop is not a
             // fight and browsing must not beat winning, assumption 7) and it
             // is already baked into `rollOne`; what this needs from depth is
-            // only which tier band to stock.
+            // only which tier band to stock -- one rung above a fight's own
+            // floor tier (GearTierBoost, owner ask 2026-09-22), capped at
+            // whatever content actually goes up to.
+            int targetTier = Math.Min(RarityTable.FloorTier(depthStep) + GearTierBoost, maxTier);
             var chosen = ItemOfferTable.Choose(
-                candidates, RarityTable.FloorTier(depthStep), maxTier, nextIndex, GearCount);
+                candidates, targetTier, maxTier, nextIndex, GearCount);
 
-            var rolled = chosen.Select(rollOne).ToList();
+            var rolled = chosen.Select(offer => ApplyQualityFloor(rollOne(offer), rollOne)).ToList();
 
             ApplyAffordabilityFloor(chosen, rolled, rollOne);
 
@@ -321,10 +347,41 @@ namespace PrincesPalace.Domain.Rewards
             {
                 if (PriceOf(rolled[cheapest]) <= ShopPricing.NormalFightPayoutAnchor) return;
 
-                var redrawn = rollOne(chosen[cheapest]);
+                // Through the SAME quality floor the first pass used, so a
+                // redraw can never hand back a bare common the first pass
+                // would have refused -- the two guarantees (affordable,
+                // never bare) have to hold on the SAME final card, not one
+                // each on two different drafts of it.
+                var redrawn = ApplyQualityFloor(rollOne(chosen[cheapest]), rollOne);
                 if (PriceOf(redrawn) < PriceOf(rolled[cheapest])) rolled[cheapest] = redrawn;
             }
         }
+
+        // NO BARE COMMONS (assumption/owner ask 2026-09-22): a +0, no-affix
+        // copy is never handed back. Re-draws the SAME candidate through the
+        // SAME `rollOne` seam up to QualityRedraws times -- never a special
+        // "just add a modifier" path, which would be a second way to build
+        // an ItemOffer that the fight reward's own draw does not share.
+        //
+        // FORCED, NOT LEFT EXPENSIVE, when the redraws run out: unlike the
+        // affordability floor (which accepts an expensive shelf as the
+        // honest answer when nothing prices low enough), a shop that ships a
+        // bare common because the RNG happened to whiff four times in a row
+        // is exactly the bug this rule exists to close, so the fallback is a
+        // flat +1 -- the CHEAPEST way to stop being bare (PlusStep 0.35 <
+        // RiftStep 0.50, so a point of plus is always the less expensive of
+        // the two ways to clear this bar).
+        private static ItemOffer ApplyQualityFloor(ItemOffer offer, Func<ItemOffer, ItemOffer> rollOne)
+        {
+            for (int attempt = 0; attempt < QualityRedraws && IsBareCommon(offer); attempt++)
+            {
+                offer = rollOne(offer);
+            }
+
+            return IsBareCommon(offer) ? offer.WithPlus(1) : offer;
+        }
+
+        private static bool IsBareCommon(ItemOffer offer) => offer.Plus <= 0 && offer.Modifiers.Count == 0;
 
         // ---- the relic shelf --------------------------------------------------
 

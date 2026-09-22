@@ -16,28 +16,33 @@ namespace PrincesPalace.EditModeTests
     // The three tier columns are docs/PLAN_SHOP.md §2c's own table: tier 0 is
     // what a step-8 shop stocks, tier 1 a step-24 shop and tier 2 a step-40
     // shop, under RarityTable.FloorTier's current /16 divisor.
+    //
+    // RETABULATED 2026-09-22 (owner ask, "better-quality, more expensive
+    // stock"): GearBase 20->21, GearPerTier 4->5. Every literal below is the
+    // NEW formula's own output, not the old table with a delta applied --
+    // recomputed and pinned fresh, per this file's own header rule.
     public class ShopPricingTests
     {
         // tier, plus, riftTier, price
-        [TestCase(0, 0, 0, 20)]
-        [TestCase(0, 1, 0, 27)]
-        [TestCase(0, 2, 0, 34)]
-        [TestCase(1, 0, 0, 24)]
-        [TestCase(1, 1, 0, 32)]
-        [TestCase(1, 2, 0, 41)]
-        [TestCase(2, 0, 0, 28)]
-        [TestCase(2, 1, 0, 38)]
-        [TestCase(2, 2, 0, 48)]
+        [TestCase(0, 0, 0, 21)]
+        [TestCase(0, 1, 0, 28)]
+        [TestCase(0, 2, 0, 36)]
+        [TestCase(1, 0, 0, 26)]
+        [TestCase(1, 1, 0, 35)]
+        [TestCase(1, 2, 0, 44)]
+        [TestCase(2, 0, 0, 31)]
+        [TestCase(2, 1, 0, 42)]
+        [TestCase(2, 2, 0, 53)]
 
         // "Rare": tier-matched, +2, one affix slot.
-        [TestCase(0, 2, 1, 51)]
-        [TestCase(1, 2, 1, 61)]
-        [TestCase(2, 2, 1, 71)]
+        [TestCase(0, 2, 1, 54)]
+        [TestCase(1, 2, 1, 66)]
+        [TestCase(2, 2, 1, 79)]
 
         // "Very rare": +3, two affix slots.
-        [TestCase(0, 3, 2, 82)]
-        [TestCase(1, 3, 2, 98)]
-        [TestCase(2, 3, 2, 115)]
+        [TestCase(0, 3, 2, 86)]
+        [TestCase(1, 3, 2, 107)]
+        [TestCase(2, 3, 2, 127)]
         public void GearPrice_IsItsPinnedValue(int tier, int plus, int riftTier, int expected)
         {
             Assert.AreEqual(expected, ShopPricing.GearPrice(tier, plus, riftTier));
@@ -154,12 +159,38 @@ namespace PrincesPalace.EditModeTests
         }
 
         // Assumption 11's anchor has to be reachable, or the floor it
-        // guarantees is a guarantee that never fires. The cheapest gear that
-        // can exist at all is a tier-0, +0, no-affix piece.
+        // guarantees is a guarantee that never fires. UPDATED 2026-09-22: a
+        // tier-0, +0, no-affix piece is no longer a legal roll at all
+        // (ShopStock.ApplyQualityFloor, "no bare commons") -- the cheapest
+        // gear that CAN exist is now a tier-0, +1 piece, and the anchor was
+        // raised to sit exactly on that new floor (see
+        // ShopPricing.NormalFightPayoutAnchor's own comment).
         [Test]
         public void TheAffordabilityAnchorIsAboveTheCheapestGearThatCanExist()
         {
-            Assert.GreaterOrEqual(ShopPricing.NormalFightPayoutAnchor, ShopPricing.GearPrice(0, 0, 0));
+            Assert.GreaterOrEqual(ShopPricing.NormalFightPayoutAnchor, ShopPricing.GearPrice(0, 1, 0));
+        }
+
+        // THE BEFORE/AFTER TABLE, pinned. depthStep 8/24/40 are this file's
+        // own tier-0/1/2 shop steps (see header); ShopStock.GearTierBoost is
+        // what a live shop actually rolls at each of them, and plus 1 is the
+        // cheapest a card can now be (ShopStock's "no bare commons" floor --
+        // a point of plus is the CHEAPEST way to clear that bar, PlusStep <
+        // RiftStep). BEFORE is a literal from the retired §2c table (a bare
+        // tier-N common under the OLD GearBase/GearPerTier, 20/4) and is not
+        // recomputable from this file's own formula any more -- the whole
+        // point of pinning it here is that the code that produced it is
+        // gone. Only AFTER is asserted against live code.
+        [TestCase(0, 20, 35)]
+        [TestCase(1, 24, 42)]
+        [TestCase(2, 28, 49)]
+        public void TheShelfFloorAtEachTierIsItsPinnedBeforeAndAfterPrice(
+            int unboostedTier, int beforePriceForTheRecord, int afterPrice)
+        {
+            int boostedTier = unboostedTier + ShopStock.GearTierBoost;
+            Assert.AreEqual(afterPrice, ShopPricing.GearPrice(boostedTier, 1, 0),
+                "the NEW floor: one tier up, +1 minimum. beforePriceForTheRecord " +
+                $"({beforePriceForTheRecord}) is the retired formula's own value, kept here as documentation.");
         }
 
         // Price is a function of tier, plus and rift and nothing else -- no

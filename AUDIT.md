@@ -2757,3 +2757,83 @@ working, and it lands on one item modifier that nobody edited. Flagged so a
 later balance pass on `Sylvan` reads the right history — if the modifier looks
 strong, this is when it became so, and the cause is in `CombatActions`, not in
 `modifiers.json`.
+
+## Findings from the shop pricing, spell-book, and QA-backlog pass, 2026-09-22
+
+### 196. OWNER'S CALL: the shop gear price floor landed at ~1.75x, not the asked ~1.5x
+
+Floor-1 cheapest gear moved 20g -> 35g. `ShopPricing.GearBase 21`,
+`GearPerTier 5`, `NormalFightPayoutAnchor 28`, `ShopStock.GearTierBoost 1`, and
+`QualityRedraws 4` are the knobs behind that curve, landed together against an
+asked ~1.5x floor. Owner: pick which knob absorbs the retune — `GearBase` or
+`GearPerTier` down, or `NormalFightPayoutAnchor` up — or accept 1.75x as shipped.
+
+### 197. OWNER'S CALL: the shop's SHOPKEEPER portrait panel was retired for the item comparison panel
+
+`Domain/UiKit/Screens/ShopScreen.cs` dropped the "SHOPKEEPER" portrait header
+and its "portrait pending" placeholder to make room for the item comparison
+panel. Owner: restore the portrait as a smaller header alongside the
+comparison panel, or accept the loss.
+
+### 198. OWNER'S CALL: thirteen expansion spell books ship glyph-less; eight fell to the Arcane fallback for want of a declared element
+
+`skills.json` declares no element for Gilded Aegis, Borrowed Moment, Palace
+Passage, Velvet Shackles, Censer of Embers, Thorn Tithe, or Court of Whispers,
+so all eight render with the Arcane fallback cover; Crownfall is Arcane by
+declaration, not fallback. Full table:
+`Assets/_Project/Art/Items/SpellBooks/README.md`. Owner: commission glyphs
+against the thirteen placeholder covers, and decide elements for the three
+status-flavoured spells (Velvet Shackles, Censer of Embers, Thorn Tithe).
+
+### 199. OWNER'S CALL: attributes panel effect lines mix a computed value and per-step deltas
+
+`Domain/Stats/AbilityEffectDescriptions.cs` (see header comment) prints WIS's
+line as the computed regen number rather than "WIS/4", while DEX and CHA print
+deltas taken per divisor step (2 and 4 points respectively) because a literal
+one-point delta prints "+0" half the time. Owner: keep the mixed presentation,
+or restate all three as per-point fractions for consistency.
+
+### 200. RECORDED: `JourneyFightRoundTests`' seeded damage literal moved 6 -> 8 on an unverified RNG draw
+
+`Tests/PlayMode/Run/JourneyFightRoundTests.cs`. After the 1.2x basic-attack
+coefficient, the deterministic part was hand-derived (raw 9 -> 8 after
+defense), but the `SeededRandom` variance draw's position could not be
+reproduced without touching `Domain/Combat` (CLAUDE.md gotcha 5). The pinned
+8 is taken from the landed formula's actual output, not independently proven.
+Owner: accept as pinned, or have someone trace the RNG draw algebraically to
+confirm it.
+
+### 201. RECORDED: `BalanceSheetTests`' elite-pair gap persists in the same kind, at a new count
+
+`Tests/PlayMode/Combat/BalanceSheetTests.cs`: two treants at floor two now take
+~29 actions to clear (was 36 before the 1.2x coefficient), against a design
+band of ~9-11. Same designer call as before the coefficient landed, just a
+smaller gap. Owner: retune the treant kit or the coefficient further, or widen
+the accepted band.
+
+### 202. OWNER'S CALL: the dossier item tooltip's reused comparison panel crosses the Legs-slot mannequin art
+
+The dossier tooltip now reuses `ItemComparisonPanel` (420x420, font 15) with
+its title left-aligned as the shop's is. Beside the Legs slot the panel
+crosses the mannequin art — the existing 300x480 tooltip already had the same
+overlap there. Owner: accept it, add a title-alignment parameter, or move the
+anchor rule so Legs clears the art.
+
+### 203. Hands-on QA still pending for nine landed systems; no runtime captures taken
+
+Attributes panel with pad Left/Right/Submit; fight detail card (compact rows,
+damage-type tag on POWER); five-row skills list; shop comparison panel and
+LB/RB character picker; enemy plates (head-zone icons, ward segment,
+hit-strength recoil tiers); Blackglass Spear / Winter's Rebuke spear layers;
+Thorn Tithe `fit: target`; treant slam and spores. No captures were taken
+because graphics-mode launches steal the owner's focus. Owner: schedule a
+focus-safe QA pass.
+
+### 204. Graphics-mode tooling still steals focus; the hidden-desktop fix is an untested candidate
+
+`tools/screenshot.ps1 -Runtime`, `graphics_tests.ps1`, and `preview.ps1
+-Launch` all open a focus-stealing window; only `-nographics` launches use the
+hidden desktop (`docs/INCIDENTS.md`, "Batchmode Unity steals focus").
+Candidate fix: route graphics launches through the hidden desktop too, proven
+with `tools/focus_check.ps1`. That proof run itself pops windows, so it needs
+scheduling for when the owner is away.

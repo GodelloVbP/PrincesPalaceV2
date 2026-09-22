@@ -43,7 +43,7 @@
     },
     {
       "id": "mud_burst",
-      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book.png",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Mud Burst/Mud Burst - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Mud Burst",
       "description": "The bog answers. It arrives wearing whatever it picked up on the way.",
@@ -74,7 +74,7 @@
     },
     {
       "id": "frost_flare",
-      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Frost Flare/Frost Flare - Spell Book.png",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Frost Flare/Frost Flare - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Frost Flare",
       "description": "Burns and freezes in the same breath. Something out there hates one half of it.",
@@ -104,7 +104,7 @@
     },
     {
       "id": "cinderfault",
-      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell Book.png",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Cinderfault/Cinderfault - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Cinderfault",
       "description": "One crack runs the length of the floor, and everything standing on it finds out what is underneath.",
@@ -164,7 +164,7 @@
     },
     {
       "id": "lightning_bolt",
-      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt - Spell Book.png",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Lightning Bolt/Lightning Bolt - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Lightning Bolt",
       "description": "A single white line from the ceiling to whatever is standing under it.",
@@ -191,6 +191,7 @@
     {
       "_comment": "MILESTONE A of docs/PLAN_SPELL_EXPANSION.md, section 2.1. Every number here is marked prototype in that document and is tuning, not specification.",
       "id": "gilded_aegis",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Gilded Aegis/Gilded Aegis - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Gilded Aegis",
       "description": "Shields one ally. The gilding holds for two of their turns.",
@@ -258,6 +259,7 @@
     {
       "_comment": "MILESTONE A, section 2.2. Frost resolves to DamageType.Ice -- Frost is a skills.json-only alias (SkillEntryResolver). appliesStatus Chilled is the FIRST content row in the game to author it, and it only slows anyone because ApplySkillStatus now goes through FightSession.ApplyStatusTo (plan D6). statusDuration 2 means two of the target's turns fully affected, the turn-end clock plan D1 put every standing modifier on.",
       "id": "winters_rebuke",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Winter's Rebuke/Winter's Rebuke - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Winter's Rebuke",
       "description": "Frost damage, and the cold hangs on them for two turns.",
@@ -282,21 +284,35 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "ritual",
-            "render": "sprite",
-            "place": "target-centre",
+            "_comment": "The diagonal spear: f3's ice spike, held rather than played. Same formation/span reasoning as Blackglass Spear's own spear layer -- see that spell's comment.",
+            "id": "spear",
+            "render": "still",
+            "place": "formation",
+            "align": "span",
             "at": "release",
             "path": "Spells/winters_rebuke",
-            "seconds": 0.72,
+            "startFrame": 4,
+            "seconds": 0.16,
             "until": "once",
-            "size": 340,
-            "impactX": 0.5,
-            "impactY": 0.46,
             "facing": "none",
             "sort": "effects",
             "punch": 0.22,
-            "glow": 1.25,
-            "fade": 0.14
+            "glow": 1.3
+          },
+          {
+            "_comment": "The lingering tear: f11's frost-mist swirl, held on the struck body's own centre and faded out slowly.",
+            "id": "tear",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/winters_rebuke",
+            "startFrame": 12,
+            "until": "hold",
+            "seconds": 0.85,
+            "fade": 0.45,
+            "facing": "none",
+            "sort": "effects",
+            "glow": 0.75
           },
           {
             "id": "settle",
@@ -331,6 +347,7 @@
     {
       "_comment": "MILESTONE A, section 2.3. The Poison-typed packet detonates whatever Poison the target already carries -- ALL of it, in one consumption, since Poison stacks (StatusCombos.SpendPoisonIfMatched) -- and the fresh Poison below lands afterwards, on a live target only, so the cast can never re-detonate what it just applied. The description is the tooltip and is worded exactly as the plan specifies.",
       "id": "vipers_bite",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Viper's Bite/Viper's Bite - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Viper's Bite",
       "description": "Detonates existing Poison, then poisons again.",
@@ -404,6 +421,7 @@
     {
       "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.4. Every number here is marked prototype in that document and is tuning, not specification. consumesStatus/damageInstancesIfConsumed read and spend the GENERAL Marked status (Marks.cs), never the Drowned Lantern's own private mark set.",
       "id": "crownfall",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Crownfall/Crownfall - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Crownfall",
       "description": "Arcane damage. Far heavier against a marked enemy, and spends the mark.",
@@ -480,6 +498,7 @@
     {
       "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.5. Every number here is marked prototype in that document and is tuning, not specification. requiresStatus/detonationPercent/detonationSplit build the Reclaim effect's whole damage from a consumed Poison pile; see StatusCombos.SpendPoisonIfMatched and ConsumedTotalSplit. No damageInstances of its own -- the packets are computed at resolution.",
       "id": "ashen_reckoning",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Ashen Reckoning/Ashen Reckoning - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Ashen Reckoning",
       "description": "Requires Poison. Rips it out and returns it burning, then leaves them open.",
@@ -552,6 +571,7 @@
     {
       "_comment": "MILESTONE B of docs/PLAN_SPELL_EXPANSION.md, section 2.6. Every number here is marked prototype in that document and is tuning, not specification. healthCostPercent is validated together with manaCost and paid directly (HealthCost), never through the damage funnel. ignoresDefense depends on the milestone B repair to ResolveDamageInstances (plan 1.3) -- without it this packet's bypass is inert.",
       "id": "blackglass_spear",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Blackglass Spear/Blackglass Spear - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Blackglass Spear",
       "description": "Costs blood. Ignores magical defence.",
@@ -575,21 +595,35 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
-            "id": "ritual",
-            "render": "sprite",
-            "place": "target-centre",
+            "_comment": "The diagonal spear: f6 of the same sheet, held rather than played (a rapid strike, not a wind-up). Formation/span so a future multi-target Blackglass Spear runs the line across every struck body; against today's SingleEnemy targeting FormationSpan.Between degenerates to a level box the width of the one struck body's own (stageScale-scaled) footprint -- see FormationSpan.cs's own header for why that degenerate case is intentional, not a gap.",
+            "id": "spear",
+            "render": "still",
+            "place": "formation",
+            "align": "span",
             "at": "release",
             "path": "Spells/blackglass_spear",
-            "seconds": 0.72,
+            "startFrame": 7,
+            "seconds": 0.16,
             "until": "once",
-            "size": 350,
-            "impactX": 0.56,
-            "impactY": 0.46,
             "facing": "none",
             "sort": "effects",
-            "punch": 0.2,
-            "glow": 1.1,
-            "fade": 0.14
+            "punch": 0.25,
+            "glow": 1.35
+          },
+          {
+            "_comment": "The lingering tear: f11's swirl, held on the struck body's own centre well past the strike and faded out slowly.",
+            "id": "tear",
+            "render": "still",
+            "place": "target-centre",
+            "at": "hit",
+            "path": "Spells/blackglass_spear",
+            "startFrame": 12,
+            "until": "hold",
+            "seconds": 0.85,
+            "fade": 0.45,
+            "facing": "none",
+            "sort": "effects",
+            "glow": 0.8
           },
           {
             "id": "settle",
@@ -624,6 +658,7 @@
     {
       "_comment": "MILESTONE C of docs/PLAN_SPELL_EXPANSION.md, section 2.7. Every number here is marked prototype in that document and is tuning, not specification. advanceSlots is measured in PLACES, not in charge -- one slot moves past one charge LEVEL, so two combatants tied at a level are jumped together and a slot with nobody above it clips (plan 1.9). No damage, no status, nothing left on the board: the whole cast is a position. It is refused outright, before payment, when the chosen ally is already next in the order.",
       "id": "borrowed_moment",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Borrowed Moment/Borrowed Moment - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Borrowed Moment",
       "description": "Moves an ally up to two places earlier in the order. Never buys them an extra turn.",
@@ -689,6 +724,7 @@
     {
       "_comment": "MILESTONE C, section 2.8. queuePushSlots on a DamageAll row is NEW: the AOE branch applied status but never the push until this milestone, so the resolver refused the field on anything but DamageSingle and now accepts it on either damage effect. The delay is batched AFTER every enemy has resolved and every death has settled, over landed-hit survivors only -- a dodger keeps its place (plan 1.9 rule 6). Wind 5 per enemy, each checked against that enemy's own affinity.",
       "id": "gale_scythe",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Gale Scythe/Gale Scythe - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Gale Scythe",
       "description": "Wind damage to every enemy, and each one it hits loses a place in the order.",
@@ -760,6 +796,7 @@
     {
       "_comment": "MILESTONE C, section 2.9. TWO PICKS, and the count is NOT authored: SkillEffects.PicksRequired reads it off the effect, because one more content number would let a row ask for three picks no resolution can use (plan 2.9). freeAction true is the caster's one free action a turn, the same lock Tuck In already uses. Either ally being Rooted refuses the cast before payment, the identical rule CanMove/Move read off both sides.",
       "id": "palace_passage",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Palace Passage/Palace Passage - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Palace Passage",
       "description": "Swap two allies. Free action. Neither may be rooted.",
@@ -825,6 +862,7 @@
     {
       "_comment": "MILESTONE D, section 2.10. SkillEffect.Afflict: one enemy, this row's authored status, no damage -- so there is no damage instance, AfterDefences is never entered and the root cannot be dodged. statusDuration 2 is two EFFECTIVE turns under the milestone-A duration model (Rooted is AtTurnEnd, so the second turn's action is still restricted). The root now forbids every action classified physicalMove, on both sides, plus the formation Move it always forbade (plan 1.10). No scaling of any kind: a two-turn root is two turns from anyone, which is what keeps this a control spell rather than a damage spell in disguise.",
       "id": "velvet_shackles",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Velvet Shackles/Velvet Shackles - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Velvet Shackles",
       "description": "Binds one enemy for two turns. It cannot strike, charge or move - only cast.",
@@ -890,6 +928,7 @@
     },
     {
       "id": "censer_of_embers",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Censer of Embers/Censer of Embers - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Censer of Embers",
       "description": "Burns for three turns. Cast it again and both fires burn.",
@@ -956,6 +995,7 @@
     },
     {
       "id": "thorn_tithe",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Thorn Tithe/Thorn Tithe - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Thorn Tithe",
       "description": "Thorns for three turns: damage at the start of each of its turns, and again whenever it strikes or charges.",
@@ -974,6 +1014,7 @@
         "hitCueSeconds": 0.3,
         "layers": [
           {
+            "_comment": "fit: target -- 350 is the box on a rat-sized enemy; multiplied by the struck target's own stage footprint (rank depth times its authored stageScale) so the thorns read as covering the body on an Elder Treant (stageScale 1.45) rather than as a patch sized for something a third its size.",
             "id": "ritual",
             "render": "sprite",
             "place": "target-centre",
@@ -982,6 +1023,7 @@
             "seconds": 0.72,
             "until": "once",
             "size": 350,
+            "fit": "target",
             "impactX": 0.5,
             "impactY": 0.4,
             "facing": "none",
@@ -1023,6 +1065,7 @@
     {
       "_comment": "MILESTONE F of docs/PLAN_SPELL_EXPANSION.md, section 2.13. Ordinary enemies take Fear; authored bosses use queuePushSlots as their fallback. appliesStatus is the caster's explicit price.",
       "id": "court_of_whispers",
+      "iconPath": "Assets/_Project/Art/Items/SpellBooks/Court of Whispers/Court of Whispers - Spell Book - 48x48.png",
       "bookOnly": true,
       "displayName": "Court of Whispers",
       "description": "Terrifies ordinary enemies for a turn. Bosses are only delayed. You are left open.",
@@ -1346,6 +1389,7 @@
       "playerSelectable": false
     },
     {
+      "_comment": "windupStance: attack -- without it, hasWindup is false and the actor opens the beat ALREADY wearing trunk_slam (OpenStanceFor's Lunge branch falls back straight to strikeStance), so the crouch-and-cross plays in the strike pose itself and there is no visible windup. Authoring an existing pose ('attack') here gets the beat open in it instead, and the strike-pose switch at the impact instant (FightBeatPlayer's 'ONLY IF THE ACTOR IS NOT ALREADY IN IT' guard) then actually fires -- windup, then slam. vfx is the ground contact: impact_burst at the target's ground line, timed to hit.",
       "id": "trunk_slam",
       "displayName": "Trunk Slam",
       "description": "It brings its whole upper half down like a felled tree.",
@@ -1356,10 +1400,31 @@
       "flatAmount": 3,
       "manaCost": 0,
       "stance": "trunk_slam",
+      "windupStance": "attack",
       "approach": "lunge",
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.14,
+        "layers": [
+          {
+            "id": "slam",
+            "render": "sprite",
+            "place": "target",
+            "at": "hit",
+            "path": "Vfx/impact_burst",
+            "seconds": 0.28,
+            "until": "once",
+            "size": 340,
+            "facing": "none",
+            "sort": "effects",
+            "glow": 0.9
+          }
+        ]
+      },
       "playerSelectable": false
     },
     {
+      "_comment": "No approach/windupStance authored -- Hold delivers a cast from where it stands, which is what the 'cast' pose already is. vfx: an emitter over the whole struck party (formation/level -- a footprint, not a line), drifting rather than bursting (rate+window, near-zero gravity, long life). Reuses thorn_tithe_particles (no dedicated spore art exists): weighted toward f1 (the leaf) and f3 (the green droplet, already Poison-coloured) over f0/f2's thorn shapes -- see the emitter's own weights.",
       "id": "spore_cloud",
       "displayName": "Spore Cloud",
       "description": "The mushrooms along its back burst, and the air turns.",
@@ -1373,6 +1438,43 @@
       "statusMagnitude": 3,
       "statusDuration": 3,
       "stance": "cast",
+      "vfx": {
+        "layerFormat": 1,
+        "hitCueSeconds": 0.35,
+        "layers": [
+          {
+            "id": "spores",
+            "render": "emitter",
+            "place": "formation",
+            "align": "level",
+            "at": "release",
+            "sort": "effects",
+            "emitter": {
+              "path": "Spells/thorn_tithe_particles",
+              "rate": 11,
+              "window": 0.9,
+              "sourceDy": 140,
+              "spreadDegrees": 360,
+              "aimDegrees": 270,
+              "speedMin": 15,
+              "speedMax": 45,
+              "inherit": 0,
+              "drag": 0.4,
+              "gravity": -40,
+              "lifeMin": 0.9,
+              "lifeMax": 1.4,
+              "sizeMin": 0.35,
+              "sizeMax": 0.7,
+              "spinMin": -60,
+              "spinMax": 60,
+              "fadeFrom": 0.7,
+              "endScale": 0.9,
+              "weights": [0.15, 0.3, 0.15, 0.4],
+              "seed": 4471
+            }
+          }
+        ]
+      },
       "playerSelectable": false
     },
     {

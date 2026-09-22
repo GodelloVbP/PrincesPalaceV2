@@ -199,6 +199,12 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{at}.align '{layer.align}' is not an alignment. " +
                              $"Known: {string.Join(", ", SpellAlignNames.All)}.");
             }
+
+            if (!SpellFitNames.IsKnown(layer.fit))
+            {
+                problems.Add($"{at}.fit '{layer.fit}' is not a sizing rule. " +
+                             $"Known: {string.Join(", ", SpellFitNames.All)}.");
+            }
         }
 
         private static void CheckNumbers(string at, SpellLayer layer, List<string> problems)
@@ -408,6 +414,23 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at} is placed on the formation and authors dx {Num(layer.dx)}, which the " +
                              "measured span's own midpoint overrides. Remove it.");
+            }
+
+            // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target` and
+            // `target-centre` are the two placements PlaceOne resolves against
+            // one struck combatant's own rect; `formation` measures a span
+            // over every struck body at once and `caster`/`caster-centre`
+            // (without travel) never touch a target's rect at all -- none of
+            // the three has "the struck target" for `fit: target` to read a
+            // footprint off, so it is refused here rather than silently doing
+            // nothing, the same rule this file already applies to `size` and
+            // `align` on placements that cannot use them.
+            if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
+                !SpellPlaceNames.PerTarget(layer.Place))
+            {
+                problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
+                             "resolves no single struck target to read a footprint off. Only target and " +
+                             "target-centre do.");
             }
 
             // ONLY A FORMATION HAS A LINE TO LIE ALONG. Every other placement

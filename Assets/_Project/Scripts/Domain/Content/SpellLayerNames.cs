@@ -389,6 +389,58 @@ namespace PrincesPalace.Domain.Content
         }
     }
 
+    // ---- what a layer's box scales against ------------------------------------
+
+    // WHETHER `size` IS AN ABSOLUTE NUMBER OR A MULTIPLIER ON THE STRUCK
+    // TARGET'S OWN FOOTPRINT. Every layer before this word existed authored a
+    // constant box, which is right for a bolt or a status glint and wrong for
+    // an effect that has to read as "covering the body" on both a rat and an
+    // Elder Treant: Thorn Tithe's ritual at a fixed 350 reads as a small patch
+    // on a target authoring stageScale 1.45, because nothing before this
+    // multiplied the box by how big that target actually draws.
+    //
+    // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target` and `target-centre`
+    // are the two placements PlaceOne resolves against one struck combatant's
+    // own rect; `formation` measures its own span from every struck body at
+    // once (there is no single "the target" to read a footprint off), and
+    // `caster`/`caster-centre` without travel never touch a target's rect
+    // either -- SpellLayerRules.CheckPlacement refuses `fit: target` on all
+    // three for the same reason it refuses `size` on a formation layer: a word
+    // that would silently do nothing is refused rather than ignored.
+    public enum SpellFit
+    {
+        // The authored `size` is the box, verbatim. The default, and every
+        // layer that shipped before this word existed.
+        None,
+
+        // `size` (or SpellPresentation.DefaultSize) is multiplied by the
+        // struck target's own stage footprint -- the same composed scale
+        // AnchorOne writes onto that target's slot (its rank's depth curve
+        // times its authored stageScale), read off the target's own animator
+        // so a squash-stretch mid-hit cannot smuggle itself into an effect's
+        // size. See FightController.BoxForLayer.
+        Target,
+    }
+
+    public static class SpellFitNames
+    {
+        public static SpellFit Parse(string name) => Lookup(name, SpellFit.None);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellFit)(-1)) != (SpellFit)(-1);
+
+        public static string[] All => new[] { "none", "target" };
+
+        private static SpellFit Lookup(string name, SpellFit fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellFit.None;
+
+            if (SpellWord.Is(name, "none")) return SpellFit.None;
+            if (SpellWord.Is(name, "target")) return SpellFit.Target;
+            return fallback;
+        }
+    }
+
     // ---- which band it draws in ----------------------------------------------
 
     public enum SpellSort

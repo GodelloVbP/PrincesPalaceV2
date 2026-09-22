@@ -67,6 +67,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 330
+        fit: 
         facing: none
         sort: effects
         align: 
@@ -117,6 +118,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
+        fit: 
         facing: 
         sort: effects
         align: 
@@ -206,7 +208,8 @@ MonoBehaviour:
     WindupStance: 
     SummonEnemyId: 
     SummonCap: 0
-    IconPath: 
+    IconPath: Assets/_Project/Art/Items/SpellBooks/Borrowed Moment/Borrowed Moment
+      - Spell Book - 48x48.png
     AdvanceSlots: 2
     HealthCostPercent: 0
     RequiresStatusType: 0

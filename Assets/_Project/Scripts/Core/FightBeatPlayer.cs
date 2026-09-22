@@ -949,9 +949,30 @@ namespace PrincesPalace
             // as no different from a Hold Back turn or a non-damaging cast.
             // See CombatBeat.Missed and DamagePopup.PlayMiss's own headers.
             if (beat.Target == null) return;
-            if (!beat.Missed && beat.Amount <= 0) return;
+            if (beat.Missed)
+            {
+                PopNumber(beat, beat.Target, beat.Amount, missed: true);
+                return;
+            }
 
-            PopNumber(beat, beat.Target, beat.Amount, beat.Missed);
+            // WHAT ACTUALLY REACHED HEALTH, not the raw swing -- a shield
+            // (CombatBeat.Absorbed's own header) can eat part or all of
+            // Amount before it gets there, and a popup that showed the raw
+            // figure over a target whose HP bar barely moved would disagree
+            // with the bar it sits above.
+            int healthDamage = beat.Amount - beat.Absorbed;
+            if (healthDamage < 0) healthDamage = 0;
+
+            // THE ABSORBED POPUP, whenever there is one to show -- BEFORE
+            // the health-damage return below, so a FULLY absorbed hit still
+            // gets its own popup (PlayAbsorbed's own header: this is the
+            // "shown rather than nothing" case) rather than falling through
+            // the healthDamage <= 0 guard into silence.
+            if (beat.Absorbed > 0) PopAbsorbed(beat.Target, beat.Absorbed);
+
+            if (healthDamage <= 0) return;
+
+            PopNumber(beat, beat.Target, healthDamage, missed: false);
         }
 
         // ONE NUMBER, WHEREVER IT CAME FROM. Both paths above end here, so the
@@ -972,20 +993,42 @@ namespace PrincesPalace
             var popup = FreePopup();
             if (popup == null) return;   // every one still in flight; the number is dropped, not queued
 
-            var slot = SlotFor?.Invoke(target);
-            var at = slot == null
-                ? Vector2.zero
-                : slot.anchoredPosition + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
-
-            // Contract 9: the popup's whole life is scaled by the SAME
-            // product a beat's own durations are, so it outlives its beat by
-            // the same ratio the beat itself is stretched or compressed --
-            // a popup timed to the authored 0.85s would read as abnormally
-            // slow at 0.5x and vanish mid-read at 2x.
+            var at = PopupAnchor(target, 0f);
             float lifeSeconds = Scaled(DamagePopup.LifeSeconds);
 
             if (missed) popup.PlayMiss(at, lifeSeconds);
             else popup.Play(at, amount, beat.IsHealing, beat.DamageType, lifeSeconds);
+        }
+
+        // THE ABSORBED POPUP -- ITS OWN CALL, not a branch inside PopNumber,
+        // because a PARTIAL absorb shows BOTH: the health-damage number
+        // (what got through) and this one (what a shield kept), at the same
+        // moment, for the same beat. Two "-n"-shaped popups stacked on one
+        // anchor would read as one hit disagreeing with itself, so this one
+        // rises from a SECOND anchor, one popup-height further up, rather
+        // than sharing PopNumber's.
+        private void PopAbsorbed(CombatantState target, int absorbed)
+        {
+            var popup = FreePopup();
+            if (popup == null) return;
+
+            var at = PopupAnchor(target, AbsorbedPopupExtraHeadroom);
+            float lifeSeconds = Scaled(DamagePopup.LifeSeconds);
+            popup.PlayAbsorbed(at, absorbed, lifeSeconds);
+        }
+
+        // Roughly one popup's own rise-and-settle height above PopNumber's
+        // usual spot -- enough that two numbers for one hit read as a
+        // stack, not a smear.
+        private const float AbsorbedPopupExtraHeadroom = 26f;
+
+        private Vector2 PopupAnchor(CombatantState target, float extraHeadroom)
+        {
+            var slot = SlotFor?.Invoke(target);
+            if (slot == null) return Vector2.zero;
+
+            return slot.anchoredPosition +
+                   new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom + extraHeadroom);
         }
 
         private DamagePopup FreePopup()
@@ -1299,17 +1342,29 @@ namespace PrincesPalace
             {
                 foreach (var result in beat.Results)
                 {
-                    if (result.Amount > 0) RecoilOne(beat, result.Target);
+                    if (result.Amount <= 0) continue;
+
+                    // A sweep's BeatTargetResult carries no per-target
+                    // Absorbed today (a known gap -- see the handoff
+                    // report), so this path always classifies off the raw
+                    // amount alone, same as it always implicitly did before
+                    // HitStrength existed.
+                    RecoilOne(beat, result.Target, result.Amount, absorbed: 0, missed: result.Missed);
                 }
 
                 return;
             }
 
-            if (beat.Amount <= 0) return;
-            RecoilOne(beat, beat.Target);
+            if (beat.Amount <= 0 && beat.Absorbed <= 0) return;
+            RecoilOne(beat, beat.Target, beat.Amount, beat.Absorbed, beat.Missed);
         }
 
-        private void RecoilOne(CombatBeat beat, CombatantState target)
+        // ONE HIT, CLASSIFIED AND THEN MOVED. HitStrength.Classify answers
+        // "how hard did this land" from the numbers alone; this method's own
+        // job shrank to mapping that answer onto an animator call -- see
+        // HitStrength's own header for why the classification itself lives
+        // in Domain rather than here.
+        private void RecoilOne(CombatBeat beat, CombatantState target, int amount, int absorbed, bool missed)
         {
             if (target == null) return;
 
@@ -1317,22 +1372,44 @@ namespace PrincesPalace
             // number, just no recoil.
             if (ReferenceEquals(target, beat.Actor)) return;
 
+            var tier = HitStrength.Classify(amount, absorbed, target.MaxHealth, missed, KilledOnThisBeat(beat, target));
+            if (tier == HitStrength.Tier.None) return;
+
             var animator = AnimatorFor?.Invoke(target);
             if (animator == null) return;
 
-            float dx = target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
+            float distance = HitStrength.DistanceFor(tier);
+            float dwellSeconds = RecoilDwellSeconds * HitStrength.DwellFractionFor(tier);
+
+            float dx = target.IsPlayerSide ? -distance : distance;
             var offset = new Vector2(dx, 0f);
 
             // THE RETURN LEG IS THIS BEAT'S, not every mover's. Passed as an
             // argument rather than by raising StageActorAnimator.ReturnSeconds
             // -- that constant is the recovery for a lunge, a charge and a
             // walk-in as well, and a reel four times slower is a statement
-            // about being HIT, not about coming home from anything.
-            animator.Play(offset, Scaled(RecoilDwellSeconds), returnSeconds: RecoilReturnSeconds);
+            // about being HIT, not about coming home from anything. NOT
+            // scaled by tier: the spring-back reads the same whichever
+            // distance it is coming back from, only the dwell at full
+            // extent (above) is what a light tap shortens.
+            animator.Play(offset, Scaled(dwellSeconds), returnSeconds: RecoilReturnSeconds);
 
             // AND A LATER BEAT AIMED AT THIS BODY HAS TO WAIT FOR IT -- see
             // StillReeling.
             if (!_reeling.Contains(animator)) _reeling.Add(animator);
+        }
+
+        // WHETHER THIS BEAT'S OWN SNAPSHOT LEFT THE TARGET AT ZERO -- read
+        // off Snapshot rather than the combatant's LIVE health for the exact
+        // reason every other beat field prefers its own snapshot (this
+        // file's header, and CombatBeat's): resolution has already run the
+        // whole round by the time any beat plays, so live health answers for
+        // the END of the round on every beat, not for this one.
+        private static bool KilledOnThisBeat(CombatBeat beat, CombatantState target)
+        {
+            return beat?.Snapshot != null
+                && beat.Snapshot.TryGetValue(target, out var vitals)
+                && vitals.Health <= 0;
         }
 
         // WHOEVER IS STILL COMING HOME FROM A BLOW.
@@ -1428,7 +1505,10 @@ namespace PrincesPalace
         // anticipation LEAD, which is a real distinction and the only one it
         // was ever making here.
 
-        private const float RecoilDistance = 45f;
+        // RecoilDistance (the flat 45px every struck figure used to slide) is
+        // GONE -- see HitStrength.HeavyDistance, which restates the same
+        // 45px as the top of the new three-tier table rather than a second
+        // literal this file could drift from it.
 
         // ---- how long a struck figure reels ----------------------------------
         //

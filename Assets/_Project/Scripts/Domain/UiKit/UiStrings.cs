@@ -564,8 +564,19 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopCardSold = UiString.Define("shop.card_sold", "SOLD");
         public static readonly UiString ShopCardNoOffer = UiString.Define("shop.card_no_offer", "NO OFFER");
 
+        // VISIBLE AFFIXES (owner ask #2, 2026-09-22): {2} used to be a bare
+        // COUNT ("3 AFFIX"); it is now the affix NAMES themselves,
+        // comma-joined (ShopController.DescribeEntry), or ShopGearMetaNoAffix
+        // below when the roll carries none. Runtime-only content
+        // (ShopController sets this label via UiString.Runtime, never this
+        // UiString's own audit sample), so an unusually long affix list
+        // wrapping or clipping on the card is a graceful-degradation
+        // tradeoff, not a fit-audit regression -- the full lines with their
+        // numbers live in the selected card's comparison panel regardless.
         public static readonly UiString ShopGearMeta =
-            UiString.Define("shop.gear_meta", "TIER {0} · +{1} · {2} AFFIX", "TIER 10 · +5 · 3 AFFIX");
+            UiString.Define("shop.gear_meta", "TIER {0} · +{1} · {2}", "TIER 10 · +5 · Fiery, Swift");
+        public static readonly UiString ShopGearMetaNoAffix =
+            UiString.Define("shop.gear_meta_no_affix", "NO AFFIX");
 
         // A book card's purchase-time facts (docs/PLAN_SHOP.md §7.1 point 4):
         // the shop carries no per-character context to show a badge against,
@@ -673,6 +684,22 @@ namespace PrincesPalace.Domain.UiKit
         // character with no talent-granted skills yet, not an error state.
         public static readonly UiString DossierSkillsEmpty =
             UiString.Define("dossier.skills_empty", "NOTHING LEARNED YET");
+
+        // --- the dossier's attributes panel ---------------------------------------
+        // A separate key from OverlayAttributes (the row that opens this
+        // panel) even though the words match -- same convention
+        // DossierSkillsTitle/OverlaySkills already use, one row and one
+        // panel title, kept as two keys because they are two different
+        // places on the screen.
+        public static readonly UiString DossierAttributesTitle =
+            UiString.Define("dossier.attributes_title", "ATTRIBUTES");
+
+        // The same lock CharacterDossierController.Refund already enforces
+        // (lockedForFight || InDescent) -- named here because the compact
+        // grid's own minus buttons only ever went quiet with no explanation,
+        // and a panel with the room to say why should say why.
+        public static readonly UiString DossierAttributesLocked =
+            UiString.Define("dossier.attributes_locked", "Reallocation is locked until you return to the hub.");
 
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
@@ -866,8 +893,11 @@ namespace PrincesPalace.Domain.UiKit
 
         // Detail column labels.
         public static readonly UiString DetailKindSkill = UiString.Define("detail_kind_skill", "SKILL");
+        public static readonly UiString DetailStatMana = UiString.Define("detail_stat_mana", "MANA");
         public static readonly UiString DetailStatCost = UiString.Define("detail_stat_cost", "COST");
+        public static readonly UiString DetailStatCooldown = UiString.Define("detail_stat_cooldown", "COOLDOWN");
         public static readonly UiString DetailStatPower = UiString.Define("detail_stat_power", "POWER");
+        public static readonly UiString DetailStatDefense = UiString.Define("detail_stat_defense", "DEFENSE");
         public static readonly UiString DetailStatTarget = UiString.Define("detail_stat_target", "TARGET");
         public static readonly UiString DetailStatEffect = UiString.Define("detail_stat_effect", "EFFECT");
         public static readonly UiString DetailStatScaling = UiString.Define("detail_stat_scaling", "SCALES");

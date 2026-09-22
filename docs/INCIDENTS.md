@@ -610,3 +610,35 @@ the launched process tree with its own independent P/Invoke calls, and is
 itself passive. The rule (every window-spawning `tools/` entry point wires
 in `Start-FocusGuard`/`Stop-FocusGuard`; every `-nographics` launch goes
 through `Start-UnityQuiet`) lives in `docs/TESTING.md`.
+
+## A MonoBehaviour attached at build time, named after its old home (2026-09-22)
+
+`ScreenRegistry.WireDossier` wires the attributes panel's stepper rows with
+`result.Attach<AttributeRow>` — `UiEmitResult.Attach<T>` adds `T` as a real
+component onto the GameObject a `UiNode` already emitted, the same seam
+`WireOptions` uses to attach `OptionRow` onto the Options screen's rows.
+`AttributeRow` started life as a private class declared inside
+`CharacterDossierController.cs`, compiling and passing every EditMode/PlayMode
+test that exercised it directly. What it broke was invisible until a scene
+was actually rebuilt: Unity ties a serialized component reference to the
+`MonoScript` asset whose **file name** matches the class, not to the class
+name alone, and a class living in a file named after something else has no
+such asset to bind to. The next `SceneBuilder` pass wrote the row back into
+`Hub.unity` as a component with a missing `MonoScript` GUID — "The referenced
+script (Unknown) on this Behaviour is missing!" — which surfaced as a batch
+of unrelated `*LifecycleTests` failing the moment `AttributeRow` instances
+first appeared in the built scene, not as a compile error and not as a
+failure anywhere near the attributes panel itself.
+
+**The rule:** a MonoBehaviour that `result.Attach<T>` (or any scene-build
+step) attaches onto a generated GameObject must live in its own file, named
+exactly after the class, the same way every other attachable component in
+this project already does (`Core/OptionRow.cs` for `OptionRow`, now
+`Core/AttributeRow.cs` for `AttributeRow`). A nested or differently-named
+class can compile clean and pass tests that construct or call it directly,
+and still corrupt the next generated scene — this is a scene-serialization
+constraint, not a C# one, so nothing short of an actual `-BuildScenes` pass
+and a lifecycle test over the rebuilt scene will catch a violation. Grep
+`Attach<` in `Editor/SceneBuilder/*.cs` against `Core/*.cs` file names before
+adding a new attached component, rather than discovering the mismatch after
+the next scene rebuild.

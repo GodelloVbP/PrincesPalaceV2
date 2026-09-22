@@ -338,6 +338,72 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("level, span", message);
         }
 
+        // ---- what a box scales against --------------------------------------------
+
+        [Test]
+        public void FitTargetOnATargetCentrePlacementIsLegal()
+        {
+            var layer = Sprite();
+            layer.place = "target-centre";
+            layer.fit = "target";
+
+            CollectionAssert.IsEmpty(Problems(With(layer)),
+                "target-centre resolves one struck body, which is exactly what fit: target needs");
+        }
+
+        // A WORD THAT WOULD READ NO FOOTPRINT IS REFUSED RATHER THAN IGNORED,
+        // the same rule this file already applies to `size` and `align` on a
+        // placement that cannot use them. `formation` measures a span over
+        // every struck body at once -- there is no single "the target" here --
+        // and `caster-centre` without travel never resolves a target's rect
+        // either.
+        [Test]
+        public void FitTargetOnTheFormationIsRefused()
+        {
+            var layer = Sprite();
+            layer.place = "formation";
+            layer.align = "span";
+            layer.fit = "target";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors fit 'target' but is placed on formation", message);
+            StringAssert.Contains("Only target and target-centre do", message);
+        }
+
+        [Test]
+        public void FitTargetOnACasterCentrePlacementIsRefused()
+        {
+            var layer = Sprite();
+            layer.place = "caster-centre";
+            layer.fit = "target";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors fit 'target' but is placed on caster-centre", message);
+        }
+
+        [Test]
+        public void AnUnknownFitIsRefusedAndTheKnownOnesAreListed()
+        {
+            var layer = Sprite();
+            layer.fit = "footprint";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].fit 'footprint' is not a sizing rule", message);
+            StringAssert.Contains("Known: none, target", message);
+        }
+
+        // BLANK IS THE DEFAULT AND THEREFORE LEGAL EVERYWHERE, spelled out or
+        // not -- the same shape ABlankRendererIsRefused's siblings above pin
+        // for the words that DO have a safe default.
+        [Test]
+        public void ABlankFitIsLegalBecauseNoneIsTheDefault()
+        {
+            var layer = Sprite();
+            layer.fit = "";
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
         // ---- the overshoot -------------------------------------------------------
 
         [Test]

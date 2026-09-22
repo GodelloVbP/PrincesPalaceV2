@@ -71,6 +71,18 @@ namespace PrincesPalace
         // never look like "0 damage from armour" landed instead.
         private static readonly Color MissColor = new Color(0.78f, 0.82f, 0.88f, 1f);
 
+        // WHAT A SHIELD ATE, read straight off the same token the health
+        // bar's own ward segment and StageHitFlash's barrier pulse both use
+        // (FightHudPalette.WardText/WardBright) -- one colour language for
+        // one mechanic across the bar, the flash and the number. Falls back
+        // to MissColor rather than PhysicalFallback's red: an absorbed hit
+        // is closer kin to "nothing landed" than to "something landed hard"
+        // if the token ever fails to parse.
+        private static readonly Color AbsorbedColor =
+            ColorUtility.TryParseHtmlString(FightHudPalette.WardText, out var parsedWardText)
+                ? parsedWardText
+                : MissColor;
+
         [SerializeField] internal TMP_Text label;
 
         private RectTransform _rect;
@@ -110,6 +122,17 @@ namespace PrincesPalace
         // the DIFFERENCE the player needs to read is the colour and the
         // word, not a second animation language to learn.
         public void PlayMiss(Vector2 anchoredStart, float lifeSeconds) => PlayContent(anchoredStart, "Miss", MissColor, lifeSeconds);
+
+        // A SHIELD'S OWN NUMBER -- what it ate, not what reached health
+        // (that is a separate Play call, at a separate anchor, when there is
+        // any). Worded rather than signed ("ABSORBED 12", not "-12"): a
+        // health-damage popup for the SAME hit can be on screen doing its
+        // own "-n" at almost the same spot (a partial absorb shows both --
+        // see FightBeatPlayer.ShowSingleAmount), and two "-" numbers one
+        // above the other read as one hit that misreported its size rather
+        // than as two different things that happened to it.
+        public void PlayAbsorbed(Vector2 anchoredStart, int absorbed, float lifeSeconds) =>
+            PlayContent(anchoredStart, "ABSORBED " + Mathf.Abs(absorbed), AbsorbedColor, lifeSeconds);
 
         private void PlayContent(Vector2 anchoredStart, string text, Color color, float lifeSeconds)
         {

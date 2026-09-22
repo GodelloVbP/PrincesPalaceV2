@@ -113,6 +113,18 @@ namespace PrincesPalace.Domain.UiKit
         public const string PipFilled = "#E8E0F7";
         public const string PipEmpty = "#0E0814B3";          // 0.70
 
+        // ---- the ward segment --------------------------------------------------
+        //
+        // A COOL CYAN, deliberately apart from both HpBright (salmon/red) and
+        // MpBright (blue) -- a shield reads as a THIRD kind of resource, not a
+        // tinted mana bar, and the two existing bars already claim the warm
+        // and the blue ends of this palette. Drawn as its own segment on the
+        // health bar (party and enemy plates alike, one colour for both --
+        // see FightController.Hud's SetWardFill), sized ward/maxHP.
+        public const string WardBright = "#8FE6E0";
+        public const string WardDeep = "#2E6B66";
+        public const string WardText = "#D8F5F2";
+
         // --- enemy intent badges ----------------------------------------------
         //
         // The icons ship as WHITE silhouettes and are tinted here, which is the

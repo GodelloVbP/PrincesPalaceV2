@@ -35,6 +35,30 @@ namespace PrincesPalace
         // health; this is the same fix applied to the pose.
         private readonly HashSet<CombatantState> _confirmedDefeated = new HashSet<CombatantState>();
 
+        // WHOSE CORPSE HAS EXPLICITLY REPORTED ITSELF GONE -- the one true
+        // source HoldsRank reads, in place of asking a StageDeathFade's own
+        // Faded flag live.
+        //
+        // THE RACE THIS REPLACES (StageFormationTests.TheSurvivorClosesUp
+        // OnlyOnceTheCorpseHasFinishedFading, hunt 2026-09-22): HoldsRank
+        // used to read fade.Faded directly, and RefreshStage is reached
+        // from every ordinary beat's PaintVitals as well as from a fade's
+        // own Finished callback. Both are coroutines on different
+        // MonoBehaviours, and Unity gives no ordering guarantee between two
+        // different components' coroutines resuming on the same frame -- so
+        // an ordinary beat's repaint could, on the exact frame a fade
+        // crossed its own finish line, observe Faded already true and close
+        // ranks a frame ahead of the fade's own notification. A HitStrength
+        // pass that shortened a nearby beat's dwell made that coincidence
+        // land often enough to be caught; the coincidence was always
+        // possible.
+        //
+        // Written ONLY by OnCorpseFadeFinished (the fade's own explicit
+        // notification) and cleared only by a revival, so no OTHER caller
+        // can ever flip a corpse's rank-holding status by asking the wrong
+        // question at the wrong moment.
+        private readonly HashSet<CombatantState> _corpseGone = new HashSet<CombatantState>();
+
         // WHO HAS ACTUALLY ARRIVED, as against who the model already contains.
         //
         // The exact mirror of _confirmedDefeated, and it exists for the mirror
@@ -150,8 +174,9 @@ namespace PrincesPalace
             if (!IsOnStage(combatant)) return false;
             if (IsStanding(combatant)) return true;
 
-            var fade = DeathFadeFor(combatant);
-            return fade != null && !fade.Faded;
+            // _corpseGone, not fade.Faded read live -- see its own header
+            // for the race asking the fade directly used to open.
+            return !_corpseGone.Contains(combatant);
         }
 
         // Reused across repaints rather than allocated per call: RefreshStage
@@ -302,6 +327,9 @@ namespace PrincesPalace
         {
             if (_isBusy || !combatant.IsAlive) return;
             if (!_confirmedDefeated.Remove(combatant)) return;
+
+            // See the identical line in FadeTheFallen's own revival branch.
+            _corpseGone.Remove(combatant);
 
             DeathFadeFor(combatant)?.ResetToVisible();
         }
@@ -968,6 +996,13 @@ namespace PrincesPalace
                     // came back.
                     if (!_confirmedDefeated.Remove(pair.Key)) continue;
 
+                    // The rank-holding half of the same revival -- a raised
+                    // combatant must be able to hold its rank on a LATER
+                    // death, and _corpseGone from a previous life would
+                    // otherwise still say "gone" for a body that is standing
+                    // again.
+                    _corpseGone.Remove(pair.Key);
+
                     DeathFadeFor(pair.Key)?.ResetToVisible();
                     raised = true;
                     continue;
@@ -985,7 +1020,24 @@ namespace PrincesPalace
                 // PlayIfNotAlready, not Play: a corpse is in the snapshot of
                 // every beat after the one that killed it, so this is asked
                 // repeatedly and must only ever fade once.
-                DeathFadeFor(pair.Key)?.PlayIfNotAlready();
+                //
+                // Finished IS RE-BOUND HERE, EVERY TIME, rather than once at
+                // fight start: the fight-start binding (see the reset loop
+                // below) cannot close over WHICH combatant will die in a
+                // given slot, because it does not know yet -- a slot is
+                // reused across the fight (revival, the next encounter) and
+                // its occupant at death time is the one fact this call site
+                // actually has. PlayIfNotAlready's own no-op-after-first
+                // guard means a repeated rebind of an ALREADY-fading corpse
+                // is harmless: the coroutine it would otherwise restart
+                // never starts a second time.
+                var fade = DeathFadeFor(pair.Key);
+                if (fade != null)
+                {
+                    var corpse = pair.Key;
+                    fade.Finished = () => OnCorpseFadeFinished(corpse);
+                    fade.PlayIfNotAlready();
+                }
             }
 
             // The raised are back in the line, so the line has to be re-laid
@@ -1001,11 +1053,15 @@ namespace PrincesPalace
         // the fade that decides rather than the beat: the kill, the fall and
         // the fade are nearly a second apart, and sliding the line forward at
         // either of the first two would walk a figure through a body still on
-        // screen. See HoldsRank.
-        private void OnDeathFadeFinished()
+        // screen. See HoldsRank and _corpseGone's own headers for why THIS
+        // is the one and only writer of _corpseGone -- an ordinary beat's
+        // repaint must never be able to reach the same conclusion on its
+        // own by reading the fade's state instead of being told.
+        private void OnCorpseFadeFinished(CombatantState corpse)
         {
             if (_session == null) return;
 
+            _corpseGone.Add(corpse);
             RefreshStage();
         }
 
@@ -1326,19 +1382,29 @@ namespace PrincesPalace
 
             StartIdleBreathing();
 
+            // _corpseGone TOO -- a fresh fight reuses these same slot
+            // components, and a combatant object from the LAST encounter
+            // (a fixture reusing CombatantState instances, or simply the
+            // same reference by coincidence) must not open this one already
+            // marked gone.
+            _corpseGone.Clear();
+
             foreach (var fade in enemyDeathFades.Concat(partyDeathFades))
             {
                 if (fade == null) continue;
 
                 fade.ResetToVisible();
 
-                // TOLD WHEN THE BODY IS GONE. A corpse holds its rank until it
-                // has faded (see HoldsRank), so the moment the fade ends is the
-                // moment the survivors are allowed to close up -- and nothing
-                // else repaints then. Waiting for the next beat instead would
-                // work only when there is one; a kill that ends the round would
-                // leave the line open until the player's next action.
-                fade.Finished = OnDeathFadeFinished;
+                // NOT BOUND HERE ANY MORE. Finished used to be assigned once
+                // per slot, right here, with no idea which combatant would
+                // eventually die in it -- FadeTheFallen now rebinds it at
+                // the moment a specific combatant's fade actually starts
+                // (its own comment says why), which is the only place that
+                // knows who. Left unbound, a fade that somehow ran with no
+                // rebind (should not happen -- PlayIfNotAlready has exactly
+                // one call site, and it always rebinds first) simply
+                // finishes in silence rather than throwing on a null
+                // corpse.
             }
 
             foreach (var animator in enemyActorAnimators.Concat(partyActorAnimators)) animator?.ResetToHome();
@@ -1371,11 +1437,16 @@ namespace PrincesPalace
                 return;
             }
 
-            // Only a beat that actually LANDED something flashes. A beat that
-            // recorded no amount is a hold-back, a refusal or a status tick, and
-            // flashing those would make the one signal that means "you were hit"
-            // stop meaning anything.
-            if (beat.Amount <= 0) return;
+            // Only a beat that actually LANDED something flashes -- OR that
+            // a shield ate, which is what Absorbed on its own (Amount <= 0)
+            // now also has to arm this: a Ward status's full absorb leaves
+            // Amount at its unwritten 0 (CombatBeat.Absorbed's own header),
+            // and a shield taking a whole blow is exactly the kind of "you
+            // were hit" this gate exists to let through, not filter out. A
+            // beat that recorded neither is a hold-back, a refusal or a
+            // status tick, and flashing those would make the signal mean
+            // nothing.
+            if (beat.Amount <= 0 && beat.Absorbed <= 0) return;
 
             FlashOne(beat, beat.Target);
         }
@@ -1386,6 +1457,34 @@ namespace PrincesPalace
         {
             var flash = HitFlashFor(target);
             if (flash == null) return;
+
+            // A SHIELD TOOK SOME OR ALL OF IT -- the barrier reaction,
+            // distinct from the ordinary hit flash (FightHudPalette.
+            // WardBright rather than white/typed/heal). What actually
+            // reached health is Amount less Absorbed, CLAMPED: a
+            // Ward-status full absorb can leave Amount at 0 while Absorbed
+            // is positive (see CombatBeat.Absorbed's own header), which
+            // would read as negative health damage without the clamp.
+            if (beat.Absorbed > 0)
+            {
+                int healthDamage = beat.Amount - beat.Absorbed;
+                if (healthDamage < 0) healthDamage = 0;
+
+                if (healthDamage <= 0)
+                {
+                    // FULLY ABSORBED: the barrier is the whole story. No
+                    // hit flash underneath it, matching HitStrength.Tier.
+                    // None's "no slide either" on the recoil side.
+                    flash.FlashBarrier();
+                    return;
+                }
+
+                // PARTIALLY ABSORBED: the blow still landed for something,
+                // so it still opens with its own flash -- the barrier
+                // trails it rather than replacing it.
+                flash.FlashPartiallyWarded(beat.DamageType);
+                return;
+            }
 
             // AND THE ELEMENT OFF THE BEAT, for the same reason the amount is
             // read off it: a poison tick's beat declares Poison (see

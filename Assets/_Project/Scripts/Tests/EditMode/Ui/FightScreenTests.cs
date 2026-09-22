@@ -662,16 +662,17 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(topMargin, bottomMargin, 0.01f,
                 "the top row and the bar should be centred as one block, not offset toward one edge");
 
-            // 40.5, UP FROM 34: PlateH grew 110 to 130 with PlateW
-            // 220 -> 260 (see PlateW's own 2026-09-10 note) while the HP box
-            // grew 27 -> 34 with its font, and barY was re-solved against
-            // both -- see the two equations in BuildEnemyPlates' own topY/
-            // barY comment. Still centred (the assertion above), inside a
-            // taller frame, with a box 7px taller in it.
+            // 39.5, DOWN FROM 40.5 (2026-09-22): the bar grew 7 -> 9px for
+            // the health-bar polish pass and topY was re-solved against it
+            // -- see the two equations in BuildEnemyPlates' own topY/barY
+            // comment. The margin gives up exactly half of what the bar
+            // gained (1 of the bar's +2), split evenly per the "equal
+            // margins" equation, same as it always has whenever either
+            // box's height moved.
             //
             // hp is still the taller of the two top-row boxes at 34 against
             // the name's 24, so its edge is still the row's real top edge.
-            Assert.AreEqual(40.5f, topMargin, 0.01f);
+            Assert.AreEqual(39.5f, topMargin, 0.01f);
 
             // A deliberate small gap between the two rows, not the old blank
             // band (which was the full retired status line's own height).
@@ -1319,24 +1320,32 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the skill detail card's element tag ------------------------------
 
+        // WHICH ROW CARRIES "POWER" IS RUNTIME DATA now (2026-09-22 rework
+        // #2): FightHudModel.DetailPanel.Stats is compact, so the physical
+        // row index POWER lands on moves with whatever else the hovered
+        // skill shows. This dotnet-host test solves the STATIC tree only --
+        // it has no panel, no hovered skill, nothing to ask "which row is
+        // POWER this time" -- so it cannot pin "the tag sits between the
+        // key and value of row N" the way it used to when POWER's row was a
+        // build-time constant. FightController.Hud.cs's RefreshDetail/
+        // RefreshDetailDamageType own that claim now (every row is built
+        // uniform-width; the row painting POWER is narrowed and the tag
+        // moved onto it at runtime, by key lookup, not by index).
+        //
+        // What IS still a build-time fact, and worth pinning: the tag is
+        // built at the width the runtime narrowing expects. Its build-time
+        // rest position DOES sit on row 0's own line (no padding strip is
+        // tall enough to park it clear of every row -- FightScreen.
+        // BuildDetailColumn's own comment on the tag) -- that overlap is
+        // real and declared AllowOverlap for exactly that reason (the tag
+        // is Inactive and always relocated before either it or the row it
+        // rests on is shown together), which is what
+        // TheFightScreenAuditsCleanAtEveryFrame is trusting to be true.
         [Test]
-        public void TheDamageTypeTagSitsBetweenThePowerKeyAndItsValue()
+        public void TheDamageTypeTagIsSizedForTheNarrowRow()
         {
-            var keyRect = RectOf("DetailStatKey1");
-            var valueRect = RectOf("DetailStatValue1");
             var tagRect = RectOf("DetailDamageType");
-
-            // Same row -- riding POWER rather than a row of its own, since
-            // FightHudSpec.DetailStatRows (pinned at 5 by
-            // TheTreeIsSizedFromFightHudSpec_NotFromRestatedNumbers) leaves no
-            // sixth line to give it.
-            Assert.AreEqual(keyRect.Centre.Y, tagRect.Centre.Y, 0.01f);
-            Assert.AreEqual(valueRect.Centre.Y, tagRect.Centre.Y, 0.01f);
-
-            Assert.LessOrEqual(keyRect.Right, tagRect.Left,
-                "the element tag reaches back into the POWER key's own box");
-            Assert.LessOrEqual(tagRect.Right, valueRect.Left,
-                "the element tag reaches into the POWER value's own box");
+            Assert.AreEqual(FightScreen.DetailDamageTypeWidth, tagRect.Width, 0.01f);
         }
 
         // ---- status badges (PLAN_STATUS_EFFECT_UI, package B) -----------------

@@ -130,6 +130,31 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] attributeValues;
         [SerializeField] internal TMP_Text[] attributeKeys;
 
+        // The attributes panel (owner item: "dedicated attributes screen
+        // showing stat effects, with mouse/gamepad allocation and
+        // reallocation") -- see CharacterDossierScreen.AttributesPanel's own
+        // comment for the shape. attributesRow opens it, the same
+        // row-that-opens-a-panel idiom Pack/Spells/Skills/Track's own rows
+        // already use.
+        [SerializeField] internal Button attributesRow;
+        [SerializeField] internal GameObject attributesPanel;
+        [SerializeField] internal Button attributesCloseButton;
+        [SerializeField] internal TMP_Text attributesUnspentPoints;
+        [SerializeField] internal GameObject attributesLockNote;
+
+        // ONE PER ABILITY SCORE, in _cellOrder's order (RefreshAttributes),
+        // same as attributeCells above. attributeRowSteps is the row
+        // ITSELF -- an AttributeRow (this file, below), attached by
+        // ScreenRegistry.WireDossier the same way OptionRow is attached to
+        // an Options row, so a focused row answers Left/Right as
+        // refund/spend and Submit as spend without a second Selectable on
+        // the same GameObject.
+        [SerializeField] internal AttributeRow[] attributeRowSteps;
+        [SerializeField] internal TMP_Text[] attributeRowNames;
+        [SerializeField] internal TMP_Text[] attributeRowEffects;
+        [SerializeField] internal Button[] attributeRowPluses;
+        [SerializeField] internal Button[] attributeRowMinuses;
+
         [SerializeField] internal Image[] slotRarityTicks;
 
         // ITEM-MODIFIER PLAN PHASE E: a rolled item's RiftTier, distinct from
@@ -204,6 +229,16 @@ namespace PrincesPalace
         // character actually has, rather than from a neutral block.
         private AbilityScoreBlock _scores;
         private AbilityScoreBlock _previewScores;
+
+        // The character's LIVE weapon/spell scaling, held for the same reason
+        // _scores is: the attributes panel's Strength/Intelligence lines
+        // (AbilityEffectDescriptions.Strength/Intelligence) read these rather
+        // than recomputing anything -- ContentDatabase.EffectiveWeaponScaling/
+        // EffectiveSkillScaling are the SAME calls FightEncounterAdapter.
+        // ToCombatant makes, so a sword's grade cannot show one number here
+        // and a different one in the fight it is about to be used in.
+        private ScalingSet _weaponScaling;
+        private ScalingSet _skillScaling;
 
         // WHICH CAPACITY RULE THE SHOWN CHARACTER'S PRIMARY POOL USES, held
         // for the same reason _scores is: the sheet's hover mechanic and the
@@ -302,6 +337,15 @@ namespace PrincesPalace
             AttachHovers(slotCells, OnSlotHover);
             AttachHovers(packCells, OnPackHover);
 
+            // Opening/closing the attributes panel is VIEWING, same as the
+            // hovers just above -- wired above the lockedForFight guard
+            // below so the fight's own locked copy can still show what a
+            // score does, even though spending or refunding a point inside
+            // it (wired below the guard, with the rest of Pack/Spells/
+            // Skills' own row+panel pairs) stays barred.
+            if (attributesRow != null) attributesRow.onClick.AddListener(() => ShowAttributes(true));
+            if (attributesCloseButton != null) attributesCloseButton.onClick.AddListener(() => ShowAttributes(false));
+
             // AUDIT.md #160: wired above the lockedForFight guard, same
             // reasoning as AttachHovers just above it -- the fight's own
             // locked copy of this sheet still takes Move/Submit (equipping is
@@ -363,6 +407,56 @@ namespace PrincesPalace
 
                     int cell = i;
                     attributeMinuses[i].onClick.AddListener(() => Refund(cell));
+                }
+            }
+
+            // THE ATTRIBUTES PANEL'S OWN ROWS -- same index-by-cell,
+            // resolve-through-_cellOrder-at-click-time rule as the compact
+            // grid's plus/minus just above, so Spend(int)/Refund(int) never
+            // need a second overload for this panel (edit-surface rule:
+            // "Do not duplicate Spend/Refund").
+            //
+            // Submit fires the row's own onClick (Button's stock behaviour
+            // -- AttributeRow adds nothing for it), so wiring that alongside
+            // Right below keeps the two ways to spend from this row
+            // (Submit, and Right) pointed at literally the same delegate.
+            if (attributeRowSteps != null)
+            {
+                for (int i = 0; i < attributeRowSteps.Length; i++)
+                {
+                    if (attributeRowSteps[i] == null) continue;
+
+                    int cell = i;
+                    attributeRowSteps[i].onClick.AddListener(() => Spend(cell));
+                    attributeRowSteps[i].OnLeftRight = delta =>
+                    {
+                        if (delta < 0) Refund(cell);
+                        else if (delta > 0) Spend(cell);
+                    };
+                }
+            }
+
+            if (attributeRowPluses != null)
+            {
+                for (int i = 0; i < attributeRowPluses.Length; i++)
+                {
+                    if (attributeRowPluses[i] == null) continue;
+
+                    int cell = i;
+                    attributeRowPluses[i].onClick.AddListener(() => Spend(cell));
+                    SetNoNavigation(attributeRowPluses[i]);
+                }
+            }
+
+            if (attributeRowMinuses != null)
+            {
+                for (int i = 0; i < attributeRowMinuses.Length; i++)
+                {
+                    if (attributeRowMinuses[i] == null) continue;
+
+                    int cell = i;
+                    attributeRowMinuses[i].onClick.AddListener(() => Refund(cell));
+                    SetNoNavigation(attributeRowMinuses[i]);
                 }
             }
 
@@ -468,6 +562,24 @@ namespace PrincesPalace
 
         private void RefreshNavigation()
         {
+            // THE ATTRIBUTES PANEL IS A MODAL, not a column-A overlay like
+            // Pack/Spells/Skills/Track -- it covers columns A, B AND C at
+            // once (AttributesPanel's own comment says why), so every other
+            // group below (the paperdoll's two files, the compact score
+            // grid) would be reaching for Selectables the player cannot see
+            // or click right now. Declaring ONLY the panel's own group while
+            // it is open, rather than leaving the rest declared-but-hidden
+            // the way Pack/Spells/Skills leave the paperdoll reachable
+            // (correctly -- column B stays visible behind THOSE three), is
+            // what keeps a Move from ever landing on a covered button.
+            if (IsAttributesShown)
+            {
+                var attributesGroups = new List<UiNavGroup<Selectable>>();
+                DeclareAttributes(attributesGroups);
+                RuntimeNavWiring.Apply(attributesGroups, new List<UiNavLink<Selectable>?>());
+                return;
+            }
+
             var leftFile = FileCells(LeftFile);
             var rightFile = FileCells(RightFile);
             var scores = Present(attributeCells);
@@ -647,6 +759,47 @@ namespace PrincesPalace
             spine.AddRange(rows);
 
             PairAcross(links, spine, leftFile, UiNavDirection.Right, UiNavDirection.Left);
+        }
+
+        // The attributes panel's own graph -- a plain vertical List, Close
+        // above the six rows in drawn order, clamped rather than wrapping.
+        // NO cross-column PairAcross call, unlike DeclarePack/DeclareSpells/
+        // DeclareSkills above: this panel covers every column at once, so
+        // there is no neighbouring file or grid still visible to hand
+        // Left/Right off to (RefreshNavigation's own header says why the
+        // other three groups are not even declared while this one is
+        // open). A row's own Left/Right are answered by AttributeRow.OnMove
+        // (spend/refund), not by this graph at all.
+        private void DeclareAttributes(List<UiNavGroup<Selectable>> groups)
+        {
+            var column = new List<Selectable>();
+            if (attributesCloseButton != null) column.Add(attributesCloseButton);
+
+            if (attributeRowSteps != null)
+            {
+                foreach (var row in attributeRowSteps)
+                {
+                    if (row != null) column.Add(row);
+                }
+            }
+
+            groups.Add(RuntimeNavWiring.Group("dossierAttributesRows", UiNavGroupKind.List, column,
+                wrap: UiNavWrap.Clamp));
+        }
+
+        // The panel's own entry: the first row that actually holds a score,
+        // else Close -- same "land somewhere real" rule SpellsEntry states.
+        private Selectable AttributesEntry()
+        {
+            if (attributeRowSteps != null)
+            {
+                foreach (var row in attributeRowSteps)
+                {
+                    if (row != null) return row;
+                }
+            }
+
+            return attributesCloseButton;
         }
 
         // Column A while the skills panel covers it (owner bug report,
@@ -973,6 +1126,18 @@ namespace PrincesPalace
         // cannot quietly invert it, nor can a fifth.
         bool INavCancelClaim.ClaimCancel()
         {
+            // Checked FIRST, innermost of the five: it is reachable only
+            // from the base column-A-rows state (there is no attributesRow
+            // to press while Pack/Spells/Skills/Track already cover the
+            // screen), so a Cancel while it is open only ever needs to
+            // return to that same base state, never chain into a second
+            // claim below.
+            if (IsAttributesShown)
+            {
+                ShowAttributes(false);
+                return true;
+            }
+
             if (trackPanel != null && trackPanel.activeSelf)
             {
                 // Deactivating is the whole of it: RewardTrackController's own
@@ -1322,6 +1487,101 @@ namespace PrincesPalace
 
         private void ToggleSkills() => ShowSkills(skillsPanel != null && !skillsPanel.activeSelf);
 
+        public bool IsAttributesShown => attributesPanel != null && attributesPanel.activeSelf;
+
+        public void ShowAttributes(bool open)
+        {
+            attributesPanel.SetShown(open);
+
+            // Closing any open tooltip rather than leaving it floating over
+            // a modal that just covered the button it was anchored to --
+            // OnAttributeHover/OnSlotHover/OnPackHover never fire again to
+            // clear it on their own once their own cell is hidden behind
+            // this panel.
+            if (open) HideTooltip();
+
+            var squad = Squad();
+            var character = (_index >= 0 && _index < squad.Count) ? squad[_index] : null;
+            if (open) PaintAttributesPanel(character);
+
+            RefreshNavigation();
+
+            // EXPLICIT on both edges, same reason ShowPack/ShowSpells/
+            // ShowSkills state on their own identical two lines.
+            if (open) EventSystem.current?.SetSelectedGameObject(AttributesEntry()?.gameObject);
+            else if (attributesRow != null) EventSystem.current?.SetSelectedGameObject(attributesRow.gameObject);
+        }
+
+        // What one row shows: the score's short name, its current value and
+        // however many points are invested in it -- one line, so the effect
+        // text below does not have to fight a second column for the row's
+        // width (AttributeRowNames' own comment on the screen tree).
+        private static string AttributeRowLabel(AbilityScore score, int value, int invested)
+        {
+            return invested > 0
+                ? $"{AbilityScores.ShortName(score)}   {value}   ({invested} invested)"
+                : $"{AbilityScores.ShortName(score)}   {value}";
+        }
+
+        // Paints the attributes panel's six rows plus its own unspent-points
+        // and lock-note lines. Called on every Refresh() (so the panel never
+        // goes stale while a player pages between characters with it open)
+        // and once more from ShowAttributes when it opens, for the same
+        // "paint before the first frame it is visible" reason ShowSkills
+        // calls RefreshSkills.
+        //
+        // MUST run after RefreshAttributes -- it reads _cellOrder, the same
+        // ordering dependency PaintStatSpending already has (see that
+        // method's own call site in Refresh()).
+        private void PaintAttributesPanel(Character character)
+        {
+            int points = character?.unspentStatPoints ?? 0;
+            bool canSpend = points > 0 && !lockedForFight;
+
+            if (attributesUnspentPoints != null)
+            {
+                attributesUnspentPoints.SetContent(UnspentPointsLabel(points, canSpend));
+            }
+
+            // THE SAME LOCK Refund ENFORCES (lockedForFight || InDescent),
+            // stated in the panel rather than left for a quiet minus button
+            // to imply -- see DossierAttributesLocked's own comment.
+            bool locked = lockedForFight || InDescent;
+            if (attributesLockNote != null) attributesLockNote.SetActive(locked);
+
+            bool canRefundAny = !lockedForFight && !InDescent;
+
+            for (int i = 0; i < SheetStats.Abilities.Length; i++)
+            {
+                bool hasScore = i < _cellOrder.Count;
+                AbilityScore score = hasScore ? _cellOrder[i] : AbilityScore.Strength;
+                int value = hasScore ? ValueOf(_scores, score) : 0;
+                int invested = hasScore && character != null ? character.investedAbilityScores[score] : 0;
+
+                if (attributeRowNames != null && i < attributeRowNames.Length && attributeRowNames[i] != null)
+                {
+                    attributeRowNames[i].SetContent(hasScore ? AttributeRowLabel(score, value, invested) : "");
+                }
+
+                if (attributeRowEffects != null && i < attributeRowEffects.Length && attributeRowEffects[i] != null)
+                {
+                    attributeRowEffects[i].SetContent(hasScore
+                        ? AbilityEffectDescriptions.Describe(score, _scores, _weaponScaling, _skillScaling)
+                        : "");
+                }
+
+                if (attributeRowPluses != null && i < attributeRowPluses.Length && attributeRowPluses[i] != null)
+                {
+                    attributeRowPluses[i].gameObject.SetActive(hasScore && canSpend);
+                }
+
+                if (attributeRowMinuses != null && i < attributeRowMinuses.Length && attributeRowMinuses[i] != null)
+                {
+                    attributeRowMinuses[i].gameObject.SetActive(hasScore && canRefundAny && invested > 0);
+                }
+            }
+        }
+
         // Paints the panel's own list. Talent-granted only -- the same set
         // skillsCount already counts in RefreshIdentity -- so the row's "N
         // known" and the pane's row count can never disagree; there is no
@@ -1418,6 +1678,8 @@ namespace PrincesPalace
 
             RefreshIdentity(character);
             _scores = scores;
+            _weaponScaling = ContentDatabase.EffectiveWeaponScaling(character);
+            _skillScaling = ContentDatabase.EffectiveSkillScaling(character);
             var primaryPool = PrimaryPoolFor(character);
             _primaryPoolRule = primaryPool?.CapacityRule ?? PoolCapacityRule.WisdomDerived;
             _primaryPoolName = string.IsNullOrWhiteSpace(primaryPool?.DisplayName)
@@ -1432,6 +1694,7 @@ namespace PrincesPalace
             // cell for a character who has points to spend, which is precisely
             // the bug this whole feature exists to end.
             PaintStatSpending(character);
+            PaintAttributesPanel(character);
             RefreshStats(character, stats, scores);
             RefreshSlots(character);
             RefreshPack();
@@ -1898,6 +2161,33 @@ namespace PrincesPalace
         // discoverable -- a 22px "+" in the corner of a cell is easy to have
         // and never notice, which is most of how levelling came to hand out
         // something no player could see.
+        // Same hazard Core/OptionsController.SetNoNavigation already flags:
+        // UnityEngine.UI.Navigation spelled out in full, because
+        // PrincesPalace.Navigation (the map/graph state type) sits in this
+        // same namespace and would otherwise shadow it.
+        //
+        // The row's own steppers never take a nav target and are never
+        // selected by a mouse click either -- clicking one still fires its
+        // onClick (independent of the selection side effect Navigation.
+        // Mode.None suppresses) and leaves the ROW's own remembered focus
+        // alone, same as Options' stepper buttons beside their row.
+        private static void SetNoNavigation(Selectable selectable)
+        {
+            if (selectable == null) return;
+            var nav = selectable.navigation;
+            nav.mode = UnityEngine.UI.Navigation.Mode.None;
+            selectable.navigation = nav;
+        }
+
+        // Shared by the compact grid's own UnspentPoints label and the
+        // attributes panel's AttributesUnspentPoints -- one wording, so the
+        // two can never say something different about the same count.
+        private static string UnspentPointsLabel(int points, bool canSpend)
+        {
+            if (!canSpend) return "";
+            return points == 1 ? "1 POINT TO SPEND" : $"{points} POINTS TO SPEND";
+        }
+
         private void PaintStatSpending(Character character)
         {
             int points = character?.unspentStatPoints ?? 0;
@@ -1905,9 +2195,7 @@ namespace PrincesPalace
 
             if (unspentPoints != null)
             {
-                unspentPoints.SetContent(canSpend
-                    ? (points == 1 ? "1 POINT TO SPEND" : $"{points} POINTS TO SPEND")
-                    : "");
+                unspentPoints.SetContent(UnspentPointsLabel(points, canSpend));
             }
 
             if (attributePluses == null) return;

@@ -159,6 +159,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 195
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -209,6 +210,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 210
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -259,6 +261,7 @@ MonoBehaviour:
           dy: 0
           scale: 0.65
           size: 0
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -309,6 +312,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -367,6 +371,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 260
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -417,6 +422,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -495,6 +501,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 170
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -545,6 +552,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 190
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -595,6 +603,7 @@ MonoBehaviour:
           dy: 0
           scale: 0.7
           size: 0
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -645,6 +654,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -695,6 +705,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 260
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -745,6 +756,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -815,6 +827,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 170
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -865,6 +878,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 175
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -915,6 +929,7 @@ MonoBehaviour:
           dy: 0
           scale: 0.55
           size: 0
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -965,6 +980,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -1015,6 +1031,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 230
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -1065,6 +1082,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -1135,6 +1153,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 135
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -1185,6 +1204,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 195
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -1235,6 +1255,7 @@ MonoBehaviour:
           dy: 0
           scale: 0.6
           size: 0
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -1285,6 +1306,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 
@@ -1335,6 +1357,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 300
+          fit: 
           facing: auto
           sort: effects
           align: 
@@ -1385,6 +1408,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
+          fit: 
           facing: 
           sort: effects
           align: 

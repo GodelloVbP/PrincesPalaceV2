@@ -31,12 +31,52 @@ namespace PrincesPalace.Domain.Combat.Session
     // and the whole of it becomes testable in EditMode.
     public sealed class CombatBeat
     {
-        // How much the target took (or was healed) in THIS beat. Carried on the
-        // beat rather than read from live state at playback time for the same
-        // reason as the vitals snapshot: by the time a beat plays, later
-        // actions in the same chain have already landed.
+        // How much the target took (or was healed) in THIS beat -- the
+        // PRE-SHIELD figure, restored to that even when a Ward absorbed
+        // part of it (RecordBeatAmount adds the ward's own Absorbed back
+        // in; see its own header). Carried on the beat rather than read
+        // from live state at playback time for the same reason as the
+        // vitals snapshot: by the time a beat plays, later actions in the
+        // same chain have already landed.
         public int Amount;
         public bool IsHealing;
+
+        // HOW MUCH OF THIS BEAT'S DAMAGE NEVER REACHED HEALTH, because a
+        // shield ate it -- EITHER KIND, through the SAME field, written from
+        // TWO sites (both reuse an already-computed number; neither
+        // recomputes one):
+        //
+        //   1. FightSession.Ledger.ApplyAndCountDamage, for the SIGNATURE
+        //      POOL's own absorb (ResourcePool.Absorb, currently authored
+        //      absorbsDamage: false on every row in pools.json -- live
+        //      capability, no live content) -- `toHealth = amount -
+        //      result.Absorbed`, the ledger's own bookkeeping line.
+        //   2. FightSession.Talents.ResolveWard, for a WARD STATUS's absorb
+        //      (Magical Shield, the Fragile Lamb's Ward -- StatusEffects.
+        //      ConsumeWard, wired in through DamagePipeline's `resolveWard`
+        //      hook) -- spent UPSTREAM of DealDamage, on the raw number
+        //      before it ever reaches the ledger.
+        //
+        // ADDITIVE across the two (and across a beat that lands on more
+        // than one shielded body, or drains one target's ward AND its
+        // signature pool in the same swing): a beat reports the TOTAL a
+        // shield or shields kept off health, which is what the barrier
+        // reaction and the hit-strength "fully absorbed" gate both actually
+        // need to know, not which mechanism it came from.
+        //
+        // `Amount - Absorbed`, CLAMPED AT ZERO, IS THE HEALTH DAMAGE that
+        // actually landed -- HitStrength.Classify, FightBeatPlayer.
+        // ShowSingleAmount/RecoilOne and FightController.StageVisuals.
+        // FlashOne all read it this way. That arithmetic is correct for
+        // site 2 (Amount is deliberately restored to its pre-ward figure,
+        // above) but is a KNOWN GAP for site 1 if it is ever turned on: a
+        // signature pool's absorb is not baked into Amount the way a
+        // ward's is, so this subtraction would double-count it. Not
+        // reachable today for the reason site 1's own comment gives.
+        //
+        // Zero for every beat that landed clean, which is nearly all of
+        // them.
+        public int Absorbed;
 
         // THE ONE FIELD THIS CLASS DID NOT CARRY UNTIL THE POPUP NEEDED IT.
         //

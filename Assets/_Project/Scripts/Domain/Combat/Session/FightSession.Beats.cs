@@ -155,8 +155,56 @@ namespace PrincesPalace.Domain.Combat.Session
                 return;
             }
 
-            _recordingBeat.Amount = amount;
+            // ADDS BACK WHATEVER A WARD ALREADY TOOK OUT of `amount`, so
+            // Amount reads as the PRE-shield figure again -- the same
+            // figure it always represented before Wards existed -- and
+            // `Amount - Absorbed` (FightBeatPlayer.ShowSingleAmount/
+            // RecoilOne, FightController.StageVisuals.FlashOne, HitStrength.
+            // Classify) gives the true health-damage remainder rather than
+            // subtracting the ward's share a SECOND time.
+            //
+            // WHY THIS IS SAFE: `resolveWard` (DamagePipeline.AfterDefences)
+            // spends the ward and reduces the number BEFORE it ever reaches
+            // this call, through FightSession.Talents.ResolveWard, which
+            // records the spent amount into `_recordingBeat.Absorbed`
+            // ahead of every caller of THIS method -- so by the time
+            // `amount` arrives here it has already had that same figure
+            // subtracted out of it once, and adding it back is the exact
+            // inverse of that one subtraction. A beat with no ward at all
+            // has Absorbed == 0, making this a no-op addition.
+            //
+            // WHY THIS IS NOT SAFE for the FightSession.Ledger.
+            // ApplyAndCountDamage: a signature pool's OWN absorb runs
+            // through DealDamage, called immediately before this method
+            // with this SAME `amount` -- the pool's share is never baked
+            // INTO `amount` the way a ward's is, so adding it back here
+            // would double it in the opposite direction. Not reachable by
+            // any shipped content today: every pools.json row is authored
+            // absorbsDamage: false. The day a pool ships with that flag
+            // true, THIS line is the one a fixer needs to revisit, and the
+            // fix is very likely two figures on the beat rather than one.
+            _recordingBeat.Amount = amount + _recordingBeat.Absorbed;
             _recordingBeat.IsHealing = isHealing;
+        }
+
+        // CombatBeat.Absorbed's one WRITE METHOD, called from its two SITES
+        // -- FightSession.Ledger.ApplyAndCountDamage (a signature pool's
+        // absorb) and FightSession.Talents.ResolveWard (a Ward status's) --
+        // see CombatBeat.Absorbed's own header for why there are two and why
+        // that is still "recorded once" rather than "computed twice".
+        // ADDITIVE rather than an assignment: a beat that lands on more than
+        // one shielded body in one pass (a splash, a rider), or drains one
+        // target's ward AND its signature pool in the same swing, reports
+        // the total a shield or shields kept off health, not just the last
+        // one asked.
+        private void RecordAbsorbed(int absorbed)
+        {
+            if (_recordingBeat == null || absorbed <= 0)
+            {
+                return;
+            }
+
+            _recordingBeat.Absorbed += absorbed;
         }
 
         // PHASE D1: marks the beat currently recording as a dodge. Called

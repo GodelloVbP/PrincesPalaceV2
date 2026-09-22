@@ -450,6 +450,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
+| `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's own stage footprint -- its rank depth times its authored stageScale). Blank means none. Legal only where a single struck target is resolved: place target or target-centre. | None, Target |
 | `facing` | string | `""` | Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto. | Auto, None, Reverse |
 | `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
 | `align` | string | `""` | How a formation-placed layer lies on the rank: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). Refused on any other placement. | Level, Span |

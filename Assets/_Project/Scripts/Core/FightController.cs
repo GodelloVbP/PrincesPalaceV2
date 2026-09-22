@@ -370,6 +370,12 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform submenuScrollTrack;
         [SerializeField] internal RectTransform submenuScrollThumb;
 
+        // The themed art frame around the whole box -- "SubmenuContainer" in
+        // FightScreen.BuildSubmenuFrame. Only wired from 2026-09-22: nothing
+        // needed to move it at runtime before the container started growing
+        // to fit the row count (AnchorSubmenuRows' own header).
+        [SerializeField] internal RectTransform submenuContainer;
+
         // How far down the open list the player has scrolled, in pixels, and
         // how many rows that list holds. Held together because neither means
         // anything without the other -- the range is a function of the count.
@@ -1013,15 +1019,79 @@ namespace PrincesPalace
             _submenuScrolledBranch = _menu.Branch;
 
             if (!sameList) _submenuScroll = 0f;
+
+            ResizeSubmenuContainer(shown);
             ApplySubmenuScroll();
 
             // The header sits on the container now rather than on the top row,
             // so it no longer moves with the count -- but it is still written
             // here, because the container's height is what it is derived from
             // and that is a layout number rather than a constant.
-            float headerY = FightSubmenuLayout.HeaderY(shown);
+            //
+            // HeaderYFor, not HeaderY -- HeaderY answers the STATIC tree's own
+            // (oversized, BuildReservationRows) placeholder position; this
+            // wants the REAL frame's top edge for `shown` rows.
+            float headerY = FightSubmenuLayout.HeaderYFor(shown);
             MoveToY(submenuTitle, headerY);
             MoveToY(submenuHint, headerY);
+        }
+
+        // THE CONTAINER GROWS TO FIT UP TO FightSubmenuLayout.RowsInView
+        // ROWS, THEN CAPS -- a three-skill actor gets a three-row frame, a
+        // twelve-skill one gets the same five-row cap, with the existing
+        // scrollbar reaching the rest.
+        //
+        // HEIGHT AND Y ONLY, NEVER WIDTH OR X. Every one of these is
+        // BOTTOM-anchored (VisibleBottomLine for the frame, RowsBottom for
+        // the viewport, ContainerBottom for the back row -- all fixed
+        // constants, independent of row count), so shrinking only ever
+        // removes space off the TOP of the list; BACK and the verb column's
+        // own flush edge never move. Width stays at FightSubmenuLayout.
+        // FrameWidth's own STATIC figure always -- a row is RowWidth wide
+        // regardless of how many of them there are, so following the
+        // frame's 3:4 aspect down to a short list's own smaller height would
+        // narrow it past what a row needs and clip it (FightSubmenuLayout.
+        // BuildReservationRows' own header is where that was tried and
+        // failed the audit). Holding width fixed is also what keeps
+        // ContainerX/SubmenuX and every offset solved from them at build
+        // time correct at any count, so nothing besides these rects has to
+        // move.
+        //
+        // THE TRACK MOVES WITH THE VIEWPORT too, not only the thumb --
+        // FightSubmenuLayout.ThumbHeight/ThumbCentreY already read
+        // RowsInView's own (capped) window rather than the STATIC one, on
+        // the reasoning that the bar only ever shows once the real viewport
+        // has been resized to that cap; the track's own rect has to agree
+        // with the same window or it runs alongside a thumb that no longer
+        // matches its length.
+        private void ResizeSubmenuContainer(int count)
+        {
+            if (submenuContainer != null)
+            {
+                submenuContainer.sizeDelta = new Vector2(
+                    submenuContainer.sizeDelta.x, FightSubmenuLayout.FrameHeightFor(count));
+                MoveToY(submenuContainer, FightSubmenuLayout.FrameCentreYFor(count));
+            }
+
+            if (submenuViewport != null)
+            {
+                submenuViewport.sizeDelta = new Vector2(
+                    submenuViewport.sizeDelta.x, FightSubmenuLayout.ViewportHeightFor(count));
+                MoveToY(submenuViewport, FightSubmenuLayout.ViewportOffsetInContainerFor(count));
+            }
+
+            if (submenuScrollTrack != null)
+            {
+                submenuScrollTrack.sizeDelta = new Vector2(
+                    submenuScrollTrack.sizeDelta.x, FightSubmenuLayout.ViewportHeightFor(count));
+                MoveToY(submenuScrollTrack, FightSubmenuLayout.ViewportOffsetInContainerFor(count));
+            }
+
+            if (submenuBackButton != null)
+            {
+                MoveToY((RectTransform)submenuBackButton.transform,
+                    FightSubmenuLayout.BackRowY - FightSubmenuLayout.ContainerCentreYFor(count));
+            }
         }
 
         // Slides the list and repaints the bar. The one place either is written.
@@ -1114,7 +1184,11 @@ namespace PrincesPalace
             float y = FightSubmenuLayout.ContentY(_submenuCount, _submenuScroll)
                       + FightSubmenuLayout.RowYInContent(index);
 
-            float windowHalf = FightSubmenuLayout.ViewportHeight * 0.5f;
+            // RowsInView's own window, not the static ViewportHeight -- this
+            // only ever runs once ScrollRange has already confirmed the list
+            // is long enough to scroll, which is exactly the regime the real
+            // (resized) viewport sits at RowsInView's cap in.
+            float windowHalf = FightSubmenuLayout.ColumnHeight(FightSubmenuLayout.RowsInView) * 0.5f;
             float rowHalf = FightSubmenuLayout.RowHeight * 0.5f;
 
             // Scrolling further down the list moves the content UP, so a row
@@ -1135,6 +1209,12 @@ namespace PrincesPalace
         {
             if (text == null) return;
             var rect = text.rectTransform;
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
+        }
+
+        private static void MoveToY(RectTransform rect, float y)
+        {
+            if (rect == null) return;
             rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
         }
 
