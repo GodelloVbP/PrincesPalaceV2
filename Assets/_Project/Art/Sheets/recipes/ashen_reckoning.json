@@ -1,0 +1,103 @@
+{
+  "_notes": [
+    "Ashen Reckoning: cells 1-12 are the authored begin, release, impact, and settle timeline.",
+    "The 1254px atlas does not divide by four; explicit measured edges preserve every cell without borrowing gutter pixels.",
+    "Authored alpha and dark material are preserved. Impact is authored in skills.json against source cell 6, except Crownfall source cell 7."
+  ],
+  "sheet": "Spells/Ashen Reckoning/ashen_reckoning_atlas_v1.png",
+  "rects": [
+    [
+      0,
+      0,
+      314,
+      314
+    ],
+    [
+      314,
+      0,
+      313,
+      314
+    ],
+    [
+      627,
+      0,
+      313,
+      314
+    ],
+    [
+      940,
+      0,
+      314,
+      314
+    ],
+    [
+      0,
+      314,
+      314,
+      313
+    ],
+    [
+      314,
+      314,
+      313,
+      313
+    ],
+    [
+      627,
+      314,
+      313,
+      313
+    ],
+    [
+      940,
+      314,
+      314,
+      313
+    ],
+    [
+      0,
+      627,
+      314,
+      313
+    ],
+    [
+      314,
+      627,
+      313,
+      313
+    ],
+    [
+      627,
+      627,
+      313,
+      313
+    ],
+    [
+      940,
+      627,
+      314,
+      313
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11"
+  ],
+  "keyed": false,
+  "canvas": [
+    314,
+    314
+  ],
+  "base_align": false,
+  "content_crop": false
+}

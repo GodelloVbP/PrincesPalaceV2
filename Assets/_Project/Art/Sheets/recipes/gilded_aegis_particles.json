@@ -1,0 +1,46 @@
+{
+  "_notes": [
+    "Gilded Aegis: cells 13-16 are independent reusable particle sprites, never timeline frames.",
+    "The emitter in skills.json samples these stills with deterministic material-specific motion."
+  ],
+  "sheet": "Spells/Gilded Aegis/gilded_aegis_atlas_v1.png",
+  "rects": [
+    [
+      0,
+      940,
+      314,
+      314
+    ],
+    [
+      314,
+      940,
+      313,
+      314
+    ],
+    [
+      627,
+      940,
+      313,
+      314
+    ],
+    [
+      940,
+      940,
+      314,
+      314
+    ]
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3"
+  ],
+  "keyed": false,
+  "canvas": [
+    314,
+    314
+  ],
+  "base_align": false,
+  "content_crop": false
+}
