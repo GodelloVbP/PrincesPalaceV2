@@ -7,19 +7,26 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using PrincesPalace.Domain.DebugMenu;
 
 namespace PrincesPalace.PlayModeTests
 {
     // docs/GAMEPAD_NAVIGATION_PLAN.md phase 3, item 1 (AUDIT.md #158): the
     // debug menu, the last of the three Hub-covering modals that did not
     // push their own NavContext. DebugMenuController.RefreshNavigation
-    // (called at the end of every Refresh()) is the mechanism -- currency
-    // and filter Rails, the item List, the pager Rail, chained top to bottom
-    // by explicit links since a debug tool with four differently-shaped rows
-    // is not one group. Driven through the REAL production dispatcher
-    // (scripted BaseInput via inputOverride, `yield return null`, assert
-    // resulting state), never a direct GrantRow/SetFilter call standing in
-    // for a press.
+    // (called at the end of every Refresh()) is the mechanism -- currency,
+    // category and sub-filter Rails, the item Grid, the pager Rail, chained
+    // top to bottom by explicit links since a debug tool with several
+    // differently-shaped rows is not one group. Driven through the REAL
+    // production dispatcher (scripted BaseInput via inputOverride,
+    // `yield return null`, assert resulting state), never a direct
+    // GrantRow/SetCategory call standing in for a press.
+    //
+    // REBUILT 2026-09-23 (debug menu overhaul, phase 1): the old single
+    // filter Rail is a category Rail (vertical, reached by Right/Left from
+    // the currency row) plus a sub-filter Rail (reached by Down from a
+    // category, same as the old filter-to-row Down step). The item list is
+    // a Grid now, not a List -- see RefreshNavigation's own comment for why.
     public class DebugMenuGamepadNavigationTests
     {
         private string _root;
@@ -88,7 +95,7 @@ namespace PrincesPalace.PlayModeTests
         private GameObject LastActiveRow()
         {
             GameObject last = null;
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < DebugMenuCatalog.RowsPerPage; i++)
             {
                 var row = Named($"DebugRow{i}");
                 if (row != null && row.activeSelf) last = row;
@@ -97,16 +104,16 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator EntryIsTheGoldButton_AsSoonAsTheMenuOpens()
+        public IEnumerator EntryIsTheFirstCategory_AsSoonAsTheMenuOpens()
         {
             yield return OpenTheMenu();
 
-            Assert.AreEqual(Named("DebugGiveGoldButton"), EventSystem.current.currentSelectedGameObject,
-                "the first currency grant is RefreshNavigation's own entry");
+            Assert.AreEqual(Named("DebugCategory0"), EventSystem.current.currentSelectedGameObject,
+                "the top of the category rail is RefreshNavigation's own entry");
         }
 
         [UnityTest]
-        public IEnumerator Down_FromGold_ReachesTheFirstFilter()
+        public IEnumerator Down_FromTheFirstCategory_WalksTheRail()
         {
             yield return OpenTheMenu();
 
@@ -114,16 +121,36 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             _input.Vertical = 0f;
 
-            Assert.AreEqual(Named("DebugFilter0"), EventSystem.current.currentSelectedGameObject,
-                "Down from Gold should reach the first filter, the explicit link between the two Rails");
+            Assert.AreEqual(Named("DebugCategory1"), EventSystem.current.currentSelectedGameObject,
+                "the rail is a vertical List, so Down steps to the next category");
         }
 
         [UnityTest]
-        public IEnumerator Down_FromTheFirstFilter_ReachesTheFirstRow()
+        public IEnumerator Right_FromTheFirstCategory_ReachesTheFirstSubFilter()
         {
             yield return OpenTheMenu();
 
-            EventSystem.current.SetSelectedGameObject(Named("DebugFilter0"));
+            EventSystem.current.SetSelectedGameObject(Named("DebugCategory0"));
+            yield return null;
+
+            _input.Horizontal = 1f;
+            yield return DriveFrame();
+            _input.Horizontal = 0f;
+
+            // Weapons (category 0) has a sub-filter row (the tier chips), so
+            // Right from the rail should reach it rather than jumping
+            // straight into the list.
+            Assert.AreEqual(Named("DebugSubFilter0"), EventSystem.current.currentSelectedGameObject,
+                "Right from the first category should reach the sub-filter row, the explicit link between " +
+                "the rail and the content column");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromTheFirstSubFilter_ReachesTheFirstRow()
+        {
+            yield return OpenTheMenu();
+
+            EventSystem.current.SetSelectedGameObject(Named("DebugSubFilter0"));
             yield return null;
 
             _input.Vertical = -1f;
@@ -131,7 +158,7 @@ namespace PrincesPalace.PlayModeTests
             _input.Vertical = 0f;
 
             Assert.AreEqual(Named("DebugRow0"), EventSystem.current.currentSelectedGameObject,
-                "Down from the first filter should reach the item list's own first row");
+                "Down from the first sub-filter chip should reach the item grid's own first row");
         }
 
         [UnityTest]
@@ -151,7 +178,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(Named("DebugPrevPage"), EventSystem.current.currentSelectedGameObject,
                 "Down from the last row should reach the pager, the explicit link RefreshNavigation adds " +
-                "since a clamped List has nothing below its own last member");
+                "since a clamped Grid has nothing below its own last row");
         }
 
         [UnityTest]
@@ -168,8 +195,8 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
 
             Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count),
-                "Submit on a row should grant exactly one item, same as one click -- a double dispatch " +
-                "would have granted two");
+                "Submit on a row should grant exactly one item at the default x1, same as one click -- a " +
+                "double dispatch would have granted two");
         }
 
         [UnityTest]

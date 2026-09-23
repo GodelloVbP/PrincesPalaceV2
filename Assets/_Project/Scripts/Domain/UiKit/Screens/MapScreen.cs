@@ -161,6 +161,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // exactly the ordering AUDIT.md #173's Shop line calls out as the gap.
         public ShopScreen Shop;
 
+        // The debug menu, the hub's own copy mounted here too (F1, dev
+        // builds only): spell books, relics and every Tools row act on the
+        // descent, and the hub has none to act on.
+        public DebugMenuScreen Debug;
+
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
         // site restates it and drifts.
@@ -300,8 +305,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // opened on top of (AUDIT.md #173's Shop line), the same "opened
             // FROM here, drawn OVER everything" rule the hub and the fight
             // already apply to their own nested modals.
+            // DEBUG LAST: it is opened over whatever else is up, the system
+            // menu included, and has to draw over it.
+            var debug = DebugMenuScreen.Build();
+            screen.Debug = debug;
+
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, systemMenu.Root);
+                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, systemMenu.Root,
+                debug.Root);
 
             return screen;
         }

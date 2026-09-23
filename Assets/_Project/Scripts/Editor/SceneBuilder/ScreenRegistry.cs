@@ -409,7 +409,7 @@ public static class ScreenRegistry
                 WireCharacterOverlay(result, screen, hub);
                 WireRelicDraft(result, screen, hub);
                 WireGlossary(result, screen, hub);
-                WireDebugMenu(result, screen, hub);
+                hub.debugMenuPanel = WireDebugMenu(result, screen.Debug);
             },
         };
     }
@@ -615,6 +615,8 @@ public static class ScreenRegistry
 
                 shopController = WireShop(result, screen.Shop);
                 map.shop = shopController;
+
+                map.debugMenuPanel = WireDebugMenu(result, screen.Debug);
 
                 // The SAME SystemMenuController instance the map just built
                 // above (map.systemMenu), not a second one: one overlay per
@@ -1324,12 +1326,13 @@ public static class ScreenRegistry
         hub.relicDraft = controller;
     }
 
-    private static void WireDebugMenu(UiEmitResult result, HubScreen screen, HubController hub)
+    // ONE wiring for both mounts (hub and map): the screen is the same tree
+    // built twice, and the host only needs the panel to show and hide.
+    private static GameObject WireDebugMenu(UiEmitResult result, DebugMenuScreen debug)
     {
-        var debug = screen.Debug;
         var controller = result.Attach<DebugMenuController>(debug.Root);
         UiAutoBind.Bind(result, controller, debug);
 
-        hub.debugMenuPanel = result.Go(debug.Root);
+        return result.Go(debug.Root);
     }
 }

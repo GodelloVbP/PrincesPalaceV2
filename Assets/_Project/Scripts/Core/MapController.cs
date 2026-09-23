@@ -58,6 +58,10 @@ namespace PrincesPalace
         // MapController.Walk.cs's Arrive() rather than by Navigation.Go.
         [SerializeField] internal ShopController shop;
 
+        // The debug menu, F1 in the editor or a development build only -- the
+        // same gate and the same reason as HubController's copy.
+        [SerializeField] internal GameObject debugMenuPanel;
+
         // The painted room icons. Bound by the wiring step rather than loaded
         // here: an "Assets/..." path is an editor-only address, and Core cannot
         // see the editor assembly.
@@ -122,6 +126,13 @@ namespace PrincesPalace
             // Refresh with no context yet to reconfigure would silently wire
             // nothing on the very first paint.
             RegisterNavContext();
+
+            // A debug grant can move the gold, the pending-book count and the
+            // leg itself; the map repaints after each one rather than on the
+            // next room.
+            var debug = debugMenuPanel != null ? debugMenuPanel.GetComponent<DebugMenuController>() : null;
+            if (debug != null) debug.Changed = Refresh;
+
             Refresh();
         }
 
@@ -173,6 +184,14 @@ namespace PrincesPalace
                 return;
             }
 
+            // Gated on the KEY, not on SetDebugMenu, so PlayMode can still
+            // drive the methods -- see HubController's F1 for the same split.
+            if (Debug.isDebugBuild && Input.GetKeyDown(KeyCode.F1))
+            {
+                ToggleDebugMenu();
+                return;
+            }
+
             if (characterSheetPanel == null) return;
 
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
@@ -212,6 +231,16 @@ namespace PrincesPalace
         // Separated from the key for the reason HubController documents:
         // legacy Input cannot be simulated headlessly, so a test that had to
         // press C could not exist. Tests drive these directly.
+        public bool DebugMenuIsOpen => debugMenuPanel != null && debugMenuPanel.activeSelf;
+
+        public void ToggleDebugMenu() => SetDebugMenu(!DebugMenuIsOpen);
+
+        public void SetDebugMenu(bool open)
+        {
+            if (debugMenuPanel == null) return;
+            debugMenuPanel.SetActive(open);
+        }
+
         public bool CharacterSheetIsOpen => SheetPanel.IsOpen(characterSheetPanel);
 
         public void ToggleCharacterSheet(bool inventory = false) =>

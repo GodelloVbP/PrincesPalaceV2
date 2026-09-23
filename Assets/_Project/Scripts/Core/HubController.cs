@@ -63,6 +63,13 @@ namespace PrincesPalace
         // back, not one scene load later.
         private void OnEnable()
         {
+            // The debug menu's grants move the wallet this screen shows; it
+            // says so after every write rather than leaving the plate stale
+            // until the next scene load. Assigned here because a delegate is
+            // not something the scene can serialize.
+            var debug = debugMenuPanel != null ? debugMenuPanel.GetComponent<DebugMenuController>() : null;
+            if (debug != null) debug.Changed = Refresh;
+
             Refresh();
         }
 

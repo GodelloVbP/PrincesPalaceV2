@@ -71,10 +71,15 @@ namespace PrincesPalace.PlayModeTests
             var save = SaveSlotManager.CurrentSave;
             int before = save.wallet.gold;
 
-            Click("DebugGiveGoldButton");
+            // The gold rows live on the Resources tab since the currency
+            // buttons went (2026-09-23); row 2 is the largest grant.
+            Click($"DebugCategory{(int)PrincesPalace.Domain.DebugMenu.DebugCategory.Resources}");
+            yield return null;
+            Click("DebugRow2");
             yield return null;
 
-            Assert.AreEqual(before + DebugMenuController.GoldGrant, save.wallet.gold,
+            int grant = DebugMenuController.GoldGrants[2];
+            Assert.AreEqual(before + grant, save.wallet.gold,
                 "one press of Give Gold granted more than one grant, so the debug menu wired its " +
                 "buttons again on every opening");
 
@@ -82,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
             // disk at all: the grant persists, so a tripled grant is not a
             // display error that goes away on the next load.
             SaveSlotManager.Forget();
-            Assert.AreEqual(before + DebugMenuController.GoldGrant, SaveSlotManager.CurrentSave.wallet.gold,
+            Assert.AreEqual(before + grant, SaveSlotManager.CurrentSave.wallet.gold,
                 "the wallet that reached disk is not the one the single press should have written");
         }
 

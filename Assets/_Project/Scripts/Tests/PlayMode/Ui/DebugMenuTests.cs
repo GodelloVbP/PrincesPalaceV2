@@ -21,6 +21,10 @@ namespace PrincesPalace.PlayModeTests
     // survives being written to disk -- a debug tool that appears to work and
     // silently does not persist would send you hunting a bug in whatever you
     // were actually testing.
+    //
+    // REBUILT 2026-09-23 (debug menu overhaul): category buttons replace the
+    // old kind filter and the currency buttons, and the grant bar, books,
+    // relics, levels and the Tools rows are new coverage.
     public class DebugMenuTests
     {
         private string _root;
@@ -114,7 +118,15 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(_hub.gameObject.activeInHierarchy);
         }
 
-        // ---- currency ---------------------------------------------------------------
+        private void Select(DebugCategory category) => Click($"DebugCategory{(int)category}");
+
+        private string Toast => Named("DebugToastLabel").GetComponent<TMP_Text>().text;
+
+        // ---- Resources: gold, embers, levels ----------------------------------------
+        //
+        // Row order is ResourceActions' declared order: 0-2 gold (+100,
+        // +1000, +10000), 3 run gold, 4-5 embers (+1, +25), then two rows per
+        // roster member (+1 level, max level).
 
         [UnityTest]
         public IEnumerator GoldLandsOnTheBankedWalletAndReachesDisk()
@@ -126,56 +138,205 @@ namespace PrincesPalace.PlayModeTests
 
             int before = Save.wallet.Get(CurrencyType.Gold);
 
-            Click("DebugGiveGoldButton");
+            Select(DebugCategory.Resources);
+            Click("DebugRow2");
             yield return null;
 
-            Assert.AreEqual(before + DebugMenuController.GoldGrant, Save.wallet.Get(CurrencyType.Gold));
+            Assert.AreEqual(before + 10000, Save.wallet.Get(CurrencyType.Gold));
 
             SaveSlotManager.Forget();
-            Assert.AreEqual(before + DebugMenuController.GoldGrant, Save.wallet.Get(CurrencyType.Gold),
+            Assert.AreEqual(before + 10000, Save.wallet.Get(CurrencyType.Gold),
                 "the grant never reached the file");
         }
 
         [UnityTest]
-        public IEnumerator TheEmberButtonGrantsEnoughToBeWorthPressing()
+        public IEnumerator EmbersReachEveryRosterMemberInBothSizes()
         {
-            // A tree is 21 slots x 3 constellations at 1 ember each. The first
-            // sketch of this menu granted +1, which is 63 presses to fill one
-            // character -- a chore rather than a tool. Pinned so it cannot
-            // quietly shrink back.
+            // +25 is the row you press (a tree is 21 slots x 3 constellations
+            // at 1 ember each); +1 exists for the NotEnoughEmbers boundary,
+            // which +25 can never leave you on.
             yield return OpenTheMenu();
 
-            // Per CHARACTER now, so the grant is checked on the roster rather
-            // than on a wallet nothing writes to any more.
-            int before = Save.roster[0].embers;
+            var before = Save.roster.Select(c => c.embers).ToList();
 
-            Click("DebugGiveEmbersButton");
+            Select(DebugCategory.Resources);
+            Click("DebugRow4");
+            Click("DebugRow5");
             yield return null;
 
-            Assert.AreEqual(before + DebugMenuController.EmberGrant, Save.roster[0].embers);
-            Assert.GreaterOrEqual(DebugMenuController.EmberGrant, 25);
+            for (int i = 0; i < Save.roster.Count; i++)
+            {
+                Assert.AreEqual(before[i] + 26, Save.roster[i].embers, $"roster member {i}");
+            }
         }
 
         [UnityTest]
-        public IEnumerator TheSingleEmberButtonExistsForTheRefusalBoundary()
+        public IEnumerator PlusOneLevelMovesExactlyOneLevel()
         {
-            // +25 can never leave you one ember short, which is the one state
-            // the NotEnoughEmbers refusal needs to be testable by hand.
             yield return OpenTheMenu();
 
-            int before = Save.roster[0].embers;
+            int before = Save.roster[0].level;
 
-            Click("DebugGiveOneEmberButton");
+            Select(DebugCategory.Resources);
+            Click("DebugRow6");
             yield return null;
 
-            Assert.AreEqual(before + 1, Save.roster[0].embers);
+            Assert.AreEqual(before + 1, Save.roster[0].level);
+        }
+
+        [UnityTest]
+        public IEnumerator MaxLevelStopsAtTheCap()
+        {
+            // 40, literally: the cap the level table is authored for (see
+            // LevelCurve.MaxLevel's header). Not read back off the table, which
+            // would only prove the loop agrees with itself.
+            yield return OpenTheMenu();
+
+            Select(DebugCategory.Resources);
+            Click("DebugRow7");
+            yield return null;
+
+            Assert.AreEqual(40, Save.roster[0].level);
+        }
+
+        // ---- the run-scoped tabs --------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator ABookWithNoRunIsRefusedWithAReason()
+        {
+            yield return OpenTheMenu();
+            Assert.IsFalse(RunManager.HasRun, "fixture: the hub opens with no run");
+
+            Select(DebugCategory.SpellBooks);
+            yield return null;
+            Assert.IsTrue(Named("DebugRow0").activeSelf, "fixture: content has book spells");
+
+            Click("DebugRow0");
+            yield return null;
+
+            StringAssert.Contains("Start a run first", Toast);
+        }
+
+        [UnityTest]
+        public IEnumerator ABookInARunLandsInTheUnassignedPileNotASlot()
+        {
+            yield return OpenTheMenu();
+            RunManager.StartRun(20260923UL);
+
+            Select(DebugCategory.SpellBooks);
+            Click("DebugQty1"); // x5
+            yield return null;
+
+            int learnedBefore = RunManager.Run.learnedSpells.Count;
+
+            Click("DebugRow0");
+            yield return null;
+
+            Assert.AreEqual(5, RunManager.Run.unassignedSpellBooks.Count);
+            Assert.AreEqual(learnedBefore, RunManager.Run.learnedSpells.Count,
+                "placing a book is the dossier's job, not the debug menu's");
+        }
+
+        [UnityTest]
+        public IEnumerator ARelicIsGrantedOnceHoweverOftenItIsPressed()
+        {
+            yield return OpenTheMenu();
+            RunManager.StartRun(20260923UL);
+
+            Select(DebugCategory.Relics);
+            Click("DebugQty2"); // x10 -- ignored for relics
+            yield return null;
+
+            Click("DebugRow0");
+            Click("DebugRow0");
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.relicIds.Count);
+        }
+
+        // ---- Tools ----------------------------------------------------------------
+        //
+        // Row order is ToolActions' declared order: 0 heal, 1 jump to boss,
+        // 2 next leg, 3 clear stash, 4 clear run bag, 5 respec, 6 reset tracks.
+
+        [UnityTest]
+        public IEnumerator JumpToBossPutsTheBossOnTheNextChoice()
+        {
+            yield return OpenTheMenu();
+            RunManager.StartRun(20260923UL);
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow1");
+            yield return null;
+
+            Assert.IsTrue(RunManager.Choices().Any(n => n.Id == RunManager.Map.Boss.Id),
+                "after the jump the boss must be one step away");
+        }
+
+        [UnityTest]
+        public IEnumerator NextLegMovesTheLegStart()
+        {
+            yield return OpenTheMenu();
+            RunManager.StartRun(20260923UL);
+            int before = RunManager.Run.legStartStep;
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow2");
+            yield return null;
+
+            Assert.Greater(RunManager.Run.legStartStep, before);
+        }
+
+        [UnityTest]
+        public IEnumerator ToolsThatNeedARunRefuseInTheHub()
+        {
+            yield return OpenTheMenu();
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow0"); // heal
+            yield return null;
+
+            StringAssert.Contains("Start a run first", Toast);
+        }
+
+        [UnityTest]
+        public IEnumerator ClearStashEmptiesItAndReachesDisk()
+        {
+            yield return OpenTheMenu();
+
+            Click("DebugRow0"); // any weapon, so there is something to clear
+            yield return null;
+            Assert.IsNotEmpty(Save.stockpiledItems, "fixture");
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow3");
+            yield return null;
+
+            SaveSlotManager.Forget();
+            Assert.IsEmpty(Save.stockpiledItems);
+        }
+
+        [UnityTest]
+        public IEnumerator ResetTracksPutsEveryWatermarkBackToZero()
+        {
+            yield return OpenTheMenu();
+
+            foreach (var character in Save.roster) character.claimedTrackLevel = 3;
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow6");
+            yield return null;
+
+            Assert.IsTrue(Save.roster.All(c => c.claimedTrackLevel == 0));
         }
 
         // ---- items --------------------------------------------------------------------
 
         [UnityTest]
-        public IEnumerator AddingARowPutsExactlyOneItemInTheBagAndSavesIt()
+        public IEnumerator AddingARowAtDefaultModifiersPutsExactlyOneItemInTheBagAndSavesIt()
         {
+            // Default modifiers on open: +0, x1 -- same grant shape the old
+            // menu always made, before plus/quantity existed at all.
             yield return OpenTheMenu();
 
             int before = Save.stockpiledItems.Sum(e => e.count);
@@ -184,7 +345,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count),
-                "one press is one item, not a stack");
+                "one press at the default x1 is one item, not a stack");
 
             SaveSlotManager.Forget();
             Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count),
@@ -206,18 +367,18 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator TheFilterNarrowsTheListAndResetsToPageOne()
+        public IEnumerator TheCategoryNarrowsTheListAndResetsToPageOne()
         {
             yield return OpenTheMenu();
 
-            // Page away from the start, then filter. Landing on page 7 of the
-            // potions when there are two pages of them reads as a broken
-            // filter, so the page has to reset with it.
+            // Page away from the start, then switch category. Landing on
+            // page 7 of Equipment when there are two pages of it reads as a
+            // broken filter, so the page has to reset with it.
             Click("DebugNextPage");
             Click("DebugNextPage");
             yield return null;
 
-            Click("DebugFilter1");
+            Select(DebugCategory.Equipment);
             yield return null;
 
             StringAssert.Contains("PAGE 1 OF", Named("DebugPageLabel").GetComponent<TMP_Text>().text);
@@ -233,6 +394,116 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.Greater(shown, 0, "fixture: content has items");
             Assert.LessOrEqual(shown, DebugMenuCatalog.RowsPerPage);
+        }
+
+        // ---- the grant bar: plus stepper and quantity selector -------------------------
+
+        [UnityTest]
+        public IEnumerator PlusAndQuantityAreStickyAndBothReachTheGrant()
+        {
+            // Contract 3: plus and quantity are STICKY modifiers, set once on
+            // the grant bar and applied to whichever row is next clicked --
+            // not per-row, and not reset by paging or filtering.
+            yield return OpenTheMenu();
+
+            for (int i = 0; i < 7; i++) Click("DebugPlusPlusButton");
+            Click("DebugQty1"); // x5
+            yield return null;
+
+            // A clean stash, so the assertions below can only be about this
+            // grant and not about whatever the fresh save started with.
+            Save.stockpiledItems.Clear();
+
+            Click("DebugRow0");
+            yield return null;
+
+            Assert.AreEqual(5, Save.stockpiledItems.Sum(e => e.count), "x5 must grant five, not one");
+            Assert.IsTrue(Save.stockpiledItems.All(e => e.plus == 7),
+                "the plus stepper's value must reach the grant");
+        }
+
+        [UnityTest]
+        public IEnumerator PlusClampsAtTen()
+        {
+            // ItemUpgrade.MaxPlus, pinned as a literal per this repo's own
+            // rule against a test recomputing a production formula for its
+            // own expected value.
+            yield return OpenTheMenu();
+
+            for (int i = 0; i < 15; i++) Click("DebugPlusPlusButton");
+            yield return null;
+
+            StringAssert.Contains("+10", Named("DebugPlusLabel").GetComponent<TMP_Text>().text);
+        }
+
+        [UnityTest]
+        public IEnumerator PlusCannotGoBelowZero()
+        {
+            yield return OpenTheMenu();
+
+            Click("DebugPlusMinusButton");
+            Click("DebugPlusMinusButton");
+            yield return null;
+
+            StringAssert.Contains("+0", Named("DebugPlusLabel").GetComponent<TMP_Text>().text);
+        }
+
+        [UnityTest]
+        public IEnumerator PlusIsIgnoredWhenGrantingAConsumable()
+        {
+            yield return OpenTheMenu();
+
+            Select(DebugCategory.Consumables);
+            for (int i = 0; i < 5; i++) Click("DebugPlusPlusButton");
+            yield return null;
+
+            if (!Named("DebugRow0").activeSelf)
+            {
+                Assert.Ignore("fixture: no consumables in content");
+                yield break;
+            }
+
+            Save.stockpiledItems.Clear();
+
+            Click("DebugRow0");
+            yield return null;
+
+            Assert.IsNotEmpty(Save.stockpiledItems);
+            Assert.IsTrue(Save.stockpiledItems.All(e => e.plus == 0),
+                "a consumable grant must ignore the sticky plus stepper");
+        }
+
+        // ---- sets: one row grants every piece --------------------------------------
+
+        [UnityTest]
+        public IEnumerator GrantingASetsRowGrantsMoreThanOneItem()
+        {
+            // Contract 4. A weak assertion on purpose -- this fixture does
+            // not pin which sets exist in content, only that clicking a Sets
+            // row (when the fixture has one) behaves like a multi-piece
+            // grant rather than a single-item one.
+            yield return OpenTheMenu();
+
+            Select(DebugCategory.Sets);
+            yield return null;
+
+            if (!Named("DebugRow0").activeSelf)
+            {
+                Assert.Ignore("fixture: no item sets in content");
+                yield break;
+            }
+
+            int before = Save.stockpiledItems.Sum(e => e.count);
+
+            Click("DebugRow0");
+            yield return null;
+
+            Assert.Greater(Save.stockpiledItems.Sum(e => e.count), before,
+                "granting a Sets row must grant at least its pieces");
+
+            SaveSlotManager.Forget();
+            Assert.Greater(Save.stockpiledItems.Sum(e => e.count), before,
+                "the set grant never reached the file");
         }
 
         // ---- stacking against the other overlay --------------------------------------

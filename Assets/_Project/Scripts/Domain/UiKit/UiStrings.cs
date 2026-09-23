@@ -491,20 +491,78 @@ namespace PrincesPalace.Domain.UiKit
         // label overflows its box is a small thing, but the exemption would be
         // the first crack in "every user-facing string lives here".
         public static readonly UiString DebugTitle = UiString.Define("debug.title", "DEBUG");
-        public static readonly UiString DebugGiveGold = UiString.Define("debug.gold", "+10,000 GOLD");
-        public static readonly UiString DebugGiveEmbers = UiString.Define("debug.embers", "+25 EMBERS");
+
+        // --- category rail, in DebugCategory order -------------------------------
+        public static readonly UiString DebugCategoryWeapons = UiString.Define("debug.category_weapons", "WEAPONS");
+        public static readonly UiString DebugCategoryEquipment = UiString.Define("debug.category_equipment", "ARMOUR");
+        public static readonly UiString DebugCategoryConsumables = UiString.Define("debug.category_consumables", "POTIONS");
+        public static readonly UiString DebugCategorySets = UiString.Define("debug.category_sets", "SETS");
+        public static readonly UiString DebugCategoryBooks = UiString.Define("debug.category_books", "BOOKS");
+        public static readonly UiString DebugCategoryRelics = UiString.Define("debug.category_relics", "RELICS");
+        public static readonly UiString DebugCategoryResources = UiString.Define("debug.category_resources", "RESOURCES");
+        public static readonly UiString DebugCategoryTools = UiString.Define("debug.category_tools", "TOOLS");
+
+        // --- Resources and Tools rows (verbs, not content) -----------------------
         // A tree is 21 slots x 3 constellations at 1 ember each, so +25 is the
-        // button you actually press. +1 exists only to sit on the
-        // NotEnoughEmbers boundary, which is the one case +25 can never test.
-        public static readonly UiString DebugGiveOneEmber = UiString.Define("debug.ember_one", "+1 EMBER");
-        public static readonly UiString DebugFilterAll = UiString.Define("debug.filter_all", "ALL");
-        public static readonly UiString DebugFilterConsumable = UiString.Define("debug.filter_consumable", "POTIONS");
-        public static readonly UiString DebugFilterWeapon = UiString.Define("debug.filter_weapon", "WEAPONS");
-        public static readonly UiString DebugFilterEquipment = UiString.Define("debug.filter_equipment", "ARMOUR");
+        // row you actually press. +1 exists only to sit on the NotEnoughEmbers
+        // boundary, which is the one case +25 can never test.
+        public static readonly UiString DebugGold = UiString.Define("debug.gold", "+{0} GOLD", "+10000 GOLD");
+        public static readonly UiString DebugRunGold =
+            UiString.Define("debug.run_gold", "+{0} RUN GOLD", "+10000 RUN GOLD");
+        public static readonly UiString DebugEmbers =
+            UiString.Define("debug.embers", "+{0} EMBERS, EVERYONE", "+25 EMBERS, EVERYONE");
+        public static readonly UiString DebugLevelUp =
+            UiString.Define("debug.level_up", "{0}: +1 LEVEL (NOW {1})", "Ceremonial Name: +1 LEVEL (NOW 40)");
+        public static readonly UiString DebugLevelMax =
+            UiString.Define("debug.level_max", "{0}: MAX LEVEL", "Ceremonial Name: MAX LEVEL");
+        public static readonly UiString DebugHealParty = UiString.Define("debug.heal_party", "HEAL PARTY TO FULL");
+        public static readonly UiString DebugJumpToBoss = UiString.Define("debug.jump_boss", "JUMP TO THIS LEG'S BOSS");
+        public static readonly UiString DebugNextLeg = UiString.Define("debug.next_leg", "SKIP TO THE NEXT LEG");
+        public static readonly UiString DebugClearStash =
+            UiString.Define("debug.clear_stash", "CLEAR STASH ({0} STACKS)", "CLEAR STASH (999 STACKS)");
+        public static readonly UiString DebugClearRunBag =
+            UiString.Define("debug.clear_run_bag", "CLEAR RUN BAG ({0} STACKS)", "CLEAR RUN BAG (999 STACKS)");
+        public static readonly UiString DebugResetTalents =
+            UiString.Define("debug.reset_talents", "RESET TALENTS, REFUND EMBERS");
+        public static readonly UiString DebugResetTracks =
+            UiString.Define("debug.reset_tracks", "RESET REWARD TRACKS");
+
+        public static readonly UiString DebugRowPlain =
+            UiString.Define("debug.row_plain", "{0}", "Ceremonial Greatsword of the Undying");
+        public static readonly UiString DebugToastDone =
+            UiString.Define("debug.toast_done", "Done: {0}", "Done: RESET REWARD TRACKS TO UNCLAIMED (EVERYONE)");
+        public static readonly UiString DebugToastNeedsRun =
+            UiString.Define("debug.toast_needs_run", "Start a run first -- that lives on the descent");
+
+        // --- sub-filter row, both axes it can show -------------------------------
+        // "ALL" is shared with the tier axis; the tier chip itself formats
+        // its own number ("T4") rather than the row's DebugRow "T{0}  {1}"
+        // shape, since a chip has no name to pair it with.
+        public static readonly UiString DebugSubFilterAll = UiString.Define("debug.subfilter_all", "ALL");
+        public static readonly UiString DebugTierChip = UiString.Define("debug.tier_chip", "T{0}", "T10");
+        public static readonly UiString DebugSlotHead = UiString.Define("debug.slot_head", "HEAD");
+        public static readonly UiString DebugSlotNecklace = UiString.Define("debug.slot_necklace", "NECK");
+        public static readonly UiString DebugSlotTorso = UiString.Define("debug.slot_torso", "TORSO");
+        public static readonly UiString DebugSlotLegs = UiString.Define("debug.slot_legs", "LEGS");
+        public static readonly UiString DebugSlotShoes = UiString.Define("debug.slot_shoes", "SHOES");
+        public static readonly UiString DebugSlotGloves = UiString.Define("debug.slot_gloves", "GLOVES");
+
         public static readonly UiString DebugRow =
             UiString.Define("debug.row", "T{0}  {1}", "T10  Ceremonial Greatsword of the Undying");
         public static readonly UiString DebugPage =
             UiString.Define("debug.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
+
+        // --- the grant bar: plus stepper, quantity, toast ------------------------
+        public static readonly UiString DebugPlusMinus = UiString.Define("debug.plus_minus", "-");
+        public static readonly UiString DebugPlusPlus = UiString.Define("debug.plus_plus", "+");
+        public static readonly UiString DebugPlusValue = UiString.Define("debug.plus_value", "+{0}", "+10");
+        public static readonly UiString DebugQty1 = UiString.Define("debug.qty1", "x1");
+        public static readonly UiString DebugQty5 = UiString.Define("debug.qty5", "x5");
+        public static readonly UiString DebugQty10 = UiString.Define("debug.qty10", "x10");
+        public static readonly UiString DebugToastGranted =
+            UiString.Define("debug.toast_granted", "Granted {0} x {1} +{2}", "Granted 5 x Ember Blade +7");
+        public static readonly UiString DebugToastGrantedNoPlus =
+            UiString.Define("debug.toast_granted_no_plus", "Granted {0} x {1}", "Granted 5 x Minor Potion");
 
         // --- the relic draft ---------------------------------------------------
         public static readonly UiString DraftTitle = UiString.Define("draft.title", "TAKE ONE INTO THE DARK");

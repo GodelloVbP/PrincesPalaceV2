@@ -13,6 +13,10 @@ namespace PrincesPalace.Domain.Tests
     // twelve 44px rows stacked on a 50px pitch is exactly the sort of thing
     // that passes by eye and overlaps by 6px, and the whole point of building
     // screens as trees is that nobody has to notice that by eye.
+    //
+    // REBUILT 2026-09-23 (debug menu overhaul, phase 1): the flat kind filter
+    // row is a category rail plus a pooled sub-filter row now, and the list
+    // is 2 columns x RowsPerColumn instead of one column of 12.
     public class DebugMenuScreenTests
     {
         private static UiNode Tree() => DebugMenuScreen.Build().Root;
@@ -54,17 +58,19 @@ namespace PrincesPalace.Domain.Tests
             // width) only fits 6 of RowsPerPage on screen. Rows are now
             // chromeless with a hairline rule, same shape as
             // CharacterDossierScreen.BuildNavRow; the icon pager arrows were
-            // already NoChrome.
+            // already NoChrome. The category rail and sub-filter chips
+            // (2026-09-23) are Silver too, same rule.
             var screen = DebugMenuScreen.Build();
 
-            Assert.AreEqual(ButtonTheme.Silver, screen.GiveGoldButton.Node.Theme);
-            Assert.AreEqual(ButtonTheme.Silver, screen.GiveEmbersButton.Node.Theme);
-            Assert.AreEqual(ButtonTheme.Silver, screen.GiveOneEmberButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
-            Assert.AreEqual(ButtonTheme.Silver, screen.FilterButtons[0].Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.CategoryButtons[0].Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.SubFilterButtons[0].Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.QtyButtons[0].Node.Theme);
             Assert.IsTrue(screen.RowButtons[0].Node.Chromeless, "20.5:1 fits no plate shape -- hairline row instead");
             Assert.IsTrue(screen.PrevPageButton.Node.Chromeless, "an icon arrow, not a plate button");
             Assert.IsTrue(screen.NextPageButton.Node.Chromeless, "an icon arrow, not a plate button");
+            Assert.IsTrue(screen.PlusMinusButton.Node.Chromeless, "a square stepper fits no plate shape");
+            Assert.IsTrue(screen.PlusPlusButton.Node.Chromeless, "a square stepper fits no plate shape");
         }
 
         [Test]
@@ -86,13 +92,33 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThereIsAFilterForEveryKindPlusAll()
+        public void ThereIsOneCategoryButtonPerCategory()
         {
-            // Three ItemKinds and the no-filter sentinel. Stated here because
-            // the controller indexes FilterKinds by button position, so a
-            // fourth kind added to content without a button would make the two
-            // arrays disagree silently.
-            Assert.AreEqual(4, DebugMenuScreen.Build().FilterButtons.Count);
+            // The controller indexes DebugCategory's values by rail position,
+            // so a button added to the tree without a matching category (or
+            // the reverse) would make the two disagree silently. Eight, as a
+            // literal, so adding a category is a decision this test sees.
+            Assert.AreEqual(8, DebugMenuScreen.Build().CategoryButtons.Count);
+            Assert.AreEqual(8, System.Enum.GetValues(typeof(DebugCategory)).Length);
+        }
+
+        [Test]
+        public void TheSubFilterPoolIsTwelveWide()
+        {
+            // The largest sub-filter axis is the tier chips (All + 0..10).
+            // Equipment's 7-wide slot axis reuses the front of this same
+            // pool -- see DebugMenuScreen's own field comment.
+            var screen = DebugMenuScreen.Build();
+
+            Assert.AreEqual(12, screen.SubFilterButtons.Count);
+            Assert.AreEqual(12, screen.SubFilterLabels.Count);
+        }
+
+        [Test]
+        public void ThereAreThreeQuantityButtons()
+        {
+            // x1 / x5 / x10 -- contract 3.
+            Assert.AreEqual(3, DebugMenuScreen.Build().QtyButtons.Count);
         }
 
         [Test]

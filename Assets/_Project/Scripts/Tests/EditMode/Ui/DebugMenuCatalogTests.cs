@@ -12,19 +12,36 @@ namespace PrincesPalace.Domain.Tests
     // 261 items into a 20-cell bag -- produced 14 unnavigable pages. A picker
     // whose own paging is off by one recreates the problem it was built to
     // avoid, one page further along.
+    //
+    // REBUILT 2026-09-23 (debug menu overhaul, phase 1) for the category/
+    // sub-filter model: what was Filter(all, kind) is now
+    // Filter(all, category, subFilter), RowsPerPage doubled to 24 (2 columns
+    // x 12), and a DebugItem carries a Category plus one optional SubKey.
     public class DebugMenuCatalogTests
     {
-        private const int Consumable = 0;
-        private const int Weapon = 1;
-        private const int Equipment = 2;
+        private const int WeaponKind = 1;
+        private const int EquipmentKind = 2;
+        private const int ConsumableKind = 0;
 
-        private static List<DebugItem> Catalogue(int count, int kind = Weapon)
+        // Pinned literals, not read off the constant, so a change to either
+        // number is a deliberate, visible edit here rather than a test that
+        // silently keeps pace with whatever the source says.
+        [Test]
+        public void RowsPerPageIsTwoColumnsOfTwelve()
         {
-            // Descending tier on purpose: if Filter did not sort, the fixture
-            // would come back in this order and the tier assertions below
-            // would fail rather than accidentally pass.
+            Assert.AreEqual(2, DebugMenuCatalog.Columns);
+            Assert.AreEqual(12, DebugMenuCatalog.RowsPerColumn);
+            Assert.AreEqual(24, DebugMenuCatalog.RowsPerPage);
+        }
+
+        // Descending tier on purpose: if Filter did not sort, the fixture
+        // would come back in this order and the tier assertions below would
+        // fail rather than accidentally pass.
+        private static List<DebugItem> Catalogue(int count, DebugCategory category = DebugCategory.Weapons,
+            int kind = WeaponKind)
+        {
             return Enumerable.Range(0, count)
-                .Select(i => new DebugItem($"item_{i:D3}", $"Item {i:D3}", kind, count - i))
+                .Select(i => new DebugItem($"item_{i:D3}", $"Item {i:D3}", kind, count - i, category))
                 .ToList();
         }
 
@@ -54,7 +71,8 @@ namespace PrincesPalace.Domain.Tests
         {
             // The screen declares exactly RowsPerPage row nodes. A page
             // returning more would silently drop items with nothing saying so.
-            var filtered = DebugMenuCatalog.Filter(Catalogue(100), DebugMenuCatalog.KindAll);
+            var filtered = DebugMenuCatalog.Filter(Catalogue(100), DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll);
 
             for (int page = 0; page < DebugMenuCatalog.PageCount(filtered.Count); page++)
             {
@@ -68,7 +86,8 @@ namespace PrincesPalace.Domain.Tests
             // Walking the pages must reconstruct the list -- no gaps at a page
             // seam, no duplicates. This is the assertion that would have caught
             // a start-index that used PageCount instead of RowsPerPage.
-            var filtered = DebugMenuCatalog.Filter(Catalogue(37), DebugMenuCatalog.KindAll);
+            var filtered = DebugMenuCatalog.Filter(Catalogue(37), DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll);
 
             var walked = new List<string>();
             for (int page = 0; page < DebugMenuCatalog.PageCount(filtered.Count); page++)
@@ -81,34 +100,92 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheFilterKeepsOnlyTheAskedForKind()
+        public void TheFilterKeepsOnlyItemsInTheAskedForCategory()
         {
-            var mixed = Catalogue(5, Consumable)
-                .Concat(Catalogue(7, Weapon))
-                .Concat(Catalogue(3, Equipment))
+            var mixed = Catalogue(5, DebugCategory.Consumables, ConsumableKind)
+                .Concat(Catalogue(7, DebugCategory.Weapons, WeaponKind))
+                .Concat(Catalogue(3, DebugCategory.Equipment, EquipmentKind))
                 .ToList();
 
-            Assert.AreEqual(5, DebugMenuCatalog.Filter(mixed, Consumable).Count);
-            Assert.AreEqual(7, DebugMenuCatalog.Filter(mixed, Weapon).Count);
-            Assert.AreEqual(3, DebugMenuCatalog.Filter(mixed, Equipment).Count);
+            Assert.AreEqual(5, DebugMenuCatalog.Filter(mixed, DebugCategory.Consumables,
+                DebugMenuCatalog.SubFilterAll).Count);
+            Assert.AreEqual(7, DebugMenuCatalog.Filter(mixed, DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll).Count);
+            Assert.AreEqual(3, DebugMenuCatalog.Filter(mixed, DebugCategory.Equipment,
+                DebugMenuCatalog.SubFilterAll).Count);
         }
 
         [Test]
-        public void KindAllKeepsEverything()
+        public void SubFilterAllKeepsEveryItemInTheCategory()
         {
-            var mixed = Catalogue(5, Consumable).Concat(Catalogue(7, Weapon)).ToList();
+            var mixed = Catalogue(5, DebugCategory.Consumables, ConsumableKind)
+                .Concat(Catalogue(7, DebugCategory.Weapons, WeaponKind))
+                .ToList();
 
-            Assert.AreEqual(12, DebugMenuCatalog.Filter(mixed, DebugMenuCatalog.KindAll).Count);
+            Assert.AreEqual(7, DebugMenuCatalog.Filter(mixed, DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll).Count);
+        }
+
+        [Test]
+        public void WeaponsSubFilterMatchesOnTier()
+        {
+            // Weapons' sub-filter row is the tier chips -- the sub-filter
+            // value IS the tier itself, no separate SubKey needed.
+            var mixed = new List<DebugItem>
+            {
+                new DebugItem("a", "A", WeaponKind, 3, DebugCategory.Weapons),
+                new DebugItem("b", "B", WeaponKind, 3, DebugCategory.Weapons),
+                new DebugItem("c", "C", WeaponKind, 5, DebugCategory.Weapons),
+            };
+
+            Assert.AreEqual(2, DebugMenuCatalog.Filter(mixed, DebugCategory.Weapons, 3).Count);
+            Assert.AreEqual(1, DebugMenuCatalog.Filter(mixed, DebugCategory.Weapons, 5).Count);
+            Assert.AreEqual(0, DebugMenuCatalog.Filter(mixed, DebugCategory.Weapons, 4).Count);
+        }
+
+        [Test]
+        public void EquipmentSubFilterMatchesOnSubKeyNotTier()
+        {
+            // Equipment's sub-filter row is the slot chips -- SubKey, a
+            // separate axis from Tier, since two different slots can share a
+            // tier and the same slot spans every tier.
+            var mixed = new List<DebugItem>
+            {
+                new DebugItem("head1", "Head Tier1", EquipmentKind, 1, DebugCategory.Equipment, subKey: 0),
+                new DebugItem("head2", "Head Tier9", EquipmentKind, 9, DebugCategory.Equipment, subKey: 0),
+                new DebugItem("legs1", "Legs Tier1", EquipmentKind, 1, DebugCategory.Equipment, subKey: 3),
+            };
+
+            var headOnly = DebugMenuCatalog.Filter(mixed, DebugCategory.Equipment, 0);
+            Assert.AreEqual(2, headOnly.Count, "both head pieces match slot 0 regardless of tier");
+
+            var legsOnly = DebugMenuCatalog.Filter(mixed, DebugCategory.Equipment, 3);
+            Assert.AreEqual(1, legsOnly.Count);
+        }
+
+        [Test]
+        public void ASetsRowIsInvisibleToAnotherCategorysFilter()
+        {
+            var sets = new List<DebugItem>
+            {
+                new DebugItem("dragon_set", "Dragon Set", -1, 4, DebugCategory.Sets, setId: "dragon_set"),
+            };
+
+            CollectionAssert.IsEmpty(DebugMenuCatalog.Filter(sets, DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll));
+            Assert.AreEqual(1, DebugMenuCatalog.Filter(sets, DebugCategory.Sets,
+                DebugMenuCatalog.SubFilterAll).Count);
         }
 
         [Test]
         public void RowsAreSortedByTierBeforeName()
         {
-            // Tier is the axis a debug menu is searched on -- "give me a tier 4
-            // weapon" is the question. Sorting by name would scatter the tiers
-            // across every page and make the pager useless for the one job the
-            // menu has.
-            var filtered = DebugMenuCatalog.Filter(Catalogue(20), DebugMenuCatalog.KindAll);
+            // Tier is the axis you actually search on in a debug menu -- "give
+            // me a tier 4 weapon" is the question. Sorting by name would
+            // scatter the tiers across every page and make the pager useless
+            // for the one thing the menu is for.
+            var filtered = DebugMenuCatalog.Filter(Catalogue(20), DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll);
 
             for (int i = 1; i < filtered.Count; i++)
             {
@@ -123,12 +200,12 @@ namespace PrincesPalace.Domain.Tests
             // two Refreshes and move a row out from under a click.
             var tied = new List<DebugItem>
             {
-                new DebugItem("b", "Same Name", Weapon, 3),
-                new DebugItem("a", "Same Name", Weapon, 3),
-                new DebugItem("c", "Aardvark", Weapon, 3),
+                new DebugItem("b", "Same Name", WeaponKind, 3, DebugCategory.Weapons),
+                new DebugItem("a", "Same Name", WeaponKind, 3, DebugCategory.Weapons),
+                new DebugItem("c", "Aardvark", WeaponKind, 3, DebugCategory.Weapons),
             };
 
-            var sorted = DebugMenuCatalog.Filter(tied, DebugMenuCatalog.KindAll);
+            var sorted = DebugMenuCatalog.Filter(tied, DebugCategory.Weapons, DebugMenuCatalog.SubFilterAll);
 
             Assert.AreEqual("c", sorted[0].Id, "name orders before the id tie-break");
             Assert.AreEqual("a", sorted[1].Id);
@@ -138,7 +215,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ClampingHoldsAtBothEnds()
         {
-            var filtered = DebugMenuCatalog.Filter(Catalogue(25), DebugMenuCatalog.KindAll);
+            var filtered = DebugMenuCatalog.Filter(Catalogue(25), DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll);
             int last = DebugMenuCatalog.PageCount(filtered.Count) - 1;
 
             Assert.AreEqual(0, DebugMenuCatalog.ClampPage(-5, filtered.Count));
@@ -151,9 +229,48 @@ namespace PrincesPalace.Domain.Tests
             // Graceful degradation is the house style, and this one is
             // reachable: ContentDatabase.Items is read fresh on every Refresh
             // and can be empty mid content-rebuild in the editor.
-            Assert.DoesNotThrow(() => DebugMenuCatalog.Filter(null, DebugMenuCatalog.KindAll));
-            CollectionAssert.IsEmpty(DebugMenuCatalog.Filter(null, DebugMenuCatalog.KindAll));
+            Assert.DoesNotThrow(() => DebugMenuCatalog.Filter(null, DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll));
+            CollectionAssert.IsEmpty(DebugMenuCatalog.Filter(null, DebugCategory.Weapons,
+                DebugMenuCatalog.SubFilterAll));
             CollectionAssert.IsEmpty(DebugMenuCatalog.Page(null, 0));
+        }
+
+        [Test]
+        public void ThePlusStepperClampsAtZeroAndTen()
+        {
+            // 10 is ItemUpgrade.MaxPlus, pinned as a literal so a change to
+            // the cap is a decision this test sees rather than follows.
+            Assert.AreEqual(0, DebugMenuCatalog.StepPlus(0, -1));
+            Assert.AreEqual(1, DebugMenuCatalog.StepPlus(0, 1));
+            Assert.AreEqual(10, DebugMenuCatalog.StepPlus(10, 1));
+            Assert.AreEqual(9, DebugMenuCatalog.StepPlus(10, -1));
+        }
+
+        [Test]
+        public void OnlyResourcesAndToolsAreActionTabs()
+        {
+            var actions = System.Enum.GetValues(typeof(DebugCategory)).Cast<DebugCategory>()
+                .Where(DebugMenuCatalog.IsAction);
+
+            CollectionAssert.AreEquivalent(new[] { DebugCategory.Resources, DebugCategory.Tools }, actions);
+        }
+
+        [Test]
+        public void ActionRowsKeepTheirDeclaredOrderNotAlphabetical()
+        {
+            // Tier is the row's position on an action tab. "+10000" sorts
+            // before "+1000" by name; the declared order must win.
+            var rows = new[]
+            {
+                new DebugItem("r:0", "+100 GOLD", -1, 0, DebugCategory.Resources),
+                new DebugItem("r:1", "+1000 GOLD", -1, 1, DebugCategory.Resources),
+                new DebugItem("r:2", "+10000 GOLD", -1, 2, DebugCategory.Resources),
+            };
+
+            var sorted = DebugMenuCatalog.Filter(rows.Reverse(), DebugCategory.Resources, DebugMenuCatalog.SubFilterAll);
+
+            CollectionAssert.AreEqual(new[] { "r:0", "r:1", "r:2" }, sorted.Select(r => r.Id));
         }
     }
 }
