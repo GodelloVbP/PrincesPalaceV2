@@ -349,6 +349,116 @@ namespace PrincesPalace.Domain.Tests
                 "parents are lit -- the oath never should have gated the tree, only the engine");
         }
 
+        // THE REAL COST SHAPE, on two paths at once -- ShippedPriceShape's
+        // own pricing (ContentDatabase.OrbCost: 1/2/3 climbing the grid, 0
+        // at the root/convergence/capstone, 2/3/4 climbing the branch, a
+        // 9-gate at the convergence and a 20-gate at the capstone), but with
+        // a real root on BOTH path 0 and path 1 -- TwoRootedPaths' own
+        // shape -- so an allegiance scenario can be played on realistically
+        // priced ground instead of the flat depth-1 TwoRootedPaths gives it.
+        private static TalentTree TwoRootedRealPriceShape()
+        {
+            var tree = new TalentTree();
+            for (int path = 0; path < 2; path++)
+            {
+                for (int i = 0; i < TalentSkeleton.SlotCount; i++)
+                {
+                    int depth = TalentSkeleton.Depth[i];
+                    int cost = depth == 0 || depth == 4 || depth == 8
+                        ? 0
+                        : depth <= 3 ? depth : depth - 3;
+                    int gate = i == 10 ? 9 : i == 20 ? 20 : 0;
+                    tree.Set(path, i, new TalentSlot($"p{path}s{i}", $"Star {path}.{i}", "", cost, gate));
+                }
+            }
+            return tree;
+        }
+
+        // OWNER, 2026-09-23 (confirming 1523266d's rule): the exclusivity
+        // covers only the wool GENERATOR -- Fragile Lamb and Black Ram can
+        // never both be taken -- and everything else on the Black Ram path
+        // stays open. The owner's own worked example: 21 points climbed
+        // into Fragile Lamb's tree plus 9 points on the Black Ram grid
+        // reach Black Ram Mode (sheep_ram_converge) without ever taking
+        // Black Ram itself. Played here from an empty page with real picks
+        // and real prices, not preset state:
+        //
+        //   path 1 (Fragile Lamb): two FULL pre-convergence strands (6+6),
+        //   one strand touched to tier 2 (1+2=3) -- 15 spent, the
+        //   convergence's own 9-gate and completed>=1/touched>=2 both
+        //   already met -- then the convergence itself (free) and one
+        //   tier-5 branch stone in EACH of the three post-convergence
+        //   columns (2+2+2=6). 15 + 6 = 21.
+        //
+        //   path 0 (Black Ram): one full strand (1+2+3=6) plus a second
+        //   strand touched to tier 2 (1+2=3) -- exactly
+        //   FirstConvergenceUnlocksWithNineSpentAcrossTwoStrands' own
+        //   shape, 9 spent, clearing the convergence's 9-gate with room to
+        //   spare on completed/touched -- then Black Ram Mode (slot 10)
+        //   itself, still never touching slot 0.
+        [Test]
+        public void FragileLambThenRealPicks_ReachesBlackRamModeOnNinePoints_RootStaysSworn()
+        {
+            var tree = TwoRootedRealPriceShape();
+            var unlocked = new HashSet<string>();
+
+            void Invest(int path, int slot, string reason)
+            {
+                Assert.AreEqual(TalentPage.Refusal.None,
+                    TalentPage.Evaluate(tree, path, slot, unlocked, embers: 99, budget: 999), reason);
+                unlocked.Add($"p{path}s{slot}");
+            }
+
+            Invest(1, 0, "Fragile Lamb (path 1's root) should be free to swear on an empty page");
+
+            // Fragile Lamb's tree: two full strands (dx -1 and dx 0: slots
+            // 1/4/7 and 2/5/8) plus the third (dx +1: slots 3/6) touched to
+            // tier 2. 1+2+3 + 1+2+3 + 1+2 = 15.
+            foreach (int slot in new[] { 1, 4, 7, 2, 5, 8, 3, 6 })
+            {
+                Invest(1, slot, $"path 1 slot {slot} should be reachable while climbing Fragile Lamb's own grid");
+            }
+
+            Assert.AreEqual(15, TalentPage.SpentOn(tree, 1, unlocked), "fixture: the pre-convergence spend moved");
+
+            Invest(1, 10, "Fragile Lamb's own convergence should open on 15 spent across two full strands " +
+                          "and a touched third");
+
+            // One tier-5 branch stone in each of the three post-convergence
+            // columns: slots 11, 12, 13. 2+2+2 = 6. 15 + 6 = 21.
+            foreach (int slot in new[] { 11, 12, 13 })
+            {
+                Invest(1, slot, $"path 1 slot {slot} (post-convergence) should be reachable");
+            }
+
+            Assert.AreEqual(21, TalentPage.SpentOn(tree, 1, unlocked),
+                "fixture: the owner's own '21 points in Fragile Lamb's tree' number");
+
+            // Black Ram's grid, path 0, with NO root of its own -- the exact
+            // shape FirstConvergenceUnlocksWithNineSpentAcrossTwoStrands
+            // pins for one path, replayed here on the UNSWORN one: one full
+            // strand (1+2+3=6) plus a second touched to tier 2 (1+2=3) = 9.
+            foreach (int slot in new[] { 1, 4, 7, 2, 5 })
+            {
+                Invest(0, slot, $"path 0 slot {slot} should be reachable from the sworn root alone, " +
+                                "with no preset prerequisites");
+            }
+
+            Assert.AreEqual(9, TalentPage.SpentOn(tree, 0, unlocked),
+                "fixture: the owner's own '9 points on the Black Ram path' number");
+
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, path: 0, slot: 10, unlocked, embers: 99, budget: 999),
+                "Black Ram Mode (the convergence) should open on the same 9-point, two-strand shape as " +
+                "the sworn path's own convergence -- the oath never should have gated the tree, only " +
+                "the engine");
+
+            Assert.AreEqual(TalentPage.Refusal.AllegianceSworn,
+                TalentPage.Evaluate(tree, path: 0, slot: 0, unlocked, embers: 99, budget: 999),
+                "Black Ram itself (the wool generator, sheep_ram_root) must still be locked out -- the " +
+                "exclusivity the owner confirmed covers only the two roots, nothing this deep picks up");
+        }
+
         // THE LIFETIME BUDGET, WHICH NOTHING WAS CHECKING EITHER.
         //
         // ContentDatabase.EmberSpendCap is 30 and its header spells out what

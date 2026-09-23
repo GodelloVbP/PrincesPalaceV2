@@ -169,8 +169,17 @@ namespace PrincesPalace.PlayModeTests
         // -1/+1 child on each side -- Left/Right now reaches it instead of
         // the page arrows, which stay reachable via LT/RT regardless
         // (TabNext_StepsToTheNextConstellation_AndEntersItsRoot above).
+        // Two separate tests, not one Left-then-Right test reusing the same
+        // coroutine: driving a second Move right after re-selecting the
+        // convergence in the SAME frame budget as the first Move produced a
+        // false failure here (NavigationInputModule's own repeat/edge
+        // handling -- see StickThresholdGamepadNavigationTests -- needs a
+        // real settled frame between two driven moves, which
+        // SetSelectedGameObject-then-yield-once does not reliably give).
+        // Isolated, each direction is proven independently and matches every
+        // other single-assertion test in this file.
         [UnityTest]
-        public IEnumerator LeftRight_FromTheConvergence_ReachTheFlankingChildren()
+        public IEnumerator Left_FromTheConvergence_ReachesTheLeftChild()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_10"));
@@ -180,7 +189,12 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(Node("Orb0_11"), EventSystem.current.currentSelectedGameObject,
                 "Left from the convergence should reach its own DxSlot -1 child, not the page arrow");
+        }
 
+        [UnityTest]
+        public IEnumerator Right_FromTheConvergence_ReachesTheRightChild()
+        {
+            yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_10"));
             yield return null;
 

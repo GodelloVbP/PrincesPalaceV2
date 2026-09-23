@@ -1051,10 +1051,15 @@ namespace PrincesPalace
         private static readonly List<int>[] _skeletonTiers;
 
         // A slot's own dx-1/dx+1 CHILD (as opposed to _skeletonUpChild's
-        // dx-0-preferring pick) -- only the root and the convergence have
-        // one, since they are the singles that feed a triple. Used to give
-        // Left/Right a real talent to reach from those two nodes instead of
-        // teleporting to the page arrows (owner playtest, 2026-09-23).
+        // dx-0-preferring pick). Computed for every slot that feeds a
+        // triple -- the root as well as the convergence, since both are
+        // singles above one -- but RefreshOrbNavigation only reads it for
+        // Kind == "merge": the convergence's Left/Right reaches this
+        // instead of the page arrows (owner playtest, 2026-09-23), while
+        // the root keeps its own arrow links (JourneyHubToTalentsTests'
+        // "Right from a one-wide tier orb should reach the arrow" is the
+        // player's only stick path to InvestButton before anything is
+        // kindled, and the owner's report never named the root).
         private static readonly int[] _skeletonLeftChild;
         private static readonly int[] _skeletonRightChild;
 
@@ -1267,21 +1272,24 @@ namespace PrincesPalace
             if (panelActions != null) groups.Add(panelActions);
 
             // Every orb in a ONE-WIDE tier (the root, the convergence, the
-            // capstone) sits in the sky's centre column. The root and the
-            // convergence each feed a triple, so they have a REAL talent to
-            // their left and right -- their own dx-1/dx+1 child, one hop up
-            // -- and Left/Right now reaches it (owner playtest, 2026-09-23:
-            // "pressing LEFT [from Convergence] moves focus onto the arrows
-            // ... Expected: LEFT/RIGHT go to the left/right talent option in
-            // the tree"). The page arrows are still reachable exactly as
-            // before -- LT/RT's own trigger shortcut (StepTab), the mouse,
-            // and the arrows' own links back to the root -- so nothing about
-            // paging constellations is lost by this.
-            //
-            // The capstone feeds nothing: it has no left/right talent to
-            // reach, so its own Left/Right keeps the old arrow fallback --
-            // "the page arrows should only be reached when there is no
-            // talent further in that direction" is exactly this case.
+            // capstone) sits in the sky's centre column, so what lies left
+            // and right of it is the pair of arrows flanking the sky --
+            // UNCHANGED for the root and the capstone (JourneyHubToTalents
+            // Tests' own "Right from a one-wide tier orb should reach the
+            // arrow drawn at the sky's right edge" is a deliberate,
+            // already-tested escape hatch: root -> arrow -> the panel
+            // column, the only stick path to InvestButton before anything
+            // is kindled). The owner's report named the CONVERGENCE only
+            // ("pressing LEFT [from Convergence] moves focus onto the
+            // arrows ... Expected: LEFT/RIGHT go to the left/right talent
+            // option in the tree") -- the convergence is the one single
+            // that feeds a triple on BOTH sides of a tree the player is
+            // already standing inside, not the tree's own front door, so
+            // only Kind == "merge" gets its own dx-1/dx+1 child instead of
+            // the arrow. The arrows stay reachable from the convergence too
+            // -- LT/RT's own trigger shortcut (StepTab), the mouse, and the
+            // long way up through the root -- so nothing about paging
+            // constellations is lost.
             //
             // The arrows are never hidden, only greyed at the ends of the line
             // (Refresh's own `prevPathButton.interactable = CanStep(...)`), so
@@ -1297,11 +1305,19 @@ namespace PrincesPalace
                 var lone = OrbAt(slot);
                 if (lone == null) continue;
 
-                var leftChild = _skeletonLeftChild[slot] >= 0 ? OrbAt(_skeletonLeftChild[slot]) : null;
-                var rightChild = _skeletonRightChild[slot] >= 0 ? OrbAt(_skeletonRightChild[slot]) : null;
+                Selectable leftTarget = prevPathButton;
+                Selectable rightTarget = nextPathButton;
 
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, (Selectable)leftChild ?? prevPathButton));
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, (Selectable)rightChild ?? nextPathButton));
+                if (TalentSkeleton.Kind[slot] == "merge")
+                {
+                    var leftChild = _skeletonLeftChild[slot] >= 0 ? OrbAt(_skeletonLeftChild[slot]) : null;
+                    var rightChild = _skeletonRightChild[slot] >= 0 ? OrbAt(_skeletonRightChild[slot]) : null;
+                    leftTarget = (Selectable)leftChild ?? prevPathButton;
+                    rightTarget = (Selectable)rightChild ?? nextPathButton;
+                }
+
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, leftTarget));
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, rightTarget));
             }
 
             // BOTH ARROWS COME BACK TO THE ROOT, stated once here rather than
