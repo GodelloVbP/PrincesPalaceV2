@@ -31,6 +31,13 @@ public class IntentIconImportPostprocessor : AssetPostprocessor
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.spritePivot = new UnityEngine.Vector2(0.5f, 0.5f);
         importer.alphaIsTransparency = true;
-        importer.mipmapEnabled = false;
+
+        // Mips ON, Trilinear filtering -- same shape as
+        // StatusIconImportPostprocessor (2026-09-23): these are 128px masters
+        // drawn at 69px (FightStageAnchors.IntentIconSize), which still
+        // minifies. mipmapEnabled=false had no stated reason in this file's
+        // history either, so it gets the same fix.
+        importer.mipmapEnabled = true;
+        importer.filterMode = UnityEngine.FilterMode.Trilinear;
     }
 }

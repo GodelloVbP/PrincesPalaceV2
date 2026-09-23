@@ -95,6 +95,13 @@
       irreplaceable is worth more in a 5s loop than in a 20s one.
     -->
 
+    <!-- UnityEditor.AssetImporter/TextureImporter, over a real imported asset
+         under Resources/Status/. The thing under test IS Unity's own import
+         pipeline result (StatusIconImportPostprocessor ran, the .meta reflects
+         it): there is no dotnet stand-in for an asset importer, and this
+         project has no reference to UnityEditor at all. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Art\StatusIconMipmapImportTests.cs" />
+
     <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
     <Compile Include="MathfShim.cs" />
   </ItemGroup>

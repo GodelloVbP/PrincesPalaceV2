@@ -28,6 +28,16 @@ public class StatusIconImportPostprocessor : AssetPostprocessor
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.spritePivot = new UnityEngine.Vector2(0.5f, 0.5f);
         importer.alphaIsTransparency = true;
-        importer.mipmapEnabled = false;
+
+        // Mips ON, Trilinear filtering -- same call as UiKitImportPostprocessor
+        // and PortraitImportPostprocessor. These are 256px masters drawn at
+        // 20px on party plates and 36px on enemy rows; without mips, GPU
+        // minification samples the full-res texture bilinearly and aliases
+        // into visible grain at that scale-down. mipmapEnabled=false had no
+        // stated reason in this file's history -- it was set alongside
+        // textureType/pivot/alphaIsTransparency as import boilerplate, never
+        // called out on its own.
+        importer.mipmapEnabled = true;
+        importer.filterMode = UnityEngine.FilterMode.Trilinear;
     }
 }
