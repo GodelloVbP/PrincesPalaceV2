@@ -367,7 +367,7 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("authors fit 'target' but is placed on formation", message);
-            StringAssert.Contains("Only target and target-centre do", message);
+            StringAssert.Contains("Only target, target-centre, sky or a travelling layer do", message);
         }
 
         [Test]
@@ -379,6 +379,112 @@ namespace PrincesPalace.Domain.Tests
 
             string message = Only(With(layer));
             StringAssert.Contains("authors fit 'target' but is placed on caster-centre", message);
+        }
+
+        // A TRAVELLER ARRIVES ON ONE STRUCK BODY, so it may size to it too --
+        // mud_burst's bolt lands at the size of what it hits.
+        [Test]
+        public void FitTargetOnATravellingLayerIsLegal()
+        {
+            var layer = Sprite();
+            layer.place = "caster-centre";
+            layer.travelSeconds = 0.2f;
+            layer.fit = "target";
+
+            CollectionAssert.IsEmpty(Problems(With(layer)));
+        }
+
+        // ---- the air a called strike amasses in ------------------------------
+
+        [Test]
+        public void ALayerMayAmassInTheSkyAndTravelFromIt()
+        {
+            var amass = Sprite("amass");
+            amass.place = "sky";
+            amass.fit = "target";
+
+            var spear = Sprite("spear");
+            spear.place = "sky";
+            spear.travelSeconds = 0.2f;
+            spear.orient = "path";
+            spear.artDegrees = 26f;
+            spear.fit = "target";
+
+            CollectionAssert.IsEmpty(Problems(With(amass, spear)),
+                "sky resolves one caster-target pair, so it is both a place to stand and a place to launch from");
+        }
+
+        [Test]
+        public void ATargetPlacedLayerStillHasNowhereToTravelFrom()
+        {
+            var layer = Sprite();
+            layer.place = "target-centre";
+            layer.travelSeconds = 0.2f;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("travels but is placed on target-centre", message);
+            StringAssert.Contains("leaves the caster or the sky", message);
+        }
+
+        [Test]
+        public void OrientPathWithoutTravelIsRefused()
+        {
+            var layer = Sprite();
+            layer.orient = "path";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors orient 'path' but does not travel", message);
+        }
+
+        [Test]
+        public void ArtDegreesWithoutOrientPathIsRefused()
+        {
+            var layer = Sprite();
+            layer.artDegrees = 26f;
+
+            string message = Only(With(layer));
+            StringAssert.Contains("authors artDegrees 26 but not orient 'path'", message);
+        }
+
+        [Test]
+        public void AnUnknownOrientationIsRefusedAndTheKnownOnesAreListed()
+        {
+            var layer = Sprite();
+            layer.place = "caster";
+            layer.travelSeconds = 0.2f;
+            layer.orient = "tangent";
+
+            string message = Only(With(layer));
+            StringAssert.Contains("vfx.layers[0].orient 'tangent' is not an orientation", message);
+            StringAssert.Contains("none, path", message);
+        }
+
+        // ---- the single block's own fit ----------------------------------------
+
+        [Test]
+        public void ASingleBlockMayFitItsTarget()
+        {
+            var vfx = new SpellPresentation { path = "Spells/frost_flare", fit = "target" };
+            CollectionAssert.IsEmpty(Problems(vfx));
+        }
+
+        [Test]
+        public void ASingleBlockFitOnACasterAnchorIsRefused()
+        {
+            var vfx = new SpellPresentation { path = "Spells/frost_flare", anchor = "caster", fit = "target" };
+
+            string message = Only(vfx);
+            StringAssert.Contains("authors fit 'target' on anchor 'caster'", message);
+        }
+
+        [Test]
+        public void ASingleBlockFitBesideLayersIsRefused()
+        {
+            var vfx = With(Sprite());
+            vfx.fit = "target";
+
+            string message = Only(vfx);
+            StringAssert.Contains("single-block fit beside layers", message);
         }
 
         [Test]

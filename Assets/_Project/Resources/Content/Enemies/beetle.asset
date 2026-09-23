@@ -49,6 +49,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1

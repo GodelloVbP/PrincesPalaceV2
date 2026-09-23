@@ -610,6 +610,14 @@ namespace PrincesPalace
             // the same two values every frame rather than re-deriving them
             // (a follower-chain PositionOf/VelocityOf read among them) on
             // every one of them. See the Drop struct's own header.
+            // FITTED TO THE BODY, the whole burst scales about its source:
+            // the offset it is born at, how far each drop flies and how big it
+            // is drawn. The sim is linear in launch speed and gravity, so
+            // scaling the displacement it returns is the same as scaling both
+            // -- done here, on the way out, so SpellEmitterSim stays a closed
+            // form over authored numbers. 1 for every unfitted emitter.
+            float fit = instance.Fit > 0f ? instance.Fit : 1f;
+
             var source = SourceOf(cast, instance);
             while (drops.Count < total)
             {
@@ -618,7 +626,7 @@ namespace PrincesPalace
                 if (birth > seconds) break;
 
                 var p0 = SpellPerformance.PositionOf(source, birth)
-                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy);
+                         + new UiVec(spec.sourceDx * instance.DrawFacing, spec.sourceDy) * fit;
                 var v0 = SpellEmitterSim.LaunchOf(spec, seed, particle, instance.DrawFacing)
                          + SpellPerformance.VelocityOf(source, birth) * spec.inherit;
 
@@ -642,9 +650,10 @@ namespace PrincesPalace
                     continue;
                 }
 
+                var at = held.P0 + (drop.Position - held.P0) * fit;
                 particleRenderer.Show(member, frames[drop.Frame],
-                    new Vector2(drop.Position.X, drop.Position.Y),
-                    ParticleSize * drop.Scale, drop.Alpha, drop.Rotation);
+                    new Vector2(at.X, at.Y),
+                    ParticleSize * drop.Scale * fit, drop.Alpha, drop.Rotation);
             }
         }
 

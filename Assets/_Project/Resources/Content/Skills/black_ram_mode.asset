@@ -39,6 +39,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1
@@ -81,6 +82,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1
@@ -108,7 +110,7 @@ MonoBehaviour:
             dy: 0
             scale: 1
             size: 260
-            fit: 
+            fit: target
             facing: auto
             sort: effects
             align: 
@@ -119,6 +121,8 @@ MonoBehaviour:
             aspect: 0
             travelSeconds: 0
             travelDelay: 0
+            orient: 
+            artDegrees: 0
             emitter:
               path: 
               rate: 0

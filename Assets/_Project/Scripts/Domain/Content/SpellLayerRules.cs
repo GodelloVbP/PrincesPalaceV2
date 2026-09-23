@@ -112,6 +112,27 @@ namespace PrincesPalace.Domain.Content
                              "Author the ground layer as a layer with sort 'ground' instead.");
             }
 
+            // THE SINGLE BLOCK'S OWN `fit`, carried onto the layer the adapter
+            // builds. A layered block says it per layer, where it can differ
+            // between a projectile and its splash; on the block as well it
+            // would be a second home for the same answer.
+            if (!SpellFitNames.IsKnown(vfx.fit))
+            {
+                problems.Add($"{label}: vfx.fit '{vfx.fit}' is not a sizing rule. " +
+                             $"Known: {string.Join(", ", SpellFitNames.All)}.");
+            }
+            else if (layers.Length > 0 && vfx.Fit != SpellFit.None)
+            {
+                problems.Add($"{label}: vfx authors the single-block fit beside layers. " +
+                             "Author fit on each layer instead.");
+            }
+            else if (vfx.Fit == SpellFit.Target &&
+                     (vfx.Anchor == SpellAnchor.Caster || vfx.Anchor == SpellAnchor.CasterCentre))
+            {
+                problems.Add($"{label}: vfx authors fit 'target' on anchor '{vfx.anchor.Trim()}', which " +
+                             "never touches a target's body. Only a target or travelling anchor does.");
+            }
+
             if (vfx.hitCueSeconds < 0f)
             {
                 problems.Add($"{label}: vfx.hitCueSeconds {Num(vfx.hitCueSeconds)} cannot be negative.");
@@ -204,6 +225,12 @@ namespace PrincesPalace.Domain.Content
             {
                 problems.Add($"{at}.fit '{layer.fit}' is not a sizing rule. " +
                              $"Known: {string.Join(", ", SpellFitNames.All)}.");
+            }
+
+            if (!SpellOrientNames.IsKnown(layer.orient))
+            {
+                problems.Add($"{at}.orient '{layer.orient}' is not an orientation. " +
+                             $"Known: {string.Join(", ", SpellOrientNames.All)}.");
             }
         }
 
@@ -425,12 +452,34 @@ namespace PrincesPalace.Domain.Content
             // footprint off, so it is refused here rather than silently doing
             // nothing, the same rule this file already applies to `size` and
             // `align` on placements that cannot use them.
+            //
+            // A TRAVELLING LAYER RESOLVES ONE TOO -- it arrives on a single
+            // struck body and is fanned out per target for exactly that reason
+            // (SpellLayer.IsPerTarget), so a bolt that should land at the size
+            // of what it hits may say so.
             if (SpellFitNames.IsKnown(layer.fit) && layer.Fit == SpellFit.Target &&
-                !SpellPlaceNames.PerTarget(layer.Place))
+                !SpellPlaceNames.PerTarget(layer.Place) && !layer.Travels)
             {
                 problems.Add($"{at} authors fit 'target' but is placed on {layer.place.Trim()}, which " +
-                             "resolves no single struck target to read a footprint off. Only target and " +
-                             "target-centre do.");
+                             "resolves no single struck target to read a footprint off. Only target, " +
+                             "target-centre, sky or a travelling layer do.");
+            }
+
+            // A STILL BOX HAS NO LINE OF FLIGHT to turn onto, and an unturned
+            // layer has no use for the direction its drawing points -- both
+            // refused rather than left inert, the rule `align` and `size`
+            // already follow.
+            if (SpellOrientNames.IsKnown(layer.orient) && layer.Orient == SpellOrient.Path && !layer.Travels)
+            {
+                problems.Add($"{at} authors orient 'path' but does not travel, so there is no flight for " +
+                             "it to point along. Give it travelSeconds or remove orient.");
+            }
+
+            if (layer.artDegrees != 0f &&
+                !(SpellOrientNames.IsKnown(layer.orient) && layer.Orient == SpellOrient.Path))
+            {
+                problems.Add($"{at} authors artDegrees {Num(layer.artDegrees)} but not orient 'path', so " +
+                             "nothing reads it. Add orient 'path' or remove it.");
             }
 
             // ONLY A FORMATION HAS A LINE TO LIE ALONG. Every other placement
@@ -494,10 +543,10 @@ namespace PrincesPalace.Domain.Content
                     problems.Add($"{at} travels, but an emitter has no box to move -- its particles detach " +
                                  "the instant they exist. Place it on the travelling layer instead.");
                 }
-                else if (!SpellPlaceNames.OnCaster(layer.Place))
+                else if (!SpellPlaceNames.CanLaunch(layer.Place))
                 {
                     problems.Add($"{at} travels but is placed on {layer.place.Trim()}, so it has nowhere to " +
-                                 "travel from. A projectile leaves the caster.");
+                                 "travel from. A projectile leaves the caster or the sky.");
                 }
             }
             else if (layer.travelDelay > 0f)

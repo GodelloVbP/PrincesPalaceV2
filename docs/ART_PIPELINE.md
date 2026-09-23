@@ -678,6 +678,7 @@ dissolve and all, to `tools/screenshots/vfx/{id}.gif`.
 | `impactFrame` | `3` | Which frame (from 1) the blow lands on. The damage number, the flash and the hit-stop are all timed to it. |
 | `anchor` | `target` | Where the art happens — see below. |
 | `size` | `380` | Square box the art is fitted into, in reference-frame units. |
+| `fit` | `none` | `target` scales `size` by the struck body (see `fit: target` under Layers). |
 | `departFrame` | `0` | `travel` only: which frame (from 1) it leaves the caster on. Holds the wind-up in place instead of letting it drift. |
 | `impactX` | unset | Where across its own frame the sheet actually strikes, `0`..`1` from the LEFT. |
 | `impactY` | unset | Where up its own frame the sheet actually strikes, `0`..`1` from the BOTTOM. |
@@ -818,7 +819,7 @@ gameplay; a layered block cannot, which is the point of the format.
 | --- | --- | --- |
 | `id` | — | Name, needed only when another layer rides it through `place: layer:<id>`. |
 | `render` | refused blank | `sprite` (an animated folder), `still` (one frame of a folder, held), `emitter` (ballistic particles). |
-| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, or `layer:<id>`. |
+| `place` | refused blank | `caster`, `caster-centre`, `target`, `target-centre`, `formation`, `sky`, or `layer:<id>`. |
 | `at` | `release` | `release` (the beat opens), `arrival` (the cast's projectile lands), `hit` (the authoritative cue). |
 | `offset` | `0` | Seconds added to `at`. |
 | `path` | — | `Resources`-relative FOLDER of `f0..fN`, for `sprite` and `still` alike. |
@@ -827,12 +828,14 @@ gameplay; a layered block cannot, which is the point of the format.
 | `startFrame` | `1` | Which frame of the folder it opens on, counting from 1. Range-checked against the folder. |
 | `until` | `once` | `once`, `loop`, `hold`. Describes what the sheet does while it is alive, never how long it lives. |
 | `fade` | `0` | Seconds of alpha ramp after the layer's end. Capped at `SpellLayerRules.MaxFadeSeconds`. |
-| `travelSeconds` | `0` | Non-zero makes the layer a projectile, crossing from its anchor to the target. |
+| `travelSeconds` | `0` | Non-zero makes the layer a projectile, crossing from its anchor to the target. Only a caster word or `sky` has somewhere to leave from. |
+| `orient` | `none` | `path` turns the drawing so `artDegrees` lies along its flight, with the impact point riding the line from launch to aim. Travelling layers only. |
+| `artDegrees` | `0` | Which way the drawing points as painted, degrees anticlockwise from +x. Read only by `orient: path`. |
 | `travelDelay` | `0` | The wind-up held at the caster before the motion starts. |
 | `follow` | `false` | Re-read the anchor every tick rather than sampling it once when the layer opens. |
 | `dx` / `dy` | `0` | Local offset from the anchor, in reference-frame units. `dx` mirrors with the cast. |
 | `size` / `scale` / `aspect` | `380` / `1` / square | The box the art is fitted into. `place: formation` measures its own span and ignores `size`. |
-| `fit` | `none` | `none` (the authored `size`, verbatim) or `target` (multiply by the struck target's own stage footprint). Refused everywhere but `target`/`target-centre` -- see below. |
+| `fit` | `none` | `none` (the authored `size`, verbatim) or `target` (multiply by the struck target's visible body over a front-rank Giant Rat's). Legal on `target`, `target-centre`, `sky` and travelling layers -- see below. The single block takes it too. |
 | `impactX` / `impactY` | unset | The same correction the single block's take, per layer. `formation` is exempt from `impactX`. |
 | `sort` | `effects` | `ground` (behind the racks) or `effects` (over the HUD, under the damage numbers). |
 | `facing` | `auto` | `auto` takes the cast's facing, `none` never mirrors, `reverse` flips it. |
@@ -859,22 +862,42 @@ box onto it; the sheet's `impactY` correction then moves along the box's own up
 rather than along screen +Y. The geometry is `Domain.Stage.FormationSpan` and is
 pinned with literals by `FormationSpanTests`.
 
+**Every target-side placement aims at the visible body, not the slot.** A slot
+is the sprite's canvas, cut for the actor's tallest pose: 62 empty rows over
+the golem's head, a rat sitting 38px left of its canvas centre. `target`,
+`target-centre`, a traveller's arrival, `sky` and a `formation` span all read
+`Domain.Stage.TargetBody` instead -- the idle drawing's opaque box (measured
+off its alpha, cached per fight), placed through the slot's origin at its
+resting scale. `target-centre` is the middle of that box; `target` is its
+middle column on the authored ground line. An actor with no readable art falls
+back to the slot rect. Pinned with literals by `TargetBodyTests`.
+
 **`fit: target` is a multiplier, not a replacement.** `size` (or the
 `DefaultSize` fallback) is still the base number; `fit: target` multiplies it
-by the struck target's own composed stage scale -- the same number
-`AnchorOne` writes onto that target's slot, its rank's depth curve times its
-authored `stageScale` -- read off the target's resting pose (`StageActorAnimator
-.BaseScale`) rather than its live one, for the identical reason `ContactBoxFor`
-and `StageStandOff`'s `ScaleOf` already read that pose instead of a squashing
-`localScale`. Thorn Tithe's ritual authored a fixed 350 and read as a small
-patch on the Elder Treant (`stageScale` 1.45): `fit: target` is the field, not
-a Thorn Tithe special case, so any layer of any spell may author it. Legal
-only on `target` and `target-centre` -- the two placements that resolve one
-struck body -- and refused everywhere else (`formation` measures a span over
-every struck body at once and has no single target to read a footprint off;
-`caster`/`caster-centre` without travel never touch a target's rect either),
-the same "refused rather than silently doing nothing" rule `align` and `size`
-already follow off a formation layer.
+by the struck body's larger extent (width or height, on stage) over
+`TargetBody.ReferenceExtent` = 280, which is a lone front-rank Giant Rat. So an
+authored size keeps meaning "the box on a rat", a back-rank rat gets a little
+less, and an Elder Treant gets 1.63x. Measured off the body rather than off
+the old stageScale multiplier, which ignored how the art is proportioned, and
+off the RESTING scale, so a squash mid-hit does not leak into the size. An
+emitter fitted this way scales its particle size, launch speed and source
+offset by the same factor. Legal wherever one struck body is resolved --
+`target`, `target-centre`, `sky`, and any travelling layer -- and refused
+everywhere else (`formation` measures its own span; the caster words never
+touch a target). The single-block `vfx` takes `fit` too, refused on a caster
+anchor. Every per-target layer in `skills.json` authors it.
+
+**`sky`: a called strike amasses in the air, then fires.** `place: sky` is the
+point halfway across from where the cast leaves the caster to the target's
+middle, `SpellFlight.SkyLift` (110) above the taller of the two bodies, capped
+at `SpellFlight.SkyCeiling` (240) so a treant does not push it into the HUD.
+Per target. A non-travelling `sky` layer is drawn centred on it (the amass); a
+travelling one leaves from it and arrives at the target's middle (the shot).
+Pair the shot with `orient: path` and the sheet's painted direction as
+`artDegrees`: the box is turned after the mirror, and the stated
+`impactX`/`impactY` (the spear's tip, not its middle) rides the line from the
+air point to the aim. Winter's Rebuke, Blackglass Spear and Crownfall are
+authored this way; the geometry is pinned by `SpellFlightTests`.
 
 **Bloom is reachable and nothing reaches it without `glow`.** Every
 precondition is already true -- `supportsHDR` on the pipeline asset, `render

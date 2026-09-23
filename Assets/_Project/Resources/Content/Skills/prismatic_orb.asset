@@ -42,6 +42,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1
@@ -84,6 +85,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1
@@ -132,6 +134,7 @@ MonoBehaviour:
         impactFrame: 3
         anchor: 
         size: 380
+        fit: 
         departFrame: 0
         impactX: -1
         impactY: -1
@@ -170,6 +173,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -221,6 +226,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.18
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -272,6 +279,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -323,6 +332,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_earth_drops
             rate: 10
@@ -371,7 +382,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 260
-          fit: 
+          fit: target
           facing: auto
           sort: effects
           align: 
@@ -382,6 +393,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -422,7 +435,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
-          fit: 
+          fit: target
           facing: 
           sort: effects
           align: 
@@ -433,6 +446,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_earth_drops
             rate: 0
@@ -474,6 +489,7 @@ MonoBehaviour:
         impactFrame: 3
         anchor: 
         size: 380
+        fit: 
         departFrame: 0
         impactX: -1
         impactY: -1
@@ -512,6 +528,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -563,6 +581,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -614,6 +634,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -665,6 +687,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_water_drops
             rate: 40
@@ -705,7 +729,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 260
-          fit: 
+          fit: target
           facing: auto
           sort: effects
           align: 
@@ -716,6 +740,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -756,7 +782,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
-          fit: 
+          fit: target
           facing: 
           sort: effects
           align: 
@@ -767,6 +793,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_water_drops
             rate: 0
@@ -800,6 +828,7 @@ MonoBehaviour:
         impactFrame: 3
         anchor: 
         size: 380
+        fit: 
         departFrame: 0
         impactX: -1
         impactY: -1
@@ -838,6 +867,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -889,6 +920,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -940,6 +973,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -991,6 +1026,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_fire_drops
             rate: 24
@@ -1031,7 +1068,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 230
-          fit: 
+          fit: target
           facing: auto
           sort: effects
           align: 
@@ -1042,6 +1079,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -1082,7 +1121,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
-          fit: 
+          fit: target
           facing: 
           sort: effects
           align: 
@@ -1093,6 +1132,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_fire_drops
             rate: 0
@@ -1126,6 +1167,7 @@ MonoBehaviour:
         impactFrame: 3
         anchor: 
         size: 380
+        fit: 
         departFrame: 0
         impactX: -1
         impactY: -1
@@ -1164,6 +1206,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -1215,6 +1259,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0.25
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -1266,6 +1312,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -1317,6 +1365,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_wind_drops
             rate: 26
@@ -1357,7 +1407,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 300
-          fit: 
+          fit: target
           facing: auto
           sort: effects
           align: 
@@ -1368,6 +1418,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: 
             rate: 0
@@ -1408,7 +1460,7 @@ MonoBehaviour:
           dy: 0
           scale: 1
           size: 0
-          fit: 
+          fit: target
           facing: 
           sort: effects
           align: 
@@ -1419,6 +1471,8 @@ MonoBehaviour:
           aspect: 0
           travelSeconds: 0
           travelDelay: 0
+          orient: 
+          artDegrees: 0
           emitter:
             path: Spells/prismatic_orb_wind_drops
             rate: 0

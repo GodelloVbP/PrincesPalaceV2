@@ -42,6 +42,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1
@@ -53,23 +54,129 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: ritual
+      - id: amass
         render: sprite
-        place: target-centre
+        place: sky
         follow: 0
         at: release
         offset: 0
         path: Spells/crownfall
-        seconds: 0.72
+        seconds: 0.36
+        fps: 14
+        startFrame: 1
+        until: once
+        fade: 0.08
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 300
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.16
+        glow: 1.2
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: spike
+        render: still
+        place: sky
+        follow: 0
+        at: release
+        offset: 0.34
+        path: Spells/crownfall
+        seconds: 0
         fps: 0
-        startFrame: 0
+        startFrame: 6
+        until: 
+        fade: 0
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 300
+        fit: target
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.2
+        impactX: 0.485
+        impactY: 0.16
+        aspect: 0
+        travelSeconds: 0.16
+        travelDelay: 0
+        orient: path
+        artDegrees: -90
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: shatter
+        render: sprite
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: Spells/crownfall
+        seconds: 0
+        fps: 14
+        startFrame: 7
         until: once
         fade: 0.14
         dx: 0
         dy: 0
         scale: 1
         size: 340
-        fit: 
+        fit: target
         facing: none
         sort: effects
         align: 
@@ -80,6 +187,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: 
           rate: 0
@@ -120,7 +229,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
-        fit: 
+        fit: target
         facing: 
         sort: effects
         align: 
@@ -131,6 +240,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: Spells/crownfall_particles
           rate: 0
@@ -156,7 +267,7 @@ MonoBehaviour:
           seed: 873
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.36
+      hitCueSeconds: 0.5
     SortOrder: 10
     Status: 0
     HasStatus: 0
@@ -186,6 +297,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1

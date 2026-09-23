@@ -32,6 +32,7 @@ namespace PrincesPalace.Domain.Tests
             impactFrame = 7,
             anchor = "travel-centre",
             size = 512f,
+            fit = "target",
             departFrame = 3,
             impactX = 0.61f,
             impactY = 0.42f,
@@ -73,6 +74,8 @@ namespace PrincesPalace.Domain.Tests
                     impactY = 0.5f,
                     aspect = 1.5f,
                     travelSeconds = 0.25f,
+                    orient = "path",
+                    artDegrees = 26f,
                     travelDelay = 0.05f,
                     emitter = new SpellEmitter
                     {

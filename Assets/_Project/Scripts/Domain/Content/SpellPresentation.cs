@@ -82,6 +82,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into, in reference-frame units; 0 means the default size.")]
         public float size = DefaultSize;
 
+        // THE SAME WORD A LAYER TAKES (SpellLayer.fit), carried onto the layer
+        // ToLayers builds, so a single-block spell can size to the body it
+        // lands on without being re-authored as layers -- which would also
+        // re-derive its hit cue from seconds, retiming it.
+        [ContentDoc("What `size` scales against, as on a layer: none (verbatim) or target (the struck target's visible body over TargetBody.ReferenceExtent). Blank means none. Refused on a caster anchor, and beside layers.")]
+        public string fit = "";
+
         // WHICH FRAME THE EFFECT LEAVES ON, for a fromCaster sheet. 1-based
         // like impactFrame, and 0 means "from the very first frame".
         //
@@ -264,6 +271,7 @@ namespace PrincesPalace.Domain.Content
         // The parsed anchor. Case-insensitive, because "Travel" and "travel"
         // are the same intent and refusing one of them teaches nothing.
         public SpellAnchor Anchor => SpellAnchorNames.Parse(anchor);
+        public SpellFit Fit => SpellFitNames.Parse(fit);
 
         // THE ONE THING A CONSUMER ASKS BEFORE DRAWING ANYTHING.
         public bool HasAnimation => !string.IsNullOrEmpty(path) && seconds > 0f;
@@ -452,6 +460,7 @@ namespace PrincesPalace.Domain.Content
                 fps = 0f,
                 until = "once",
                 size = size,
+                fit = fit,
                 impactX = impactX,
                 impactY = impactY,
                 sort = "effects",
@@ -542,6 +551,7 @@ namespace PrincesPalace.Domain.Content
             impactFrame = impactFrame,
             anchor = anchor,
             size = size,
+            fit = fit,
             departFrame = departFrame,
             impactX = impactX,
             impactY = impactY,

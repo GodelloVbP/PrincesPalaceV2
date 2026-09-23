@@ -2837,3 +2837,38 @@ hidden desktop (`docs/INCIDENTS.md`, "Batchmode Unity steals focus").
 Candidate fix: route graphics launches through the hidden desktop too, proven
 with `tools/focus_check.ps1`. That proof run itself pops windows, so it needs
 scheduling for when the owner is away.
+
+## Findings from the spell target-bounds pass, 2026-09-23
+
+### 205. OWNER'S CALL: a sky strike at a tall target starts under the combat log
+
+`place: sky` sits 110 above the taller body, capped at 240. An Elder Treant's
+head reaches ~240 in the front rank, so Winter's Rebuke / Blackglass Spear /
+Crownfall amass at the cap and the spear's upper end crosses the bottom lines
+of the combat-log bark (capture: `spell_winters_rebuke_vs_treant_after.png`).
+Owner: lower `SpellFlight.SkyCeiling`, or accept the overlap for tall mobs.
+
+### 206. OWNER'S CALL: formation spans and every target aim moved from canvas to drawn body
+
+Cinderfault's fault and Spore Cloud now span the struck bodies' opaque edges,
+not their canvases -- a lone rat's fault is ~225 canvas px shorter. Every
+`target`/`target-centre` aim moved to the drawn body's middle (the rat's is
+38.5 canvas px left of its canvas centre). Thorn Tithe on a front-rank rat is
+now 350 (its comment's stated intent) where the old stageScale fit gave ~250.
+Owner: look at Cinderfault on one rat and on a full rank.
+
+### 207. RECORDED: spell previews anchor sample 0 at the press, so the file labels run early
+
+`PreviewCaptureTests.CaptureSpellCast` reports "sample 0 = the frame the cast
+first drew (0 frames after the press)" for every sheep spell tried: something
+is already drawn at the press, so the release anchor never waits. The damage
+popup lands ~8 samples after the scheduled `_impact`, so `_impact.png` shows
+the moment before the blow and `_tail.png` shows the blow. Unfixed.
+
+### 208. RECORDED: caster-side rituals and the house melee contact do not size to anyone
+
+Gilded Aegis and Borrowed Moment are placed `caster-centre` (the ritual draws
+on the caster, not on the ally they target), Prismatic Orb's projectile is
+sized for the caster's hand, and `PlayContactFx` sizes by stage depth only.
+None of them take `fit: target`. Owner: say if the ally-target rituals should
+move onto the ally's body.

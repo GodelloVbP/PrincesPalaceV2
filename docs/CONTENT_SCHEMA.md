@@ -436,7 +436,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `id` | string | `""` | Stable name for this layer; required only when another layer references it through place 'layer:<id>'. |  |
 | `render` | string | `""` | What draws: sprite (an animated folder), still (one frame of a folder) or emitter (ballistic particles). No default -- a blank is refused. | Sprite, Still, Emitter |
-| `place` | string | `""` | Where it belongs: caster, caster-centre, target, target-centre, formation, or 'layer:<id>' to ride another layer. No default -- a blank is refused. | Caster, CasterCentre, Target, TargetCentre, Formation, Layer |
+| `place` | string | `""` | Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), or 'layer:<id>' to ride another layer. No default -- a blank is refused. | Caster, CasterCentre, Target, TargetCentre, Formation, Layer, Sky |
 | `follow` | bool | `false` | Re-read the anchor every tick (true) rather than sampling its position once when the layer opens (false). |  |
 | `at` | string | `""` | When it starts: release (the beat opens), arrival (the cast's projectile lands) or hit (the authoritative impact cue). Blank means release. | Release, Arrival, Hit |
 | `offset` | float | `0` | Seconds added to `at`. |  |
@@ -450,7 +450,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `dy` | float | `0` | Local offset from the anchor, in reference-frame units. |  |
 | `scale` | float | `1` | Uniform scale applied on top of the fitted box. |  |
 | `size` | float | `0` | The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span. |  |
-| `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's own stage footprint -- its rank depth times its authored stageScale). Blank means none. Legal only where a single struck target is resolved: place target or target-centre. | None, Target |
+| `fit` | string | `""` | What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, or a layer that travels. | None, Target |
 | `facing` | string | `""` | Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto. | Auto, None, Reverse |
 | `sort` | string | `""` | Draw band: ground (behind the racks) or effects (over the HUD, under the damage numbers). Blank means effects. | Ground, Effects |
 | `align` | string | `""` | How a formation-placed layer lies on the rank: level (axis-aligned, the default) or span (rotated along the line from the leftmost struck body to the rightmost). Refused on any other placement. | Level, Span |
@@ -461,6 +461,8 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `aspect` | float | `0` | Width-over-height of the box; 0 means take the sheet's own frame aspect. |  |
 | `travelSeconds` | float | `0` | Seconds this layer takes to cross from its anchor to the target, departure to arrival; 0 means it does not travel. |  |
 | `travelDelay` | float | `0` | Seconds after this layer starts before its motion begins; the wind-up held at the caster. |  |
+| `orient` | string | `""` | Projectile orientation: none (drawn as painted) or path (turned so artDegrees lies along the flight, with the impact point riding the line from launch to aim). Blank means none. Legal only on a layer that travels. | None, Path |
+| `artDegrees` | float | `0` | The direction the drawing points as painted, in degrees counter-clockwise from +x (right); read only by orient 'path'. |  |
 | `emitter` | SpellEmitter (below) | (zero -- see SpellEmitter) | Ballistic particle settings; inert unless render is 'emitter'. |  |
 
 ### `SpellPresentation`
@@ -472,6 +474,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `impactFrame` | int | `3` | Which frame (1-based) the spell actually lands on. |  |
 | `anchor` | string | `""` | Where the effect happens: a SpellAnchor name (Target, Caster, ...), parsed case-insensitively; unrecognised falls back to Target. | Target, Caster, TargetCentre, CasterCentre, Travel, TravelCentre |
 | `size` | float | `380` | The square box the art is fitted into, in reference-frame units; 0 means the default size. |  |
+| `fit` | string | `""` | What `size` scales against, as on a layer: none (verbatim) or target (the struck target's visible body over TargetBody.ReferenceExtent). Blank means none. Refused on a caster anchor, and beside layers. | None, Target |
 | `departFrame` | int | `0` | Which frame (1-based) a from-caster effect leaves on; 0 means from the first frame. |  |
 | `impactX` | float | `-1` | Where the blow lands inside the sheet, as a fraction from the left edge; -1 means unauthored (use the measured fallback). |  |
 | `impactY` | float | `-1` | Where the blow lands inside the sheet, as a fraction from the bottom edge; -1 means unauthored (use the measured fallback). |  |

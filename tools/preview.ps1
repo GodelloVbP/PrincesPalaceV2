@@ -51,6 +51,11 @@ param(
     # elements drawn, the alternative to this flag was reordering elements[],
     # capturing, and putting the order back (AUDIT #107).
     [string]$Element = "",
+    # Which enemies a -Spell capture is cast at, as comma-separated
+    # enemies.json ids ("rat" or "rat,treant,golem"). Empty keeps PreviewFight's
+    # rule: the first enemies with art in sort order. For a spell that sizes to
+    # its target, look at it on a small body and on a tall one.
+    [string]$Versus = "",
 
     # The character to look at, by its characters.json id. Fields them alone
     # so the stage, the map figure and the dossier are all unambiguously them.
@@ -424,6 +429,19 @@ function Invoke-SpellPreview {
         # capture overwrite the last.
         $prefix = "spell_$resolved"
         if ($chosenElement -ne "") { $prefix = "$prefix`_$($chosenElement.ToLowerInvariant())" }
+
+        # ALWAYS SET, empty included, for the reason -Element's variable is:
+        # an inherited value from an earlier shell would cast at the wrong mob.
+        $versusIds = @()
+        foreach ($one in ($Versus -split ",")) {
+            $trimmed = $one.Trim()
+            if ($trimmed -eq "") { continue }
+            $known = Resolve-ContentId -Id $trimmed -File "enemies.json" -Collection "enemies" -Noun "enemy"
+            if (-not $known) { return 2 }
+            $versusIds += $known
+        }
+        $env:PP_PREVIEW_VERSUS = ($versusIds -join ",")
+        if ($versusIds.Count -gt 0) { $prefix = "$prefix`_vs_" + ($versusIds -join "-") }
 
         return (Invoke-PreviewCapture -Variable "PP_PREVIEW_SPELL" -Value $resolved -Prefix $prefix `
             -ExtraVariable "PP_PREVIEW_ELEMENT" -ExtraValue $chosenElement)

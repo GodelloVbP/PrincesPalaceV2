@@ -2,7 +2,7 @@ using System;
 
 namespace PrincesPalace.Domain.Content
 {
-    // THE SEVEN WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
+    // THE EIGHT WORDS A LAYER IS AUTHORED IN, each as a closed enum with a
     // Parse/IsKnown pair beside it.
     //
     // The shape is SpellAnchorNames' exactly (SpellAnchor.cs), and it is copied
@@ -155,6 +155,21 @@ namespace PrincesPalace.Domain.Content
         // "does this repeat per enemy" is answered by the thing being followed
         // rather than by a rule somebody has to remember.
         Layer,
+
+        // IN THE AIR BETWEEN THE CASTER AND ONE STRUCK TARGET: horizontally
+        // halfway from the caster's cast point to the target's visible body,
+        // raised above the taller of the two (Domain.Stage.SpellFlight.SkyPoint). The
+        // place a called strike amasses before it is fired, which no other
+        // word could say -- every one of them is ON a body, so Winter's Rebuke
+        // formed at the rat's feet (owner, 2026-09-23).
+        //
+        // PER TARGET, because the midpoint is a function of which target: a
+        // volley at three enemies amasses three times, each over its own line
+        // of fire. With travelSeconds it is the projectile's ORIGIN and the
+        // layer flies to the target's middle -- the same "a travelling layer
+        // leaves its own place and arrives on the target" rule the caster
+        // words follow.
+        Sky,
     }
 
     public static class SpellPlaceNames
@@ -195,13 +210,23 @@ namespace PrincesPalace.Domain.Content
         // absent on purpose: it inherits its source's scope and answering here
         // would be a second, disagreeing home for that rule.
         public static bool PerTarget(SpellPlace place) =>
-            place == SpellPlace.Target || place == SpellPlace.TargetCentre;
+            place == SpellPlace.Target || place == SpellPlace.TargetCentre || place == SpellPlace.Sky;
 
+        // Whether a travelling layer on this word has somewhere to LEAVE from:
+        // the caster's own body, or the air it amassed in. Every other word is
+        // already on the target, and a flight from the target to the target is
+        // no flight.
+        public static bool CanLaunch(SpellPlace place) => OnCaster(place) || place == SpellPlace.Sky;
+
+        // `sky` IS CENTRED: a strike called down out of the air arrives in the
+        // target's middle, not at its feet, and a non-travelling sky layer is
+        // drawn centred on its own point because there is no floor up there
+        // for a standing rule to measure against.
         public static bool Centred(SpellPlace place) =>
-            place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre;
+            place == SpellPlace.CasterCentre || place == SpellPlace.TargetCentre || place == SpellPlace.Sky;
 
         public static string[] All =>
-            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "layer:<id>" };
+            new[] { "caster", "caster-centre", "target", "target-centre", "formation", "sky", "layer:<id>" };
 
         private static SpellPlace Lookup(string name, SpellPlace fallback)
         {
@@ -219,6 +244,8 @@ namespace PrincesPalace.Domain.Content
                 SpellWord.Is(name, "target-center")) return SpellPlace.TargetCentre;
 
             if (SpellWord.Is(name, "formation")) return SpellPlace.Formation;
+
+            if (SpellWord.Is(name, "sky")) return SpellPlace.Sky;
 
             return fallback;
         }
@@ -399,13 +426,13 @@ namespace PrincesPalace.Domain.Content
     // on a target authoring stageScale 1.45, because nothing before this
     // multiplied the box by how big that target actually draws.
     //
-    // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target` and `target-centre`
-    // are the two placements PlaceOne resolves against one struck combatant's
-    // own rect; `formation` measures its own span from every struck body at
+    // ONLY WHERE A SINGLE STRUCK BODY IS RESOLVED. `target`, `target-centre`
+    // and `sky` are the placements PlaceOne resolves against one struck
+    // combatant, and a travelling layer arrives on one; `formation` measures its own span from every struck body at
     // once (there is no single "the target" to read a footprint off), and
     // `caster`/`caster-centre` without travel never touch a target's rect
-    // either -- SpellLayerRules.CheckPlacement refuses `fit: target` on all
-    // three for the same reason it refuses `size` on a formation layer: a word
+    // either -- SpellLayerRules.CheckPlacement refuses `fit: target` on those
+    // for the same reason it refuses `size` on a formation layer: a word
     // that would silently do nothing is refused rather than ignored.
     public enum SpellFit
     {
@@ -414,11 +441,18 @@ namespace PrincesPalace.Domain.Content
         None,
 
         // `size` (or SpellPresentation.DefaultSize) is multiplied by the
-        // struck target's own stage footprint -- the same composed scale
-        // AnchorOne writes onto that target's slot (its rank's depth curve
-        // times its authored stageScale), read off the target's own animator
-        // so a squash-stretch mid-hit cannot smuggle itself into an effect's
-        // size. See FightController.BoxForLayer.
+        // struck target's VISIBLE BODY: the larger of its opaque width and
+        // height as drawn on stage, over Domain.Stage.TargetBody.Reference
+        // Extent -- a front-rank Giant Rat -- so an authored size keeps
+        // meaning "the box on a rat" and every other body is proportionate to
+        // it. Measured off the idle drawing's alpha, not the sprite canvas:
+        // a canvas carries headroom for the tallest pose (123px over the
+        // golem's head), so a canvas-sized fit was a padding-sized fit.
+        // Through the body's on-stage size it already carries the rank's
+        // depth curve and the authored stageScale, read off the RESTING pose
+        // so a squash mid-hit cannot smuggle itself into an effect's size.
+        // An emitter fitted this way scales its particles, their speeds and
+        // their source offset by the same factor. See FightController.BodyOf.
         Target,
     }
 
@@ -437,6 +471,46 @@ namespace PrincesPalace.Domain.Content
 
             if (SpellWord.Is(name, "none")) return SpellFit.None;
             if (SpellWord.Is(name, "target")) return SpellFit.Target;
+            return fallback;
+        }
+    }
+
+    // ---- which way a projectile points ---------------------------------------
+
+    // A PROJECTILE'S DRAWING TURNED ONTO ITS OWN LINE OF FLIGHT. Before this a
+    // sheet flew at whatever angle it was painted, which is right for an orb
+    // and wrong for a spear: Winter's Rebuke's is painted pointing 26 degrees
+    // UP and the line from the air to the rat runs about 38 degrees DOWN.
+    //
+    // ONLY ON A LAYER THAT TRAVELS -- a still box has no line to lie along,
+    // and SpellLayerRules refuses the word elsewhere rather than letting it do
+    // nothing. The painted direction is the layer's own `artDegrees`.
+    public enum SpellOrient
+    {
+        // Drawn as painted. The default and every layer before this word.
+        None,
+
+        // Turned so the painted direction (`artDegrees`) lies along the flight,
+        // and the sheet's impact point rides the line from launch to aim
+        // rather than the box's centre. Domain.Stage.SpellFlight.Turn.
+        Path,
+    }
+
+    public static class SpellOrientNames
+    {
+        public static SpellOrient Parse(string name) => Lookup(name, SpellOrient.None);
+
+        public static bool IsKnown(string name) =>
+            string.IsNullOrWhiteSpace(name) || Lookup(name, (SpellOrient)(-1)) != (SpellOrient)(-1);
+
+        public static string[] All => new[] { "none", "path" };
+
+        private static SpellOrient Lookup(string name, SpellOrient fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return SpellOrient.None;
+
+            if (SpellWord.Is(name, "none")) return SpellOrient.None;
+            if (SpellWord.Is(name, "path")) return SpellOrient.Path;
             return fallback;
         }
     }

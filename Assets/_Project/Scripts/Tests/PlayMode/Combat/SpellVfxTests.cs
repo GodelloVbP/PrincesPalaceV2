@@ -508,7 +508,12 @@ namespace PrincesPalace.PlayModeTests
         // fit: target reads this exact number (composed with the slot's own
         // depth curve) off the struck target, and every other test in this
         // file wants the identical stage it always got.
-        private IEnumerator LoadFight(int enemyCount, float stageScale)
+        //
+        // SPRITE PATH AS A PARAMETER for the target-bounds suite: every other
+        // fixture enemy has no art, so BodyOf falls back to the slot rect and
+        // the placement it measures is exactly the one it always was. Only a
+        // real drawing has a body narrower than its canvas.
+        private IEnumerator LoadFight(int enemyCount, float stageScale, string spritePath = "")
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
@@ -546,7 +551,8 @@ namespace PrincesPalace.PlayModeTests
             var enemyKits = foes
                 .Select(f => new EnemyKit(new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name,
                     new StatBlock(), 5, 3, false,
-                    DamageType.Physical, DamageType.Physical, 0, stageScale: stageScale), false))
+                    DamageType.Physical, DamageType.Physical, 0, spritePath: spritePath,
+                    stageScale: stageScale), false))
                 .ToList();
 
             var session = new FightSession(encounter, new List<PlayerKit> { kit },
@@ -1291,6 +1297,144 @@ namespace PrincesPalace.PlayModeTests
                 "fit: target must scale the box by exactly the target's authored stageScale -- Thorn " +
                 "Tithe's ritual on an Elder Treant (stageScale 1.45) must cover its body, not read as a " +
                 "patch sized for a rat");
+        }
+
+        // ---- the target-bounds contract, against real art ----------------------
+
+        private CombatBeat OneLayerBeat(SpellLayer layer, float hitCue = 0.3f)
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation { layerFormat = 1, hitCueSeconds = hitCue, layers = new[] { layer } },
+            };
+        }
+
+        // THE BODY, NOT THE CANVAS AND NOT stageScale. Rat idle is 391 x 270
+        // opaque on a 616 x 306 canvas; treant idle is 348 x 441 on 646 x 478.
+        // Both alone in the front rank, so the rank depth cancels and the
+        // ratio is the larger opaque extent times stageScale:
+        //
+        //   body    441 x 1.45 / 391 = 1.6355
+        //   canvas  646 x 1.45 / 616 = 1.5206   (what a slot-rect fit gave)
+        //   old     1.45                         (the stageScale multiplier)
+        [UnityTest]
+        public IEnumerator FitTargetScalesByTheVisibleBodyOfRealArt()
+        {
+            var layer = new SpellLayer
+            {
+                render = "sprite", place = "target-centre", at = "release",
+                path = "Vfx/impact_burst", seconds = 0.24f, size = 200f, fit = "target",
+            };
+
+            yield return LoadFight(1, 1f, "Enemies/rat");
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(OneLayerBeat(layer));
+            yield return null;
+            float onRat = _player.Image.rectTransform.sizeDelta.x;
+
+            yield return LoadFight(1, 1.45f, "Enemies/treant");
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(OneLayerBeat(layer));
+            yield return null;
+            float onTreant = _player.Image.rectTransform.sizeDelta.x;
+
+            Assert.AreEqual(1.6355f, onTreant / onRat, 0.02f,
+                "fit: target must follow the struck body's drawn extent -- the treant's height, the " +
+                "rat's width -- not its canvas (1.52) and not its stageScale alone (1.45)");
+        }
+
+        [UnityTest]
+        public IEnumerator ATargetCentreLayerLandsOnTheDrawnBodyNotTheCanvas()
+        {
+            yield return LoadFight(1, 1f, "Enemies/rat");
+
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+            var slot = SlotOf("Front");
+
+            // 391 opaque of a 616 canvas: if the body is not clearly narrower
+            // than the slot, the art never loaded and this measures the
+            // fallback instead of the contract.
+            Assume.That(body.Width / slot.rect.width, Is.LessThan(0.8f * Mathf.Abs(slot.localScale.x)),
+                "fixture: the rat's art did not load, so this measures the slot fallback");
+
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(OneLayerBeat(new SpellLayer
+            {
+                render = "sprite", place = "target-centre", at = "release",
+                path = "Vfx/impact_burst", seconds = 0.24f,
+            }));
+            yield return null;
+
+            var at = _player.Image.rectTransform.anchoredPosition;
+            Assert.AreEqual(body.Centre.X, at.x, 1.5f, "target-centre missed the drawn body horizontally");
+            Assert.AreEqual(body.Centre.Y, at.y, 1.5f, "target-centre missed the drawn body vertically");
+            Assert.Greater(Mathf.Abs(at.x - SlotXOf("Front")), 10f,
+                "the rat is drawn 38.5px left of its canvas centre; an aim on the slot would not see that");
+        }
+
+        // AMASS IN THE AIR: between the two, above the target's head.
+        [UnityTest]
+        public IEnumerator ASkyLayerAmassesBetweenCasterAndTargetAboveTheTarget()
+        {
+            yield return LoadFight(1, 1f, "Enemies/rat");
+
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+            float casterX = SlotXOf("Shawn");
+
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(OneLayerBeat(new SpellLayer
+            {
+                render = "sprite", place = "sky", at = "release",
+                path = "Vfx/impact_burst", seconds = 0.24f,
+            }));
+            yield return null;
+
+            var at = _player.Image.rectTransform.anchoredPosition;
+            Assert.Greater(at.x, Mathf.Min(casterX, body.Centre.X) + 50f, "the air point is not between the two");
+            Assert.Less(at.x, Mathf.Max(casterX, body.Centre.X) - 50f, "the air point is not between the two");
+            Assert.Greater(at.y, body.Top + 50f, "the air point is not above the target -- it amassed on the body");
+        }
+
+        // FIRED FROM THE AIR, TIP FIRST. The tip is read back through the
+        // renderer's own transform -- mirror, rotation and all -- so this
+        // checks the drawn result, not SpellFlight's arithmetic a second time.
+        [UnityTest]
+        public IEnumerator AFiredSkyLayerTurnsOntoItsFlightAndLandsItsTipOnTheBody()
+        {
+            yield return LoadFight(1, 1f, "Enemies/rat");
+
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(OneLayerBeat(new SpellLayer
+            {
+                render = "still", place = "sky", at = "release",
+                path = "Vfx/impact_burst", seconds = 0.5f,
+                travelSeconds = 0.2f, orient = "path", artDegrees = 0f,
+                impactX = 1f, impactY = 0.5f,
+            }, hitCue: 0.2f));
+            yield return null;
+
+            HoldTheClockAt(0.3f);
+            yield return null;
+
+            var rect = _player.Image.rectTransform;
+            float turn = Mathf.DeltaAngle(0f, rect.localEulerAngles.z);
+            Assert.Less(turn, -5f, "a sheet painted pointing right, fired down at the rat, was not turned down");
+
+            var parent = _player.transform.parent;
+            var tip = parent.InverseTransformPoint(
+                rect.TransformPoint(new Vector3(rect.rect.xMax, rect.rect.center.y, 0f)));
+            Assert.AreEqual(body.Centre.X, tip.x, 2f, "the tip did not land on the body");
+            Assert.AreEqual(body.Centre.Y, tip.y, 2f, "the tip did not land on the body");
         }
 
         // fit: none (the default) is the case every OTHER test in this file

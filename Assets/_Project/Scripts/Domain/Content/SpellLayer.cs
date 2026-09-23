@@ -32,7 +32,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("What draws: sprite (an animated folder), still (one frame of a folder) or emitter (ballistic particles). No default -- a blank is refused.")]
         public string render = "";
 
-        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
+        [ContentDoc("Where it belongs: caster, caster-centre, target, target-centre, formation, sky (in the air halfway from the caster to one struck target, above both), or 'layer:<id>' to ride another layer. No default -- a blank is refused.")]
         public string place = "";
 
         // FOLLOW versus SAMPLE-ONCE, and the difference is visible the moment
@@ -78,7 +78,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("The square box the art is fitted into; 0 means SpellPresentation.DefaultSize. Ignored by place 'formation', which measures its own span.")]
         public float size;
 
-        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's own stage footprint -- its rank depth times its authored stageScale). Blank means none. Legal only where a single struck target is resolved: place target or target-centre.")]
+        [ContentDoc("What `size` scales against: none (the authored number, verbatim) or target (multiplied by the struck target's visible body on stage -- the larger of its opaque width and height over TargetBody.ReferenceExtent, a front-rank Giant Rat; an emitter scales its particles, speeds and source offset by the same factor). Blank means none. Legal only where a single struck target is resolved: place target, target-centre or sky, or a layer that travels.")]
         public string fit = "";
 
         [ContentDoc("Mirroring: auto (take the cast's facing), none (never mirror) or reverse. Blank means auto.")]
@@ -143,6 +143,17 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Seconds after this layer starts before its motion begins; the wind-up held at the caster.")]
         public float travelDelay;
 
+        // WHICH WAY THE DRAWING POINTS, and whether it is turned onto its
+        // flight. Two fields rather than one because the painted direction is
+        // a fact about the SHEET (Winter's Rebuke's spear is painted 26
+        // degrees up, Blackglass Spear's 45 down) and turning it is a choice
+        // about the CAST; a spell that flies an orb has neither.
+        [ContentDoc("Projectile orientation: none (drawn as painted) or path (turned so artDegrees lies along the flight, with the impact point riding the line from launch to aim). Blank means none. Legal only on a layer that travels.")]
+        public string orient = "";
+
+        [ContentDoc("The direction the drawing points as painted, in degrees counter-clockwise from +x (right); read only by orient 'path'.")]
+        public float artDegrees;
+
         [ContentDoc("Ballistic particle settings; inert unless render is 'emitter'.")]
         public SpellEmitter emitter = new SpellEmitter();
 
@@ -181,6 +192,8 @@ namespace PrincesPalace.Domain.Content
             aspect = aspect,
             travelSeconds = travelSeconds,
             travelDelay = travelDelay,
+            orient = orient,
+            artDegrees = artDegrees,
             emitter = emitter == null ? new SpellEmitter() : emitter.Copy(),
         };
 
@@ -192,6 +205,7 @@ namespace PrincesPalace.Domain.Content
         public SpellSort Sort => SpellSortNames.Parse(sort);
         public SpellAlign Align => SpellAlignNames.Parse(align);
         public SpellFit Fit => SpellFitNames.Parse(fit);
+        public SpellOrient Orient => SpellOrientNames.Parse(orient);
 
         // The id this layer rides, or empty when it does not ride one. Read
         // rather than re-split at each of the four call sites that need it.

@@ -1321,6 +1321,7 @@ namespace PrincesPalace
             // drawing each) against never risking this again.
             ContentCentreCache.Clear();
             ContentTopCache.Clear();
+            ClearOpaqueBoxCache();
 
             _confirmedDefeated.Clear();
 

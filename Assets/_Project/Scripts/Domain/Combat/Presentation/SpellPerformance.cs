@@ -91,6 +91,15 @@ namespace PrincesPalace.Domain.Combat.Presentation
         // is pinned.
         public float Degrees;
 
+        // THE BODY FACTOR THIS INSTANCE WAS SIZED BY -- 1 unless its layer
+        // authors `fit: target`, then the struck target's visible extent over
+        // Domain.Stage.TargetBody.ReferenceExtent. Written by Core beside Box.
+        // Box already carries it for a drawn layer; it is kept on its own for
+        // the one reader that has no box, an emitter, whose particle size,
+        // launch speed and source offset all scale by it so a fitted burst is
+        // the same SHAPE on a rat and on a treant, only bigger.
+        public float Fit = 1f;
+
         // FALSE WHEN CORE COULD NOT FIND ANYWHERE FOR THIS LAYER TO GO --
         // FightController.PlaceOne's early return, a cast-level layer whose
         // beat struck no target. Written before SpellPerformancePlayer.Begin

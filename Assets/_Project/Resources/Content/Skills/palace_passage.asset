@@ -39,6 +39,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1
@@ -66,7 +67,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 390
-        fit: 
+        fit: target
         facing: none
         sort: effects
         align: 
@@ -77,6 +78,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: 
           rate: 0
@@ -117,7 +120,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
-        fit: 
+        fit: target
         facing: 
         sort: effects
         align: 
@@ -128,6 +131,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: Spells/palace_passage_particles
           rate: 0
@@ -183,6 +188,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1

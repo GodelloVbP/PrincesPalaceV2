@@ -57,6 +57,12 @@ namespace PrincesPalace.PlayModeTests
         // legal -Spell run rather than a reason to ignore the test.
         private const string ElementVariable = "PP_PREVIEW_ELEMENT";
 
+        // OPTIONAL, THE SAME WAY: which enemies a -Spell capture is cast at,
+        // by id, instead of the first ones with art in sort order. A spell that
+        // sizes to its target has to be looked at on a small body and a tall
+        // one, and the sort order only ever fielded the small one.
+        private const string VersusVariable = "PP_PREVIEW_VERSUS";
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "preview"));
@@ -391,7 +397,10 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var enemies = PreviewFight.EnemiesWithArt(PreviewFight.EnemyCountFor(plan.Formation, 3));
+            var versus = Requested(VersusVariable);
+            var enemies = versus.Length > 0
+                ? versus.ToList()
+                : PreviewFight.EnemiesWithArt(PreviewFight.EnemyCountFor(plan.Formation, 3));
             Assert.IsNotEmpty(enemies, "no enemies in content to cast at");
 
             var built = FightEncounterAdapter.Build(
@@ -448,7 +457,8 @@ namespace PrincesPalace.PlayModeTests
             // delivery that found AUDIT #107 was reordering skills.json between
             // runs partly because the pictures collided as well.
             string prefix = "spell_" + id +
-                (string.IsNullOrEmpty(plan.Element) ? "" : "_" + plan.Element.ToLowerInvariant());
+                (string.IsNullOrEmpty(plan.Element) ? "" : "_" + plan.Element.ToLowerInvariant()) +
+                (versus.Length > 0 ? "_vs_" + string.Join("-", versus) : "");
             var wanted = new Dictionary<int, string>
             {
                 { impactSample - FlankSamples, prefix + "_before.png" },

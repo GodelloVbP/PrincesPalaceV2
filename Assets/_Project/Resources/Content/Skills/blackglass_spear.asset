@@ -41,6 +41,7 @@ MonoBehaviour:
       impactFrame: 3
       anchor: 
       size: 380
+      fit: 
       departFrame: 0
       impactX: -1
       impactY: -1
@@ -52,26 +53,132 @@ MonoBehaviour:
       groundImpactY: -1
       castSfxPath: 
       layers:
-      - id: spear
-        render: still
-        place: formation
+      - id: amass
+        render: sprite
+        place: sky
         follow: 0
         at: release
         offset: 0
         path: Spells/blackglass_spear
-        seconds: 0.16
-        fps: 0
-        startFrame: 7
+        seconds: 0.3
+        fps: 10
+        startFrame: 1
         until: once
+        fade: 0.08
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 280
+        fit: target
+        facing: none
+        sort: effects
+        align: 
+        punch: 0.12
+        glow: 1.1
+        impactX: -1
+        impactY: -1
+        aspect: 0
+        travelSeconds: 0
+        travelDelay: 0
+        orient: 
+        artDegrees: 0
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: spear
+        render: still
+        place: sky
+        follow: 0
+        at: release
+        offset: 0.28
+        path: Spells/blackglass_spear
+        seconds: 0
+        fps: 0
+        startFrame: 4
+        until: 
         fade: 0
         dx: 0
         dy: 0
         scale: 1
-        size: 0
-        fit: 
+        size: 300
+        fit: target
+        facing: auto
+        sort: effects
+        align: 
+        punch: 0
+        glow: 1.35
+        impactX: 0.78
+        impactY: 0.13
+        aspect: 0
+        travelSeconds: 0.18
+        travelDelay: 0
+        orient: path
+        artDegrees: -45
+        emitter:
+          path: 
+          rate: 0
+          burst: 0
+          window: 0
+          sourceDx: 0
+          sourceDy: 0
+          spreadDegrees: 0
+          aimDegrees: 0
+          speedMin: 0
+          speedMax: 0
+          inherit: 0
+          drag: 0
+          gravity: 0
+          lifeMin: 0
+          lifeMax: 0
+          sizeMin: 1
+          sizeMax: 1
+          spinMin: 0
+          spinMax: 0
+          fadeFrom: 1
+          endScale: 1
+          seed: 0
+          weights: []
+      - id: impact
+        render: still
+        place: target-centre
+        follow: 0
+        at: hit
+        offset: 0
+        path: Spells/blackglass_spear
+        seconds: 0.16
+        fps: 0
+        startFrame: 6
+        until: hold
+        fade: 0.1
+        dx: 0
+        dy: 0
+        scale: 1
+        size: 320
+        fit: target
         facing: none
         sort: effects
-        align: span
+        align: 
         punch: 0.25
         glow: 1.35
         impactX: -1
@@ -79,6 +186,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: 
           rate: 0
@@ -119,7 +228,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
-        fit: 
+        fit: target
         facing: none
         sort: effects
         align: 
@@ -130,6 +239,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: 
           rate: 0
@@ -170,7 +281,7 @@ MonoBehaviour:
         dy: 0
         scale: 1
         size: 0
-        fit: 
+        fit: target
         facing: 
         sort: effects
         align: 
@@ -181,6 +292,8 @@ MonoBehaviour:
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
+        orient: 
+        artDegrees: 0
         emitter:
           path: Spells/blackglass_spear_particles
           rate: 0
@@ -206,7 +319,7 @@ MonoBehaviour:
           seed: 1552
           weights: []
       layerFormat: 1
-      hitCueSeconds: 0.3
+      hitCueSeconds: 0.46
     SortOrder: 12
     Status: 0
     HasStatus: 0
@@ -236,6 +349,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1

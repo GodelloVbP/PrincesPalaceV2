@@ -29,17 +29,16 @@ namespace PrincesPalace
         // every sheet before the ground fault was drawn for; an authored aspect
         // is for art whose box must differ from the frame.
         //
-        // `targetFootprint` IS INERT UNLESS `fit: target` IS AUTHORED --
-        // every call site before this field existed passes 1f and gets exactly
-        // today's box back. SpellLayerRules.CheckPlacement is what keeps a
-        // caller from ever having a footprint worth reading for a layer that
-        // does not fit against one, so this function does not have to ask
-        // which placement it was given.
-        private static Vector2 BoxForLayer(SpellLayer layer, float targetFootprint)
+        // `fitFactor` IS INERT UNLESS `fit: target` IS AUTHORED -- every call
+        // site passes 1f for a layer that does not fit and gets its authored
+        // box back. SpellLayerRules.CheckPlacement is what keeps a layer from
+        // authoring the word where no single target's body is resolved, so
+        // this function does not have to ask which placement it was given.
+        private static Vector2 BoxForLayer(SpellLayer layer, float fitFactor)
         {
             float size = (layer.size > 0f ? layer.size : SpellPresentation.DefaultSize)
                          * (layer.scale > 0f ? layer.scale : 1f);
-            if (layer.Fit == SpellFit.Target) size *= targetFootprint;
+            if (layer.Fit == SpellFit.Target) size *= fitFactor;
             float aspect = layer.aspect;
             return aspect > 0f ? new Vector2(size, size / aspect) : new Vector2(size, size);
         }
@@ -52,21 +51,136 @@ namespace PrincesPalace
         // one, which is what FightBeatPlayer.ScaleOf and PlayContactFx's own
         // ContactBoxFor already read for the identical reason: the struck
         // target's localScale is mid-squash on the very frame an effect is
-        // being placed, and BaseScale is not. One number, three readers, so a
-        // fourth (`fit: target`) is a call site rather than a second formula.
+        // being placed, and BaseScale is not.
         //
         // FALLS BACK TO THE SLOT'S OWN localScale for a combatant with no
         // animator wired (a synthetic fixture), and to 1 for a zero or
         // unanchored scale -- the same "not yet anchored" floor ContactBoxFor
-        // uses, so a fit layer on an unplaced slot draws at its authored size
+        // uses, so a body on an unplaced slot measures at its drawn size
         // rather than at nothing.
-        private float TargetFootprint(CombatantState target, RectTransform targetRect)
+        private float RestingScaleOf(CombatantState who, RectTransform slot)
         {
-            var animator = target != null ? AnimatorFor(target) : null;
+            var animator = who != null ? AnimatorFor(who) : null;
             float scale = animator != null
                 ? Mathf.Abs(animator.BaseScale.x)
-                : targetRect != null ? Mathf.Abs(targetRect.localScale.x) : 1f;
+                : slot != null ? Mathf.Abs(slot.localScale.x) : 1f;
             return scale > 0.01f ? scale : 1f;
+        }
+
+        // WHERE THIS COMBATANT'S VISIBLE BODY IS, in the effect pool's frame --
+        // the target-bounds contract every per-target layer positions and
+        // sizes against (Domain.Stage.TargetBody has the why). The slot's
+        // origin through the same TransformPoint dance as everything else in
+        // this file; the opaque box off the idle drawing; the arithmetic in
+        // Domain where TargetBodyTests pins it.
+        //
+        // AN ACTOR WITH NO READABLE ART falls back to the slot's own rect --
+        // exactly what every placement here measured before the body existed,
+        // so a synthetic fixture or a missing sheet lands where it always did.
+        private StageBody BodyOf(CombatantState who, RectTransform slot, Transform parent)
+        {
+            var origin = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero));
+            float scale = RestingScaleOf(who, slot);
+
+            string folder = who != null ? SpriteFolderFor(who) : null;
+            var drawn = OpaqueBoxForActor(folder);
+
+            StageBody local;
+            if (drawn.HasValue)
+            {
+                var side = who.IsPlayerSide ? StageSide.Left : StageSide.Right;
+                float mirror = StageFacing.MirrorScaleX(FacingOf(who), side);
+                var box = drawn.Value.Box;
+                local = TargetBody.SlotLocal(box.xMin, box.yMin, box.xMax, box.yMax,
+                    drawn.Value.CanvasWidth, StanceManifestLoader.Manifest.GroundLineFor(folder), mirror);
+            }
+            else
+            {
+                var rect = slot.rect;
+                local = new StageBody(rect.xMin, rect.xMax, rect.yMin, rect.yMax);
+            }
+
+            return TargetBody.OnStage(local, scale, new UiVec(origin.x, origin.y));
+        }
+
+        // Public for the PlayMode fixtures, for the reason every seam in this
+        // file is: InternalsVisibleTo names the EDITOR assembly only.
+        public StageBody BodyOfForTest(CombatantState who)
+        {
+            var slot = SlotFor(who);
+            var parent = PrimaryPlayer != null ? PrimaryPlayer.transform.parent : null;
+            return slot == null || parent == null ? default : BodyOf(who, slot, parent);
+        }
+
+        // THE IDLE DRAWING'S OPAQUE BOX, in canvas pixels up from the canvas's
+        // bottom-left, plus that canvas's width. Cached per folder and cleared
+        // per fight beside the stage's other pixel caches, for the reason that
+        // clear gives: an asset-only re-slice recompiles nothing.
+        private readonly struct DrawnBox
+        {
+            internal readonly Rect Box;
+            internal readonly float CanvasWidth;
+
+            internal DrawnBox(Rect box, float canvasWidth)
+            {
+                Box = box;
+                CanvasWidth = canvasWidth;
+            }
+        }
+
+        private static readonly Dictionary<string, DrawnBox?> OpaqueBoxCache = new Dictionary<string, DrawnBox?>();
+
+        private static void ClearOpaqueBoxCache() => OpaqueBoxCache.Clear();
+
+        private static DrawnBox? OpaqueBoxForActor(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder)) return null;
+            if (OpaqueBoxCache.TryGetValue(folder, out var cached)) return cached;
+
+            var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
+            var measured = OpaqueBox(idle);
+            OpaqueBoxCache[folder] = measured;
+            return measured;
+        }
+
+        // TRIMMED-CROP AWARE, the lesson FootBandCentreFraction's header
+        // records: GetPixels32 indexes the TEXTURE at textureRect, and a pixel
+        // found there is `textureRectOffset` further into the sprite's own
+        // canvas. Same alpha floor as the stage's other scans.
+        private static DrawnBox? OpaqueBox(Sprite sprite)
+        {
+            if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return null;
+
+            var crop = sprite.textureRect;
+            int cropX = (int)crop.x;
+            int cropY = (int)crop.y;
+            int cropWidth = (int)crop.width;
+            int cropHeight = (int)crop.height;
+            if (cropWidth <= 0 || cropHeight <= 0 || sprite.rect.width <= 0f) return null;
+
+            var pixels = sprite.texture.GetPixels32();
+            int textureWidth = sprite.texture.width;
+            int left = int.MaxValue, right = int.MinValue, bottom = int.MaxValue, top = int.MinValue;
+
+            for (int y = 0; y < cropHeight; y++)
+            {
+                int rowStart = (cropY + y) * textureWidth + cropX;
+                for (int x = 0; x < cropWidth; x++)
+                {
+                    if (pixels[rowStart + x].a <= AlphaFloorByte) continue;
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                    if (y < bottom) bottom = y;
+                    if (y > top) top = y;
+                }
+            }
+
+            if (left > right || bottom > top) return null;
+
+            var offset = sprite.textureRectOffset;
+            return new DrawnBox(
+                new Rect(offset.x + left, offset.y + bottom, right - left + 1, top - bottom + 1),
+                sprite.rect.width);
         }
 
         // A per-pixel scan of every frame of a sheet, asked for on every cast.
@@ -269,9 +383,38 @@ namespace PrincesPalace
                 return;
             }
 
-            float footprint = layer.Fit == SpellFit.Target ? TargetFootprint(targetCombatant, targetRect) : 1f;
-            var box = BoxForLayer(layer, footprint);
-            var aim = AimPoint(parent, on, SpellPlaceNames.Centred(layer.Place));
+            // THE TARGET'S VISIBLE BODY, once, for everything below that lands
+            // on it: the aim point, the air point a sky layer amasses at, and
+            // the factor `fit: target` sizes by. A caster-side layer that never
+            // reaches a target still resolves one when a target exists, which
+            // costs a cached lookup and nothing else.
+            StageBody? body = targetRect != null ? BodyOf(targetCombatant, targetRect, parent) : (StageBody?)null;
+
+            float fit = layer.Fit == SpellFit.Target && body.HasValue ? TargetBody.FitFactor(body.Value) : 1f;
+            instance.Fit = fit;
+
+            var box = BoxForLayer(layer, fit);
+            bool fromCaster = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels;
+            bool centred = SpellPlaceNames.Centred(layer.Place);
+
+            // WHERE IT IS AIMED. On the caster, the slot as it always was; on
+            // the target -- a target placement, or any traveller's arrival --
+            // the visible body: its middle when centred, its own ground line
+            // under its middle when standing. A sky layer that does not
+            // travel is aimed at the air point itself.
+            Vector2 aim;
+            if (fromCaster || !body.HasValue)
+            {
+                aim = AimPoint(parent, on, centred);
+            }
+            else if (layer.Place == SpellPlace.Sky && !layer.Travels)
+            {
+                aim = SkyPointFor(caster, casterRect, parent, body.Value);
+            }
+            else
+            {
+                aim = AimAtBody(body.Value, parent, targetRect, centred);
+            }
 
             // A NON-TRAVELLING `caster` OR `caster-centre` PLACEMENT used to
             // mean "the slot's own origin" or "the slot's own middle" --
@@ -292,17 +435,38 @@ namespace PrincesPalace
             // actor but the two this feature was written for -- so
             // `caster-centre` for an unauthored actor keeps meaning the
             // figure's own centre exactly as before.
-            if (SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels && casterRect != null)
+            if (fromCaster && casterRect != null)
             {
                 aim = CasterCastPoint(caster, casterRect, parent, aim);
             }
 
             float facing = instance.DrawFacing;
-
-            var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing,
-                standing: !SpellPlaceNames.Centred(layer.Place));
-
             instance.Box = new UiVec(box.x, box.y);
+
+            // TURNED ONTO ITS FLIGHT. The launch is decided first, because the
+            // angle is the line from it to the aim; then the sheet's impact
+            // point -- a spear's tip, not the box's middle -- is put ON that
+            // line at both ends, so the tip flies straight at what it hits and
+            // the painted shaft trails along the same line behind it.
+            if (layer.Travels && layer.Orient == SpellOrient.Path)
+            {
+                var from = LaunchPoint(layer, caster, casterRect, parent, body, casterX, aim.y);
+                float degrees = SpellFlight.Turn(
+                    SpellFlight.DegreesOf(new UiVec(from.x, from.y), new UiVec(aim.x, aim.y)),
+                    layer.artDegrees, facing);
+
+                var art = RenderedSize(layer.path, box);
+                var tip = layer.HasImpactPoint
+                    ? SpellFlight.ImpactOffset(layer.impactX, layer.impactY, new UiVec(art.x, art.y), facing, degrees)
+                    : UiVec.Zero;
+
+                instance.Degrees = degrees;
+                instance.To = new UiVec(aim.x, aim.y) - tip;
+                instance.From = new UiVec(from.x, from.y) - tip;
+                return;
+            }
+
+            var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing, standing: !centred);
             instance.To = new UiVec(to.x, to.y);
 
             // THE LAUNCH IS NOT IMPACT-CORRECTED, and the asymmetry is on
@@ -310,15 +474,69 @@ namespace PrincesPalace
             // the same offset at the other end would shift a DIFFERENT part of
             // the drawing -- the conjuring glyph -- away from the caster rather
             // than onto them.
-            //
-            // THE LAUNCH IS THE CAST POINT, when the caster authors one --
-            // CasterCastPoint falls back to (casterX, to.y) verbatim for an
-            // actor that authors nothing, which is what this line always
-            // computed before the cast point existed.
-            var launch = layer.Travels && casterRect != null
-                ? CasterCastPoint(caster, casterRect, parent, new Vector2(casterX, to.y))
-                : (Vector2?)null;
-            instance.From = launch.HasValue ? new UiVec(launch.Value.x, launch.Value.y) : instance.To;
+            if (layer.Travels)
+            {
+                var launch = LaunchPoint(layer, caster, casterRect, parent, body, casterX, to.y);
+                instance.From = new UiVec(launch.x, launch.y);
+            }
+            else
+            {
+                instance.From = instance.To;
+            }
+        }
+
+        // WHERE A TRAVELLING LAYER LEAVES FROM: the air point for `sky`, the
+        // caster's cast point for the caster words.
+        //
+        // THE CASTER'S LAUNCH falls back to (casterX, `height`) verbatim for an
+        // actor that authors no cast point, which is what this line always
+        // computed before the cast point existed -- a flat throw at the
+        // arrival's own height. With no caster slot at all it leaves from the
+        // aim's own column, which is a flight of zero length and draws the
+        // sheet where it lands rather than nowhere.
+        private Vector2 LaunchPoint(SpellLayer layer, CombatantState caster, RectTransform casterRect,
+            Transform parent, StageBody? body, float casterX, float height)
+        {
+            if (layer.Place == SpellPlace.Sky && body.HasValue)
+            {
+                return SkyPointFor(caster, casterRect, parent, body.Value);
+            }
+
+            return casterRect != null
+                ? CasterCastPoint(caster, casterRect, parent, new Vector2(casterX, height))
+                : new Vector2(casterX, height);
+        }
+
+        // THE AIR POINT for this caster and this target (SpellFlight.SkyPoint):
+        // halfway from where the cast leaves the caster to the target's middle,
+        // above the taller of the two. The caster's point is its cast point
+        // when it authors one and its own body's middle otherwise; with no
+        // caster slot the target stands in for it, which puts the point
+        // straight above the target.
+        private Vector2 SkyPointFor(CombatantState caster, RectTransform casterRect, Transform parent,
+            StageBody target)
+        {
+            var casterBody = casterRect != null ? BodyOf(caster, casterRect, parent) : target;
+            var middle = casterBody.Centre;
+            var leaves = casterRect != null
+                ? CasterCastPoint(caster, casterRect, parent, new Vector2(middle.X, middle.Y))
+                : new Vector2(middle.X, middle.Y);
+
+            var point = SpellFlight.SkyPoint(new UiVec(leaves.x, leaves.y), casterBody.Top, target);
+            return new Vector2(point.X, point.Y);
+        }
+
+        // THE POINT ON A STRUCK BODY an effect is aimed at: the middle of what
+        // is drawn when centred; standing, the same column on the slot's own
+        // ground line -- which is authored (StanceManifest groundLine) and
+        // outranks any measurement of where the lowest pixel happens to be.
+        private static Vector2 AimAtBody(StageBody body, Transform parent, RectTransform slot, bool centred)
+        {
+            var middle = body.Centre;
+            if (centred) return new Vector2(middle.X, middle.Y);
+
+            float ground = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).y;
+            return new Vector2(middle.X, ground);
         }
 
         // WHERE A CAST ACTUALLY LEAVES THIS ACTOR'S BODY, on stage, right now
@@ -379,7 +597,7 @@ namespace PrincesPalace
         // describes ground nothing is standing on, which is the same class of
         // wrongness as an impact landing off the target.
         //
-        // MEASURED THROUGH EACH SLOT'S OWN EDGES, not from its centre plus a
+        // MEASURED THROUGH EACH BODY'S OWN EDGES, not from its centre plus a
         // margin. A back-row slot is depth-scaled, so its half-width in the
         // renderer's coordinates is not a front-row slot's -- one authored
         // margin would over-reach on one rank and under-reach on the other.
@@ -404,17 +622,17 @@ namespace PrincesPalace
                 var slot = SlotFor(one);
                 if (slot == null) continue;
 
-                var rect = slot.rect;
-                float centre = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
-                float slotLeft = parent.InverseTransformPoint(
-                    slot.TransformPoint(new Vector3(rect.xMin, 0f, 0f))).x;
-                float slotRight = parent.InverseTransformPoint(
-                    slot.TransformPoint(new Vector3(rect.xMax, 0f, 0f))).x;
+                // THE VISIBLE BODY'S EDGES, not the slot's: a slot is the
+                // sprite's canvas, and the rat's runs 225 canvas pixels wider
+                // than the rat -- a fault measured off it overshot every lone
+                // rat by that padding. Ground stays the slot's own origin,
+                // which is the authored ground line.
+                var body = BodyOf(one, slot, parent);
+                float centre = body.Centre.X;
+                float slotLeft = body.Left;
+                float slotRight = body.Right;
 
-                if (slotLeft > slotRight) (slotLeft, slotRight) = (slotRight, slotLeft);
-
-                float ground = parent.InverseTransformPoint(
-                    slot.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
+                float ground = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).y;
 
                 stood.Add(new FootPrint(centre, ground, slotLeft, slotRight));
             }
@@ -831,14 +1049,11 @@ namespace PrincesPalace
         // anchoredPosition, because the slot is nested inside the stage and
         // scaled by depth: its own coordinates are not where it appears.
         //
-        // KNOWN, AND FINE FOR EVERY ACTOR THAT USES IT TODAY: `centred` takes
-        // the slot's midpoint, and the slot is sized to the sprite's raw
-        // CANVAS rather than to the figure drawn on it. The two agree closely
-        // for the rat (canvas mid 153, content mid ~142) and would not for the
-        // golem, whose idle frame carries 123px of empty headroom -- the same
-        // disagreement PlaceIntentBadge already had to stop measuring around.
-        // Nothing centred is aimed at the golem yet; when something is, the
-        // measured answer is ContentTopForActor, not another constant.
+        // NOW ONLY THE CASTER'S SIDE. `centred` takes the slot's midpoint,
+        // and the slot is the sprite's raw CANVAS rather than the figure drawn
+        // on it -- 62 empty rows over the golem's head -- which is why every
+        // target-side aim goes through BodyOf/AimAtBody instead. A caster
+        // mostly authors a cast point, which overrides this anyway.
         private static Vector2 AimPoint(Transform parent, RectTransform slot, bool centred)
         {
             var rect = slot.rect;

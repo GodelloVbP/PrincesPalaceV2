@@ -40,6 +40,7 @@ MonoBehaviour:
       impactFrame: 13
       anchor: travel-centre
       size: 380
+      fit: target
       departFrame: 9
       impactX: 0.69
       impactY: 0.52
@@ -82,6 +83,7 @@ MonoBehaviour:
           impactFrame: 3
           anchor: 
           size: 380
+          fit: 
           departFrame: 0
           impactX: -1
           impactY: -1
