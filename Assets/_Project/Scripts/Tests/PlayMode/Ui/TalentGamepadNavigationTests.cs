@@ -86,30 +86,28 @@ namespace PrincesPalace.PlayModeTests
                 "the entry is the first orb -- path 0's root, slot 0");
         }
 
-        // OWNER, 2026-09-23, RESTATED MODEL (supersedes every earlier pass
-        // at this file -- both the Rail-wrap "Right from Shatter goes to
-        // The Flock" fix and its own "continue up the strand" replacement):
-        // Left/Right name a LEVEL's two fixed ends, absolutely, not a
-        // relative step. Right from ANY stone in a 3-wide level reaches
-        // that level's OWN right-hand stone directly -- from the left
-        // stone (DxSlot -1) that is a straight jump past the centre one,
-        // not a step onto it.
+        // OWNER, 2026-09-23, FINAL CORRECTION (supersedes this file's own
+        // earlier "Left/Right name a level's two fixed ends, absolutely"
+        // reading, itself already past the Rail-wrap "Right from Shatter
+        // goes to The Flock" fix and the "continue up the strand"
+        // replacement): Left/Right step ONE LANE AT A TIME within a 3-wide
+        // level -- middle to a side and back -- never a jump straight to
+        // the far side. Right from the middle stone reaches the level's
+        // own right-hand stone...
         [UnityTest]
-        public IEnumerator Right_FromTheLeftStone_ReachesTheLevelsRightStone()
+        public IEnumerator Right_FromTheCentreStone_ReachesTheLevelsRightStone()
         {
             yield return LoadTheTree();
-            EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_2"));
             yield return null;
 
             yield return Move(1f, 0f);
 
             Assert.AreEqual(Node("Orb0_3"), EventSystem.current.currentSelectedGameObject,
-                "Right always names the level's own right-hand stone (DxSlot +1), a fixed target, " +
-                "not the next stone over");
+                "Right from the middle stone should reach the level's own right-hand stone");
         }
 
-        // The mirror from the centre stone -- Left reaches the level's own
-        // left-hand stone, same fixed-target rule.
+        // ...and Left from the middle stone reaches the left-hand one.
         [UnityTest]
         public IEnumerator Left_FromTheCentreStone_ReachesTheLevelsLeftStone()
         {
@@ -120,14 +118,45 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(-1f, 0f);
 
             Assert.AreEqual(Node("Orb0_1"), EventSystem.current.currentSelectedGameObject,
-                "Left always names the level's own left-hand stone (DxSlot -1)");
+                "Left from the middle stone should reach the level's own left-hand stone");
         }
 
-        // "RIGHT again from the right-hand stone goes to the next-page
-        // arrow" -- once already standing on the level's own fixed target,
-        // there is nothing further that way inside the tree, so the SAME
-        // direction reaches the arrow instead. No wrap, no "continue up the
-        // strand": both retired by this same restated model.
+        // FROM A SIDE STONE, the direction back TOWARD the middle reaches
+        // it -- Right from the left-hand stone, Left from the right-hand
+        // one -- never a jump past it to the far side.
+        [UnityTest]
+        public IEnumerator Right_FromTheLeftStone_ReachesTheLevelsMiddleStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
+            yield return null;
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_2"), EventSystem.current.currentSelectedGameObject,
+                "Right from the left-hand stone should step to the level's own middle stone, not " +
+                "jump past it to the right-hand one");
+        }
+
+        [UnityTest]
+        public IEnumerator Left_FromTheRightStone_ReachesTheLevelsMiddleStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_3"));
+            yield return null;
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_2"), EventSystem.current.currentSelectedGameObject,
+                "Left from the right-hand stone should step to the level's own middle stone, not " +
+                "jump past it to the left-hand one");
+        }
+
+        // ONLY A SECOND PRESS PAST AN OUTER LANE reaches the page arrow --
+        // Right from the level's own right-hand stone (already the far
+        // edge in that direction, nothing further that way in the tree),
+        // and the mirror on the left. No wrap, no "continue up the
+        // strand": both retired well before this correction.
         [UnityTest]
         public IEnumerator Right_AtTheRightStone_ReachesTheNextPageArrow()
         {
@@ -138,8 +167,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(1f, 0f);
 
             Assert.AreEqual(Node("NextPathButton"), EventSystem.current.currentSelectedGameObject,
-                "Right from the level's own right-hand stone (already the fixed target) should reach " +
-                "the next-page arrow, not wrap to the left stone and not continue up the strand");
+                "Right from the level's own right-hand stone (already the outer lane in that " +
+                "direction) should reach the next-page arrow, not wrap and not continue up the strand");
         }
 
         [UnityTest]
@@ -152,7 +181,8 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(-1f, 0f);
 
             Assert.AreEqual(Node("PrevPathButton"), EventSystem.current.currentSelectedGameObject,
-                "Left from the level's own left-hand stone should reach the prev-page arrow");
+                "Left from the level's own left-hand stone (already the outer lane in that direction) " +
+                "should reach the prev-page arrow");
         }
 
         // THE SHATTER/SPLINTERING/FLOCK CASE, checked directly against the

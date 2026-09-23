@@ -1046,28 +1046,35 @@ namespace PrincesPalace
         // _skeletonDownParent send a chain slot to the SAME dx one level up or
         // down, and fall back to a single-stone level's one stone (the root,
         // the convergence, the capstone) when the lane it left from has no
-        // match there. LEFT/RIGHT name a level's two ends, once, in
-        // _leftFlank/_rightFlank: a 3-wide level's own left/right member, or --
-        // borrowed, for a single-stone level -- the adjacent 3-wide level's.
-        // Left/Right always aim at that fixed stone; pressing the same
-        // direction again once already standing on it is what reaches the page
-        // arrow, since there is nothing further that way in the tree. Scoped to
-        // the CURRENT path's 21 orbs only: the other two paths' orbs are real,
-        // visible Buttons sitting off-screen mid-slide (OnOrbPressed's own
-        // comment), and wiring them in would let a Move walk into a
-        // constellation the player cannot see.
+        // match there. LEFT/RIGHT step ONE LANE AT A TIME within a 3-wide
+        // level (_leftFlank/_rightFlank): the middle stone to a side and
+        // back, never a jump to the far side -- only a second press past an
+        // outer lane reaches the page arrow. A single-stone level jumps
+        // straight to the adjacent 3-wide level's own outer lane instead,
+        // landing the player ON that lane, where the ordinary in-level rule
+        // then applies. Scoped to the CURRENT path's 21 orbs only: the
+        // other two paths' orbs are real, visible Buttons sitting off-
+        // screen mid-slide (OnOrbPressed's own comment), and wiring them in
+        // would let a Move walk into a constellation the player cannot see.
         private static readonly int[] _skeletonUpChild;
         private static readonly int[] _skeletonDownParent;
         private static readonly List<int>[] _skeletonTiers;
 
-        // LEFT/RIGHT's two fixed targets per slot (owner's restated model,
-        // 2026-09-23): the stone at the left/right end of the LEVEL Left/
-        // Right actually addresses -- a 3-wide level's own two ends, or,
-        // for a single-stone level (the root, the convergence, the
-        // capstone), the ends BORROWED from the one adjacent 3-wide level.
-        // -1 means "no such level exists" (never happens on this skeleton,
-        // every single sits next to at least one triple, but the sentinel
-        // keeps RefreshOrbNavigation's read honest rather than assuming).
+        // LEFT/RIGHT's target per slot, per direction (owner's final
+        // correction, 2026-09-23: Left/Right step ONE LANE AT A TIME within
+        // a 3-wide level -- middle to a side and back, never a jump to the
+        // far side -- only a second press past an outer lane reaches the
+        // page arrow). -1 is the ARROW sentinel: RefreshOrbNavigation reads
+        // it as "go to prevPathButton/nextPathButton" rather than an orb.
+        //
+        // A single-stone level (the root, the convergence, the capstone)
+        // is unchanged by this correction and still jumps straight to the
+        // adjacent 3-wide level's own outer lane -- "for single-stone
+        // levels (the middle position), Left/Right go to the borrowed
+        // level's left or right lane, which is already the case" (owner).
+        // Landing there is what puts the player ON that lane, so the very
+        // next press already follows the ordinary in-level rule below (one
+        // more step to the middle, or the arrow from the far side).
         private static readonly int[] _leftFlank;
         private static readonly int[] _rightFlank;
 
@@ -1140,21 +1147,30 @@ namespace PrincesPalace
                 .Select(kv => kv.Value.OrderBy(s => TalentSkeleton.DxSlot[s]).ToList())
                 .ToArray();
 
-            // A 3-wide level names its own two ends, sorted ascending by
-            // DxSlot above so index 0 is the left one and index 2 the
-            // right.
+            // A 3-wide level steps ONE LANE AT A TIME, sorted ascending by
+            // DxSlot above so index 0/1/2 is left/middle/right: the middle
+            // stone's Left/Right reach the side stones, a side stone's
+            // Left/Right toward the OTHER side reaches the middle, and a
+            // side stone's Left/Right AWAY from the middle (already the
+            // outer lane in that direction) is the arrow -- the -1
+            // sentinel.
             for (int d = 0; d < _skeletonTiers.Length; d++)
             {
                 var tier = _skeletonTiers[d];
                 if (tier.Count != 3) continue;
 
                 int left = tier[0];
+                int middle = tier[1];
                 int right = tier[2];
-                foreach (var s in tier)
-                {
-                    _leftFlank[s] = left;
-                    _rightFlank[s] = right;
-                }
+
+                _leftFlank[left] = -1;
+                _rightFlank[left] = middle;
+
+                _leftFlank[middle] = left;
+                _rightFlank[middle] = right;
+
+                _leftFlank[right] = middle;
+                _rightFlank[right] = -1;
             }
 
             // A single-stone level BORROWS its ends from the one adjacent
@@ -1326,19 +1342,20 @@ namespace PrincesPalace
             //
             // LEFT/RIGHT NAME A LEVEL'S TWO ENDS, ONCE. _leftFlank/
             // _rightFlank (computed once in the static constructor) give
-            // every slot the SAME two stones: its own level's left/right
-            // member when the level is 3 wide, or -- for a single-stone
-            // level -- the flanking pair BORROWED from the one adjacent
-            // 3-wide level (the level above when there is one, since that
-            // is the direction every tree grows; otherwise the level
-            // below, which only the capstone ever needs). Left always
-            // aims at the left one, Right at the right one -- a flat,
-            // absolute target, not a relative step -- and pressing the
-            // SAME direction again once already standing on that stone is
-            // what "again" means: there is nothing further that way inside
-            // the tree, so it goes to the page arrow instead. No wrap, no
-            // "continue up the strand", no per-tier special case: this is
-            // the one loop, for every level in every constellation.
+            // one lane at a time within a 3-wide level: the middle stone's
+            // Left/Right reach that level's own side stones, and a side
+            // stone's Left/Right back toward the middle reaches it -- only
+            // Left/Right AWAY from the middle, already standing on the
+            // outer lane in that direction, reaches the page arrow (the -1
+            // sentinel _leftFlank/_rightFlank carry for exactly that case).
+            // A single-stone level (the root, the convergence, the
+            // capstone) is the one exception, unchanged from the pass
+            // before this correction: it jumps straight to the adjacent
+            // 3-wide level's own outer lane, landing the player ON that
+            // lane, where the very next press already follows the ordinary
+            // rule above. No wrap, no "continue up the strand", no
+            // per-tier special case: this is the one loop, for every level
+            // in every constellation.
             for (int slot = 0; slot < n; slot++)
             {
                 var from = OrbAt(slot);
@@ -1354,17 +1371,11 @@ namespace PrincesPalace
                     links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Up, OrbAt(_skeletonUpChild[slot])));
                 }
 
-                if (_leftFlank[slot] >= 0)
-                {
-                    Selectable leftTarget = slot == _leftFlank[slot] ? prevPathButton : OrbAt(_leftFlank[slot]);
-                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Left, leftTarget));
-                }
+                Selectable leftTarget = _leftFlank[slot] >= 0 ? OrbAt(_leftFlank[slot]) : prevPathButton;
+                links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Left, leftTarget));
 
-                if (_rightFlank[slot] >= 0)
-                {
-                    Selectable rightTarget = slot == _rightFlank[slot] ? nextPathButton : OrbAt(_rightFlank[slot]);
-                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Right, rightTarget));
-                }
+                Selectable rightTarget = _rightFlank[slot] >= 0 ? OrbAt(_rightFlank[slot]) : nextPathButton;
+                links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Right, rightTarget));
             }
 
             // INVEST'S OTHER ROUTE. The old "Right from the root reaches an
