@@ -232,6 +232,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PcGhostFills = new List<NodeRef>();
         public List<NodeRef> PcWardFills = new List<NodeRef>();
 
+        // "+12" beside the HP value while a shield is up, hidden at zero --
+        // owner's playtest ask (2026-09-23), see PcPlate{i}HpWardFill's own
+        // build-site comment. Right-aligned against the bar's own right
+        // edge, mirroring hpValue's left-aligned margin, so the two never
+        // contest the same pixels regardless of how many digits either one
+        // carries.
+        public List<NodeRef> PcWardValues = new List<NodeRef>();
+
         public List<NodeRef> PcMpValues = new List<NodeRef>();
         public List<NodeRef> PcMpFills = new List<NodeRef>();
 
@@ -300,17 +308,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef SubmenuScrollThumb;
 
         public NodeRef DetailColumn;
+        public NodeRef DetailColumnFill;
+        public List<NodeRef> DetailColumnRim = new List<NodeRef>();
         public NodeRef DetailName;
         public NodeRef DetailKind;
-        public NodeRef DetailBody;
-        public List<NodeRef> DetailStatKeys = new List<NodeRef>();
-        public List<NodeRef> DetailStatValues = new List<NodeRef>();
 
-        // The skill's element ("FIRE", "ARCANE", ...), tinted at runtime by
-        // FightHudPalette.ForDamageType -- see BuildDetailColumn's own
-        // comment for why it rides the POWER row instead of a sixth row of
-        // its own.
-        public NodeRef DetailDamageType;
+        // ICON ROWS, NOT TEXT (2026-09-23 icon rework) -- DetailBody and the
+        // DetailStatKeys/DetailStatValues/DetailDamageType text-row pool
+        // this replaced are gone from the built tree; see BuildDetailColumn's
+        // own header. One pool of icon+value pairs, sized to
+        // FightHudSpec.DetailIconRows, the same fixed-pool/toggle-visibility
+        // idiom the old row pool used.
+        public List<NodeRef> DetailIconImages = new List<NodeRef>();
+        public List<NodeRef> DetailIconValues = new List<NodeRef>();
 
         public NodeRef TargetPrompt;
         public NodeRef IntentTooltip;
@@ -1758,6 +1768,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .TextAligned(UiTextAlign.Left)
                     .Styled(TypographyRole.OnBarCaption);
 
+                // "+12" WHILE A SHIELD IS UP, HIDDEN AT ZERO -- owner's
+                // playtest ask (2026-09-23): the ward segment (below) showed
+                // no number anywhere on the card. Right-aligned against the
+                // bar's own right edge rather than beside hpValue's own
+                // left-aligned box: PcBarW is 171.85 at the current plate
+                // width (452 * (0.5-0.1904) head zone, 0.0293 rim inset --
+                // PcContentLeft/PcHeadZoneLeft's own derivation), so a
+                // 40-wide box here and hpValue's 88-wide one sit ~34px apart
+                // at their closest (both full 4-digit HP and a live ward) --
+                // clear at every value either one can print. WardText, not
+                // TextPrimary -- this sits on the SAME fill hpValue does at
+                // full health (SetWardFill's own header, the "over the fill"
+                // case), so it needs its own on-fill contrast rather than
+                // TextPrimary's, which was only ever measured against
+                // HpBright/MpBright. FightController.RefreshPartyMember sets
+                // its content and visibility every repaint alongside
+                // SetWardFill, off the same StatusEffects.WardPoints read.
+                var wardValue = Ui.Label($"PcPlate{i}HpWardValue", UiString.Runtime,
+                        new UiVec(40f, PcValueBoxH), PcValueFontSize,
+                        FightHudPalette.WardText, Place.At(PcBarW * 0.5f - 5f, 0f, new UiVec(1f, 0.5f)))
+                    .TextAligned(UiTextAlign.Right)
+                    .Styled(TypographyRole.OnBarCaption)
+                    .Inactive();
+
                 // THE TAG IS AN ARGUMENT, not "MP" -- the meter draws whichever
                 // pool its holder carries (pools.json owns the short tag and
                 // the three hexes), so this reads "FURY 60/100" for Bjorn and
@@ -1779,7 +1813,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var hp = Ui.Meter($"PcPlate{i}HpBar", $"PcPlate{i}HpFill",
                     Place.At(PcHpBarCentreX, PcBarRowY), new UiVec(PcBarW, PcBarH),
                     FightHudPalette.Track, FightHudPalette.HpRim,
-                    FightHudPalette.HpBright, FightHudPalette.HpShade, hpValue);
+                    FightHudPalette.HpBright, FightHudPalette.HpShade, hpValue, wardValue);
 
                 // THE AFTERIMAGE AND THE WARD SEGMENT, on the party bar too --
                 // one rule for both plate kinds (PcGhostFills/PcWardFills'
@@ -1798,12 +1832,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 hp.Track.Children.Insert(0, pcGhostFill);
                 hp.Track.Children.Insert(hp.Track.Children.IndexOf(hp.Fill) + 1, pcWardFill);
 
-                // hpValue TOO -- Ui.Meter already declared fill+hpValue as
-                // one layered group internally; these two new fills sit in
-                // that exact same stack and need the same waiver, or the
-                // audit sees an UNDECLARED overlap against the caption that
-                // Ui.Meter's own Layered call never mentioned them to.
-                Ui.Layered(pcGhostFill, hp.Fill, pcWardFill, hpValue);
+                // hpValue AND wardValue TOO -- Ui.Meter already declared
+                // fill+hpValue+wardValue as one layered group internally;
+                // these two new fills sit in that exact same stack and need
+                // the same waiver, or the audit sees an UNDECLARED overlap
+                // against the captions that Ui.Meter's own Layered call
+                // never mentioned them to.
+                Ui.Layered(pcGhostFill, hp.Fill, pcWardFill, hpValue, wardValue);
 
                 var mp = Ui.Meter($"PcPlate{i}MpBar", $"PcPlate{i}MpFill",
                     Place.At(PcPoolBarCentreX, PcBarRowY), new UiVec(PcBarW, PcBarH),
@@ -1848,6 +1883,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 PcHpFills.Add(hp.Fill);
                 PcGhostFills.Add(pcGhostFill);
                 PcWardFills.Add(pcWardFill);
+                PcWardValues.Add(wardValue);
                 PcMpValues.Add(mpValue);
                 PcMpFills.Add(mp.Fill);
                 PcMpShades.Add(mp.Shade);
@@ -2239,11 +2275,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // NOT AT THE CONTAINER'S CENTRE ANY MORE. It was, while the frame
             // held nothing but the list; the back row sits in the bottom
             // padding now, so the viewport rides above the container's middle
-            // by half a back row and half a gap. UNCHANGED by the Violet 3:4
-            // frame below: this is still "offset from the INNER box's own
-            // centre" exactly as it always was, and reparenting it under the
-            // frame's own (taller) content inset is what recentres it -- see
-            // FightSubmenuLayout.FrameHeight's own comment.
+            // by half a back row and half a gap. UNCHANGED by the flat frame
+            // below: this is still "offset from the INNER box's own centre"
+            // exactly as it always was, and parenting it under the frame
+            // (which sits at FightSubmenuLayout.FrameCentreY, a few pixels
+            // off ContainerCentreY -- see that property's own header) shifts
+            // the whole block by that same small amount, automatically.
             float viewportY = FightSubmenuLayout.ViewportOffsetInContainer;
 
             var viewport = Ui.Panel("SubmenuViewport",
@@ -2304,25 +2341,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
             back.LayerCaptionWithVisuals(backKey, backText);
             SubmenuBackButton = back;
 
-            // ---- the Violet 3:4 themed frame, wrapping the inner box above --------
+            // ---- the frame, wrapping the inner box above (flat fill, not kit art) --
             //
-            // containerW x FightSubmenuLayout.ContainerHeight (316x500, 0.632)
-            // misses the kit's 3:4 aspect (0.75 since the 2026-09-07 repin,
-            // 0.588 before it) by more than Ui.Container's 5% band either
-            // way. FrameWidth/FrameHeight (419.9x559.9, was 363.22x617.72)
-            // are what the SAME inner box looks like grown to the kit's own
-            // 5.2%/5.5% top/bottom inset and then completed to 0.75 exactly
-            // -- the frame is height-bound now rather than width-bound; see
-            // FightSubmenuLayout.FrameHeight's own comment for why, and for
-            // why nothing below RowsBottom had to move for it. The flat Solid + Ui.Rim
-            // this replaces is gone -- Ui.Container draws its own border art.
-            var frameNode = Ui.Container("SubmenuContainer", ButtonTheme.Violet, ContainerRatio.ThreeByFour,
-                Place.At(containerX, FightSubmenuLayout.FrameCentreY),
-                new UiVec(FightSubmenuLayout.FrameWidth, FightSubmenuLayout.FrameHeight));
+            // WAS a Violet 3:4 Ui.Container. That art's own content inset
+            // forced the frame bigger than the inner box on both axes
+            // (419.9x559.9 against 316x428) and needed the inner box
+            // recentred inside the slack. TURNING PreserveAspect OFF was
+            // tried first (fixes FightController.ResizeSubmenuContainer's
+            // height-only runtime resize drifting the rect off the art's
+            // true 3:4 at a short list -- rows sticking out both sides of a
+            // letterboxed frame) but LEFT A DIFFERENT DEFECT: Type.Simple's
+            // non-uniform stretch squashed the painted border hard at 1-3
+            // rows, the same "stretched and looks bad" complaint the owner
+            // made about the relic draft screen's own Container the same day
+            // (2026-09-23), which the kit already lints against elsewhere.
+            //
+            // RelicDraftScreen's OWN fix for that (a flat Solid fill plus a
+            // hairline Rim, drawn last so it sits on top of what it encloses
+            // -- that file's own DraftFrameFill/DraftFrame header) is the fix
+            // here: no aspect, so no distortion at any height, and
+            // FrameWidth/FrameHeight ARE ContainerWidth/ContainerHeight(For)
+            // now -- no more inset, no more recentring layer (FightSubmenuLayout.
+            // FrameWidth's own header).
+            var frameSize = new UiVec(FightSubmenuLayout.FrameWidth, FightSubmenuLayout.FrameHeight);
+            var frameFill = Ui.Solid("SubmenuContainerFill", DetailFillHex, frameSize, Place.At(0f, 0f)).AsDecor();
 
-            Ui.ContainerContent(frameNode, ContainerRatio.ThreeByFour, "SubmenuFrameContent",
-                viewport, track, thumb, back);
+            var frameChildren = new List<UiNode> { frameFill, viewport, track, thumb, back };
+            frameChildren.AddRange(Ui.Rim("SubmenuContainer", frameSize, FightHudPalette.Hairline));
 
+            var frameNode = Ui.Panel("SubmenuContainer", Place.At(containerX, FightSubmenuLayout.FrameCentreY),
+                UiSize.Fixed(frameSize), frameChildren);
             SubmenuContainer = frameNode;
 
             yield return frameNode;
@@ -2350,65 +2398,135 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float DetailBottomMargin = 40f;
         private static float DetailX => (960f - DetailRightMargin) - DetailW * 0.5f;
 
-        // ITS OWN HEIGHT RULE now, not half of the submenu container's --
-        // that borrowing tied the detail card's size to a number that (post
-        // FightSubmenuLayout.RowsInView's own rework) now moves with how
-        // many rows a character's list happens to show, which the detail
-        // card must never do: a three-skill actor's card has to stay exactly
-        // as tall as a twelve-skill actor's, since both can carry all eight
-        // stat rows plus a three-line body. So this sums what the CONTENT
-        // needs directly -- top pad, name+kind, three lines of the new body
-        // font, the divider, FightHudSpec.DetailStatRows rows at their own
-        // pitch, bottom pad -- rather than deriving from a neighbour's own
-        // unrelated number.
+        // ITS OWN HEIGHT RULE, summing what the CONTENT needs directly --
+        // top pad, name+kind, the icon rows at their own pitch, bottom pad.
+        //
+        // 2026-09-23 ICON REWORK: the body text and its 64px minimum plus
+        // 20px gap are GONE (owner's playtest ask, "remove the flavor/
+        // description body from the card") -- a card that used to reserve
+        // room for three lines of prose plus eight text rows now reserves
+        // room for at most six compact icon rows and nothing else, which is
+        // most of this box's own "dynamic, not a fixed tall rect" ask by
+        // itself. STILL BUILT AT THE POOL'S FULL SIX ROWS, though (the
+        // static tree's own reservation, same reason FightSubmenuLayout's
+        // BuildReservationRows stays at the pool size rather than the
+        // typical case) -- a true per-hover resize (this flat Solid+Rim
+        // fill has no aspect-locked art in the way FightSubmenuLayout's
+        // Container did, so it is SAFE to add, unlike that one) is a real
+        // follow-up this pass ran out of room for; see this file's own
+        // report for that open call.
         private const float DetailTopPad = 18f;
         private const float DetailBottomPad = 18f;
         private const float DetailNameBlockH = 46f;
-        private const float DetailBodyMinH = 64f;
-        private const float DetailBodyToStatsGap = 20f;
-        private const float DetailStatPitch = 20f;
+        private const float DetailIconRowPitch = 36f;
 
-        // public, not private: FightController.Hud.cs's RefreshDetail reads
-        // these to narrow/restore a stat row's key and value boxes at
-        // runtime, so the element tag riding POWER's CURRENT row (whichever
-        // one that is -- Stats is compact now, see BuildDetailColumn's own
-        // header) always has the same amount of freed middle to sit in,
-        // wherever it lands.
-        public const float DetailStatKeyWidth = 190f;
-        public const float DetailStatValueWidth = 170f;
-        public const float DetailStatKeyWidthNarrow = 80f;
-        public const float DetailStatValueWidthNarrow = 110f;
-        public const float DetailDamageTypeWidth = 210f;
+        // The icon and its value, side by side in one row -- 28px square
+        // badge (the generated Icons/Ability/*.png art is a 64px source, so
+        // this reads crisp at up to ~2.3x before the importer's own mipmap
+        // chain has to make anything up) plus an 8px gap and whatever width
+        // the row has left for its value text.
+        public const float DetailIconSize = 28f;
+        public const float DetailIconValueGap = 8f;
 
-        private static float DetailH =>
-            DetailTopPad + DetailNameBlockH + DetailBodyMinH + DetailBodyToStatsGap
-            + FightHudSpec.DetailStatRows * DetailStatPitch + DetailBottomPad;
+        // A PURE LAYOUT FUNCTION (coordinator ask, 2026-09-23 pass 2 --
+        // "a dynamic box around it" means resized at runtime, not just built
+        // smaller once): how tall the card is for N VISIBLE icon rows,
+        // clamped to the pool -- the same ContainerHeightFor(count) shape
+        // FightSubmenuLayout already uses for its own runtime-resized frame.
+        // FightController.Hud.cs's RefreshDetail calls this every repaint
+        // with panel.Icons.Count and writes the result onto the built
+        // fill/rim/column rects directly (DetailColumnFill/DetailColumnRim),
+        // the same "Domain computes, Core paints" split AnchorSubmenuRows
+        // already follows.
+        public static int DetailVisibleIconRows(int count)
+        {
+            if (count < 0) return 0;
+            return count > FightHudSpec.DetailIconRows ? FightHudSpec.DetailIconRows : count;
+        }
 
-        private static float DetailY => -(540f - DetailBottomMargin) + DetailH * 0.5f;
+        public static float DetailHFor(int count) =>
+            DetailTopPad + DetailNameBlockH
+            + DetailVisibleIconRows(count) * DetailIconRowPitch + DetailBottomPad;
+
+        // THE STATIC TREE'S OWN RESERVATION -- built at the pool's full six
+        // rows, same reason FightSubmenuLayout.BuildReservationRows keeps a
+        // static tree at its pool size rather than the common case: it is
+        // never what the player actually sees (RefreshDetail resizes the
+        // real card down to however many rows the FIRST hovered panel
+        // shows, before it is ever drawn), so it is pure build-time plumbing.
+        private static float DetailH => DetailHFor(FightHudSpec.DetailIconRows);
+
+        // BOTTOM-ANCHORED AT A FIXED SCREEN MARGIN -- shrinking the card for
+        // a short list moves only its TOP, never this bottom edge, which is
+        // the edge nearest the enemy rack/party plates this column sits
+        // beside (DetailX/DetailW's own header: "a collision this opens is
+        // with the enemy rack"). Growing from the CENTRE instead would push
+        // this bottom edge down just as often as it pulls the top up, which
+        // is exactly the "fixed tall rect" feel the owner's ask was against.
+        private const float DetailFixedBottom = -(540f - DetailBottomMargin);
+
+        public static float DetailCentreYFor(int count) => DetailFixedBottom + DetailHFor(count) * 0.5f;
+
+        private static float DetailY => DetailCentreYFor(FightHudSpec.DetailIconRows);
 
         // NO BLEED CORRECTION any more -- panel_violet's 9-slice transparent
         // margin is gone with the sprite itself (see BuildDetailColumn's own
         // header); a flat fill plus a hairline Rim draws exactly on the rect
         // it is given, so the frame IS the rect on every edge.
-        private static float DetailFrameTop => DetailH * 0.5f;
-        private static float DetailFrameBottom => -DetailH * 0.5f;
+        //
+        // LOCAL (BOX-RELATIVE) COORDINATES below, all count-aware, all pure
+        // functions of DetailHFor(count) -- FightController.Hud.cs's
+        // RefreshDetail calls these every repaint to reposition the fill,
+        // the four Rim edges, DetailName/DetailKind and each active icon row,
+        // the same "Domain computes the local Y, Core writes it onto the
+        // RectTransform" split FightSubmenuLayout's own Y functions already
+        // follow for the submenu. The STATIC tree below is built at
+        // FightHudSpec.DetailIconRows (the pool's own ceiling) by calling
+        // these with that same count, so the built scene and the first
+        // runtime repaint can never disagree about where anything sits.
+        private static float DetailFrameTop => DetailFrameTopFor(FightHudSpec.DetailIconRows);
+        private static float DetailFrameBottom => DetailFrameBottomFor(FightHudSpec.DetailIconRows);
+
+        public static float DetailFrameTopFor(int count) => DetailHFor(count) * 0.5f;
+        public static float DetailFrameBottomFor(int count) => -DetailHFor(count) * 0.5f;
+
+        // Name/kind sit a fixed distance below the box's own (count-aware)
+        // top edge -- they move DOWN, toward the fixed bottom, as the box
+        // shrinks for a shorter list, the same way FightSubmenuLayout.
+        // HeaderYFor tracks FrameTopFor(count) for the submenu's own title.
+        public static float DetailNameYFor(int count) => DetailFrameTopFor(count) - DetailTopPad - 12f;
+        public static float DetailKindYFor(int count) => DetailFrameTopFor(count) - DetailTopPad - 32f;
+
+        // Row `index`'s local Y for a card showing `count` icons, packed
+        // TIGHT under the name block with no gap and no dead space above the
+        // bottom pad -- DetailHFor(count) was sized to fit EXACTLY
+        // DetailVisibleIconRows(count) rows at this pitch, so bottom-
+        // anchoring within the CURRENT (not the static/pool) box always
+        // lands the last row's own bottom exactly DetailBottomPad above this
+        // count's own bottom edge.
+        public static float DetailIconRowYFor(int count, int index)
+        {
+            int shown = DetailVisibleIconRows(count);
+            float statBottom = DetailFrameBottomFor(count) + DetailBottomPad;
+            return statBottom + (shown - 1 - index) * DetailIconRowPitch;
+        }
 
         // A PERSISTENT third column rather than a hover tooltip: arrowing
         // through options lets the player compare without re-hovering, and a
         // tooltip that vanishes the moment the cursor moves cannot be compared
         // against anything.
-        // A DARK, NEAR-OPAQUE PLATE, not panel_violet -- the owner's ask was
-        // legibility over ornament: a body line read against the violet
-        // panel's own busy paint at 1920x1080 without leaning in. #1D1226F2
-        // is the same near-black-plum the kit's OWN tooltip already uses
-        // (CharacterDossierScreen.BuildTooltip, ReckoningScreen's offer
-        // tooltip) for exactly this reason, so this is the kit's existing
-        // "read this" surface, not a new one invented for this card. The
-        // hairline Rim (FightHudPalette.Hairline, the same edge DetailDivider
-        // already draws) replaces the ornate frame's own border -- no darker
-        // panel sprite exists under Art/UI/Panels for this card's aspect, so
-        // there is no frame art to keep (see this method's own header
-        // elsewhere for the Glob that confirmed it).
+        // A DARK, NEAR-OPAQUE PLATE, not panel_violet -- the owner's original
+        // ask was legibility over ornament, and the 2026-09-23 icon rework
+        // keeps the same call ("keep it dark and wide as the last commit
+        // made it") even though the body text that first justified it is
+        // gone. #1D1226F2 is the same near-black-plum the kit's OWN tooltip
+        // already uses (CharacterDossierScreen.BuildTooltip, ReckoningScreen's
+        // offer tooltip), so this is the kit's existing "read this" surface,
+        // not a new one invented for this card. The hairline Rim
+        // (FightHudPalette.Hairline) replaces the ornate frame's own border --
+        // no darker panel sprite exists under Art/UI/Panels for this card's
+        // aspect, so there is no frame art to keep (see this method's own
+        // header elsewhere for the Glob that confirmed it).
         private const string DetailFillHex = "#1D1226F2";
 
         // A PERSISTENT third column rather than a hover tooltip: arrowing
@@ -2429,115 +2547,55 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             float contentW = DetailW - 44f;
             float left = -DetailW * 0.5f + 22f;
-            float top = DetailFrameTop - DetailTopPad;
-
-            // MEASURED FROM THE BOTTOM, same as before -- statBottom is a
-            // plain DetailBottomPad off the rect's own edge now, not an
-            // empirical fudge against an ornate border's drawn line: a flat
-            // fill plus a 1px Rim has no decoration for a row to sit on top
-            // of.
-            float statBottom = DetailFrameBottom + DetailBottomPad;
-            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * DetailStatPitch + 10f;
+            const int staticCount = FightHudSpec.DetailIconRows;
 
             var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(contentW, 22f), 18,
-                FightHudPalette.TextPrimary, Place.At(left, top - 12f, new UiVec(0f, 0.5f)));
+                FightHudPalette.TextPrimary, Place.At(left, DetailNameYFor(staticCount), new UiVec(0f, 0.5f)));
             var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(contentW, 14f), 11,
-                FightHudPalette.GoldLight, Place.At(left, top - 32f, new UiVec(0f, 0.5f)));
-
-            // TOP-ALIGNED IN A TALL BOX. Centred, a one-line description sat in
-            // the middle of the space and a three-line one started higher --
-            // the block moved every time the text wrapped, which is exactly
-            // what a reader uses the first line's position to track.
-            //
-            // 15, UP FROM 13 -- the owner's ask: readable at 1920x1080
-            // without leaning in. Body text is the one thing on this card a
-            // player actually reads sentence by sentence, rather than scans
-            // for a number, so it is the one label that earns a size bump
-            // the stat rows (scanned, not read) do not need.
-            float bodyTop = top - DetailNameBlockH;
-            float bodyHeight = bodyTop - (dividerY + 10f);
-            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(contentW, bodyHeight), 15,
-                    FightHudPalette.TextSecondary,
-                    Place.At(left, bodyTop - bodyHeight * 0.5f, new UiVec(0f, 0.5f)))
-                .TextAligned(UiTextAlign.TopLeft);
-            var divider = Ui.Solid("DetailDivider", FightHudPalette.Hairline, new UiVec(contentW, 1f),
-                Place.At(0f, dividerY));
+                FightHudPalette.GoldLight, Place.At(left, DetailKindYFor(staticCount), new UiVec(0f, 0.5f)));
 
             DetailName = name;
             DetailKind = kind;
-            DetailBody = body;
 
-            // POOLED ROWS, NOT EIGHT FIXED KEYS (2026-09-22 rework #2). A
-            // row's KEY is now UiString.Runtime, same as its value already
-            // was -- FightHudModel's Stats list is COMPACT (only the facts
-            // that apply to whatever is hovered, in canonical order, with
-            // nothing left as an empty placeholder in the middle), so which
-            // physical row paints POWER moves with what else is present.
-            // FightController.Hud.cs's RefreshDetail writes both the key and
-            // the value into row i from panel.Stats[i], and hides row i
-            // entirely once i reaches panel.Stats.Count -- the same
-            // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows
-            // already use, not a restatement of it.
-            //
-            // WIDTH IS UNIFORM AT BUILD TIME. Every row starts at the normal
-            // key/value width; RefreshDetail narrows exactly the row that
-            // currently carries "POWER" (and restores every other row to
-            // full width, since these are pooled and a PREVIOUS panel may
-            // have narrowed a different index) -- see DetailStatKeyWidth/
-            // DetailStatKeyWidthNarrow's own header and RefreshDetail's.
             var fill = Ui.Solid("DetailColumnFill", DetailFillHex, new UiVec(DetailW, DetailH),
                 Place.At(0f, 0f)).AsDecor();
+            DetailColumnFill = fill;
 
-            var children = new List<UiNode> { fill, name, kind, body, divider };
-            children.AddRange(Ui.Rim("DetailColumn", new UiVec(DetailW, DetailH), FightHudPalette.Hairline));
+            var children = new List<UiNode> { fill, name, kind };
+            var rim = Ui.Rim("DetailColumn", new UiVec(DetailW, DetailH), FightHudPalette.Hairline).ToList();
+            children.AddRange(rim);
+            foreach (var edge in rim) DetailColumnRim.Add(edge);
 
-            for (int i = 0; i < FightHudSpec.DetailStatRows; i++)
+            // ONE ICON POOL, NOT EIGHT TEXT KEYS (2026-09-23 icon rework).
+            // FightHudModel.DetailPanel.Icons is COMPACT -- only the facts
+            // that apply to whatever is hovered, in DetailIconKind's own
+            // canonical order (FillDetailIcons) -- same "omit rather than
+            // pad" rule the old Stats row pool followed. FightController.
+            // Hud.cs's RefreshDetail sets row i's sprite (by IconKey, via
+            // Resources.Load), value text AND its LOCAL Y (DetailIconRowYFor,
+            // count-aware -- the pass-2 "dynamic box" rework) from panel.
+            // Icons[i] for i < Count, and hides row i entirely past it -- the
+            // same fixed-pool/toggle-visibility idiom FightSubmenuLayout's
+            // rows and the old text-row pool this replaces both already use.
+            for (int i = 0; i < FightHudSpec.DetailIconRows; i++)
             {
-                float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * DetailStatPitch;
+                float y = DetailIconRowYFor(staticCount, i);
 
-                var key = Ui.Label($"DetailStatKey{i}", UiString.Runtime, new UiVec(DetailStatKeyWidth, 16f), 12,
-                    FightHudPalette.TextMuted, Place.At(left, y, new UiVec(0f, 0.5f)));
+                var icon = Ui.Sprite($"DetailIcon{i}", null, new UiVec(DetailIconSize, DetailIconSize),
+                        Place.At(left + DetailIconSize * 0.5f, y, new UiVec(0.5f, 0.5f)))
+                    .Inactive();
 
-                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(DetailStatValueWidth, 16f), 13,
-                    FightHudPalette.GoldLight, Place.At(DetailW * 0.5f - 22f, y, new UiVec(1f, 0.5f)));
+                float valueLeft = left + DetailIconSize + DetailIconValueGap;
+                var value = Ui.Label($"DetailIconValue{i}", UiString.Runtime,
+                        new UiVec(DetailW * 0.5f - 22f - valueLeft, DetailIconSize), 14,
+                        FightHudPalette.GoldLight, Place.At(valueLeft, y, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
 
-                DetailStatKeys.Add(key);
-                DetailStatValues.Add(value);
-                children.Add(key);
+                DetailIconImages.Add(icon);
+                DetailIconValues.Add(value);
+                children.Add(icon);
                 children.Add(value);
             }
-
-            // ONE SHARED TAG, repositioned at runtime to ride whichever row
-            // currently paints POWER (RefreshDetailDamageType reads that
-            // row's own key label Y, since rows never move -- only their
-            // content, and for one row at a time, their width, do). X is a
-            // CONSTANT regardless of which row that is: it always rides the
-            // NARROW key width, the only width the tag is ever shown beside.
-            //
-            // RESTS ON ROW 0'S OWN LINE at build time -- there is no padding
-            // strip left tall enough to park a 16px label clear of both the
-            // card's own edge and the nearest row (DetailBottomPad is sized
-            // for VISUAL breathing room under the last stat, not for hiding
-            // an extra element), so the declared rest position genuinely
-            // does overlap a row's key/value until RefreshDetailDamageType
-            // moves it at runtime -- exactly the case UiAudit's own
-            // SiblingOverlap message names as the reason AllowOverlap
-            // exists: "meant to sit on top of each other" here reads as
-            // "one of them is Inactive and always relocated before either
-            // is ever shown together", which is what makes it true rather
-            // than a dead exemption (UiAudit's A7 catches those).
-            float tagRestY = statBottom + (FightHudSpec.DetailStatRows - 1) * DetailStatPitch;
-            var tag = Ui.Label("DetailDamageType", UiString.Runtime,
-                    new UiVec(DetailDamageTypeWidth, 16f), 11, FightHudPalette.TextMuted,
-                    Place.At(left + DetailStatKeyWidthNarrow + 4f, tagRestY, new UiVec(0f, 0.5f)))
-                .Styled(TypographyRole.TacticalData)
-                .Inactive()
-                .AllowOverlap("hidden placeholder rest position -- FightController.Hud.cs's " +
-                    "RefreshDetailDamageType relocates this Inactive tag onto whichever row currently " +
-                    "carries POWER before it is ever shown, so its build-time spot on row 0's own line " +
-                    "is never actually visible alongside that row's content");
-            DetailDamageType = tag;
-            children.Add(tag);
 
             var column = Ui.Panel("DetailColumn", Place.At(DetailX, DetailY),
                 UiSize.Fixed(DetailW, DetailH), children.ToArray());

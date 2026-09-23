@@ -12,12 +12,12 @@ namespace PrincesPalace.PlayModeTests
     // The four things every button in this project carries, under interruption
     // and teardown.
     //
-    // ButtonPressAnimator, SubtleHoverScale, ThemedButtonState and
-    // ColumnOpenAnimator are attached from ONE choke point apiece, to every
-    // button and every column in the game. That is what makes a stuck state on
-    // one of them worth a test: the failure is not "this button looks odd", it
-    // is "some buttons in the game sometimes look odd", which is the shape of
-    // bug nobody can reproduce.
+    // ButtonPressAnimator, HoverBox, ThemedButtonState and ColumnOpenAnimator
+    // are attached from ONE choke point apiece, to every button and every
+    // column in the game. That is what makes a stuck state on one of them
+    // worth a test: the failure is not "this button looks odd", it is "some
+    // buttons in the game sometimes look odd", which is the shape of bug
+    // nobody can reproduce.
     //
     // A NO-SCENE RIG for the three pure animators, the shape
     // FightBeatPlayerFixtureTests and StageAnimationTests already use: these
@@ -72,62 +72,75 @@ namespace PrincesPalace.PlayModeTests
         // cannot ease itself back down -- OnDisable has to reset eagerly, which
         // is what its own comment says it is for. A row swapping out under the
         // cursor (Continue replacing the choice row) is the live case.
+        //
+        // Owner's call, 2026-09-23: no more press-scale pop either -- this
+        // used to assert localScale.x shrank and snapped back; the plate now
+        // dims instead (a colour lerp, not a transform change), so this
+        // asserts the same "stuck mid-feedback" failure shape against Image.
+        // color.
         [UnityTest]
         public IEnumerator APressAnimatorDisabledMidPressComesBackAtRest()
         {
-            var go = Rig("Pressed", typeof(ButtonPressAnimator));
-            var rect = (RectTransform)go.transform;
+            // Image BEFORE ButtonPressAnimator -- AddComponent runs Awake
+            // synchronously, and ButtonPressAnimator.Awake captures its base
+            // colour from GetComponent<Image>() once, so the Image has to
+            // already be attached when that fires. Image's own default
+            // colour is white, which is what the assertions below compare
+            // against.
+            var go = Rig("Pressed", typeof(Image), typeof(ButtonPressAnimator));
+            var image = go.GetComponent<Image>();
             var animator = go.GetComponent<ButtonPressAnimator>();
 
-            animator.OnPointerEnter(null);
             animator.OnPointerDown(null);
             yield return Settle(0.30f);
 
-            Assert.Less(rect.localScale.x, ButtonPressAnimator.RestingScale - 0.001f,
-                "fixture: the press never shrank the button, so nothing below is tested");
+            Assert.Less(image.color.r, Color.white.r - 0.001f,
+                "fixture: the press never dimmed the plate, so nothing below is tested");
 
             go.SetActive(false);
 
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                "a button hidden mid-press stayed shrunk, so it pops back into view already pressed");
-            Assert.AreEqual(1f, rect.localScale.y, 0.001f);
+            Assert.AreEqual(Color.white, image.color,
+                "a button hidden mid-press stayed dimmed, so it pops back into view already pressed");
 
             // And it does not come back still believing it is held: one frame
             // after re-enabling, with no pointer anywhere near it, it is at
-            // rest rather than easing toward the press scale.
+            // rest rather than easing toward the pressed tint.
             go.SetActive(true);
             yield return null;
             yield return null;
 
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
+            Assert.AreEqual(Color.white, image.color,
                 "the re-enabled button is animating toward a press nobody is making");
         }
 
-        // ---- B20: the subtler hover, same shape ------------------------------------------
-
+        // ---- B20: the hover/focus rim, same shape of bug -----------------------------
+        //
+        // SubtleHoverScale's own version of this test animated a localScale
+        // and is gone with it (owner's 2026-09-23 hover-pop removal); HoverBox
+        // has no Update() to leave mid-animation, but it still owns two
+        // sticky booleans (_isHovering/_isSelected) that OnDisable has to
+        // clear or a row hidden mid-hover comes back showing a rim for a
+        // pointer that is no longer there.
         [UnityTest]
-        public IEnumerator AHoverScaleDisabledMidHoverComesBackAtRest()
+        public IEnumerator AHoverBoxDisabledMidHoverComesBackWithTheRimHidden()
         {
-            var go = Rig("Hovered", typeof(SubtleHoverScale));
-            var rect = (RectTransform)go.transform;
-            var hover = go.GetComponent<SubtleHoverScale>();
+            var go = Rig("Hovered", typeof(HoverBox));
+            var hover = go.GetComponent<HoverBox>();
+            var rim = new GameObject("Rim", typeof(RectTransform));
+            rim.transform.SetParent(go.transform, worldPositionStays: false);
+            rim.SetActive(false);
+            hover.Rim = rim;
 
             hover.OnPointerEnter(null);
-            yield return Settle(0.30f);
 
-            Assert.Greater(rect.localScale.x, 1.001f, "fixture: the hover never grew the row");
+            Assert.IsTrue(rim.activeSelf, "fixture: the hover never showed the rim");
 
             go.SetActive(false);
-
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                "a row hidden mid-hover stayed enlarged");
-
             go.SetActive(true);
             yield return null;
-            yield return null;
 
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                "the re-enabled row is still hovering something the pointer left");
+            Assert.IsFalse(rim.activeSelf,
+                "the re-enabled row is still showing a rim for a hover the pointer already left");
         }
 
         // ---- A20 / B23: the column's open animation ----------------------------------------

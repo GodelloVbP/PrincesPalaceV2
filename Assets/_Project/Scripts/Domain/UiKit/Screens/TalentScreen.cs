@@ -131,11 +131,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // and investing is what lights the path behind it.
         public List<NodeRef> EdgeGlows = new List<NodeRef>();
 
-        // Which slot each edge arrives at, parallel to Edges. The controller
-        // lights an edge when its CHILD is invested: the parent necessarily
-        // already is, since that is what the prerequisite means, so the child
-        // alone answers it and nothing has to re-walk the skeleton at runtime.
+        // Which slot each edge arrives at, parallel to Edges. "The parent
+        // necessarily already is [invested]" turned out false for a merge or
+        // capstone slot, which authors more than one incoming edge for the
+        // same child and only requires ONE of them to be met (TalentPage.
+        // MeetsPrerequisites) -- the child-only test lit every edge into it,
+        // including the strand the player never climbed. EdgeParentSlots
+        // below is the other half the controller now checks.
         public List<int> EdgeChildSlots = new List<int>();
+
+        // Which slot each edge LEAVES, parallel to EdgeChildSlots -- the
+        // other endpoint PaintEdges' own header now requires. A parent stored
+        // per edge, not just per child, because a merge/capstone slot has
+        // more than one parent and only the edges from the ones actually
+        // invested may light.
+        public List<int> EdgeParentSlots = new List<int>();
 
         // The two animated layers, and each edge's own length. The components
         // that drive them live in Core -- Domain cannot name a MonoBehaviour --
@@ -800,6 +810,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Edges.Add(edge);
             EdgeGlows.Add(glow);
             EdgeChildSlots.Add(slot);
+            EdgeParentSlots.Add(parent);
             EdgeCores.Add(core);
             EdgeSparks.Add(spark);
             EdgeLengths.Add(length);

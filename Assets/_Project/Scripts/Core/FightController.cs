@@ -423,20 +423,26 @@ namespace PrincesPalace
         [SerializeField] internal GameObject detailColumn;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailKind;
-        [SerializeField] internal TMP_Text detailBody;
-        [SerializeField] internal TMP_Text[] detailStatValues;
 
-        // The KEYS as well, so a row with nothing to say can take its label with
-        // it. Declared in the tree since the panel was built and never wired, so
-        // "COST / POWER / TARGET / EFFECT" sat over four blank values whenever
-        // the panel had no selection to describe -- which reads as a panel that
-        // failed to populate rather than one with nothing to populate.
-        [SerializeField] internal TMP_Text[] detailStatKeys;
+        // THE DYNAMIC BOX ITSELF (coordinator pass 2, 2026-09-23) -- the
+        // fill and the four Rim edges (Top/Bottom/Left/Right, Ui.Rim's own
+        // yield order) RefreshDetail resizes/repositions every repaint via
+        // FightScreen.DetailHFor/DetailFrameTopFor/DetailFrameBottomFor, so
+        // the card is a pure function of the CURRENT panel's icon count, not
+        // a static six-row reservation drawn small.
+        [SerializeField] internal Image detailColumnFill;
+        [SerializeField] internal Image[] detailColumnRim;
 
-        // The skill's element, riding the POWER row -- see FightScreen.
-        // BuildDetailColumn's own comment for why it shares that line rather
-        // than getting a sixth row.
-        [SerializeField] internal TMP_Text detailDamageType;
+        // ICON ROWS, NOT TEXT (2026-09-23 icon rework) -- detailBody and the
+        // detailStatValues/detailStatKeys/detailDamageType fields this
+        // replaced are gone; see FightScreen.BuildDetailColumn's own header.
+        // detailIconImages[i] is a plain Image with no sprite assigned at
+        // build time (FightScreen.BuildDetailColumn's Ui.Sprite(..., null,
+        // ...)) -- RefreshDetail assigns one at runtime by IconKey, off the
+        // same Resources.Load + IconCache<string> mechanism
+        // StatusRowSprites already uses.
+        [SerializeField] internal Image[] detailIconImages;
+        [SerializeField] internal TMP_Text[] detailIconValues;
 
         [SerializeField] internal GameObject targetPrompt;
         [SerializeField] internal TMP_Text targetPromptLabel;

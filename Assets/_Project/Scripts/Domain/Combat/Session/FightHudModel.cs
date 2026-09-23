@@ -3,6 +3,7 @@ using System.Linq;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -76,6 +77,41 @@ namespace PrincesPalace.Domain.Combat.Session
         }
     }
 
+    // WHICH ICON A DetailIcon ROW PAINTS. Enum-keyed rather than a raw
+    // sprite-path string (owner's ask, 2026-09-23 playtest) so the UI side
+    // decides the ONE resource key per member in one place (FightController.
+    // Hud.cs's DetailIconResourcePath) instead of a string minted fresh at
+    // every call site that could misspell or drift from the art on disk.
+    public enum DetailIconKind
+    {
+        Mana,
+        Cost,
+        Cooldown,
+        Element,
+        Defense,
+        Reach,
+        AreaOfEffect,
+        Scaling,
+    }
+
+    // One icon cell on the detail card: WHICH icon (Kind, further narrowed
+    // by IconKey for the members that cover more than one glyph -- Element
+    // has eleven, Defense three, Reach two, Scaling six), and the short
+    // text beside it where one exists ("11", "100", "STR"), "" otherwise.
+    public readonly struct DetailIcon
+    {
+        public readonly DetailIconKind Kind;
+        public readonly string IconKey;
+        public readonly string Value;
+
+        public DetailIcon(DetailIconKind kind, string iconKey, string value)
+        {
+            Kind = kind;
+            IconKey = iconKey;
+            Value = value;
+        }
+    }
+
     // What the detail column is describing.
     public sealed class DetailPanel
     {
@@ -83,6 +119,17 @@ namespace PrincesPalace.Domain.Combat.Session
         public string Kind = "";
         public string Body = "";
         public readonly List<(string Key, string Value)> Stats = new List<(string, string)>();
+
+        // THE CARD'S ACTUAL ROWS NOW (2026-09-23 icon rework, playtest ask
+        // "replace the text rows with icons"). Stats/Body above are left
+        // populated exactly as before -- FightMenuStateTests and every other
+        // existing reader still gets the same strings -- this is additive:
+        // FightScreen/FightController paint FROM Icons and stop painting the
+        // Stats/Body nodes, rather than the model losing a field a different
+        // reader still wants. Compact, same "omit rather than pad" rule
+        // Stats already followed: a fact that does not apply for this
+        // skill/spell is not in the list at all.
+        public readonly List<DetailIcon> Icons = new List<DetailIcon>();
 
         // The skill's damage type ("Fire", "Arcane", ...), or "" for a
         // non-damaging skill -- see FightHudModel.DamageTypeLabel. A
@@ -512,6 +559,21 @@ namespace PrincesPalace.Domain.Combat.Session
             return remaining > 0 ? $"{authored} ({CooldownLabel(remaining)} LEFT)" : authored;
         }
 
+        // THE COOLDOWN ICON'S OWN VALUE, compact rather than CooldownRowLabel's
+        // "2 TURNS (1 TURN LEFT)" -- an icon row's value sits beside a small
+        // badge, not a whole sentence, the same reason ScalingLabel prints
+        // "STR" rather than a full grade breakdown (that method's own
+        // header). Same two inputs, same two facts CooldownRowLabel states
+        // (the authored length, and how much longer THIS time), just typeset
+        // for the smaller space: "3T" while ready, "2/3" while cooling --
+        // remaining first, since that is the number a player mid-cooldown
+        // actually needs.
+        public static string CooldownIconValue(int cooldownTurns, int remaining)
+        {
+            if (cooldownTurns <= 0) return "";
+            return remaining > 0 ? $"{remaining}/{cooldownTurns}" : $"{cooldownTurns}T";
+        }
+
         // What the cost column prints beside a primary-pool number. Falls
         // back to nothing rather than to "MP" when there is no actor: a card
         // built with no caster in hand cannot know the unit, and a guessed
@@ -611,8 +673,95 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("EFFECT", VerbFor(skill.Effect)));
             panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
             panel.DamageType = DamageTypeLabel(session, actor, skill);
+            FillDetailIcons(panel, session, actor, skill, resourceName, cooldownRemaining);
             return panel;
         }
+
+        // THE ICON ROWS (2026-09-23 icon rework, coordinator pass 2). Every
+        // fact the old compact Stats row pool carried now has an icon: MANA,
+        // COST (resource/health -- dropping this pass 1 was a real
+        // regression, the coordinator's own call), COOLDOWN (same), Element
+        // (carrying POWER's value), Defense, Reach, AreaOfEffect, Scaling.
+        //
+        // ONE ICON, COMPACT -- the same "omit rather than pad" rule Stats
+        // already followed above: a skill with no scaling axis (a fixed-
+        // damage spell) adds no Scaling row at all rather than a "-" icon.
+        private static void FillDetailIcons(DetailPanel panel, FightSession session, CombatantState actor,
+            ResolvedSkill skill, string resourceName, int cooldownRemaining)
+        {
+            string mana = ManaCostLabel(skill, PrimaryTagOf(actor));
+            if (!string.IsNullOrEmpty(mana))
+            {
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Mana, "mana", mana));
+            }
+
+            string cost = ResourceOrHealthCostLabel(skill, actor, resourceName);
+            if (!string.IsNullOrEmpty(cost))
+            {
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Cost, "cost", cost));
+            }
+
+            string cooldown = CooldownIconValue(skill.CooldownTurns, cooldownRemaining);
+            if (!string.IsNullOrEmpty(cooldown))
+            {
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Cooldown, "cooldown", cooldown));
+            }
+
+            var types = ResolvedDamageTypesFor(session, actor, skill);
+            string power = PowerLabel(session, actor, skill);
+            if (types.Count > 0 && !string.IsNullOrEmpty(power))
+            {
+                // THE FIRST TYPE, not every one -- a multi-packet spell
+                // (frost_flare: Fire and Ice) still shows one element icon,
+                // the same simplification DamageTypeLabel's own "/"-joined
+                // text made bearable to read; the full list stays reachable
+                // through panel.DamageType for a reader that wants it.
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Element, ElementIconKey(types[0]), power));
+            }
+
+            if (skill.IsDamaging)
+            {
+                string defenseKey = skill.IgnoresDefense ? "ignored"
+                    : types.Count == 0 ? null
+                    : types.Any(CombatMath.IsPhysical) && types.Any(t => !CombatMath.IsPhysical(t)) ? "mixed"
+                    : types.Any(CombatMath.IsPhysical) ? "physical" : "magical";
+
+                // "mixed" has no single glyph (a skill mixing physical and
+                // magical packets in one cast is rare enough this rework
+                // does not author a third shield for it) -- the row is
+                // omitted rather than shown against the wrong icon, same
+                // "omit what cannot be shown honestly" rule as everywhere
+                // else on this card.
+                if (defenseKey != null && defenseKey != "mixed")
+                {
+                    panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, defenseKey, ""));
+                }
+            }
+
+            if (skill.Targeting != SkillTargeting.Self)
+            {
+                string reachKey = skill.Reach.Kind == ReachKind.Any ? "any" : "front";
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey, ""));
+
+                string aoeKey = skill.Targeting == SkillTargeting.SingleEnemy
+                    || skill.Targeting == SkillTargeting.SingleAlly
+                    ? "single" : "aoe";
+                panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, aoeKey, ""));
+            }
+
+            string scaling = ScalingLabelForSkill(session, actor, skill);
+            if (scaling != "-")
+            {
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Scaling, scaling.ToLowerInvariant(), scaling));
+            }
+        }
+
+        // The Element icon's key: exactly DamageType's own member name,
+        // lowercased -- the one spelling both this method and the generated
+        // Icons/Ability/element_*.png files (tools/make_detail_card_icons.py)
+        // agree on, so a twelfth DamageType only ever needs new art, never a
+        // new mapping line here.
+        private static string ElementIconKey(DamageType type) => type.ToString().ToLowerInvariant();
 
         // Adds (key, value) only when value is non-empty -- the single seam
         // every compacted stat (MANA, COST, COOLDOWN, POWER, DEFENSE) goes
@@ -1052,6 +1201,29 @@ namespace PrincesPalace.Domain.Combat.Session
             if (enemy == null || enemy.BreakShield == null || !enemy.BreakShield.IsBroken) return "";
 
             return ItemStatLines.Coloured(BrokenHex, "BRK");
+        }
+
+        // WHAT THE SAME TAGS NODE SHOWS WHEN THERE IS NO BRK TO SHOW --
+        // playtest 2026-09-23: a shield was carried by the plate's own ward
+        // segment (SetWardFill) with no number anywhere on the card saying
+        // how much. The Tags node (see EnemyStatusLine's own header, "BRK
+        // survives because it has no other surface") is the one slot this
+        // row has spare -- BRK is a boss-only, narrow-window state, so
+        // sharing it with ward rather than opening a second box is the same
+        // "one surface per fact" call Phase 3 already made here.
+        //
+        // BRK WINS THE SLOT when both are true at once (an elite mid-break
+        // with a shield up is the only way that happens) -- a broken boss is
+        // the rarer and more urgent fact, and losing the ward NUMBER for
+        // that one window is not losing the ward ITSELF: the segment on the
+        // bar still shows it, only the "+N" beside it does not, until BRK
+        // clears. Graceful degradation on a slot conflict, not silence.
+        public static string EnemyPlateTagLine(CombatantState enemy, FightSession session, int wardPoints)
+        {
+            string brk = EnemyStatusLine(enemy, session);
+            if (brk.Length > 0) return brk;
+
+            return wardPoints > 0 ? ItemStatLines.Coloured(FightHudPalette.WardText, $"+{wardPoints}") : "";
         }
 
         // WHAT THIS ITEM WOULD DO FOR THE CHARACTER HOLDING IT, which for a

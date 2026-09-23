@@ -18,12 +18,16 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // The skill detail card's element tag, hovered the way a player's mouse
-    // reaches it -- FightScreenTests.TheDamageTypeTagSitsBetweenThePowerKey
-    // AndItsValue already pins the built node's geometry; this is the seam
-    // proving RefreshDetail actually fills it in and hides it again when the
-    // skill deals no typed damage at all.
-    public class FightSkillDetailDamageTypeTests
+    // The skill detail card's Element icon row, hovered the way a player's
+    // mouse reaches it. 2026-09-23 icon rework replaced the old
+    // detailDamageType text tag with an icon-row pool painted from
+    // DetailPanel.Icons (FightHudModel.FillDetailIcons) into FightController's
+    // detailIconImages/detailIconValues (FightController.Hud.cs's
+    // RefreshDetail) -- this is the seam proving RefreshDetail actually
+    // paints an active Element row, sprited from the resolved damage type's
+    // own resource, and paints none at all for a skill that deals no typed
+    // damage.
+    public class FightSkillDetailElementIconTests
     {
         private FightController _fight;
 
@@ -90,7 +94,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator HoveringAnArcaneSkillShowsARCANE()
+        public IEnumerator HoveringAnArcaneSkillShowsAnActiveElementRow()
         {
             yield return LoadFightWithAnArcaneSkill();
 
@@ -102,19 +106,19 @@ namespace PrincesPalace.PlayModeTests
             var panel = _fight.CurrentDetailForTest();
             Assert.AreEqual("Arcane", panel.DamageType, "fixture: the model itself did not resolve Arcane");
 
-            var label = Named("DetailDamageType").GetComponent<TMP_Text>();
-            Assert.IsTrue(label.gameObject.activeInHierarchy, "the element tag stayed hidden for a damaging skill");
-            Assert.AreEqual("ARCANE", label.text);
+            int index = panel.Icons.FindIndex(icon => icon.Kind == DetailIconKind.Element);
+            Assert.GreaterOrEqual(index, 0, "an Arcane bolt should carry an Element icon row");
 
-            bool ok = ColorUtility.TryParseHtmlString(FightHudPalette.DamageTypeArcane, out var expected);
-            Assert.IsTrue(ok, "fixture: the palette token itself does not parse");
-            Assert.AreEqual(expected.r, label.color.r, 0.02f);
-            Assert.AreEqual(expected.g, label.color.g, 0.02f);
-            Assert.AreEqual(expected.b, label.color.b, 0.02f);
+            var image = Named($"DetailIcon{index}").GetComponent<Image>();
+            Assert.IsTrue(image.gameObject.activeInHierarchy, "the Element row stayed hidden for a damaging skill");
+
+            var expectedSprite = Resources.Load<Sprite>("Icons/Ability/element_arcane");
+            Assert.IsNotNull(expectedSprite, "fixture: element_arcane is not under Resources/Icons/Ability");
+            Assert.AreEqual(expectedSprite, image.sprite, "the Element row is not sprited from element_arcane");
         }
 
         [UnityTest]
-        public IEnumerator HoveringANonDamagingSkillHidesTheTag()
+        public IEnumerator HoveringANonDamagingSkillShowsNoElementRow()
         {
             yield return LoadFightWithAnArcaneSkill();
 
@@ -126,9 +130,8 @@ namespace PrincesPalace.PlayModeTests
             var panel = _fight.CurrentDetailForTest();
             Assert.AreEqual("", panel.DamageType, "fixture: Mend should carry no damage type at all");
 
-            var label = Named("DetailDamageType").GetComponent<TMP_Text>();
-            Assert.IsFalse(label.gameObject.activeInHierarchy,
-                "a heal with no element still shows a (presumably stale) element tag");
+            bool hasElementRow = panel.Icons.Any(icon => icon.Kind == DetailIconKind.Element);
+            Assert.IsFalse(hasElementRow, "a heal with no element still carries an Element icon row");
         }
     }
 }

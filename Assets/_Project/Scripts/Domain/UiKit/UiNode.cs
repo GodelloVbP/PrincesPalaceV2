@@ -135,15 +135,20 @@ namespace PrincesPalace.Domain.UiKit
         // ---- motion (all three migrated from v1, which lost them in the
         // rebuild along with every other button animation) --------------------
 
-        // A WIDE row or plate: hover-scales by this factor and does NOT get the
-        // press "pop".
+        // DEAD as of 2026-09-23 (second pass): the hover/focus rim it used to
+        // request is now the default for every unthemed button (Ui.Button
+        // builds it unconditionally; see that method's own header), so the
+        // field no longer decides whether a node gets one. Read by nothing
+        // in UiEmitter any more -- ButtonPressAnimator (press-dim) and
+        // HoverBox (hover/focus rim) are not mutually exclusive the way the
+        // old scale-pop and rim were, so an unthemed button now carries both
+        // regardless of this value.
         //
-        // Zero means "use the default press animator". The two are mutually
-        // exclusive by construction in the emitter, because both drive
-        // localScale and would fight over it every frame. The reason a wide row
-        // wants the gentler one is legibility, not taste: the press animator's
-        // 1.05/0.95 visibly shifts a long caption sideways, which reads as the
-        // text wobbling rather than the row responding.
+        // Kept, and still written by Hovers(), ONLY so every existing
+        // .Hovers(1.03f)/.Hovers(1.16f) call site across ~15 screens keeps
+        // compiling and so a test pinning "this call site asked for the
+        // gentle treatment" (FightButtonMotionTests) has something to read.
+        // Never assign this directly outside Hovers().
         public float HoverScale;
 
         // Slides in and fades up when shown (ColumnOpenAnimator).
@@ -217,6 +222,15 @@ namespace PrincesPalace.Domain.UiKit
         public string AllowOverlapReason;
         public string AllowOverflowReason;
 
+        // A fourth escape hatch, hover-rim-shaped: opts an unthemed Button out
+        // of the default hover/focus rim Ui.Button now builds for it (see
+        // Ui.Button's own header). REQUIRES a reason, same pattern as the
+        // other three -- for a button that already draws its own focus
+        // visual and would show it twice. Set only through NoHoverBox()
+        // below, which also removes the rim Ui.Button already added, since
+        // the two calls can land in either order at a call site.
+        public string NoHoverBoxReason;
+
         // A third escape hatch, gamepad-navigation-shaped (plan section 9a):
         // a custom actionable control (anything implementing
         // IPointerClickHandler/IPointerDownHandler/IDragHandler that is not a
@@ -273,7 +287,36 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode AsDecor() { Decor = true; return this; }
         public UiNode Clipping() { Masks = true; return this; }
         public UiNode NoChrome() { Chromeless = true; return this; }
-        public UiNode Hovers(float scale = 1.02f) { HoverScale = scale; return this; }
+
+        // NO-OP since 2026-09-23 (owner's call: the hover/focus rim is now
+        // the DEFAULT every unthemed Ui.Button() already builds for itself
+        // at declaration time -- see Ui.Button's own header). Kept only so
+        // every existing .Hovers(1.02f)/.Hovers(1.16f) call site across the
+        // game -- ~15 screens -- keeps compiling unchanged rather than
+        // forcing every one of them to be edited to drop a call that would
+        // otherwise do nothing. Still sets HoverScale, which nothing but
+        // FightButtonMotionTests-style "did this call site ask for the
+        // gentle treatment" pins now reads -- see that field's own header.
+        public UiNode Hovers(float scale = 1.02f)
+        {
+            HoverScale = scale;
+            return this;
+        }
+
+        // Opts an unthemed button out of the default hover/focus rim --
+        // for a control that already draws its own selection/focus visual
+        // (a dossier cell lit by LightRowsFor, a fight hit area the picking
+        // cursor already marks) and would otherwise show two. REQUIRES a
+        // reason, same pattern as AllowOverlap/AllowOverflow/AllowUnreachable.
+        // Removes the rim child Ui.Button already added -- this can be
+        // called before or after Themed()/other builders, and either order
+        // must leave the node rim-free.
+        public UiNode NoHoverBox(string reason)
+        {
+            NoHoverBoxReason = Require(reason, nameof(NoHoverBox));
+            Ui.RemoveDefaultHoverBox(this);
+            return this;
+        }
         public UiNode Opening() { OpensOnShow = true; return this; }
         public UiNode Quiet() { SilentClick = true; return this; }
 

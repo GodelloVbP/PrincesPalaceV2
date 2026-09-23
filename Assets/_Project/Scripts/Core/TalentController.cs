@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Ambience;
@@ -25,6 +26,7 @@ namespace PrincesPalace
 
         [SerializeField] internal GameObject[] edgeGlows;
         [SerializeField] internal int[] edgeChildSlots;
+        [SerializeField] internal int[] edgeParentSlots;
         [SerializeField] internal Image[] orbGlows;
 
         // A stone's own furniture, one entry per orb in the same order as
@@ -251,14 +253,21 @@ namespace PrincesPalace
             Refresh();
         }
 
-        // A ON AN UNKINDLED STAR KINDLES IT, same press that used to only
-        // select (owner play-test, 2026-09-19: "Make A on a star that is
-        // unkindled the way to kindle it"). Button.onClick is the ONE
-        // handler a mouse click and a pad Submit on the focused orb both
-        // already drive (Unity's own OnPointerClick/OnSubmit each call
-        // Press()), so there is exactly one place this decision can live,
-        // and a mouse click gets the identical behaviour rather than a
-        // second copy of it.
+        // FIRST PRESS SELECTS, SECOND PRESS ON THE SAME STAR KINDLES.
+        // Owner's hardware playtest (2026-09-23) rejected the earlier
+        // contract -- "Make A on a star that is unkindled the way to
+        // kindle it" -- because a single press with no confirmation reads
+        // as an accidental spend on both mouse and pad: nothing tells the
+        // player what a star does before it is gone. Button.onClick is
+        // still the ONE handler a mouse click and a pad Submit on the
+        // focused orb both drive (Unity's own OnPointerClick/OnSubmit each
+        // call Press()), so this one place still covers both.
+        //
+        // `alreadySelected` is read BEFORE `_selectedSlot` is overwritten,
+        // so pressing a star that was not the selection always just selects
+        // it, however that press evaluates -- and a second press on the
+        // same, still-refused star still only re-selects rather than
+        // kindling, since Kindle is gated on Refusal.None below too.
         private void OnOrbPressed(int index)
         {
             int path = index / TalentScreen.OrbCount;
@@ -268,6 +277,8 @@ namespace PrincesPalace
             // sitting off-screen with live buttons on them, and a stray click
             // landing there would kindle something the player cannot see.
             if (path != _path) return;
+
+            bool alreadySelected = _selectedSlot == slot;
 
             _selectedSlot = slot;
             AimPushIn();
@@ -280,7 +291,7 @@ namespace PrincesPalace
             // second path onto the same call, for a mouse player or anyone
             // who lands on the panel by other means.
             var refusal = TalentPage.Evaluate(Tree, path, slot, Unlocked, Embers, Budget);
-            if (refusal == TalentPage.Refusal.None)
+            if (alreadySelected && refusal == TalentPage.Refusal.None)
             {
                 Kindle();
                 return;
@@ -398,11 +409,69 @@ namespace PrincesPalace
             }
 
             respecDialog.SetShown(true);
+            PushRespecDialogContext();
         }
 
         private void CloseRespec()
         {
             if (respecDialog != null) respecDialog.SetShown(false);
+            PopRespecDialogContext();
+        }
+
+        // A MODAL PUSHED ON TOP OF THE SCREEN'S OWN CONTEXT, the same shape
+        // GlossaryController/DebugMenuController/RelicDraftController each
+        // push for a full pane -- this one just opens and closes far more
+        // often than a scene does, so it is pushed from OpenRespec/CloseRespec
+        // rather than OnEnable/OnDisable.
+        //
+        // Owner's hardware playtest (2026-09-23): the dialog "does not work
+        // with the gamepad" -- OpenRespec never declared Confirm/Cancel to
+        // any NavContext, so the dispatcher's own reselect-outside-the-
+        // declared-set rule (NavigationInputModule.ReselectIfOutsideDeclaredSet)
+        // yanked the pad straight back onto whatever the SCREEN'S context
+        // still called selected, which sat under the dialog the whole time.
+        //
+        // CANCEL IS THE CONTEXT'S CANCEL, not an INavCancelClaim: this dialog
+        // has nothing under it worth asking first -- it IS the top of the
+        // stack while it is open -- so the plain `cancel` action is the
+        // right shape, the same one DefeatController/ReckoningController use
+        // for their own confirmation modals.
+        //
+        // FIRST FOCUS ON CANCEL, not Confirm -- a respec spends nothing to
+        // reject and everything to accept, so the safe answer is where an
+        // accidental Submit press lands.
+        private NavContext _respecDialogContext;
+
+        private void PushRespecDialogContext()
+        {
+            if (_respecDialogContext != null) return;
+            if (respecCancelButton == null && respecConfirmButton == null) return;
+
+            var selectables = new Dictionary<string, object>();
+            if (respecCancelButton != null) selectables["cancel"] = respecCancelButton.gameObject;
+            if (respecConfirmButton != null) selectables["confirm"] = respecConfirmButton.gameObject;
+
+            object entry = respecCancelButton != null ? respecCancelButton.gameObject
+                : respecConfirmButton != null ? respecConfirmButton.gameObject
+                : null;
+
+            _respecDialogContext = new NavContext(entry, selectables, cancel: CloseRespec);
+            NavigationInputModule.Contexts?.Push(_respecDialogContext);
+
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("talentRespecDialog", UiNavGroupKind.Rail,
+                    new[] { respecCancelButton, respecConfirmButton }.Where(b => b != null)),
+                System.Array.Empty<UiNavLink<Selectable>?>());
+
+            EventSystem.current?.SetSelectedGameObject(entry as GameObject);
+        }
+
+        private void PopRespecDialogContext()
+        {
+            if (_respecDialogContext == null) return;
+
+            NavigationInputModule.Contexts?.Remove(_respecDialogContext);
+            _respecDialogContext = null;
         }
 
         // BOTH CURRENCIES, because there are two: embers committed to orbs, and
@@ -733,21 +802,31 @@ namespace PrincesPalace
             }
         }
 
-        // THE PATH BEHIND YOU LIGHTS UP.
+        // THE PATH BEHIND YOU LIGHTS UP -- AND ONLY THE PATH YOU ACTUALLY
+        // CLIMBED.
         //
-        // An edge is lit when its CHILD is invested -- the parent necessarily
-        // already is, because that is what a prerequisite means, so the child
-        // alone answers it and nothing here has to re-walk the skeleton.
+        // An edge lights only when BOTH its endpoints are invested on its own
+        // path: the child, and the specific parent it is drawn from. "The
+        // parent necessarily already is [invested]" was the child-only rule
+        // this used to run on, and it is false for a merge or capstone slot,
+        // which TalentPage.MeetsPrerequisites lets in on ONE completed strand
+        // of several -- so the child lights while the other strand's own
+        // parent never got taken, and the child-only test lit that strand's
+        // edge anyway: an energy beam into a kindled star from a stone the
+        // player never touched (owner's hardware playtest, 2026-09-23).
+        // EdgeParentSlots (TalentScreen) is the per-edge parent this needed
+        // and never had.
         //
-        // The edges were pure decoration before this: three paths' worth of
-        // limbs that never changed whatever the player spent, so a tree with
-        // twenty orbs invested looked exactly like an empty one apart from the
-        // orbs themselves. The climb is the thing the screen is about.
+        // The edges were pure decoration before any of this: three paths'
+        // worth of limbs that never changed whatever the player spent, so a
+        // tree with twenty orbs invested looked exactly like an empty one
+        // apart from the orbs themselves. The climb is the thing the screen
+        // is about.
         private void PaintEdges(HashSet<string> unlocked)
         {
             var tree = Tree;
 
-            if (edgeGlows == null || edgeChildSlots == null) return;
+            if (edgeGlows == null || edgeChildSlots == null || edgeParentSlots == null) return;
 
             // FROM THE SKELETON, NOT FROM THE ARRAY'S LENGTH.
             //
@@ -764,7 +843,7 @@ namespace PrincesPalace
             // one. The same reason the layout derives its waist from the
             // skeleton instead of writing 4.
             int perPath = Domain.Talents.TalentSkeleton.EdgesPerPath;
-            int count = Mathf.Min(edgeGlows.Length, edgeChildSlots.Length);
+            int count = Mathf.Min(edgeGlows.Length, Mathf.Min(edgeChildSlots.Length, edgeParentSlots.Length));
 
             if (perPath <= 0 || count < perPath * TalentPage.PathCount)
             {
@@ -783,12 +862,10 @@ namespace PrincesPalace
                 // are, so which path an edge belongs to is its index over the
                 // per-path count.
                 int path = i / perPath;
-                int slot = edgeChildSlots[i];
 
-                // An edge is lit when its CHILD is invested, and an edge into
-                // an unauthored slot can never be.
-                string id = tree.IdAt(path, slot);
-                bool lit = !string.IsNullOrEmpty(id) && unlocked.Contains(id);
+                // TalentPage.EdgeIsLit owns the rule (both endpoints, on this
+                // edge's own path); this just supplies its own two slots.
+                bool lit = TalentPage.EdgeIsLit(tree, path, edgeParentSlots[i], edgeChildSlots[i], unlocked);
                 edgeGlows[i].SetShown(lit);
             }
         }
@@ -1042,6 +1119,12 @@ namespace PrincesPalace
 
         private void OnDestroy()
         {
+            // The dialog's context first: it sits ABOVE _navContext on the
+            // stack while open, and Remove is order-independent, but leaving
+            // it for a second call here (rather than relying on CloseRespec
+            // ever having run) is what makes a scene unload mid-dialog safe.
+            PopRespecDialogContext();
+
             if (_navContext == null) return;
 
             NavigationInputModule.Contexts?.Remove(_navContext);

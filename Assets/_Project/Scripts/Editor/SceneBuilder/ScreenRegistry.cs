@@ -836,6 +836,7 @@ public static class ScreenRegistry
                 // arrays, and this is what maps a collar's position back.
                 talents.collarSlots = screen.CollarSlots.ToArray();
                 talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
+                talents.edgeParentSlots = screen.EdgeParentSlots.ToArray();
 
                 // The motion, attached here because Domain cannot name a
                 // MonoBehaviour -- the same bounded escape hatch DressAmbience

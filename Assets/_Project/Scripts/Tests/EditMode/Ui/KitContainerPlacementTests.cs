@@ -22,9 +22,10 @@ namespace PrincesPalace.Domain.Tests
     // inside the system menu ugly, and Exits/Options/Party/RunStats/
     // RewardTrack/DossierColumnAFrame are plain Panels now -- Ui.SystemMenuPane,
     // CharacterDossierScreen.BuildColumnAFrame -- with no theme/ratio/inset for
-    // this test to pin), and TalentPanelColumn on 2026-09-19 for the same
-    // reason (Cases() has that row's own note). PartyPane and
-    // RewardTrackPanel were never rows here to begin with --
+    // this test to pin), TalentPanelColumn on 2026-09-19 for the same reason
+    // (Cases() has that row's own note), and DraftFrame on 2026-09-23 (same
+    // reason again, that row's own note). PartyPane and RewardTrackPanel
+    // were never rows here to begin with --
     // SystemMenuScreenTests.NoSystemMenuNodeUsesAContainerOrFlagBannerSprite
     // is the mechanised form of the rule that replaces all of them.
     public class KitContainerPlacementTests
@@ -62,17 +63,24 @@ namespace PrincesPalace.Domain.Tests
             // (EnemyPlate*Frame, GlossaryFrame) and is still pinned against
             // its own art by UiKitAspectPinTests.
 
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => Walk(FightScreen.Build().Root).First(n => n.Name == "SubmenuContainer")),
-                "SubmenuFrameContent", ButtonTheme.Violet, ContainerRatio.ThreeByFour,
-                FightSubmenuLayout.FrameWidth, FightSubmenuLayout.FrameHeight)
-                .SetName("SubmenuContainer/Violet/ThreeByFour");
+            // SubmenuContainer/Violet/ThreeByFour WENT (2026-09-23, coordinator
+            // pass 2): PreserveAspect off (tried first) stopped the frame
+            // rendering narrower than its own rows, but Type.Simple's
+            // non-uniform stretch squashed the painted border hard at 1-3
+            // rows -- the same "stretched and looks bad" complaint that took
+            // DraftFrame off this list the same day (see that row's own
+            // note, just above the HQ-kit section below). FightScreen.
+            // BuildSubmenuFrame is a flat Solid-fill-plus-Rim panel now
+            // (RelicDraftScreen's own DraftFrameFill/DraftFrame idiom), with
+            // no theme/ratio/inset for this row to pin.
 
-            yield return new TestCaseData(
-                (System.Func<UiNode>)(() => RelicDraftScreen.Build().Frame.Node),
-                "DraftFrameContent", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
-                1500f, 1000f)
-                .SetName("DraftFrame/Violet/ThreeByTwo");
+            // DraftFrame/Violet/ThreeByTwo WENT (2026-09-23): the owner called
+            // it out by name -- "it's stretched and looks bad and the inside
+            // is not black, it's more leathery" -- the same complaint that
+            // took RunStatsPane/OptionsPane/ExitsPane/DossierColumnAFrame off
+            // this list on 2026-09-07. RelicDraftScreen.Build().Frame is a
+            // flat Solid-fill-plus-Rim panel now (SystemMenuScreen's own
+            // frame idiom), with no theme/ratio/inset for this row to pin.
 
             // ---- HQ-kit conversions (owner's instruction, 2026-09-07) ----
 

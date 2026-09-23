@@ -96,6 +96,40 @@ namespace PrincesPalace
                 dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Down, collectButton)));
         }
 
+        // THE COHERENT MAP'S OTHER HALF: Down from any dot reaches
+        // collectButton (WireNodes above, built once); Up from collectButton
+        // has to come back, or the pad has a one-way door onto it -- exactly
+        // the owner's hardware complaint ("mapping completely off and
+        // horrible to navigate"). collectButton was never a Rail member and
+        // never a Link's `from`, so UiNavLinkBuilder.Build had no entry for
+        // it at all and RuntimeNavWiring.Apply never touched its
+        // `.navigation` -- Up did whatever Unity's own default (Automatic,
+        // or whatever the scene last authored) happened to compute.
+        //
+        // A SINGLE FIELD WRITE, not a re-Apply of the whole graph: dots'
+        // own Rail and Down links are declared ONCE (WireNodes' own header,
+        // "built once... there is nothing here a later Refresh() rebuilds"),
+        // and that still holds -- the hundred discs themselves never change.
+        // What changes is which one collectButton's Up should return to, so
+        // only that one link is rewritten, every Refresh, off the same
+        // CurrentLevelDot() the pad's initial focus (OnEnable) resolves to --
+        // the one dot both the fly-in and the ribbon rail agree is "here".
+        //
+        // CALLED FROM Refresh(), not WireNodes: WireNodes runs from Wire(),
+        // which OnEnable calls BEFORE Refresh() has resolved _level for the
+        // first time, so a link built there would answer for whatever _level
+        // defaulted to (RewardTrack.StartingLevel) rather than the character
+        // actually showing.
+        private void RefreshCollectButtonUpLink()
+        {
+            if (collectButton == null) return;
+
+            var nav = collectButton.navigation;
+            nav.mode = UnityEngine.UI.Navigation.Mode.Explicit;
+            nav.selectOnUp = CurrentLevelDot();
+            collectButton.navigation = nav;
+        }
+
         private void WireRail()
         {
             if (viewport == null) return;

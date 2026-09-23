@@ -69,6 +69,21 @@ namespace PrincesPalace.Domain.UiKit
         // something the runtime resizes: the fight's enemy hit areas fill a
         // stage slot whose rect is set from the real sprite on load, so a fixed
         // box authored here would be the wrong shape for every monster.
+        // EVERY BUTTON GETS THE HOVER/FOCUS RIM BY DEFAULT, built right here
+        // at declaration time (AttachDefaultHoverBox below) -- owner's call,
+        // 2026-09-23 (second pass): "every hoverable/focusable element in the
+        // game shows a solid box on hover and on gamepad focus." Before this,
+        // only the ~15 screens that remembered to call .Hovers() got one, and
+        // every OTHER unthemed button's only hover/focus feedback was the
+        // press animator's now-removed scale-pop -- about 30 call sites
+        // across 15 screens went silent the moment that pop was pulled. This
+        // is the seam that fixes all of them without editing any of their
+        // files: change what Button() builds, not what 30 call sites ask for.
+        //
+        // .Themed()/.ThemedPlate() strip this rim back off (ThemedButtonState
+        // already drives that button's own focus visual on Glow/Plate) and
+        // .NoHoverBox("reason") strips it for a control that draws its own --
+        // both work regardless of which order they run in relative to this.
         public static UiNode Button(string name, UiString text, Place place, UiSize size,
             int fontSize = 24)
         {
@@ -76,6 +91,7 @@ namespace PrincesPalace.Domain.UiKit
             var node = Node(name, UiNodeKind.Button, place, size);
             node.Text = text;
             node.FontSize = fontSize;
+            AttachDefaultHoverBox(node);
             return node;
         }
 
@@ -85,7 +101,33 @@ namespace PrincesPalace.Domain.UiKit
             var node = Node(name, UiNodeKind.Button, place ?? Place.Flow, UiSize.Fixed(size));
             node.Text = text;
             node.FontSize = fontSize;
+            AttachDefaultHoverBox(node);
             return node;
+        }
+
+        // Skips a button whose box is not known yet (UiSize.Fill/FillWidth/
+        // FillHeight -- the fight's hit areas, resized from the real sprite
+        // at runtime) rather than padding a rim around a zero-size rect.
+        // Nothing currently calls .Hovers() on one of these either, which is
+        // the same fact stated the other way round: a runtime-sized button
+        // has never had a declaration-time rim to build.
+        private static void AttachDefaultHoverBox(UiNode node)
+        {
+            if (node.Size.ModeX == UiSizeMode.Fixed && node.Size.ModeY == UiSizeMode.Fixed)
+            {
+                ApplyHoverBox(node);
+            }
+        }
+
+        // The other half of NoHoverBox()/Themed()/ThemedPlate(): removes the
+        // rim AttachDefaultHoverBox may already have added, so either of
+        // those can run before or after it without leaving a stray child (or
+        // throwing trying to add a second "HoverRim"). A no-op when nothing
+        // is there, which covers a Fill-sized button and a call-site order
+        // where the rim was already stripped.
+        internal static void RemoveDefaultHoverBox(UiNode node)
+        {
+            node.Children.RemoveAll(c => c.Name == "HoverRim");
         }
 
         public static UiNode Sprite(string name, string spriteKey, UiVec size, Place? place = null)
@@ -859,6 +901,88 @@ namespace PrincesPalace.Domain.UiKit
             return Node(name, UiNodeKind.Pool, Place.Stretch(), UiSize.Fill, children);
         }
 
+        // ---- hover/focus rim -----------------------------------------------------
+        //
+        // Called by Button()'s AttachDefaultHoverBox for every fixed-size,
+        // unthemed button -- not by UiNode.Hovers(), which is a no-op since
+        // 2026-09-23 (second pass). Owner's call, 2026-09-23: no more
+        // hover-scale pop anywhere in the game -- a solid rim instead, shown
+        // on pointer hover OR gamepad/keyboard focus (Core/HoverBox.cs),
+        // never a transform change, and on EVERY hoverable/focusable
+        // control, not only the ones that remembered to ask. Builds the rim
+        // as a REAL UiNode child for the same reason ApplyTheme builds
+        // Visuals/Label as real children: UiAudit and UiKitAuditTests only
+        // walk the UiNode tree, so a rim UiEmitter invented for itself would
+        // be neither.
+        //
+        // A hollow rectangle built the SAME way the kit's other four-edge
+        // rims are (Rim, below: each edge is a Solid RectTransform,
+        // AsDecor), but NOT through Rim() itself -- Rim's 1px hairline is
+        // right for a border that sits flush on something (Options, Run
+        // statistics, Exits, the system menu, the shop's chips); a box that
+        // has to read as a solid outline around a control from across the
+        // room does not. Owner's call, 2026-09-23 (second pass): the first
+        // 1px/pad-6 rim did not read as solid enough. 2px, padded 4 --
+        // closer to the control so the box reads as ABOUT the button, not a
+        // second frame floating near it.
+        private const float HoverRimThickness = 2f;
+        private const float HoverRimPad = 4f;
+
+        // Kit silver, full alpha -- neutral against every ButtonTheme's own
+        // plate colour (Gold/Crimson/Violet/Blue/Green), so one rim colour
+        // reads correctly no matter which theme, or no theme at all, sits
+        // under it. Unlike ThemeGlowHex's baked-at-alpha-0 pairs, this rim
+        // does not fade -- HoverBox shows it by activating the whole
+        // GameObject, so it is baked at full alpha here.
+        private const string HoverRimHex = "#D6D6E0FF";
+
+        // Rim()'s own four-edge shape (RimEdge below is the same private
+        // helper Rim() uses), but at HoverRimThickness rather than Rim's
+        // fixed 1f -- kept local to the hover box rather than a new
+        // parameter threaded onto Rim() itself, which every one of its
+        // other five 1px callers would have to keep passing 1f through for
+        // no reason of their own.
+        private static IEnumerable<UiNode> HoverRimEdges(UiVec size)
+        {
+            float w = size.X;
+            float h = size.Y;
+            float t = HoverRimThickness;
+
+            yield return RimEdge("HoverRimTop", new UiVec(w, t), 0f, h * 0.5f - t * 0.5f, HoverRimHex);
+            yield return RimEdge("HoverRimBottom", new UiVec(w, t), 0f, -(h * 0.5f - t * 0.5f), HoverRimHex);
+            yield return RimEdge("HoverRimLeft", new UiVec(t, h), -(w * 0.5f - t * 0.5f), 0f, HoverRimHex);
+            yield return RimEdge("HoverRimRight", new UiVec(t, h), w * 0.5f - t * 0.5f, 0f, HoverRimHex);
+        }
+
+        internal static void ApplyHoverBox(UiNode node)
+        {
+            if (node.Kind != UiNodeKind.Button)
+            {
+                throw new ArgumentException(
+                    $"The hover/focus rim only applies to a Button node; '{node.Name}' is a {node.Kind}.");
+            }
+
+            var rimSize = new UiVec(node.Size.X + HoverRimPad * 2f, node.Size.Y + HoverRimPad * 2f);
+
+            // Rim's own edges are already AsDecor (RimEdge) -- what that
+            // exempts them from is each other (they meet, and would
+            // otherwise overlap, at the frame's four corners) AND every real
+            // sibling the button already carries or ever will, since
+            // CheckSiblingOverlap skips any pair where either side is Decor.
+            // Without it, every unthemed button that already carries its own
+            // children (badges, labels, solids) would need its own new
+            // AllowOverlap the moment this shipped, which is exactly the
+            // "edit every caller" this seam exists to avoid.
+            var rim = Panel("HoverRim", Place.At(0f, 0f), UiSize.Fixed(rimSize), HoverRimEdges(rimSize))
+                .AsDecor()
+                .AllowOverflow(
+                    "the hover/focus rim pads outward past the button it wraps (HoverRimPad) so it reads as a " +
+                    "box AROUND the control, not as a second, smaller plate sitting on it")
+                .Inactive();
+
+            node.Children.Add(rim);
+        }
+
         // ---- themed buttons ----------------------------------------------------
         //
         // Called by UiNode.Themed(), not directly -- see that method's own
@@ -883,6 +1007,11 @@ namespace PrincesPalace.Domain.UiKit
             }
 
             node.Theme = theme;
+
+            // A themed button wears ThemedButtonState's own Glow/Plate focus
+            // visual instead -- strip the default rim Button() already
+            // attached, or a themed plate would show both on the same hover.
+            RemoveDefaultHoverBox(node);
 
             var buttonSize = new UiVec(node.Size.X, node.Size.Y);
             var shape = node.PlateShapeOverride ?? PlateShapeFor(buttonSize.X, buttonSize.Y);
@@ -935,6 +1064,10 @@ namespace PrincesPalace.Domain.UiKit
 
             node.Theme = theme;
             node.CaptionPreserving = true;
+
+            // Same reason ApplyTheme strips it: ThemedButtonState owns this
+            // button's focus visual now.
+            RemoveDefaultHoverBox(node);
 
             var buttonSize = new UiVec(node.Size.X, node.Size.Y);
             var shape = node.PlateShapeOverride ?? PlateShapeFor(buttonSize.X, buttonSize.Y);

@@ -157,13 +157,14 @@ namespace PrincesPalace.PlayModeTests
             // gives Down a target at all (RefreshOrbNavigation's own override,
             // re-resolved on every Refresh -- here, from OnOrbPressed's Submit).
             //
-            // This Submit ALSO kindles the root now (owner, 2026-09-19: see
-            // Submit_OnAKindleableStar_KindlesItImmediately below) -- fine for
-            // what this test actually checks, since InvestButton stays shown
-            // (only NotAuthored hides it) whether or not the star underneath
-            // it is already lit, and the Down override is unconditional on
-            // `_selectedSlot >= 0` rather than on the button's interactable
-            // state.
+            // This Submit only SELECTS the root now (owner, 2026-09-23: see
+            // Submit_OnAKindleableStar_SelectsThenKindles_TwoPressesNotOne
+            // below -- a first Submit on an unkindled star selects it, a
+            // second kindles) -- fine for what this test actually checks,
+            // since InvestButton stays shown (only NotAuthored hides it)
+            // whether or not the star underneath it is already lit, and the
+            // Down override is unconditional on `_selectedSlot >= 0` rather
+            // than on the button's interactable state.
             EventSystem.current.SetSelectedGameObject(Node("Orb0_0"));
             yield return null;
             _input.SubmitDown = true;
@@ -179,20 +180,18 @@ namespace PrincesPalace.PlayModeTests
                 "(nonexistent) parent link for exactly this one orb");
         }
 
-        // OWNER HARDWARE PLAY-TEST, 2026-09-19: "It is incredibly unintuitive
-        // to get into the right part where one can kindle with a controller
-        // ... Make A on a star that is unkindled the way to kindle it."
-        //
-        // OnOrbPressed is Button.onClick, which a mouse click and a pad
-        // Submit on the focused orb both already drive (Unity's own
-        // OnPointerClick/OnSubmit each call Press()) -- so this is the one
-        // press both devices share, not a pad-only shortcut. The root of
-        // path 0 is always affordable and parentless from a fresh save
-        // (TalentLifecycleTests' own comment), so one Submit on it is enough
-        // to prove the whole thing: no Move onto InvestButton, no second
-        // press.
+        // OWNER, 2026-09-23 (revising the 2026-09-19 hardware play-test call
+        // below): a single Submit on an unkindled star was found to fire too
+        // eagerly on hardware -- the new contract is that the FIRST Submit
+        // on an unkindled star only SELECTS it (shows its detail, same as
+        // Submit on a refused star already did), and a SECOND Submit on that
+        // same selected star -- or a Submit on InvestButton, unchanged --
+        // is what actually kindles it. The root of path 0 is always
+        // affordable and parentless from a fresh save (TalentLifecycleTests'
+        // own comment), so it is enough to prove both halves without ever
+        // moving onto InvestButton.
         [UnityTest]
-        public IEnumerator Submit_OnAKindleableStar_KindlesItImmediately_OnePressNotTwo()
+        public IEnumerator Submit_OnAKindleableStar_SelectsThenKindles_TwoPressesNotOne()
         {
             yield return LoadTheTree();
 
@@ -208,8 +207,16 @@ namespace PrincesPalace.PlayModeTests
             _input.SubmitDown = true;
             yield return DriveFrame();
 
+            Assert.AreEqual(0, character.unlockedTalentIds.Count,
+                "the first Submit on an unkindled star should only select it, not kindle it");
+            Assert.AreEqual(Node("Orb0_0"), EventSystem.current.currentSelectedGameObject,
+                "the first Submit should select the star so its detail panel shows");
+
+            _input.SubmitDown = true;
+            yield return DriveFrame();
+
             Assert.AreEqual(1, character.unlockedTalentIds.Count,
-                "one Submit on a reachable star should kindle it -- no second press on InvestButton required");
+                "a second Submit on the already-selected star should kindle it");
             Assert.AreEqual(Node("Orb0_0"), EventSystem.current.currentSelectedGameObject,
                 "the star stays selected so the detail panel updates to show it kindled");
         }

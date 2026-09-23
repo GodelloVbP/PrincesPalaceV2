@@ -821,6 +821,179 @@ namespace PrincesPalace.Domain.Tests
                 "COST and COOLDOWN don't apply to this skill and must be compacted away, not left empty mid-list");
         }
 
+        // ---- the icon rows (2026-09-23 icon rework) -------------------------
+
+        private static DetailIcon IconOf(DetailPanel panel, DetailIconKind kind)
+        {
+            foreach (var icon in panel.Icons)
+            {
+                if (icon.Kind == kind) return icon;
+            }
+
+            Assert.Fail($"no {kind} icon on this card. Present: " +
+                        string.Join(", ", panel.Icons.Select(i => i.Kind)));
+            return default;
+        }
+
+        private static bool HasIcon(DetailPanel panel, DetailIconKind kind) => panel.Icons.Any(i => i.Kind == kind);
+
+        [Test]
+        public void TheIconRowsCoverManaElementDefenseReachAoeAndScaling()
+        {
+            var skill = Skill("a", "Alpha", manaCost: 5, power: 100,
+                packets: new[] { new DamageInstance(DamageType.Lightning, 12) });
+            var (session, hero) = Fight(skill);
+            hero.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("5 MP", IconOf(panel, DetailIconKind.Mana).Value);
+
+            var element = IconOf(panel, DetailIconKind.Element);
+            Assert.AreEqual("lightning", element.IconKey, "the icon key must match Icons/Ability/element_lightning.png exactly");
+            Assert.AreEqual(StatValue(panel, "POWER"), element.Value,
+                "the value beside the element icon is the same POWER number the old text row showed");
+
+            Assert.AreEqual("magical", IconOf(panel, DetailIconKind.Defense).IconKey);
+            Assert.AreEqual("any", IconOf(panel, DetailIconKind.Reach).IconKey, "an unrestricted skill's reach icon is 'any'");
+            Assert.AreEqual("single", IconOf(panel, DetailIconKind.AreaOfEffect).IconKey);
+        }
+
+        // ---- COST and COOLDOWN icons (coordinator pass 2, 2026-09-23) --------
+        //
+        // Dropping these two in pass 1 was a real regression, the
+        // coordinator's own call: a player loses cooldown information with
+        // no icon for it. Both reuse the same data the old text Stats rows
+        // (COST/COOLDOWN) already read -- ResourceOrHealthCostLabel and
+        // CooldownIconValue -- just painted as an icon+value cell instead.
+        [Test]
+        public void TheCostIconShowsTheResourcePayment()
+        {
+            var skill = new ResolvedSkill("r", "Resource Alpha", "", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 0,
+                resourceCost: 3, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: false, damageInstances: new[] { new DamageInstance(DamageType.Physical, 10) },
+                presentation: SpellPresentation.None, sortOrder: 0);
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill, resourceName: "Wool");
+            string value = IconOf(panel, DetailIconKind.Cost).Value;
+
+            StringAssert.Contains("3", value);
+            StringAssert.Contains("WOOL", value.ToUpperInvariant());
+        }
+
+        [Test]
+        public void APowerlessEffectOmitsTheCostIconWhenItPaysNothing()
+        {
+            var provoke = Skill("p", "Rally", effect: SkillEffect.Provoke);
+            var (session, hero) = Fight(provoke);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, provoke);
+
+            Assert.IsFalse(HasIcon(panel, DetailIconKind.Cost), "Rally pays neither a resource nor health");
+        }
+
+        [Test]
+        public void TheCooldownIconShowsTheAuthoredLengthThenTheRemainingCount()
+        {
+            var skill = new ResolvedSkill("cd", "Cooldown Bolt", "Waits between casts.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5,
+                resourceCost: 0, spendsAllResource: false, power: 0, flatAmount: 10,
+                ignoresDefense: false, damageInstances: null, presentation: SpellPresentation.None,
+                sortOrder: 0, cooldownTurns: 3);
+            var (session, hero) = Fight(skill);
+            var foe = session.Encounter.Enemies[0];
+
+            var before = FightHudModel.DetailForSkill(session, hero, skill);
+            Assert.AreEqual("3T", IconOf(before, DetailIconKind.Cooldown).Value,
+                "ready, and never yet cast: the compact 'NT' form");
+
+            Assert.IsTrue(session.CastSkill(skill, foe), "fixture: the cast itself must succeed to arm the cooldown");
+
+            var after = FightHudModel.DetailForSkill(session, hero, skill);
+            Assert.AreEqual("2/3", IconOf(after, DetailIconKind.Cooldown).Value,
+                "freshly cast: remaining/authored, remaining first");
+        }
+
+        [Test]
+        public void ASkillWithNoCooldownOmitsTheCooldownIconEntirely()
+        {
+            var skill = Skill("a", "Alpha", packets: new[] { new DamageInstance(DamageType.Physical, 10) });
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.IsFalse(HasIcon(panel, DetailIconKind.Cooldown));
+        }
+
+        [Test]
+        public void AFrontOnlyMeleeSkillShowsTheFrontReachIcon()
+        {
+            var skill = Skill("m", "Melee Alpha", packets: new[] { new DamageInstance(DamageType.Physical, 10) });
+            skill.Reach = Reach.Melee;
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("front", IconOf(panel, DetailIconKind.Reach).IconKey);
+        }
+
+        [Test]
+        public void AGroupTargetingSkillShowsTheAoeIcon()
+        {
+            var skill = new ResolvedSkill("g", "Group Alpha", "", "hero", 1,
+                SkillEffect.DamageAll, SkillTargeting.AllEnemies, manaCost: 5,
+                resourceCost: 0, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: false, damageInstances: new[] { new DamageInstance(DamageType.Fire, 10) },
+                presentation: SpellPresentation.None, sortOrder: 0);
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("aoe", IconOf(panel, DetailIconKind.AreaOfEffect).IconKey);
+        }
+
+        [Test]
+        public void ASkillWithNoScalingAxisOmitsTheScalingIconEntirely()
+        {
+            var heal = Skill("h", "Mend", effect: SkillEffect.HealSelf, power: 5);
+            var (session, hero) = Fight(heal);
+            hero.SkillScaling = ScalingProfile.None.With(AbilityScore.Wisdom, ScalingGrade.S);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, heal);
+
+            Assert.IsFalse(HasIcon(panel, DetailIconKind.Scaling),
+                "same 'omit rather than pad' rule the text Stats row already followed for this exact fixture");
+        }
+
+        [Test]
+        public void ASkillThatIgnoresDefenseShowsTheIgnoredDefenseIcon()
+        {
+            var skill = new ResolvedSkill("ig", "Ignore Alpha", "", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 0,
+                resourceCost: 0, spendsAllResource: false, power: 10, flatAmount: 0,
+                ignoresDefense: true, damageInstances: new[] { new DamageInstance(DamageType.Physical, 10) },
+                presentation: SpellPresentation.None, sortOrder: 0);
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("ignored", IconOf(panel, DetailIconKind.Defense).IconKey);
+        }
+
+        [Test]
+        public void APowerlessEffectOmitsTheElementAndManaIconsItHasNothingToShow()
+        {
+            var provoke = Skill("p", "Rally", effect: SkillEffect.Provoke);
+            var (session, hero) = Fight(provoke);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, provoke);
+
+            Assert.IsFalse(HasIcon(panel, DetailIconKind.Element), "Rally has no previewable power to show beside an element icon");
+            Assert.IsFalse(HasIcon(panel, DetailIconKind.Defense), "a non-damaging skill has no defense interaction to state");
+        }
+
         [Test]
         public void ADetailCardShowsBothItsCostAndItsCooldownWhileWaiting()
         {

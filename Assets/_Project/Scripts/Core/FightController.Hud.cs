@@ -380,6 +380,17 @@ namespace PrincesPalace
 
         // Column C. Describes whatever the submenu has selected, or the
         // synthetic Strike entry when the branch is ATTACK.
+        //
+        // 2026-09-23 ICON REWORK, PASS 2: paints from panel.Icons now, not
+        // panel.Stats/.Body (see FightHudModel.DetailPanel's own header for
+        // why both are still populated), AND resizes the card to fit --
+        // "a dynamic box", not a static six-row reservation drawn small.
+        // Every position/size below comes from FightScreen's own pure
+        // Domain functions (DetailHFor, DetailCentreYFor, DetailFrameTopFor/
+        // BottomFor, DetailNameYFor/KindYFor, DetailIconRowYFor) -- this
+        // method's whole job is writing their output onto the RectTransforms
+        // FightScreen built, the same "Domain computes, Core paints" split
+        // FightController.AnchorSubmenuRows already follows for the submenu.
         private void RefreshDetail()
         {
             detailColumn.SetShown(_menu.DetailOpen);
@@ -388,90 +399,130 @@ namespace PrincesPalace
             var panel = CurrentDetail();
             detailName.SetContent(panel.Name);
             detailKind.SetContent(panel.Kind);
-            detailBody.SetContent(panel.Body);
 
-            // COMPACT NOW (2026-09-22 rework #2): panel.Stats holds ONLY the
-            // facts that apply to whatever is hovered, in canonical order --
-            // FightHudModel.AddIfApplicable's own header. Row i is painted
-            // from panel.Stats[i] for i < Count and hidden past it, the same
-            // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows
-            // already use -- KEY AND VALUE BOTH, since a row's key is no
-            // longer a fixed label baked at build time (BuildDetailColumn's
-            // own header): whichever physical row happens to hold "POWER"
-            // this time is found below, by key, not assumed by index.
-            int powerRow = -1;
-            for (int i = 0; i < detailStatValues.Length; i++)
+            int shown = panel.Icons.Count;
+            ResizeDetailColumn(shown);
+            MoveToY(detailName.rectTransform, FightScreen.DetailNameYFor(shown));
+            MoveToY(detailKind.rectTransform, FightScreen.DetailKindYFor(shown));
+
+            for (int i = 0; i < detailIconImages.Length; i++)
             {
-                bool has = i < panel.Stats.Count;
-                detailStatValues[i].SetContent(has ? panel.Stats[i].Value : "");
+                bool has = i < shown;
 
-                if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
+                if (detailIconImages[i] != null)
                 {
-                    detailStatKeys[i].SetContent(has ? panel.Stats[i].Key : "");
-                    detailStatKeys[i].gameObject.SetShown(has);
+                    if (has)
+                    {
+                        detailIconImages[i].gameObject.SetShown(true);
+                        MoveToY(detailIconImages[i].rectTransform, FightScreen.DetailIconRowYFor(shown, i));
+                        IconCache<string>.Apply(detailIconImages[i], DetailIconSpriteFor(panel.Icons[i]), disableOnMiss: true);
+                    }
+                    else
+                    {
+                        detailIconImages[i].gameObject.SetShown(false);
+                    }
                 }
 
-                if (has && powerRow < 0 && panel.Stats[i].Key == "POWER") powerRow = i;
-
-                // NARROW EXACTLY THIS ROW, restore every other -- these
-                // labels are pooled, so a PREVIOUS panel may have narrowed a
-                // different index than this one does, and a row that is no
-                // longer POWER's must not keep yesterday's width.
-                SetDetailStatRowWidth(i, narrow: has && i == powerRow);
+                if (i < detailIconValues.Length && detailIconValues[i] != null)
+                {
+                    detailIconValues[i].gameObject.SetShown(has);
+                    if (has)
+                    {
+                        detailIconValues[i].SetContent(panel.Icons[i].Value);
+                        MoveToY(detailIconValues[i].rectTransform, FightScreen.DetailIconRowYFor(shown, i));
+                    }
+                }
             }
-
-            RefreshDetailDamageType(panel.DamageType, powerRow);
         }
 
-        private void SetDetailStatRowWidth(int i, bool narrow)
+        // THE FIVE PIECES THAT DRAW THE CARD'S OWN BOX, resized for `shown`
+        // icon rows and repositioned so the card's BOTTOM EDGE NEVER MOVES
+        // (FightScreen.DetailCentreYFor's own header) -- the outer column
+        // (its rect is what the click-through/audit geometry and
+        // detailColumn.SetShown above both reason about), the flat fill
+        // (LOCAL position stays at the column's own origin -- both share one
+        // centre, so only its OWN size has to change), and the four Rim
+        // edges (Top/Bottom move, Left/Right resize -- Ui.Rim's own yield
+        // order, see detailColumnRim's header).
+        private void ResizeDetailColumn(int shown)
         {
-            if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
+            float height = FightScreen.DetailHFor(shown);
+
+            var columnRect = detailColumn != null ? detailColumn.transform as RectTransform : null;
+            if (columnRect != null)
             {
-                var rect = detailStatKeys[i].rectTransform;
-                float w = narrow ? FightScreen.DetailStatKeyWidthNarrow : FightScreen.DetailStatKeyWidth;
-                rect.sizeDelta = new Vector2(w, rect.sizeDelta.y);
+                columnRect.sizeDelta = new Vector2(columnRect.sizeDelta.x, height);
+                MoveToY(columnRect, FightScreen.DetailCentreYFor(shown));
             }
 
-            if (i < detailStatValues.Length && detailStatValues[i] != null)
+            if (detailColumnFill != null)
             {
-                var rect = detailStatValues[i].rectTransform;
-                float w = narrow ? FightScreen.DetailStatValueWidthNarrow : FightScreen.DetailStatValueWidth;
-                rect.sizeDelta = new Vector2(w, rect.sizeDelta.y);
+                var rect = detailColumnFill.rectTransform;
+                rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
+            }
+
+            if (detailColumnRim == null || detailColumnRim.Length < 4) return;
+
+            float top = height * 0.5f - 0.5f;
+            float bottom = -height * 0.5f + 0.5f;
+
+            if (detailColumnRim[0] != null) MoveToY(detailColumnRim[0].rectTransform, top);
+            if (detailColumnRim[1] != null) MoveToY(detailColumnRim[1].rectTransform, bottom);
+
+            for (int i = 2; i <= 3; i++)
+            {
+                if (detailColumnRim[i] == null) continue;
+                var rect = detailColumnRim[i].rectTransform;
+                rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
             }
         }
 
-        // "Fire", "Poison", a "/"-joined "Fire/Ice" or "" -- see FightHudModel.
-        // DamageTypeLabel's own header for where the string comes from. Only
-        // the FIRST element of a joined list gets a colour; CombatBeat (and
-        // so this card) has no way to show two colours on one word, and the
-        // label itself still names every element the skill authors.
+        // detailIcons, keyed by the SAME "<slot>_<key>" string DetailIcon's
+        // Kind+IconKey pair names -- one cache rather than a per-Kind
+        // dictionary, since every icon (Mana, Cost, Cooldown, Element x11,
+        // Defense x3, Reach x2, AreaOfEffect x2, Scaling x6) is a distinct
+        // file under Resources/Icons/Ability/ and none of them share a key
+        // across kinds. Same IconCache<TKind> StatusRowSprites already uses
+        // (that class's own header).
         //
-        // RIDES powerRow'S OWN Y, whatever physical row that happens to be
-        // this time -- rows never move (BuildDetailColumn builds them at
-        // fixed pool positions), only their content and, for the row that
-        // currently holds POWER, their width do, so reading that row's own
-        // key label's CURRENT anchoredPosition.y is the single source for
-        // where the tag belongs; no formula here can drift from where the
-        // row it describes actually is.
-        private void RefreshDetailDamageType(string label, int powerRow)
+        // DetailIcon/DetailIconKind ARE NOT NESTED in FightHudModel --
+        // FightHudModel.cs declares them at namespace scope (Domain.Combat.
+        // Session), alongside the static FightHudModel class, not inside it.
+        // `FightHudModel.DetailIcon` (CS0426) went unnoticed through this
+        // session's own dotnet verification because the dotnet host only
+        // compiles Domain -- this file is Core, Unity-only, and the Unity
+        // gate is what actually caught it. Unqualified is correct, the same
+        // way this file already reads DetailPanel unqualified.
+        private static readonly IconCache<string> DetailIconSprites = new IconCache<string>();
+
+        private static Sprite DetailIconSpriteFor(DetailIcon icon) =>
+            DetailIconSprites.Resolve(DetailIconResourceKey(icon), DetailIconResourcePath);
+
+        // ONE SPELLING, matched against tools/make_detail_card_icons.py's
+        // own file names (element_fire.png, defense_magical.png, reach_
+        // front.png, target_aoe.png, scale_str.png, resource_mana.png) --
+        // FightHudModel.FillDetailIcons/ElementIconKey is the only writer of
+        // a DetailIcon.IconKey, and this is the only reader, so the two
+        // halves of this string cannot drift from each other without a
+        // build error, only from the art on disk. A miss here (a twelfth
+        // DamageType with no matching element_*.png yet) is applied through
+        // IconCache.Apply(disableOnMiss: true), same as an enemy intent with
+        // no art -- a blank slot beats a filled white rectangle (that
+        // method's own header).
+        private static string DetailIconResourceKey(DetailIcon icon) => icon.Kind switch
         {
-            if (detailDamageType == null) return;
+            DetailIconKind.Mana => "resource_mana",
+            DetailIconKind.Cost => "resource_cost",
+            DetailIconKind.Cooldown => "resource_cooldown",
+            DetailIconKind.Element => "element_" + icon.IconKey,
+            DetailIconKind.Defense => "defense_" + icon.IconKey,
+            DetailIconKind.Reach => "reach_" + icon.IconKey,
+            DetailIconKind.AreaOfEffect => "target_" + icon.IconKey,
+            DetailIconKind.Scaling => "scale_" + icon.IconKey,
+            _ => "",
+        };
 
-            bool has = powerRow >= 0 && !string.IsNullOrEmpty(label)
-                       && detailStatKeys != null && powerRow < detailStatKeys.Length && detailStatKeys[powerRow] != null;
-            detailDamageType.gameObject.SetShown(has);
-            if (!has) return;
-
-            MoveToY(detailDamageType, detailStatKeys[powerRow].rectTransform.anchoredPosition.y);
-
-            detailDamageType.SetContent(label.ToUpperInvariant());
-
-            string firstType = label.Split('/')[0];
-            var color = System.Enum.TryParse(firstType, out DamageType parsed)
-                ? Hex(FightHudPalette.ForDamageType(parsed))
-                : Hex(FightHudPalette.TextMuted);
-            detailDamageType.color = color;
-        }
+        private static string DetailIconResourcePath(string key) => "Icons/Ability/" + key;
 
         private void RefreshTargetPrompt()
         {
@@ -564,6 +615,11 @@ namespace PrincesPalace
         [SerializeField] internal Image[] enemyPlateWardFills;
         [SerializeField] internal Image[] pcGhostFills;
         [SerializeField] internal Image[] pcWardFills;
+
+        // "+N" beside the HP value, TMP_Text like pcHpValues -- bound off
+        // FightScreen.PcWardValues the same way every field above is bound
+        // off its own PascalCase NodeRef list.
+        [SerializeField] internal TMP_Text[] pcWardValues;
 
         // Cropped-to-the-head copies of whatever StanceSpriteFor hands back,
         // keyed by the SOURCE sprite so two enemies sharing one idle art
@@ -718,13 +774,17 @@ namespace PrincesPalace
                         ref _enemyGhostRoutines[i]);
                 }
 
+                int enemyWard = StatusEffects.WardPoints(enemy);
                 if (Has(enemyPlateWardFills, i))
                 {
-                    SetWardFill(enemyPlateWardFills[i], enemy.CurrentHealth, enemy.MaxHealth,
-                        StatusEffects.WardPoints(enemy));
+                    SetWardFill(enemyPlateWardFills[i], enemy.CurrentHealth, enemy.MaxHealth, enemyWard);
                 }
 
-                enemyPlateTags[i].SetContent(FightHudModel.EnemyStatusLine(enemy, _session));
+                // EnemyPlateTagLine, not EnemyStatusLine -- BRK still wins the
+                // slot when both are true (that method's own header), but a
+                // shielded enemy with no BRK now gets its "+N" where BRK used
+                // to leave the Tags node blank.
+                enemyPlateTags[i].SetContent(FightHudModel.EnemyPlateTagLine(enemy, _session, enemyWard));
 
                 // Only an elite or boss carries a BreakShield at all -- the
                 // track stays hidden for everything else rather than showing
@@ -981,9 +1041,16 @@ namespace PrincesPalace
                 UpdateGhostFill(pcGhostFills[i], member.CurrentHealth, member.MaxHealth, ref _pcGhostRoutines[i]);
             }
 
+            int pcWard = StatusEffects.WardPoints(member);
             if (Has(pcWardFills, i))
             {
-                SetWardFill(pcWardFills[i], member.CurrentHealth, member.MaxHealth, StatusEffects.WardPoints(member));
+                SetWardFill(pcWardFills[i], member.CurrentHealth, member.MaxHealth, pcWard);
+            }
+            if (Has(pcWardValues, i))
+            {
+                bool wardShown = pcWard > 0;
+                pcWardValues[i].gameObject.SetShown(wardShown);
+                if (wardShown) pcWardValues[i].SetContent($"+{pcWard}");
             }
 
             // THE TAG COMES OFF THE POOL, not out of UiStrings (plan P7). A
@@ -1315,13 +1382,28 @@ namespace PrincesPalace
         // ---- the ward segment ---------------------------------------------------
         //
         // A SECOND FILL ON THE SAME BAR, sized ward/maxHP and clamped, drawn
-        // starting where the HP fill ends -- so a shield reads as bonus
-        // effective health tacked onto the bar rather than as a tint over
-        // health that is already there. StatusEffects.WardPoints is the pool
-        // every Ward status (Magical Shield, the Fragile Lamb's Ward, every
-        // other shield -- see WardTests) shares; this reads it fresh every
-        // repaint the same way the HP fill reads CurrentHealth fresh, rather
-        // than caching anything.
+        // OVER the HP fill -- starting at the HP fill's own right edge when
+        // there is empty track to draw into, and sliding LEFT to sit on top
+        // of the fill itself once there is not (a full-health bar has no
+        // empty track past 100%, which is exactly when a shield is most
+        // often cast). StatusEffects.WardPoints is the pool every Ward
+        // status (Magical Shield, the Fragile Lamb's Ward, every other
+        // shield -- see WardTests) shares; this reads it fresh every repaint
+        // the same way the HP fill reads CurrentHealth fresh, rather than
+        // caching anything.
+        //
+        // PLAYTEST 2026-09-23: "shield is not shown on the health bar". Root
+        // cause was this formula, not the call sites (both PC and enemy
+        // plates already called this every repaint) -- endFrac was
+        // Clamp01(hpFrac + wardFrac) while startFrac stayed hpFrac
+        // unconditionally, so at full health (hpFrac already 1) endFrac
+        // clamped to the SAME 1 and the segment's own width came out zero:
+        // a real shield, rendering nothing. startFrac now reads
+        // Clamp01(endFrac - wardFrac) -- the same hpFrac whenever endFrac
+        // wasn't clamped (case A, "starts at the fill's right edge"), but
+        // when endFrac WAS clamped to 1 it slides startFrac left by exactly
+        // the clamped amount (case B, "over the fill"), so the segment's
+        // width is always wardFrac and it is never silently zeroed.
         private static void SetWardFill(Image ward, int current, int max, int wardPoints)
         {
             if (ward == null) return;
@@ -1333,14 +1415,16 @@ namespace PrincesPalace
             }
 
             float hpFrac = Mathf.Clamp01(current / (float)max);
-            float endFrac = Mathf.Clamp01(hpFrac + wardPoints / (float)max);
+            float wardFrac = Mathf.Clamp01(wardPoints / (float)max);
+            float endFrac = Mathf.Clamp01(hpFrac + wardFrac);
+            float startFrac = Mathf.Clamp01(endFrac - wardFrac);
 
-            bool visible = endFrac > hpFrac;
+            bool visible = endFrac > startFrac;
             ward.gameObject.SetShown(visible);
             if (!visible) return;
 
             var rect = (RectTransform)ward.transform;
-            rect.anchorMin = new Vector2(hpFrac, 0f);
+            rect.anchorMin = new Vector2(startFrac, 0f);
             rect.anchorMax = new Vector2(endFrac, 1f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;

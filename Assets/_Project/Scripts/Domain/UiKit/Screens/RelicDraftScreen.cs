@@ -141,22 +141,44 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.DescendButton = descend;
             inside.Add(descend);
 
-            // VIOLET, 3:2 KIT CONTAINER -- was a flat #241736F5 panel at
-            // 1500x820 (aspect 1.83), 22.8% off the kit's measured 3:2
-            // aspect -- past the 5% band Ui.Container refuses. Nudged to
-            // 1500x1000 (aspect 1.5, which was 0.7% off the spliced
-            // delivery's 1.49 and is EXACT against the regenerated kit)
-            // rather than narrowed to 1230x820: every existing child (three
-            // cards at a CardWidth + CardGap pitch, the title, the descend
-            // button) clears the container's own measured inset at the
-            // TALLER box with room to spare -- the card row's outer edge
-            // reaches 557.5 against a 697.5 content bound, and Descend's
-            // bottom edge reaches only -382 against a -455 bound -- so nudging
-            // height moves fewer things than narrowing width and re-fitting
-            // three cards plus their gaps would have.
-            var frame = Ui.Container("DraftFrame", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
-                Place.At(0f, 0f), new UiVec(1500f, 1000f));
-            Ui.ContainerContent(frame, ContainerRatio.ThreeByTwo, "DraftFrameContent", inside.ToArray());
+            // THE SYSTEM MENU'S OWN FRAME IDIOM, not a kit Container.
+            //
+            // WAS a Violet 3:2 Container (ContainerArt's baked leather plate,
+            // stretched besides: 1500x1000 measured 0.7% off the regenerated
+            // kit's 1.49, inside Ui.Container's 5% band, but the owner's
+            // actual complaint was the ART, not the fit -- "it's stretched
+            // and looks bad and the inside is not black, it's more leathery"
+            // (2026-09-23). SystemMenuScreen and ShopScreen dropped this
+            // exact art for this exact reason on 2026-09-07 (see Ui.
+            // SystemMenuPane's own header): a flat near-black Solid ground
+            // plus a hairline Rim reads as the kit's UI chrome, where the
+            // leather plate reads as a game OBJECT sitting behind the menu.
+            //
+            // PanelFill/PanelRim are SystemMenuScreen's own two constants
+            // (its PanelFill/PanelRim fields) copied rather than shared,
+            // because nothing before this needed a Container-idiom frame's
+            // fill/rim colours outside the file that owns its own theme --
+            // ShopScreen's version of the same shape uses its own CardFill/
+            // BorderQuiet pair instead, which is the same "the shell doesn't
+            // export its colours" precedent already in the kit.
+            //
+            // FrameSize UNCHANGED at 1500x1000: this is not a Container any
+            // more, so the aspect that used to matter (matching the kit's
+            // measured 3:2) is no longer a fact about this frame at all --
+            // every child's placement (card row, pager, Descend) was already
+            // measured against this exact size and did not have to move.
+            const string PanelFill = "#1A1024F5"; // SystemMenuScreen.PanelFill (PanelViolet at 96%)
+            const string PanelRim = FightHudPalette.BorderGold; // SystemMenuScreen.PanelRim
+            var frameSize = new UiVec(1500f, 1000f);
+
+            var frameChildren = new List<UiNode> { Ui.Solid("DraftFrameFill", PanelFill, frameSize, Place.At(0f, 0f)).AsDecor() };
+            frameChildren.AddRange(inside);
+            // LAST, drawn on top of everything it encloses -- same reason
+            // SystemMenuScreen's own Rim call is last (its own comment: "the
+            // whole fix for the sides disappearing along the tab bar").
+            frameChildren.AddRange(Ui.Rim("DraftFrame", frameSize, PanelRim));
+
+            var frame = Ui.Panel("DraftFrame", Place.At(0f, 0f), UiSize.Fixed(frameSize), frameChildren);
             screen.Frame = frame;
 
             var content = Ui.Panel("DraftContent", Place.At(0f, 0f), UiSize.Fill, frame);

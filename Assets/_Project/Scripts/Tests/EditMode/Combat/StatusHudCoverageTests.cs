@@ -494,6 +494,49 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("", line);
         }
 
+        // ---- the same Tags node, sharing its one spare slot with the ward -----
+        //
+        // Playtest 2026-09-23: a shielded enemy showed no number for it
+        // anywhere on the plate. EnemyPlateTagLine reuses BRK's own "the one
+        // slot this row has spare" (EnemyStatusLine's own header) rather than
+        // opening a second box -- see that method's own header for why BRK
+        // wins when both are true at once.
+        [Test]
+        public void ShieldedEnemyShowsItsWardCountOnThePlate()
+        {
+            var enemy = Combatant("Shielded");
+
+            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 12);
+
+            StringAssert.Contains("+12", line);
+        }
+
+        [Test]
+        public void UnshieldedEnemyShowsNothingInTheTagSlot()
+        {
+            var enemy = Combatant("Bare");
+
+            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 0);
+
+            Assert.AreEqual("", line);
+        }
+
+        // BRK wins the slot: a broken boss carrying a shield at the same
+        // moment is the one way both are true, and losing the ward NUMBER
+        // for that window is not losing the ward itself (the bar segment
+        // still shows it) -- EnemyPlateTagLine's own header.
+        [Test]
+        public void BrokenAndShieldedEnemyShowsBrkNotTheWardCount()
+        {
+            var enemy = Combatant("BrokenAndShielded");
+            enemy.BreakShield = new BreakShield(10) { IsBroken = true };
+
+            string line = FightHudModel.EnemyPlateTagLine(enemy, null, wardPoints: 12);
+
+            StringAssert.Contains("BRK", line);
+            StringAssert.DoesNotContain("+12", line);
+        }
+
         // ---- enemy intent (untouched by Package A, still covered) ------------------
 
         // EnemyIntentIcons.KindFor: Feared must telegraph the same "your turn

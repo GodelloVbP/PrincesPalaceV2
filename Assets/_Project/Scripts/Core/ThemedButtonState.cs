@@ -21,7 +21,7 @@ namespace PrincesPalace
     }
 
     // The flat state controller a THEMED button gets instead of
-    // ButtonPressAnimator/SubtleHoverScale - see UiEmitter.EmitButton's
+    // ButtonPressAnimator/HoverBox - see UiEmitter.EmitButton's
     // Themed() branch for why the two are mutually exclusive with this one.
     //
     // NO TRANSFORM SCALING, deliberately. The press animators exist because a

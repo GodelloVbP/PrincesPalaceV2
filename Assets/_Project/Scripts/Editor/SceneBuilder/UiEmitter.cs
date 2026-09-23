@@ -127,6 +127,17 @@ public static class UiEmitter
             WireThemedButton(go, node, result);
         }
 
+        // SAME REASON, SAME PLACE: HoverBox needs the HoverRim child
+        // (Ui.ApplyHoverBox, now built by default for every fixed-size
+        // unthemed button -- see Ui.Button's own header) to exist before it
+        // can be wired to it. Read off the child's presence, not
+        // node.HoverScale -- that field stopped deciding this the moment the
+        // rim became the default rather than something .Hovers() opted into.
+        if (node.Kind == UiNodeKind.Button && HasHoverRim(node))
+        {
+            WireHoverBox(go, node, result);
+        }
+
         // AFTER children, so a subtree that starts inactive is fully built first
         // - Start() only runs on activation, and a half-built inactive tree is
         // the sort of thing that fails much later and somewhere else.
@@ -370,28 +381,26 @@ public static class UiEmitter
         var button = go.AddComponent<Button>();
         button.targetGraphic = image;
 
-        // EVERY button gets its motion from here, which is the whole point --
-        // v1 attached these per-call-site across several CreateButton variants
-        // and this is one function, so "a button with no press animation" is
-        // not a state that can be reached by forgetting.
+        // EVERY unthemed button gets its motion from here, which is the whole
+        // point -- v1 attached these per-call-site across several
+        // CreateButton variants and this is one function, so "a button with
+        // no press feedback" is not a state that can be reached by
+        // forgetting.
         //
-        // The two are mutually exclusive: both drive localScale, and a node
-        // carrying both would have them fight every frame. A wide row asks for
-        // the gentler one with Hovers(); everything else pops.
+        // NOT mutually exclusive with the hover/focus rim any more (owner's
+        // 2026-09-23 second pass): ButtonPressAnimator no longer scales, it
+        // dims the plate on press, and HoverBox only ever shows the static
+        // rim on hover/focus -- a colour change and a box toggle answer two
+        // different gestures (press vs hover/focus) and do not fight each
+        // other the way the old scale-pop and rim both would have. So every
+        // unthemed button gets BOTH now: the rim by default (Ui.Button) and
+        // the press dim here.
         //
-        // Note the sound follows the press animator, which is v1's behaviour
-        // reproduced deliberately rather than by omission: a hover-scaled wide
-        // row (submenu row, enemy plate) clicks SILENTLY there too. Worth
-        // knowing it is a choice, since it is easy to read as a bug.
-        if (node.HoverScale > 0f)
-        {
-            go.AddComponent<SubtleHoverScale>().HoverScale = node.HoverScale;
-        }
-        else
-        {
-            var press = go.AddComponent<ButtonPressAnimator>();
-            if (node.SilentClick) press.clickSound = Sound.None;
-        }
+        // The sound rides on the press animator regardless of whether the
+        // button also carries a rim -- a hover-rimmed wide row (submenu row,
+        // enemy plate) clicks exactly like everything else.
+        var press = go.AddComponent<ButtonPressAnimator>();
+        if (node.SilentClick) press.clickSound = Sound.None;
 
         var labelGo = new GameObject(node.Name + "Label", typeof(RectTransform));
         labelGo.transform.SetParent(go.transform, worldPositionStays: false);
@@ -432,6 +441,37 @@ public static class UiEmitter
     private static readonly Color ThemedPrimaryGlowColor =
         SceneBuilder.ParseHex(Ui.ThemeGlowHex(ButtonTheme.Gold), Color.white);
     private const float ThemedPrimaryGlowAlpha = ThemedButtonState.FocusGlowAlpha;
+
+    // Whether Ui.Button's AttachDefaultHoverBox (or, formerly, .Hovers())
+    // left a HoverRim child on this node -- Themed()/ThemedPlate()/
+    // NoHoverBox() all remove it, so its presence is the one thing worth
+    // asking rather than re-deriving from Theme/NoHoverBoxReason here too.
+    private static bool HasHoverRim(UiNode node) => node.Children.Any(c => c.Name == "HoverRim");
+
+    // Finishes what Ui.Button's default rim started, once HoverRim
+    // (Ui.ApplyHoverBox) actually exists as a GameObject.
+    //
+    // Finds it BY NAME rather than by position in node.Children - Ui.
+    // ApplyHoverBox is the one writer of this shape, and matching its own
+    // child name is cheaper to read than trusting an index, same reasoning
+    // WireThemedButton (below) states for Visuals/Glow/Plate.
+    private static void WireHoverBox(GameObject go, UiNode node, UiEmitResult result)
+    {
+        var rimNode = node.Children.FirstOrDefault(c => c.Name == "HoverRim");
+        if (rimNode == null)
+        {
+            throw new System.Exception(
+                $"[UiEmitter] '{node.Name}' passed HasHoverRim but its HoverRim child is missing - " +
+                "did something mutate node.Children between the check and here?");
+        }
+
+        var box = go.AddComponent<HoverBox>();
+        box.Rim = result.Objects[rimNode];
+
+        // Recorded so UiWiringSweep (E3) checks Rim the same way it checks
+        // every other controller's serialized references.
+        result.AttachedControllers.Add(box);
+    }
 
     // Finishes what EmitButton's Themed() branch started, once Visuals'
     // Glow/Plate (and, for the label-generating mode, the declared Label)

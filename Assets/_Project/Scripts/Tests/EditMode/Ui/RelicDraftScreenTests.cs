@@ -120,12 +120,14 @@ namespace PrincesPalace.Domain.Tests
             // the raycast, so no layer can eat the click meant for its card.
             //
             // "...Frame"/"...FrameContent" are excluded: the Violet 3:4
-            // container wrapper each card grew (balance-bot, 2026-09-02) is
-            // the SAME non-Decor-holder-wrapping-a-Decor-frame shape
-            // DraftFrame/DraftFrameContent already use at the top level (see
-            // Ui.BuildFrameHolder's own comment on why the holder must stay
+            // container wrapper each card grew (balance-bot, 2026-09-02) is a
+            // non-Decor holder wrapping a Decor frame sprite (see Ui.
+            // BuildFrameHolder's own comment on why the holder must stay
             // non-Decor) -- content beneath a Decor node is exempt from
-            // sibling overlap entirely, which is wrong for real content.
+            // sibling overlap entirely, which is wrong for real content. The
+            // screen's own top-level DraftFrame stopped being a Container on
+            // 2026-09-23 (see its build site) and is not one of these --
+            // this exclusion is for the per-card frames only.
             foreach (var node in Walk(Tree()))
             {
                 if (!node.Name.StartsWith("DraftCard")) continue;
@@ -136,16 +138,42 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The frame's container theme/ratio and content inset (Violet 3:2 at
-        // 1500x1000 -- nudged from the flat panel's 1500x820 to clear the
-        // aspect band, see the build site's own comment) are covered by
-        // KitContainerPlacementTests; only the screen-specific fact -- the
-        // old flat #241736F5 fill is gone -- stays here.
+        // The frame ITSELF (the Panel that wraps DraftFrameFill/the cards/
+        // Descend/the Rim) must stay a bare grouping node with no ColorHex of
+        // its own -- the fill is a separate DraftFrameFill child (2026-09-23,
+        // the system-menu frame idiom replacing the old Violet Container),
+        // exactly as SystemMenuFrame's own ColorHex-less wrapper sits over
+        // SystemMenuFill. A colour landing on the wrapper directly would
+        // double-paint under the Rim's own edges.
         [Test]
-        public void TheFrameHasNoLeftoverFlatFill()
+        public void TheFrameHasNoFillOfItsOwn()
         {
             Assert.IsNull(RelicDraftScreen.Build().Frame.Node.ColorHex,
-                "the old flat fill must be gone -- the art is the only frame now");
+                "the frame wrapper must stay bare -- DraftFrameFill is the only thing that paints the ground");
+        }
+
+        // Pins the actual shape of the 2026-09-23 replacement: a near-black
+        // fill and a four-edge hairline Rim, not the Violet Container art it
+        // used to wear. If DraftFrameFill's own colour ever drifted back
+        // toward a lighter/tinted violet, this is the test that would say so
+        // rather than a screenshot someone had to notice was wrong.
+        [Test]
+        public void TheFrameIsANearBlackFillWithAHairlineRim()
+        {
+            var frame = RelicDraftScreen.Build().Frame.Node;
+
+            var fill = frame.Children.Single(c => c.Name == "DraftFrameFill");
+            Assert.AreEqual("#1A1024F5", fill.ColorHex,
+                "the interior must read as near-black, matching the system menu's own frame -- not the old leather container");
+            Assert.IsTrue(fill.Decor, "the fill must not steal clicks meant for the cards/pager/Descend drawn over it");
+
+            var rimNames = new[] { "DraftFrameRimTop", "DraftFrameRimBottom", "DraftFrameRimLeft", "DraftFrameRimRight" };
+            foreach (var name in rimNames)
+            {
+                var edge = frame.Children.SingleOrDefault(c => c.Name == name);
+                Assert.IsNotNull(edge, $"'{name}' is missing -- Ui.Rim should have produced all four edges");
+                Assert.IsTrue(edge.Decor, $"'{name}' must be Decor, same as every other kit rim edge");
+            }
         }
 
         [Test]

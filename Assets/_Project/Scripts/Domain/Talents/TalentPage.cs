@@ -270,6 +270,32 @@ namespace PrincesPalace.Domain.Talents
         public static bool IsRoot(int slot) =>
             slot >= 0 && slot < TalentSkeleton.SlotCount && TalentSkeleton.Parents[slot].Length == 0;
 
+        // WHETHER ONE EDGE -- from parentSlot to childSlot, on ONE path --
+        // should draw lit. BOTH endpoints must be invested on THAT path: the
+        // child alone is not enough, because a merge or capstone slot
+        // (TalentPage.MeetsPrerequisites) authors more than one incoming edge
+        // for the same child and only requires ONE of them met, so a
+        // child-only test lights every strand into it, including the one the
+        // player never climbed (owner's hardware playtest, 2026-09-23 --
+        // "the unchosen path still lights up with an energy beam to a
+        // kindled star").
+        //
+        // IN DOMAIN, not the screen: the rule is "are both ends of THIS
+        // specific edge unlocked", which needs nothing Core has that Domain
+        // does not, and stating it here is what let TalentEdgeLightingTests
+        // pin it without a scene.
+        public static bool EdgeIsLit(
+            TalentTree tree, int path, int parentSlot, int childSlot, IReadOnlyCollection<string> unlocked)
+        {
+            if (tree == null || unlocked == null) return false;
+
+            string childId = tree.IdAt(path, childSlot);
+            if (string.IsNullOrEmpty(childId) || !unlocked.Contains(childId)) return false;
+
+            string parentId = tree.IdAt(path, parentSlot);
+            return !string.IsNullOrEmpty(parentId) && unlocked.Contains(parentId);
+        }
+
         // Every slot that is one step away from being taken. This is what the
         // screen lights up: the frontier, rather than the whole tree.
         // TAKES THE BUDGET THOUGH IT IGNORES THE WALLET, and the asymmetry is

@@ -583,6 +583,7 @@ namespace PrincesPalace
             var leftFile = FileCells(LeftFile);
             var rightFile = FileCells(RightFile);
             var scores = Present(attributeCells);
+            var opener = Present(new[] { attributesRow });
 
             var groups = new List<UiNavGroup<Selectable>>
             {
@@ -600,6 +601,27 @@ namespace PrincesPalace
                     gridRowLength: ScoreColumns, wrap: UiNavWrap.Clamp),
             };
 
+            // THE ATTRIBUTES PANEL'S OPENER, never once in any navigable
+            // group or link -- "there is no way to allocate stat points with
+            // the gamepad" (owner's hardware playtest, 2026-09-23) traced to
+            // exactly this: the modal itself (DeclareAttributes) is a fully
+            // worked pad surface -- entry focused, Close reachable, every
+            // row's own Left/Right spend/refund (AttributeRow.OnMove) -- and
+            // nothing could ever open it, because attributesRow sat outside
+            // DeclareColumnARows' rows list AND outside this method's own
+            // groups/links, with RuntimeNavWiring never once touching its
+            // `.navigation` -- left on whatever Unity's own Automatic default
+            // does near a screen full of Explicit-wired neighbours, which is
+            // not "reachable", it is "undefined".
+            //
+            // ITS OWN GROUP so it gets Explicit navigation without becoming a
+            // GRID member (it sits ABOVE the score grid, not inside it --
+            // CharacterDossierScreen.BuildColumnC's own header: "this one
+            // lives in column C... because that is where the thing it opens
+            // already is").
+            if (opener.Count > 0) groups.Add(RuntimeNavWiring.Group("dossierAttributesOpener",
+                UiNavGroupKind.List, opener));
+
             var links = new List<UiNavLink<Selectable>?>();
 
             // The loadout's two files, paired by body row: Torso beside
@@ -608,8 +630,28 @@ namespace PrincesPalace
             // clamp onto it rather than dead-ending.
             PairFilesByBodyRow(links);
 
-            // And the right file out to the scores' own left column.
-            PairAcross(links, rightFile, ColumnOf(scores, 0), UiNavDirection.Right, UiNavDirection.Left);
+            // And the right file out to column C -- the opener above the
+            // grid AND the grid's own left column, so PairAcross's own
+            // nearest-by-height match (NearestAcross) decides which one a
+            // given loadout row actually reaches, exactly the way it already
+            // decides between grid rows. No hand-authored Y coordinate: the
+            // opener sits physically above row 0, so it simply wins for
+            // whichever right-file row sits nearest it.
+            var columnC = new List<Selectable>(opener);
+            columnC.AddRange(ColumnOf(scores, 0));
+            PairAcross(links, rightFile, columnC, UiNavDirection.Right, UiNavDirection.Left);
+
+            // Down from the opener into the grid's own top row, and Up from
+            // every cell in that row back to the opener -- the one path
+            // PairAcross's height-only pairing above does not already cover,
+            // since the opener and the grid are two separate groups rather
+            // than one taller one.
+            if (opener.Count > 0)
+            {
+                var topRow = Row(scores, 0);
+                links.Add(RuntimeNavWiring.Link(opener[0], UiNavDirection.Down, First(topRow)));
+                foreach (var cell in topRow) links.Add(RuntimeNavWiring.Link(cell, UiNavDirection.Up, opener[0]));
+            }
 
             // FOUR STATES, not three -- DossierSkillsPanel joins Pack and
             // Spells (owner bug report, 2026-09-19). Same opaque-cover-of-

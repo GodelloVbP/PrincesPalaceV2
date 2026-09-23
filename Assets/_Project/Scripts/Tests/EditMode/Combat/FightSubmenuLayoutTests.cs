@@ -215,11 +215,99 @@ namespace PrincesPalace.Domain.Tests
                 "the header moved with the count instead of staying on its frame");
 
             // FrameTop, not the old ContainerCentreY + ContainerHeight * 0.5f --
-            // the inner box (rows/scrollbar/BACK) now sits recentred well
-            // inside the Violet 3:4 art frame (see FrameHeight's own comment),
-            // so the frame the header actually has to clear is the taller one.
+            // the frame is VisibleBottomLine-flush now (FrameCentreY's own
+            // header), a few pixels off ContainerCentreY's own convention,
+            // so the frame the header actually has to clear is the one built
+            // from that flush edge, not the inner box's own raw rect.
             Assert.Greater(FightSubmenuLayout.HeaderY(5), FightSubmenuLayout.FrameTop,
                 "the header must clear the top of the frame it labels");
+        }
+
+        // ---- the frame must never render narrower than its own rows --------------
+        //
+        // THE 98a4e062 BUG: FrameHeight dropped to BuildReservationRows(8)'s
+        // figure at build time and ResizeSubmenuContainer shrinks only the
+        // RECT's height per count afterward -- but Ui.Container's frame art
+        // carried PreserveAspect, which does not stretch a mismatched rect,
+        // it LETTERBOXES the art down to whichever axis is over-constrained.
+        // A short list's rect was far off the art's 3:4, so the rendered art
+        // came out narrower than the 240-wide rows sitting on it.
+        //
+        // FIXED TWICE NOW. PreserveAspect off (Type.Simple non-uniform
+        // stretch) was tried first and fixed the overflow, but distorted the
+        // painted border hard at 1-3 rows -- the same "stretched container
+        // art looks bad" defect the owner rejected on the relic draft screen
+        // the same day. The 2026-09-23 rework replaces the Violet 3:4
+        // Ui.Container outright with RelicDraftScreen's own flat Solid-fill-
+        // plus-Rim idiom (that file's own DraftFrameFill/DraftFrame header):
+        // FrameWidth IS ContainerWidth now, at every height, because a flat
+        // fill has no aspect to keep in the first place.
+        //
+        // 274 is hand-computed from the current constants, not read back
+        // through the property it checks (CLAUDE.md's fifth gotcha):
+        // ContainerWidth = RowWidth(240) + ContainerPad*2(20) +
+        // ScrollbarGap(8) + ScrollbarWidth(6) = 274.
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(5)]
+        [TestCase(8)]
+        public void FrameStaysWideEnoughForItsOwnRowsAtEveryCount(int requested)
+        {
+            int shown = FightSubmenuLayout.VisibleRows(requested);
+            Assert.Greater(shown, 0);
+
+            Assert.AreEqual(274f, FightSubmenuLayout.ContainerWidth, 0.01f,
+                "ContainerWidth's own formula moved without this pin moving too");
+            Assert.AreEqual(274f, FightSubmenuLayout.FrameWidth, 0.01f,
+                "FrameWidth is ContainerWidth now -- a flat fill has no art to pad past the content, " +
+                "so a value other than 274 here means a pad crept back in");
+
+            // FrameWidth is the SAME number at every count (it is never
+            // resized), so this is really "does the one static figure clear
+            // the content box" -- checked at 1/3/5/8 rather than once so a
+            // future FrameWidthFor(count) that shrinks it per count, the
+            // exact shape of the shipped bug, fails here immediately.
+            Assert.GreaterOrEqual(FightSubmenuLayout.FrameWidth, FightSubmenuLayout.ContainerWidth,
+                $"the frame must never render narrower than the {shown}-row content it wraps");
+        }
+
+        // ---- the frame is flush with the verb column and closes tight under BACK --
+        //
+        // FrameCentreY(For) is VisibleBottomLine-flush now, ZERO pad (a flat
+        // Solid fill's rect bottom IS its last painted pixel -- FrameCentreY's
+        // own header) -- pinned here with FightScreenTests.
+        // TheSkillPanelEndsOnTheSameLineAsTheVerbColumn covering the built
+        // scene's own rect, and this covering the pure Domain formula the
+        // Unity side reads.
+        [Test]
+        public void TheFrameIsFlushWithVisibleBottomLineAtEveryCount()
+        {
+            float bottom5 = FightSubmenuLayout.FrameCentreYFor(5) - FightSubmenuLayout.FrameHeightFor(5) * 0.5f;
+            float bottom1 = FightSubmenuLayout.FrameCentreYFor(1) - FightSubmenuLayout.FrameHeightFor(1) * 0.5f;
+
+            Assert.AreEqual(FightSubmenuLayout.VisibleBottomLine, bottom5, 0.01f,
+                "a five-row frame's rect bottom must sit exactly on the verb column's own visible line");
+            Assert.AreEqual(FightSubmenuLayout.VisibleBottomLine, bottom1, 0.01f,
+                "a one-row frame's rect bottom must ALSO sit there -- the frame shrinks from its TOP, " +
+                "never its bottom (ResizeSubmenuContainer's own header)");
+        }
+
+        // BACK sits in the container's own bottom padding (BackRowY), and
+        // the frame has to close AROUND that padding, not cut through it --
+        // the frame's bottom is VisibleBottomLine-flush (just above), so
+        // what is left to check is that BACK's own bottom edge clears the
+        // CONTENT box's bottom (ContainerBottom) by at least ContainerPad,
+        // at every count the container can be resized to.
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(5)]
+        public void BackRowStaysInsideTheContainersBottomPadding(int count)
+        {
+            float backBottom = FightSubmenuLayout.BackRowY - FightSubmenuLayout.BackRowHeight * 0.5f;
+            float contentBottom = FightSubmenuLayout.ContainerBottom;
+
+            Assert.GreaterOrEqual(backBottom - contentBottom, FightSubmenuLayout.ContainerPad - 0.01f,
+                $"BACK's own bottom edge must clear the content box's bottom by ContainerPad at count {count}");
         }
     }
 }

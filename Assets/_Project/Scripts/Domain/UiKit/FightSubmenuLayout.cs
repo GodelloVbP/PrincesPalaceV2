@@ -133,22 +133,21 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         // WHAT THE STATIC TREE IS ACTUALLY BUILT AT, and it is NOT RowsInView
-        // -- kept apart on purpose (2026-09-22), because FrameWidth below is
-        // DERIVED from this height through the kit's fixed 3:4 art, and the
-        // frame has to stay wide enough for the row/scrollbar content
-        // (~362px, ContainerWidth's own inset) at whatever height it is
-        // built at. Building at RowsInView's own five rows was tried first
-        // and failed TheFightScreenAuditsCleanAtEveryFrame: a 5-row-tall
-        // frame's 3:4-matched width comes out narrower than the fixed-width
-        // rows inside it, so the content overflowed its own container at
-        // every aspect. Eight is the number already proven to clear that
-        // floor (it was RowsInView's own value before this rework). The
-        // static tree is never what the player actually sees, though --
-        // FightController.AnchorSubmenuRows shrinks the real frame down to
-        // RowsInView's own cap the moment any real actor's skill count is
-        // known, before a frame is ever drawn to the screen, so this number
-        // is pure build-time plumbing and never a design decision about how
-        // the list looks.
+        // -- kept apart on purpose (2026-09-22). Originally this had to stay
+        // eight because FrameWidth was DERIVED from this height through the
+        // kit's fixed 3:4 container art, and a 5-row-tall frame's 3:4-matched
+        // width came out narrower than the fixed-width rows inside it
+        // (TheFightScreenAuditsCleanAtEveryFrame). THAT REASON IS GONE since
+        // the 2026-09-23 flat-fill rework (FrameWidth's own header): width is
+        // simply ContainerWidth now, at any height. Eight stays anyway,
+        // rather than collapsing this into RowsInView, because nothing
+        // forces it back down and a static tree one row taller than the
+        // common case is free width-wise headroom for whatever the pool
+        // grows to next, not a cost worth spending a change on today. The
+        // static tree is never what the player actually sees -- FightController.
+        // AnchorSubmenuRows shrinks the real frame down to RowsInView's own
+        // cap the moment any real actor's skill count is known, before a
+        // frame is ever drawn to the screen.
         private const int BuildReservationRows = 8;
 
         // How many row rects the tree emits. The list SCROLLS now, so this is
@@ -238,96 +237,61 @@ namespace PrincesPalace.Domain.UiKit
         public static float ContainerWidth =>
             RowWidth + ContainerPad * 2f + ScrollbarGap + ScrollbarWidth;
 
-        // ---- the Violet 3:4 art frame around the box above ----------------------
+        // ---- the frame around the box above (flat fill, not kit art) ------------
         //
-        // ContainerWidth/ContainerHeight (316x500, aspect 0.632) are the INNER
-        // box every row, the scrollbar and BACK already lay out against,
-        // UNCHANGED by wrapping it in themed art -- nothing about RowY,
-        // ScrollRange or ThumbHeight above had to move, because the frame is
-        // built AROUND this box in BuildSubmenuFrame rather than replacing its
-        // arithmetic. 0.632 misses the kit's 3:4 aspect by more than
-        // Ui.Container's 5% band either way it has ever been measured, so the
-        // frame has to be bigger than the inner box on one axis and the kit's
-        // own content inset is what says by how much.
+        // WAS a Violet 3:4 Ui.Container. Turning PreserveAspect off (tried
+        // first, 2026-09-23) kept the rect the right size but not the ART:
+        // Type.Simple's non-uniform stretch squashed the painted border hard
+        // at 1-3 rows -- the "stretched container art looks bad" defect the
+        // owner rejected on the relic draft screen the same day, and the kit
+        // already lints against elsewhere. RelicDraftScreen's own fix for
+        // that screen (a flat Solid fill plus a hairline Rim, replacing a
+        // Violet 3:2 Container for the identical reason -- see that file's
+        // own header on DraftFrameFill) is the fix here too: a flat fill has
+        // no aspect to keep, so it resizes to any height with zero
+        // distortion and FightController.ResizeSubmenuContainer's
+        // height-only runtime move stays exactly as simple as it already was.
         //
-        // HEIGHT-BOUND SINCE THE 2026-09-07 KIT REPIN, where it used to be
-        // width-bound. While the 3:4 art measured 0.588, widening the inner
-        // box to the frame's left/right inset (FrameWidth = 316 / (1 - .13) =
-        // 363.22) gave a frame 617.72 tall -- far more vertical room than the
-        // 500-tall inner box needed. At a true 0.75 that same 363.22-wide
-        // frame is only 484 tall, which the inner box does not fit inside at
-        // all. So the binding constraint flipped: the frame's height is what
-        // the inner box's own 500 needs once the top/bottom inset is put back
-        // (500 / (1 - .052 - .055) = 559.9), and the width follows from the
-        // aspect (419.9).
+        // EXACTLY THE CONTENT BOX NOW, not bigger. The 3:4 art's own content
+        // inset used to force the frame wider/taller than ContainerWidth/
+        // ContainerHeight and recentre the inner box inside that slack (see
+        // this section's own history in git blame if that math is ever
+        // needed again); a flat fill has no border art to leave room for, so
+        // FrameWidth/FrameHeight ARE ContainerWidth/ContainerHeight(For) --
+        // no FrameInset, no separate FrameContentCentreY layer.
+        public static float FrameWidth => ContainerWidth;
+
+        public static float FrameHeight => ContainerHeight;
+
+        public static float FrameHeightFor(int count) => ContainerHeightFor(count);
+
+        // BOTTOM-ANCHORED AT VisibleBottomLine, ZERO PAD -- this is what
+        // keeps FightScreenTests.TheSkillPanelEndsOnTheSameLineAsTheVerbColumn
+        // true. A flat Solid fill draws exactly to its own rect on every
+        // edge (no transparent halo the way the kit's container art always
+        // carried, per VisibleBottomLine's own header) -- the same "rect
+        // bottom IS the last painted pixel" convention that test's own
+        // comment already documents for the PC plate's cropped art, so the
+        // frame's rect can sit flush at VisibleBottomLine directly with no
+        // pad correction, where the old art needed one.
         //
-        // The inner box is CENTRED in that width rather than exactly filling
-        // it -- 419.9 * (1 - .138) = 361.9 of content box against 316 of
-        // inner box, so ~23px of slack a side. That is fine where the old
-        // exact fit was necessary: SubmenuX is back-solved from ContainerX
-        // through ContainerWidth (see FightScreen.SubmenuX), so the rows,
-        // scrollbar and BACK stay centred on the frame's own centre whatever
-        // the slack is; the exact fit was tightness, not a requirement.
-        //
-        // BuildSubmenuFrame reparents the unchanged viewport/track/thumb/BACK
-        // under this inset instead of a bare Panel at the old
-        // ContainerCentreY -- and because every one of their own Y's is
-        // already authored AS AN OFFSET FROM that centre
-        // (ViewportOffsetInContainer, BackRowY - ContainerCentreY),
-        // reparenting them under a DIFFERENT centre (FrameContentCentreY,
-        // below) recentres the whole 500-tall block inside the frame
-        // automatically -- no shift added anywhere in the screen.
-        public static readonly ContentInsetFrac FrameInset =
-            Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
-
-        public static float FrameHeight =>
-            ContainerHeight / (1f - FrameInset.Top - FrameInset.Bottom);
-
-        public static float FrameHeightFor(int count) =>
-            ContainerHeightFor(count) / (1f - FrameInset.Top - FrameInset.Bottom);
-
-        // WIDTH NEVER MOVES, whatever count the runtime resize is asked
-        // for -- FrameWidth reads the STATIC (BuildReservationRows) height
-        // only, and there is no FrameWidthFor(count) beside it. A row is
-        // RowWidth (240) wide regardless of how many of them there are, so
-        // the frame cannot narrow below what the fixed-width content needs
-        // without clipping it; only FrameHeightFor shrinks per count (see
-        // FightController.AnchorSubmenuRows' own header, and
-        // BuildReservationRows' own header for why the STATIC height itself
-        // cannot simply become RowsInView's five either). Holding width
-        // fixed also means ContainerX, SubmenuX and every row/viewport/
-        // scrollbar offset solved from them at build time stay correct at
-        // any row count -- only Y coordinates and heights are ever touched
-        // at runtime.
-        public static float FrameWidth =>
-            Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, FrameHeight).X;
-
-        // BOTTOM-ANCHORED AT THE FRAME'S OWN VISIBLE EDGE now, not its rect
-        // edge -- this is what keeps FightScreenTests.TheSkillPanelEndsOnThe
-        // SameLineAsTheVerbColumn true: the frame's PAINTED bottom, not its
-        // rect (which would still equal ContainerBottom/CommandBottom, and
-        // did until the halo pad above was measured), is what has to end on
-        // the same line as the verb column's own painted bottom. See
-        // VisibleBottomLine's own comment for why a rect-to-rect flush was
-        // wrong in the first place.
-        public static float FrameCentreY =>
-            Ui.CentreYForVisibleBottom(VisibleBottomLine, FrameHeight, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour).Bottom);
+        // ViewportOffsetInContainer(For)/BackRowY-ContainerCentreY(For) below
+        // are UNCHANGED by this -- they are still authored as an offset from
+        // ContainerCentreY(For), and BuildSubmenuFrame/ResizeSubmenuContainer
+        // still parent viewport/track/thumb/BACK directly under this frame
+        // using those same offsets, so the whole row block shifts by
+        // (FrameCentreY(For) - ContainerCentreY(For)) when reparented --
+        // exactly the mechanism the old FrameContentCentreY used, just
+        // simpler now that there is no second, art-inset-driven correction
+        // to add on top of it.
+        public static float FrameCentreY => VisibleBottomLine + FrameHeight * 0.5f;
 
         public static float FrameCentreYFor(int count) =>
-            Ui.CentreYForVisibleBottom(VisibleBottomLine, FrameHeightFor(count),
-                Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour).Bottom);
+            VisibleBottomLine + FrameHeightFor(count) * 0.5f;
 
         public static float FrameTop => FrameCentreY + FrameHeight * 0.5f;
 
         public static float FrameTopFor(int count) => FrameCentreYFor(count) + FrameHeightFor(count) * 0.5f;
-
-        // The content inset's OWN centre, which is not the frame's centre once
-        // the top and bottom insets differ (4.5% vs 4%) -- half that 0.5% of
-        // FrameHeight, about 1.5px, plus all of the frame's own half-height.
-        // What BuildSubmenuFrame's viewport/track/thumb/BACK are reparented
-        // under.
-        public static float FrameContentCentreY =>
-            FrameCentreY + FrameHeight * (FrameInset.Bottom - FrameInset.Top) * 0.5f;
 
         // NO LONGER CONCENTRIC WITH THE VIEWPORT. It was, while the container
         // held nothing but the list; the back row hangs below the viewport now,
@@ -544,9 +508,10 @@ namespace PrincesPalace.Domain.UiKit
         // would cut it, and it would move every time the count changed while
         // the box around it did not.
         // MEASURED AGAINST THE FRAME'S OWN TOP EDGE now, not the inner box's --
-        // the inner box sits recentred well inside the frame (see FrameHeight's
-        // own comment), so the old ContainerCentreY + ContainerHeight * 0.5f
-        // would land the header deep inside the painted border instead of
+        // the frame sits a few pixels above the inner box's own ContainerCentreY
+        // (FrameCentreY is VisibleBottomLine-flush, not ContainerBottom-flush --
+        // see FrameCentreY's own comment), so the old ContainerCentreY +
+        // ContainerHeight * 0.5f would land the header inside the frame instead of
         // above it.
         // STILL IGNORES `count` -- the parameter is kept only because
         // BuildSubmenuColumn's one build-time call already passes one

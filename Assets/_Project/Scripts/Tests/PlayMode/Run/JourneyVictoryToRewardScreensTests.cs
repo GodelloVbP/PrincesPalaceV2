@@ -264,9 +264,16 @@ namespace PrincesPalace.PlayModeTests
             // does, so the ScrollTo assertion below is not racing it.
             yield return new WaitForSecondsRealtime(0.5f);
 
-            var entryDot = Node($"TrackDot{RewardTrackLayout.FirstLevel}");
-            Assert.IsNotNull(entryDot, "the track has no first dot");
-            AssertSelectedName(entryDot.name, "the track's own entry is its first dot");
+            // NEW CONTRACT (owner, 2026-09-23): opening the track focuses the
+            // CURRENT level's dot (RewardTrackController.CurrentLevelDot()),
+            // not the track's first dot -- the fixture set every squad
+            // member's level to 12 above, so 12 is that dot, taken as the
+            // fixture's own literal rather than re-derived by calling the
+            // controller's private method from outside it.
+            const int currentLevel = 12;
+            var entryDot = Node($"TrackDot{currentLevel}");
+            Assert.IsNotNull(entryDot, "the track has no dot for the fixture's current level");
+            AssertSelectedName(entryDot.name, "opening the track should focus the current level's own dot");
 
             var content = GameObject.Find("TrackContent")?.GetComponent<RectTransform>();
             var viewport = GameObject.Find("TrackViewport")?.GetComponent<RectTransform>();
@@ -275,10 +282,10 @@ namespace PrincesPalace.PlayModeTests
 
             yield return MoveRight(); // one Right press on the rail
 
-            var nextDot = Node($"TrackDot{RewardTrackLayout.FirstLevel + 1}");
+            var nextDot = Node($"TrackDot{currentLevel + 1}");
             AssertSelectedName(nextDot.name, "one Right press on the rail should move selection to the next dot");
 
-            float expected = RewardTrackLayout.ScrollFor(RewardTrackLayout.FirstLevel + 1, viewport.rect.width);
+            float expected = RewardTrackLayout.ScrollFor(currentLevel + 1, viewport.rect.width);
             Assert.AreEqual(expected, content.anchoredPosition.x, 1f,
                 "selecting the next dot should have scrolled the rail to it via ScrollTo, the same call a " +
                 "mouse hover already makes");

@@ -52,22 +52,16 @@ namespace PrincesPalace.Domain.Tests
                 ". Either mark them Inactive() or drop Opening().");
         }
 
-        // Quiet() suppresses the click sound, which lives on the press
-        // animator. A node that also asks for Hovers() does not GET the press
-        // animator, so the Quiet() is silently doing nothing and whoever wrote
-        // it believes they suppressed a sound that was never going to play.
-        [Test]
-        public void QuietIsNeverCombinedWithHovers_WhichWouldSilentlyDoNothing()
-        {
-            var contradictory = FightNodes()
-                .Where(n => n.SilentClick && n.HoverScale > 0f)
-                .Select(n => n.Name)
-                .ToList();
-
-            Assert.IsEmpty(contradictory,
-                "Quiet() only affects the press animator, and Hovers() replaces it -- so Quiet() here is a " +
-                "no-op that reads as an intention: " + string.Join(", ", contradictory));
-        }
+        // DEAD as an invariant since the owner's 2026-09-23 second pass:
+        // Quiet() suppressing the click sound and a node carrying the
+        // hover/focus rim used to be contradictory, because a Hovers() node
+        // did not get the press animator Quiet()'s sound rides on. Now every
+        // unthemed button gets BOTH the rim (default) and the press animator
+        // (dim, not pop) -- see UiEmitter.EmitButton's own comment -- so
+        // Quiet() and a rim are no longer mutually exclusive, and there is
+        // nothing left here to assert. Kept as a comment, not a test, so a
+        // future reader who remembers this invariant existing finds out why
+        // it does not any more instead of hitting a silently-deleted method.
 
         // ---- what the migration actually put where -------------------------------
 

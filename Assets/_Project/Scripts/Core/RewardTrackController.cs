@@ -206,10 +206,38 @@ namespace PrincesPalace
             // mechanism ShowSpells' own fix comment already names).
             // WireNodes (called from Wire(), above) has already declared the
             // ribbon Rail by this point, so its own entry exists to select.
-            if (dots != null && dots.Length > 0 && dots[0] != null)
-            {
-                EventSystem.current?.SetSelectedGameObject(dots[0].gameObject);
-            }
+            //
+            // THE CURRENT LEVEL'S DOT, not dots[0]. dots[0] is level
+            // FirstLevel -- the far LEFT of the rail -- while BeginFlyIn just
+            // above scrolled the ribbon to _level, which can be dozens of
+            // nodes further right on anything but a brand new character. The
+            // marker followed the selection here correctly; the selection
+            // itself was simply wrong (owner's hardware playtest,
+            // 2026-09-23: "the gamepad focus marker stays off-screen left").
+            //
+            // dots[i] is level FirstLevel + i (WireNodes' own indexing), so
+            // this is that inverted and clamped into range -- the same dot
+            // the fly-in just centred, which is also always the nearest
+            // collectable one: claiming is sequential and capped at _level
+            // (Press/Claim's own header), so nothing past this dot could be
+            // collected before it anyway. Only a character who has never
+            // left the starting level (_level below FirstLevel, nothing
+            // collectable yet) falls through to dots[0].
+            var target = CurrentLevelDot();
+            if (target != null) EventSystem.current?.SetSelectedGameObject(target.gameObject);
+        }
+
+        // dots[i] is level FirstLevel + i (WireNodes' own indexing), inverted
+        // and clamped into range. The one dot BOTH the initial pad focus
+        // above and the collect button's own Up link (WireNodes.Input.cs)
+        // resolve to, so the two can never name a different node than the
+        // fly-in just centred.
+        private Button CurrentLevelDot()
+        {
+            if (dots == null || dots.Length == 0) return null;
+
+            int index = Mathf.Clamp(_level - RewardTrackLayout.FirstLevel, 0, dots.Length - 1);
+            return dots[index] != null ? dots[index] : dots[0];
         }
 
         private void OnDisable()
@@ -281,6 +309,7 @@ namespace PrincesPalace
             PaintCard(CardLevel());
             MoveCaret();
             MoveHalo();
+            RefreshCollectButtonUpLink();
 
             // A LEVEL ARRIVING WHILE THE PANEL IS OPEN, which the first paint
             // is not: on open, _level goes from 1 to whatever the save holds,

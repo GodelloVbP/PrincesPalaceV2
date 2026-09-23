@@ -118,6 +118,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // fixed-pool/toggle-visibility idiom FightSubmenuLayout's rows use.
         public const int DetailStatRows = 8;
 
+        // THE ICON ROW POOL (2026-09-23 icon rework, raised 6 -> 8 in the
+        // coordinator's pass 2: dropping COST/COOLDOWN entirely was a real
+        // regression, not a scoping choice) -- how many PHYSICAL icon+value
+        // row slots the tree reserves, alongside DetailStatRows above rather
+        // than replacing it: FightHudModel.DetailPanel.Stats and .Icons are
+        // both populated by DetailForSkill now (that struct's own header),
+        // Stats for any reader that still wants the old strings and Icons
+        // for what the card actually paints. Eight covers every
+        // DetailIconKind member -- Mana, Cost, Cooldown, Element(+POWER),
+        // Defense, Reach, AreaOfEffect, Scaling -- with no ninth kind
+        // defined, so eight is the true ceiling, not a guessed one.
+        public const int DetailIconRows = 8;
+
         // Attack / Skill / Item / Hold Back. RUN was removed -- see
         // FightScreen.BuildVerbColumn's own comment -- rather than joining
         // HOLD BACK's old hidden-but-wired spot.

@@ -77,7 +77,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightHudSpec.EnemyPlates, screen.EnemyPlates.Count);
             Assert.AreEqual(FightHudSpec.Verbs, screen.VerbButtons.Count);
             Assert.AreEqual(FightHudSpec.DamagePopups, screen.DamagePopups.Count);
-            Assert.AreEqual(FightHudSpec.DetailStatRows, screen.DetailStatKeys.Count);
+            Assert.AreEqual(FightHudSpec.DetailIconRows, screen.DetailIconImages.Count);
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, screen.EnemySlots.Count);
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, screen.PartySlots.Count);
             Assert.AreEqual(FightSubmenuLayout.PoolSize, screen.SubmenuRows.Count);
@@ -96,7 +96,7 @@ namespace PrincesPalace.Domain.Tests
                 s.EnemyPlateHpFills, s.EnemyPlateTags, s.EnemyPlateReticles);
             AssertSameLength("verbs", s.VerbButtons, s.VerbLabels, s.VerbCarets);
             AssertSameLength("submenu", s.SubmenuRows, s.SubmenuMarks, s.SubmenuNames);
-            AssertSameLength("detail stats", s.DetailStatKeys, s.DetailStatValues);
+            AssertSameLength("detail icons", s.DetailIconImages, s.DetailIconValues);
             AssertSameLength("popups", s.DamagePopups, s.DamagePopupLabels);
             AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyFootGlows);
@@ -177,6 +177,8 @@ namespace PrincesPalace.Domain.Tests
                 { "PcMpValues", s.PcMpValues }, { "PcMpFills", s.PcMpFills },
                 { "PcMpShades", s.PcMpShades }, { "PcMpRims", s.PcMpRims },
                 { "PcStatusBadges", s.PcStatusBadges },
+                { "DetailIconImages", s.DetailIconImages },
+                { "DetailIconValues", s.DetailIconValues },
             };
 
             foreach (var pair in lists)
@@ -190,7 +192,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(s.SecondLifeBadge.IsValid, "the party revive badge was never assigned a node");
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
-            Assert.IsTrue(s.DetailDamageType.IsValid);
             Assert.IsTrue(s.TargetPrompt.IsValid);
             Assert.IsTrue(s.SpellVfxPool.IsValid);
             Assert.IsTrue(s.SpellGroundVfxPool.IsValid);
@@ -706,12 +707,12 @@ namespace PrincesPalace.Domain.Tests
             // The single most important binding on this screen: the same
             // function the runtime controller calls to RE-anchor these rows is
             // the one that placed them here. v1 had two hand-mirrored copies.
-            // + (FrameContentCentreY - ContainerCentreY): the rows are
-            // reparented under the Violet 3:4 frame's content inset now
-            // (balance-bot 2026-09-02), not a bare Panel at the old
-            // ContainerCentreY -- see that constant's own comment. RowY
-            // itself is untouched.
-            float shift = FightSubmenuLayout.FrameContentCentreY - FightSubmenuLayout.ContainerCentreY;
+            // + (FrameCentreY - ContainerCentreY): the rows are reparented
+            // directly under the flat frame now (2026-09-23 rework), which
+            // sits VisibleBottomLine-flush rather than at the old
+            // ContainerCentreY -- see FrameCentreY's own comment. RowY itself
+            // is untouched.
+            float shift = FightSubmenuLayout.FrameCentreY - FightSubmenuLayout.ContainerCentreY;
             int count = FightSubmenuLayout.PoolSize;
             for (int i = 0; i < count; i++)
             {
@@ -1205,6 +1206,11 @@ namespace PrincesPalace.Domain.Tests
         // VisibleBottomLine and FightScreen.BuildPartyPlate both place
         // against) of all three surfaces that share this line: the verb
         // column, the skill panel frame, and the party plate.
+        //
+        // THE PANEL'S OWN PAD IS ZERO NOW (2026-09-23 flat-fill rework) --
+        // it is a flat Solid fill plus a hairline Rim, not kit art with a
+        // transparent halo, so its rect bottom IS its last painted pixel,
+        // the same PcPlate convention this test already documents below.
         [Test]
         public void TheSkillPanelEndsOnTheSameLineAsTheVerbColumn()
         {
@@ -1213,16 +1219,17 @@ namespace PrincesPalace.Domain.Tests
             var bottomPlate = RectOf("PcPlate0");
 
             float verbVisibleBottom = VisibleBottom(attack, Ui.PlateVisiblePad(Ui.PlateShapeFor(attack.Width, attack.Height)));
-            float panelVisibleBottom = VisibleBottom(panel, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour));
+            float panelVisibleBottom = panel.Centre.Y - panel.Height * 0.5f;
 
-            // THE RAW RECT BOTTOM for the third surface, and the asymmetry
-            // is the point rather than an oversight. The verb row and the
-            // skill panel are kit art, which paints a transparent halo
-            // outside its own border, so their painted edge is inset from
-            // their rect and has to be corrected for. The PC plates are
-            // cropped to their own alpha bounding box
-            // (PcPlateArt.VisiblePad, measured at 0 on every edge), so their
-            // rect bottom IS their last painted pixel and a pad here would
+            // THE RAW RECT BOTTOM for both the panel and the third surface,
+            // and the asymmetry against the verb row is the point rather
+            // than an oversight. The verb row is themed BUTTON art, which
+            // still paints a transparent halo outside its own border, so
+            // its painted edge is inset from its rect and has to be
+            // corrected for. The skill panel (flat fill) and the PC plates
+            // (cropped to their own alpha bounding box, PcPlateArt.
+            // VisiblePad measured at 0 on every edge) both have a rect
+            // bottom that IS their last painted pixel, so a pad here would
             // move the comparison off the line it is checking.
             float plateVisibleBottom = bottomPlate.Centre.Y - bottomPlate.Height * 0.5f;
 
@@ -1318,34 +1325,93 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(52f, rect.Height, 0.01f);
         }
 
-        // ---- the skill detail card's element tag ------------------------------
+        // ---- the skill detail card's icon rows (2026-09-23 icon rework) -------
 
-        // WHICH ROW CARRIES "POWER" IS RUNTIME DATA now (2026-09-22 rework
-        // #2): FightHudModel.DetailPanel.Stats is compact, so the physical
-        // row index POWER lands on moves with whatever else the hovered
-        // skill shows. This dotnet-host test solves the STATIC tree only --
-        // it has no panel, no hovered skill, nothing to ask "which row is
-        // POWER this time" -- so it cannot pin "the tag sits between the
-        // key and value of row N" the way it used to when POWER's row was a
-        // build-time constant. FightController.Hud.cs's RefreshDetail/
-        // RefreshDetailDamageType own that claim now (every row is built
-        // uniform-width; the row painting POWER is narrowed and the tag
-        // moved onto it at runtime, by key lookup, not by index).
-        //
-        // What IS still a build-time fact, and worth pinning: the tag is
-        // built at the width the runtime narrowing expects. Its build-time
-        // rest position DOES sit on row 0's own line (no padding strip is
-        // tall enough to park it clear of every row -- FightScreen.
-        // BuildDetailColumn's own comment on the tag) -- that overlap is
-        // real and declared AllowOverlap for exactly that reason (the tag
-        // is Inactive and always relocated before either it or the row it
-        // rests on is shown together), which is what
-        // TheFightScreenAuditsCleanAtEveryFrame is trusting to be true.
+        // WHICH ROW CARRIES WHICH FACT IS RUNTIME DATA (same reason the old
+        // DetailStatKeys/Values pool was: FightHudModel.DetailPanel.Icons is
+        // compact, so this dotnet-host test -- no panel, no hovered skill --
+        // cannot pin "row N is always Element" the way a build-time constant
+        // could). What IS a build-time fact, and worth pinning: every pooled
+        // icon cell is built at the same SIZE and left margin -- pass 2's
+        // "dynamic box" rework (DetailIconRowYFor) DOES reposition a row's Y
+        // at runtime now, count by count, but never its width/height/X.
         [Test]
-        public void TheDamageTypeTagIsSizedForTheNarrowRow()
+        public void EveryDetailIconRowIsBuiltAtTheSameSize()
         {
-            var tagRect = RectOf("DetailDamageType");
-            Assert.AreEqual(FightScreen.DetailDamageTypeWidth, tagRect.Width, 0.01f);
+            var s = Screen();
+            Assert.AreEqual(FightHudSpec.DetailIconRows, s.DetailIconImages.Count);
+
+            for (int i = 0; i < s.DetailIconImages.Count; i++)
+            {
+                var rect = RectOf($"DetailIcon{i}");
+                Assert.AreEqual(FightScreen.DetailIconSize, rect.Width, 0.01f);
+                Assert.AreEqual(FightScreen.DetailIconSize, rect.Height, 0.01f);
+            }
+        }
+
+        // ---- the card is a DYNAMIC box (coordinator pass 2, 2026-09-23) -------
+        //
+        // The owner's exact ask was "a dynamic box around it" -- a static
+        // pool-sized reservation is not that, however much smaller it is
+        // than the old body-plus-eight-rows card. DetailHFor(count) is the
+        // pure Domain function FightController.Hud.cs's RefreshDetail calls
+        // every repaint to resize the fill/Rim/column to whatever the
+        // CURRENT panel's icon count needs, the same ContainerHeightFor(count)
+        // shape FightSubmenuLayout already uses for its own runtime-resized
+        // frame.
+        //
+        // 118/190/298/370 are hand-computed from the current constants, not
+        // read back through the property they check (CLAUDE.md's fifth
+        // gotcha): DetailTopPad(18) + DetailNameBlockH(46) +
+        // count * DetailIconRowPitch(36) + DetailBottomPad(18) = 82 + 36*count.
+        // 8 is FightHudSpec.DetailIconRows' own ceiling (raised 6 -> 8 the
+        // same pass, for the Cost/Cooldown icons that pass 1 dropped).
+        [TestCase(1, 118f)]
+        [TestCase(3, 190f)]
+        [TestCase(6, 298f)]
+        [TestCase(8, 370f)]
+        public void TheCardsHeightIsAPureFunctionOfItsVisibleRowCount(int count, float expectedHeight)
+        {
+            Assert.AreEqual(expectedHeight, FightScreen.DetailHFor(count), 0.01f);
+        }
+
+        // ANCHORED FROM A FIXED EDGE, NOT ITS CENTRE (coordinator's own
+        // wording) -- the card sits at a fixed margin off the screen's own
+        // bottom edge, nearest the floor of the 1080-tall canvas and
+        // farthest from the enemy rack/stage this column sits beside
+        // (DetailX/DetailW's own header on the horizontal half of this same
+        // rule). Shrinking the card for a short list must never move that
+        // bottom edge -- only the top may retreat.
+        [Test]
+        public void TheCardGrowsFromItsFixedBottomEdgeNeverItsCentre()
+        {
+            float bottom1 = FightScreen.DetailCentreYFor(1) - FightScreen.DetailHFor(1) * 0.5f;
+            float bottom8 = FightScreen.DetailCentreYFor(8) - FightScreen.DetailHFor(8) * 0.5f;
+
+            Assert.AreEqual(bottom8, bottom1, 0.01f,
+                "the card's bottom edge moved when its row count changed -- it must stay fixed");
+
+            float top1 = FightScreen.DetailCentreYFor(1) + FightScreen.DetailHFor(1) * 0.5f;
+            float top8 = FightScreen.DetailCentreYFor(8) + FightScreen.DetailHFor(8) * 0.5f;
+            Assert.Greater(top8, top1, "an eight-row card must reach higher than a one-row card");
+        }
+
+        // Rows pack TIGHT under the name block, with no gap and no dead
+        // space above the bottom pad, at every count -- not just the static
+        // six-row pool's own spacing.
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(6)]
+        [TestCase(8)]
+        public void IconRowsPackTightAgainstTheNameBlockAndTheBottomPadAtEveryCount(int count)
+        {
+            float nameBottom = FightScreen.DetailNameYFor(count) - 11f; // half the 22px name box
+            float firstRowTop = FightScreen.DetailIconRowYFor(count, 0) + FightScreen.DetailIconSize * 0.5f;
+            Assert.Less(firstRowTop, nameBottom, "row 0 must sit below the name block, not overlap it");
+
+            float lastRowBottom = FightScreen.DetailIconRowYFor(count, count - 1) - FightScreen.DetailIconSize * 0.5f;
+            float cardBottom = FightScreen.DetailFrameBottomFor(count);
+            Assert.Greater(lastRowBottom, cardBottom, "the last row must clear the card's own bottom edge");
         }
 
         // ---- status badges (PLAN_STATUS_EFFECT_UI, package B) -----------------
