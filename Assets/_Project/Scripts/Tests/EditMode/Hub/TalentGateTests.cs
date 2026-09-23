@@ -276,33 +276,77 @@ namespace PrincesPalace.Domain.Tests
                 "rather than its engine");
         }
 
-        // OWNER PLAYTEST, 2026-09-23: "Choosing Fragile Lamb correctly locks
-        // out Black Ram mode, but it also blocks picking any
-        // cross-constellation talents, which should still be allowed." Two
-        // separate `unlocked` sets on purpose, not one shared fixture: a
-        // fresh swear to Fragile Lamb alone (p1s0) is what actually blocks
-        // Black Ram (p0s0, AllegianceSworn), and a non-root stone elsewhere
-        // in path 0 (p0s1) can only ever be evaluated once its OWN
-        // prerequisite chain is met -- TalentSkeleton makes every chain
-        // node's parent that path's own root regardless of allegiance, so
-        // proving p0s1 stays reachable needs p0s0 already lit, the same
-        // "both roots already lit" shape OnlyTheROOTOfTheOtherPathIsBlocked
-        // uses above. One rule, asserted from both of its own preconditions.
+        // OWNER PLAYTEST, 2026-09-23, SECOND PASS: the first fix here
+        // (AllegianceSworn scoped to IsRoot) was necessary but not
+        // sufficient -- MeetsPrerequisites' generic loop still checked THIS
+        // path's own root id for every tier-1 stone, and that id can never
+        // be in `unlocked` once a different root is sworn (AllegianceSworn
+        // refuses it forever). So every stone above an unsworn path's root
+        // was permanently unreachable, whatever points were spent -- the
+        // bug was real, the previous test only passed because it PRESET
+        // "p0s0" as already unlocked, a state no player sworn to path 1 can
+        // ever reach.
+        //
+        // WALKED FROM AN EMPTY PAGE, no preset prerequisites: swear
+        // Fragile Lamb, then invest into path 0 exactly as the screen would
+        // -- Evaluate, then add the id to `unlocked` -- one stone at a
+        // time, up through the convergence and the capstone, the two
+        // owner-named checkpoints. Every step must read None before it is
+        // "invested".
         [Test]
-        public void FragileLambLocksOnlyBlackRam_NotTheRestOfItsPath()
+        public void FragileLambThenAnEmptyPage_ReachesBlackRamsWholeTree_RootAlone()
         {
             var tree = TwoRootedPaths();
+            var unlocked = new HashSet<string>();
 
-            var justSworn = new HashSet<string> { "p1s0" };
+            void Invest(int path, int slot, string reason)
+            {
+                Assert.AreEqual(TalentPage.Refusal.None,
+                    TalentPage.Evaluate(tree, path, slot, unlocked, embers: 99, budget: 999), reason);
+                unlocked.Add($"p{path}s{slot}");
+            }
+
+            // The oath: swear Fragile Lamb (path 1's root). Free, no
+            // prerequisites of its own.
+            Invest(1, 0, "path 1's own root should be free to swear on an empty page");
+
+            // Black Ram (path 0's root) must now be refused -- and
+            // specifically by the allegiance, not by anything else.
             Assert.AreEqual(TalentPage.Refusal.AllegianceSworn,
-                TalentPage.Evaluate(tree, path: 0, slot: 0, justSworn, embers: 99, budget: 999),
-                "Black Ram (the other path's root, its own generation engine) must still be locked out");
+                TalentPage.Evaluate(tree, path: 0, slot: 0, unlocked, embers: 99, budget: 999),
+                "Black Ram, the other path's own generation engine, must stay locked out");
 
-            var bothRooted = new HashSet<string> { "p0s0", "p1s0" };
+            // A CROSS-CONSTELLATION TALENT, reached with NO preset state --
+            // this is the exact stone the previous version of this test had
+            // to fake into `unlocked` to pass. TwoRootedPaths gives every
+            // non-root slot cost 1, well inside the 999 budget above.
+            Invest(0, 1, "a tier-1 stone on the unsworn path must be reachable from the sworn root " +
+                         "alone, with no preset prerequisites");
+
+            // ALL THE WAY UP path 0's OWN chain to its convergence --
+            // TwoRootedPaths gives every path the flat depth-1 skeleton
+            // (TalentSkeleton.Parents chains each slot to the one directly
+            // below), so walking 2..9 in order reaches it honestly.
+            for (int slot = 2; slot <= 9; slot++)
+            {
+                Invest(0, slot, $"path 0 slot {slot} should chain off the stone below it, " +
+                                 "never off its own (permanently refused) root");
+            }
+
+            Invest(0, 10, "the convergence must be reachable once its own strands are lit -- " +
+                          "still true once the tier-1 root-check no longer blocks the strands beneath it");
+
+            // AND THE CAPSTONE, the other owner-named checkpoint, up path
+            // 0's post-convergence branch.
+            for (int slot = 11; slot <= 19; slot++)
+            {
+                Invest(0, slot, $"path 0 slot {slot} (post-convergence) should stay reachable");
+            }
+
             Assert.AreEqual(TalentPage.Refusal.None,
-                TalentPage.Evaluate(tree, path: 0, slot: 1, bothRooted, embers: 99, budget: 999),
-                "a cross-constellation talent that is not a root must stay pickable once its own " +
-                "prerequisites are met -- the oath is on the engine, not on the whole tree");
+                TalentPage.Evaluate(tree, path: 0, slot: 20, unlocked, embers: 99, budget: 999),
+                "the capstone of the UNSWORN path must be reachable too, once its own gathered " +
+                "parents are lit -- the oath never should have gated the tree, only the engine");
         }
 
         // THE LIFETIME BUDGET, WHICH NOTHING WAS CHECKING EITHER.

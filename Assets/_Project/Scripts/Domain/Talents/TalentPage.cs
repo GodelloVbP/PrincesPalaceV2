@@ -253,10 +253,47 @@ namespace PrincesPalace.Domain.Talents
 
             foreach (int parent in parents)
             {
+                // THE ROOT IS A SHARED GATEWAY, NOT A PER-PATH GATE. A
+                // tier-1 stone's one parent is always that path's own root
+                // (TalentSkeleton: "triple above a single, each of the
+                // three hangs off that single"), and checking THAT
+                // specific root's id cannot ever pass once a different
+                // root is sworn -- AllegianceSworn refuses the unsworn
+                // one forever, which made every stone above it
+                // permanently unreachable, whatever points were spent
+                // (owner playtest, 2026-09-23: "after Fragile Lamb every
+                // stone beyond Black Ram is unreachable"). "The engine is
+                // exclusive, the tree is not" (AllegianceSworn's own
+                // header) means the oath itself -- ANY root, not
+                // specifically this parent's -- is what a tier-1 stone
+                // actually needs. No special case for the refused root
+                // versus an untaken one: every root parent is checked the
+                // same way, and it is still correct for the SWORN path's
+                // own tier-1 stones, since their own root is one of the
+                // roots "any" covers.
+                if (IsRoot(parent))
+                {
+                    if (!AnyRootSworn(tree, unlocked)) return false;
+                    continue;
+                }
+
                 string id = tree.IdAt(path, parent);
                 if (string.IsNullOrEmpty(id) || !unlocked.Contains(id)) return false;
             }
             return true;
+        }
+
+        // Whether the player has sworn ANY of the three roots -- the one
+        // oath MeetsPrerequisites' root case above treats as opening every
+        // constellation's tier-1 stones, not only the sworn path's own.
+        private static bool AnyRootSworn(TalentTree tree, IReadOnlyCollection<string> unlocked)
+        {
+            for (int p = 0; p < PathCount; p++)
+            {
+                string rootId = tree.IdAt(p, 0);
+                if (!string.IsNullOrEmpty(rootId) && unlocked.Contains(rootId)) return true;
+            }
+            return false;
         }
 
         public static bool CanInvest(
