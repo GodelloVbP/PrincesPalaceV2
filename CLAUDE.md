@@ -19,9 +19,12 @@ uGUI with TextMeshPro (`TMP_Text`/`Button`/`Image`); Hades-style painterly art d
 
 ## How work happens (Claude Code routing)
 
-Fable 5.1 orchestrates only: reads files, runs `git status`, writes briefs,
-launches agents, judges reports. Fable NEVER edits, runs tests, or writes
-scripts directly.
+Opus 5.5 (the main session) orchestrates only: reads files, runs `git status`,
+writes briefs, launches agents, judges reports. The orchestrator NEVER edits,
+runs tests, or writes scripts directly.
+
+Fable is not used on this project for now (owner, 2026-09-23); do not switch
+a session or agent to it.
 
 Four agent types, each pinned to one model, plus the built-in
 `claude-code-guide`. No other `subagent_type`, no model override, no

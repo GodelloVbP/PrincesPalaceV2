@@ -59,7 +59,7 @@ compact current state; path-and-section references; selected verification from
 files or read evidence; exact command and result; acceptance evidence; preserved
 unrelated work; open questions; history mode.
 
-Fable keeps a task record per session: acceptance, owner, edit surface,
+The orchestrator keeps a task record per session: acceptance, owner, edit surface,
 dependencies, status. Combine tightly coupled issues into one assignment.
 Serialize overlapping edits — never two owners on one file at once. Reuse
 an owner while its context on the issue is still relevant.
@@ -72,14 +72,14 @@ owned files, direct dependencies, and status/diffs needed to preserve shared
 work; it does not need a separate reader for those implementation-local facts.
 When its context is largely obsolete at a natural checkpoint it
 writes a state record to the scratchpad (findings, decisions, files
-changed, verification results, next action); Fable ends the assignment and
+changed, verification results, next action); the orchestrator ends the assignment and
 starts a fresh owner from the record.
 
 No fixed-turn restarts. The threshold comes from measurement
 (`tools/usage_baseline.py`; 2026-09-19 baseline: median worker 64 turns at
 148K context/turn, p90 184 turns at 262K), not a guess.
 
-After two failed correction cycles on one issue, Fable reassesses cause and
+After two failed correction cycles on one issue, the orchestrator reassesses cause and
 scope before allowing a third.
 
 ## 4. Worker context discipline
@@ -131,7 +131,7 @@ timeout.
 Opus gate: `CLAUDE.md`, "How work happens".
 
 A worker that believes a rule is wrong says so in its report and continues
-under the rule. Fable raises it with the user; nobody deviates silently.
+under the rule. The orchestrator raises it with the user; nobody deviates silently.
 
 Ask the user only for decisions that are irreversible, preference-only, and
 unanswerable from the code. Otherwise assume, state the assumption, proceed.
