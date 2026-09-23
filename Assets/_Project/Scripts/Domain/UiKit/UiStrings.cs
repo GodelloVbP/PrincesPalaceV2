@@ -950,7 +950,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SubmenuHint = UiString.Define("submenu_hint", "ESC TO GO BACK");
 
         // Detail column labels.
-        public static readonly UiString DetailKindSkill = UiString.Define("detail_kind_skill", "SKILL");
+        // Audited against the longest line FightHudModel.DetailKindLine
+        // prints at runtime -- Kind plus its Note, an item's refusal the
+        // widest -- not against the "SKILL" the label is built with.
+        public static readonly UiString DetailKindSkill =
+            UiString.Define("detail_kind_skill", "SKILL", "ITEM  ·  NO EFFECT ON FURY");
         public static readonly UiString DetailStatMana = UiString.Define("detail_stat_mana", "MANA");
         public static readonly UiString DetailStatCost = UiString.Define("detail_stat_cost", "COST");
         public static readonly UiString DetailStatCooldown = UiString.Define("detail_stat_cooldown", "COOLDOWN");

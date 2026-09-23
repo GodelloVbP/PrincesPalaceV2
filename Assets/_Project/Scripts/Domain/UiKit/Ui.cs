@@ -942,17 +942,28 @@ namespace PrincesPalace.Domain.UiKit
         // parameter threaded onto Rim() itself, which every one of its
         // other five 1px callers would have to keep passing 1f through for
         // no reason of their own.
-        private static IEnumerable<UiNode> HoverRimEdges(UiVec size)
+        // ANCHORED, NOT SIZED. Each edge is pinned to its own side of the rim
+        // (Frac anchors) and the rim itself stretches over the button with
+        // its pad as a negative inset, so the box follows whatever size the
+        // button is given AT RUNTIME. The first cut sized every edge from the
+        // button's build-time size, which is the WIDEST a map room can be
+        // (MapScreen declares every tile at the boss size, and
+        // MapController.PaintNode shrinks the rest) -- so an ordinary room's
+        // hover box drew a boss-sized frame around a smaller tree.
+        private static IEnumerable<UiNode> HoverRimEdges()
         {
-            float w = size.X;
-            float h = size.Y;
             float t = HoverRimThickness;
 
-            yield return RimEdge("HoverRimTop", new UiVec(w, t), 0f, h * 0.5f - t * 0.5f, HoverRimHex);
-            yield return RimEdge("HoverRimBottom", new UiVec(w, t), 0f, -(h * 0.5f - t * 0.5f), HoverRimHex);
-            yield return RimEdge("HoverRimLeft", new UiVec(t, h), -(w * 0.5f - t * 0.5f), 0f, HoverRimHex);
-            yield return RimEdge("HoverRimRight", new UiVec(t, h), w * 0.5f - t * 0.5f, 0f, HoverRimHex);
+            yield return HoverRimEdge("HoverRimTop", new UiVec(0f, 1f), new UiVec(1f, 1f), 0f, 0f, -t, 0f);
+            yield return HoverRimEdge("HoverRimBottom", new UiVec(0f, 0f), new UiVec(1f, 0f), 0f, 0f, 0f, -t);
+            yield return HoverRimEdge("HoverRimLeft", new UiVec(0f, 0f), new UiVec(0f, 1f), 0f, -t, 0f, 0f);
+            yield return HoverRimEdge("HoverRimRight", new UiVec(1f, 0f), new UiVec(1f, 1f), -t, 0f, 0f, 0f);
         }
+
+        private static UiNode HoverRimEdge(string name, UiVec anchorMin, UiVec anchorMax,
+                                           float left, float right, float bottom, float top) =>
+            Solid(name, HoverRimHex, Place.Frac(anchorMin, anchorMax, left, right, bottom, top), UiSize.Fill)
+                .AsDecor();
 
         internal static void ApplyHoverBox(UiNode node)
         {
@@ -962,18 +973,18 @@ namespace PrincesPalace.Domain.UiKit
                     $"The hover/focus rim only applies to a Button node; '{node.Name}' is a {node.Kind}.");
             }
 
-            var rimSize = new UiVec(node.Size.X + HoverRimPad * 2f, node.Size.Y + HoverRimPad * 2f);
+            float pad = HoverRimPad;
 
-            // Rim's own edges are already AsDecor (RimEdge) -- what that
-            // exempts them from is each other (they meet, and would
-            // otherwise overlap, at the frame's four corners) AND every real
-            // sibling the button already carries or ever will, since
-            // CheckSiblingOverlap skips any pair where either side is Decor.
-            // Without it, every unthemed button that already carries its own
-            // children (badges, labels, solids) would need its own new
-            // AllowOverlap the moment this shipped, which is exactly the
-            // "edit every caller" this seam exists to avoid.
-            var rim = Panel("HoverRim", Place.At(0f, 0f), UiSize.Fixed(rimSize), HoverRimEdges(rimSize))
+            // Rim's own edges are already AsDecor -- what that exempts them
+            // from is each other (they meet, and would otherwise overlap, at
+            // the frame's four corners) AND every real sibling the button
+            // already carries or ever will, since CheckSiblingOverlap skips
+            // any pair where either side is Decor. Without it, every unthemed
+            // button that already carries its own children (badges, labels,
+            // solids) would need its own new AllowOverlap the moment this
+            // shipped, which is exactly the "edit every caller" this seam
+            // exists to avoid.
+            var rim = Panel("HoverRim", Place.Stretch(-pad, -pad, -pad, -pad), UiSize.Fill, HoverRimEdges())
                 .AsDecor()
                 .AllowOverflow(
                     "the hover/focus rim pads outward past the button it wraps (HoverRimPad) so it reads as a " +

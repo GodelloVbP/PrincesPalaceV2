@@ -82,11 +82,11 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator APressAnimatorDisabledMidPressComesBackAtRest()
         {
             // Image BEFORE ButtonPressAnimator -- AddComponent runs Awake
-            // synchronously, and ButtonPressAnimator.Awake captures its base
-            // colour from GetComponent<Image>() once, so the Image has to
-            // already be attached when that fires. Image's own default
-            // colour is white, which is what the assertions below compare
-            // against.
+            // synchronously, and ButtonPressAnimator.Awake looks the Image up
+            // once, so it has to already be attached when that fires. The
+            // press borrows whatever colour the Image has when it starts --
+            // Image's default white here, which is what the assertions below
+            // compare against.
             var go = Rig("Pressed", typeof(Image), typeof(ButtonPressAnimator));
             var image = go.GetComponent<Image>();
             var animator = go.GetComponent<ButtonPressAnimator>();
@@ -111,6 +111,68 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(Color.white, image.color,
                 "the re-enabled button is animating toward a press nobody is making");
+        }
+
+        // ---- the press animator does not own the colour between presses -------------
+        //
+        // Map tiles, talent stars and the hub's unbuilt building are all
+        // tinted at runtime THROUGH the button's own Image (targetGraphic).
+        // An animator that eased that Image back to a colour captured at Awake
+        // every frame wiped all three within a few frames of every repaint --
+        // the map drew cleared, current and unreachable rooms identically.
+        private static readonly Color Tint = new Color(0.32f, 0.30f, 0.36f, 0.55f);
+
+        [UnityTest]
+        public IEnumerator ATintWrittenByAnotherControllerSurvivesTheAnimator()
+        {
+            var go = Rig("Tinted", typeof(Image), typeof(ButtonPressAnimator));
+            var image = go.GetComponent<Image>();
+
+            image.color = Tint;
+            yield return Settle(0.20f);
+
+            Assert.AreEqual(Tint, image.color, "the animator overwrote a colour it did not write");
+        }
+
+        [UnityTest]
+        public IEnumerator APressOnATintedButtonReleasesBackToTheTintNotToWhite()
+        {
+            var go = Rig("TintedPress", typeof(Image), typeof(ButtonPressAnimator));
+            var image = go.GetComponent<Image>();
+            var animator = go.GetComponent<ButtonPressAnimator>();
+
+            image.color = Tint;
+            yield return null;
+
+            animator.OnPointerDown(null);
+            yield return Settle(0.20f);
+            Assert.Less(image.color.r, Tint.r - 0.001f, "fixture: the press never dimmed the tinted plate");
+
+            animator.OnPointerUp(null);
+            yield return Settle(0.30f);
+
+            Assert.AreEqual(Tint, image.color, "the release eased to some other colour than the one pressed from");
+        }
+
+        [UnityTest]
+        public IEnumerator ATintWrittenMidPressIsWhatTheReleaseLandsOn()
+        {
+            // A repaint landing while the finger is down (the map redraws on
+            // every arrival) is newer than the colour the press started from.
+            var go = Rig("RepaintMidPress", typeof(Image), typeof(ButtonPressAnimator));
+            var image = go.GetComponent<Image>();
+            var animator = go.GetComponent<ButtonPressAnimator>();
+
+            animator.OnPointerDown(null);
+            yield return Settle(0.10f);
+
+            image.color = Tint;
+            yield return null;
+
+            animator.OnPointerUp(null);
+            yield return Settle(0.30f);
+
+            Assert.AreEqual(Tint, image.color);
         }
 
         // ---- B20: the hover/focus rim, same shape of bug -----------------------------

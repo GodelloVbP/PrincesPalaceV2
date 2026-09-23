@@ -146,6 +146,49 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator Right_FromAnyCategory_ReachesThatTabsContent()
+        {
+            // Only the first tab used to link Right, so from RESOURCES (which
+            // has no chip row) a pad had to climb back to WEAPONS to reach a
+            // single row.
+            yield return OpenTheMenu();
+
+            int resources = (int)PrincesPalace.Domain.DebugMenu.DebugCategory.Resources;
+            Named($"DebugCategory{resources}").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            EventSystem.current.SetSelectedGameObject(Named($"DebugCategory{resources}"));
+            yield return null;
+
+            _input.Horizontal = 1f;
+            yield return DriveFrame();
+            _input.Horizontal = 0f;
+
+            Assert.AreEqual(Named("DebugRow0"), EventSystem.current.currentSelectedGameObject,
+                "Right from the RESOURCES tab should land on its first row");
+        }
+
+        [UnityTest]
+        public IEnumerator Left_FromTheFirstRow_ReturnsToTheTabBeingShown()
+        {
+            // Not to WEAPONS: the row belongs to whichever tab is open.
+            yield return OpenTheMenu();
+
+            int resources = (int)PrincesPalace.Domain.DebugMenu.DebugCategory.Resources;
+            Named($"DebugCategory{resources}").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            EventSystem.current.SetSelectedGameObject(Named("DebugRow0"));
+            yield return null;
+
+            _input.Horizontal = -1f;
+            yield return DriveFrame();
+            _input.Horizontal = 0f;
+
+            Assert.AreEqual(Named($"DebugCategory{resources}"), EventSystem.current.currentSelectedGameObject);
+        }
+
+        [UnityTest]
         public IEnumerator Down_FromTheFirstSubFilter_ReachesTheFirstRow()
         {
             yield return OpenTheMenu();

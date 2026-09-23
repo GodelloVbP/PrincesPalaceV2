@@ -837,6 +837,71 @@ namespace PrincesPalace.Domain.Tests
 
         private static bool HasIcon(DetailPanel panel, DetailIconKind kind) => panel.Icons.Any(i => i.Kind == kind);
 
+        // ---- what the icon card still has to say in words -------------------
+        //
+        // The icon card draws Name, the kind line and Icons, nothing else. The
+        // Element icon is the hero beside the title and carries no value, so
+        // a skill's power, a Strike's power and an item's effect all went
+        // unread until the kind line took them (DetailPanel.Note).
+
+        [Test]
+        public void ADamagingSkillsPowerIsOnTheKindLine()
+        {
+            var skill = Skill("a", "Alpha", manaCost: 5, power: 100,
+                packets: new[] { new DamageInstance(DamageType.Lightning, 12) });
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            StringAssert.Contains($"{StatValue(panel, "POWER")} POWER", FightHudModel.DetailKindLine(panel));
+            StringAssert.StartsWith("SKILL", FightHudModel.DetailKindLine(panel));
+        }
+
+        [Test]
+        public void AStrikeCardHasIconRowsAndItsPowerOnTheKindLine()
+        {
+            var (_, hero) = Fight();
+
+            var panel = FightHudModel.DetailForStrike(hero);
+
+            Assert.IsNotEmpty(panel.Icons, "an empty Icons list paints the Strike card as a bare title");
+            Assert.AreEqual("physical", IconOf(panel, DetailIconKind.Defense).IconKey);
+            Assert.AreEqual("single", IconOf(panel, DetailIconKind.AreaOfEffect).IconKey);
+            StringAssert.Contains("24 POWER", FightHudModel.DetailKindLine(panel));
+        }
+
+        [Test]
+        public void AnItemsEffectAndItsRefusalAreOnTheKindLine()
+        {
+            var stack = new SatchelStack("elixir", "Elixir", 2, restoresMana: true);
+
+            StringAssert.Contains("RESTORES MANA", FightHudModel.DetailKindLine(FightHudModel.DetailForItem(stack)));
+            StringAssert.Contains("NO EFFECT ON FURY",
+                FightHudModel.DetailKindLine(FightHudModel.DetailForItem(stack, RefusingPool())));
+        }
+
+        [Test]
+        public void APanelWithNoNoteShowsItsKindAlone()
+        {
+            Assert.AreEqual("SKILL", FightHudModel.DetailKindLine(new DetailPanel { Kind = "SKILL" }));
+            Assert.AreEqual("", FightHudModel.DetailKindLine(null));
+        }
+
+        // ---- the reach icon names only what it can draw ---------------------
+
+        [Test]
+        public void ReachIconsNameAnyFrontOrNothing()
+        {
+            Assert.AreEqual("any", FightHudModel.ReachIconKey(Reach.Any));
+            Assert.AreEqual("front", FightHudModel.ReachIconKey(Reach.Melee));
+            Assert.AreEqual("front", FightHudModel.ReachIconKey(Reach.Ranks(0)));
+            Assert.AreEqual("any", FightHudModel.ReachIconKey(Reach.Ranks(0, 1, 2, 3)));
+
+            // mud_burst's reachSlots [2,3]: back ranks only. There is no
+            // picture for that, and "front" is the opposite of the truth.
+            Assert.IsNull(FightHudModel.ReachIconKey(Reach.FromContent(new[] { 2, 3 })));
+        }
+
         [Test]
         public void TheIconRowsCoverManaElementDefenseReachAoeAndScaling()
         {

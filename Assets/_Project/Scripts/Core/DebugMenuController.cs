@@ -644,10 +644,18 @@ namespace PrincesPalace
             var firstGrant = grantBar.Length > 0 ? grantBar[0] : null;
             var lastGrant = grantBar.Length > 0 ? grantBar[grantBar.Length - 1] : null;
 
+            // EVERY TAB steps Right into the content, and Left out of it lands
+            // on the tab being shown. Only the first tab used to carry the
+            // Right link, so from any other tab a pad had to climb back to
+            // WEAPONS before it could reach a single row.
+            var currentCategory = categoryButtons != null && _categoryIndex < categoryButtons.Length
+                ? categoryButtons[_categoryIndex]
+                : firstCategory;
+            var content = firstSubFilter ?? firstRow ?? prevPageButton;
+
             var links = new List<UiNavLink<Selectable>?>
             {
-                RuntimeNavWiring.Link(firstCategory, UiNavDirection.Right, firstSubFilter ?? firstRow ?? prevPageButton),
-                RuntimeNavWiring.Link(firstSubFilter ?? firstRow, UiNavDirection.Left, firstCategory),
+                RuntimeNavWiring.Link(firstSubFilter ?? firstRow, UiNavDirection.Left, currentCategory),
                 RuntimeNavWiring.Link(firstSubFilter, UiNavDirection.Down, firstRow ?? prevPageButton),
                 RuntimeNavWiring.Link(firstRow, UiNavDirection.Up, firstSubFilter),
                 RuntimeNavWiring.Link(lastRow, UiNavDirection.Down, prevPageButton),
@@ -658,6 +666,11 @@ namespace PrincesPalace
                 RuntimeNavWiring.Link(lastGrant, UiNavDirection.Down, closeButton),
                 RuntimeNavWiring.Link(closeButton, UiNavDirection.Up, lastGrant ?? prevPageButton),
             };
+
+            foreach (var category in categoryButtons ?? Array.Empty<Button>())
+            {
+                links.Add(RuntimeNavWiring.Link(category, UiNavDirection.Right, content));
+            }
 
             var groups = new List<UiNavGroup<Selectable>>
             {

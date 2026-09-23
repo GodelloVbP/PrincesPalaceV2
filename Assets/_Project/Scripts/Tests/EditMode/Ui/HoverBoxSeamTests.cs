@@ -36,13 +36,24 @@ namespace PrincesPalace.Domain.Tests
             // literal so a future pad change has to touch this test on
             // purpose, not slide past it (AUDIT.md #18's tautology lesson:
             // these are the authored numbers, not re-derived from HoverRimPad).
+            //
+            // STRETCHED OVER THE BUTTON, pad as a negative inset -- not a
+            // fixed size copied from the button at build time. A map room is
+            // declared at the boss tile's size and shrunk at runtime, and a
+            // fixed-size rim kept drawing the boss frame around every smaller
+            // room.
             const float pad = 4f;
-            Assert.AreEqual(200f + pad * 2f, rim.Size.X, 0.001f, "rim width must be the button width plus pad on both sides");
-            Assert.AreEqual(60f + pad * 2f, rim.Size.Y, 0.001f, "rim height must be the button height plus pad on both sides");
+            Assert.AreEqual(PlaceKind.Stretch, rim.Place.Kind, "the rim must follow the button's runtime size");
+            Assert.AreEqual(-pad, rim.Place.Left, 0.001f);
+            Assert.AreEqual(-pad, rim.Place.Right, 0.001f);
+            Assert.AreEqual(-pad, rim.Place.Bottom, 0.001f);
+            Assert.AreEqual(-pad, rim.Place.Top, 0.001f);
 
             // 2px edges -- a SOLID box, not the kit's 1px hairline Rim()
             // other hollow boxes (Options, Run statistics, Exits) use. The
-            // hover rim deliberately does not share Rim()'s thickness.
+            // hover rim deliberately does not share Rim()'s thickness. Each
+            // edge is anchored to its own side, its thickness the one inset
+            // that is not zero.
             const float thickness = 2f;
             var edgeNames = new[] { "HoverRimTop", "HoverRimBottom", "HoverRimLeft", "HoverRimRight" };
             foreach (var name in edgeNames)
@@ -50,10 +61,16 @@ namespace PrincesPalace.Domain.Tests
                 var edge = rim.Children.SingleOrDefault(c => c.Name == name);
                 Assert.IsNotNull(edge, $"'{name}' is missing from the rim");
                 Assert.IsTrue(edge.Decor, $"'{name}' must be Decor, same as every other kit rim edge");
+                Assert.AreEqual(PlaceKind.Frac, edge.Place.Kind, $"'{name}' must be anchored, not sized");
 
-                bool horizontal = name is "HoverRimTop" or "HoverRimBottom";
-                Assert.AreEqual(thickness, horizontal ? edge.Size.Y : edge.Size.X, 0.001f,
-                    $"'{name}' must be a {thickness}px solid edge, not a 1px hairline");
+                float inset = name switch
+                {
+                    "HoverRimTop" => edge.Place.Bottom,
+                    "HoverRimBottom" => edge.Place.Top,
+                    "HoverRimLeft" => edge.Place.Right,
+                    _ => edge.Place.Left,
+                };
+                Assert.AreEqual(-thickness, inset, 0.001f, $"'{name}' must be a {thickness}px solid edge, not a 1px hairline");
             }
         }
 

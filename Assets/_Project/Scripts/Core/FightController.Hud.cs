@@ -398,7 +398,9 @@ namespace PrincesPalace
 
             var panel = CurrentDetail();
             detailName.SetContent(panel.Name);
-            detailKind.SetContent(panel.Kind);
+            // Kind plus the panel's Note -- a skill's or Strike's power, an
+            // item's effect -- the facts the icon rows have no picture for.
+            detailKind.SetContent(FightHudModel.DetailKindLine(panel));
 
             int shown = panel.Icons.Count;
 

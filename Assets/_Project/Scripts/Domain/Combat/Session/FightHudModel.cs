@@ -139,6 +139,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // whichever screen places this label. The UiKit side decides where
         // (and whether) to show it; this model only has to carry the string.
         public string DamageType = "";
+
+        // THE ONE FACT THE ICON ROWS CANNOT CARRY, printed after Kind on the
+        // card's kind line (FightHudModel.DetailKindLine). The icon card
+        // renders only Name, the kind line and Icons -- Body and Stats are
+        // no longer drawn -- so anything a player has to read that has no
+        // icon lives here: a skill's or Strike's power (the Element icon is
+        // the hero beside the title and shows no value) and an item's effect,
+        // including the refusal "No effect on Fury" that tells the player a
+        // potion would waste the turn. Blank means the kind line is Kind alone.
+        public string Note = "";
     }
 
     // The fight HUD's contents, derived from the session and nothing else.
@@ -674,7 +684,20 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
             panel.DamageType = DamageTypeLabel(session, actor, skill);
             FillDetailIcons(panel, session, actor, skill, resourceName, cooldownRemaining);
+            panel.Note = PowerNote(PowerLabel(session, actor, skill));
             return panel;
+        }
+
+        // "45 POWER", or blank for a skill with nothing to preview.
+        private static string PowerNote(string power) =>
+            string.IsNullOrEmpty(power) ? "" : $"{power} POWER";
+
+        // What the card's kind line prints: Kind, then the panel's Note when
+        // it has one. See DetailPanel.Note for why the note exists at all.
+        public static string DetailKindLine(DetailPanel panel)
+        {
+            if (panel == null) return "";
+            return string.IsNullOrEmpty(panel.Note) ? panel.Kind : $"{panel.Kind}  \u00B7  {panel.Note}";
         }
 
         // THE ICON ROWS (2026-09-23 icon rework, coordinator pass 2). Every
@@ -740,8 +763,8 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (skill.Targeting != SkillTargeting.Self)
             {
-                string reachKey = skill.Reach.Kind == ReachKind.Any ? "any" : "front";
-                panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey, ""));
+                string reachKey = ReachIconKey(skill.Reach);
+                if (reachKey != null) panel.Icons.Add(new DetailIcon(DetailIconKind.Reach, reachKey, ""));
 
                 string aoeKey = skill.Targeting == SkillTargeting.SingleEnemy
                     || skill.Targeting == SkillTargeting.SingleAlly
@@ -754,6 +777,21 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 panel.Icons.Add(new DetailIcon(DetailIconKind.Scaling, scaling.ToLowerInvariant(), scaling));
             }
+        }
+
+        // "any" when every rank is reachable, "front" when only the front
+        // rank is, and NO ICON otherwise. Only those two pictures exist, and
+        // an authored back-ranks reach (reachSlots [2,3]) used to fall
+        // through to "front" -- the opposite of what the skill does. Omitted
+        // is the card's own rule for a fact it cannot state honestly.
+        public static string ReachIconKey(Reach reach)
+        {
+            if (reach.Kind == ReachKind.Any) return "any";
+
+            int all = (1 << Reach.MaxRanks) - 1;
+            if ((reach.RankMask & all) == all) return "any";
+            if ((reach.RankMask & all) == 1) return "front";
+            return null;
         }
 
         // The Element icon's key: exactly DamageType's own member name,
@@ -947,6 +985,22 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
             panel.Stats.Add(("SCALES", actor == null ? "-" : ScalingLabel(actor.WeaponScaling)));
+
+            // THE SAME FACTS AS ICONS -- the card draws nothing else, and a
+            // Strike with an empty Icons list painted as a bare title. No
+            // Element icon: the swing's damage type is the actor's weapon's,
+            // which this signature has no session to ask, so its power rides
+            // the kind line instead of a hero icon that might name the wrong
+            // element.
+            panel.Icons.Add(new DetailIcon(DetailIconKind.Defense, "physical", ""));
+            panel.Icons.Add(new DetailIcon(DetailIconKind.AreaOfEffect, "single", ""));
+            string scaling = actor == null ? "-" : ScalingLabel(actor.WeaponScaling);
+            if (scaling != "-")
+            {
+                panel.Icons.Add(new DetailIcon(DetailIconKind.Scaling, scaling.ToLowerInvariant(), scaling));
+            }
+
+            panel.Note = PowerNote(actor == null ? "" : CombatMath.ComputeAttackDamage(actor, null).ToString());
             return panel;
         }
 
@@ -1268,6 +1322,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // the same claim the body makes in one word, so leaving it
             // reading MANA would put the lie back one column over.
             panel.Stats.Add(("EFFECT", !stack.RestoresMana ? "HEAL" : refuses ? "-" : "MANA"));
+
+            // The effect sentence on the kind line, in the line's own caps:
+            // "ITEM  .  NO EFFECT ON FURY" is the warning that keeps a turn
+            // from being spent on a potion that does nothing.
+            panel.Note = body.TrimEnd('.').ToUpperInvariant();
             return panel;
         }
 

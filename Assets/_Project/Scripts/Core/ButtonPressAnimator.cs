@@ -83,17 +83,28 @@ namespace PrincesPalace
 
         private Button _button;
         private Image _image;
-        private Color _baseColor;
         private bool _isPressed;
+
+        // THE COLOUR IS BORROWED, NOT OWNED. Map tiles, talent stars and the
+        // hub's unbuilt building are tinted at runtime through this same Image
+        // (it is the Button's targetGraphic), so this component only touches
+        // it from a press until the release has eased back, and gives back
+        // whatever colour it found -- never one captured at Awake. The first
+        // cut of the dim held an Awake colour and eased toward it every frame,
+        // which wiped every one of those tints within a few frames.
+        //
+        // `_rest` is the colour to return to; `_written` is the last colour
+        // this component wrote. A mismatch at the next Update means someone
+        // else painted the Image meanwhile, and that newer colour becomes the
+        // one to return to.
+        private bool _animating;
+        private Color _rest;
+        private Color _written;
 
         private void Awake()
         {
             _button = GetComponent<Button>();
             _image = GetComponent<Image>();
-            if (_image != null)
-            {
-                _baseColor = _image.color;
-            }
         }
 
         private void OnDisable()
@@ -102,24 +113,52 @@ namespace PrincesPalace
             // choice row) must not stay mid-animation for when it is shown
             // again -- SetActive(false) skips Update entirely, so this has to
             // reset eagerly rather than let Update ease it back down.
+            if (_animating && _image != null && _image.color == _written) _image.color = _rest;
             _isPressed = false;
-            if (_image != null)
-            {
-                _image.color = _baseColor;
-            }
+            _animating = false;
         }
 
         private void Update()
         {
             if (_image == null) return;
+
+            if (_animating && _image.color != _written) _rest = _image.color;
+            if (!_animating && !_isPressed) return;
+
+            if (!_animating)
+            {
+                _rest = _image.color;
+                _animating = true;
+            }
+
             bool interactable = _button == null || _button.interactable;
-            // Chromeless buttons keep their base colour's alpha (often 0)
+            // Chromeless buttons keep their rest colour's alpha (often 0)
             // because PressedTint's alpha is 1 -- multiplying, not
             // overwriting, means a pressed chromeless button stays invisible
             // rather than flashing a grey plate nothing else on it has.
-            var target = interactable && _isPressed ? _baseColor * PressedTint : _baseColor;
-            _image.color = Color.Lerp(_image.color, target, Time.unscaledDeltaTime * LerpSpeed);
+            var target = interactable && _isPressed ? _rest * PressedTint : _rest;
+            var next = Color.Lerp(_image.color, target, Time.unscaledDeltaTime * LerpSpeed);
+
+            // Released and home: hand the colour back exactly and stop
+            // touching it, so the next repaint by its owner is left alone.
+            if (!_isPressed && Near(next, target))
+            {
+                next = target;
+                _animating = false;
+            }
+
+            _image.color = next;
+            _written = next;
         }
+
+        // Within a hundredth on every channel -- invisible, and reached in
+        // well under a tenth of a second at LerpSpeed. Color's own == is a
+        // 1e-5 test an exponential ease takes most of a second to satisfy,
+        // which would leave the animator holding the colour long after the
+        // release looked finished.
+        private static bool Near(Color a, Color b) =>
+            Mathf.Abs(a.r - b.r) < 0.01f && Mathf.Abs(a.g - b.g) < 0.01f &&
+            Mathf.Abs(a.b - b.b) < 0.01f && Mathf.Abs(a.a - b.a) < 0.01f;
 
         public void OnPointerExit(PointerEventData eventData)
         {
