@@ -16,16 +16,19 @@ namespace PrincesPalace.Domain.UiKit
     {
         // 48 and 6, down from 66 and 8.
         //
-        // 40, DOWN FROM 48 (balance-bot item 5, 2026-09-03). The 44px floor
-        // that comment describes was measured against a row that carried a
-        // mark, a name AND a meta line -- the two-line row this project no
-        // longer builds (see BuildSubmenuColumn's own "A NAME, AND NOTHING
-        // ELSE" comment, which removed the meta line and cost before this).
-        // A single 24px name box only needs its own text height plus a
-        // sensible margin either side, and the mark is 36px -- so 40 clears
-        // both with room, where 48 was carrying dead space the two-line row
-        // no longer needs.
-        public const float RowHeight = 40f;
+        // NOW EQUAL TO VerbRowH (owner playtest, 2026-09-23): "the skill
+        // buttons are narrower/shorter with thinner borders than the main
+        // command buttons beside them -- make the submenu buttons match the
+        // command buttons' size and border." A submenu row used to be sized
+        // off its own text content (40, then 48, then 66) and picked the
+        // same Row6x1 plate as the verb row by aspect-nearest coincidence,
+        // not by construction -- close enough that nobody noticed the two
+        // rows were never actually the same size until they were compared
+        // side by side. Reading VerbRowH directly (rather than restating 52
+        // and hoping it stays in sync) is what makes "the same size" a fact
+        // the compiler can check instead of a resemblance two authors have
+        // to maintain by hand.
+        public const float RowHeight = VerbRowH;
         public const float RowGap = 6f;
         public const float RowPitch = RowHeight + RowGap;
 
@@ -215,24 +218,18 @@ namespace PrincesPalace.Domain.UiKit
         public static float ViewportOffsetInContainerFor(int count) =>
             ViewportCentreYFor(count) - ContainerCentreYFor(count);
 
-        // The row's own content width -- ONE COPY, because the art frame below
+        // The row's own content width -- ONE COPY, because the viewport
         // (built in FightScreen.BuildSubmenuFrame) has to size itself from the
         // exact same number the rows are actually built at, not a second
         // number that could drift from it the way this file's own header
         // warns about.
         //
-        // 240, DOWN FROM 282: 282x40 was 7.05:1 against the Row6x1 plate's
-        // true 6:1 -- ThemedButtonAspectLintTests. Width down to the row's
-        // exact nominal for RowHeight (240 = 40 * 6), not RowHeight grown to
-        // 282's nominal (47), because FrameWidth/FrameHeight above are
-        // entirely a function of ContainerHeight -- RowWidth only feeds
-        // ContainerWidth, which the frame does not size itself from (see
-        // FrameWidth's own comment: "the inner box is CENTRED in that width
-        // rather than exactly filling it") -- so narrowing the rows costs
-        // nothing but slack inside the frame, where growing them taller
-        // would have re-run every RowsInView/PoolSize/scroll number this
-        // whole file derives from RowHeight.
-        public const float RowWidth = 240f;
+        // NOW EQUAL TO VerbRowW, for the same reason RowHeight reads VerbRowH
+        // above -- see that constant's own header. 300x52 is exactly the verb
+        // row's own size, so the two pick the identical Row6x1 plate at the
+        // identical dimensions: not merely a close aspect match any more, the
+        // same border, at the same size.
+        public const float RowWidth = VerbRowW;
 
         public static float ContainerWidth =>
             RowWidth + ContainerPad * 2f + ScrollbarGap + ScrollbarWidth;

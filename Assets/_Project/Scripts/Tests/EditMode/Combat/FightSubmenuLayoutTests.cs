@@ -116,15 +116,16 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            // 1384/648, DOWN FROM 1708/844 -- RowHeight 48->40 (balance-bot
-            // item 5, 2026-09-03) shortened RowPitch from 54 to 46, which
-            // this test's own literals have to move with; see that item's
-            // own comment on FightSubmenuLayout.RowHeight for why 40.
-            Assert.AreEqual(1384f, FightSubmenuLayout.RowY(40, 0), 0.01f,
+            // 1870/942, UP FROM 1384/648 -- RowHeight 40->52 (owner playtest,
+            // 2026-09-23, "make the submenu buttons match the command
+            // buttons' size") lengthened RowPitch from 46 to 58, which this
+            // test's own literals have to move with; see FightSubmenuLayout.
+            // RowHeight's own comment for why 52.
+            Assert.AreEqual(1870f, FightSubmenuLayout.RowY(40, 0), 0.01f,
                 "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
             int shown = FightSubmenuLayout.VisibleCount(40);
-            Assert.AreEqual(648f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+            Assert.AreEqual(942f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
                 "clamped, the top row must sit at the pool height");
         }
 
@@ -143,14 +144,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Twelve rows against a FIVE-row window (RowsInView, down from eight,
-        // 2026-09-22): seven rows' worth of travel. 322, not the 280 seven
-        // rows at 40px suggest, for the same reason as before: travel is
-        // measured in PIXELS and twelve rows carry eleven gaps against the
-        // window's four.
+        // 2026-09-22): seven rows' worth of travel. 406, UP FROM 322 (RowHeight
+        // 40->52, owner playtest 2026-09-23), not the 364 seven rows at 52px
+        // suggest, for the same reason as before: travel is measured in
+        // PIXELS and twelve rows carry eleven gaps against the window's four.
         [Test]
         public void AListLongerThanTheWindowScrollsByTheDifference()
         {
-            Assert.AreEqual(322f, FightSubmenuLayout.ScrollRange(12), 0.01f);
+            Assert.AreEqual(406f, FightSubmenuLayout.ScrollRange(12), 0.01f);
         }
 
         // SCROLL ZERO IS THE TOP OF THE LIST, which is the inversion worth
@@ -160,8 +161,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ScrollZeroShowsTheTopOfTheListAndFullScrollTheBottom()
         {
-            Assert.AreEqual(-322f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
-            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 322f), 0.01f);
+            Assert.AreEqual(-406f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 406f), 0.01f);
         }
 
         // The thumb is the visible fraction of the list, floored so it stays
@@ -169,13 +170,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThumbShowsHowMuchOfTheListIsOnScreen()
         {
-            // 91.9, DOWN FROM 240.01 (RowsInView 8->5, 2026-09-22) -- the
-            // thumb is the visible fraction of the content BY HEIGHT (224 of
-            // 546 now, not 362 of 546), and twelve rows carry eleven gaps
-            // against the window's four. Pinned at the real number, because
-            // the tidy one would mean the thumb was measuring rows rather
-            // than pixels and would drift the moment the gap changed.
-            Assert.AreEqual(91.9f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
+            // 116.89, UP FROM 91.9 (RowHeight 40->52, owner playtest
+            // 2026-09-23) -- the thumb is the visible fraction of the content
+            // BY HEIGHT (284 of 690 now, not 224 of 546), and twelve rows
+            // carry eleven gaps against the window's four. Pinned at the real
+            // number, because the tidy one would mean the thumb was measuring
+            // rows rather than pixels and would drift the moment the gap
+            // changed.
+            Assert.AreEqual(116.89f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
                 "the thumb must be the visible fraction of the content's height");
 
             // ABOVE AND BELOW THE VIEWPORT'S OWN CENTRE, not the container's.
@@ -243,10 +245,12 @@ namespace PrincesPalace.Domain.Tests
         // FrameWidth IS ContainerWidth now, at every height, because a flat
         // fill has no aspect to keep in the first place.
         //
-        // 274 is hand-computed from the current constants, not read back
+        // 334 is hand-computed from the current constants, not read back
         // through the property it checks (CLAUDE.md's fifth gotcha):
-        // ContainerWidth = RowWidth(240) + ContainerPad*2(20) +
-        // ScrollbarGap(8) + ScrollbarWidth(6) = 274.
+        // ContainerWidth = RowWidth(300) + ContainerPad*2(20) +
+        // ScrollbarGap(8) + ScrollbarWidth(6) = 334. RowWidth is 300 now,
+        // UP FROM 240 (owner playtest 2026-09-23: submenu rows read
+        // VerbRowW directly -- FightSubmenuLayout.RowWidth's own header).
         [TestCase(1)]
         [TestCase(3)]
         [TestCase(5)]
@@ -256,11 +260,11 @@ namespace PrincesPalace.Domain.Tests
             int shown = FightSubmenuLayout.VisibleRows(requested);
             Assert.Greater(shown, 0);
 
-            Assert.AreEqual(274f, FightSubmenuLayout.ContainerWidth, 0.01f,
+            Assert.AreEqual(334f, FightSubmenuLayout.ContainerWidth, 0.01f,
                 "ContainerWidth's own formula moved without this pin moving too");
-            Assert.AreEqual(274f, FightSubmenuLayout.FrameWidth, 0.01f,
+            Assert.AreEqual(334f, FightSubmenuLayout.FrameWidth, 0.01f,
                 "FrameWidth is ContainerWidth now -- a flat fill has no art to pad past the content, " +
-                "so a value other than 274 here means a pad crept back in");
+                "so a value other than 334 here means a pad crept back in");
 
             // FrameWidth is the SAME number at every count (it is never
             // resized), so this is really "does the one static figure clear

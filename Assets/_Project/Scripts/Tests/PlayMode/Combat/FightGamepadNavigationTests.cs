@@ -99,6 +99,105 @@ namespace PrincesPalace.PlayModeTests
                 "Y/Triangle should enter the existing party portrait/figure controls, not the enemy ring");
         }
 
+        // ---- character-select walks the formation spatially (owner playtest,
+        // 2026-09-23) -----------------------------------------------------------
+        //
+        // "Pressing Y puts the cursor on Bjorn (good). From there LEFT goes
+        // back to the Attack command button -- it should go to party
+        // position 2. RIGHT goes to the player party -- it should go to the
+        // enemies." Bjorn is PlayerParty[0] here, so he is plate 0 -- the
+        // FRONT party member and, on the mirrored ally rack, the one nearest
+        // the screen's own centre (InspectMove's own Target-depth header).
+        // "Party position 2" is read as the ordinary-language second party
+        // member, plate 1 -- one step DEEPER than Bjorn, the same "Left is
+        // deeper" convention CharacterSelectRing's own header derives for
+        // the mirrored rack. Assumption stated here because CLAUDE.md's
+        // briefing rule asks for it, not because the reading is close: no
+        // other party member is a candidate for "position 2" once Bjorn is
+        // "position 1".
+        [UnityTest]
+        public IEnumerator CharacterSelectLeftAndRightWalkThePartyAndTheEnemiesSpatially()
+        {
+            yield return LoadFight();
+
+            var bjorn = new CombatantState("Bjorn", true, 300, 30, 40, 30);
+            var shawn = new CombatantState("Shawn", true, 300, 30, 40, 20);
+            var odette = new CombatantState("Odette", true, 300, 30, 40, 10);
+            var front = new CombatantState("Front", false, 300, 10, 8, 1);
+            var back = new CombatantState("Back", false, 300, 10, 8, 1);
+            var encounter = new CombatEncounter(
+                new[] { bjorn, shawn, odette }, new[] { front, back });
+
+            var kits = new List<PlayerKit>
+            {
+                new PlayerKit("bjorn", Domain.Content.CharacterRole.Tank, null, null,
+                    Domain.Stats.DamageType.Physical),
+                new PlayerKit("shawn", Domain.Content.CharacterRole.Tank, null, null,
+                    Domain.Stats.DamageType.Physical),
+                new PlayerKit("odette", Domain.Content.CharacterRole.Tank, null, null,
+                    Domain.Stats.DamageType.Physical),
+            };
+            var enemyKits = new List<EnemyKit>
+            {
+                new EnemyKit(new Domain.Content.ResolvedEnemy("front", "Front", new Domain.Stats.StatBlock(),
+                    5, 3, false, Domain.Stats.DamageType.Physical, Domain.Stats.DamageType.Physical, 0), false),
+                new EnemyKit(new Domain.Content.ResolvedEnemy("back", "Back", new Domain.Stats.StatBlock(),
+                    5, 3, false, Domain.Stats.DamageType.Physical, Domain.Stats.DamageType.Physical, 0), false),
+            };
+
+            var session = new FightSession(encounter, kits, enemyKits, new Domain.Rng.SeededRandom(9));
+            session.Begin();
+            _fight.Bind(session, Domain.Rewards.EncounterClass.Normal);
+            yield return null;
+
+            var pad = (IFightNavigationTarget)_fight;
+            var method = typeof(IFightNavigationTarget).GetMethod("EnterCharacterSelect");
+            method.Invoke(pad, null);
+            yield return null;
+
+            StringAssert.StartsWith("PartyHitArea", FocusName(pad), "precondition: Y lands on a party member");
+            Assert.AreEqual("Bjorn", _fight.InspectedActorNameForTest, "precondition: that member is Bjorn");
+
+            // LEFT: one step deeper, to the second party member -- never the
+            // command menu.
+            pad.InspectMove(-1);
+            yield return null;
+
+            Assert.AreEqual("Shawn", _fight.InspectedActorNameForTest,
+                "Left from Bjorn must reach party position 2 (Shawn), not fall back to the verb column");
+            StringAssert.StartsWith("PartyHitArea", FocusName(pad),
+                "Left from Bjorn must land on a party figure, never a command button");
+
+            // LEFT again, off the deepest party member: clamped, not a wrap
+            // and not the command menu.
+            pad.InspectMove(-1);
+            yield return null;
+
+            Assert.AreEqual("Odette", _fight.InspectedActorNameForTest,
+                "Left again reaches the deepest party member");
+            pad.InspectMove(-1);
+            yield return null;
+            Assert.AreEqual("Odette", _fight.InspectedActorNameForTest,
+                "Left past the deepest party member holds there rather than leaving the ring");
+            StringAssert.StartsWith("PartyHitArea", FocusName(pad),
+                "clamping at either end must never land the focus on a command button");
+
+            // Back to Bjorn, then RIGHT: past the front of the party and onto
+            // the front enemy.
+            method.Invoke(pad, null);
+            yield return null;
+            method.Invoke(pad, null);
+            yield return null;
+            Assert.AreEqual("Bjorn", _fight.InspectedActorNameForTest, "precondition: back on Bjorn");
+
+            pad.InspectMove(1);
+            yield return null;
+
+            Assert.AreEqual("Front", _fight.InspectedActorNameForTest,
+                "Right from Bjorn must cross into the enemy formation, not stay in the player party");
+            Assert.AreEqual("EnemyHitArea0", FocusName(pad), "and land on the front enemy's own figure");
+        }
+
         [UnityTest]
         public IEnumerator UpFromAnInspectedEnemyMovesFocusToItsIntent()
         {

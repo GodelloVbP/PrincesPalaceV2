@@ -2007,6 +2007,13 @@ namespace PrincesPalace
         // ResetStagePresentation, which this file does not own.
         private CombatantState _inspectCursor;
 
+        // Read-only window for GamepadNavigationTests, same reason and same
+        // shape as FocusedVerbForTest -- the ring's own actor is what a
+        // character-select test needs to name (FocusName only proves WHICH
+        // FIGURE the marker sits on, not which combatant it is; a test
+        // walking Bjorn/Shawn/Odette needs both).
+        public string InspectedActorNameForTest => _inspectCursor?.Name;
+
         // INSPECT ONLY EVER EXISTS ON TOP OF ROOT, and the flag alone cannot
         // say so: a MOUSE click on a verb while the pad was reading a monster
         // moves the depth out from under it without the pad pressing
@@ -2052,20 +2059,22 @@ namespace PrincesPalace
         private List<InspectStop> InspectRing()
         {
             var ring = new List<InspectStop>();
+            ring.AddRange(LivingEnemyStops());
+            ring.AddRange(PartyInspectRing());
+            return ring;
+        }
 
+        // Living enemies, FRONT FIRST -- FightStageAnchors' enemy rack runs
+        // outward unmirrored (Near.X 300 -> Far.X 660), so ascending index
+        // IS ascending screen X here already; nothing to reverse, unlike the
+        // party below.
+        private List<InspectStop> LivingEnemyStops()
+        {
+            var ring = new List<InspectStop>();
             var enemies = Enemies;
             for (int i = 0; i < enemies.Count; i++)
             {
                 if (enemies[i] != null && enemies[i].IsAlive) ring.Add(new InspectStop(enemies[i], false, i));
-            }
-
-            if (pcPlates != null)
-            {
-                for (int i = 0; i < pcPlates.Length; i++)
-                {
-                    var member = PartyMemberOnPlate(i);
-                    if (member != null && member.IsAlive) ring.Add(new InspectStop(member, true, i));
-                }
             }
 
             return ring;
@@ -2082,6 +2091,40 @@ namespace PrincesPalace
                 if (member != null && member.IsAlive) ring.Add(new InspectStop(member, true, i));
             }
 
+            return ring;
+        }
+
+        // ---- the character-select ring (owner playtest, 2026-09-23) --------------
+        //
+        // "While picking a target, left/right should walk the formation
+        // spatially -- party on the left, mobs on the right -- and never
+        // jump to the command menu." Y/Triangle (EnterCharacterSelect)
+        // starts on the front party member (PartyInspectRing()[0], per
+        // CharacterSelectStartsOnTheFrontLivingPartyMember), and until now
+        // Left/Right there only ever walked PartyInspectRing() -- so Left
+        // off the front member fell all the way through StepInspectRing's
+        // -1 and landed back on the verb column (the bug: "LEFT goes back
+        // to the Attack command button"), and Right could never leave the
+        // party at all ("RIGHT goes to the player party" -- nowhere new to
+        // go, because the enemies were never part of this ring).
+        //
+        // ONE FLAT LIST IN SCREEN ORDER, LEFT TO RIGHT: the party, DEEPEST
+        // FIRST, then the enemies, FRONT FIRST. The party has to reverse
+        // because its rack is MIRRORED (SlotOffset negates X, same reason
+        // InspectMove's own Target-depth header gives) -- the front party
+        // member (plate 0) sits nearest the CENTRE of the screen, so it is
+        // the party's own RIGHTMOST member, one step from the first enemy.
+        // Walking this list forward (Right) from the front party member
+        // therefore lands on the front enemy, and walking it backward
+        // (Left) from the front party member lands on plate 1 -- the
+        // second party member, "party position 2" in the owner's own words
+        // -- exactly the two presses the playtest pinned.
+        private List<InspectStop> CharacterSelectRing()
+        {
+            var party = PartyInspectRing();
+            var ring = new List<InspectStop>(party.Count + Enemies.Count);
+            for (int i = party.Count - 1; i >= 0; i--) ring.Add(party[i]);
+            ring.AddRange(LivingEnemyStops());
             return ring;
         }
 
@@ -2104,6 +2147,25 @@ namespace PrincesPalace
             int next = at + (delta > 0 ? 1 : -1);
             if (next < 0) return -1;
             return next >= count ? 0 : next;
+        }
+
+        // THE CHARACTER-SELECT RING'S OWN RULE -- CLAMPED, NOT LEFT/WRAPPED,
+        // and that is the whole fix (owner playtest, 2026-09-23: "never jump
+        // to the command menu"). StepInspectRing's -1-means-the-verb-column
+        // convention exists FOR the plain Root inspect ring on purpose (its
+        // own header: "the verb column is the stop before the first
+        // monster") -- Y/Triangle's character-select ring is a different
+        // control with a different contract: once on it, every press has to
+        // land on SOMEBODY, because the whole point (CharacterSelectRing's
+        // own header) is that Left/Right now reaches the enemies too, not
+        // just the party. Running off either end simply stops at that end.
+        public static int ClampInspectRing(int at, int delta, int count)
+        {
+            if (count <= 0) return -1;
+
+            int next = at + (delta > 0 ? 1 : -1);
+            if (next < 0) return 0;
+            return next >= count ? count - 1 : next;
         }
 
         // The horizontal axis' whole meaning in a fight. At a submenu it
@@ -2172,12 +2234,27 @@ namespace PrincesPalace
 
         private void InspectStep(int delta)
         {
-            var ring = _characterSelecting ? PartyInspectRing() : InspectRing();
-
             // A cursor that is no longer on the ring (its owner died while
             // being read) is picked back up at the front rather than dropped:
             // the press the player made was "move", and the nearest honest
             // answer to it is the first monster.
+            if (_characterSelecting)
+            {
+                var spatial = CharacterSelectRing();
+                if (spatial.Count == 0)
+                {
+                    LeaveInspect();
+                    return;
+                }
+
+                int spatialAt = IndexOnRing(spatial, _inspectCursor);
+                int spatialNext = ClampInspectRing(spatialAt < 0 ? 0 : spatialAt, delta, spatial.Count);
+                _inspectCursor = spatial[spatialNext].Actor;
+                RefreshUi();
+                return;
+            }
+
+            var ring = InspectRing();
             int at = IndexOnRing(ring, _inspectCursor);
             int next = StepInspectRing(at < 0 ? 0 : at, delta, ring.Count);
 
@@ -2361,7 +2438,7 @@ namespace PrincesPalace
             stop = default;
             if (!IsInspecting || _session == null || _isBusy || _session.IsOver) return false;
 
-            var ring = _characterSelecting ? PartyInspectRing() : InspectRing();
+            var ring = _characterSelecting ? CharacterSelectRing() : InspectRing();
             int at = IndexOnRing(ring, _inspectCursor);
             if (at < 0) return false;
 

@@ -2341,33 +2341,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
             back.LayerCaptionWithVisuals(backKey, backText);
             SubmenuBackButton = back;
 
-            // ---- the frame, wrapping the inner box above (flat fill, not kit art) --
+            // ---- the frame, now bare: NO PLATE, NO FILL, NO RIM ------------------
             //
-            // WAS a Violet 3:4 Ui.Container. That art's own content inset
-            // forced the frame bigger than the inner box on both axes
-            // (419.9x559.9 against 316x428) and needed the inner box
-            // recentred inside the slack. TURNING PreserveAspect OFF was
-            // tried first (fixes FightController.ResizeSubmenuContainer's
-            // height-only runtime resize drifting the rect off the art's
-            // true 3:4 at a short list -- rows sticking out both sides of a
-            // letterboxed frame) but LEFT A DIFFERENT DEFECT: Type.Simple's
-            // non-uniform stretch squashed the painted border hard at 1-3
-            // rows, the same "stretched and looks bad" complaint the owner
-            // made about the relic draft screen's own Container the same day
-            // (2026-09-23), which the kit already lints against elsewhere.
+            // WAS a flat Solid fill plus a hairline Rim (before that, a Violet
+            // 3:4 Ui.Container -- see git blame for that art-inset history).
+            // Owner playtest, 2026-09-23: "remove the container surrounding
+            // it" -- the flat fill still read as a tall purple panel standing
+            // behind buttons that are themed art in their own right and need
+            // no backing plate, and it extended well past the last row/BACK
+            // whenever the actor's kit was short (FrameHeight is sized off
+            // BuildReservationRows' 8-row static reservation, not the real
+            // count -- ResizeSubmenuContainer only shrinks it at runtime).
             //
-            // RelicDraftScreen's OWN fix for that (a flat Solid fill plus a
-            // hairline Rim, drawn last so it sits on top of what it encloses
-            // -- that file's own DraftFrameFill/DraftFrame header) is the fix
-            // here: no aspect, so no distortion at any height, and
-            // FrameWidth/FrameHeight ARE ContainerWidth/ContainerHeight(For)
-            // now -- no more inset, no more recentring layer (FightSubmenuLayout.
-            // FrameWidth's own header).
+            // SubmenuContainer SURVIVES as a plain, graphic-less Panel: it is
+            // still the one thing ResizeSubmenuContainer/AnchorSubmenuRows
+            // move and resize (FightController.cs), and the viewport/
+            // scrollbar/BACK still ride inside it as children so the whole
+            // block still hides/shows/relayouts as one unit -- only the
+            // painted box that used to fill this rect is gone. A Panel with
+            // no Image emits no graphic (Ui.Panel's own EmitsNoGraphic), so
+            // it takes no UiAudit overlap check against its neighbours
+            // whatever height it is built or resized to, and the header
+            // above it reads directly against the battlefield backdrop, the
+            // same way the verb column's own labels already do a few pixels
+            // to its left -- no separate legibility fix needed.
             var frameSize = new UiVec(FightSubmenuLayout.FrameWidth, FightSubmenuLayout.FrameHeight);
-            var frameFill = Ui.Solid("SubmenuContainerFill", DetailFillHex, frameSize, Place.At(0f, 0f)).AsDecor();
 
-            var frameChildren = new List<UiNode> { frameFill, viewport, track, thumb, back };
-            frameChildren.AddRange(Ui.Rim("SubmenuContainer", frameSize, FightHudPalette.Hairline));
+            var frameChildren = new List<UiNode> { viewport, track, thumb, back };
 
             var frameNode = Ui.Panel("SubmenuContainer", Place.At(containerX, FightSubmenuLayout.FrameCentreY),
                 UiSize.Fixed(frameSize), frameChildren);
