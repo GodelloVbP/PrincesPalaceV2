@@ -86,8 +86,16 @@ namespace PrincesPalace.PlayModeTests
                 "the entry is the first orb -- path 0's root, slot 0");
         }
 
+        // OWNER, 2026-09-23, RESTATED MODEL (supersedes every earlier pass
+        // at this file -- both the Rail-wrap "Right from Shatter goes to
+        // The Flock" fix and its own "continue up the strand" replacement):
+        // Left/Right name a LEVEL's two fixed ends, absolutely, not a
+        // relative step. Right from ANY stone in a 3-wide level reaches
+        // that level's OWN right-hand stone directly -- from the left
+        // stone (DxSlot -1) that is a straight jump past the centre one,
+        // not a step onto it.
         [UnityTest]
-        public IEnumerator Right_AcrossTier1_StepsSiblingToSibling()
+        public IEnumerator Right_FromTheLeftStone_ReachesTheLevelsRightStone()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
@@ -95,24 +103,33 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("Orb0_2"), EventSystem.current.currentSelectedGameObject,
-                "tier 1 is a 3-wide Rail ordered by DxSlot ascending -- Right from the left stone " +
-                "(DxSlot -1) should reach the centre one (DxSlot 0)");
+            Assert.AreEqual(Node("Orb0_3"), EventSystem.current.currentSelectedGameObject,
+                "Right always names the level's own right-hand stone (DxSlot +1), a fixed target, " +
+                "not the next stone over");
         }
 
-        // OWNER PLAYTEST, 2026-09-23: "Right from Shatter goes to The Flock"
-        // -- Rail's owner-default wrap treated a 3-wide tier as a ring, so
-        // Right off the rightmost stone (DxSlot +1) stepped past centre and
-        // landed on the leftmost (DxSlot -1) of the SAME tier, skipping the
-        // centre one entirely. Fixed for every tier, not Shatter alone: the
-        // tier's Rail is now Clamp, and running off either edge continues
-        // up the same DxSlot strand instead -- slot 3 (tier 1, DxSlot +1)
-        // and slot 6 (tier 2, DxSlot +1) are that strand's own two rungs,
-        // literally what Up already reaches from slot 3
-        // (RefreshOrbNavigation wires both from the identical
-        // _skeletonUpChild lookup).
+        // The mirror from the centre stone -- Left reaches the level's own
+        // left-hand stone, same fixed-target rule.
         [UnityTest]
-        public IEnumerator Right_AtTheRightmostStone_ContinuesUpTheStrand()
+        public IEnumerator Left_FromTheCentreStone_ReachesTheLevelsLeftStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_2"));
+            yield return null;
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_1"), EventSystem.current.currentSelectedGameObject,
+                "Left always names the level's own left-hand stone (DxSlot -1)");
+        }
+
+        // "RIGHT again from the right-hand stone goes to the next-page
+        // arrow" -- once already standing on the level's own fixed target,
+        // there is nothing further that way inside the tree, so the SAME
+        // direction reaches the arrow instead. No wrap, no "continue up the
+        // strand": both retired by this same restated model.
+        [UnityTest]
+        public IEnumerator Right_AtTheRightStone_ReachesTheNextPageArrow()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_3"));
@@ -120,16 +137,13 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("Orb0_6"), EventSystem.current.currentSelectedGameObject,
-                "Right off the rightmost stone of a tier should no longer wrap to the leftmost of the " +
-                "same tier -- it should continue up the DxSlot +1 strand, the same target Up reaches");
+            Assert.AreEqual(Node("NextPathButton"), EventSystem.current.currentSelectedGameObject,
+                "Right from the level's own right-hand stone (already the fixed target) should reach " +
+                "the next-page arrow, not wrap to the left stone and not continue up the strand");
         }
 
-        // The mirror of the above at the OTHER edge, same rule: Left off the
-        // leftmost stone (DxSlot -1) continues up ITS strand rather than
-        // wrapping to the rightmost.
         [UnityTest]
-        public IEnumerator Left_AtTheLeftmostStone_ContinuesUpTheStrand()
+        public IEnumerator Left_AtTheLeftStone_ReachesThePrevPageArrow()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
@@ -137,19 +151,29 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(-1f, 0f);
 
-            Assert.AreEqual(Node("Orb0_4"), EventSystem.current.currentSelectedGameObject,
-                "Left off the leftmost stone of a tier should continue up the DxSlot -1 strand rather " +
-                "than wrapping to the rightmost of the same tier");
+            Assert.AreEqual(Node("PrevPathButton"), EventSystem.current.currentSelectedGameObject,
+                "Left from the level's own left-hand stone should reach the prev-page arrow");
         }
 
-        // A THIRD TIER UP, past the convergence, so the same rule reaches
-        // past a merge node too -- this is the structural shape of "Shatter
-        // (DxSlot +1, the tier right after the convergence) -> Right ->
-        // Splintering (DxSlot +1, the next tier up)" from the owner's own
-        // report, pinned on slot numbers rather than on one path's authored
-        // names per this file's own convention.
+        // THE SHATTER/SPLINTERING/FLOCK CASE, checked directly against the
+        // restated model rather than assumed: Shatter (slot 13) is the
+        // RIGHT-hand stone of the level right after the convergence, so
+        // Right from it now reaches the arrow (proven above via slot 3, the
+        // same shape one level earlier) -- Splintering (slot 16, the
+        // right-hand stone of the NEXT level, directly above Shatter in the
+        // same DxSlot +1 lane) is reached by UP alone, in one press:
+        // _skeletonUpChild's lane-preserving pick (owner's later
+        // correction, 2026-09-23: "Up/Down stay in the lane you're in")
+        // sends a chain slot with exactly one child straight to it, and
+        // Parents[16] == [13] makes 16 that one child -- there is no
+        // "recentre through the level's middle stone" step for a plain
+        // chain slot, only for a single-stone level's own Up/Down (Up_
+        // FromTheRoot_ReachesTheCentreChild is that different case). Pinned
+        // on slot numbers, not this path's authored names, per this file's
+        // own convention -- The Flock (slot 11) is the mirroring LEFT-hand
+        // stone of Shatter's own level.
         [UnityTest]
-        public IEnumerator Right_PastTheConvergence_AlsoContinuesUpTheStrand()
+        public IEnumerator Right_FromShatter_ReachesTheArrow_NotSplinteringDirectly()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_13"));
@@ -157,27 +181,32 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("Orb0_16"), EventSystem.current.currentSelectedGameObject,
-                "Right from the rightmost stone of the post-convergence tier (slot 13) should reach " +
-                "slot 16 -- the next rung of the same strand -- not wrap back to slot 11");
+            Assert.AreEqual(Node("NextPathButton"), EventSystem.current.currentSelectedGameObject,
+                "Shatter (slot 13) is already its level's own right-hand stone, so Right reaches the " +
+                "arrow -- Splintering is reached by Up instead, not by Right");
         }
 
-        // OWNER PLAYTEST, 2026-09-23: "On the Convergence talent, pressing
-        // LEFT moves focus onto the page arrows. Expected: LEFT/RIGHT go to
-        // the left/right talent option in the tree from there." The
-        // convergence (slot 10) feeds a triple, so it has a real DxSlot
-        // -1/+1 child on each side -- Left/Right now reaches it instead of
-        // the page arrows, which stay reachable via LT/RT regardless
-        // (TabNext_StepsToTheNextConstellation_AndEntersItsRoot above).
-        // Two separate tests, not one Left-then-Right test reusing the same
-        // coroutine: driving a second Move right after re-selecting the
-        // convergence in the SAME frame budget as the first Move produced a
-        // false failure here (NavigationInputModule's own repeat/edge
-        // handling -- see StickThresholdGamepadNavigationTests -- needs a
-        // real settled frame between two driven moves, which
-        // SetSelectedGameObject-then-yield-once does not reliably give).
-        // Isolated, each direction is proven independently and matches every
-        // other single-assertion test in this file.
+        [UnityTest]
+        public IEnumerator Up_FromShatter_ReachesSplinteringDirectly()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_13"));
+            yield return null;
+
+            yield return Move(0f, 1f);
+
+            Assert.AreEqual(Node("Orb0_16"), EventSystem.current.currentSelectedGameObject,
+                "Up from Shatter (slot 13, DxSlot +1) should land on Splintering (slot 16), the same " +
+                "DxSlot +1 stone one level up -- lane-preserving, in one press");
+        }
+
+        // OWNER, 2026-09-23: "Levels with a single stone (root, convergence,
+        // capstone): ... Left/Right go to the flanking stones of the
+        // adjacent level." The convergence (slot 10) borrows its child
+        // level's (the one right above it) own left/right pair -- the
+        // arrows are then reached by pressing again from THAT side stone
+        // (Right_FromTheLeftStone_ReachesTheLevelsRightStone and its
+        // mirror above already prove the second-press rule generically).
         [UnityTest]
         public IEnumerator Left_FromTheConvergence_ReachesTheLeftChild()
         {
@@ -188,7 +217,7 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(-1f, 0f);
 
             Assert.AreEqual(Node("Orb0_11"), EventSystem.current.currentSelectedGameObject,
-                "Left from the convergence should reach its own DxSlot -1 child, not the page arrow");
+                "Left from the convergence should reach its child level's own left-hand stone");
         }
 
         [UnityTest]
@@ -201,15 +230,60 @@ namespace PrincesPalace.PlayModeTests
             yield return Move(1f, 0f);
 
             Assert.AreEqual(Node("Orb0_13"), EventSystem.current.currentSelectedGameObject,
-                "Right from the convergence should reach its own DxSlot +1 child, not the page arrow");
+                "Right from the convergence should reach its child level's own right-hand stone");
         }
 
-        // The capstone has no child at all -- nothing further right or left
-        // -- so it is the one single-tier orb that keeps the old arrow
-        // fallback ("only reached when there is no talent further in that
-        // direction").
+        // The root (slot 0) is the SAME shape as the convergence -- a
+        // single stone feeding a triple -- so it behaves the same way now
+        // (owner, 2026-09-23: "Make the root behave the same way"), rather
+        // than the old direct-to-arrow link JourneyHubToTalentsTests used
+        // to pin (that route is retired; see that file's own update for
+        // Invest's new one).
         [UnityTest]
-        public IEnumerator LeftRight_FromTheCapstone_StillReachThePageArrows()
+        public IEnumerator Left_FromTheRoot_ReachesTheLeftChild()
+        {
+            yield return LoadTheTree();
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_1"), EventSystem.current.currentSelectedGameObject,
+                "Left from the root should reach tier 1's own left-hand stone, the same shape the " +
+                "convergence uses -- not the page arrow directly");
+        }
+
+        [UnityTest]
+        public IEnumerator Right_FromTheRoot_ReachesTheRightChild()
+        {
+            yield return LoadTheTree();
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_3"), EventSystem.current.currentSelectedGameObject,
+                "Right from the root should reach tier 1's own right-hand stone");
+        }
+
+        // The capstone (slot 20) has nothing ABOVE it, so it borrows from
+        // the level BELOW instead -- the one adjacent 3-wide level it has
+        // (owner, 2026-09-23: "the capstone too if it has a level below
+        // with sides"). Reaching the arrow from here is Left/Right, THEN
+        // Left/Right again from that side stone, the same second-press
+        // rule as everywhere else.
+        [UnityTest]
+        public IEnumerator Left_FromTheCapstone_ReachesItsParentLevelsLeftStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_20"));
+            yield return null;
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_17"), EventSystem.current.currentSelectedGameObject,
+                "Left from the capstone should reach the level below it's own left-hand stone, since " +
+                "the capstone has no level above to borrow from");
+        }
+
+        [UnityTest]
+        public IEnumerator Right_FromTheCapstone_ReachesItsParentLevelsRightStone()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_20"));
@@ -217,9 +291,8 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("NextPathButton"), EventSystem.current.currentSelectedGameObject,
-                "the capstone has no left/right talent to reach, so Right should still land on the " +
-                "page arrow exactly as every single-tier orb used to");
+            Assert.AreEqual(Node("Orb0_19"), EventSystem.current.currentSelectedGameObject,
+                "Right from the capstone should reach the level below it's own right-hand stone");
         }
 
         [UnityTest]
@@ -233,7 +306,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(Node("Orb0_2"), EventSystem.current.currentSelectedGameObject,
                 "the root feeds all three tier-1 stones -- Up should pick the centre column (DxSlot 0), " +
-                "the convention every convergence in this skeleton follows");
+                "the convention leaving any single-stone level uses");
         }
 
         [UnityTest]
@@ -249,8 +322,84 @@ namespace PrincesPalace.PlayModeTests
                 "Down should follow the skeleton's own Parents back to the root");
         }
 
+        // OWNER, 2026-09-23: "Up/Down stay in the lane (column) you're in
+        // ... the same holds for left and middle." A SIDE stone's Up/Down
+        // must land on the SAME DxSlot one level over, not the centre --
+        // the earlier (now-retired) "recentre on every Up/Down" reading of
+        // this rule would have sent this to Orb0_5 instead.
         [UnityTest]
-        public IEnumerator Down_FromTheSelectedOrb_ReachesInvestButton_OverridingTheSkeletonLink()
+        public IEnumerator Up_FromASideStone_StaysInLane()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
+            yield return null;
+
+            yield return Move(0f, 1f);
+
+            Assert.AreEqual(Node("Orb0_4"), EventSystem.current.currentSelectedGameObject,
+                "Up from a DxSlot -1 stone should land on the DxSlot -1 stone of the level above, not " +
+                "recentre onto the level's own middle stone");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromASideStone_StaysInLane()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_4"));
+            yield return null;
+
+            yield return Move(0f, -1f);
+
+            Assert.AreEqual(Node("Orb0_1"), EventSystem.current.currentSelectedGameObject,
+                "Down from a DxSlot -1 stone should land on the DxSlot -1 stone of the level below");
+        }
+
+        // Leaving a single-stone level, the stone Up/Down lands on is this
+        // method's own choice (owner, 2026-09-23: "the stone you land on
+        // is up to you, but state it") -- the CENTRE one, the same
+        // convention Up_FromTheRoot_ReachesTheCentreChild already pins for
+        // the root. Proven from BOTH side lanes of the level right after
+        // the convergence, in separate tests: both converge on the same
+        // stone.
+        [UnityTest]
+        public IEnumerator Down_FromTheLeftLane_LandsOnTheConvergencesSingleStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_11"));
+            yield return null;
+
+            yield return Move(0f, -1f);
+
+            Assert.AreEqual(Node("Orb0_10"), EventSystem.current.currentSelectedGameObject,
+                "Down from the DxSlot -1 stone in the level right after the convergence should land " +
+                "on the convergence itself -- the only stone that level has");
+        }
+
+        [UnityTest]
+        public IEnumerator Down_FromTheRightLane_LandsOnTheConvergencesSingleStone()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_13"));
+            yield return null;
+
+            yield return Move(0f, -1f);
+
+            Assert.AreEqual(Node("Orb0_10"), EventSystem.current.currentSelectedGameObject,
+                "Down from the DxSlot +1 stone in the level right after the convergence should also " +
+                "land on the convergence itself");
+        }
+
+        // OWNER, 2026-09-23: "Give InvestButton another reachable route
+        // (Down from the root ...)" -- the old route (root -> arrow ->
+        // Invest) is retired now that the root's own Left/Right reach tier
+        // 1's stones instead. The root has nothing below it in the tree
+        // (Parents.Length == 0), so its Down was always unclaimed; it is
+        // spent here UNCONDITIONALLY, not only once the root itself is
+        // selected -- proven by selecting a DIFFERENT orb (tier 1, still
+        // refused) to reveal InvestButton, then reaching it from the root
+        // without ever submitting on the root at all.
+        [UnityTest]
+        public IEnumerator Down_FromTheRoot_ReachesInvestButton_Unconditionally()
         {
             yield return LoadTheTree();
 
@@ -260,32 +409,27 @@ namespace PrincesPalace.PlayModeTests
             _talents.Refresh();
             yield return null;
 
-            // Root has no skeleton parent to fall back on -- an unselected
-            // root's own Down link is unset entirely. Selecting it is what
-            // gives Down a target at all (RefreshOrbNavigation's own override,
-            // re-resolved on every Refresh -- here, from OnOrbPressed's Submit).
-            //
-            // This Submit only SELECTS the root now (owner, 2026-09-23: see
-            // Submit_OnAKindleableStar_SelectsThenKindles_TwoPressesNotOne
-            // below -- a first Submit on an unkindled star selects it, a
-            // second kindles) -- fine for what this test actually checks,
-            // since InvestButton stays shown (only NotAuthored hides it)
-            // whether or not the star underneath it is already lit, and the
-            // Down override is unconditional on `_selectedSlot >= 0` rather
-            // than on the button's interactable state.
-            EventSystem.current.SetSelectedGameObject(Node("Orb0_0"));
+            // InvestButton stays shown once ANY orb is selected (only
+            // NotAuthored hides it), whether or not that orb is itself
+            // reachable -- selecting tier 1's refused stone here, never the
+            // root, is what proves the root's own Down link is
+            // unconditional rather than tied to the root being selected.
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_2"));
             yield return null;
             _input.SubmitDown = true;
             yield return DriveFrame();
 
             var investButton = Node("InvestButton");
-            Assert.IsTrue(investButton.activeInHierarchy, "selecting an authored, reachable root should reveal InvestButton");
+            Assert.IsTrue(investButton.activeInHierarchy, "selecting a refused orb should still reveal InvestButton");
+
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_0"));
+            yield return null;
 
             yield return Move(0f, -1f);
 
             Assert.AreEqual(investButton, EventSystem.current.currentSelectedGameObject,
-                "Down from the SELECTED root should reach InvestButton, overriding the skeleton's own " +
-                "(nonexistent) parent link for exactly this one orb");
+                "Down from the root should reach InvestButton unconditionally -- the root was never " +
+                "itself selected here, only a different orb was, to prove the link does not depend on it");
         }
 
         // OWNER, 2026-09-23 (revising the 2026-09-19 hardware play-test call

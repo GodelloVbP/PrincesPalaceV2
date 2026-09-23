@@ -1034,50 +1034,67 @@ namespace PrincesPalace
         // capstone (TalentSkeleton.cs's own header) -- and a fixed-width Grid's
         // row-major indexing has nothing to say about a row of 1 followed by a
         // row of 3. UiNavSpec has no Graph kind either (UiNavLinkBuilder's own
-        // header: Map's is "entirely explicit links"), so this wires one small
-        // Rail GROUP per triple tier (Left/Right among siblings, wrap -- the
-        // owner default for a Grid-row-shaped thing) plus explicit Up/Down
-        // links between tiers, derived once from TalentSkeleton.Parents/DxSlot
-        // rather than hand-authored: Down is the parent nearest the centre
-        // column when a slot gathers more than one (only the convergence and
-        // the capstone do), Up is the inverse -- the child nearest the centre
-        // column when a slot feeds more than one. Scoped to the CURRENT path's
-        // 21 orbs only: the other two paths' orbs are real, visible Buttons
-        // sitting off-screen mid-slide (OnOrbPressed's own comment), and
-        // wiring them in would let a Move walk into a constellation the
-        // player cannot see.
+        // header: Map's is "entirely explicit links"), so every direction here
+        // is an explicit Link, computed once per slot from two small tables
+        // below rather than a Rail GROUP -- Rail's owner-default wrap (and this
+        // method's own two earlier attempts at a "continue past the edge"
+        // fallback) is not what the owner's restated model wants.
+        //
+        // A "LEVEL" IS A ROW OF STONES AT THE SAME SCREEN HEIGHT (owner,
+        // 2026-09-23) -- TalentSkeleton's own depth tiers, already grouped by
+        // _skeletonTiers below. UP/DOWN stay in LANE: _skeletonUpChild/
+        // _skeletonDownParent send a chain slot to the SAME dx one level up or
+        // down, and fall back to a single-stone level's one stone (the root,
+        // the convergence, the capstone) when the lane it left from has no
+        // match there. LEFT/RIGHT name a level's two ends, once, in
+        // _leftFlank/_rightFlank: a 3-wide level's own left/right member, or --
+        // borrowed, for a single-stone level -- the adjacent 3-wide level's.
+        // Left/Right always aim at that fixed stone; pressing the same
+        // direction again once already standing on it is what reaches the page
+        // arrow, since there is nothing further that way in the tree. Scoped to
+        // the CURRENT path's 21 orbs only: the other two paths' orbs are real,
+        // visible Buttons sitting off-screen mid-slide (OnOrbPressed's own
+        // comment), and wiring them in would let a Move walk into a
+        // constellation the player cannot see.
         private static readonly int[] _skeletonUpChild;
         private static readonly int[] _skeletonDownParent;
         private static readonly List<int>[] _skeletonTiers;
 
-        // A slot's own dx-1/dx+1 CHILD (as opposed to _skeletonUpChild's
-        // dx-0-preferring pick). Computed for every slot that feeds a
-        // triple -- the root as well as the convergence, since both are
-        // singles above one -- but RefreshOrbNavigation only reads it for
-        // Kind == "merge": the convergence's Left/Right reaches this
-        // instead of the page arrows (owner playtest, 2026-09-23), while
-        // the root keeps its own arrow links (JourneyHubToTalentsTests'
-        // "Right from a one-wide tier orb should reach the arrow" is the
-        // player's only stick path to InvestButton before anything is
-        // kindled, and the owner's report never named the root).
-        private static readonly int[] _skeletonLeftChild;
-        private static readonly int[] _skeletonRightChild;
+        // LEFT/RIGHT's two fixed targets per slot (owner's restated model,
+        // 2026-09-23): the stone at the left/right end of the LEVEL Left/
+        // Right actually addresses -- a 3-wide level's own two ends, or,
+        // for a single-stone level (the root, the convergence, the
+        // capstone), the ends BORROWED from the one adjacent 3-wide level.
+        // -1 means "no such level exists" (never happens on this skeleton,
+        // every single sits next to at least one triple, but the sentinel
+        // keeps RefreshOrbNavigation's read honest rather than assuming).
+        private static readonly int[] _leftFlank;
+        private static readonly int[] _rightFlank;
 
         static TalentController()
         {
             int n = TalentSkeleton.SlotCount;
             _skeletonDownParent = new int[n];
             _skeletonUpChild = new int[n];
-            _skeletonLeftChild = new int[n];
-            _skeletonRightChild = new int[n];
+            _leftFlank = new int[n];
+            _rightFlank = new int[n];
             for (int i = 0; i < n; i++)
             {
                 _skeletonDownParent[i] = -1;
                 _skeletonUpChild[i] = -1;
-                _skeletonLeftChild[i] = -1;
-                _skeletonRightChild[i] = -1;
+                _leftFlank[i] = -1;
+                _rightFlank[i] = -1;
             }
 
+            // STAY IN LANE. Down is the parent sharing this slot's own
+            // DxSlot; for a chain slot that is its one and only parent
+            // (the lane climbs straight), and for a slot with several
+            // parents -- only the convergence and the capstone gather more
+            // than one -- it is the dx-0 one specifically, since neither
+            // of those has a "lane" of its own to preserve and the centre
+            // is this method's own chosen landing (owner, 2026-09-23:
+            // "leaving a single-stone level, the stone you land on is up
+            // to you, but state it").
             for (int i = 0; i < n; i++)
             {
                 var parents = TalentSkeleton.Parents[i];
@@ -1095,6 +1112,10 @@ namespace PrincesPalace
                 foreach (var p in TalentSkeleton.Parents[i]) childrenOf[p].Add(i);
             }
 
+            // Up is the mirror: the child sharing this slot's own lane, or
+            // -- leaving the root or the convergence, both of which feed
+            // three lanes at once -- the dx-0 child, the same convention
+            // Down uses leaving a single-stone level.
             for (int i = 0; i < n; i++)
             {
                 if (childrenOf[i].Count == 0) continue;
@@ -1102,12 +1123,6 @@ namespace PrincesPalace
                 int chosen = childrenOf[i][0];
                 foreach (var c in childrenOf[i]) if (TalentSkeleton.DxSlot[c] == 0) chosen = c;
                 _skeletonUpChild[i] = chosen;
-
-                foreach (var c in childrenOf[i])
-                {
-                    if (TalentSkeleton.DxSlot[c] == -1) _skeletonLeftChild[i] = c;
-                    else if (TalentSkeleton.DxSlot[c] == 1) _skeletonRightChild[i] = c;
-                }
             }
 
             var byDepth = new Dictionary<int, List<int>>();
@@ -1124,6 +1139,45 @@ namespace PrincesPalace
             _skeletonTiers = byDepth.OrderBy(kv => kv.Key)
                 .Select(kv => kv.Value.OrderBy(s => TalentSkeleton.DxSlot[s]).ToList())
                 .ToArray();
+
+            // A 3-wide level names its own two ends, sorted ascending by
+            // DxSlot above so index 0 is the left one and index 2 the
+            // right.
+            for (int d = 0; d < _skeletonTiers.Length; d++)
+            {
+                var tier = _skeletonTiers[d];
+                if (tier.Count != 3) continue;
+
+                int left = tier[0];
+                int right = tier[2];
+                foreach (var s in tier)
+                {
+                    _leftFlank[s] = left;
+                    _rightFlank[s] = right;
+                }
+            }
+
+            // A single-stone level BORROWS its ends from the one adjacent
+            // 3-wide level -- the level above when there is one (every
+            // tree grows upward from its root, so the root and the
+            // convergence both prefer this), otherwise the level below
+            // (only the capstone has nothing above it to borrow from).
+            for (int d = 0; d < _skeletonTiers.Length; d++)
+            {
+                var tier = _skeletonTiers[d];
+                if (tier.Count != 1) continue;
+
+                int slot = tier[0];
+                int donorDepth = -1;
+                if (d + 1 < _skeletonTiers.Length && _skeletonTiers[d + 1].Count == 3) donorDepth = d + 1;
+                else if (d - 1 >= 0 && _skeletonTiers[d - 1].Count == 3) donorDepth = d - 1;
+
+                if (donorDepth < 0) continue;
+
+                var donor = _skeletonTiers[donorDepth];
+                _leftFlank[slot] = donor[0];
+                _rightFlank[slot] = donor[2];
+            }
         }
 
         // Pushed once in Start(), never popped while this scene is loaded --
@@ -1193,55 +1247,6 @@ namespace PrincesPalace
             var groups = new List<UiNavGroup<Selectable>>();
             var links = new List<UiNavLink<Selectable>?>();
 
-            // CLAMP, NOT WRAP (owner playtest, 2026-09-23: "Right from
-            // Shatter goes to The Flock" -- Rail's owner-default wrap
-            // treated a 3-wide tier as a ring, so Right off the rightmost
-            // stone stepped past centre and landed on the leftmost. A tier
-            // is not a ring: DxSlot -1/0/+1 is a persistent LANE climbing
-            // tier to tier (Flock/Gift/Shatter, all the way to the
-            // capstone), so running off either edge should continue up
-            // that lane instead -- wired below as an explicit Link, once
-            // the group itself stops wrapping). Scoped to talentTier*
-            // groups only: Rail's wrap default is unchanged everywhere
-            // else in the kit.
-            foreach (var tier in _skeletonTiers)
-            {
-                if (tier.Count < 2) continue;
-
-                var members = tier.Select(OrbAt).ToList();
-                var group = RuntimeNavWiring.Group($"talentTier{TalentSkeleton.Depth[tier[0]]}",
-                    UiNavGroupKind.Rail, members, wrap: UiNavWrap.Clamp);
-                if (group != null) groups.Add(group);
-            }
-
-            // THE LANE CONTINUES: off either edge of a 3-wide tier, Left/
-            // Right now reaches the same slot Up already would -- the
-            // dx-preserving child one tier up -- rather than going nowhere
-            // (Clamp's own effect with no link) or wrapping to the far
-            // side. Every tier shares this identically, which is the fix
-            // the owner asked for ("fix the class ... not a special case
-            // for Shatter"): the loop runs once per depth, for whichever
-            // constellation is open.
-            foreach (var tier in _skeletonTiers)
-            {
-                if (tier.Count < 2) continue;
-
-                int leftmost = tier[0];
-                int rightmost = tier[tier.Count - 1];
-
-                if (_skeletonUpChild[leftmost] >= 0)
-                {
-                    links.Add(RuntimeNavWiring.Link(OrbAt(leftmost), UiNavDirection.Left,
-                        OrbAt(_skeletonUpChild[leftmost])));
-                }
-
-                if (_skeletonUpChild[rightmost] >= 0)
-                {
-                    links.Add(RuntimeNavWiring.Link(OrbAt(rightmost), UiNavDirection.Right,
-                        OrbAt(_skeletonUpChild[rightmost])));
-                }
-            }
-
             // THE SCREEN'S OWN CHROME, WHICH WAS NOT IN THE GRAPH AT ALL
             // (hardware play-test round 1, item 1: "I found no way to move in
             // the talent screen"). Measured rather than guessed: on the real
@@ -1271,55 +1276,6 @@ namespace PrincesPalace
                 new[] { (Selectable)investButton, respecButton });
             if (panelActions != null) groups.Add(panelActions);
 
-            // Every orb in a ONE-WIDE tier (the root, the convergence, the
-            // capstone) sits in the sky's centre column, so what lies left
-            // and right of it is the pair of arrows flanking the sky --
-            // UNCHANGED for the root and the capstone (JourneyHubToTalents
-            // Tests' own "Right from a one-wide tier orb should reach the
-            // arrow drawn at the sky's right edge" is a deliberate,
-            // already-tested escape hatch: root -> arrow -> the panel
-            // column, the only stick path to InvestButton before anything
-            // is kindled). The owner's report named the CONVERGENCE only
-            // ("pressing LEFT [from Convergence] moves focus onto the
-            // arrows ... Expected: LEFT/RIGHT go to the left/right talent
-            // option in the tree") -- the convergence is the one single
-            // that feeds a triple on BOTH sides of a tree the player is
-            // already standing inside, not the tree's own front door, so
-            // only Kind == "merge" gets its own dx-1/dx+1 child instead of
-            // the arrow. The arrows stay reachable from the convergence too
-            // -- LT/RT's own trigger shortcut (StepTab), the mouse, and the
-            // long way up through the root -- so nothing about paging
-            // constellations is lost.
-            //
-            // The arrows are never hidden, only greyed at the ends of the line
-            // (Refresh's own `prevPathButton.interactable = CanStep(...)`), so
-            // a Move onto one always lands: Unity's own Selectable.Navigate
-            // tests IsActive, not IsInteractable. Focus resting on a greyed
-            // arrow is exactly what a mouse hovering it already gets, and Right
-            // off it comes straight back.
-            foreach (var tier in _skeletonTiers)
-            {
-                if (tier.Count != 1) continue;
-
-                int slot = tier[0];
-                var lone = OrbAt(slot);
-                if (lone == null) continue;
-
-                Selectable leftTarget = prevPathButton;
-                Selectable rightTarget = nextPathButton;
-
-                if (TalentSkeleton.Kind[slot] == "merge")
-                {
-                    var leftChild = _skeletonLeftChild[slot] >= 0 ? OrbAt(_skeletonLeftChild[slot]) : null;
-                    var rightChild = _skeletonRightChild[slot] >= 0 ? OrbAt(_skeletonRightChild[slot]) : null;
-                    leftTarget = (Selectable)leftChild ?? prevPathButton;
-                    rightTarget = (Selectable)rightChild ?? nextPathButton;
-                }
-
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, leftTarget));
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, rightTarget));
-            }
-
             // BOTH ARROWS COME BACK TO THE ROOT, stated once here rather than
             // tracked per visit: which orb you stepped off is state, the root
             // is this screen's own declared entry, and one convention beats a
@@ -1348,6 +1304,41 @@ namespace PrincesPalace
             links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Left, nextPathButton));
             links.Add(RuntimeNavWiring.Link(respecButton, UiNavDirection.Left, nextPathButton));
 
+            // ONE RULE, EVERY DIRECTION, EVERY SLOT (owner's restated model,
+            // 2026-09-23, superseding both earlier passes at this method --
+            // defined entirely by ON-SCREEN POSITION, "a level" being a row
+            // of stones at the same screen height):
+            //
+            // UP/DOWN STAY IN LANE. _skeletonUpChild/_skeletonDownParent
+            // already compute exactly this and are UNCHANGED by this pass:
+            // a chain slot's one parent/child shares its own DxSlot (the
+            // lane climbs straight), so Up/Down from a side stone reaches
+            // the SAME side of the next/previous level. The only place a
+            // lane has no matching stone is a single-stone level (the
+            // root, the convergence, the capstone) -- there both arrays
+            // fall back to that level's one stone regardless of the lane
+            // you left it from (chosen for the dx-0 candidate among
+            // several, e.g. every strand's Up into the convergence, or the
+            // convergence's own Down into the grid below it -- "leaving a
+            // single-stone level, the stone you land on is up to you": this
+            // method picks the centre one, the same convention the root's
+            // own Up onto the centre tier-1 stone already used).
+            //
+            // LEFT/RIGHT NAME A LEVEL'S TWO ENDS, ONCE. _leftFlank/
+            // _rightFlank (computed once in the static constructor) give
+            // every slot the SAME two stones: its own level's left/right
+            // member when the level is 3 wide, or -- for a single-stone
+            // level -- the flanking pair BORROWED from the one adjacent
+            // 3-wide level (the level above when there is one, since that
+            // is the direction every tree grows; otherwise the level
+            // below, which only the capstone ever needs). Left always
+            // aims at the left one, Right at the right one -- a flat,
+            // absolute target, not a relative step -- and pressing the
+            // SAME direction again once already standing on that stone is
+            // what "again" means: there is nothing further that way inside
+            // the tree, so it goes to the page arrow instead. No wrap, no
+            // "continue up the strand", no per-tier special case: this is
+            // the one loop, for every level in every constellation.
             for (int slot = 0; slot < n; slot++)
             {
                 var from = OrbAt(slot);
@@ -1362,36 +1353,39 @@ namespace PrincesPalace
                 {
                     links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Up, OrbAt(_skeletonUpChild[slot])));
                 }
+
+                if (_leftFlank[slot] >= 0)
+                {
+                    Selectable leftTarget = slot == _leftFlank[slot] ? prevPathButton : OrbAt(_leftFlank[slot]);
+                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Left, leftTarget));
+                }
+
+                if (_rightFlank[slot] >= 0)
+                {
+                    Selectable rightTarget = slot == _rightFlank[slot] ? nextPathButton : OrbAt(_rightFlank[slot]);
+                    links.Add(RuntimeNavWiring.Link(from, UiNavDirection.Right, rightTarget));
+                }
             }
 
-            // THE DETAIL ACTION, re-resolved here -- overriding the skeleton's
-            // own Down/Up for the selected orb, appended AFTER the skeleton
-            // links so it wins (RuntimeNavWiring.Apply writes links in order,
-            // a later one for the same node+direction replaces the earlier).
-            // ONLY when that orb has no skeleton parent of its own (owner's
-            // "Ultimate Down" call, 2026-09-19 hardware round: Down from a
-            // selected orb follows the constellation to its skeleton parent;
-            // it is only a ROOT orb -- one with nothing below it in the tree
-            // -- whose Down instead reaches Invest). Every other orb keeps
-            // its ordinary tree Down/Up, gated the same way this method
-            // already gates it: only while investButton is worth reaching,
-            // NOT on `investButton.gameObject.activeSelf`, the same call
-            // RewardTrackController.WireNodes makes for its own collect
-            // button ("DOWN FROM EVERY DISC... Unity never routes a Move
-            // onto an inactive Selectable" -- true here whether or not a
-            // selection exists to begin with, so a hidden or NotAuthored
-            // investButton is simply never reached). Reachable from Invest's
-            // own Up regardless, and from the right-arrow column above,
-            // since a root orb with no skeleton parent has no other Down
-            // link to conflict with.
-            if (_selectedSlot >= 0 && _skeletonDownParent[_selectedSlot] < 0)
+            // INVEST'S OTHER ROUTE. The old "Right from the root reaches an
+            // arrow, Right again reaches Invest" path is gone -- the root's
+            // Right now reaches tier 1's own right-hand stone, like every
+            // other single-stone level (owner, 2026-09-23: "give InvestButton
+            // another reachable route (Down from the root...)"). The root is
+            // the one slot with nothing below it in the tree (Parents.Length
+            // == 0, the same test _skeletonDownParent's own construction
+            // already uses), so its Down was always unclaimed; it is spent
+            // here, unconditionally, rather than only once something is
+            // selected -- InvestButton itself is still hidden until then
+            // (Refresh's own PaintInvestButton), and Unity's Selectable.
+            // Navigate already refuses to land on an inactive target, so an
+            // early press here simply does nothing until a selection makes
+            // Invest worth reaching, the same rule every arrow and door in
+            // this graph already relies on.
+            if (rootOrb != null && investButton != null)
             {
-                var selectedOrb = OrbAt(_selectedSlot);
-                if (selectedOrb != null && investButton != null)
-                {
-                    links.Add(RuntimeNavWiring.Link(selectedOrb, UiNavDirection.Down, investButton));
-                    links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Up, selectedOrb));
-                }
+                links.Add(RuntimeNavWiring.Link(rootOrb, UiNavDirection.Down, investButton));
+                links.Add(RuntimeNavWiring.Link(investButton, UiNavDirection.Up, rootOrb));
             }
 
             RuntimeNavWiring.Apply(groups, links);

@@ -123,24 +123,30 @@ namespace PrincesPalace.PlayModeTests
             talents.Refresh();
             yield return null;
 
-            yield return MoveUp(); // root -> the centre tier-1 child (the convergence convention)
+            yield return MoveUp(); // root -> the centre tier-1 child (the lane convention leaving the root)
             AssertSelectedName("Orb0_2", "Up from the root should reach the centre tier-1 stone");
 
             yield return PressSubmit(); // OnOrbPressed -> selects this orb (refused, so no auto-kindle), reveals the detail panel
 
-            // Down from a tier-1 orb now follows the constellation to its
-            // skeleton parent (the root) rather than reaching InvestButton --
-            // the owner's "Ultimate Down" call, 2026-09-19 hardware round:
-            // only a root orb (no skeleton parent) links Down to Invest. This
-            // is a focus move only (no click), so _selectedSlot stays on the
-            // tier-1 orb -- reaching InvestButton from here now goes through
-            // the root's own Left/Right arrow links instead (the right-arrow
-            // column production change 4 keeps Invest reachable from).
+            // Down from a tier-1 orb follows the constellation's own lane
+            // back to the root (unchanged -- Up/Down stay in lane, the
+            // owner's restated model, 2026-09-23). This is a focus move
+            // only (no click), so _selectedSlot stays on the tier-1 orb.
             yield return MoveDown();
             AssertSelectedName("Orb0_0", "Down from a selected tier-1 orb should follow the tree to its root");
 
-            yield return MoveRight(); // root -> nextPathButton (one-wide tier's own side link)
-            yield return MoveRight(); // nextPathButton -> InvestButton (the right-arrow column)
+            // INVEST'S NEW ROUTE (owner, 2026-09-23: root -> arrow -> Invest
+            // is retired now that the root's own Right reaches tier 1's
+            // right-hand stone like every other single-stone level; "give
+            // InvestButton another reachable route (Down from the root...)"
+            // is what RefreshOrbNavigation now wires, unconditionally, since
+            // the root has nothing below it in the tree to begin with).
+            // Selecting the tier-1 orb above already made InvestButton
+            // active (TalentGamepadNavigationTests.Down_FromTheRoot_
+            // ReachesInvestButton_Unconditionally proves the link itself
+            // does not depend on which orb was selected), so one press
+            // reaches it directly.
+            yield return MoveDown(); // root -> InvestButton
             AssertSelectedName("InvestButton", "should be standing on InvestButton before the refused press");
 
             yield return PressSubmit(); // Kindle() -> TalentOps.Kindle refuses: PrerequisiteMissing, still against the tier-1 orb
@@ -182,13 +188,17 @@ namespace PrincesPalace.PlayModeTests
 
         // HARDWARE PLAY-TEST ROUND 1, ITEM 1: "I found no way to move in the
         // talent screen." Driven on the REAL Hub -> Talents building -> Submit
-        // path (the hand-built TalentGamepadNavigationTests fixture passed
-        // throughout, and still does -- the gap was never the fixture, it was
-        // that three of the entry orb's four directions had no link at all and
-        // the screen's own chrome was never declared: measured on this exact
-        // path before the fix, Orb0_0 read up=Orb0_2, down=null, left=null,
-        // right=null, and TalentBackButton was still on the scene-build
-        // default Navigation.Mode.Automatic).
+        // path. REWRITTEN 2026-09-23 for the owner's restated model: the
+        // root now behaves exactly like the convergence (Left/Right reach
+        // tier 1's own flanking stones, a second press from THAT stone
+        // reaches the arrow), and Invest is reached by the root's own Down
+        // rather than through the right-hand arrow -- TalentGamepadNavigation
+        // Tests carries the unit-level proof for each of these individually
+        // (Left/Right_FromTheRoot_ReachesThe*Child,
+        // Right/Left_At*Stone_ReachesThe*Arrow,
+        // Down_FromTheRoot_ReachesInvestButton_Unconditionally); this test's
+        // own job is only proving the same graph holds on the REAL built
+        // scene, not re-deriving it.
         //
         // Literal node names, one ring, every direction off the entry.
         [UnityTest]
@@ -196,7 +206,8 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return ReachTalentsFromTheHub();
 
-            // Up/Down: the tree, unchanged -- the one axis that already worked.
+            // Up/Down: the tree, unchanged -- lane-preserving, the one axis
+            // the owner's restated model left untouched.
             yield return MoveUp();
             AssertSelectedName("Orb0_2", "Up from the root should still reach the centre tier-1 stone");
             yield return MoveDown();
@@ -212,11 +223,29 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(Node("InvestButton").activeInHierarchy,
                 "selecting the root should reveal InvestButton");
 
-            // Right: off the sky's centre column onto the arrow flanking it,
-            // then on into the panel column down the right of the screen.
+            // INVEST, THE ROOT'S OWN NEW ROUTE: Down from the root reaches
+            // it directly and unconditionally now (root -> arrow -> Invest
+            // is retired), and Up from Invest returns to the root -- the
+            // same round trip the old route made, one hop shorter.
+            yield return MoveDown();
+            AssertSelectedName("InvestButton", "Down from the root should reach InvestButton directly");
+
+            yield return MoveUp();
+            AssertSelectedName("Orb0_0", "Up from InvestButton should return to the root");
+
+            // RIGHT: the root behaves like the convergence now -- Right
+            // reaches tier 1's own right-hand stone, a real talent, not the
+            // arrow. A second Right from THAT stone (already the level's
+            // fixed target) is what reaches the arrow.
+            yield return MoveRight();
+            AssertSelectedName("Orb0_3",
+                "Right from the root should reach tier 1's own right-hand stone, the same shape the " +
+                "convergence uses");
+
             yield return MoveRight();
             AssertSelectedName("NextPathButton",
-                "Right from a one-wide tier orb should reach the arrow drawn at the sky's right edge");
+                "Right again, already standing on the level's own right-hand stone, should reach the " +
+                "arrow drawn at the sky's right edge");
 
             yield return MoveRight();
             AssertSelectedName("InvestButton",
@@ -239,10 +268,16 @@ namespace PrincesPalace.PlayModeTests
             AssertSelectedName("Orb0_0",
                 "Left from the right-hand arrow returns to the root, this screen's own declared entry");
 
-            // Left: the other arrow, and Back in the corner above it.
+            // LEFT: the mirror -- tier 1's own left-hand stone, then the
+            // left arrow on the second press, then Back above it.
+            yield return MoveLeft();
+            AssertSelectedName("Orb0_1",
+                "Left from the root should reach tier 1's own left-hand stone");
+
             yield return MoveLeft();
             AssertSelectedName("PrevPathButton",
-                "Left from a one-wide tier orb should reach the arrow drawn at the sky's left edge");
+                "Left again, already standing on the level's own left-hand stone, should reach the " +
+                "arrow drawn at the sky's left edge");
 
             yield return MoveUp();
             AssertSelectedName("TalentBackButton",
