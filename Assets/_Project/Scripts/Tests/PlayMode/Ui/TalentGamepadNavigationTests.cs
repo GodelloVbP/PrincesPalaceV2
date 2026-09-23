@@ -100,8 +100,19 @@ namespace PrincesPalace.PlayModeTests
                 "(DxSlot -1) should reach the centre one (DxSlot 0)");
         }
 
+        // OWNER PLAYTEST, 2026-09-23: "Right from Shatter goes to The Flock"
+        // -- Rail's owner-default wrap treated a 3-wide tier as a ring, so
+        // Right off the rightmost stone (DxSlot +1) stepped past centre and
+        // landed on the leftmost (DxSlot -1) of the SAME tier, skipping the
+        // centre one entirely. Fixed for every tier, not Shatter alone: the
+        // tier's Rail is now Clamp, and running off either edge continues
+        // up the same DxSlot strand instead -- slot 3 (tier 1, DxSlot +1)
+        // and slot 6 (tier 2, DxSlot +1) are that strand's own two rungs,
+        // literally what Up already reaches from slot 3
+        // (RefreshOrbNavigation wires both from the identical
+        // _skeletonUpChild lookup).
         [UnityTest]
-        public IEnumerator Right_WrapsAcrossTheTriple()
+        public IEnumerator Right_AtTheRightmostStone_ContinuesUpTheStrand()
         {
             yield return LoadTheTree();
             EventSystem.current.SetSelectedGameObject(Node("Orb0_3"));
@@ -109,9 +120,92 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Move(1f, 0f);
 
-            Assert.AreEqual(Node("Orb0_1"), EventSystem.current.currentSelectedGameObject,
-                "Rail is wrap by the owner default -- Right from the rightmost stone (DxSlot +1) " +
-                "should wrap to the leftmost (DxSlot -1)");
+            Assert.AreEqual(Node("Orb0_6"), EventSystem.current.currentSelectedGameObject,
+                "Right off the rightmost stone of a tier should no longer wrap to the leftmost of the " +
+                "same tier -- it should continue up the DxSlot +1 strand, the same target Up reaches");
+        }
+
+        // The mirror of the above at the OTHER edge, same rule: Left off the
+        // leftmost stone (DxSlot -1) continues up ITS strand rather than
+        // wrapping to the rightmost.
+        [UnityTest]
+        public IEnumerator Left_AtTheLeftmostStone_ContinuesUpTheStrand()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_1"));
+            yield return null;
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_4"), EventSystem.current.currentSelectedGameObject,
+                "Left off the leftmost stone of a tier should continue up the DxSlot -1 strand rather " +
+                "than wrapping to the rightmost of the same tier");
+        }
+
+        // A THIRD TIER UP, past the convergence, so the same rule reaches
+        // past a merge node too -- this is the structural shape of "Shatter
+        // (DxSlot +1, the tier right after the convergence) -> Right ->
+        // Splintering (DxSlot +1, the next tier up)" from the owner's own
+        // report, pinned on slot numbers rather than on one path's authored
+        // names per this file's own convention.
+        [UnityTest]
+        public IEnumerator Right_PastTheConvergence_AlsoContinuesUpTheStrand()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_13"));
+            yield return null;
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_16"), EventSystem.current.currentSelectedGameObject,
+                "Right from the rightmost stone of the post-convergence tier (slot 13) should reach " +
+                "slot 16 -- the next rung of the same strand -- not wrap back to slot 11");
+        }
+
+        // OWNER PLAYTEST, 2026-09-23: "On the Convergence talent, pressing
+        // LEFT moves focus onto the page arrows. Expected: LEFT/RIGHT go to
+        // the left/right talent option in the tree from there." The
+        // convergence (slot 10) feeds a triple, so it has a real DxSlot
+        // -1/+1 child on each side -- Left/Right now reaches it instead of
+        // the page arrows, which stay reachable via LT/RT regardless
+        // (TabNext_StepsToTheNextConstellation_AndEntersItsRoot above).
+        [UnityTest]
+        public IEnumerator LeftRight_FromTheConvergence_ReachTheFlankingChildren()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_10"));
+            yield return null;
+
+            yield return Move(-1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_11"), EventSystem.current.currentSelectedGameObject,
+                "Left from the convergence should reach its own DxSlot -1 child, not the page arrow");
+
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_10"));
+            yield return null;
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("Orb0_13"), EventSystem.current.currentSelectedGameObject,
+                "Right from the convergence should reach its own DxSlot +1 child, not the page arrow");
+        }
+
+        // The capstone has no child at all -- nothing further right or left
+        // -- so it is the one single-tier orb that keeps the old arrow
+        // fallback ("only reached when there is no talent further in that
+        // direction").
+        [UnityTest]
+        public IEnumerator LeftRight_FromTheCapstone_StillReachThePageArrows()
+        {
+            yield return LoadTheTree();
+            EventSystem.current.SetSelectedGameObject(Node("Orb0_20"));
+            yield return null;
+
+            yield return Move(1f, 0f);
+
+            Assert.AreEqual(Node("NextPathButton"), EventSystem.current.currentSelectedGameObject,
+                "the capstone has no left/right talent to reach, so Right should still land on the " +
+                "page arrow exactly as every single-tier orb used to");
         }
 
         [UnityTest]

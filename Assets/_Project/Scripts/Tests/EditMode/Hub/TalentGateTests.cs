@@ -276,6 +276,35 @@ namespace PrincesPalace.Domain.Tests
                 "rather than its engine");
         }
 
+        // OWNER PLAYTEST, 2026-09-23: "Choosing Fragile Lamb correctly locks
+        // out Black Ram mode, but it also blocks picking any
+        // cross-constellation talents, which should still be allowed." Two
+        // separate `unlocked` sets on purpose, not one shared fixture: a
+        // fresh swear to Fragile Lamb alone (p1s0) is what actually blocks
+        // Black Ram (p0s0, AllegianceSworn), and a non-root stone elsewhere
+        // in path 0 (p0s1) can only ever be evaluated once its OWN
+        // prerequisite chain is met -- TalentSkeleton makes every chain
+        // node's parent that path's own root regardless of allegiance, so
+        // proving p0s1 stays reachable needs p0s0 already lit, the same
+        // "both roots already lit" shape OnlyTheROOTOfTheOtherPathIsBlocked
+        // uses above. One rule, asserted from both of its own preconditions.
+        [Test]
+        public void FragileLambLocksOnlyBlackRam_NotTheRestOfItsPath()
+        {
+            var tree = TwoRootedPaths();
+
+            var justSworn = new HashSet<string> { "p1s0" };
+            Assert.AreEqual(TalentPage.Refusal.AllegianceSworn,
+                TalentPage.Evaluate(tree, path: 0, slot: 0, justSworn, embers: 99, budget: 999),
+                "Black Ram (the other path's root, its own generation engine) must still be locked out");
+
+            var bothRooted = new HashSet<string> { "p0s0", "p1s0" };
+            Assert.AreEqual(TalentPage.Refusal.None,
+                TalentPage.Evaluate(tree, path: 0, slot: 1, bothRooted, embers: 99, budget: 999),
+                "a cross-constellation talent that is not a root must stay pickable once its own " +
+                "prerequisites are met -- the oath is on the engine, not on the whole tree");
+        }
+
         // THE LIFETIME BUDGET, WHICH NOTHING WAS CHECKING EITHER.
         //
         // ContentDatabase.EmberSpendCap is 30 and its header spells out what

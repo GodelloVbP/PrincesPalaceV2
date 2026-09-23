@@ -1050,15 +1050,27 @@ namespace PrincesPalace
         private static readonly int[] _skeletonDownParent;
         private static readonly List<int>[] _skeletonTiers;
 
+        // A slot's own dx-1/dx+1 CHILD (as opposed to _skeletonUpChild's
+        // dx-0-preferring pick) -- only the root and the convergence have
+        // one, since they are the singles that feed a triple. Used to give
+        // Left/Right a real talent to reach from those two nodes instead of
+        // teleporting to the page arrows (owner playtest, 2026-09-23).
+        private static readonly int[] _skeletonLeftChild;
+        private static readonly int[] _skeletonRightChild;
+
         static TalentController()
         {
             int n = TalentSkeleton.SlotCount;
             _skeletonDownParent = new int[n];
             _skeletonUpChild = new int[n];
+            _skeletonLeftChild = new int[n];
+            _skeletonRightChild = new int[n];
             for (int i = 0; i < n; i++)
             {
                 _skeletonDownParent[i] = -1;
                 _skeletonUpChild[i] = -1;
+                _skeletonLeftChild[i] = -1;
+                _skeletonRightChild[i] = -1;
             }
 
             for (int i = 0; i < n; i++)
@@ -1085,6 +1097,12 @@ namespace PrincesPalace
                 int chosen = childrenOf[i][0];
                 foreach (var c in childrenOf[i]) if (TalentSkeleton.DxSlot[c] == 0) chosen = c;
                 _skeletonUpChild[i] = chosen;
+
+                foreach (var c in childrenOf[i])
+                {
+                    if (TalentSkeleton.DxSlot[c] == -1) _skeletonLeftChild[i] = c;
+                    else if (TalentSkeleton.DxSlot[c] == 1) _skeletonRightChild[i] = c;
+                }
             }
 
             var byDepth = new Dictionary<int, List<int>>();
@@ -1170,14 +1188,53 @@ namespace PrincesPalace
             var groups = new List<UiNavGroup<Selectable>>();
             var links = new List<UiNavLink<Selectable>?>();
 
+            // CLAMP, NOT WRAP (owner playtest, 2026-09-23: "Right from
+            // Shatter goes to The Flock" -- Rail's owner-default wrap
+            // treated a 3-wide tier as a ring, so Right off the rightmost
+            // stone stepped past centre and landed on the leftmost. A tier
+            // is not a ring: DxSlot -1/0/+1 is a persistent LANE climbing
+            // tier to tier (Flock/Gift/Shatter, all the way to the
+            // capstone), so running off either edge should continue up
+            // that lane instead -- wired below as an explicit Link, once
+            // the group itself stops wrapping). Scoped to talentTier*
+            // groups only: Rail's wrap default is unchanged everywhere
+            // else in the kit.
             foreach (var tier in _skeletonTiers)
             {
                 if (tier.Count < 2) continue;
 
                 var members = tier.Select(OrbAt).ToList();
                 var group = RuntimeNavWiring.Group($"talentTier{TalentSkeleton.Depth[tier[0]]}",
-                    UiNavGroupKind.Rail, members);
+                    UiNavGroupKind.Rail, members, wrap: UiNavWrap.Clamp);
                 if (group != null) groups.Add(group);
+            }
+
+            // THE LANE CONTINUES: off either edge of a 3-wide tier, Left/
+            // Right now reaches the same slot Up already would -- the
+            // dx-preserving child one tier up -- rather than going nowhere
+            // (Clamp's own effect with no link) or wrapping to the far
+            // side. Every tier shares this identically, which is the fix
+            // the owner asked for ("fix the class ... not a special case
+            // for Shatter"): the loop runs once per depth, for whichever
+            // constellation is open.
+            foreach (var tier in _skeletonTiers)
+            {
+                if (tier.Count < 2) continue;
+
+                int leftmost = tier[0];
+                int rightmost = tier[tier.Count - 1];
+
+                if (_skeletonUpChild[leftmost] >= 0)
+                {
+                    links.Add(RuntimeNavWiring.Link(OrbAt(leftmost), UiNavDirection.Left,
+                        OrbAt(_skeletonUpChild[leftmost])));
+                }
+
+                if (_skeletonUpChild[rightmost] >= 0)
+                {
+                    links.Add(RuntimeNavWiring.Link(OrbAt(rightmost), UiNavDirection.Right,
+                        OrbAt(_skeletonUpChild[rightmost])));
+                }
             }
 
             // THE SCREEN'S OWN CHROME, WHICH WAS NOT IN THE GRAPH AT ALL
@@ -1210,10 +1267,21 @@ namespace PrincesPalace
             if (panelActions != null) groups.Add(panelActions);
 
             // Every orb in a ONE-WIDE tier (the root, the convergence, the
-            // capstone) sits in the sky's centre column, so what lies left and
-            // right of it is the pair of arrows flanking the sky -- a tier of
-            // three keeps its own Rail's Left/Right instead, wrap included
-            // (TalentGamepadNavigationTests pins that wrap and it is unchanged).
+            // capstone) sits in the sky's centre column. The root and the
+            // convergence each feed a triple, so they have a REAL talent to
+            // their left and right -- their own dx-1/dx+1 child, one hop up
+            // -- and Left/Right now reaches it (owner playtest, 2026-09-23:
+            // "pressing LEFT [from Convergence] moves focus onto the arrows
+            // ... Expected: LEFT/RIGHT go to the left/right talent option in
+            // the tree"). The page arrows are still reachable exactly as
+            // before -- LT/RT's own trigger shortcut (StepTab), the mouse,
+            // and the arrows' own links back to the root -- so nothing about
+            // paging constellations is lost by this.
+            //
+            // The capstone feeds nothing: it has no left/right talent to
+            // reach, so its own Left/Right keeps the old arrow fallback --
+            // "the page arrows should only be reached when there is no
+            // talent further in that direction" is exactly this case.
             //
             // The arrows are never hidden, only greyed at the ends of the line
             // (Refresh's own `prevPathButton.interactable = CanStep(...)`), so
@@ -1225,11 +1293,15 @@ namespace PrincesPalace
             {
                 if (tier.Count != 1) continue;
 
-                var lone = OrbAt(tier[0]);
+                int slot = tier[0];
+                var lone = OrbAt(slot);
                 if (lone == null) continue;
 
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, prevPathButton));
-                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, nextPathButton));
+                var leftChild = _skeletonLeftChild[slot] >= 0 ? OrbAt(_skeletonLeftChild[slot]) : null;
+                var rightChild = _skeletonRightChild[slot] >= 0 ? OrbAt(_skeletonRightChild[slot]) : null;
+
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Left, (Selectable)leftChild ?? prevPathButton));
+                links.Add(RuntimeNavWiring.Link(lone, UiNavDirection.Right, (Selectable)rightChild ?? nextPathButton));
             }
 
             // BOTH ARROWS COME BACK TO THE ROOT, stated once here rather than
