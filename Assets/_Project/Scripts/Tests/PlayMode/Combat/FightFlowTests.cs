@@ -275,9 +275,14 @@ namespace PrincesPalace.PlayModeTests
             float rowBottom = row.position.y - row.rect.height * 0.5f * row.lossyScale.y;
             float backTop = back.position.y + back.rect.height * 0.5f * back.lossyScale.y;
 
+            // Domain.UiKit.FightSubmenuLayout.RowGap, not a bare pixel
+            // literal -- this gap IS one row's own gap (see RowsBottom), and
+            // it grew from 6 to 10 the same playtest pass that made RowPitch
+            // read VerbPitch instead of a separately hand-tuned number.
             Assert.Greater(rowBottom, backTop, "the only row stacks above BACK, never through it");
-            Assert.Less(rowBottom - backTop, 8f * row.lossyScale.y,
-                "and immediately above it, with no dead space -- which is what bottom-anchoring buys");
+            Assert.Less(rowBottom - backTop,
+                (FightSubmenuLayout.RowGap + 0.01f) * row.lossyScale.y,
+                "and immediately above it, by exactly one row's own gap -- which is what bottom-anchoring buys");
         }
 
         [UnityTest]

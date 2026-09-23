@@ -1952,7 +1952,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // could drift.
         private const float VerbRowW = FightSubmenuLayout.VerbRowW;
         private const float VerbRowH = FightSubmenuLayout.VerbRowH;
-        private const float VerbPitch = 62f;
+
+        // Reads FightSubmenuLayout.VerbPitch rather than restating 62 --
+        // FightSubmenuLayout.RowPitch (the submenu column's own row spacing)
+        // now reads this same constant, which is the fix for the playtest
+        // bug where the two columns' pitches had drifted apart. One copy,
+        // not two that can disagree again.
+        private const float VerbPitch = FightSubmenuLayout.VerbPitch;
 
         // Rendered BOTTOM-UP so ATTACK sits nearest the cursor, and tiered so
         // read order matches use frequency: ATTACK loud, SKILL/ITEM neutral,

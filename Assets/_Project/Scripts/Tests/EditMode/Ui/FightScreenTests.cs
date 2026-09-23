@@ -729,8 +729,15 @@ namespace PrincesPalace.Domain.Tests
             float back = RectOf("SubmenuBack").Top;
             float lastRow = RectOf($"CharacterSkill{FightSubmenuLayout.PoolSize - 1}").Bottom;
 
+            // 10, up from 8 -- this gap IS FightSubmenuLayout.RowGap (see
+            // RowsBottom), which grew from 6 to 10 when RowPitch started
+            // reading VerbPitch (62) instead of its own hand-tuned number
+            // (58f = RowHeight 52 + the old RowGap 6f). "No dead space" means
+            // one row's own gap, same as every other row-to-row gap in the
+            // list -- not a fixed pixel budget.
             Assert.Greater(lastRow, back, "rows stack above BACK, never through it");
-            Assert.Less(lastRow - back, 8f, "and immediately above it, with no dead space");
+            Assert.Less(lastRow - back, FightSubmenuLayout.RowGap + 0.01f,
+                "and immediately above it, by exactly one row's own gap");
         }
 
         [Test]

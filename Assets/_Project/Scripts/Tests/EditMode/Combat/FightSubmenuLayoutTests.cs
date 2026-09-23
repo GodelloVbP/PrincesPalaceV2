@@ -116,16 +116,17 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            // 1870/942, UP FROM 1384/648 -- RowHeight 40->52 (owner playtest,
-            // 2026-09-23, "make the submenu buttons match the command
-            // buttons' size") lengthened RowPitch from 46 to 58, which this
-            // test's own literals have to move with; see FightSubmenuLayout.
-            // RowHeight's own comment for why 52.
-            Assert.AreEqual(1870f, FightSubmenuLayout.RowY(40, 0), 0.01f,
+            // 2030/1038, UP FROM 1870/942 -- RowPitch 58->62 (owner playtest,
+            // 2026-09-23, "submenu rows drift upward against the command
+            // rows"): RowPitch now reads VerbPitch directly instead of a
+            // separately hand-tuned RowGap, so this test's own literals move
+            // with it again; see FightSubmenuLayout.RowPitch's own comment
+            // for why 62.
+            Assert.AreEqual(2030f, FightSubmenuLayout.RowY(40, 0), 0.01f,
                 "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
             int shown = FightSubmenuLayout.VisibleCount(40);
-            Assert.AreEqual(942f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+            Assert.AreEqual(1038f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
                 "clamped, the top row must sit at the pool height");
         }
 
@@ -144,14 +145,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Twelve rows against a FIVE-row window (RowsInView, down from eight,
-        // 2026-09-22): seven rows' worth of travel. 406, UP FROM 322 (RowHeight
-        // 40->52, owner playtest 2026-09-23), not the 364 seven rows at 52px
-        // suggest, for the same reason as before: travel is measured in
-        // PIXELS and twelve rows carry eleven gaps against the window's four.
+        // 2026-09-22): seven rows' worth of travel. 434, UP FROM 406
+        // (RowPitch 58->62, owner playtest 2026-09-23, submenu row spacing
+        // now reads VerbPitch directly), not the 434... er, not a round
+        // number, for the same reason as before: travel is measured in
+        // PIXELS and twelve rows carry eleven gaps against the window's four,
+        // each of those gaps now 4px wider (RowGap 6->10).
         [Test]
         public void AListLongerThanTheWindowScrollsByTheDifference()
         {
-            Assert.AreEqual(406f, FightSubmenuLayout.ScrollRange(12), 0.01f);
+            Assert.AreEqual(434f, FightSubmenuLayout.ScrollRange(12), 0.01f);
         }
 
         // SCROLL ZERO IS THE TOP OF THE LIST, which is the inversion worth
@@ -161,8 +164,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ScrollZeroShowsTheTopOfTheListAndFullScrollTheBottom()
         {
-            Assert.AreEqual(-406f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
-            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 406f), 0.01f);
+            Assert.AreEqual(-434f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 434f), 0.01f);
         }
 
         // The thumb is the visible fraction of the list, floored so it stays
@@ -170,14 +173,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThumbShowsHowMuchOfTheListIsOnScreen()
         {
-            // 116.89, UP FROM 91.9 (RowHeight 40->52, owner playtest
+            // 122.62, UP FROM 116.89 (RowPitch 58->62, owner playtest
             // 2026-09-23) -- the thumb is the visible fraction of the content
-            // BY HEIGHT (284 of 690 now, not 224 of 546), and twelve rows
-            // carry eleven gaps against the window's four. Pinned at the real
-            // number, because the tidy one would mean the thumb was measuring
-            // rows rather than pixels and would drift the moment the gap
-            // changed.
-            Assert.AreEqual(116.89f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
+            // BY HEIGHT (300 of 734 now), and twelve rows carry eleven gaps
+            // against the window's four. Pinned at the real number, because
+            // the tidy one would mean the thumb was measuring rows rather
+            // than pixels and would drift the moment the gap changed.
+            Assert.AreEqual(122.62f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
                 "the thumb must be the visible fraction of the content's height");
 
             // ABOVE AND BELOW THE VIEWPORT'S OWN CENTRE, not the container's.

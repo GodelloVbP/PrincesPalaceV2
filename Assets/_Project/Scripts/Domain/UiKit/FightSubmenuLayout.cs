@@ -29,8 +29,22 @@ namespace PrincesPalace.Domain.UiKit
         // the compiler can check instead of a resemblance two authors have
         // to maintain by hand.
         public const float RowHeight = VerbRowH;
-        public const float RowGap = 6f;
-        public const float RowPitch = RowHeight + RowGap;
+
+        // ONE SOURCE FOR THE PITCH, not a second hand-tuned gap. This used to
+        // be a bare `6f` here while the verb column carried its own separate
+        // `VerbPitch = 62f` in FightScreen -- RowHeight already read VerbRowH
+        // so the two columns' ROW HEIGHTS matched, but nothing made their ROW
+        // SPACING match, and 52+6=58 drifted a steady 4px/row short of the
+        // verb column's 62. That is the whole shape of the playtest bug this
+        // closes ("submenu rows drift upward against the command rows"): row
+        // 0 lined up, row 3 (BACK) was 12px off, and it read as the panel
+        // sitting too high rather than as an arithmetic mismatch. RowPitch
+        // now reads VerbPitch directly -- the same fix RowHeight already
+        // applied to VerbRowH, for the same reason -- and RowGap is DERIVED
+        // from it rather than being the independent number that drifted.
+        public const float VerbPitch = 62f;
+        public const float RowPitch = VerbPitch;
+        public const float RowGap = RowPitch - RowHeight;
 
         public const float CommandBottom = -486f;
 
