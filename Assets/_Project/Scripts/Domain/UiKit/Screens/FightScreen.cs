@@ -2385,15 +2385,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // empty below a short description; moving it out of the middle of the
         // battlefield and shrinking it is the actual request, not a like-for-
         // like reposition.
-        // WIDER, on request -- 340 read the body text at a squint from the
-        // couch; this is the width a 15pt body line needs to hold three
-        // lines without wrapping to five. Grows toward the battlefield
-        // centre (DetailX is anchored off the screen's own right edge, same
-        // as always), so a collision this opens is with the enemy rack, not
-        // with anything to its right -- UiAudit's four-aspect pass is what
-        // would catch it, and the fix is to move the column, never to
-        // AllowOverlap it (see BuildDetailColumn's own header).
-        private const float DetailW = 460f;
+        // 2026-09-23 PROPORTION FIX (owner playtest, "way out of
+        // proportion"): 460 was sized for the three-line body-text card the
+        // icon rework (this file's own DetailHFor header) already dropped --
+        // the icon rows/value text this card actually draws need a fraction
+        // of that width, and unlike DetailH (a pure function of row count
+        // since pass 2) DetailW never shrank to match, so the box hugged its
+        // content on one axis and swam in dead space on the other. 260 is
+        // DetailContentLeft's own 22px pad, the widest icon+gap+value row
+        // (28 + 8 + up to ~11 characters at 14pt, "10 STAMINA"-shaped), and
+        // the same pad mirrored on the right -- HUGS, does not merely
+        // shrink: recompute if a longer value string is ever authored.
+        // Grows toward the battlefield centre (DetailX is anchored off the
+        // screen's own right edge, same as always), so a collision this
+        // opens is with the enemy rack, not with anything to its right --
+        // UiAudit's four-aspect pass is what would catch it, and the fix is
+        // to move the column, never to AllowOverlap it (see BuildDetailColumn's
+        // own header).
+        private const float DetailW = 260f;
         private const float DetailRightMargin = 40f;
         private const float DetailBottomMargin = 40f;
         private static float DetailX => (960f - DetailRightMargin) - DetailW * 0.5f;
@@ -2427,6 +2436,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the row has left for its value text.
         public const float DetailIconSize = 28f;
         public const float DetailIconValueGap = 8f;
+
+        // THE HERO ICON (owner playtest, "the skill icon sized and anchored
+        // as the card's hero, beside the title" -- the DetailIconKind.Element
+        // row is the only one that identifies WHAT the card is describing
+        // rather than a cost/limit on casting it, the same reason
+        // FillDetailIcons already special-cases it (one type per skill, at
+        // most). It is NOT a new node: RefreshDetail (FightController.Hud.cs)
+        // finds whichever pool slot holds the Element icon for the current
+        // hover and repositions/resizes THAT slot, so
+        // FightSkillDetailElementIconTests' "DetailIcon{index}, active,
+        // sprited from element_*" contract is untouched -- only where and
+        // how big it paints changes. A skill with no Element row (Mend, a
+        // plain heal) shows no hero at all; the title sits back at its
+        // un-indented left margin (DetailNameLeftFor(false)).
+        public const float DetailHeroIconSize = 36f;
+        private const float DetailHeroGap = 10f;
 
         // A PURE LAYOUT FUNCTION (coordinator ask, 2026-09-23 pass 2 --
         // "a dynamic box around it" means resized at runtime, not just built
@@ -2497,6 +2522,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public static float DetailNameYFor(int count) => DetailFrameTopFor(count) - DetailTopPad - 12f;
         public static float DetailKindYFor(int count) => DetailFrameTopFor(count) - DetailTopPad - 32f;
 
+        // THE ROW COUNT DetailHFor/DetailIconRowYFor SHOULD SIZE AROUND --
+        // the hero icon (see DetailHeroIconSize's own header) sits in the
+        // header block beside the title, not in the row stack, so it must
+        // not reserve a row of its own or the box grows one pitch (36px)
+        // taller than its rows actually need. RefreshDetail is the only
+        // caller: it works out `shown` (panel.Icons.Count) and whether one
+        // of those icons is the hero, and passes THIS, never `shown`
+        // directly, to every count-aware function below.
+        public static int DetailListRowCountFor(int shown, bool hasHero) =>
+            hasHero ? (shown > 0 ? shown - 1 : 0) : shown;
+
+        // The content column's own left edge/width, pulled out of
+        // BuildDetailColumn's local `left`/`contentW` so RefreshDetail can
+        // reuse the identical numbers when it repositions the hero icon and
+        // the name/kind block around it (single source, same reason
+        // DetailX/DetailY are properties rather than inlined at each call
+        // site).
+        public static float DetailContentLeft => -DetailW * 0.5f + 22f;
+        public static float DetailContentW => DetailW - 44f;
+
+        // Name/kind make room for the hero icon by starting further right
+        // and losing that same width -- ONLY when a hero is actually
+        // painted (DetailNameLeftFor(false)/DetailNameWidthFor(false) are
+        // the plain, un-indented values BuildDetailColumn already built the
+        // static tree at, so a skill with no Element row, like a plain
+        // heal, never reserves hero space it does not use).
+        public static float DetailNameLeftFor(bool hasHero) =>
+            hasHero ? DetailContentLeft + DetailHeroIconSize + DetailHeroGap : DetailContentLeft;
+        public static float DetailNameWidthFor(bool hasHero) =>
+            hasHero ? DetailContentW - DetailHeroIconSize - DetailHeroGap : DetailContentW;
+
+        // The hero icon's own local position: pinned to the content
+        // column's left edge (same X every other icon row uses) and
+        // centred across the name+kind block's own vertical span, so it
+        // reads as one header unit with the title rather than a row that
+        // happens to be bigger.
+        public static float DetailHeroIconXFor() => DetailContentLeft + DetailHeroIconSize * 0.5f;
+        public static float DetailHeroIconYFor(int listRowCount) =>
+            (DetailNameYFor(listRowCount) + DetailKindYFor(listRowCount)) * 0.5f;
+
         // Row `index`'s local Y for a card showing `count` icons, packed
         // TIGHT under the name block with no gap and no dead space above the
         // bottom pad -- DetailHFor(count) was sized to fit EXACTLY
@@ -2545,8 +2610,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Options/Party/RunStats already draw their own bordered cards with.
         private UiNode BuildDetailColumn()
         {
-            float contentW = DetailW - 44f;
-            float left = -DetailW * 0.5f + 22f;
+            float contentW = DetailContentW;
+            float left = DetailContentLeft;
             const int staticCount = FightHudSpec.DetailIconRows;
 
             var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(contentW, 22f), 18,

@@ -1224,6 +1224,17 @@ namespace PrincesPalace
             rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
         }
 
+        // Both axes at once -- FightController.Hud.cs's RefreshDetail needs
+        // this for the skill detail card's hero icon and its name/kind
+        // block, which move sideways (not just up and down like every other
+        // count-resized row) depending on whether the current hover has a
+        // hero icon to make room for.
+        private static void MoveTo(RectTransform rect, float x, float y)
+        {
+            if (rect == null) return;
+            rect.anchoredPosition = new Vector2(x, y);
+        }
+
         // ---- queries the view asks of the session --------------------------------
 
         public bool HasSession => _session != null;

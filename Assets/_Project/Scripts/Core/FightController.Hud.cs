@@ -401,20 +401,63 @@ namespace PrincesPalace
             detailKind.SetContent(panel.Kind);
 
             int shown = panel.Icons.Count;
-            ResizeDetailColumn(shown);
-            MoveToY(detailName.rectTransform, FightScreen.DetailNameYFor(shown));
-            MoveToY(detailKind.rectTransform, FightScreen.DetailKindYFor(shown));
 
+            // THE HERO ICON (owner playtest, "the skill icon ... as the
+            // card's hero, beside the title" -- FightScreen.DetailHeroIconSize's
+            // own header): the Element row, when the current hover has one,
+            // paints beside the title instead of in the row stack. It is
+            // found by Kind, not a fixed index, because Icons is compact --
+            // which pool slot holds it depends on which earlier facts (mana,
+            // cost, cooldown) this particular skill happened to carry.
+            int heroIndex = -1;
+            for (int i = 0; i < panel.Icons.Count; i++)
+            {
+                if (panel.Icons[i].Kind == DetailIconKind.Element) { heroIndex = i; break; }
+            }
+            bool hasHero = heroIndex >= 0;
+
+            // The row stack sizes/positions around this, not `shown` --
+            // the hero does not reserve a row of its own (DetailListRowCountFor's
+            // own header).
+            int listRows = FightScreen.DetailListRowCountFor(shown, hasHero);
+            ResizeDetailColumn(listRows);
+
+            float nameLeft = FightScreen.DetailNameLeftFor(hasHero);
+            float nameWidth = FightScreen.DetailNameWidthFor(hasHero);
+            MoveTo(detailName.rectTransform, nameLeft, FightScreen.DetailNameYFor(listRows));
+            SetWidth(detailName.rectTransform, nameWidth);
+            MoveTo(detailKind.rectTransform, nameLeft, FightScreen.DetailKindYFor(listRows));
+            SetWidth(detailKind.rectTransform, nameWidth);
+
+            // `rowSlot` packs the non-hero rows tight, same as `i` used to
+            // when every active icon occupied its own row -- the hero icon
+            // (if any) is skipped here so the row beneath it does not leave
+            // a gap where the hero used to sit in the old one-slot-per-row
+            // layout.
+            int rowSlot = 0;
             for (int i = 0; i < detailIconImages.Length; i++)
             {
                 bool has = i < shown;
+                bool isHero = has && i == heroIndex;
 
                 if (detailIconImages[i] != null)
                 {
                     if (has)
                     {
                         detailIconImages[i].gameObject.SetShown(true);
-                        MoveToY(detailIconImages[i].rectTransform, FightScreen.DetailIconRowYFor(shown, i));
+                        var iconRect = detailIconImages[i].rectTransform;
+                        if (isHero)
+                        {
+                            SetSize(iconRect, FightScreen.DetailHeroIconSize);
+                            MoveTo(iconRect, FightScreen.DetailHeroIconXFor(), FightScreen.DetailHeroIconYFor(listRows));
+                        }
+                        else
+                        {
+                            SetSize(iconRect, FightScreen.DetailIconSize);
+                            MoveTo(iconRect, FightScreen.DetailContentLeft + FightScreen.DetailIconSize * 0.5f,
+                                FightScreen.DetailIconRowYFor(listRows, rowSlot));
+                        }
+
                         IconCache<string>.Apply(detailIconImages[i], DetailIconSpriteFor(panel.Icons[i]), disableOnMiss: true);
                     }
                     else
@@ -423,20 +466,47 @@ namespace PrincesPalace
                     }
                 }
 
+                // NO VALUE LABEL FOR A ROW WITH NOTHING TO SAY -- Defense/
+                // Reach/AreaOfEffect carry their fact through the icon alone
+                // (FillDetailIcons' own "ONE ICON, COMPACT" header) and were
+                // built with Value == "", but the label object used to stay
+                // active anyway, an empty TMP_Text taking its place in the
+                // row and reading as a bare icon adrift in blank space. The
+                // icon is not "genuinely nothing" (it carries the fact by
+                // itself) so the ROW stays; only the label that has nothing
+                // to print is hidden. The hero icon never gets a value label
+                // either -- its sprite alone identifies the skill.
                 if (i < detailIconValues.Length && detailIconValues[i] != null)
                 {
-                    detailIconValues[i].gameObject.SetShown(has);
-                    if (has)
+                    bool hasValue = has && !isHero && !string.IsNullOrEmpty(panel.Icons[i].Value);
+                    detailIconValues[i].gameObject.SetShown(hasValue);
+                    if (hasValue)
                     {
                         detailIconValues[i].SetContent(panel.Icons[i].Value);
-                        MoveToY(detailIconValues[i].rectTransform, FightScreen.DetailIconRowYFor(shown, i));
+                        MoveToY(detailIconValues[i].rectTransform, FightScreen.DetailIconRowYFor(listRows, rowSlot));
                     }
                 }
+
+                if (has && !isHero) rowSlot++;
             }
         }
 
-        // THE FIVE PIECES THAT DRAW THE CARD'S OWN BOX, resized for `shown`
-        // icon rows and repositioned so the card's BOTTOM EDGE NEVER MOVES
+        private static void SetWidth(RectTransform rect, float width)
+        {
+            if (rect == null) return;
+            rect.sizeDelta = new Vector2(width, rect.sizeDelta.y);
+        }
+
+        private static void SetSize(RectTransform rect, float size)
+        {
+            if (rect == null) return;
+            rect.sizeDelta = new Vector2(size, size);
+        }
+
+        // THE FIVE PIECES THAT DRAW THE CARD'S OWN BOX, resized for
+        // `listRows` (RIGHT rows only -- the hero icon does not reserve a
+        // row of its own, FightScreen.DetailListRowCountFor's own header)
+        // and repositioned so the card's BOTTOM EDGE NEVER MOVES
         // (FightScreen.DetailCentreYFor's own header) -- the outer column
         // (its rect is what the click-through/audit geometry and
         // detailColumn.SetShown above both reason about), the flat fill
@@ -444,15 +514,15 @@ namespace PrincesPalace
         // centre, so only its OWN size has to change), and the four Rim
         // edges (Top/Bottom move, Left/Right resize -- Ui.Rim's own yield
         // order, see detailColumnRim's header).
-        private void ResizeDetailColumn(int shown)
+        private void ResizeDetailColumn(int listRows)
         {
-            float height = FightScreen.DetailHFor(shown);
+            float height = FightScreen.DetailHFor(listRows);
 
             var columnRect = detailColumn != null ? detailColumn.transform as RectTransform : null;
             if (columnRect != null)
             {
                 columnRect.sizeDelta = new Vector2(columnRect.sizeDelta.x, height);
-                MoveToY(columnRect, FightScreen.DetailCentreYFor(shown));
+                MoveToY(columnRect, FightScreen.DetailCentreYFor(listRows));
             }
 
             if (detailColumnFill != null)

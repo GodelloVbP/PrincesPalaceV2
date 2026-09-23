@@ -15,6 +15,7 @@ using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -132,6 +133,85 @@ namespace PrincesPalace.PlayModeTests
 
             bool hasElementRow = panel.Icons.Any(icon => icon.Kind == DetailIconKind.Element);
             Assert.IsFalse(hasElementRow, "a heal with no element still carries an Element icon row");
+        }
+
+        // THE THREE BLANK ROWS the owner's playtest report flagged
+        // ("icons with no values") are BY DESIGN, not missing data: Defense/
+        // Reach/AreaOfEffect carry their fact through the icon glyph alone
+        // (FillDetailIcons' own "ONE ICON, COMPACT" header), so Value is ""
+        // on purpose and the row must stay. What was a real bug is that the
+        // value LABEL used to stay active anyway -- an empty TMP_Text
+        // reserving its slot and reading as a blank gap beside the icon.
+        // Arcane Bolt (SingleEnemy, IgnoresDefense == false, one Arcane
+        // packet) carries all three: Defense ("magical", Arcane is not
+        // physical), Reach and AreaOfEffect (every non-Self skill gets
+        // both).
+        [UnityTest]
+        public IEnumerator HoveringADamagingSkillHidesTheValueLabelForIconOnlyRows()
+        {
+            yield return LoadFightWithAnArcaneSkill();
+
+            Click("Verb1");
+            yield return null;
+            _fight.HoverRowForTest(0);
+            yield return null;
+
+            var panel = _fight.CurrentDetailForTest();
+            var valueless = new List<int>();
+            for (int i = 0; i < panel.Icons.Count; i++)
+            {
+                if (string.IsNullOrEmpty(panel.Icons[i].Value)) valueless.Add(i);
+            }
+
+            Assert.IsNotEmpty(valueless,
+                "fixture: Arcane Bolt should carry at least one icon-only row (Defense/Reach/AreaOfEffect)");
+
+            foreach (int index in valueless)
+            {
+                var iconImage = Named($"DetailIcon{index}").GetComponent<Image>();
+                Assert.IsTrue(iconImage.gameObject.activeInHierarchy,
+                    $"row {index} ({panel.Icons[index].Kind}) has no value but IS the fact -- its icon must stay visible");
+
+                var valueLabel = Named($"DetailIconValue{index}");
+                Assert.IsFalse(valueLabel.activeInHierarchy,
+                    $"row {index} ({panel.Icons[index].Kind}) has no value to print -- its label must be hidden, " +
+                    "not an empty active text box");
+            }
+        }
+
+        // THE HERO ICON (owner playtest, "the skill icon ... as the card's
+        // hero, beside the title") -- Arcane Bolt's Element row paints
+        // enlarged, beside DetailName/DetailKind, not in the row stack: it
+        // stays the same GameObject at the same index (FightScreen.
+        // DetailHeroIconSize's own header, and this file's own
+        // HoveringAnArcaneSkillShowsAnActiveElementRow above, which already
+        // pins its name/activeInHierarchy/sprite), just bigger and to the
+        // card's own top-left rather than stacked under the other rows.
+        [UnityTest]
+        public IEnumerator TheElementRowPaintsAsAHeroIconBesideTheTitleNotInTheRowStack()
+        {
+            yield return LoadFightWithAnArcaneSkill();
+
+            Click("Verb1");
+            yield return null;
+            _fight.HoverRowForTest(0);
+            yield return null;
+
+            var panel = _fight.CurrentDetailForTest();
+            int index = panel.Icons.FindIndex(icon => icon.Kind == DetailIconKind.Element);
+            Assert.GreaterOrEqual(index, 0, "fixture: Arcane Bolt should carry an Element icon row");
+
+            var heroRect = (RectTransform)Named($"DetailIcon{index}").transform;
+            Assert.AreEqual(FightScreen.DetailHeroIconSize, heroRect.sizeDelta.x, 0.01f,
+                "the hero icon must paint at its own larger size, not the compact row size");
+            Assert.AreEqual(FightScreen.DetailHeroIconSize, heroRect.sizeDelta.y, 0.01f);
+
+            var nameRect = (RectTransform)Named("DetailName").transform;
+            Assert.Greater(nameRect.anchoredPosition.x, heroRect.anchoredPosition.x,
+                "the title must sit to the RIGHT of the hero icon, not overlap or trail it");
+
+            var valueLabel = Named($"DetailIconValue{index}");
+            Assert.IsFalse(valueLabel.activeInHierarchy, "the hero icon carries no value label of its own");
         }
     }
 }

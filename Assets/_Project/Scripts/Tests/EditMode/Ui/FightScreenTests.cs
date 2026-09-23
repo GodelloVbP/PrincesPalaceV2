@@ -1266,6 +1266,61 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(names, "SubmenuBack");
         }
 
+        // ---- the container is gone (owner playtest, 2026-09-23) --------------------
+        //
+        // "The whole list sits inside a tall purple panel that extends far
+        // below the last button. Remove the container surrounding it." The
+        // frame node itself survives (it is still what ResizeSubmenuContainer
+        // moves/resizes at runtime), but it must carry no fill and no rim any
+        // more -- neither a "SubmenuContainerFill" child nor a "SubmenuContainer"
+        // -named Rim edge (Ui.Rim yields four edges sharing the frame's own
+        // base name) should exist anywhere in the tree.
+        [Test]
+        public void TheSubmenuFrameHasNoFillOrRimLeft()
+        {
+            var names = Walk(Screen().Root).Select(n => n.Name).ToList();
+
+            CollectionAssert.DoesNotContain(names, "SubmenuContainerFill",
+                "the submenu's purple background panel is supposed to be gone");
+            Assert.IsFalse(names.Any(n => n.StartsWith("SubmenuContainer") && n != "SubmenuContainer"),
+                "no Rim edge (SubmenuContainerTop/Bottom/Left/Right etc.) should remain either");
+        }
+
+        [Test]
+        public void TheSubmenuContainerNodeEmitsNoGraphicOfItsOwn()
+        {
+            // A bare Panel wrapping the viewport/scrollbar/BACK, not a plate --
+            // this is what lets it grow/shrink to any row count without ever
+            // tripping UiAudit's sibling-overlap check on itself.
+            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
+            Assert.IsTrue(frame.EmitsNoGraphic,
+                "SubmenuContainer must be a plain group node -- give it back its fill/rim and the container is back");
+        }
+
+        // ---- the rows match the command buttons beside them (owner playtest,
+        // 2026-09-23): "the skill buttons are narrower/shorter with thinner
+        // borders than the main command buttons beside them ... make the
+        // submenu buttons match the command buttons' size and border." Both
+        // now read the exact same FightSubmenuLayout.VerbRowW/VerbRowH pair,
+        // so they pick the identical themed plate at the identical size.
+        [Test]
+        public void ASubmenuRowIsExactlyTheSameSizeAsACommandRow()
+        {
+            var commandRow = RectOf("Verb0");
+            var submenuRow = RectOf("CharacterSkill0");
+            var backRow = RectOf("SubmenuBack");
+
+            Assert.AreEqual(commandRow.Width, submenuRow.Width, 0.01f,
+                "a submenu row must be exactly as wide as a command row");
+            Assert.AreEqual(commandRow.Height, submenuRow.Height, 0.01f,
+                "a submenu row must be exactly as tall as a command row");
+            Assert.AreEqual(commandRow.Height, backRow.Height, 0.01f,
+                "BACK is a row too, and must match the same height");
+
+            Assert.AreEqual(FightSubmenuLayout.VerbRowW, submenuRow.Width, 0.01f);
+            Assert.AreEqual(FightSubmenuLayout.VerbRowH, submenuRow.Height, 0.01f);
+        }
+
         // ---- verb theming --------------------------------------------------------
 
         [TestCase(0, ButtonTheme.Crimson)]
@@ -1412,6 +1467,36 @@ namespace PrincesPalace.Domain.Tests
             float lastRowBottom = FightScreen.DetailIconRowYFor(count, count - 1) - FightScreen.DetailIconSize * 0.5f;
             float cardBottom = FightScreen.DetailFrameBottomFor(count);
             Assert.Greater(lastRowBottom, cardBottom, "the last row must clear the card's own bottom edge");
+        }
+
+        // ---- the hero icon (owner playtest, "way out of proportion" fix) ------
+
+        // The Element icon moves beside the title instead of taking a row of
+        // its own (DetailHeroIconSize's own header) -- DetailListRowCountFor
+        // is the seam that keeps the row STACK from reserving space for it.
+        [TestCase(5, false, 5)]
+        [TestCase(5, true, 4)]
+        [TestCase(1, true, 0)]
+        [TestCase(0, true, 0)]
+        [TestCase(0, false, 0)]
+        public void DetailListRowCountExcludesTheHeroIconOnlyWhenOnePresent(int shown, bool hasHero, int expectedRows)
+        {
+            Assert.AreEqual(expectedRows, FightScreen.DetailListRowCountFor(shown, hasHero));
+        }
+
+        // A card whose height still sized around `shown` (raw icon count)
+        // would be one full row pitch (36px) taller than its rows actually
+        // need whenever a hero is present -- this is the regression the
+        // owner's "far larger than its content" report was pointing at.
+        [Test]
+        public void TheHeroIconDoesNotInflateTheCardsHeight()
+        {
+            int rowsWithHero = FightScreen.DetailListRowCountFor(5, hasHero: true);
+            int rowsWithoutHero = FightScreen.DetailListRowCountFor(4, hasHero: false);
+
+            Assert.AreEqual(4, rowsWithHero);
+            Assert.AreEqual(FightScreen.DetailHFor(rowsWithoutHero), FightScreen.DetailHFor(rowsWithHero), 0.01f,
+                "a 5-icon panel with a hero and a 4-row panel with none must be exactly as tall");
         }
 
         // ---- status badges (PLAN_STATUS_EFFECT_UI, package B) -----------------
