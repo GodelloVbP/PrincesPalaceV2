@@ -19,28 +19,45 @@ uGUI with TextMeshPro (`TMP_Text`/`Button`/`Image`); Hades-style painterly art d
 
 ## How work happens (Claude Code routing)
 
-Opus 5.5 (the main session) orchestrates only: reads files, runs `git status`,
-writes briefs, launches agents, judges reports. The orchestrator NEVER edits,
-runs tests, or writes scripts directly.
+Opus 5.5 at medium effort (the main session) orchestrates only: reads files,
+runs `git status`, writes briefs, launches agents, judges reports. The
+orchestrator NEVER edits, runs tests, or writes scripts directly.
 
 Fable is not used on this project for now (owner, 2026-09-23); do not switch
 a session or agent to it.
 
 Four agent types, each pinned to one model, plus the built-in
 `claude-code-guide`. No other `subagent_type`, no model override, no
-`Workflow` tool — enforced by `tools/githooks/route_agents.py`.
+`Workflow` tool — enforced by `tools/githooks/route_agents.py`. Opus costs
+more per token than Sonnet, so Sonnet 5 stays the default implementer and
+is never the main implementer.
+
+**Triage before every implementation launch:** is this doable as a bounded
+change, or does it go deep architectural? Doable → `implementer`. Deep
+architectural → `senior`, with a stated reason — every Opus launch is
+hook-checked, not a per-call judgment call.
 
 | Type | Model | Use when |
 |---|---|---|
 | `reader` | Haiku | Locate files and extract facts. Returns file paths, line numbers, and relevant excerpts. Never interprets or diagnoses. |
-| `implementer` | Sonnet | Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
-| `verifier` | Sonnet | Run one named gate once, report pass/fail. |
-| `architect` | Opus | Architectural change: brief names the change, affected contracts/lifecycles, failure risks. |
+| `implementer` | Sonnet 5 | The default for every implementation. Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
+| `verifier` | Sonnet 5 | Run one named gate once, report pass/fail. |
+| `senior` | Opus 5.5, medium effort | Deep architectural work only: brief must carry `Escalation:` with one of three criteria; hook-enforced. |
 
 **Handoff pattern:** Reader outputs `file.cs:123-145` + excerpt. Implementer's brief includes that exact location and excerpt, so implementer reads only what's necessary. This avoids re-reading the codebase and maximizes cache reuse.
 
-Workers cannot launch agents. Opus REQUIRES a brief naming all three things
-above, scoped to only that portion, or it refuses. Max three active agents
+Workers cannot launch agents. `senior` REQUIRES a brief with a line
+`Escalation: <criterion>` naming exactly one of:
+
+- `architecture` (by triage) — redesigns a contract or lifecycle.
+- `cross-layer` (by triage) — must land atomically across Domain + Core +
+  Editor/scene generation, with ordering, serialization or lifecycle risk.
+- `two-failed-cycles` (fallback) — a Sonnet implementer already failed two
+  correction cycles on this same issue.
+
+scoped to only that portion, or it refuses — see `docs/WORKFLOW.md` §6.
+`unknown-cause` is removed; there is no generic "difficult" criterion.
+Max three active agents
 at once. One owner per issue — no duplicates, no replacement launch without
 a stated reason. Details: `docs/WORKFLOW.md`.
 

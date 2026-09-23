@@ -14,8 +14,18 @@ out to be whatever the orchestrator felt like in the moment. A written
 preference is exactly as strong as whoever happens to be reading it; this
 hook makes the routing a fact about the tool call instead.
 
+Opus costs more per token than Sonnet, so Sonnet 5 stays the default
+implementer and Opus 5.5 is never the main implementer. Before every
+implementation launch the orchestrator triages: is this doable as a
+bounded change, or does it go deep architectural? Doable goes to
+`implementer`; deep architectural goes to `senior`. Before 2026-09-23,
+Opus worked only on changes that could break entire systems (the old
+`architect` rule). It now also takes these cases, but only through the
+three escalation criteria below, so every Opus launch has a stated
+reason.
+
 Four project agents exist under .claude/agents/ (reader/haiku,
-implementer/sonnet, verifier/sonnet, architect/opus), each pinned to one
+implementer/sonnet, verifier/sonnet, senior/opus), each pinned to one
 model in its own frontmatter. claude-code-guide is a built-in agent this
 project also allows, at haiku or sonnet. Nothing else is a valid
 subagent_type for the Agent tool: general-purpose, Explore, Plan, claude,
@@ -25,6 +35,25 @@ on tool_input is refused for the same reason even when the subagent_type is
 one of the four -- the whole point of a pinned agent is that its model is
 not a per-call decision. isolation: "remote" is refused because a remote
 launch is not covered by this hook's own visibility into what ran.
+
+`senior` replaced `architect` on 2026-09-23: same one-Opus-worker shape,
+but its brief must also carry a line `Escalation: <criterion>` naming one
+of two-failed-cycles, architecture, or cross-layer -- this hook checks
+that line is present and well-formed before the call is allowed through.
+The check exists here, in code, for the same reason the whole hook
+exists: a written criterion is only as strong as whoever is reading the
+brief, so the tool checks it instead of leaving it to whoever launches or
+reviews the agent.
+
+`unknown-cause` was removed on 2026-09-23: a generic "difficult" criterion
+reopens exactly the judgment call this hook exists to close. `architecture`
+and `cross-layer` are decided by triage before launch; `two-failed-cycles`
+is the fallback when a Sonnet implementer already tried and failed twice.
+
+A model value containing "fable" is refused outright, regardless of
+subagent_type: the owner decided on 2026-09-23 that Fable is not used on
+this project, and a hook is the only way that decision survives whoever is
+driving the session that day.
 
 The Workflow tool is refused outright: it is a second way to run arbitrary
 code outside the four pinned agents, and this hook has no per-workflow
@@ -43,20 +72,36 @@ input is a liability, not a safeguard.
 """
 
 import json
+import re
 import sys
 
 # subagent_type values the Agent tool may be launched with, each pinned to
-# the model(s) named here. reader/implementer/verifier/architect are this
+# the model(s) named here. reader/implementer/verifier/senior are this
 # project's own agents (.claude/agents/*.md); claude-code-guide is the one
 # built-in agent this project also allows, since it answers questions about
 # Claude Code itself rather than doing project work.
 PINNED_MODELS = {
-    "reader": {"haiku"},
-    "implementer": {"sonnet"},
-    "verifier": {"sonnet"},
-    "architect": {"opus"},
+    "reader": {"haiku", "claude-haiku-4-5-20251001"},
+    "implementer": {"sonnet", "claude-sonnet-5"},
+    "verifier": {"sonnet", "claude-sonnet-5"},
+    "senior": {"opus", "claude-opus-5-5"},
     "claude-code-guide": {"haiku", "sonnet"},
 }
+
+# The three criteria a `senior` brief's "Escalation: <criterion>" line may
+# name. Kept exactly these three on purpose -- see module docstring: a
+# generic "difficult" criterion would reopen the judgment call this hook
+# exists to close.
+ESCALATION_CRITERIA = (
+    "two-failed-cycles",
+    "architecture",
+    "cross-layer",
+)
+
+ESCALATION_LINE_RE = re.compile(
+    r"^Escalation:\s*(" + "|".join(ESCALATION_CRITERIA) + r")\b",
+    re.MULTILINE,
+)
 
 ROUTING_ADVICE = (
     "Use the Agent tool with subagent_type set to one of: "
@@ -86,6 +131,12 @@ def check_agent(tool_input):
 
     model = tool_input.get("model")
     if model is not None and model != "":
+        if "fable" in model.lower():
+            return (
+                "Fable is not used on this project (owner decision, 2026-09-23). "
+                "Drop the model field and let '{}' use its own pinned "
+                "model.".format(subagent_type)
+            )
         allowed = PINNED_MODELS[subagent_type]
         if model not in allowed:
             return (
@@ -100,6 +151,15 @@ def check_agent(tool_input):
             "isolation: \"remote\" is not allowed for routed agents. Launch "
             "'{}' without isolation instead.".format(subagent_type)
         )
+
+    if subagent_type == "senior":
+        prompt = tool_input.get("prompt")
+        if not isinstance(prompt, str) or not ESCALATION_LINE_RE.search(prompt):
+            return (
+                "'senior' requires a brief with a line 'Escalation: <criterion>' "
+                "naming one of: " + ", ".join(ESCALATION_CRITERIA) + ". Add that "
+                "line to the prompt, or launch 'implementer' instead."
+            )
 
     return None
 

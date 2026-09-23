@@ -21,6 +21,11 @@ Update rule: see §11.
 
 ## 2. Assignments
 
+**Step one of every implementation launch: triage.** Is this doable as a
+bounded change, or does it go deep architectural? Doable goes to
+`implementer`; deep architectural goes to `senior` with a stated
+`Escalation:` reason (§6).
+
 Say the reservation when it forms — a reaffirmed request is a decision.
 
 User-facing intent header, before anything bigger than a one-line fix:
@@ -80,7 +85,9 @@ No fixed-turn restarts. The threshold comes from measurement
 148K context/turn, p90 184 turns at 262K), not a guess.
 
 After two failed correction cycles on one issue, the orchestrator reassesses cause and
-scope before allowing a third.
+scope, then either allows a third attempt or relaunches as `senior` with
+`Escalation: two-failed-cycles` — or `architecture`/`cross-layer` if the
+reassessment found that instead (§6).
 
 ## 4. Worker context discipline
 
@@ -128,7 +135,30 @@ timeout.
 
 ## 6. Escalation
 
-Opus gate: `CLAUDE.md`, "How work happens".
+Opus costs more per token than Sonnet, so Sonnet 5 stays the default
+implementer and Opus 5.5 is never the main implementer. Triage before
+every implementation launch (§2) decides `implementer` vs `senior`: doable
+as a bounded change goes to `implementer`; deep architectural goes to
+`senior`. Before 2026-09-23, Opus worked only on changes that could break
+entire systems (the old `architect` rule). It now also takes these cases,
+but only when the brief carries a line `Escalation: <criterion>` naming
+one of exactly three criteria, so every Opus launch has a stated reason
+instead of a per-call judgment call. `tools/githooks/route_agents.py`
+checks that line is present and well-formed before the launch is allowed.
+
+Opus gate — the three criteria, also in `senior.md` and `CLAUDE.md`:
+
+- `architecture` (by triage) — the change redesigns a contract or
+  lifecycle (brief names the change, the affected contracts/lifecycles,
+  and the concrete failure risks).
+- `cross-layer` (by triage) — one change that must land atomically across
+  Domain + Core + Editor/scene generation with ordering, serialization or
+  lifecycle risk, where splitting it across Sonnet owners would break it.
+- `two-failed-cycles` (fallback) — a Sonnet implementer failed two
+  correction cycles on this same issue (brief names what each attempt did
+  and why it failed).
+
+`unknown-cause` is removed: there is no generic "difficult" criterion.
 
 A worker that believes a rule is wrong says so in its report and continues
 under the rule. The orchestrator raises it with the user; nobody deviates silently.
