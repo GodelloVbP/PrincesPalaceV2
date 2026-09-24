@@ -29,6 +29,17 @@ namespace PrincesPalace.Domain.UiKit
 
         public List<SolvedNode> Children = new List<SolvedNode>();
 
+        // Column/Row only, written by UiSolver.ArrangeFlow: the main-axis
+        // extent its flow children actually consumed (every flow child's size
+        // plus every gap between them, padding excluded) and how many flow
+        // children that was. The audit's flow-capacity check reads these
+        // rather than re-adding Children, because a Ui.Space consumes extent
+        // and a gap but draws nothing, so it never becomes a SolvedNode --
+        // summing Children missed it, and a Fixed column of 90 + Space 60 + 90
+        // in 200px read as 180 and passed with its last child 40px outside.
+        public float FlowExtent;
+        public int FlowCount;
+
         // What the node actually covers on screen once scale and rotation are
         // applied. Overlap tests use THIS, never Rect -- the talent tree's
         // rotated edge stripes have a footprint several times their unrotated

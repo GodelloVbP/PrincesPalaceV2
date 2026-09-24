@@ -201,22 +201,15 @@ namespace PrincesPalace.Domain.UiKit
             var mode = vertical ? source.Size.ModeY : source.Size.ModeX;
             if (mode != UiSizeMode.Fixed) return;
 
-            int count = 0;
-            float required = 0f;
-            foreach (var child in node.Children)
-            {
-                // Flow children only, matching what UiSolver.ArrangeFlow
-                // actually stacks and spaces. A pinned glow inside a Fixed
-                // row occupies none of its flow extent, and counting it here
-                // reported an overflow for a container that fits.
-                if (child.Source != null && !child.Source.Place.IsFlow) continue;
-
-                required += vertical ? child.Rect.Height : child.Rect.Width;
-                count++;
-            }
+            // The solver's own figure for what the flow consumed, not a re-sum
+            // of the solved children. It counts flow children only (a pinned
+            // glow occupies none of the flow) and it counts Ui.Space, which
+            // has no SolvedNode to sum -- the re-sum missed both a Space's
+            // extent and its gap, so a trailing Space could overflow unseen.
+            int count = node.FlowCount;
             if (count == 0) return;
 
-            required += source.Spacing * (count - 1);
+            float required = node.FlowExtent;
             required += vertical ? source.Pad.Vertical : source.Pad.Horizontal;
 
             float available = vertical ? node.Rect.Height : node.Rect.Width;

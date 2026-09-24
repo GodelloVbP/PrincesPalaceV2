@@ -83,5 +83,55 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(1, overflows.Length, "the capacity check stopped firing for a real overflow");
         }
+
+        // A Ui.Space consumes flow extent and a gap but draws nothing, so it
+        // has no SolvedNode. The capacity check used to sum solved children
+        // and so never saw it: 90 + 60 + 90 read as 180 in a 200px column.
+        private static UiNode Block(string name) =>
+            Ui.Solid(name, "#336699", new UiVec(100f, 90f));
+
+        private static UiAuditError[] CapacityErrors(UiNode tree) =>
+            UiAudit.Run(UiSolver.Solve(tree, Canvas), Canvas)
+                .Where(e => e.Check == UiAuditCheck.FlowCapacity)
+                .ToArray();
+
+        [Test]
+        public void FlowCapacityCountsASpaceBetweenChildren()
+        {
+            var column = Ui.Column("Stack", Place.At(0f, 0f), 0f, UiAlign.Centre,
+                Block("First"), Ui.Space(60f), Block("Second")).Sized(UiSize.Fixed(100f, 200f));
+
+            var overflows = CapacityErrors(column);
+
+            Assert.AreEqual(1, overflows.Length, "a 240px stack in a 200px column passed the capacity check");
+            StringAssert.Contains("needs 240px", overflows[0].Message);
+        }
+
+        // The trailing case, which containment cannot catch: nothing drawn
+        // sits outside the box, but the declared stack still does not fit.
+        [Test]
+        public void FlowCapacityCountsATrailingSpaceAndItsGap()
+        {
+            var row = Ui.Row("Strip", Place.At(0f, 0f), 10f, UiAlign.Centre,
+                Block("First"), Block("Second"), Ui.Space(50f)).Sized(UiSize.Fixed(250f, 90f));
+
+            var overflows = CapacityErrors(row);
+
+            // 100 + 10 + 100 + 10 + 50.
+            Assert.AreEqual(1, overflows.Length, "a trailing Space's extent and gap were not counted");
+            StringAssert.Contains("needs 270px", overflows[0].Message);
+        }
+
+        [Test]
+        public void FlowCapacityPassesAColumnThatFitsItsSpaceExactly()
+        {
+            var column = Ui.Column("Stack", Place.At(0f, 0f), 10f, UiAlign.Centre,
+                Block("First"), Ui.Space(40f), Block("Second")).Sized(UiSize.Fixed(100f, 240f));
+
+            // 90 + 10 + 40 + 10 + 90 = 240.
+            var overflows = CapacityErrors(column).Select(e => e.Message).ToArray();
+
+            CollectionAssert.IsEmpty(overflows, string.Join("\n", overflows));
+        }
     }
 }

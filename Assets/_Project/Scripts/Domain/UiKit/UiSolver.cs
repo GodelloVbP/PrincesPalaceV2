@@ -269,9 +269,13 @@ namespace PrincesPalace.Domain.UiKit
                     crossSize = child.Size.ModeY == UiSizeMode.Fill ? content.Height : measured.Y;
                 }
 
+                solved.FlowExtent += mainSize + (solved.FlowCount > 0 ? node.Spacing : 0f);
+                solved.FlowCount++;
+
                 if (child.Kind == UiNodeKind.Space)
                 {
-                    // Occupies main-axis extent and draws nothing.
+                    // Occupies main-axis extent and draws nothing, so it gets
+                    // no SolvedNode; FlowExtent above is what records it.
                     cursor += vertical ? -(mainSize + node.Spacing) : (mainSize + node.Spacing);
                     continue;
                 }
