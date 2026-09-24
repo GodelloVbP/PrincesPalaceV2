@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
@@ -72,62 +73,101 @@ namespace PrincesPalace
                 var select = dots[i].gameObject.GetComponent<SelectIndex>()
                              ?? dots[i].gameObject.AddComponent<SelectIndex>();
                 select.Index = level;
-                select.Changed = (lvl, entered) => { if (entered) ScrollTo(lvl); };
+                select.Changed = OnSelected;
             }
-
-            // A Rail group (plan section 5), wrap by the owner's default --
-            // Left/Right steps disc to disc -- plus the collect button as
-            // every disc's Down link, in ONE authoritative pass (RuntimeNav
-            // Wiring.Apply writes all four directions of every node it
-            // resolves, so the rail and the links have to arrive together).
-            //
-            // DOWN FROM EVERY DISC, not from one distinguished disc: claiming
-            // what is owed is not tied to which disc happens to be focused.
-            // Eligibility itself (hide-on-owed-zero, plan section 6) stays
-            // exactly where it already lived -- PaintCollectButton's own
-            // SetActive call, untouched by this.
-            //
-            // Built ONCE: unlike Map's runtime-varying node set, every one of
-            // these hundred discs exists and is active for the life of the
-            // panel (WireNodes' own header: "a hundred discs", never
-            // toggled), so there is nothing here a later Refresh() rebuilds.
-            RuntimeNavWiring.Apply(
-                RuntimeNavWiring.Group("rewardTrackRibbon", UiNavGroupKind.Rail, dots),
-                dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Down, collectButton)));
         }
 
-        // THE COHERENT MAP'S OTHER HALF: Down from any dot reaches
-        // collectButton (WireNodes above, built once); Up from collectButton
-        // has to come back, or the pad has a one-way door onto it -- exactly
-        // the owner's hardware complaint ("mapping completely off and
-        // horrible to navigate"). collectButton was never a Rail member and
-        // never a Link's `from`, so UiNavLinkBuilder.Build had no entry for
-        // it at all and RuntimeNavWiring.Apply never touched its
-        // `.navigation` -- Up did whatever Unity's own default (Automatic,
-        // or whatever the scene last authored) happened to compute.
+        // THE WHOLE PAD MAP, in one authoritative pass -- three rows, top to
+        // bottom as they are drawn:
         //
-        // A SINGLE FIELD WRITE, not a re-Apply of the whole graph: dots'
-        // own Rail and Down links are declared ONCE (WireNodes' own header,
-        // "built once... there is nothing here a later Refresh() rebuilds"),
-        // and that still holds -- the hundred discs themselves never change.
-        // What changes is which one collectButton's Up should return to, so
-        // only that one link is rewritten, every Refresh, off the same
-        // CurrentLevelDot() the pad's initial focus (OnEnable) resolves to --
-        // the one dot both the fly-in and the ribbon rail agree is "here".
+        //   the rail     Left/Right disc to disc (a Rail, wrap by default)
+        //   the ribbon   Left/Right scrubs the window (StepRibbon)
+        //   the footer   COLLECT <-> CLOSE, or CLOSE alone when nothing is owed
         //
-        // CALLED FROM Refresh(), not WireNodes: WireNodes runs from Wire(),
-        // which OnEnable calls BEFORE Refresh() has resolved _level for the
-        // first time, so a link built there would answer for whatever _level
-        // defaulted to (RewardTrack.StartingLevel) rather than the character
-        // actually showing.
-        private void RefreshCollectButtonUpLink()
+        // Down from every disc is the ribbon, Down from the ribbon is the
+        // footer, and Up walks the same edges back. EVERY SELECTABLE THIS
+        // PANEL OWNS IS NAMED HERE. Before this only the discs and collect's
+        // Up were Explicit; the ribbon and CLOSE were left at Unity's
+        // Automatic, which navigates by screen position with no idea this
+        // panel is drawn OVER the dossier -- so a Move from CLOSE walked
+        // onto a dossier row sitting underneath, and the focus marker and A
+        // then belonged to a control the player could not see (owner's
+        // hardware report, 2026-09-24: "fake hovers and fake buttons").
+        // Explicit with nothing further in a direction is a wall, which is
+        // what the panel's edge is.
+        //
+        // REBUILT EVERY REFRESH, not once: whether COLLECT exists is save
+        // state (PaintCollectButton hides it at owed == 0), and the ribbon's
+        // Down and CLOSE's Left both change with it. Called after
+        // PaintCollectButton for that reason, and after _level is resolved
+        // so the ribbon's Up has a real disc to name.
+        private void WireNavigation()
         {
-            if (collectButton == null) return;
+            if (dots == null || dots.Length == 0) return;
 
-            var nav = collectButton.navigation;
-            nav.mode = UnityEngine.UI.Navigation.Mode.Explicit;
-            nav.selectOnUp = CurrentLevelDot();
-            collectButton.navigation = nav;
+            var footer = collectButton != null && collectButton.gameObject.activeSelf ? collectButton : null;
+            var ribbonDown = footer != null ? footer : closeButton;
+
+            var links = new List<UiNavLink<UnityEngine.UI.Selectable>?>();
+            links.AddRange(dots.Select(dot => RuntimeNavWiring.Link(dot, UiNavDirection.Down, ribbonGrab)));
+            links.Add(RuntimeNavWiring.Link(ribbonGrab, UiNavDirection.Up, RailFocusDot()));
+            links.Add(RuntimeNavWiring.Link(ribbonGrab, UiNavDirection.Down, ribbonDown));
+            links.Add(RuntimeNavWiring.Link(closeButton, UiNavDirection.Up, ribbonGrab));
+
+            if (footer != null)
+            {
+                links.Add(RuntimeNavWiring.Link(footer, UiNavDirection.Up, ribbonGrab));
+                links.AddRange(RuntimeNavWiring.LinkBoth(footer, UiNavDirection.Right, closeButton));
+            }
+
+            RuntimeNavWiring.Apply(
+                RuntimeNavWiring.Group("rewardTrackRibbon", UiNavGroupKind.Rail, dots),
+                links);
+        }
+
+        // Which disc Up from the ribbon returns to: the one last selected on
+        // the rail, or -- once the ribbon has been scrubbed -- the one now in
+        // the middle of the window, so Up lands on what the player is looking
+        // at rather than on a disc the scrub carried off screen.
+        private int _railFocus = -1;
+
+        private UnityEngine.UI.Button RailFocusDot()
+        {
+            if (_railFocus < RewardTrackLayout.FirstLevel) return CurrentLevelDot();
+
+            int index = Mathf.Clamp(_railFocus - RewardTrackLayout.FirstLevel, 0, dots.Length - 1);
+            return dots[index] != null ? dots[index] : CurrentLevelDot();
+        }
+
+        // A single field write, not a re-Apply: only the ribbon's Up moved.
+        private void PointRibbonUpAtRailFocus()
+        {
+            if (ribbonGrab == null) return;
+
+            var nav = ribbonGrab.navigation;
+            nav.selectOnUp = RailFocusDot();
+            ribbonGrab.navigation = nav;
+        }
+
+        // A disc gaining or losing pad focus. The card follows it exactly as
+        // it follows the pointer -- before this, selection only scrolled, so
+        // the marker sat on one disc while the card went on describing the
+        // next reward, and nothing a pad player could do ever changed it.
+        //
+        // PAD ONLY for the card. OnEnable selects the current disc for every
+        // player, and for a mouse player that selection is invisible; letting
+        // it move the card would replace "the next reward" -- what the card
+        // rests on when nothing is pointed at -- with "you are here" on every
+        // open.
+        private void OnSelected(int level, bool entered)
+        {
+            if (NavigationInputModule.LastInputWasPad) OnHover(level, entered);
+
+            if (!entered) return;
+
+            _railFocus = level;
+            PointRibbonUpAtRailFocus();
+            ScrollTo(level);
         }
 
         private void WireRail()
@@ -163,6 +203,48 @@ namespace PrincesPalace
                           ?? ribbonGrab.gameObject.AddComponent<BarSlider>();
 
             _ribbonSeek.Changed = SeekTo;
+
+            // THE PAD'S HALF OF THE SLIDER. The ribbon is a Button, and
+            // WireNavigation leaves its Left/Right empty, so the Button's own
+            // OnMove does nothing on that axis and this is the only thing
+            // that answers it -- the two IMoveHandlers on one object never
+            // both act on the same press.
+            var step = ribbonGrab.gameObject.GetComponent<MoveStep>()
+                       ?? ribbonGrab.gameObject.AddComponent<MoveStep>();
+            step.Stepped = StepRibbon;
+
+            // A on the ribbon goes back up to the rail at the window's
+            // centre -- never a no-op, the rule this file is built around.
+            // PAD ONLY: a mouse click here is BarSlider's seek, and the same
+            // click also reaches this Button's onClick.
+            ribbonGrab.onClick.AddListener(() =>
+            {
+                if (!NavigationInputModule.LastInputWasPad) return;
+
+                var dot = RailFocusDot();
+                if (dot != null) UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(dot.gameObject);
+            });
+        }
+
+        // ONE PRESS, ONE WINDOW, less a disc of overlap so the player keeps
+        // their place -- a stick held down crosses the track in about a dozen
+        // repeats. Stepped from _railFocus rather than from the live scroll,
+        // so a press landing mid-glide adds to where the last one was going
+        // instead of to wherever the animation happened to be.
+        private void StepRibbon(int direction)
+        {
+            if (viewport == null) return;
+
+            int from = _railFocus >= RewardTrackLayout.FirstLevel
+                ? _railFocus
+                : RewardTrackLayout.LevelAtCentre(content.anchoredPosition.x);
+
+            int page = Mathf.Max(1, Mathf.FloorToInt(viewport.rect.width / RewardTrackLayout.NodePitch) - 1);
+            int target = Mathf.Clamp(from + direction * page, RewardTrackLayout.FirstLevel, RewardTrack.MaxLevel);
+
+            _railFocus = target;
+            PointRibbonUpAtRailFocus();
+            GlideTo(target);
         }
 
         // ---- pressing a node -------------------------------------------------
@@ -181,6 +263,13 @@ namespace PrincesPalace
                 return;
             }
 
+            // AND THE CARD SAYS WHAT IT IS. A pad's A on a disc the rail has
+            // already centred glided nowhere, so pressing a locked reward
+            // looked like nothing happened; the card coming up on it -- with
+            // its rise, even when it was already showing -- is the answer to
+            // "what will this give me".
+            _hovered = level;
+            BeginCardSwap(level);
             GlideTo(level);
         }
 
@@ -270,6 +359,9 @@ namespace PrincesPalace
 
             CancelGlide();
             SetScroll(RewardTrackLayout.ScrollForFraction(fraction, viewport.rect.width));
+
+            _railFocus = RewardTrackLayout.LevelAtCentre(content.anchoredPosition.x);
+            PointRibbonUpAtRailFocus();
         }
 
         // THE ONE PLACE anything writes the content's x.

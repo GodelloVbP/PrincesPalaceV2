@@ -149,8 +149,9 @@ is authoritative -- `Apply` writes all four directions of every node it
 resolved -- so each surface passes its whole shape in one call:
 `SystemMenuController.RefreshNavLinks` (the visible tab Rail plus the selected
 tab's Down link into its pane), `OptionsController.Wire` (the row List),
-`RewardTrackController.WireNodes` (the ribbon Rail plus every disc's Down link
-to collect), `PartyController.WireNavigation` (seats as a Rail in VISUAL
+`RewardTrackController.WireNavigation` (the disc Rail, every disc's Down to the
+ribbon slider, the ribbon's Down to the COLLECT/CLOSE footer; rebuilt each
+Refresh because COLLECT comes and goes), `PartyController.WireNavigation` (seats as a Rail in VISUAL
 column order -- seat 0 is the front rank and is drawn on the right -- plus the
 roster Rail and the clamped positional links between them).
 

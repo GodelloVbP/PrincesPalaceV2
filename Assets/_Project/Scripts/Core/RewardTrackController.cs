@@ -204,8 +204,9 @@ namespace PrincesPalace
             // visibility, so a hidden row still counts as "declared" and the
             // reselect-if-outside-the-set rule stays silent -- the identical
             // mechanism ShowSpells' own fix comment already names).
-            // WireNodes (called from Wire(), above) has already declared the
-            // ribbon Rail by this point, so its own entry exists to select.
+            // WireNavigation (called from Refresh(), above) has already
+            // declared the disc Rail by this point, so its own entry exists
+            // to select.
             //
             // THE CURRENT LEVEL'S DOT, not dots[0]. dots[0] is level
             // FirstLevel -- the far LEFT of the rail -- while BeginFlyIn just
@@ -229,9 +230,9 @@ namespace PrincesPalace
 
         // dots[i] is level FirstLevel + i (WireNodes' own indexing), inverted
         // and clamped into range. The one dot BOTH the initial pad focus
-        // above and the collect button's own Up link (WireNodes.Input.cs)
-        // resolve to, so the two can never name a different node than the
-        // fly-in just centred.
+        // above and the ribbon's Up link (WireNavigation, .Input.cs) resolve
+        // to until the player moves along the rail, so the two can never
+        // name a different node than the fly-in just centred.
         private Button CurrentLevelDot()
         {
             if (dots == null || dots.Length == 0) return null;
@@ -247,6 +248,7 @@ namespace PrincesPalace
             // cleared here rather than left to reassert itself.
             StopAllCoroutines();
             _hovered = -1;
+            _railFocus = -1;
 
             // A BURST STOPPED MID-FLIGHT LEAVES ITS RIG LIT. StopAllCoroutines
             // kills the thing that would have switched it off, so closing the
@@ -309,7 +311,7 @@ namespace PrincesPalace
             PaintCard(CardLevel());
             MoveCaret();
             MoveHalo();
-            RefreshCollectButtonUpLink();
+            WireNavigation();
 
             // A LEVEL ARRIVING WHILE THE PANEL IS OPEN, which the first paint
             // is not: on open, _level goes from 1 to whatever the save holds,

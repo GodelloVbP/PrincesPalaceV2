@@ -290,8 +290,11 @@ namespace PrincesPalace.PlayModeTests
                 "selecting the next dot should have scrolled the rail to it via ScrollTo, the same call a " +
                 "mouse hover already makes");
 
-            yield return MoveDown(); // Down from any dot reaches the collect button
-            AssertSelectedName("TrackCollectButton", "Down from the rail should reach the collect button");
+            yield return MoveDown(); // Down from any dot reaches the ribbon slider
+            AssertSelectedName("TrackRibbonGrab", "Down from the rail should reach the ribbon slider");
+
+            yield return MoveDown(); // and Down from the ribbon reaches the collect button
+            AssertSelectedName("TrackCollectButton", "Down from the ribbon should reach the collect button");
 
             var character0 = SaveSlotManager.CurrentSave.ActiveSquad().First();
             int before = character0.claimedTrackLevel;

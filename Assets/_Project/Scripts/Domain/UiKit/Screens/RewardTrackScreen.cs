@@ -323,11 +323,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // to carry that opacity; the flat #120A18FA Solid ground is what
             // did the same job before the container existed (git history),
             // so it comes back below as this pane's own first child.
+            //
+            // AND IT TAKES THE POINTER, which is why it is not AsDecor. A
+            // ground that hides the dossier from the eye but not from the
+            // raycaster let every hover and click on an empty stretch of
+            // this panel land on the dossier row drawn underneath -- a
+            // highlight and a button nobody could see (owner's report,
+            // 2026-09-24: "fake hovers and fake buttons").
             var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent",
                 new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), children.ToArray());
             ground.Children.Insert(0, Ui.Solid("RewardTrackPanelFill", Ground + "FA",
-                    new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), Place.At(0f, 0f))
-                .AsDecor());
+                    new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), Place.At(0f, 0f)));
             ground.Inactive();
 
             screen.Root = ground;
