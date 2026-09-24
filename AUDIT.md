@@ -2851,42 +2851,5 @@ sized for the caster's hand, and `PlayContactFx` sizes by stage depth only.
 None of them take `fit: target`. Owner: say if the ally-target rituals should
 move onto the ally's body.
 
-### 209. Clearing `VfxPaddingCache` per fight breaks a travelling-effect placement test -- cause not chased down
+### ~~209. Clearing `VfxPaddingCache` per fight breaks a travelling-effect placement test -- cause not chased down~~ — fixed in `756abfbf`: a cold scan was a 35ms hitch that outlasted the fixture's 11ms 60x flight, so the test read a released renderer; scan is now row-wise from the bottom, cache cleared per fight and keyed by (path, first frame). Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-`FightController.SpellVfx.cs:190`'s `VfxPaddingCache` has the identical
-stale-measurement hazard as its three siblings `ContentCentreCache`,
-`ContentTopCache`, `OpaqueBoxCache` (cleared in `ResetStagePresentation`,
-`FightController.StageVisuals.cs:~1303-1321` -- an asset-only re-slice never
-invalidates any of the four, and the other three are cleared per fight for
-exactly that reason). Adding the same `.Clear()` for `VfxPaddingCache` looked
-like the obvious missing line and is what a straight read of the class asks
-for.
-
-It breaks `SpellVfxTests.ATravellingEffectStartsOnTheCasterAndEndsOnTheTarget`
-(fails in isolation and as part of the class; confirmed by bisection --
-reverting only this one `.Clear()` call, with the other two fixes from the
-same pass left in, turns the whole 45-test class green again). The symptom:
-`_player.Image.rectTransform.anchoredPosition.x` reads the CASTER's position
-(-320) once the flight finishes, instead of the TARGET's (300) -- i.e. the
-travelling box never advances past its launch point, though `IsPlaying`
-correctly goes false.
-
-**Not chased to a root cause.** The suspect is `VfxContentPaddingFraction`
-(`FightController.SpellVfx.cs:~1239`), which now does a real, uncached pixel
-scan of `Spells/mud_burst`'s frames inside this specific test's `PlaceCast`
-call rather than reusing a value an earlier test in the fixture had already
-warmed permanently into the (previously never-cleared) static dictionary.
-Only `VfxDeadSpaceBelow`'s Y correction reads that value on this code path
-(`to.y`, not `to.x`), and the caster-side launch X (`CasterCastPoint`'s
-fallback) is `casterX` regardless of it -- so how a Y-only measurement stalls
-the box at its launch X specifically was not established. Left as filed
-rather than fixed blind, per this project's own "an audit that reads the
-source of truth cannot see what a later stage synthesises" lesson (#39,
-`docs/AUDIT_STRUCK_ARCHIVE.md`) -- there is a real seam here nobody has
-looked at closely enough yet.
-
-`VfxPaddingCache` is therefore left **uncleared** for now, same as before
-this pass (`FightController.StageVisuals.cs`'s `ResetStagePresentation` has a
-comment at the clear-caches block saying why, pointing here). The bug this
-was meant to fix (a long Editor session carrying a stale padding measurement
-across an asset-only re-slice, same as the other three caches) is still open.
