@@ -5,12 +5,13 @@
 
 Each case is a whole hook payload -- tool_name and tool_input in, allow or
 deny out -- run the way the hook itself is invoked: JSON on stdin, a decision
-on stdout. The four routed agents are reader (haiku), implementer (sonnet),
+on stdout. The four routed agents are reader (sonnet), implementer (opus),
 verifier (sonnet), and senior (opus); claude-code-guide (haiku or sonnet)
 is the one built-in agent this project also allows. Everything else --
 general-purpose, Explore, Plan, claude, a missing subagent_type, a model
-override on a routed agent, a model naming Fable, isolation: "remote", and
-the Workflow tool outright -- must be denied. `senior` additionally requires
+override on a routed agent, a model naming Fable, a bare "opus" alias, an
+Opus id that is not exactly claude-opus-5-5, isolation: "remote", and the
+Workflow tool outright -- must be denied. `senior` additionally requires
 a `prompt` with a line `Escalation: <criterion>` naming one of the three
 criteria in route_agents.ESCALATION_CRITERIA. `unknown-cause` was removed
 2026-09-23 and must be denied like any other made-up criterion.
@@ -46,13 +47,11 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
         self.assertAllowed({"subagent_type": "claude-code-guide"})
 
     def test_each_type_with_its_own_pinned_model_named_explicitly(self):
-        self.assertAllowed({"subagent_type": "reader", "model": "haiku"})
-        self.assertAllowed({"subagent_type": "reader", "model": "claude-haiku-4-5-20251001"})
-        self.assertAllowed({"subagent_type": "implementer", "model": "sonnet"})
-        self.assertAllowed({"subagent_type": "implementer", "model": "claude-sonnet-5"})
+        self.assertAllowed({"subagent_type": "reader", "model": "sonnet"})
+        self.assertAllowed({"subagent_type": "reader", "model": "claude-sonnet-5"})
+        self.assertAllowed({"subagent_type": "implementer", "model": "claude-opus-5-5"})
         self.assertAllowed({"subagent_type": "verifier", "model": "sonnet"})
         self.assertAllowed({"subagent_type": "verifier", "model": "claude-sonnet-5"})
-        self.assertAllowed({"subagent_type": "senior", "model": "opus", "prompt": ESCALATION_PROMPT})
         self.assertAllowed({"subagent_type": "senior", "model": "claude-opus-5-5", "prompt": ESCALATION_PROMPT})
 
     def test_claude_code_guide_allows_either_of_its_two_models(self):
@@ -119,6 +118,24 @@ class DeniesFableModelTests(unittest.TestCase):
         })
 
 
+class DeniesNonExactOpusModelTests(unittest.TestCase):
+    """Owner decision 2026-09-24: the only Opus this project allows is
+    exactly claude-opus-5-5 ("no Opus 5"). The bare "opus" alias and any
+    other Opus id are refused by name, on implementer and senior alike."""
+
+    def assertDenied(self, tool_input):
+        self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
+
+    def test_bare_opus_alias_denied(self):
+        self.assertDenied({"subagent_type": "implementer", "model": "opus"})
+        self.assertDenied({"subagent_type": "senior", "model": "opus", "prompt": ESCALATION_PROMPT})
+
+    def test_non_5_5_opus_id_denied(self):
+        self.assertDenied({"subagent_type": "implementer", "model": "claude-opus-5-20250514"})
+        self.assertDenied({"subagent_type": "senior", "model": "claude-opus-5", "prompt": ESCALATION_PROMPT})
+        self.assertDenied({"subagent_type": "implementer", "model": "opus-4-1"})
+
+
 class DeniesUnroutedSubagentTypesTests(unittest.TestCase):
     def assertDenied(self, tool_input):
         self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
@@ -176,20 +193,23 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     def assertDenied(self, tool_input):
         self.assertIsNotNone(decision("Agent", tool_input), "should have been denied: " + repr(tool_input))
 
-    def test_reader_may_not_be_upgraded_off_haiku(self):
-        self.assertDenied({"subagent_type": "reader", "model": "sonnet"})
-        self.assertDenied({"subagent_type": "reader", "model": "opus"})
+    def test_reader_may_not_be_moved_to_haiku_or_opus(self):
+        self.assertDenied({"subagent_type": "reader", "model": "haiku"})
+        self.assertDenied({"subagent_type": "reader", "model": "claude-opus-5-5"})
 
-    def test_implementer_and_verifier_may_not_be_moved_to_opus(self):
-        self.assertDenied({"subagent_type": "implementer", "model": "opus"})
-        self.assertDenied({"subagent_type": "verifier", "model": "opus"})
+    def test_verifier_may_not_be_moved_to_opus(self):
+        self.assertDenied({"subagent_type": "verifier", "model": "claude-opus-5-5"})
+
+    def test_implementer_may_not_be_downgraded_off_opus(self):
+        self.assertDenied({"subagent_type": "implementer", "model": "sonnet"})
+        self.assertDenied({"subagent_type": "implementer", "model": "haiku"})
 
     def test_senior_may_not_be_downgraded_off_opus(self):
         self.assertDenied({"subagent_type": "senior", "model": "sonnet", "prompt": ESCALATION_PROMPT})
         self.assertDenied({"subagent_type": "senior", "model": "haiku", "prompt": ESCALATION_PROMPT})
 
     def test_claude_code_guide_may_not_be_moved_to_opus(self):
-        self.assertDenied({"subagent_type": "claude-code-guide", "model": "opus"})
+        self.assertDenied({"subagent_type": "claude-code-guide", "model": "claude-opus-5-5"})
 
 
 class DeniesRemoteIsolationTests(unittest.TestCase):

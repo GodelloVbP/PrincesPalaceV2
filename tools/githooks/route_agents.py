@@ -14,18 +14,20 @@ out to be whatever the orchestrator felt like in the moment. A written
 preference is exactly as strong as whoever happens to be reading it; this
 hook makes the routing a fact about the tool call instead.
 
-Opus costs more per token than Sonnet, so Sonnet 5 stays the default
-implementer and Opus 5.5 is never the main implementer. Before every
-implementation launch the orchestrator triages: is this doable as a
-bounded change, or does it go deep architectural? Doable goes to
-`implementer`; deep architectural goes to `senior`. Before 2026-09-23,
-Opus worked only on changes that could break entire systems (the old
-`architect` rule). It now also takes these cases, but only through the
-three escalation criteria below, so every Opus launch has a stated
-reason.
+As of 2026-09-24, `implementer` moved to Opus 5.5 at medium effort and
+`reader` moved to Sonnet 5 (owner decision) -- the per-token cost
+rationale that used to justify keeping Sonnet as the default implementer
+no longer holds, so this hook no longer encodes one. `implementer` and
+`senior` now run the same model and effort; what still separates them is
+`senior`'s `Escalation:` gate below, which is a process control (stating
+a reason before an escalation-shaped change proceeds), not a cost
+control anymore. Before every implementation launch the orchestrator
+still triages: is this doable as a bounded change, or does it go deep
+architectural? Doable goes to `implementer`; deep architectural goes to
+`senior`, with a stated reason.
 
-Four project agents exist under .claude/agents/ (reader/haiku,
-implementer/sonnet, verifier/sonnet, senior/opus), each pinned to one
+Four project agents exist under .claude/agents/ (reader/sonnet,
+implementer/opus, verifier/sonnet, senior/opus), each pinned to one
 model in its own frontmatter. claude-code-guide is a built-in agent this
 project also allows, at haiku or sonnet. Nothing else is a valid
 subagent_type for the Agent tool: general-purpose, Explore, Plan, claude,
@@ -36,14 +38,19 @@ one of the four -- the whole point of a pinned agent is that its model is
 not a per-call decision. isolation: "remote" is refused because a remote
 launch is not covered by this hook's own visibility into what ran.
 
-`senior` replaced `architect` on 2026-09-23: same one-Opus-worker shape,
-but its brief must also carry a line `Escalation: <criterion>` naming one
-of two-failed-cycles, architecture, or cross-layer -- this hook checks
-that line is present and well-formed before the call is allowed through.
-The check exists here, in code, for the same reason the whole hook
-exists: a written criterion is only as strong as whoever is reading the
-brief, so the tool checks it instead of leaving it to whoever launches or
-reviews the agent.
+The only Opus this project allows is exactly `claude-opus-5-5` -- the
+owner excluded every other Opus ("no Opus 5") on 2026-09-24, so the bare
+`opus` alias is no longer an allowed spelling for `implementer` or
+`senior` and any model string containing "opus" that isn't the exact id
+is refused by name, the same way a Fable model is.
+
+`senior` also requires its brief to carry a line `Escalation: <criterion>`
+naming one of two-failed-cycles, architecture, or cross-layer -- this hook
+checks that line is present and well-formed before the call is allowed
+through. The check exists here, in code, for the same reason the whole
+hook exists: a written criterion is only as strong as whoever is reading
+the brief, so the tool checks it instead of leaving it to whoever launches
+or reviews the agent.
 
 `unknown-cause` was removed on 2026-09-23: a generic "difficult" criterion
 reopens exactly the judgment call this hook exists to close. `architecture`
@@ -81,10 +88,10 @@ import sys
 # built-in agent this project also allows, since it answers questions about
 # Claude Code itself rather than doing project work.
 PINNED_MODELS = {
-    "reader": {"haiku", "claude-haiku-4-5-20251001"},
-    "implementer": {"sonnet", "claude-sonnet-5"},
+    "reader": {"sonnet", "claude-sonnet-5"},
+    "implementer": {"claude-opus-5-5"},
     "verifier": {"sonnet", "claude-sonnet-5"},
-    "senior": {"opus", "claude-opus-5-5"},
+    "senior": {"claude-opus-5-5"},
     "claude-code-guide": {"haiku", "sonnet"},
 }
 
@@ -136,6 +143,14 @@ def check_agent(tool_input):
                 "Fable is not used on this project (owner decision, 2026-09-23). "
                 "Drop the model field and let '{}' use its own pinned "
                 "model.".format(subagent_type)
+            )
+        if "opus" in model.lower() and model != "claude-opus-5-5":
+            return (
+                "'{}' is not claude-opus-5-5, and no other Opus is allowed on "
+                "this project (owner decision, 2026-09-24). Drop the model "
+                "field and let '{}' use its own pinned model.".format(
+                    model, subagent_type
+                )
             )
         allowed = PINNED_MODELS[subagent_type]
         if model not in allowed:

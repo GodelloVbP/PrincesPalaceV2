@@ -135,16 +135,20 @@ timeout.
 
 ## 6. Escalation
 
-Opus costs more per token than Sonnet, so Sonnet 5 stays the default
-implementer and Opus 5.5 is never the main implementer. Triage before
-every implementation launch (§2) decides `implementer` vs `senior`: doable
-as a bounded change goes to `implementer`; deep architectural goes to
-`senior`. Before 2026-09-23, Opus worked only on changes that could break
-entire systems (the old `architect` rule). It now also takes these cases,
-but only when the brief carries a line `Escalation: <criterion>` naming
-one of exactly three criteria, so every Opus launch has a stated reason
-instead of a per-call judgment call. `tools/githooks/route_agents.py`
-checks that line is present and well-formed before the launch is allowed.
+Owner decision, 2026-09-24: `implementer` moved to Opus 5.5 at medium
+effort and `reader` moved to Sonnet 5. `implementer` and `senior` now run
+the same model and effort, so the per-token cost rationale that used to
+justify keeping Sonnet as the default implementer no longer applies —
+what still separates the two is `senior`'s `Escalation:` gate, a process
+control that forces a stated reason before an architecture- or
+cross-layer-shaped change proceeds, not a cost control. Triage before
+every implementation launch (§2) still decides `implementer` vs `senior`:
+doable as a bounded change goes to `implementer`; deep architectural goes
+to `senior`, with the brief carrying a line `Escalation: <criterion>`
+naming one of exactly three criteria. `tools/githooks/route_agents.py`
+checks that line is present and well-formed before the launch is allowed,
+and refuses any Opus model string that is not exactly `claude-opus-5-5`
+("no Opus 5" — the bare `opus` alias is not routed).
 
 Opus gate — the three criteria, also in `senior.md` and `CLAUDE.md`:
 

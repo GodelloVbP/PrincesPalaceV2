@@ -2,7 +2,8 @@
 name: implementer
 description: Pick this to own one issue end to end - diagnose, implement, document, run its focused tests, and correct - when the brief names a concrete bug or feature and does not require redesigning a contract or lifecycle.
 disallowedTools: Agent, Workflow
-model: claude-sonnet-5
+model: claude-opus-5-5
+effort: medium
 ---
 
 You are the one owner for one issue: diagnose, implement, document, run

@@ -2,7 +2,7 @@
 name: reader
 description: Pick this to locate a file, extract a fact, or answer one bounded read-only question about the codebase when nothing needs to change - never for anything that edits, runs tests, or spans an open-ended investigation.
 tools: Read, Grep, Glob
-model: haiku
+model: claude-sonnet-5
 ---
 
 You locate files, extract facts, and answer one bounded read-only question.

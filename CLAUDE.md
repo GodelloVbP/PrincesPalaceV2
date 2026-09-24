@@ -28,9 +28,11 @@ a session or agent to it.
 
 Four agent types, each pinned to one model, plus the built-in
 `claude-code-guide`. No other `subagent_type`, no model override, no
-`Workflow` tool — enforced by `tools/githooks/route_agents.py`. Opus costs
-more per token than Sonnet, so Sonnet 5 stays the default implementer and
-is never the main implementer.
+`Workflow` tool — enforced by `tools/githooks/route_agents.py`. Owner
+decision, 2026-09-24: `implementer` moved to Opus 5.5 at medium effort and
+`reader` moved to Sonnet 5. The only Opus this project allows is exactly
+`claude-opus-5-5` — no other Opus, including a bare `opus` alias, is
+routed.
 
 **Triage before every implementation launch:** is this doable as a bounded
 change, or does it go deep architectural? Doable → `implementer`. Deep
@@ -39,8 +41,8 @@ hook-checked, not a per-call judgment call.
 
 | Type | Model | Use when |
 |---|---|---|
-| `reader` | Haiku | Locate files and extract facts. Returns file paths, line numbers, and relevant excerpts. Never interprets or diagnoses. |
-| `implementer` | Sonnet 5 | The default for every implementation. Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
+| `reader` | Sonnet 5 | Locate files and extract facts. Returns file paths, line numbers, and relevant excerpts. Never interprets or diagnoses. |
+| `implementer` | Opus 5.5, medium effort | The default for every implementation. Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
 | `verifier` | Sonnet 5 | Run one named gate once, report pass/fail. |
 | `senior` | Opus 5.5, medium effort | Deep architectural work only: brief must carry `Escalation:` with one of three criteria; hook-enforced. |
 
