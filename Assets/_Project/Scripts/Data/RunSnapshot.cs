@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
@@ -327,6 +328,37 @@ namespace PrincesPalace
         // what removes one matching entry, and Replace* returns the
         // displaced book here instead of destroying it (§7.1 point 5).
         public List<string> unassignedSpellBooks = new List<string>();
+
+        // ---- the event room (docs/EVENTS.md, plan contracts 1-2, 15) --------
+        //
+        // THE DISCRIMINATOR IS eventId, NOT eventNodeId. An empty id is "no
+        // event open". eventNodeId cannot do that job: a save written before
+        // these fields existed reads a missing int as 0 on some paths, and 0
+        // is a real node. So an old save loads with eventId "" and no event,
+        // whatever eventNodeId comes back as. Same reasoning as hasRun above.
+        //
+        // Open means eventId is non-empty AND eventNodeId is the node the
+        // party stands on (RunOrchestrator.EventIsOpen); Reconcile closes one
+        // that fails the second half, the way ReconcileShopStock drops a shelf
+        // that is not under the party.
+        public string eventId = "";
+        public int eventNodeId = -1;
+
+        // The page the event is on. EMPTY WHILE eventId IS SET means the
+        // event has CONCLUDED: a choice ended in Leave but had a result to
+        // show, and only LeaveEvent is left (EventView.Concluded).
+        public string eventPageId = "";
+
+        // Every event opened this run, so none shows twice (plan assumption
+        // 4). Run-scoped by construction: StartRun replaces the snapshot.
+        public List<string> eventsSeen = new List<string>();
+
+        // The last choice's outcome, stored rather than held in memory so a
+        // Map scene reload repaints the same result line the player was
+        // reading. The effects are the APPLIED ones and the effects line is
+        // derived from them on read (EventEffectSummary), not stored as text.
+        public string eventResult = "";
+        public List<EventEffect> eventResultEffects = new List<EventEffect>();
     }
 
     // One learned spell, in one of a character's three slots this run.

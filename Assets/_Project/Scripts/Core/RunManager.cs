@@ -488,12 +488,22 @@ namespace PrincesPalace
         // this method.
         public static void BankPayout(int gold)
         {
+            if (CreditPayout(gold)) Persist();
+        }
+
+        // BankPayout's rule without its write, for a caller that applies
+        // several changes and persists ONCE at the end -- an event choice
+        // (RunOrchestrator.ChooseEventOption, plan contract 10). One home for
+        // "held and earned move together"; the write is the only difference.
+        // Returns whether anything moved.
+        internal static bool CreditPayout(int gold)
+        {
             var run = Run;
-            if (run == null || gold <= 0) return;
+            if (run == null || gold <= 0) return false;
 
             run.gold += gold;
             run.goldEarned += gold;
-            Persist();
+            return true;
         }
 
         // ---- persistence -------------------------------------------------------------

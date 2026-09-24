@@ -37,10 +37,10 @@ namespace PrincesPalace
     // Static and stateless, exactly like RunManager and RunLedger, and for the
     // same reason: the SAVE is the state, and a second copy held here would be
     // a second thing that can disagree with the disk.
-    // Split across two files (CODE_STANDARDS §4): this root file owns the
-    // class declaration and everything a run has always done, and
-    // RunOrchestrator.Shop.cs owns the shop's own mutations -- one topic per
-    // file, and the shop half is the one that grows through gates 2 and 3.
+    // Split across files (CODE_STANDARDS §4): this root file owns the
+    // class declaration and everything a run has always done,
+    // RunOrchestrator.Shop.cs owns the shop's own mutations and
+    // RunOrchestrator.Event.cs the event room's -- one topic per file.
     public static partial class RunOrchestrator
     {
         // ---- starting a descent -------------------------------------------------
@@ -193,6 +193,13 @@ namespace PrincesPalace
             // player leaves, through LeaveShop.
             Shop,
 
+            // An event room with an event rolled and persisted. THE THIRD
+            // ROOM THAT LEADS TO A SCREEN, so it does not clear itself either:
+            // the room clears on LeaveEvent (or on a choice that leaves with
+            // nothing to say). An Event node whose pool is empty is not this
+            // -- it resolves on the spot and comes back Resolved.
+            Event,
+
             // Anything else resolved on the spot and the room is cleared.
             Resolved,
         }
@@ -231,6 +238,20 @@ namespace PrincesPalace
                 RoomResolver.Reset();
                 EnsureShopStock();
                 return Arrival.Shop;
+            }
+
+            // AN EVENT RESOLVES INTO A SCREEN WHEN THERE IS ONE TO SHOW.
+            //
+            // Same ordering as the shop: rolled after MoveTo has persisted,
+            // and persisted again by EnsureEvent before this returns. When
+            // the floor's pool is empty (every event seen, or none authored
+            // for this floor) there is nothing to show, and the node falls
+            // through to RoomResolver.Resolve below -- the old "nothing built
+            // here" line and a cleared room, never a throw (contract 3).
+            if (target.Type == RoomType.Event)
+            {
+                RoomResolver.Reset();
+                if (EnsureEvent()) return Arrival.Event;
             }
 
             // Everything else resolves HERE and the map redraws, which is where

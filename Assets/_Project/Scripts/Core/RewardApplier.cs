@@ -22,6 +22,17 @@ namespace PrincesPalace
         // "before" stops existing the moment AddExperience mutates in place.
         public static CombatReward Apply(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds)
         {
+            var reward = ApplyUnsaved(payout, fieldedIds);
+            SaveSlotManager.SaveCurrent();
+            return reward;
+        }
+
+        // Apply's rule without its write, for a caller that persists once
+        // for several changes -- an event's exp effect
+        // (RunOrchestrator.ChooseEventOption). Same loop, same split, same
+        // downed-half rule; only who writes differs.
+        internal static CombatReward ApplyUnsaved(VictoryRewards.Payout payout, IReadOnlyList<string> fieldedIds)
+        {
             var reward = new CombatReward { GoldGained = payout.Gold };
 
             var save = SaveSlotManager.CurrentSave;
@@ -123,7 +134,6 @@ namespace PrincesPalace
                     Character.ExpToNextLevel(levelBefore)));
             }
 
-            SaveSlotManager.SaveCurrent();
             return reward;
         }
 

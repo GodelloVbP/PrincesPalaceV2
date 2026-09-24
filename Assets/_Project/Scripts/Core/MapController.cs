@@ -131,9 +131,24 @@ namespace PrincesPalace
             // leg itself; the map repaints after each one rather than on the
             // next room.
             var debug = debugMenuPanel != null ? debugMenuPanel.GetComponent<DebugMenuController>() : null;
-            if (debug != null) debug.Changed = Refresh;
+            if (debug != null) debug.Changed = RefreshAndShowLiveEvent;
 
+            RefreshAndShowLiveEvent();
+        }
+
+        // THE RELOAD HALF OF AN EVENT ROOM (plan contract 2), and new
+        // behaviour rather than copied: the shop does NOT do this -- OpenShop
+        // has one caller, Walk.Arrive, so a Map scene that starts with a shop
+        // open shows the map. An event open on the node the party stands on
+        // reopens its panel here, on the same event and page, because both
+        // are in the save (RunSnapshot.eventId / eventPageId).
+        //
+        // Also the debug menu's repaint, so "open event" from the Tools tab
+        // shows the panel it just opened.
+        private void RefreshAndShowLiveEvent()
+        {
             Refresh();
+            if (RunOrchestrator.EventIsOpen) OpenEvent();
         }
 
         private void Wire()
@@ -259,6 +274,24 @@ namespace PrincesPalace
             shop.Finished = Refresh;
             shop.Open();
         }
+
+        // The event room's panel, opened on arrival (Walk.Arrive) and on a
+        // Map start that finds one open (RefreshAndShowLiveEvent).
+        //
+        // PHASE 3 PLUGS THE PANEL IN THROUGH ShowEventPanel: a partial method
+        // with no body until MapController.Event.cs implements it, so until
+        // then the call compiles away and walking into an event shows the map
+        // with the event open in the save. That is the null-safe hook -- no
+        // field to leave unwired, nothing to null-check. The panel reads
+        // RunOrchestrator.CurrentEvent(), calls ChooseEventOption / LeaveEvent,
+        // and hands Refresh back through Finished exactly as OpenShop does.
+        public void OpenEvent()
+        {
+            if (!RunOrchestrator.EventIsOpen) return;
+            ShowEventPanel();
+        }
+
+        partial void ShowEventPanel();
 
         public void Refresh()
         {

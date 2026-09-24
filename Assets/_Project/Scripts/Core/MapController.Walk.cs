@@ -187,6 +187,13 @@ namespace PrincesPalace
                     OpenShop();
                     return;
 
+                case RunOrchestrator.Arrival.Event:
+                    // The shop's shape: a nested panel, the room uncleared
+                    // until RunOrchestrator.LeaveEvent. The pick is already
+                    // on disk (EnsureEvent) before this line runs.
+                    OpenEvent();
+                    return;
+
                 case RunOrchestrator.Arrival.Resolved:
                     Refresh();
                     return;

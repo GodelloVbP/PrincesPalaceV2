@@ -50,6 +50,13 @@ namespace PrincesPalace.Domain.Rng
         // streams are keyed to position rather than drawn fresh.
         public const uint SpellDrop = 8;
 
+        // Which event an Event room opens (EventRoll.Pick), keyed to
+        // (run.step, run.currentNodeId). Its own number rather than
+        // Treasure's: an Event and a Treasure room are both non-fight rooms
+        // at a position, and two rooms drawing from one sequence would let
+        // one roll predict the other.
+        public const uint Event = 9;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering

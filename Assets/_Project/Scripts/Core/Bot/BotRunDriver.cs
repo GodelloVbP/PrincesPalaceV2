@@ -684,6 +684,20 @@ namespace PrincesPalace
                     continue;
                 }
 
+                // THE THIRD ROOM THAT DOES NOT RESOLVE ITSELF. An event
+                // left open would leave the node uncleared for the rest of
+                // the leg, so the visit ends in LeaveEvent whatever happens.
+                if (arrival == RunOrchestrator.Arrival.Event)
+                {
+                    using (BotPhaseTimers.Measure(BotPhase.RoomResolve))
+                    {
+                        VisitEvent(node, result);
+                    }
+                    result.Trace.Rooms.Add(roomTrace);
+                    CaptureWhatTheRunHolds(save, result);
+                    continue;
+                }
+
                 if (!isFight)
                 {
                     result.Trace.Rooms.Add(roomTrace);
@@ -705,6 +719,74 @@ namespace PrincesPalace
                 result.Trace.Rooms.Add(roomTrace);
 
                 if (!alive) return;
+            }
+        }
+
+        // ---- the event room --------------------------------------------------------
+
+        // A ceiling on choices in one event, because an authored "do it
+        // again" loop (a choice whose outcome goes back to its own page) is
+        // legal content and "first available choice" can walk it forever.
+        // Past this the bot leaves and records it -- a finding about the
+        // content or the policy, not a hang. Far above any visit the demo
+        // event can make (its first choice is Leave).
+        private const int MaxEventChoices = 32;
+
+        // WHAT THE BOT DOES IN AN EVENT: THE FIRST AVAILABLE CHOICE UNTIL IT
+        // LEAVES (plan contract 13). "Available" is EventChoiceGate's answer,
+        // the one the panel greys with, so the bot can never pick what a
+        // player could not. Deliberately no policy: an archetype's opinion on
+        // events is a later question, and taking the first open choice is the
+        // floor every event must survive.
+        //
+        // The visit ALWAYS ends with the room cleared. Anything else is a hit.
+        private static void VisitEvent(DescentNode node, BotRunResult result)
+        {
+            for (int picks = 0; picks < MaxEventChoices; picks++)
+            {
+                var view = RunOrchestrator.CurrentEvent();
+                if (view == null) break;
+
+                if (view.Concluded)
+                {
+                    RunOrchestrator.LeaveEvent();
+                    break;
+                }
+
+                var open = view.Choices.FirstOrDefault(c => c.Visible && c.Enabled);
+                if (open == null)
+                {
+                    // The build refuses a page with no unconditional choice,
+                    // so this is content the resolver should have stopped.
+                    result.Hits.Add(new InvariantHit("EventTrapped",
+                        $"event '{view.EventId}' page '{view.PageId}' offered no available choice"));
+                    RunOrchestrator.LeaveEvent();
+                    break;
+                }
+
+                var outcome = RunOrchestrator.ChooseEventOption(open.Index);
+                if (!outcome.WasApplied)
+                {
+                    result.Hits.Add(new InvariantHit("EventChoiceRefused",
+                        $"event '{view.EventId}' refused choice {open.Index} ({outcome.Reason}) that the gate offered"));
+                    RunOrchestrator.LeaveEvent();
+                    break;
+                }
+
+                if (outcome.Closed) break;
+            }
+
+            if (RunOrchestrator.EventIsOpen)
+            {
+                result.Hits.Add(new InvariantHit("EventChoiceCap",
+                    $"still in an event after {MaxEventChoices} choices; left it"));
+                RunOrchestrator.LeaveEvent();
+            }
+
+            if (!RunManager.Run.clearedNodeIds.Contains(node.Id))
+            {
+                result.Hits.Add(new InvariantHit("EventRoomNotCleared",
+                    $"node {node.Id} was still uncleared after its event closed"));
             }
         }
 

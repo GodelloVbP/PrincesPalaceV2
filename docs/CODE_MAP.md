@@ -1223,6 +1223,16 @@ the choice of `UnityEngine.Random` for the offer roll (deliberately unseeded --
 see `PLAN_BALANCE_BOT.md` F3), `ReckoningController` keeps its take-once guard
 and repaint, `RelicDraftController` keeps paging and selection.
 
+**Event rooms (`Core/Bot/RunOrchestrator.Event.cs`).** The event room's half,
+shaped like the shop's: `ArriveAt` routes an Event node to `EnsureEvent` (roll
+on `RngStreams.Event`, persist the pick, room NOT cleared; an empty pool falls
+through to `RoomResolver.Resolve`), `ChooseEventOption(int)` is validate /
+apply / persist-once, `LeaveEvent` clears the room. The panel reads
+`CurrentEvent()` (an `EventView`, `Domain/Events/EventView.cs`). State lives on
+`RunSnapshot.event*` and the profile's `SaveData.eventCounters`;
+`RunEventContext` (Core) is the live `IEventContext`. `MapController.OpenEvent`
+calls the partial method `ShowEventPanel`, which the event screen implements.
+
 ### Two more one-rulebook seams (`Core/EquipmentOps.cs`, `Core/TalentOps.cs`)
 
 Same extraction, same reason, one layer smaller. **`EquipmentOps`** holds the

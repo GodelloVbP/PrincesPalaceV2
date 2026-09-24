@@ -216,9 +216,18 @@ namespace PrincesPalace.EditModeTests
             {
                 RngStreams.Leg, RngStreams.Boss, RngStreams.Fight, RngStreams.Treasure,
                 RngStreams.ShopGear, RngStreams.ShopBooks, RngStreams.ShopRelics,
+                RngStreams.SpellDrop, RngStreams.Event,
             };
 
             CollectionAssert.AllItemsAreUnique(numbers);
+        }
+
+        // A stream number is a serialized format: renumbering Event moves
+        // which event every existing seed opens at every node.
+        [Test]
+        public void TheEventStreamIsNumberNine()
+        {
+            Assert.AreEqual(9u, RngStreams.Event);
         }
     }
 }

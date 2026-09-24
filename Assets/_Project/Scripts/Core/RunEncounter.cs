@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace
@@ -98,7 +100,9 @@ namespace PrincesPalace
                 .Select(e => new EnemyCandidate(e.id, e.Data.IsBoss, e.Data.AvoidsFrontSlot, e.Data.MinFloor, e.Data.SlotSpan))
                 .ToList();
 
-        private static Dictionary<string, int> HealthByCharacter(RunSnapshot run)
+        // Internal for the event exp effect, which decides "fielded" the way a
+        // fight does (RunOrchestrator.Event.cs).
+        internal static Dictionary<string, int> HealthByCharacter(RunSnapshot run)
         {
             var health = new Dictionary<string, int>();
             if (run?.currentHealth == null) return health;
@@ -200,6 +204,49 @@ namespace PrincesPalace
             }
 
             SaveSlotManager.SaveCurrent();
+        }
+
+        // An event's healPercent / damagePercent over the same squad, with
+        // the per-character arithmetic in Domain (EventHealth: of maximum,
+        // rounded up; damage floors at 1 and never kills or revives).
+        //
+        // THESE DO NOT PERSIST, and that is the one deliberate exception to
+        // the "mutator owns the write" rule above: their only caller is
+        // RunOrchestrator.ChooseEventOption, which applies a choice's whole
+        // effect list and writes once at the end (plan contract 10). A
+        // second caller that is not a batch must persist itself.
+        //
+        // A missing entry is a character at full health -- the same reading
+        // EncounterRoll.FieldableParty gives it -- so the entry is created
+        // from the maximum before the percentage moves it.
+        internal static void HealPartyByPercent(RunSnapshot run, int percent) =>
+            ShiftPartyHealth(run, (current, max) => EventHealth.Healed(current, max, percent));
+
+        internal static void HurtPartyByPercent(RunSnapshot run, int percent) =>
+            ShiftPartyHealth(run, (current, max) => EventHealth.Damaged(current, max, percent));
+
+        private static void ShiftPartyHealth(RunSnapshot run, Func<int, int, int> shift)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (run == null || save == null) return;
+
+            run.currentHealth ??= new List<RunHealthEntry>();
+
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character == null || string.IsNullOrEmpty(character.definitionId)) continue;
+
+                int maxHealth = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+
+                var entry = run.currentHealth.Find(e => e != null && e.characterId == character.definitionId);
+                if (entry == null)
+                {
+                    entry = new RunHealthEntry { characterId = character.definitionId, hp = maxHealth };
+                    run.currentHealth.Add(entry);
+                }
+
+                entry.hp = shift(entry.hp, maxHealth);
+            }
         }
 
         // KEEPS A CHARACTER'S CARRIED HEALTH AT THE SAME FRACTION of a maximum

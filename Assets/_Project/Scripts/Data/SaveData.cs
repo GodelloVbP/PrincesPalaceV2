@@ -262,6 +262,55 @@ namespace PrincesPalace
         // one. That is the same additive posture Migrate() already documents.
         public RunSnapshot activeRun = new RunSnapshot();
 
+        // ---- event counters (plan contract 9) ---------------------------------
+        //
+        // PROFILE-SCOPED, not run-scoped, which is the whole reason these are
+        // here and not on RunSnapshot: "on the tenth toss" counts across runs,
+        // and EndRun replaces the snapshot wholesale. EndRun touches neither
+        // this list nor anything else on SaveData it does not name.
+        //
+        // A {id, value} list rather than a Dictionary because JsonUtility
+        // cannot write one -- same shape as RunHealthEntry. Additive, so
+        // CurrentVersion does not move: an old save reads this as empty, and
+        // an empty list is every counter at 0.
+        public List<EventCounterEntry> eventCounters = new List<EventCounterEntry>();
+
+        // 0 for a counter never touched -- the same answer an absent entry
+        // and a fresh profile both give, so "has never happened" needs no
+        // separate state.
+        public int EventCounter(string counterId)
+        {
+            if (string.IsNullOrEmpty(counterId) || eventCounters == null) return 0;
+
+            foreach (var entry in eventCounters)
+            {
+                if (entry != null && entry.id == counterId) return entry.value;
+            }
+
+            return 0;
+        }
+
+        public void AddEventCounter(string counterId, int delta)
+        {
+            if (string.IsNullOrEmpty(counterId) || delta == 0) return;
+            SetEventCounter(counterId, EventCounter(counterId) + delta);
+        }
+
+        public void SetEventCounter(string counterId, int value)
+        {
+            if (string.IsNullOrEmpty(counterId)) return;
+
+            eventCounters ??= new List<EventCounterEntry>();
+            var entry = eventCounters.FirstOrDefault(e => e != null && e.id == counterId);
+            if (entry == null)
+            {
+                entry = new EventCounterEntry { id = counterId };
+                eventCounters.Add(entry);
+            }
+
+            entry.value = value;
+        }
+
         // How many roster members can be active in the squad at once.
         // Character Select is out of the active flow for now (see #21
         // follow-up), so this isn't enforced by picking — it caps how many
@@ -780,6 +829,10 @@ namespace PrincesPalace
 
             ReconcileLearnedSpells(activeRun);
             ReconcileShopStock(activeRun);
+            ReconcileOpenEvent(activeRun);
+
+            eventCounters ??= new List<EventCounterEntry>();
+            eventCounters.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
 
             roster.RemoveAll(c => c == null || ContentDatabase.GetCharacter(c.definitionId) == null);
 
@@ -1073,6 +1126,43 @@ namespace PrincesPalace
             return skill != null && skill.Data.BookTier > 0;
         }
 
+        // The event half of "what the party is standing in", mirroring
+        // ReconcileShopStock: null lists from an old save become empty ones,
+        // and an event that is not under the party -- or whose content is
+        // gone -- is closed rather than trusted. A closed event leaves its
+        // room uncleared, which the map already tolerates: the party can
+        // walk on from it like from any other current node.
+        //
+        // A page that no longer exists sends the event back to its start
+        // page rather than closing it: the event is still real, and the
+        // player loses a page rather than the room.
+        private static void ReconcileOpenEvent(RunSnapshot run)
+        {
+            run.eventsSeen ??= new List<string>();
+            run.eventResultEffects ??= new List<PrincesPalace.Domain.Events.EventEffect>();
+            run.eventResultEffects.RemoveAll(e => e == null);
+            run.eventId ??= "";
+            run.eventPageId ??= "";
+            run.eventResult ??= "";
+
+            if (string.IsNullOrEmpty(run.eventId)) return;
+
+            var definition = RunOrchestrator.FindEvent(run.eventId);
+            if (definition == null || run.eventNodeId != run.currentNodeId || run.eventNodeId < 0)
+            {
+                RunOrchestrator.CloseEventFields(run);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(run.eventPageId) && definition.PageById(run.eventPageId) == null)
+            {
+                run.eventPageId = definition.StartPage?.Id ?? "";
+                run.eventResult = "";
+                run.eventResultEffects.Clear();
+                if (string.IsNullOrEmpty(run.eventPageId)) RunOrchestrator.CloseEventFields(run);
+            }
+        }
+
         private static void ReconcileShopStock(RunSnapshot run)
         {
             run.shopStock ??= new List<ShopStockEntry>();
@@ -1138,5 +1228,13 @@ namespace PrincesPalace
                 default: return false;
             }
         }
+    }
+
+    // One profile counter. See SaveData.eventCounters.
+    [Serializable]
+    public class EventCounterEntry
+    {
+        public string id = "";
+        public int value;
     }
 }

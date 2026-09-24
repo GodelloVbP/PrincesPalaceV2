@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.DebugMenu;
 using PrincesPalace.Domain.Economy;
 
@@ -328,6 +329,45 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(Save.roster.All(c => c.claimedTrackLevel == 0));
+        }
+
+        // Rows 7.. are the event rows, after the seven above: one "open" per
+        // authored event (the demo is the only one), then an add and a reset
+        // per known counter.
+
+        [UnityTest]
+        public IEnumerator OpenEventOpensTheDemoWhereThePartyStands()
+        {
+            yield return OpenTheMenu();
+            RunManager.StartRun(20260923UL);
+            Assert.AreEqual(1, ContentDatabase.Events.Count, "fixture: row 7 is the only event's row");
+
+            Select(DebugCategory.Tools);
+            Click("DebugRow7");
+            yield return null;
+
+            Assert.IsTrue(RunOrchestrator.EventIsOpen);
+            Assert.AreEqual("demo_wishing_well", RunManager.Run.eventId);
+            Assert.AreEqual(RunManager.Run.currentNodeId, RunManager.Run.eventNodeId);
+
+            SaveSlotManager.Forget();
+            Assert.AreEqual("demo_wishing_well", Save.activeRun.eventId, "and it reached the disk");
+        }
+
+        [UnityTest]
+        public IEnumerator TheCounterRowsAddTheStickyQuantityAndReset()
+        {
+            yield return OpenTheMenu();
+
+            Select(DebugCategory.Tools);
+            Click("DebugQty2"); // x10
+            Click("DebugRow8");
+            yield return null;
+            Assert.AreEqual(10, Save.EventCounter("wishing_well_tosses"));
+
+            Click("DebugRow9");
+            yield return null;
+            Assert.AreEqual(0, Save.EventCounter("wishing_well_tosses"));
         }
 
         // ---- items --------------------------------------------------------------------

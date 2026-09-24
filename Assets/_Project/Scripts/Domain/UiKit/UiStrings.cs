@@ -349,6 +349,23 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapRoomEmpty =
             UiString.Define("map.room.empty", "The room is empty.");
 
+        // --- an event room's effects line (EventEffectSummary) ------------------
+        // One entry per applied effect, joined by the separator. Counters are
+        // never shown; see EventEffectSummary's header.
+        public static readonly UiString EventEffectSeparator = UiString.Define("event.effect_separator", "  ·  ");
+        public static readonly UiString EventEffectGoldGain =
+            UiString.Define("event.effect_gold_gain", "+{0} gold", "+9999 gold");
+        public static readonly UiString EventEffectGoldSpend =
+            UiString.Define("event.effect_gold_spend", "-{0} gold", "-9999 gold");
+        public static readonly UiString EventEffectHeal =
+            UiString.Define("event.effect_heal", "Party healed {0}%", "Party healed 100%");
+        public static readonly UiString EventEffectDamage =
+            UiString.Define("event.effect_damage", "Party hurt {0}%", "Party hurt 100%");
+        public static readonly UiString EventEffectExp =
+            UiString.Define("event.effect_exp", "+{0} XP", "+99999 XP");
+        public static readonly UiString EventEffectItem =
+            UiString.Define("event.effect_item", "+{0} {1}", "+99 Ceremonial Greatsword of the Undying");
+
         // Short names, because the value beside them is what is being read.
         // Spelled out where the abbreviation would be a guess (Speed, Attack).
         public static readonly UiString StatStrength = UiString.Define("stat.str", "STR");
@@ -526,6 +543,16 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("debug.reset_talents", "RESET TALENTS, REFUND EMBERS");
         public static readonly UiString DebugResetTracks =
             UiString.Define("debug.reset_tracks", "RESET REWARD TRACKS");
+
+        // Event rooms: open any authored event where the party stands, and
+        // move the profile counters an event's "on the Nth time" outcome
+        // reads. The counter add uses the sticky quantity (x1/x5/x10).
+        public static readonly UiString DebugOpenEvent =
+            UiString.Define("debug.open_event", "OPEN EVENT: {0}", "OPEN EVENT: demo_ceremonial_wishing_well");
+        public static readonly UiString DebugCounterAdd =
+            UiString.Define("debug.counter_add", "{0}: +QTY (NOW {1})", "wishing_well_tosses: +QTY (NOW 999)");
+        public static readonly UiString DebugCounterReset =
+            UiString.Define("debug.counter_reset", "{0}: RESET TO 0", "wishing_well_tosses: RESET TO 0");
 
         public static readonly UiString DebugRowPlain =
             UiString.Define("debug.row_plain", "{0}", "Ceremonial Greatsword of the Undying");

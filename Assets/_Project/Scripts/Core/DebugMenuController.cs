@@ -413,6 +413,84 @@ namespace PrincesPalace
             {
                 foreach (var character in Roster()) ResetTrack(character);
             });
+
+            // EVENT ROOMS. Opening one goes through RunOrchestrator's own
+            // door (OpenEventForDebug), which leaves exactly the state a real
+            // arrival leaves -- so the choices, the reload and Leave that
+            // follow are the game's, not the menu's. The map's Changed
+            // handler opens the panel.
+            foreach (var definition in ContentDatabase.Events)
+            {
+                string id = definition?.Data?.Id;
+                if (string.IsNullOrEmpty(id)) continue;
+
+                yield return Verb(UiStrings.DebugOpenEvent.Format(id),
+                    () => RunOrchestrator.OpenEventForDebug(id), needsRun: true);
+            }
+
+            // The counters an "on the Nth time" outcome reads. The add uses
+            // the sticky quantity, read at PRESS time, so x10 then one press
+            // is the tenth toss's precondition in one step.
+            foreach (string counterId in KnownEventCounters(save))
+            {
+                string counter = counterId;
+                int now = save?.EventCounter(counter) ?? 0;
+                yield return Verb(UiStrings.DebugCounterAdd.Format(counter, now),
+                    () => Save?.AddEventCounter(counter, QtyValues[_qtyIndex]));
+                yield return Verb(UiStrings.DebugCounterReset.Format(counter),
+                    () => Save?.SetEventCounter(counter, 0));
+            }
+        }
+
+        // Every counter content names anywhere (an effect or a requirement,
+        // at any depth of any event), plus any the save holds that content
+        // no longer names -- so a renamed counter can still be reset.
+        private static IEnumerable<string> KnownEventCounters(SaveData save)
+        {
+            var ids = new SortedSet<string>();
+
+            foreach (var definition in ContentDatabase.Events)
+            {
+                var data = definition?.Data;
+                if (data == null) continue;
+
+                AddCounters(ids, data.Requires, null);
+                foreach (var page in data.Pages ?? new Domain.Content.ResolvedEventPage[0])
+                {
+                    foreach (var choice in page?.Choices ?? new Domain.Content.ResolvedEventChoice[0])
+                    {
+                        if (choice == null) continue;
+                        AddCounters(ids, choice.Requires, choice.Effects);
+                        foreach (var outcome in choice.Outcomes ?? new Domain.Content.ResolvedEventOutcome[0])
+                        {
+                            if (outcome != null) AddCounters(ids, outcome.Requires, outcome.Effects);
+                        }
+                    }
+                }
+            }
+
+            foreach (var entry in save?.eventCounters ?? new List<EventCounterEntry>())
+            {
+                if (!string.IsNullOrEmpty(entry?.id)) ids.Add(entry.id);
+            }
+
+            return ids;
+        }
+
+        private static void AddCounters(SortedSet<string> ids,
+            Domain.Events.EventRequirement[] requires, Domain.Events.EventEffect[] effects)
+        {
+            foreach (var requirement in requires ?? new Domain.Events.EventRequirement[0])
+            {
+                if (requirement != null && requirement.Kind == Domain.Events.EventRequirementKind.Counter
+                    && !string.IsNullOrEmpty(requirement.CounterId)) ids.Add(requirement.CounterId);
+            }
+
+            foreach (var effect in effects ?? new Domain.Events.EventEffect[0])
+            {
+                if (effect != null && effect.Kind == Domain.Events.EventEffectKind.Counter
+                    && !string.IsNullOrEmpty(effect.CounterId)) ids.Add(effect.CounterId);
+            }
         }
 
         private static DebugAction Verb(string label, Action run, bool needsRun = false) =>
