@@ -1648,9 +1648,20 @@ namespace PrincesPalace
                         return AllyFigureOrPlate(plate);
                     }
 
-                    if (_hoveredEnemyIndex >= 0) return EnemyFigureOrPlate(_hoveredEnemyIndex);
-
                     var enemies = Enemies;
+
+                    // A DEAD HOVER READS AS NO HOVER, same as FocusedActor and
+                    // ConfirmFocus's own no-hover branch (~2496-2502): the
+                    // pointer can still be sitting on a plate/figure whose
+                    // monster died under it (AddEnemyHover wires PointerEnter
+                    // straight to OnEnemyHovered with no alive check), and the
+                    // marker must not stand on a corpse.
+                    if (_hoveredEnemyIndex >= 0 && _hoveredEnemyIndex < enemies.Count
+                        && enemies[_hoveredEnemyIndex].IsAlive)
+                    {
+                        return EnemyFigureOrPlate(_hoveredEnemyIndex);
+                    }
+
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         if (enemies[i].IsAlive) return EnemyFigureOrPlate(i);
@@ -1697,7 +1708,11 @@ namespace PrincesPalace
             }
 
             var enemies = Enemies;
-            if (_hoveredEnemyIndex >= 0 && _hoveredEnemyIndex < enemies.Count)
+
+            // Same dead-hover-reads-as-no-hover rule as FocusedElement above:
+            // a hover can outlive the monster it landed on.
+            if (_hoveredEnemyIndex >= 0 && _hoveredEnemyIndex < enemies.Count
+                && enemies[_hoveredEnemyIndex].IsAlive)
             {
                 return enemies[_hoveredEnemyIndex];
             }

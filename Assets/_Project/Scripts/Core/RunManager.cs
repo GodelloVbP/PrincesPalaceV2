@@ -30,6 +30,17 @@ namespace PrincesPalace
         private static ulong _mapSeed;
         private static int _mapStartStep = -1;
 
+        // THE FOURTH INPUT the key was missing: which SLOT the seed belongs
+        // to. runSeed/legStartStep/restBeforeBoss alone cannot tell two
+        // slots apart -- a fresh run in slot B can roll the same seed and
+        // step-0 leg a run already cached from slot A, and without this the
+        // cache would hand slot B slot A's map. SaveSlotManager.CurrentSlot
+        // already drops ITS OWN cache the moment the slot changes (its
+        // setter, see SaveSlotManager.cs); this mirrors that by joining the
+        // slot into the key here rather than hooking a second place to clear
+        // on the same event.
+        private static int _mapSlot = -1;
+
         // THE THIRD INPUT. GenerateLegFor takes (runSeed, legStartStep,
         // restBeforeBoss) and the key held the first two, so a run whose
         // rest guarantee changed while a map was already cached kept serving
@@ -121,13 +132,14 @@ namespace PrincesPalace
                 if (run == null || !run.hasRun) return null;
 
                 if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep
-                    || _mapRestBeforeBoss != run.restBeforeBoss)
+                    || _mapRestBeforeBoss != run.restBeforeBoss || _mapSlot != SaveSlotManager.CurrentSlot)
                 {
                     _map = DescentMapGenerator.GenerateLegFor(run.runSeed, run.legStartStep,
                         restBeforeBoss: run.restBeforeBoss);
                     _mapSeed = run.runSeed;
                     _mapStartStep = run.legStartStep;
                     _mapRestBeforeBoss = run.restBeforeBoss;
+                    _mapSlot = SaveSlotManager.CurrentSlot;
                 }
 
                 return _map;
@@ -514,17 +526,23 @@ namespace PrincesPalace
         }
 
         // Drops the cached map so the next query rebuilds it. Called whenever
-        // the seed or the leg changes -- a cache keyed by three fields still
+        // the seed or the leg changes -- a cache keyed by four fields still
         // has to be invalidated when any of them moves.
         //
-        // "Three" and not "two": the generator's third input, restBeforeBoss,
-        // was absent from the key and from this reset. See _mapRestBeforeBoss.
+        // "Four" and not "three": the generator's third input, restBeforeBoss,
+        // was absent from the key and from this reset (see _mapRestBeforeBoss),
+        // and the slot the key is read against was a fourth gap (see
+        // _mapSlot). _map = null alone already forces the next Map get to
+        // regenerate regardless of what _mapSlot holds, so resetting it here
+        // is for the key to read as fully cleared rather than because the
+        // regen depends on it.
         private static void Forget()
         {
             _map = null;
             _mapSeed = 0;
             _mapStartStep = -1;
             _mapRestBeforeBoss = false;
+            _mapSlot = -1;
         }
 
         // For tests, which run many runs in one process.

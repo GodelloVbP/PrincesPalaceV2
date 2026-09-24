@@ -216,5 +216,34 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "and a stick press walks it along the rack");
         }
+
+        // A HOVER CAN OUTLIVE THE MONSTER IT LANDED ON. AddEnemyHover wires
+        // PointerEnter straight to OnEnemyHovered with no alive check, so the
+        // pointer can still be sitting on a plate/figure whose enemy died
+        // under it. FocusedElement/FocusedActor (FightController.Input.cs)
+        // used to trust _hoveredEnemyIndex unconditionally -- this pins the
+        // fix: a dead hover reads as no hover and falls back the same way
+        // ConfirmFocus's own no-hover branch does.
+        [UnityTest]
+        public IEnumerator ADeadHoverReadsAsNoHover_TheMarkerFallsBackToTheFirstLivingEnemy()
+        {
+            yield return LoadFight();
+            yield return BindARealEncounter();
+
+            yield return PressSubmit();
+            Assert.AreSame(Node("EnemyHitArea0").transform, Marker.Target,
+                "precondition: OnVerbPressed(0) hovers the front living enemy explicitly");
+
+            var session = _fight.GetType()
+                .GetField("_session", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(_fight) as FightSession;
+            Assert.IsNotNull(session, "could not reach the bound session to kill an enemy under the hover");
+
+            session.Encounter.Enemies[0].CurrentHealth = 0;
+            yield return null;
+
+            Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
+                "a dead hover falls back to the first living enemy, not a corpse");
+        }
     }
 }

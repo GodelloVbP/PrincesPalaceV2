@@ -138,13 +138,7 @@ namespace PrincesPalace
                 string id = session.KitFor(combatant)?.Id;
                 if (string.IsNullOrEmpty(id)) continue;
 
-                var entry = run.currentHealth.FirstOrDefault(e => e != null && e.characterId == id);
-                if (entry == null)
-                {
-                    entry = new RunHealthEntry { characterId = id };
-                    run.currentHealth.Add(entry);
-                }
-
+                var entry = HealthEntryFor(run, id);
                 entry.hp = combatant.CurrentHealth;
             }
         }
@@ -193,13 +187,7 @@ namespace PrincesPalace
 
                 int maxHealth = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
-                var entry = run.currentHealth.Find(e => e != null && e.characterId == character.definitionId);
-                if (entry == null)
-                {
-                    entry = new RunHealthEntry { characterId = character.definitionId };
-                    run.currentHealth.Add(entry);
-                }
-
+                var entry = HealthEntryFor(run, character.definitionId);
                 entry.hp = maxHealth;
             }
 
@@ -238,15 +226,29 @@ namespace PrincesPalace
 
                 int maxHealth = Content.ContentDatabase.EffectiveStats(character).maxHealth;
 
-                var entry = run.currentHealth.Find(e => e != null && e.characterId == character.definitionId);
-                if (entry == null)
-                {
-                    entry = new RunHealthEntry { characterId = character.definitionId, hp = maxHealth };
-                    run.currentHealth.Add(entry);
-                }
-
+                var entry = HealthEntryFor(run, character.definitionId, maxHealth);
                 entry.hp = shift(entry.hp, maxHealth);
             }
+        }
+
+        // THE ONE PLACE A CHARACTER'S HEALTH ENTRY IS FOUND OR CREATED,
+        // modelled on RunLedger.EntryFor: every caller above list-scanned
+        // currentHealth then appended on a miss, and duplicating that shape
+        // three times is exactly what drifts. `defaultHp` exists only so a
+        // freshly-created entry starts wherever ITS caller already needed it
+        // to (WriteBackHealth and HealPartyToFull both overwrite hp on the
+        // next line regardless, so 0 is fine for them; ShiftPartyHealth reads
+        // the entry's hp as the shift's input on the next line, so a missing
+        // character has to start at the maximum it would otherwise silently
+        // read as zero).
+        private static RunHealthEntry HealthEntryFor(RunSnapshot run, string characterId, int defaultHp = 0)
+        {
+            var entry = run.currentHealth.FirstOrDefault(e => e != null && e.characterId == characterId);
+            if (entry != null) return entry;
+
+            entry = new RunHealthEntry { characterId = characterId, hp = defaultHp };
+            run.currentHealth.Add(entry);
+            return entry;
         }
 
         // KEEPS A CHARACTER'S CARRIED HEALTH AT THE SAME FRACTION of a maximum
