@@ -134,6 +134,37 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void RemoveCombatant_CurrentActorMidList_HandsOffBySchedule_NotByListPosition()
+        {
+            // The entry list is sorted by INITIATIVE, which under charge
+            // scheduling says nothing about who is next. B dies on its own
+            // turn with A (fast, rate 1) and C (slow, speed 1 -> MinRate
+            // 0.35) waiting; C sits at B's old list index, but A crosses the
+            // threshold first. The hand-off must be what B's turn ending
+            // normally (Advance) would have produced, not list[index].
+            var order = new TurnOrder<string>();
+            order.AddCombatant("A", 30);
+            order.AddCombatant("B", 20);
+            order.AddCombatant("C", 10);
+            order.SetSpeed("C", 1);
+            order.Start();                       // A acts: A -70, B 20, C 10
+
+            Assert.AreEqual("B", order.Advance()); // 80 ticks: A 10, B 0, C 38
+            Assert.AreEqual(10f, order.ChargeOf("A"), 0.01f);
+            Assert.AreEqual(38f, order.ChargeOf("C"), 0.01f);
+
+            order.RemoveCombatant("B");
+
+            // A needs 90 ticks to reach 100, C needs (100-38)/0.35 = 177.
+            // After A spends its turn: A 0, C 38 + 90*0.35 = 69.5.
+            Assert.AreEqual("A", order.Current);
+            Assert.AreEqual(0f, order.ChargeOf("A"), 0.01f);
+            Assert.AreEqual(69.5f, order.ChargeOf("C"), 0.01f);
+            // 80 + 90 = 170 baseline ticks: one round boundary crossed.
+            Assert.AreEqual(2, order.Round);
+        }
+
+        [Test]
         public void RemoveCombatant_LastRemainingCombatant_CurrentThenThrows()
         {
             var order = new TurnOrder<string>();

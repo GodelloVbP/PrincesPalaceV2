@@ -101,8 +101,7 @@ namespace PrincesPalace.Domain.Combat
             }
 
             bool wasCurrent = _current == entry;
-            int index = _entries.IndexOf(entry);
-            _entries.RemoveAt(index);
+            _entries.Remove(entry);
 
             if (!wasCurrent)
             {
@@ -116,10 +115,16 @@ namespace PrincesPalace.Domain.Combat
                 return;
             }
 
-            // The removed actor was current, so hand the turn to whoever
-            // the schedule says is next rather than to a list position —
-            // under charge scheduling, list order is not turn order.
-            _current = index < _entries.Count ? _entries[index] : ChargeUntilNextReady();
+            // The removed actor was current, so its turn ends here exactly as
+            // Advance would end it: through ChargeUntilNextReady, the one
+            // turn-end path. The removed actor already paid its threshold
+            // when it was handed the turn and its banked extra turns were
+            // dropped above, so nothing is double-charged or skipped. NOT
+            // _entries[index]: the list is sorted by initiative, and under
+            // charge scheduling list order is not turn order — that pick
+            // handed a mid-list death's turn to the next-lower initiative
+            // even when someone else would cross the threshold first.
+            _current = ChargeUntilNextReady();
         }
 
         public void Start()
