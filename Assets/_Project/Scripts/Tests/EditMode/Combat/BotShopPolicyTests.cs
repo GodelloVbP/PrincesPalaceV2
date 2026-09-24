@@ -478,15 +478,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(ShopNodeMode.Never, ShopNodePreference.Parse("Never"));
             Assert.AreEqual(ShopNodeMode.Never, ShopNodePreference.Parse("never"));
             Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse("WhenOffered"));
+            Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse("whenoffered"));
 
-            // ANYTHING ELSE IS WhenOffered, deliberately: the batch runner
-            // defaults the argument, and a typo that silently produced the
-            // baseline would make a shop batch measure no shops at all.
+            // BLANK IS THE ONLY SILENT DEFAULT: the batch runner's own
+            // -botShopPolicy default is the string "WhenOffered", so an
+            // unset argument still reads as blank here, not as that literal.
             Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse(""));
-            Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse("nonsense"));
+            Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse(null));
+            Assert.AreEqual(ShopNodeMode.WhenOffered, ShopNodePreference.Parse("   "));
 
             Assert.AreEqual("Never", ShopNodePreference.Name(ShopNodeMode.Never));
             Assert.AreEqual("WhenOffered", ShopNodePreference.Name(ShopNodeMode.WhenOffered));
+        }
+
+        // A TYPO USED TO SILENTLY RUN THE BASELINE: any string other than
+        // blank/WhenOffered/Never used to fall through to WhenOffered, so
+        // "-botShopPolicy Neverr" ran the opposite mode from the one asked
+        // for with no error at all. It must refuse instead, the same way
+        // -botArchetypes/-botProfiles already refuse an unknown name.
+        [Test]
+        public void AnUnrecognizedNameIsRefused()
+        {
+            Assert.Throws<System.ArgumentException>(() => ShopNodePreference.Parse("nonsense"));
+            Assert.Throws<System.ArgumentException>(() => ShopNodePreference.Parse("Neverr"));
+            Assert.Throws<System.ArgumentException>(() => ShopNodePreference.Parse("WhenOffered ".Trim() + "x"));
         }
     }
 }

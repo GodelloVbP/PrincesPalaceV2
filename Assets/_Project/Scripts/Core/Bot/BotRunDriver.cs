@@ -246,19 +246,7 @@ namespace PrincesPalace
                 // through one), a Navigation that goes nowhere (Go() would try
                 // to load a scene from a process that has none open), and a
                 // RunManager whose cached map is dropped between runs.
-                using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
-                {
-                    if (!inMemory) Directory.CreateDirectory(root);
-
-                    SaveSystem.InMemory = inMemory;
-                    SaveSystem.ClearMemory();
-                    SaveSystem.RootOverride = root;
-                    SaveSlotManager.CurrentSlot = 0;
-                    SaveSlotManager.Forget();
-                    RunManager.ResetForTests();
-                    RoomResolver.Reset();
-                    Navigation.LoadOverride = _ => { };
-                }
+                OpenHarness(root, inMemory);
 
                 PlayOneRun(seed, archetype, profile, depthCapSteps, shopNodes, result);
             }
@@ -273,32 +261,57 @@ namespace PrincesPalace
             }
             finally
             {
-                using (BotPhaseTimers.Measure(BotPhase.HarnessTeardown))
-                {
-                    Navigation.Reset();
-                    SaveSystem.RootOverride = null;
-                    SaveSystem.InMemory = false;
-                    SaveSystem.ClearMemory();
-                    SaveSlotManager.Forget();
-                    RunManager.ResetForTests();
-                    RoomResolver.Reset();
-
-                    try
-                    {
-                        // The SHARED root outlives the run by design; only a
-                        // per-run one is this run's to delete.
-                        if (!inMemory && Directory.Exists(root)) Directory.Delete(root, recursive: true);
-                    }
-                    catch (IOException)
-                    {
-                        // A temp directory that will not delete is litter, not a
-                        // finding -- it must not turn a clean run into a bug row.
-                    }
-                }
+                // The SHARED root outlives the run by design; only a per-run
+                // one is this run's to delete -- CloseHarness itself checks
+                // inMemory before deleting.
+                CloseHarness(root, inMemory);
             }
 
             result.ElapsedMs = (DateTime.UtcNow - started).TotalMilliseconds;
             return result;
+        }
+
+        // ---- shared harness open/close, used by both PlayRun and PlayCareer ------
+
+        private static void OpenHarness(string root, bool inMemory)
+        {
+            using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
+            {
+                if (!inMemory) Directory.CreateDirectory(root);
+
+                SaveSystem.InMemory = inMemory;
+                SaveSystem.ClearMemory();
+                SaveSystem.RootOverride = root;
+                SaveSlotManager.CurrentSlot = 0;
+                SaveSlotManager.Forget();
+                RunManager.ResetForTests();
+                RoomResolver.Reset();
+                Navigation.LoadOverride = _ => { };
+            }
+        }
+
+        private static void CloseHarness(string root, bool inMemory)
+        {
+            using (BotPhaseTimers.Measure(BotPhase.HarnessTeardown))
+            {
+                Navigation.Reset();
+                SaveSystem.RootOverride = null;
+                SaveSystem.InMemory = false;
+                SaveSystem.ClearMemory();
+                SaveSlotManager.Forget();
+                RunManager.ResetForTests();
+                RoomResolver.Reset();
+
+                try
+                {
+                    if (!inMemory && Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                }
+                catch (IOException)
+                {
+                    // A temp directory that will not delete is litter, not a
+                    // finding -- it must not turn a clean run into a bug row.
+                }
+            }
         }
 
         // ---- career mode -----------------------------------------------------------
@@ -352,25 +365,13 @@ namespace PrincesPalace
 
             try
             {
-                using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
-                {
-                    if (!inMemory) Directory.CreateDirectory(root);
+                OpenHarness(root, inMemory);
 
-                    SaveSystem.InMemory = inMemory;
-                    SaveSystem.ClearMemory();
-                    SaveSystem.RootOverride = root;
-                    SaveSlotManager.CurrentSlot = 0;
-                    SaveSlotManager.Forget();
-                    RunManager.ResetForTests();
-                    RoomResolver.Reset();
-                    Navigation.LoadOverride = _ => { };
-                }
-
-                var policy = PolicyFor(archetype);
-                var fightPolicy = policy as IFightPolicy;
-                var runPolicy = policy as IRunPolicy;
-
-                if (fightPolicy == null || runPolicy == null)
+                // Just to fail fast on a bad archetype/profile before doing
+                // any work -- the per-run instance built inside the loop
+                // below is the one every run actually plays with.
+                var probePolicy = PolicyFor(archetype);
+                if (!(probePolicy is IFightPolicy) || !(probePolicy is IRunPolicy))
                 {
                     careerResult.Runs.Add(FailedCareerRow(new InvariantHit(
                         "UnknownArchetype", $"no policy named '{archetype}'")));
@@ -384,10 +385,16 @@ namespace PrincesPalace
                     return careerResult;
                 }
 
+                // probePolicy IS THE ONE-OFF INSTANCE THE PRESET BUILD USES:
+                // Build only reads ChooseStat/ChooseTalent, which score off
+                // static weights and take their RNG as a parameter (see the
+                // loop below), so probePolicy's guard dictionary never gets
+                // touched here and there is nothing to reset before the
+                // per-run instances start.
                 SaveData save;
                 using (BotPhaseTimers.Measure(BotPhase.PresetBuild))
                 {
-                    save = ProfilePresets.Build(profile, runPolicy, StreamFor(seed, PresetStream, 0, 0));
+                    save = ProfilePresets.Build(profile, (IRunPolicy)probePolicy, StreamFor(seed, PresetStream, 0, 0));
                 }
 
                 if (save == null)
@@ -398,6 +405,22 @@ namespace PrincesPalace
 
                 for (int i = 0; i < runsInCareer; i++)
                 {
+                    // ONE POLICY INSTANCE PER RUN, not one for the whole
+                    // career: GreedyAggressivePolicy._repeatGuard and
+                    // GreedyDefensivePolicy._enemyHpAtLastCheck are
+                    // CombatantState-keyed dictionaries the policy itself
+                    // documents as "one instance per run" (their own
+                    // headers) precisely so they reset at a run boundary the
+                    // way a fresh opponent's HP history should. RNG is not
+                    // at risk from this -- every Choose*/ChooseNode/etc. call
+                    // takes its SeededRandom as a parameter derived from
+                    // (seed, stream, step, node), never stored on the
+                    // policy, so rebuilding here changes nothing about which
+                    // random numbers a run draws.
+                    var policy = PolicyFor(archetype);
+                    var fightPolicy = policy as IFightPolicy;
+                    var runPolicy = policy as IRunPolicy;
+
                     // BELT AND BRACES, PER THE BRIEF: every won fight already
                     // claims the track and spends every stat point
                     // (CollectLevelUps, called from PlayTheFight), so this is
@@ -468,25 +491,9 @@ namespace PrincesPalace
             }
             finally
             {
-                using (BotPhaseTimers.Measure(BotPhase.HarnessTeardown))
-                {
-                    Navigation.Reset();
-                    SaveSystem.RootOverride = null;
-                    SaveSystem.InMemory = false;
-                    SaveSystem.ClearMemory();
-                    SaveSlotManager.Forget();
-                    RunManager.ResetForTests();
-                    RoomResolver.Reset();
-
-                    try
-                    {
-                        if (!inMemory && Directory.Exists(root)) Directory.Delete(root, recursive: true);
-                    }
-                    catch (IOException)
-                    {
-                        // Litter, not a finding -- same as PlayRun's own catch.
-                    }
-                }
+                // Litter, not a finding -- same as PlayRun's own catch;
+                // CloseHarness carries that reasoning now.
+                CloseHarness(root, inMemory);
             }
 
             careerResult.ElapsedMs = (DateTime.UtcNow - started).TotalMilliseconds;

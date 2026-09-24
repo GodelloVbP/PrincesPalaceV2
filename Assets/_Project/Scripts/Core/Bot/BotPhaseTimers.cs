@@ -42,7 +42,13 @@ namespace PrincesPalace
         FightPlay = 5,
         SettleFight = 6,
 
-        // RollOffers + ChooseOffer + TakeOffer.
+        // RollOffers + ChooseOffer + TakeOffer, and NESTED INSIDE this one is
+        // Equip: TakeOffer's own equip pass happens mid-Offer, before the
+        // "did it land in the bag or on the body" check that closes the
+        // phase out, so splitting Equip's time back out would mean the same
+        // "minus a subtotal" threading PersistSerialize/PersistWrite already
+        // avoid below. Read Equip's row as "of the time in Offers, this much
+        // was equipping", not as extra time on top of it.
         Offers = 7,
 
         // ArriveAt for a non-fight room (RoomResolver.Resolve).
@@ -71,6 +77,12 @@ namespace PrincesPalace
         // level-ups it has earned. Given their own rows because both run a
         // clone-and-re-resolve per candidate (see GearEvaluator) and that is
         // the one new cost in this phase worth being able to see grow.
+        //
+        // NESTED INSIDE Offers when it fires from a taken reward (see the
+        // note on Offers above) -- but ALSO measured on its own outside any
+        // phase at all, for the pre-run equip pass before the first room, so
+        // Equip's row is not simply "Offers minus this" the way
+        // PersistSerialize/PersistWrite are for their hosts.
         Equip = 14,
         LevelUp = 15,
 

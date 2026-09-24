@@ -37,11 +37,21 @@ namespace PrincesPalace.Domain.Bot
 
     public static class ShopNodePreference
     {
+        // BLANK IS THE DEFAULT, ANYTHING ELSE MUST NAME A REAL MODE.
+        // A typo in -botShopPolicy used to fall through to WhenOffered the
+        // same as a blank did, so "-botShopPolicy Neverr" silently ran the
+        // opposite baseline from the one asked for -- matching how
+        // -botArchetypes/-botProfiles already refuse an unknown name in
+        // BalanceBotRunner.ReadOptions rather than substituting a default.
         public static ShopNodeMode Parse(string raw)
         {
-            return string.Equals((raw ?? "").Trim(), "Never", System.StringComparison.OrdinalIgnoreCase)
-                ? ShopNodeMode.Never
-                : ShopNodeMode.WhenOffered;
+            var trimmed = (raw ?? "").Trim();
+            if (trimmed.Length == 0) return ShopNodeMode.WhenOffered;
+            if (string.Equals(trimmed, "WhenOffered", System.StringComparison.OrdinalIgnoreCase)) return ShopNodeMode.WhenOffered;
+            if (string.Equals(trimmed, "Never", System.StringComparison.OrdinalIgnoreCase)) return ShopNodeMode.Never;
+
+            throw new System.ArgumentException(
+                $"-botShopPolicy '{raw}' is not recognized; use WhenOffered or Never");
         }
 
         public static string Name(ShopNodeMode mode) =>
