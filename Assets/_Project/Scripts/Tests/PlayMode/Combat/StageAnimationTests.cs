@@ -373,7 +373,12 @@ namespace PrincesPalace.PlayModeTests
 
             // Punch narrows and heightens (negative stretch). Against a breath
             // that is doing a little of the same, the test is that the punch
-            // still dominates the width.
+            // still dominates the width. Run the punch at its real speed and
+            // pin the frame so the one tracked frame is a fixed slice of it
+            // (~9% of the 0.19s punch), regardless of machine load -- both
+            // are reset in TearDown.
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            Time.captureDeltaTime = 1f / 60f;
             animator.Punch(1f);
             yield return null;
 
