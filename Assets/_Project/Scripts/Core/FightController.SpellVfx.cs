@@ -183,18 +183,25 @@ namespace PrincesPalace
                 sprite.rect.width);
         }
 
-        // A per-pixel scan of every frame of a sheet, asked for on every cast.
+        // A per-pixel scan of a sheet's frames, asked for on every cast.
         // Keyed by PATH rather than by sprite so nothing accumulates across
         // scene loads -- the same arrangement the stage's content-centre cache
-        // uses.
-        // NOT cleared per fight, unlike its three siblings ContentCentreCache/
-        // ContentTopCache/OpaqueBoxCache -- see ResetStagePresentation's own
-        // note and AUDIT #209. It has the identical stale-measurement hazard;
-        // clearing it broke a travelling-effect placement test for a reason
-        // that was not chased down, so the original bug (a stale padding
-        // measurement surviving an asset-only re-slice within one long Editor
-        // session) is left open rather than traded for a worse one.
-        private static readonly Dictionary<string, float> VfxPaddingCache = new Dictionary<string, float>();
+        // uses -- AND by the first frame scanned, because the answer depends
+        // on it: two spells sharing one sheet at different impactFrames used
+        // to get whichever one was cast first.
+        //
+        // Cleared once per fight (ResetStagePresentation) with its three
+        // siblings, for their reason: an asset-only re-slice recompiles
+        // nothing, so a long Editor session would otherwise keep measuring art
+        // that is gone. AUDIT #209 is why this was briefly not cleared.
+        private static readonly Dictionary<(string, int), float> VfxPaddingCache =
+            new Dictionary<(string, int), float>();
+
+        private static void ClearVfxPaddingCache() => VfxPaddingCache.Clear();
+
+        // For the test that pins "a cold measurement flies exactly like a warm
+        // one" -- which is only askable if a test can make it cold.
+        public static void ClearVfxPaddingCacheForTest() => ClearVfxPaddingCache();
 
         // How long after the beat opens the blow actually lands.
         //
@@ -303,9 +310,9 @@ namespace PrincesPalace
         {
             if (performancePlayer == null) return CastHandle.None;
 
+            // An empty (or absent) performance is Begin's to refuse, and
+            // PlaceCast has nothing to place for one.
             var performance = ResolveCast(beat);
-            if (performance == null || performance.Instances.Count == 0) return CastHandle.None;
-
             PlaceCast(beat, performance);
             return performancePlayer.Begin(performance);
         }
@@ -318,6 +325,8 @@ namespace PrincesPalace
         // exists to measure and the module has no opinion about.
         private void PlaceCast(CombatBeat beat, SpellPerformance performance)
         {
+            if (performance?.Instances == null || performance.Instances.Count == 0) return;
+
             var parent = PrimaryPlayer != null ? PrimaryPlayer.transform.parent : null;
             if (parent == null) return;
 
@@ -937,8 +946,6 @@ namespace PrincesPalace
             if (struck == 0) return;
 
             var performance = SpellPerformance.Resolve(beat.FormVfx, struck, FrameCountOf);
-            if (performance == null || performance.Instances.Count == 0) return;
-
             PlaceCast(beat, performance);
             performancePlayer.Begin(performance);
         }
@@ -1240,9 +1247,8 @@ namespace PrincesPalace
         // pinned test fixtures).
         public static float VfxContentPaddingFraction(string vfxPath, Sprite[] frames, int impactFrame = 0)
         {
-            if (vfxPath != null && VfxPaddingCache.TryGetValue(vfxPath, out var cached)) return cached;
-
             int start = Mathf.Clamp(impactFrame - 1, 0, frames.Length - 1);
+            if (vfxPath != null && VfxPaddingCache.TryGetValue((vfxPath, start), out var cached)) return cached;
             float smallest = float.MaxValue;
             for (int i = start; i < frames.Length; i++)
             {
@@ -1254,7 +1260,7 @@ namespace PrincesPalace
             // no correction rather than throwing. "Uncorrected" is exactly the
             // old behaviour rather than something new and worse.
             float result = smallest == float.MaxValue ? 0f : smallest;
-            if (vfxPath != null) VfxPaddingCache[vfxPath] = result;
+            if (vfxPath != null) VfxPaddingCache[(vfxPath, start)] = result;
             return result;
         }
 
@@ -1275,12 +1281,20 @@ namespace PrincesPalace
             int h = Mathf.RoundToInt(r.height);
             if (w <= 0 || h <= 0) return -1f;
 
-            var pixels = sprite.texture.GetPixels(Mathf.RoundToInt(r.x), Mathf.RoundToInt(r.y), w, h);
+            // ROW BY ROW FROM THE BOTTOM, stopping at the first opaque one. The
+            // answer only ever needs the rows below the art, and the whole-frame
+            // GetPixels this replaces decoded and allocated every row above it
+            // too: 14 frames of mud_burst cost 18-35ms in one frame on its
+            // first cast, which is AUDIT #209 -- at the 60x a fixture runs,
+            // that one frame was longer than the entire flight.
+            int left = Mathf.RoundToInt(r.x);
+            int bottom = Mathf.RoundToInt(r.y);
             for (int y = 0; y < h; y++)
             {
+                var row = sprite.texture.GetPixels(left, bottom + y, w, 1);
                 for (int x = 0; x < w; x++)
                 {
-                    if (pixels[y * w + x].a > 0.02f) return y / (float)h;
+                    if (row[x].a > 0.02f) return y / (float)h;
                 }
             }
 

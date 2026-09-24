@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
@@ -604,6 +605,28 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(_player.Image.enabled);
         }
 
+        // AN EMPTY PERFORMANCE IS REFUSED BY THE MODULE, not by each caller.
+        // A per-target layer on a beat that struck nobody fans out to zero
+        // instances; Begin's opening Advance used to Release that cast and
+        // the Paint right after it dereferenced the Performance the Release
+        // had just nulled. Two of three callers pre-filtered it; now none do.
+        [UnityTest]
+        public IEnumerator BeginningAnEmptyPerformanceIsANoOpRatherThanAThrow()
+        {
+            yield return LoadFight();
+
+            var empty = SpellPerformance.Resolve(new SpellPresentation
+            {
+                layers = new[] { new SpellLayer { id = "per-target", place = "target", path = "Spells/mud_burst" } },
+            }, 0, _ => 26);
+            Assume.That(empty.Instances.Count, Is.EqualTo(0),
+                "fixture: a per-target layer with no targets was meant to fan out to nothing");
+
+            CastHandle handle = default;
+            Assert.DoesNotThrow(() => handle = _fight.PerformancePlayerForTest.Begin(empty));
+            Assert.IsFalse(handle.IsLive, "an empty performance was handed a live cast");
+        }
+
         [UnityTest]
         public IEnumerator StoppingImmediatelyClearsAnEffectInFlight()
         {
@@ -645,34 +668,63 @@ namespace PrincesPalace.PlayModeTests
             Assume.That(Mathf.Abs(target - caster), Is.GreaterThan(200f),
                 "fixture: the two have to be far enough apart for the flight to be measurable");
 
-            // READ BEFORE YIELDING. PlayFrom writes the start position
-            // synchronously and the coroutine begins easing on its very first
-            // frame, so a yield here reads the effect already 6px underway --
-            // which is correct behaviour and a flaky assertion, and it failed
-            // that way exactly once before this comment was written.
+            // THE CLOCK IS HELD, and read at named instants of the cast rather
+            // than "whenever IsPlaying went false". That older shape read the
+            // renderer AFTER the cast had released it -- the last position
+            // anything painted, not where the flight ended -- and at this
+            // fixture's 60x the whole 0.65s flight is 11ms, so whether any
+            // frame painted it between arrival and release was a race against
+            // frame time. AUDIT #209: a 35ms first-cast pixel scan made the
+            // next frame jump straight past the end, nothing painted after
+            // Begin, and the test read the launch point back.
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TravellingBeat());
 
             Assert.AreEqual(caster, _player.Image.rectTransform.anchoredPosition.x, 2f,
                 "the effect does not begin on the caster, which is the whole complaint it fixes");
 
-            // Out to the end of the sequence, where it has to have arrived.
-            //
-            // BOUNDED ON THE PLAYER'S OWN STATE, not a fixed real-time guess.
-            // PlayRoutine already runs its whole travel through
-            // FightBeatPlayer.Scaled, so under this fixture's 60x [SetUp] the
-            // flight is done in milliseconds -- waiting a flat 1.4s here was
-            // ~130x longer than the thing it was waiting for. The 2f ceiling
-            // is a failure timeout, not the expected wait.
-            float waited = 0f;
-            while (_player.IsPlaying && waited < 2f)
-            {
-                waited += Time.unscaledDeltaTime;
-                yield return null;
-            }
+            // Frame 13 of 26 over 0.65s lands at 0.325s; 0.5s is after it and
+            // before the sheet ends, so the flight is over and still drawn.
+            HoldTheClockAt(0.5f);
 
-            Assert.IsFalse(_player.IsPlaying, "the effect never finished its flight inside the timeout");
+            Assert.IsTrue(_player.IsPlaying, "the effect ended before the instant this reads");
             Assert.AreEqual(target, _player.Image.rectTransform.anchoredPosition.x, 2f,
                 "the effect never reached the thing it was cast at");
+            yield break;
+        }
+
+        // A COLD MEASUREMENT FLIES EXACTLY LIKE A WARM ONE (AUDIT #209).
+        //
+        // VfxPaddingCache is cleared once per fight, so a travelling spell's
+        // first cast in every fight pays a real pixel scan of its sheet. That
+        // scan used to be slow enough to swallow a whole 60x flight in one
+        // frame, and the only test covering the flight passed because an
+        // earlier test had warmed the cache. This one makes it cold on
+        // purpose, then casts twice -- cold and warm -- and pins both flights
+        // to the same literal launch and landing: Shawn's slot at -320, the
+        // front enemy's at 300, as this fixture's stage lays them out.
+        [UnityTest]
+        public IEnumerator AColdPaddingScanLandsATravellingEffectWhereAWarmOneDoes()
+        {
+            yield return LoadFight();
+
+            foreach (var pass in new[] { "cold", "warm" })
+            {
+                if (pass == "cold") FightController.ClearVfxPaddingCacheForTest();
+                else LetTheLastCastFinish();
+
+                HoldTheClockAtTheCast();
+                _fight.PlaySpellVfxForTest(TravellingBeat());
+
+                Assert.AreEqual(-320f, _player.Image.rectTransform.anchoredPosition.x, 2f,
+                    $"{pass}: the flight does not leave from the caster");
+
+                HoldTheClockAt(0.5f);
+
+                Assert.IsTrue(_player.IsPlaying, $"{pass}: the effect ended before the instant this reads");
+                Assert.AreEqual(300f, _player.Image.rectTransform.anchoredPosition.x, 2f,
+                    $"{pass}: the flight did not land on the target");
+            }
         }
 
         // WIRING CHECK: an actor with an authored castPoint (StanceManifest

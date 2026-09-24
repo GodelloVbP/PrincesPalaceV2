@@ -200,7 +200,13 @@ namespace PrincesPalace
 
         public CastHandle Begin(SpellPerformance performance)
         {
-            if (performance == null || performance.Instances == null) return CastHandle.None;
+            // NOTHING TO PLAY IS NOT A CAST. Refused here rather than by each
+            // caller, which is where it used to live: two of the three callers
+            // pre-filtered an empty performance and PlayContactFx did not, and
+            // the one that did not was one presentation edit away from Paint
+            // dereferencing the null Performance that Advance's own Release
+            // leaves behind.
+            if (performance?.Instances == null || performance.Instances.Count == 0) return CastHandle.None;
 
             // Contract 3: refused and logged, the same posture missing art
             // gets. A cast born at pace <= 0 has no honest age to convert --
@@ -264,7 +270,14 @@ namespace PrincesPalace
             // What this replaces drew on the frame the beat opened, and a beat
             // whose art appeared one frame later would be a retiming of every
             // spell in the game for no stated reason.
+            //
+            // GUARDED THE WAY Tick IS: Advance releases a cast that has nothing
+            // left to draw or fire (every instance unplaced, a zero-length
+            // schedule), and a released cast has no Performance to paint. It
+            // also has no handle worth returning -- IsLive would already say
+            // false, and None says so without a slot a later cast may reuse.
             Advance(slot, 0f);
+            if (!cast.Live) return CastHandle.None;
             Paint(slot, 0f);
 
             return new CastHandle(slot, cast.Generation);

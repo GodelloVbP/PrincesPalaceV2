@@ -1254,11 +1254,15 @@ namespace PrincesPalace
                 clock = BreathCurve.PhaseFor(index);
             }
 
-            // UNSCALED BY BeatSpeedMultiplier, like every other clock on this
-            // stage -- a fight paused behind a modal should not bank up a
-            // breath and spend it all at once when the panel closes. Scaled
-            // by BreathSpeedMultiplier instead, which is 1 outside a test and
-            // therefore changes nothing about that rule in play.
+            // UNSCALED BY BeatSpeedMultiplier AND BY Time.timeScale, on purpose
+            // and unlike the glide, punch and kick, which run on
+            // Time.deltaTime since 1822a059 so the pause stops them. An idle
+            // breath and a hover are ambient, not part of the action, so the
+            // battle-speed preset leaves them alone (PLAN_BATTLE_SPEED
+            // contract 9); and a fight paused behind a modal should not bank
+            // up a breath and spend it all at once when the panel closes.
+            // Scaled by BreathSpeedMultiplier instead, which is 1 outside a
+            // test and therefore changes nothing about that rule in play.
             clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
             _idleClock[combatant] = clock;
 
@@ -1322,18 +1326,7 @@ namespace PrincesPalace
             ContentCentreCache.Clear();
             ContentTopCache.Clear();
             ClearOpaqueBoxCache();
-
-            // VfxPaddingCache (FightController.SpellVfx.cs) is NOT cleared
-            // here despite having the identical stale-measurement hazard as
-            // the three caches above -- see that field's own note. Clearing
-            // it broke SpellVfxTests.ATravellingEffectStartsOnTheCasterAnd
-            // EndsOnTheTarget: forcing a fresh pixel-scan of mud_burst's
-            // padding on THIS fight, rather than reusing a value warmed by
-            // an earlier fight/test, left the travelling layer's box stuck
-            // at its launch position (anchoredPosition.x read the caster's
-            // -320 instead of the target's 300 once the flight finished).
-            // Root cause not chased further; filed as AUDIT #209 instead of
-            // fixed blind.
+            ClearVfxPaddingCache();
 
             _confirmedDefeated.Clear();
 
