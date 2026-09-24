@@ -24,14 +24,15 @@ namespace PrincesPalace.PlayModeTests
     // via inputOverride, `yield return null`, assert resulting state -- on the
     // REAL Hub scene, the same shape every other file in this family uses.
     //
-    // ONE MOVE PRESS PER TEST, each from a freshly loaded scene.
-    // SystemMenuGamepadNavigationTests' own header has the full reasoning:
-    // StandaloneInputModule's move debounce is a real-time timestamp on the
-    // module instance (plan section 2 flags it as outside the seam a scripted
-    // BaseInput can control), so a second press moments later by test-clock
-    // time is silently swallowed as a repeat. Where a test needs the selection
-    // to START somewhere other than the entry it sets it directly and then
-    // presses once, exactly as the Options row tests do.
+    // Where a test needs the selection to START somewhere other than the
+    // entry it sets it directly and then presses once, so a failure points at
+    // the one edge that broke. That is the only reason for it: a second press
+    // straight after the first lands fine (the 0.1s uGUI re-press gate is
+    // lifted by NavSceneReuse.TakeOverInput; JourneyFixture.Move has the
+    // measurement).
+    //
+    // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene) -- see
+    // OpenTheCharacterTab for what is put back between tests.
     public class DossierGamepadNavigationTests
     {
         private string _root;
@@ -62,34 +63,45 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // A reused hub is put back through the dossier's own public setters
+        // and buttons: the reward track shut through its close button (shut
+        // only by the menu around it, it would stay activeSelf and replay its
+        // OnEnable on the next open), the pack, books, skills and attributes
+        // panels shut, then the menu closed on its default tab
+        // (NavSceneReuse.CloseHubModals). The menu going down also disables
+        // every pack cell, whose HoverIndex.OnDisable ends any hover a test
+        // left, and pops the dossier's context, which drops its tooltip.
+        // Nothing in this file pages the roster, so the character shown is
+        // the first squad member either way. NavSceneReuse puts back the
+        // input and the focus memory.
         private IEnumerator OpenTheCharacterTab()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            // Start() runs one frame after activation.
-            yield return null;
-            yield return null;
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-
-            // Set BEFORE letting any frame run: a previously-loaded scene's
-            // EventSystem can still be current (DefeatGamepadNavigationTests'
-            // own note, and MainMenuGamepadNavigationTests before it).
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            yield return SharedScene.Ensure("Hub");
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
 
             _dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_dossier, "the Character pane has no dossier controller");
+
+            var trackClose = Control("TrackCloseButton") as Button;
+            if (trackClose != null && trackClose.gameObject.activeInHierarchy) trackClose.onClick.Invoke();
+            if (_dossier.IsPackShown) _dossier.ShowPack(false);
+            if (_dossier.IsSpellsShown) _dossier.ShowSpells(false);
+            if (_dossier.IsSkillsShown) _dossier.ShowSkills(false);
+            if (_dossier.IsAttributesShown) _dossier.ShowAttributes(false);
+            NavSceneReuse.CloseHubModals();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
 
             _menu.Open();
             _menu.Select(0);
@@ -794,17 +806,16 @@ namespace PrincesPalace.PlayModeTests
         // reach it. It is in the spine now, which moves exactly one
         // expectation below; the geometry did not move at all.
 
-        // One press, then the real-time settle the module's own repeat gate
-        // needs before it will let another through -- JourneyFixture's own
-        // 0.6s, for the reason that file documents at length. Selection is
-        // placed first so each edge is asserted from a known start rather than
-        // walked to, which keeps a failure pointing at the edge that broke.
+        // One press and one rest frame, no wall-clock settle (the rest frame
+        // re-arms the dispatcher's edge; JourneyFixture.Move has why nothing
+        // else is needed). Selection is placed first so each edge is asserted
+        // from a known start rather than walked to, which keeps a failure
+        // pointing at the edge that broke.
         private IEnumerator Step(string from, float horizontal, float vertical)
         {
             Select(from);
             yield return null;
             yield return Press(horizontal, vertical);
-            yield return new WaitForSecondsRealtime(0.6f);
             yield return DriveFrame();
         }
 

@@ -2,7 +2,6 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -29,6 +28,9 @@ namespace PrincesPalace.PlayModeTests
     {
         private SystemMenuController _menu;
 
+        [TearDown]
+        public void Restore() => SharedScene.AfterTest();
+
         [UnityTest]
         public IEnumerator TheFillNeverLeavesItsTrack()
         {
@@ -54,6 +56,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ItStaysOnTheTrackForEveryCharacter()
         {
             yield return OpenTheDossier();
+            SharedScene.MarkDirty("pages the dossier off the first character; every other test here spends into whoever is shown");
 
             var next = _menu.GetComponentsInChildren<Button>(includeInactive: true)
                 .FirstOrDefault(b => b.name == "DossierNextCharacter");
@@ -304,19 +307,34 @@ namespace PrincesPalace.PlayModeTests
             _menu.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name);
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The menu the
+        // last test left open is closed first, so this opens it the way a
+        // fresh hub does. Once open, the dossier is paged off its character
+        // and back: the attribute grid's order is frozen per character on
+        // screen, so without that it would keep the order sorted for the
+        // previous test's scores rather than sort for this one's, as a fresh
+        // open would. Paging away and back is also what a player can do.
         private IEnumerator OpenTheDossier()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
 
+            if (_menu.IsOpen) _menu.Close();
             _menu.Open();
             _menu.Select(SystemMenuTab.CharacterInventory);
             yield return null;
             yield return null;
+
+            var next = ButtonNamed("DossierNextCharacter");
+            var prev = ButtonNamed("DossierPrevCharacter");
+            if (next != null && prev != null && next.gameObject.activeInHierarchy)
+            {
+                next.onClick.Invoke();
+                prev.onClick.Invoke();
+                yield return null;
+            }
         }
 
         private RectTransform RectNamed(string name) =>

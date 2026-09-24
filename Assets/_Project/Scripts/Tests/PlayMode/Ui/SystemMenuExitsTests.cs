@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -77,6 +76,8 @@ namespace PrincesPalace.PlayModeTests
             {
                 hold.Cancel();
             }
+
+            SharedScene.AfterTest();
 
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -341,12 +342,18 @@ namespace PrincesPalace.PlayModeTests
         {
             if (withRun) RunManager.StartRun(4242);
 
-            yield return SceneManager.LoadSceneAsync(scene, LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // Shared across this fixture while consecutive tests ask for the
+            // same scene (SharedScene). The one thing a test leaves behind is
+            // the menu open, and Close is the reset: it resumes the clock and
+            // deactivates the pane, which disarms any exit (the same path
+            // SwitchingTabsForgetsAnArmedExit pins). A hold is cancelled in
+            // [TearDown] already. Open then re-reads the context as it would
+            // on a fresh scene.
+            yield return SharedScene.Ensure(scene);
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, $"{scene} has no SystemMenuController");
+            if (_menu.IsOpen) _menu.Close();
 
             _menu.Open();
             _menu.Select(SystemMenuTab.MainMenu);

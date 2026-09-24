@@ -2,7 +2,6 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -19,11 +18,14 @@ namespace PrincesPalace.PlayModeTests
     {
         private GameObject _hub;
 
+        [TearDown]
+        public void Restore() => SharedScene.AfterTest();
+
+        // SHARED ACROSS THIS FIXTURE (SharedScene). Every test only counts
+        // what DressHub attached, so nothing needs putting back.
         private IEnumerator LoadHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _hub = Object.FindAnyObjectByType<HubController>().gameObject;
             Assert.IsNotNull(_hub);

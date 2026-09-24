@@ -42,6 +42,27 @@ Triage order, cheapest first:
 - A new window-spawning script that skips `Start-FocusGuard` is back to
   pre-2026-09-18 unguarded behavior.
 
+## Shared scenes in PlayMode
+
+- A fixture loads its scene once per FIXTURE, via `SharedScene.Ensure` /
+  `EnsureFight`, never once per test and never across fixtures.
+- A test that leaves the scene in a state its fixture cannot undo calls
+  `SharedScene.MarkDirty("reason")`; the next test reloads.
+- After a failed test the next one reloads on its own -- no action needed.
+- Per-test cheap reset (close a panel, stop a playback, rebind a fight)
+  belongs to the fixture's own setup/teardown; `SharedScene` resets nothing.
+- `PP_SHARED_SCENE_RELOAD=1` is the isolation check: every `Ensure` reloads.
+  Run the fixture under it whenever you touch a converted fixture; REQUIRED
+  when adding a new shared fixture. One that only passes shared is passing
+  on another test's leftovers.
+- The hooks in `PlayModeTestProfiler.cs` are load-bearing: `SharedScene`
+  throws if its callback never fired. Do not remove them.
+- A test that sets no save root of its own gets an emptied sandbox
+  (`TestSaveSandbox`), so no PlayMode test touches the runner's real save.
+- Contract and edge cases: the headers of `Tests/PlayMode/Shared/`
+  `SharedScene.cs`, `TestSaveSandbox.cs`, `UnityEventRegistryPrune.cs`,
+  `NavSceneReuse.cs`.
+
 ## Test-run decision table
 
 Every Unity launch in `tools/` goes through `Start-UnityQuiet` in
@@ -67,10 +88,11 @@ format is prose-like or declarative.
 | Situation | Command |
 |---|---|
 | Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng` -- each a FOLDER under `Tests/EditMode/` and `Tests/PlayMode/`, so a test's area is simply where its file sits; `-List` shows every class with its area, marking each `[D]` or `[U]` for its host) |
-| ... and how long that takes | Depends on whether the slice needs Unity. All-`[D]` runs under `dotnet test`, no Editor: ~4s (`test.ps1 wool` was ~12s, is 3.7s). Any `[U]` class boots Unity; any PlayMode class makes the slice PlayMode-bound -- `test.ps1 combat` is ~110s either way (47/122 classes are PlayMode, 93s of the run). The EditMode half of a mixed slice still costs nothing extra |
+| ... and how long that takes | Depends on whether the slice needs Unity. All-`[D]` runs under `dotnet test`, no Editor: ~4s (`test.ps1 wool` was ~12s, is 3.7s). Any `[U]` class boots Unity; any PlayMode class makes the slice PlayMode-bound -- `test.ps1 combat` is ~185s either way (2026-09-24: 80/189 classes on Unity, PlayMode 155s of the run). The EditMode half of a mixed slice still costs nothing extra |
 | Checking the fast host against the slow one | `tools/test.ps1 <slice> -Unity` forces the whole slice through Unity. Use when a dotnet result looks wrong, or after touching `tools/domain-tests`. Both hosts compile the same files, not the same NUnit (Unity ships 3.5, the host pins 3.14) -- `tools/domain-tests/README.md` |
 | Iterating across several touched files, not sure which area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Changed` -- maps uncommitted changes (tracked + untracked) to the areas/classes they affect, prints the mapping used. A file it cannot map is a hard refusal (exit 2), never a quiet subset. Forces the full suite instead of a slice: every `.asmdef`, anything under `Tests/**/Shared/`, the scenes, `tools/`, and the five `Editor/` generators (`ContentBuilder`, `GenerationRun`, `PipelineBuilder`, `StanceSpriteImporter`, `PreviewRequestWatcher`) |
-| Before committing a full-gate-row change | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~5m40s: 17s sync, then EditMode and PlayMode concurrently, PlayMode 311s of it). **Does not build the scenes** -- see below. **Refuses to run at all** on any of five: a test file outside an area folder, anything deeper than one folder inside one, a testable file in `Shared/`, two files declaring the same class name, or a test file declaring a class discovery never saw. Each names the file and the class; no bypass flag; the fix is usually a `git mv` |
+| Before committing a full-gate-row change | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~7m, measured 2026-09-24: ~57s sync, then PlayMode ~363s with EditMode's ~22s running concurrently; run-to-run noise is about +-13%). **Does not build the scenes** -- see below. **Refuses to run at all** on any of five: a test file outside an area folder, anything deeper than one folder inside one, a testable file in `Shared/`, two files declaring the same class name, or a test file declaring a class discovery never saw. Each names the file and the class; no bypass flag; the fix is usually a `git mv` |
+| Want to know where PlayMode time goes | Every PlayMode run writes `test-profile-PlayMode.csv` (one row per test, fixture and the assembly, plus boot markers) and `test-profile-PlayMode-frames.csv` (frame-cost histogram) into the runner copy's root -- `Tests/PlayMode/Shared/PlayModeTestProfiler.cs` says what each column measures and what it cannot. Scene-load cost per scene in isolation: `$env:PP_BENCHMARK='1'; tools/test.ps1 SceneLoadBenchmarkTests` (~300s; a method-name substring instead of `1` runs just those). Unset, every case is ignored -- including in `test.ps1 run`, which names the class; `[Explicit]` alone did not stop that |
 | Changed the discovery/area code in `tools/test_areas.ps1` | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -List -SelfCheck` (<1s). Runs against `tools/test_areas_fixture/` (ten files broken eight ways on purpose, two controls that must NOT be refused), asserts each of the five refusals fires on its case and does not fire on a neighbouring non-case, plus the exact count of each list. Prints `SELF-CHECK: ok` or names every miss and exits 1 |
 | Wrote a test class whose name already exists, or a generic/nested fixture | Rename it. NUnit reports a generic fixture as `Foo<Int32>` and a nested one as `Outer+Inner`; every filter this repo builds (Unity's `-testFilter`, dotnet's `FullyQualifiedName`) is the bare declared name, so none can be selected by any run. All three are refused rather than accommodated |
 | Changed `Domain/` or `Tests/EditMode/` and want to know the fast host still compiles | `dotnet build tools/domain-tests` (~2s warm). `tools/githooks/pre-commit` runs this for you when either is staged |

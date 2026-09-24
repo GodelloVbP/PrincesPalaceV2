@@ -42,6 +42,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             RewardTrackController.SpeedMultiplier = 1f;
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -51,10 +52,23 @@ namespace PrincesPalace.PlayModeTests
         // Same path RewardTrackClaimTests/RewardTrackLifecycleTests take:
         // the panel is an inactive child of the dossier, inside a pane of
         // the system menu, inside the hub.
+        //
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The track panel
+        // is shut through its own close button FIRST -- shutting only the
+        // menu around it would leave it activeSelf, and its OnEnable would
+        // then replay against the previous test's character on the next
+        // open -- and then the menu. The squad edits below land on this
+        // test's own fresh save either way, before the panel opens and reads
+        // them.
         private IEnumerator OpenTheTrack(int level, int claimed)
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
+
+            var close = Find("TrackCloseButton");
+            if (close != null && close.gameObject.activeInHierarchy) close.onClick.Invoke();
+            NavSceneReuse.CloseHubModals();
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
             yield return null;
 
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
@@ -80,11 +94,6 @@ namespace PrincesPalace.PlayModeTests
             // synchronously -- docs/CODE_STANDARDS.md section 5.
             yield return null;
             yield return null;
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
 
             // The panel's own fly-in glides toward the CURRENT level on
             // open (RewardTrackController's Motion half) -- settled here,

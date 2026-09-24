@@ -4,7 +4,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -46,6 +45,8 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
+
             // Every global this fixture touched, plus the ones it did not --
             // one call, so the list cannot go stale here while it grows
             // somewhere else. See TestGlobals.
@@ -67,14 +68,39 @@ namespace PrincesPalace.PlayModeTests
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
-        private IEnumerator OpenTheMenu()
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene), so what one
+        // test left on it is put back here, through the same buttons a hand
+        // would press. The save needs nothing: [SetUp] points every test at a
+        // fresh root and the menu reads SaveSlotManager.CurrentSave live.
+        //
+        // What does need it is the menu's own view state, which by design
+        // only a scene reload resets (DebugMenuController: plus and quantity
+        // are sticky, category and page persist), plus the toast, whose text
+        // outlives the grant that wrote it -- a refusal test would otherwise
+        // pass on the previous test's refusal.
+        private IEnumerator TheHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _hub = Object.FindAnyObjectByType<HubController>();
             Assert.IsNotNull(_hub, "the Hub scene has no HubController");
+
+            _hub.SetDebugMenu(false);
+            _hub.SetCharacterOverlay(false);
+
+            // On a fresh load these land on a menu whose Start has not wired
+            // its listeners yet, and do nothing -- the values are already the
+            // opening ones.
+            Click("DebugCategory0");
+            Click("DebugQty0");
+            // 10 is ItemUpgrade.MaxPlus; PlusClampsAtTen pins it.
+            for (int i = 0; i < 10; i++) Click("DebugPlusMinusButton");
+            Named("DebugToastLabel").GetComponent<TMP_Text>().text = "";
+        }
+
+        private IEnumerator OpenTheMenu()
+        {
+            yield return TheHub();
 
             _debug = _hub.GetComponentInChildren<DebugMenuController>(includeInactive: true);
             Assert.IsNotNull(_debug, "the debug menu was never wired into the hub");
@@ -92,8 +118,10 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheMenuStartsClosedAndTheToggleOpensIt()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
+            // Not TheHub(): its reset closes the menu, and this asserts that a
+            // freshly loaded hub opens with it closed.
+            SharedScene.MarkDirty("asserts what a freshly loaded hub opens with, not what a reset put back");
+            yield return SharedScene.Ensure("Hub");
             _hub = Object.FindAnyObjectByType<HubController>();
 
             Assert.IsFalse(_hub.DebugMenuIsOpen, "the hub opens with the debug menu down");
@@ -339,6 +367,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator OpenEventOpensTheDemoWhereThePartyStands()
         {
             yield return OpenTheMenu();
+            SharedScene.MarkDirty("opens an event over the hub, which this fixture has no cheap way to close");
             RunManager.StartRun(20260923UL);
             Assert.AreEqual(1, ContentDatabase.Events.Count, "fixture: row 7 is the only event's row");
 

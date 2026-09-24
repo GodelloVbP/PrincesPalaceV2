@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -52,6 +51,17 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). A test
+            // that returns while a blow is still playing would hand the next
+            // one a busy controller; EndFight is what a scene change runs on
+            // the way out, and Bind puts the slots back (ResetStagePresentation).
+            if (_fight != null)
+            {
+                var beats = _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true);
+                if (beats != null) beats.EndFight();
+            }
+            SharedScene.AfterTest();
+
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             FightController.BreathSpeedMultiplier = 1f;
         }
@@ -71,9 +81,9 @@ namespace PrincesPalace.PlayModeTests
 
         private IEnumerator OpenAFight()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // Loads once per fixture. The tests that bind rebind a fresh
+            // session over it, which is also how the game opens its next fight.
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);
@@ -276,6 +286,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator AFlyerRidesItsHoverThroughALungeAndBack()
         {
             yield return AFightAgainst("Enemies/rat");
+            SharedScene.MarkDirty("SetHover(40) on a grounded rat: only HoverIdle clears a hover, and it skips non-airborne actors");
 
             var slot = (RectTransform)Named("Enemy0Slot").transform;
             var animator = slot.GetComponent<StageActorAnimator>();
@@ -314,6 +325,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ReHomingAFlyerDoesNotFoldTheHoverIntoItsMark()
         {
             yield return AFightAgainst("Enemies/rat");
+            SharedScene.MarkDirty("SetHover(40) on a grounded rat: only HoverIdle clears a hover, and it skips non-airborne actors");
 
             var slot = (RectTransform)Named("Enemy0Slot").transform;
             var animator = slot.GetComponent<StageActorAnimator>();

@@ -5,7 +5,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -46,6 +45,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             ReckoningController.SpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -73,14 +73,44 @@ namespace PrincesPalace.PlayModeTests
 
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
+        // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Show()
+        // repaints every page and resets the tab to the spoils, so the reset
+        // is only putting the screen back down: OnDisable stops the previous
+        // test's animation and removes its nav context. A no-op on a fresh
+        // load. Reuse makes ItOpensOnTheSpoilsRatherThanWhereverYouLeftIt
+        // stricter, not looser: the previous test may well have left it on
+        // another tab.
+        //
+        // AND THE GLOOM. PlayIn reads its fade-up target off the dimmer's
+        // CURRENT alpha, so a Show that cuts a running PlayIn short (a second
+        // Show, or the screen going down mid-fade) leaves a lower alpha that
+        // every later PlayIn in the same scene then treats as the target. A
+        // fresh scene carries the authored value; a reused one gets it put
+        // back from what this fixture read off its fresh load.
+        private ReckoningController _capturedFor;
+        private float _sceneGloom;
+
         private IEnumerator OpenTheFight()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
             _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+            _reckoning.gameObject.SetActive(false);
+
+            var dimmer = Named("ReckoningPanelDimmer")?.GetComponent<Image>();
+            Assert.IsNotNull(dimmer, "the Reckoning has no ReckoningPanelDimmer");
+            if (_capturedFor != _reckoning)
+            {
+                _capturedFor = _reckoning;
+                _sceneGloom = dimmer.color.a;
+            }
+            else
+            {
+                var colour = dimmer.color;
+                colour.a = _sceneGloom;
+                dimmer.color = colour;
+            }
         }
 
         // A reward whose ledger numbers are distinctive enough that finding

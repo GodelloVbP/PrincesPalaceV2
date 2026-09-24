@@ -48,6 +48,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -59,23 +60,27 @@ namespace PrincesPalace.PlayModeTests
             _hub.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The debug
+        // menu's category and page persist across a close by design
+        // (DebugMenuTests.TheHub says so and resets them the same way), and
+        // two tests here switch to RESOURCES, so the category-0 button's own
+        // click puts the menu back on WEAPONS, page one, before it reopens.
+        // Nothing here touches the sticky quantity or plus. NavSceneReuse
+        // puts back the rest.
         private IEnumerator OpenTheMenu()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
-            _hub = Object.FindAnyObjectByType<HubController>();
-            Assert.IsNotNull(_hub, "the Hub scene has no HubController");
+            _hub = NavSceneReuse.CloseHubModals();
 
             _debug = _hub.GetComponentInChildren<DebugMenuController>(includeInactive: true);
             Assert.IsNotNull(_debug, "the debug menu was never wired into the hub");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            if (NavSceneReuse.Reused) Named("DebugCategory0").GetComponent<Button>().onClick.Invoke();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
 
             _hub.SetDebugMenu(true);
 
@@ -106,6 +111,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsTheFirstCategory_AsSoonAsTheMenuOpens()
         {
+            SharedScene.MarkDirty("asserts where a never-opened debug menu starts, which the category-0 reset would otherwise supply");
             yield return OpenTheMenu();
 
             Assert.AreEqual(Named("DebugCategory0"), EventSystem.current.currentSelectedGameObject,

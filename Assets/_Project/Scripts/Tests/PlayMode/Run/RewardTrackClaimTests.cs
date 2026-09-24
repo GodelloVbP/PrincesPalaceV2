@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -54,6 +53,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             RewardTrackController.SpeedMultiplier = 1f;
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -65,11 +65,20 @@ namespace PrincesPalace.PlayModeTests
         // The same path SystemMenuCaptureTests takes, because it is the only
         // one there is: the panel is an inactive child of the dossier, inside a
         // pane of the system menu, inside the hub.
+        //
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The track the
+        // last test left open is closed with its own close button and the
+        // menu under it is closed too, so the open below is a first open: the
+        // track paints from the save in its OnEnable, which is what makes the
+        // level and watermark set here reach it.
         private static IEnumerator OpenTheTrack(int level, int claimed)
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
+
+            var track = Object.FindAnyObjectByType<RewardTrackController>(FindObjectsInactive.Include);
+            if (track != null && track.gameObject.activeSelf) Find("TrackCloseButton").onClick.Invoke();
+            var open = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            if (open != null && open.IsOpen) open.Close();
 
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {

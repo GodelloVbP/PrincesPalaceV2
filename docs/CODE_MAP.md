@@ -307,10 +307,10 @@ automated as PlayMode tests through the real production dispatcher rather
 than the manual checklist section 13 used to be the only version of.
 `Tests/PlayMode/Shared/JourneyFixture.cs` is the one shared mechanism --
 scripted `BaseInput` takeover, `PressSubmit`/`PressCancel`/`PressTabNext`/
-`PressTabPrev`/`Move` (Move settles for real time after releasing the
-stick, a fix for a silent drop `StandaloneInputModule.AllowMoveEventProcessing`'s
-own real-time repeat gate causes on a second chained move, found writing
-this suite), `WaitForScene`/`WaitUntil`, and three assertion shapes
+`PressTabPrev`/`Move` (one press frame and one rest frame, no wall-clock
+wait: `TakeOverInput` lifts uGUI's 0.1s `inputActionsPerSecond` re-press
+gate, the only real-time gate on a chained move -- measured 2026-09-24;
+the 0.5s repeat delay applies only to a held stick), `WaitForScene`/`WaitUntil`, and three assertion shapes
 (a literal selected node name, "top is Fight with no selection", a named
 scene transition). Segment classes live directly under `Tests/PlayMode/Run/`:
 `JourneyToFirstFightTests` (Main Menu through the relic draft to the Map's
@@ -321,6 +321,11 @@ each adjusted once, Cancel back), `JourneyFightToHubOnDefeatTests` (a
 deliberate loss -- there is no flee verb, `FightScreen.cs`'s own
 `BuildVerbColumn` header says so, and a win's own `LeaveFight` goes to the
 Map, not the Hub -- through Defeat's Inspect/Return Rail to the Hub).
+The per-screen `*GamepadNavigationTests` fixtures (not journeys) share one
+scene load per fixture through `SharedScene`, and put a reused scene back
+through `Tests/PlayMode/Shared/NavSceneReuse.cs`: scripted input rehomed
+and at rest with the rate gate lifted, the hub's modals closed, and every
+`NavContext`'s focus memory cleared -- a fresh load's state.
 **Segments 5-9** (`cd311629`, `695e97ff`, `0fa3b05a`, `f1b92b9f` --
 `docs/GAMEPAD_NAVIGATION_PLAN.md`'s own status header has the per-segment
 detail and every stated deviation), completing phase 4 item 2:

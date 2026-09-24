@@ -7,7 +7,6 @@ using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -43,17 +42,35 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void RestoreSaveRoot()
         {
+            SharedScene.AfterTest();
             Navigation.Reset();
 
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE MENU IS SHARED ACROSS THIS FIXTURE (SharedScene). What a test
+        // opened is closed again here through the buttons a hand would press,
+        // topmost first, so every test starts on the bare root the way a fresh
+        // load does. The slot lists need nothing: both re-read the disk in
+        // OnEnable, and [SetUp] has already pointed it at a fresh root.
+        //
+        // Continue does need something, and gets no reset here: it is read
+        // once at Start, so the tests about it mark the scene dirty instead of
+        // letting a helper recompute it and hide a Start that stopped doing so.
         private static IEnumerator LoadMenu()
         {
-            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("MainMenu");
+
+            if (IsOpen("ResetConfirmPanel")) Click("ResetConfirmNoButton");
+            if (IsOpen("ManageSavesPanel")) Click("CloseManageSavesButton");
+            if (IsOpen("SaveSlotPanel")) Click("CloseSaveSlotButton");
+        }
+
+        private static bool IsOpen(string name)
+        {
+            var go = Named(name);
+            return go != null && go.activeSelf;
         }
 
         private static GameObject Named(string name) =>
@@ -351,9 +368,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.SaveCurrent();
             Assert.IsTrue(SaveSystem.SlotExists(Slot), "fixture check: the slot should exist before deletion");
 
-            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return LoadMenu();
 
             // BY NAME, because the controller's fields are `internal` and
             // InternalsVisibleTo is granted to the Editor assembly only -- a
@@ -420,6 +435,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator WithNoSaveAtAll_ContinueDoesNotShow()
         {
+            SharedScene.MarkDirty("asserts Continue as Start computed it, with nothing on disk");
             yield return LoadMenu();
 
             var continueGo = Named("ContinueButton");
@@ -432,6 +448,7 @@ namespace PrincesPalace.PlayModeTests
         {
             SaveSystem.Save(SaveData.CreateNew(), 2);
 
+            SharedScene.MarkDirty("asserts Continue as Start computed it from the save written above");
             yield return LoadMenu();
 
             var continueGo = Named("ContinueButton");
@@ -443,6 +460,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ContinueEntersTheSameSlotItNames()
         {
             SaveSystem.Save(SaveData.CreateNew(), 1);
+            SharedScene.MarkDirty("clicks the slot Start read for Continue from the save written above");
             yield return LoadMenu();
 
             Click("ContinueButton");
@@ -459,6 +477,7 @@ namespace PrincesPalace.PlayModeTests
             // thing that can make it wrong INSIDE one visit to the menu is
             // deleting the very slot it is offering.
             SaveSystem.Save(SaveData.CreateNew(), 0);
+            SharedScene.MarkDirty("needs Continue visible from Start's read of the save written above");
             yield return LoadMenu();
 
             var continueGo = Named("ContinueButton");

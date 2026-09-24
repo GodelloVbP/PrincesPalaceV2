@@ -44,26 +44,30 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             Time.timeScale = 1f;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). Closing the
+        // menu (NavSceneReuse.CloseHubModals) is the reset: the Party pane's
+        // own OnDisable cancels any carry the last test left, and its
+        // OnEnable re-reads the formation from this test's fresh save when
+        // Select(Party) shows it again below. The one thing a close does not
+        // clear is a mouse drag in flight -- see SubmitDuringAMouseDrag.
         private IEnumerator OpenTheParty()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
+
+            NavSceneReuse.CloseHubModals();
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
             yield return null;
 
             var save = SaveSlotManager.CurrentSave;
             save.selectedCharacterIds = new List<string> { "owl", "sheep", "bear" };
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the Hub scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, "the hub carries no SystemMenuController");
@@ -233,6 +237,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator SubmitDuringAMouseDrag_IsIgnored()
         {
             yield return OpenTheParty();
+            SharedScene.MarkDirty("leaves a mouse drag in flight (PartyController._dragging), which only the drag's own end clears");
 
             var front = Seat(PartySeat.Front);
             var drag = front.GetComponent<PartyDragSource>();
@@ -320,14 +325,8 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // A helper for the three tests below, all starting from the same
-        // "bear picked up from Rear" state -- kept as ONE Submit (not a
-        // shared coroutine chain of Moves) so each test drives exactly one
-        // navigation press of its own from a freshly-selected node, the
-        // same one-press-per-test shape every other file in this family
-        // uses (SystemMenuGamepadNavigationTests' own header on why: a
-        // second directional press soon after a first can fall inside
-        // StandaloneInputModule's own real-time move-repeat window, which
-        // this suite has no control over -- plan section 10's known gap).
+        // "bear picked up from Rear" state -- ONE Submit, so each test then
+        // drives exactly the one press its own claim is about.
         private IEnumerator PickUpBearFromRear()
         {
             Select(Seat(PartySeat.Rear));

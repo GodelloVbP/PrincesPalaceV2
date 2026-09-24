@@ -41,6 +41,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -50,23 +51,30 @@ namespace PrincesPalace.PlayModeTests
             _hub.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The glossary
+        // keeps its category, page and selected row across a close by design
+        // (only OnEnable's Refresh runs on reopen, and it clamps rather than
+        // resets), so a reused hub would open it wherever the last test left
+        // it -- a row already picked, the detail plate already filled. The
+        // category-0 button's own click is the one production path that puts
+        // all three back (SelectCategory: category 0, page 0, no row), and it
+        // is pressed here before the glossary opens. NavSceneReuse puts back
+        // the rest.
         private IEnumerator OpenTheGlossary()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
-            _hub = Object.FindAnyObjectByType<HubController>();
-            Assert.IsNotNull(_hub, "the Hub scene has no HubController");
+            _hub = NavSceneReuse.CloseHubModals();
 
             _glossary = _hub.GetComponentInChildren<GlossaryController>(includeInactive: true);
             Assert.IsNotNull(_glossary, "the glossary was never wired into the hub");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            if (NavSceneReuse.Reused) Named("GlossaryCategory0").GetComponent<Button>().onClick.Invoke();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
+            yield return null;
 
             Named("RelicsBuilding").GetComponent<Button>().onClick.Invoke();
             yield return null;
@@ -97,6 +105,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsTheFirstCategory_AsSoonAsTheGlossaryOpens()
         {
+            SharedScene.MarkDirty("asserts where a never-opened glossary starts, which the category-0 reset would otherwise supply");
             yield return OpenTheGlossary();
 
             Assert.AreEqual(Named("GlossaryCategory0"), EventSystem.current.currentSelectedGameObject,

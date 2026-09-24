@@ -37,27 +37,34 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             Navigation.Reset();
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE TALENTS SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Most
+        // tests here place the selection and press once, which a reused tree
+        // survives untouched: Refresh repaints it against this test's own
+        // fresh save, and NavSceneReuse puts back the input and the focus
+        // memory. A test that moves the controller's own state -- the page,
+        // the character, a selected or kindled star -- marks the scene dirty
+        // instead, because the controller has no public way back (StepPath
+        // and StepCharacter start a slide, and nothing deselects a star).
         private IEnumerator LoadTheTree()
         {
-            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the Talents scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
-
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Talents");
 
             _talents = Object.FindAnyObjectByType<TalentController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_talents, "the Talents scene has no TalentController");
+            if (NavSceneReuse.Reused) _talents.Refresh();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+
+            yield return null;
+            yield return null;
         }
 
         private IEnumerator DriveFrame()
@@ -80,6 +87,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsTheRootOfPath0()
         {
+            SharedScene.MarkDirty("asserts the entry a freshly loaded tree selects, not one a reset put back");
             yield return LoadTheTree();
 
             Assert.AreEqual(Node("Orb0_0"), EventSystem.current.currentSelectedGameObject,
@@ -432,6 +440,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Down_FromTheRoot_ReachesInvestButton_Unconditionally()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("selects a star, which nothing public deselects");
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.embers = 99;
@@ -476,6 +485,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Submit_OnAKindleableStar_SelectsThenKindles_TwoPressesNotOne()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("selects and kindles a star, which nothing public deselects");
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.embers = 99;
@@ -511,6 +521,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Submit_OnALockedStar_SelectsItAndExplainsWhy_NeverKindles()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("selects a star, which nothing public deselects");
 
             var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
             character.embers = 99;
@@ -544,6 +555,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TabNext_StepsToTheNextConstellation_AndEntersItsRoot()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("pages to constellation 1 and starts its slide");
 
             _input.TriggerRight = 1f;
             yield return DriveFrame();
@@ -589,6 +601,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TriggerRight_StepsToTheNextCharacter()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("pages to character 1 and starts its slide");
 
             var roster = SaveSlotManager.CurrentSave.roster;
             Assert.Greater(roster.Count, 1,
@@ -637,6 +650,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator DownFromTheSelectedCapstoneReturnsToItsTreeParent()
         {
             yield return LoadTheTree();
+            SharedScene.MarkDirty("selects the capstone, which nothing public deselects");
 
             var capstone = Node("Orb0_20");
             Assert.IsNotNull(capstone, "fixture: path zero needs its capstone orb");

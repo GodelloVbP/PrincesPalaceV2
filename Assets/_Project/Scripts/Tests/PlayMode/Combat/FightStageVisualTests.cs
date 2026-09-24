@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -39,6 +38,12 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene): every
+            // test binds a fresh session over it, which puts the stage back,
+            // and this stops what a rebind does not (FightSceneFixture).
+            FightSceneFixture.QuietForReuse(_fight);
+            SharedScene.AfterTest();
+
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             StanceManifestLoader.Reset();
         }
@@ -56,9 +61,7 @@ namespace PrincesPalace.PlayModeTests
 
         private IEnumerator LoadFight(SpriteFacing enemyFacing = SpriteFacing.Left)
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);
@@ -84,9 +87,7 @@ namespace PrincesPalace.PlayModeTests
         // figure and would gain an argument it does not read.
         private IEnumerator LoadFightWithTwoEnemies()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);

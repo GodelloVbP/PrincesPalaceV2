@@ -151,9 +151,17 @@ namespace PrincesPalace.Domain.Tests
                 // state every battle-speed timing fixture loads through,
                 // never flipping one away from default -- so it has nothing
                 // to pair with a restore any more than TestGlobals does.
-                // Both named here so a reader does not wonder whether either
+                // TestSaveSandbox is the same shape for SaveSystem.RootOverride:
+                // before every PlayMode test it re-aims a NULL override (or its
+                // own sandbox) at an emptied sandbox, so no test starts on the
+                // runner's real save folder. It never replaces a root a
+                // fixture chose, so it cannot land on the wrong side of a
+                // [SetUp] the way an unconditional reset would.
+                // All three named here so a reader does not wonder whether any
                 // exemption was an oversight.
-                if (Path.GetFileName(file) == "TestGlobals.cs" || Path.GetFileName(file) == "FightSceneFixture.cs") continue;
+                string fileName = Path.GetFileName(file);
+                if (fileName == "TestGlobals.cs" || fileName == "FightSceneFixture.cs" ||
+                    fileName == "TestSaveSandbox.cs") continue;
 
                 string source = File.ReadAllText(file);
 

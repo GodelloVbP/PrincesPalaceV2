@@ -5,7 +5,6 @@ using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace.Content;
@@ -54,6 +53,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             TestGlobals.ResetAll();
             RoomResolver.Reset();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -73,6 +73,14 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // The map, with no event open yet: the party stands at the entry.
+        //
+        // THE MAP IS SHARED ACROSS THIS FIXTURE (SharedScene). Each test starts
+        // a new run on a fresh save root ([SetUp]), and the map reads the run
+        // live, so putting the scene back is: close whatever the last test
+        // left up (the system menu, the event panel), repaint the map for the
+        // new run -- which also snaps the walker and the camera back to the
+        // entry -- and hand the input module a fresh scripted input. On a
+        // fresh load all of it finds nothing to undo.
         private IEnumerator LoadTheMap()
         {
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
@@ -80,31 +88,50 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 100;
             SaveSlotManager.SaveCurrent();
 
-            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return SharedScene.Ensure("Map");
 
             var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
             Assert.IsNotNull(module, "the map scene's EventSystem is not running NavigationInputModule");
             EventSystem.current = module.GetComponent<EventSystem>();
+            var stale = module.GetComponent<ScriptedBaseInput>();
+            if (stale != null) Object.DestroyImmediate(stale);
             _input = module.gameObject.AddComponent<ScriptedBaseInput>();
             module.inputOverride = _input;
-
-            yield return null;
-            yield return null;
 
             _map = Object.FindAnyObjectByType<MapController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_map, "the Map scene has no MapController");
             _panel = Object.FindAnyObjectByType<EventController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_panel, "the Map scene has no EventController");
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            if (menu != null && menu.IsOpen) menu.Close();
+            if (_panel.IsOpen) _panel.gameObject.SetActive(false); // OnDisable pops its nav context
+            Assert.IsFalse(_map.IsWalking, "fixture: the previous test left a walk in flight");
+            _map.Refresh();
+            EventSystem.current.SetSelectedGameObject(null);
+
+            yield return null;
+            yield return null;
         }
 
+        // How much faster than real time the walk into the room runs. The walk
+        // (MapController.WalkAndArrive: MapWalk.DurationFor, then the
+        // MapWalk.PanSeconds camera pan) is a scaled-time animation of about
+        // 1.4s, and it was 12.6s of this fixture's 18.5s. Nothing here tests
+        // its length -- MapWalk's own tests do -- only that it ends in Arrive.
+        private const float WalkClockScale = 40f;
+
         // Into the event room by the real door: a click on its node, the walk,
-        // and Arrive -> Arrival.Event -> OpenEvent.
+        // and Arrive -> Arrival.Event -> OpenEvent. The walk runs on a fast
+        // clock and is polled, not waited out; the timeout is real seconds.
         private IEnumerator WalkIntoTheEvent()
         {
             yield return LoadTheMap();
 
+            Time.timeScale = WalkClockScale;
             NodeButton(_eventNode).onClick.Invoke();
-            for (float waited = 0f; waited < 5f && _map.IsWalking; waited += Time.deltaTime) yield return null;
+            for (float waited = 0f; waited < 5f && _map.IsWalking; waited += Time.unscaledDeltaTime) yield return null;
+            Time.timeScale = 1f;
             Assert.IsFalse(_map.IsWalking, "the walk should have finished well inside 5 seconds");
 
             yield return null;

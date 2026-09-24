@@ -52,6 +52,11 @@ namespace PrincesPalace.PlayModeTests
             // where it is declared -- RequirementCurve.DefaultPercent rather
             // than 100 -- so this file does not become a second home for a
             // number that already has one.
+            // Null means the runner's REAL save folder, which outlives the
+            // run. Safe here only because nothing saves between a teardown
+            // and the next test's start, where TestSaveSandbox re-aims a
+            // null root at an emptied sandbox. A test that calls this
+            // MID-test puts its own root back before anything saves.
             SaveSystem.RootOverride = null;
             Navigation.Reset();
 

@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -30,7 +29,11 @@ namespace PrincesPalace.PlayModeTests
         public void PlayFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
         [TearDown]
-        public void Restore() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void Restore()
+        {
+            SharedScene.AfterTest();
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        }
 
         private GameObject Named(string name) =>
             _fight.GetComponentsInChildren<Transform>(includeInactive: true)
@@ -43,11 +46,14 @@ namespace PrincesPalace.PlayModeTests
             go.GetComponent<Button>().onClick.Invoke();
         }
 
+        // SHARED ACROSS THIS FIXTURE (SharedScene), and nothing is put back:
+        // every test here is about the fight FightBootstrap opened, so the
+        // ones that only read it share one copy and the ones that play a
+        // turn in it mark it dirty. Plain Ensure, not EnsureFight, so the
+        // bootstrap keeps its own speed source as before.
         private IEnumerator OpenTheScene()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
@@ -140,6 +146,7 @@ namespace PrincesPalace.PlayModeTests
             // Click ATTACK, click a monster, watch the round resolve. If this
             // passes the screen is playable in the ordinary sense of the word.
             yield return OpenTheScene();
+            SharedScene.MarkDirty("plays a turn in the bootstrap's fight; the tests that share it read the fight as it opened");
 
             var front = _fight.Session.Encounter.Enemies[0];
             int before = front.CurrentHealth;
@@ -168,6 +175,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator AStillDrawingSwingCarriesTheFigureAndBringsItBack()
         {
             yield return OpenTheScene();
+            SharedScene.MarkDirty("plays a turn in the bootstrap's fight; the tests that share it read the fight as it opened");
 
             var hero = _fight.Session.Encounter.PlayerParty[0];
 
@@ -235,6 +243,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             yield return OpenTheScene();
+            SharedScene.MarkDirty("plays a turn in the bootstrap's fight; the tests that share it read the fight as it opened");
 
             var canvas = _fight.GetComponentInParent<Canvas>();
             Assert.IsNotNull(canvas);

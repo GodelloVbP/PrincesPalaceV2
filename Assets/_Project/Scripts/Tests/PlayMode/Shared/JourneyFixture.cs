@@ -46,8 +46,21 @@ namespace PrincesPalace.PlayModeTests
             EventSystem.current = module.GetComponent<EventSystem>();
             Input = module.gameObject.AddComponent<ScriptedBaseInput>();
             module.inputOverride = Input;
+
+            // Lifts the stock uGUI rate limit on DIRECTION changes and
+            // re-presses so that chained Moves land without any real-time
+            // wait (see Move's own comment for the measured gate). Set here
+            // because the module is fresh on every scene load, and this is
+            // already called after every load. Nothing a journey asserts is
+            // a cadence: NavigationInputModule's own armed edge (one press,
+            // one Move) still applies unchanged, and
+            // StickThresholdGamepadNavigationTests pins the production
+            // timing on an untouched module.
+            module.inputActionsPerSecond = UnthrottledActionsPerSecond;
             return module;
         }
+
+        private const float UnthrottledActionsPerSecond = 1e6f;
 
         // One engine frame: EventSystem.Update() calls Process() exactly
         // once during it (docs/GAMEPAD_NAVIGATION_PLAN.md section 2) --
@@ -129,33 +142,24 @@ namespace PrincesPalace.PlayModeTests
 
         // Horizontal/Vertical are LEVELS (ScriptedBaseInput's own header),
         // so this sets both, drives the one frame the dispatcher reads them
-        // on, then returns them to rest before returning.
+        // on, then drives one frame at rest before returning.
         //
-        // THE REAL-TIME SETTLE AFTER RELEASE IS NOT COSMETIC. Confirmed
-        // empirically against this exact suite (a diagnostic
-        // WaitForSecondsRealtime inserted, then removed once the cause was
-        // named): StandaloneInputModule's own move gate,
-        // AllowMoveEventProcessing, ORs a fresh nonzero axis read against
-        // `time > m_PrevActionTime + moveRepeatDelay` (Time.unscaledTime, no
-        // BaseInput seam -- docs/GAMEPAD_NAVIGATION_PLAN.md section 10's own
-        // "repeat-cadence testing... has to wait real frames" note is this
-        // same gate from the other side). A single isolated press is always
-        // let through by the axis-nonzero half of that OR; what silently
-        // drops is the NEXT chained move in an ordinary (non-Fight) context
-        // when it arrives sooner than moveRepeatDelay (Unity's own default,
-        // 0.5s) after the last one -- which every SINGLE-PRESS-PER-TEST file
-        // in this project's existing gamepad-nav suite (SystemMenu/Map/Shop/
-        // RelicDraft/Reckoning's own headers all say so) sidesteps by never
-        // chaining two dispatcher moves in the same test at all. A journey
-        // is nothing BUT chained moves, so this fixture pays the real-time
-        // cost once, here, instead of every segment rediscovering the same
-        // silent drop. Harmless for Fight's own branch (ProcessFight's
-        // MoveFocus path never goes through base.Process()'s move dispatch,
-        // so it never reads this gate) and for the first move after a
-        // Submit/Cancel/TabNext/scene-load, which already have their own
-        // real-time cost baked in.
-        private const float SettleSeconds = 0.6f;
-
+        // THE REST FRAME IS LOAD-BEARING; NO REAL-TIME WAIT IS. It re-arms
+        // NavigationInputModule's own edge (UpdateMoveGate only re-arms on a
+        // frame it reads below MoveThreshold) and it resets uGUI's
+        // m_ConsecutiveMoveCount, so the next Move never takes the 0.5s
+        // repeatDelay branch of StandaloneInputModule.
+        // SendMoveEventToSelectedObject -- that branch is only for a stick
+        // HELD past its first move. What does gate a re-press is the other
+        // branch, `time <= m_PrevActionTime + 1f / inputActionsPerSecond`
+        // (0.1s at the stock 10, Time.unscaledTime, no BaseInput seam).
+        // Measured 2026-09-24 on the Main Menu: two chained Moves one rest
+        // frame apart (~2ms) -- the second is dropped at the stock rate
+        // (down,down and down,up alike), lands at 1000/s, and at stock
+        // first lands exactly 0.100s after the first. TakeOverInput lifts
+        // that rate, so this helper waits no wall clock at all. Fight's own
+        // branch never reads this gate (ProcessFight's MoveFocus path skips
+        // base.Process()'s move dispatch).
         protected IEnumerator Move(float horizontal, float vertical)
         {
             Input.Horizontal = horizontal;
@@ -163,7 +167,6 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             Input.Horizontal = 0f;
             Input.Vertical = 0f;
-            yield return new WaitForSecondsRealtime(SettleSeconds);
             yield return DriveFrame();
         }
 

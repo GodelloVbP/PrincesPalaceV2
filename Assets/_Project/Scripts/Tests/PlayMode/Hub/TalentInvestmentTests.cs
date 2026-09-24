@@ -4,7 +4,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -56,6 +55,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             TalentController.MotionSpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -68,9 +68,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator KindlingWritesAnIdTheContentActuallyHas()
         {
-            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return OpenTheTree();
 
             var talents = Object.FindAnyObjectByType<TalentController>();
             Assert.IsNotNull(talents, "the Talents scene has no TalentController");
@@ -104,9 +102,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator AKindledTalentChangesTheCharacterItWasSpentOn()
         {
-            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return OpenTheTree();
 
             var talents = Object.FindAnyObjectByType<TalentController>();
             var character = SaveSlotManager.CurrentSave.ActiveSquad().FirstOrDefault(c => c != null);
@@ -262,10 +258,48 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the respec, level 20 of the reward track ------------------------------
 
-        private static IEnumerator OpenTheTree()
+        // THE TREE IS SHARED ACROSS THIS FIXTURE (SharedScene), and the screen
+        // keeps view state a fresh load would not have: the page it was left
+        // on, the selected star (a second press on it KINDLES, so a leftover
+        // selection would turn the next test's first press into a spend), the
+        // push-in, a kindling beat, the respec dialog. Put back here through
+        // the screen's own buttons, the way a hand would: close the dialog,
+        // walk to the first page, step off it and back (a page step is what
+        // clears a selection), and let the sky settle. The save needs
+        // nothing: [SetUp] forgets it, and the screen reads it live.
+        //
+        // putBack: false is for the tests about the sky AS BUILT: they mark
+        // the scene dirty first and skip the walk, which would otherwise
+        // measure a sky that has already slid away and back.
+        private static IEnumerator OpenTheTree(bool putBack = true)
         {
-            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
-            yield return null;
+            yield return SharedScene.Ensure("Talents");
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            Assert.IsNotNull(talents, "the Talents scene has no TalentController");
+            if (!putBack) yield break;
+
+            var cancel = ButtonNamed(talents, "RespecCancelButton");
+            if (cancel != null && cancel.gameObject.activeInHierarchy) cancel.onClick.Invoke();
+
+            // At the fixture's fast pace whatever the caller chose, so the
+            // reset costs frames, not seconds; the caller's pace is put back.
+            float pace = TalentController.MotionSpeedMultiplier;
+            TalentController.MotionSpeedMultiplier = 60f;
+
+            var prev = ButtonNamed(talents, "PrevPathButton");
+            var next = ButtonNamed(talents, "NextPathButton");
+            for (int i = 0; i < TalentPage.PathCount; i++) prev.onClick.Invoke();
+            next.onClick.Invoke();
+            prev.onClick.Invoke();
+
+            var sky = talents.GetComponentsInChildren<RectTransform>(true).First(r => r.name == "TalentSky");
+            yield return Settled(sky);
+            float beat = Time.realtimeSinceStartup + ConstellationLayout.KindleSeconds / 60f + 0.05f;
+            while (Time.realtimeSinceStartup < beat) yield return null;
+
+            TalentController.MotionSpeedMultiplier = pace;
+            talents.Refresh();
             yield return null;
         }
 
@@ -548,7 +582,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EveryConstellationSettlesWhereTheFirstOneSits()
         {
-            yield return OpenTheTree();
+            SharedScene.MarkDirty("measures the sky as the scene builds it, before any page has been slid");
+            yield return OpenTheTree(putBack: false);
 
             var talents = Object.FindAnyObjectByType<TalentController>();
             var sky = talents.GetComponentsInChildren<RectTransform>(true)
@@ -578,7 +613,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator AParkedConstellationIsCompletelyOffScreen()
         {
-            yield return OpenTheTree();
+            SharedScene.MarkDirty("measures the sky as the scene builds it, before any page has been slid");
+            yield return OpenTheTree(putBack: false);
 
             var talents = Object.FindAnyObjectByType<TalentController>();
             var sky = talents.GetComponentsInChildren<RectTransform>(true)

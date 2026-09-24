@@ -35,39 +35,48 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE MAIN MENU IS SHARED ACROSS THIS FIXTURE (SharedScene). What a
+        // test can leave on it is one of three stacked panels open and a
+        // Continue button computed for the previous test's save root; both
+        // are put back here through the menu's own close buttons and its
+        // public RefreshContinue, topmost panel first (HandleCancel's order).
+        // The slot and manage lists need nothing: each re-reads the saves in
+        // its own OnEnable. NavSceneReuse puts back the input and the focus
+        // memory.
         private IEnumerator LoadMenu()
         {
-            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the main menu scene's EventSystem is not running NavigationInputModule");
-            // Set BEFORE letting any frame run, not after -- a previously-
-            // loaded scene's own EventSystem can still be EventSystem.current
-            // (CancelOpensSystemMenuTests' own hazard note) for at least one
-            // frame after this scene's own load, and EventSystem.Update only
-            // drives its OWN input module while it is the current instance:
-            // reassigning this late would mean the freshly loaded module's
-            // Process() never ran during the frames this method itself waits
-            // out below, and the entry it should have selected would still
-            // read null afterward.
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
-
-            // Start() runs one frame after activation; a second frame lets
-            // the dispatcher's own post-Process reselection land on the
-            // entry Start()'s RegisterNavContext just declared.
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("MainMenu");
 
             _menu = Object.FindAnyObjectByType<MainMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, "the main menu scene has no MainMenuController");
+
+            if (NavSceneReuse.Reused)
+            {
+                if (IsOpen("ResetConfirmPanel")) Find("ResetConfirmNoButton").onClick.Invoke();
+                if (IsOpen("ManageSavesPanel")) Find("CloseManageSavesButton").onClick.Invoke();
+                if (IsOpen("SaveSlotPanel")) Find("CloseSaveSlotButton").onClick.Invoke();
+                _menu.RefreshContinue();
+            }
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+
+            // Two frames either way: on a fresh load, Start() has run inside
+            // Ensure but the dispatcher has not yet read the scripted input;
+            // on reuse, the first Process() reselects the entry out of the
+            // null selection ForgetFocusMemory left.
+            yield return null;
+            yield return null;
         }
+
+        private static bool IsOpen(string panel) => Resources.FindObjectsOfTypeAll<Transform>()
+            .Any(t => t.name == panel && t.gameObject.scene.IsValid() && t.gameObject.activeSelf);
 
         // A save at the given slot, present on disk before the scene loads --
         // SaveSlotFlowTests' own pattern (CurrentSlot, Forget, read CurrentSave,
@@ -101,6 +110,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsPlayButton_WhenNoSaveExists()
         {
+            SharedScene.MarkDirty("asserts the entry Start() picks on a freshly loaded menu, not one a reset put back");
             yield return LoadMenu();
 
             Assert.AreEqual(Find("PlayButton").gameObject, EventSystem.current.currentSelectedGameObject,
@@ -111,6 +121,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator EntryIsContinueButton_WhenASaveExists()
         {
             SeedASave(0);
+            SharedScene.MarkDirty("asserts the entry Start() picks from a save present before the load, not one RefreshContinue put back");
             yield return LoadMenu();
 
             Assert.AreEqual(Find("ContinueButton").gameObject, EventSystem.current.currentSelectedGameObject,
@@ -131,13 +142,10 @@ namespace PrincesPalace.PlayModeTests
                 "Down from Continue should reach Play");
         }
 
-        // A SEPARATE test, freshly loaded, rather than a second press
-        // chained onto the one above -- StandaloneInputModule's own move
-        // debounce tracks a real-time timestamp across consecutive moves on
-        // one module instance (SystemMenuGamepadNavigationTests' own header
-        // makes the identical call for the identical reason), so a second
-        // press moments later by test-clock time risks being read as a
-        // repeat still inside the framework's own repeat delay.
+        // A separate test from the one above only because each claim reads
+        // better alone -- chaining the two presses would work too (LoadMenu
+        // lifts uGUI's 0.1s re-press gate; JourneyFixture.Move has the
+        // measurement).
         [UnityTest]
         public IEnumerator Down_FromPlay_ReachesExit()
         {

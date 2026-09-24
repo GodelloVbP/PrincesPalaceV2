@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace.Content;
@@ -37,6 +36,21 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene), so what a
+            // test cast must not still be drawing when the next one binds.
+            // EndFight is what a scene change runs on the way out (Flush, then
+            // cancel every cast), so a reused scene starts where a fresh load
+            // would. Before the clock is released, so a held cast is cancelled
+            // rather than first ticked to its end.
+            if (_fight != null)
+            {
+                var beats = _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true);
+                if (beats != null) beats.EndFight();
+                foreach (var player in _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true))
+                    player.StopImmediately();
+            }
+            SharedScene.AfterTest();
+
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             SpellPerformancePlayer.ClockOverride = null;
         }
@@ -515,9 +529,9 @@ namespace PrincesPalace.PlayModeTests
         // real drawing has a body narrower than its canvas.
         private IEnumerator LoadFight(int enemyCount, float stageScale, string spritePath = "")
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // Loads once per fixture; every call rebinds a fresh session below,
+            // which is all a new fight is to this controller.
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);
@@ -565,6 +579,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ThePlayerIsWiredAndStartsSilent()
         {
+            SharedScene.MarkDirty("asserts what a freshly loaded Fight opens with, not what the previous teardown put back");
             yield return LoadFight();
 
             Assert.IsNotNull(_player, "the scene has no SpellVfxPlayer");
@@ -1287,6 +1302,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             float atOne = _player.Image.rectTransform.sizeDelta.x;
 
+            SharedScene.MarkDirty("reads pool member 0 again after a second cast, which a still-live first cast owns until the scene goes");
             yield return LoadFight(1, bigStageScale);
             HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(FitTargetBeat());
@@ -1337,6 +1353,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             float onRat = _player.Image.rectTransform.sizeDelta.x;
 
+            SharedScene.MarkDirty("reads pool member 0 again after a second cast, which a still-live first cast owns until the scene goes");
             yield return LoadFight(1, 1.45f, "Enemies/treant");
             HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(OneLayerBeat(layer));

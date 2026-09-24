@@ -26,9 +26,9 @@ namespace PrincesPalace.PlayModeTests
     // scene's own EventSystem, so a bare controller could not be driven at
     // all.
     //
-    // ONE MOVE PRESS PER TEST (SystemMenuGamepadNavigationTests' header has
-    // why: the framework's own move debounce is a real-time timestamp outside
-    // the scripted-input seam).
+    // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Each test
+    // Show()s the Reckoning afresh over it; see ShowTheReckoning for what is
+    // put away first.
     public class ReckoningGamepadNavigationTests
     {
         private string _root;
@@ -49,6 +49,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -86,23 +87,23 @@ namespace PrincesPalace.PlayModeTests
             return picks.Select(i => new ItemOffer(i.id, i.tier, 0)).ToList();
         }
 
+        // Every test leaves the Reckoning up, so it is put away the way the
+        // scene change after Continue does it, by deactivating it: OnDisable
+        // detaches its tooltips and pops and forgets its NavContext, and
+        // disabling the cards ends any hover a test left (HoverIndex.
+        // OnDisable). Show() then resets the rest itself -- offers, taken
+        // flag, phase, tab -- and pushes a fresh context on its entry, the
+        // same as on a fresh load.
         private IEnumerator ShowTheReckoning(List<ItemOffer> offers)
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the fight scene's EventSystem is not running NavigationInputModule");
-
-            // Before any frame runs: a previously-loaded scene's EventSystem
-            // can still be current.
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            _input = NavSceneReuse.TakeOverInput();
 
             _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+            if (_reckoning.gameObject.activeSelf) _reckoning.gameObject.SetActive(false);
+            NavSceneReuse.ForgetFocusMemory();
 
             _reckoning.Show(Reward(), offers);
             yield return null;

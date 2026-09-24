@@ -3,7 +3,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace.Domain.UiKit;
 
@@ -22,11 +21,14 @@ namespace PrincesPalace.PlayModeTests
     // way a player's build sees it.
     public class TypographyMigrationTests
     {
+        [TearDown]
+        public void Restore() => SharedScene.AfterTest();
+
+        // SHARED ACROSS THIS FIXTURE (SharedScene). Every test reads what the
+        // emitter baked into the built scene and changes nothing.
         private static IEnumerator LoadMainMenu()
         {
-            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("MainMenu");
         }
 
         private static TMP_Text FindText(string name) =>

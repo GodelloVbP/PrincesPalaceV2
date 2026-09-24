@@ -5,7 +5,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -42,6 +41,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -57,12 +57,18 @@ namespace PrincesPalace.PlayModeTests
         {
             if (withRun) RunManager.StartRun(4242);
 
-            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // THE MAP IS SHARED ACROSS THIS FIXTURE (SharedScene). It reads the
+            // run live and has no state of its own that outlives a repaint, so
+            // the reset is the repaint its own Start() does on a fresh scene:
+            // Refresh() re-lays every node and trail for the run [SetUp] and
+            // the line above just made (or for none), and, with no walk in
+            // flight, snaps the figure and the camera back to the entry.
+            yield return SharedScene.Ensure("Map");
 
             _map = Object.FindAnyObjectByType<MapController>();
             Assert.IsNotNull(_map, "the Map scene has no MapController");
+            Assert.IsFalse(_map.IsWalking, "fixture: the previous test left a walk in flight");
+            _map.Refresh();
         }
 
         [UnityTest]

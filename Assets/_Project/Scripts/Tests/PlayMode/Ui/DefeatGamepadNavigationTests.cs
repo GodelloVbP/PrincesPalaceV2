@@ -43,6 +43,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -59,23 +60,23 @@ namespace PrincesPalace.PlayModeTests
             EmbersEarned = 0,
         };
 
+        // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Every
+        // test leaves the defeat screen up (a Dismissed that only counts does
+        // not tear it down), so it is put away the way a scene change does
+        // it, by deactivating it: its OnDisable pops and forgets its
+        // NavContext, and the Show() below pushes a fresh one on its entry,
+        // exactly as on a fresh load. A counting Dismissed a previous test
+        // installed is replaced by any test that reads it.
         private IEnumerator OpenTheFightAndShowDefeat()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the fight scene's EventSystem is not running NavigationInputModule");
-            // Set BEFORE letting any frame run -- MainMenuGamepadNavigationTests'
-            // own LoadMenu makes the identical call for the identical reason
-            // (a previously-loaded scene's EventSystem can still be current).
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            _input = NavSceneReuse.TakeOverInput();
 
             _defeat = Object.FindAnyObjectByType<DefeatController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_defeat, "the defeat screen was never wired into the fight scene");
+            if (_defeat.gameObject.activeSelf) _defeat.gameObject.SetActive(false);
+            NavSceneReuse.ForgetFocusMemory();
 
             _defeat.Show(Settlement());
             yield return null;

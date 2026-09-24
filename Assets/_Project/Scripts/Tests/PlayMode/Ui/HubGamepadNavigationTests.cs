@@ -51,15 +51,19 @@ namespace PrincesPalace.PlayModeTests
         private Button _gate;
         private Button _mainMenu;
 
+        [TearDown]
+        public void AfterEach() => NavSceneReuse.AfterTest(_input);
+
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The only thing
+        // a test here opens is the character overlay, closed by
+        // NavSceneReuse.CloseHubModals along with anything else a hub modal
+        // could have left up; the input and the focus memory go back to a
+        // fresh load's, so the gate is reselected as the entry.
         private IEnumerator LoadHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            // Start() runs one frame after activation.
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
-            _hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
-            Assert.IsNotNull(_hub, "the hub scene has no HubController");
+            _hub = NavSceneReuse.CloseHubModals();
 
             var buttons = _hub.GetComponentsInChildren<Button>(includeInactive: true);
             _talents = buttons.First(b => b.name == "TalentsBuilding");
@@ -69,11 +73,10 @@ namespace PrincesPalace.PlayModeTests
             _gate = buttons.First(b => b.name == "StartRunGate");
             _mainMenu = buttons.First(b => b.name == "MainMenuButton");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
+            yield return null;
         }
 
         private IEnumerator DriveFrame()
@@ -82,12 +85,10 @@ namespace PrincesPalace.PlayModeTests
             _input.ClearOneFrameFlags();
         }
 
-        // The real-time settle after release is JourneyFixture.Move's own,
-        // and for its reason: StandaloneInputModule's repeat gate is wall
-        // clock with no BaseInput seam, so a SECOND chained move arriving
-        // inside moveRepeatDelay is silently dropped. Every test below but
-        // the ring and the column walks is a single press and never needed
-        // it; those two are nothing but chained presses.
+        // One press frame, one rest frame, no wall-clock wait -- the shape
+        // and the reason are JourneyFixture.Move's own: the rest frame re-arms
+        // the dispatcher's edge, and the only real-time gate on a re-press
+        // (uGUI's 0.1s inputActionsPerSecond) is lifted by TakeOverInput.
         private IEnumerator Move(float horizontal, float vertical)
         {
             _input.Horizontal = horizontal;
@@ -95,7 +96,6 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             _input.Horizontal = 0f;
             _input.Vertical = 0f;
-            yield return new WaitForSecondsRealtime(0.6f);
             yield return DriveFrame();
         }
 
@@ -105,6 +105,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsTheGate_SelectedAssoonAsTheSceneLoads()
         {
+            SharedScene.MarkDirty("asserts the entry as soon as the scene loads, not after a reset");
             yield return LoadHub();
 
             Assert.AreEqual(_gate.gameObject, EventSystem.current.currentSelectedGameObject,

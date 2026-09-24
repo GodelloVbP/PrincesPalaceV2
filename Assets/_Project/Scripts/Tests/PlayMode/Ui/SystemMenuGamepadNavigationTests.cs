@@ -25,22 +25,30 @@ namespace PrincesPalace.PlayModeTests
         private SystemMenuController _menu;
         private ScriptedBaseInput _input;
 
+        [TearDown]
+        public void AfterEach() => NavSceneReuse.AfterTest(_input);
+
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). The one thing
+        // a test here opens is the system menu itself, closed through its own
+        // Close() (which also resumes the pause Open() took); NavSceneReuse
+        // puts back the input and the focus memory, so the hub's own entry
+        // is reselected exactly as on a fresh load. GameSettings values are
+        // set by each test that reads them, as before.
         private IEnumerator LoadHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            // Start() runs one frame after activation.
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_hub, "the hub scene has no HubController");
             Assert.IsNotNull(_menu, "the hub scene has no SystemMenuController");
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            NavSceneReuse.CloseHubModals();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
+            yield return null;
         }
 
         // One engine frame: EventSystem.Update() calls Process() exactly
@@ -55,6 +63,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator StartOpensTheMenuFromTheHub_StartAgainClosesItAndRestoresTheGate()
         {
+            SharedScene.MarkDirty("asserts the gate is selected as soon as the scene loads, not after a reset");
             yield return LoadHub();
 
             var gate = _hub.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
@@ -128,18 +137,11 @@ namespace PrincesPalace.PlayModeTests
         // Pinned to literal expected values (docs/CODE_STANDARDS.md section
         // 8) -- never recomputed from the production formula under test.
         //
-        // ONE PRESS PER TEST, each from a freshly loaded scene, rather than
-        // Right-then-Left in one test. StandaloneInputModule's own move
-        // debounce (SendMoveEventToSelectedObject) tracks a real-time
-        // timestamp per module instance across consecutive moves, which the
-        // plan's own section 10 already flags as outside the seam a scripted
-        // BaseInput can control ("a repeat-cadence test... has to wait real
-        // frames... or stay hardware-acceptance-only") -- a second press
-        // moments after the first, by test-clock time, can be silently
-        // treated as a repeat still under the framework's own repeat delay.
-        // A fresh scene load gives each press its own fresh module instance
-        // instead, sidestepping that timing entirely for what this test
-        // actually needs to prove: one press, one step.
+        // One press per test because each test pins one row and one
+        // direction, not because two presses could not be chained: the 0.1s
+        // uGUI re-press gate that made chaining look unsafe is lifted by
+        // NavSceneReuse.TakeOverInput (JourneyFixture.Move has the
+        // measurement).
         [UnityTest]
         public IEnumerator SliderRow_RightPress_RaisesItByExactlyOneStep()
         {

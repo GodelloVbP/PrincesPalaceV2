@@ -48,29 +48,34 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE MAP IS SHARED ACROSS THIS FIXTURE (SharedScene). Every test but
+        // the Submit walk only moves the selection, so the reset is the same
+        // seed-4242 run started again and repainted through the map's own
+        // public Refresh, plus NavSceneReuse's input and focus-memory reset.
+        // The walk is the one thing Refresh cannot put back (the party token
+        // and the pan move with it), so that test marks the scene dirty.
         private IEnumerator LoadTheMap()
         {
             RunManager.ResetForTests();
             RunManager.StartRun(4242);
 
-            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the map scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
-
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Map");
 
             _map = Object.FindAnyObjectByType<MapController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_map, "the map scene has no MapController");
+            if (NavSceneReuse.Reused) _map.Refresh();
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+
+            yield return null;
+            yield return null;
         }
 
         private IEnumerator DriveFrame()
@@ -93,6 +98,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EntryIsTheFirstReachableChoice_MapNode3()
         {
+            SharedScene.MarkDirty("asserts the entry a freshly loaded map selects, not one a reset put back");
             yield return LoadTheMap();
 
             Assert.AreEqual(Node("MapNode3"), EventSystem.current.currentSelectedGameObject,
@@ -126,9 +132,9 @@ namespace PrincesPalace.PlayModeTests
                 "Down should step choice to choice, ordered by Slot ascending (top to bottom on screen)");
         }
 
-        // A separate test, freshly loaded, rather than a third press chained
-        // onto the one above -- the same real-time move-debounce hazard
-        // SystemMenuGamepadNavigationTests' own header documents.
+        // A separate test rather than a third press chained onto the one
+        // above, so each claim reads alone. (Chaining would be safe: the 0.1s
+        // uGUI re-press gate is lifted by NavSceneReuse.TakeOverInput.)
         [UnityTest]
         public IEnumerator Left_FromTheSecondChoice_ReturnsToCurrent()
         {
@@ -150,6 +156,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator Submit_OnTheEntry_WalksToThatNode_ExactlyOnce()
         {
             yield return LoadTheMap();
+            SharedScene.MarkDirty("walks the party to another node, which Refresh does not walk back");
             EventSystem.current.SetSelectedGameObject(Node("MapNode3"));
             yield return null;
 

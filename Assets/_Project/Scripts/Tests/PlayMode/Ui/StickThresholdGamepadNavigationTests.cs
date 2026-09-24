@@ -91,8 +91,13 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Holds the axis at `value` for HoldSeconds of WALL CLOCK, then
-        // returns it to rest and settles past the repeat delay, so nothing
-        // this leaves behind can land in the next step of the same test.
+        // drives one frame at rest. That frame is all the next Hold needs:
+        // it re-arms the dispatcher's edge and resets uGUI's consecutive-move
+        // count, and the only uGUI gate left for a re-press is
+        // 1/inputActionsPerSecond (0.1s) after the last DISPATCHED move --
+        // which was at the start of this hold, HoldSeconds ago. A real-time
+        // settle here used to wait out the 0.5s repeat delay, but that
+        // delay only guards a held stick, never a re-press after rest.
         private IEnumerator Hold(float horizontal, float vertical)
         {
             _input.Horizontal = horizontal;
@@ -107,7 +112,6 @@ namespace PrincesPalace.PlayModeTests
 
             _input.Horizontal = 0f;
             _input.Vertical = 0f;
-            yield return new WaitForSecondsRealtime(0.6f);
             yield return null;
         }
 

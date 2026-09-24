@@ -52,6 +52,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             HubController.MotionSpeedMultiplier = 1f;
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
@@ -62,23 +63,30 @@ namespace PrincesPalace.PlayModeTests
             _hub.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). Every test
+        // leaves the draft open (Cancel and Start are no-ops on it, by
+        // design), and the draft has no close affordance -- so it is put away
+        // here the way its own Close() does it, by deactivating it, without
+        // Close()'s Finished callback (a Map load). Its OnDisable drops its
+        // NavContext, and the next gate press Open()s a fresh offer with no
+        // selection on page one, exactly as on a fresh load. The descent
+        // transition hands the hub panel back itself once the draft is up,
+        // and TestGlobals has already ended the previous test's run, so the
+        // gate starts a new one.
         private IEnumerator OpenTheDraft()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
-            _hub = Object.FindAnyObjectByType<HubController>();
-            Assert.IsNotNull(_hub, "the Hub scene has no HubController");
+            _hub = NavSceneReuse.CloseHubModals();
 
             _draft = _hub.GetComponentInChildren<RelicDraftController>(includeInactive: true);
             Assert.IsNotNull(_draft, "the draft was never wired into the hub");
+            if (_draft.gameObject.activeSelf) _draft.gameObject.SetActive(false);
 
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the hub scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+            yield return null;
+            yield return null;
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
 

@@ -5,7 +5,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -47,6 +46,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             ReckoningController.SpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -91,14 +91,54 @@ namespace PrincesPalace.PlayModeTests
             return new CharacterReward(id, name, levelBefore, 20, levelAfter, 50, 100, gained, 0, downed);
         }
 
+        // THE FIGHT SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Show()
+        // resets everything the screen paints (reward, offers, taken, phase,
+        // tab), so the reset is only what Show does not own: the screen is put
+        // back down -- OnDisable stops its animation and removes its nav
+        // context -- and the Dismissed handler the scene wired is put back
+        // over the one DismissingItLeavesTheFight installs.
+        //
+        // AND THE GLOOM. PlayIn reads its fade-up target off the dimmer's
+        // CURRENT alpha, so a Show that cuts a running PlayIn short (a second
+        // Show, or the screen going down mid-fade) leaves a lower alpha that
+        // every later PlayIn in the same scene then treats as the target. A
+        // fresh scene carries the authored value; a reused one gets it put
+        // back from what this fixture read off its fresh load.
+        private ReckoningController _capturedFor;
+        private System.Action _sceneDismissed;
+        private float _sceneGloom;
+
         private IEnumerator OpenTheFight()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
             _reckoning = Object.FindAnyObjectByType<ReckoningController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_reckoning, "the Reckoning was never wired into the fight scene");
+
+            if (_capturedFor != _reckoning)
+            {
+                _capturedFor = _reckoning;
+                _sceneDismissed = _reckoning.Dismissed;
+                _sceneGloom = Dimmer().color.a;
+            }
+            else
+            {
+                // A reuse. A fresh scene is left exactly as it loaded, so
+                // ItStartsHiddenAndShowOpensIt reads the scene, not this.
+                _reckoning.Dismissed = _sceneDismissed;
+                _reckoning.gameObject.SetActive(false);
+                var dimmer = Dimmer();
+                var colour = dimmer.color;
+                colour.a = _sceneGloom;
+                dimmer.color = colour;
+            }
+        }
+
+        private Image Dimmer()
+        {
+            var dimmer = Named("ReckoningPanelDimmer")?.GetComponent<Image>();
+            Assert.IsNotNull(dimmer, "the Reckoning has no ReckoningPanelDimmer");
+            return dimmer;
         }
 
         private IEnumerator ShowIt(CombatReward reward, List<ItemOffer> offers = null)
@@ -118,6 +158,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ItStartsHiddenAndShowOpensIt()
         {
+            SharedScene.MarkDirty("asserts the Reckoning is down in a freshly loaded fight, not after a reset hid it");
             yield return OpenTheFight();
             Assert.IsFalse(_reckoning.gameObject.activeSelf, "the fight opens with the Reckoning down");
 

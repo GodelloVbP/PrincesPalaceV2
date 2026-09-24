@@ -4,7 +4,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -45,6 +44,18 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void RestoreBeatSpeed()
         {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene). Several
+            // tests return mid-swing; EndFight is what a scene change runs on
+            // the way out (FightBeatPlayer.OnDisable), and its Flush hands the
+            // controller its playback-finished, which clears IsBusy. The next
+            // test's Bind then resets the menu, the log and the stage.
+            if (_fight != null)
+            {
+                var beats = _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true);
+                if (beats != null && beats.isActiveAndEnabled) beats.EndFight();
+            }
+            SharedScene.AfterTest();
+
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
         }
 
@@ -84,9 +95,9 @@ namespace PrincesPalace.PlayModeTests
         // test without saying so.
         private IEnumerator LoadFight(int foeHealth = 5000, int heroMana = 30)
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            // Loads once per fixture; each test binds a fresh session over it,
+            // which is how the game opens its next fight too.
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
@@ -452,6 +463,7 @@ namespace PrincesPalace.PlayModeTests
             // A scene change mid-round is the abandoned-fight case, and it must
             // not be the caller's job to remember.
             yield return LoadFight();
+            SharedScene.MarkDirty("deactivates the FightBeatPlayer, and a reused scene would bind the next fight to it switched off");
             var player = Object.FindAnyObjectByType<FightBeatPlayer>();
 
             Click("Verb0");

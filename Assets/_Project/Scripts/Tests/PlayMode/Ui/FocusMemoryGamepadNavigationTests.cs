@@ -28,14 +28,17 @@ namespace PrincesPalace.PlayModeTests
     // a press, which would prove the mechanism against itself rather than
     // against what a player does.
     //
-    // ONE PRESS PER STEP wherever it is enough, and JourneyFixture's own
-    // real-time settle where it is not: the ordinary-context Move gate
-    // (StandaloneInputModule.AllowMoveEventProcessing's own real-time
-    // moveRepeatDelay, JourneyFixture.Move's own header) silently drops a
-    // second chained Move inside 0.5s. Move below pays that settle once for
-    // every caller rather than each test rediscovering the drop; everything
-    // else here is reached by Submit, Cancel or the tab trigger, none of
-    // which read that gate.
+    // Move is one press frame and one rest frame, no wall-clock settle: the
+    // rest frame re-arms the dispatcher's edge, and TakeOverInput lifts the
+    // only real-time gate on a re-press (uGUI's 0.1s inputActionsPerSecond;
+    // JourneyFixture.Move has the measurement).
+    //
+    // SCENES ARE SHARED WITHIN THIS FIXTURE (SharedScene): the two Hub tests
+    // share one load. What a Hub test leaves -- the menu open, a tab stepped,
+    // a building selected, contexts remembering where they were -- is put
+    // back by NavSceneReuse (CloseHubModals, ForgetFocusMemory), which is a
+    // fresh load's state; each test below then builds the memory it asserts
+    // on from nothing, as before.
     public class FocusMemoryGamepadNavigationTests
     {
         private string _root;
@@ -60,19 +63,19 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             Navigation.Reset();
             TestGlobals.ResetAll();
             SaveSystem.RootOverride = null;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        private IEnumerator TakeOverInput()
+        private IEnumerator Open(string scene)
         {
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the freshly loaded scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
+            yield return SharedScene.Ensure(scene);
+            if (scene == "Hub") NavSceneReuse.CloseHubModals();
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
             yield return null;
             yield return null;
         }
@@ -90,7 +93,6 @@ namespace PrincesPalace.PlayModeTests
             yield return DriveFrame();
             _input.Horizontal = 0f;
             _input.Vertical = 0f;
-            yield return new WaitForSecondsRealtime(0.6f);
             yield return DriveFrame();
         }
 
@@ -141,8 +143,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator Hub_AModalOpenedFromASecondBuilding_ReturnsToThatBuildingOnCancel_NotToTheEntry()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return TakeOverInput();
+            yield return Open("Hub");
 
             var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
@@ -196,8 +197,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator SystemMenu_ReopenedAfterAClose_LandsBackInsideTheSamePane_NotOnTheTab()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return TakeOverInput();
+            yield return Open("Hub");
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub scene has no SystemMenuController");
@@ -257,8 +257,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator Talents_ARememberedInvestButton_ThatHasSinceBeenHidden_FallsBackToTheEntry()
         {
-            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
-            yield return TakeOverInput();
+            yield return Open("Talents");
+            SharedScene.MarkDirty("hides InvestButton by hand, which no Talents repaint is guaranteed to undo");
 
             var talents = Object.FindAnyObjectByType<TalentController>(FindObjectsInactive.Include);
             Assert.IsNotNull(talents, "the Talents scene has no TalentController");

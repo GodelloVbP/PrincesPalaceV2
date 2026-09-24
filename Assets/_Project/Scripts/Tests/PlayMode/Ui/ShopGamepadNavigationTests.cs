@@ -42,6 +42,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            NavSceneReuse.AfterTest(_input);
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -72,19 +73,38 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 9999;
             SaveSlotManager.SaveCurrent();
 
-            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
-
-            var module = Object.FindAnyObjectByType<NavigationInputModule>(FindObjectsInactive.Include);
-            Assert.IsNotNull(module, "the map scene's EventSystem is not running NavigationInputModule");
-            EventSystem.current = module.GetComponent<EventSystem>();
-            _input = module.gameObject.AddComponent<ScriptedBaseInput>();
-            module.inputOverride = _input;
-
-            yield return null;
-            yield return null;
+            // THE MAP IS SHARED ACROSS THIS FIXTURE (SharedScene). The run
+            // above is the same seed and the same arrival every test, so the
+            // reset is: the menu shut if a test left it open (on its default
+            // tab, as a fresh load's Start picks), the shop put
+            // away the way its own Leave does it (deactivated; OnDisable pops
+            // its context) without Leave's LeaveShop, the map repainted
+            // against the new run, and NavSceneReuse's input and focus-memory
+            // reset. The shop's own Open() below then clears every piece of
+            // its state (selection, pack, leave-arming, page) and repaints the
+            // freshly rolled stock -- a purchase from the last test is not in
+            // it.
+            yield return SharedScene.Ensure("Map");
 
             var map = Object.FindAnyObjectByType<MapController>(FindObjectsInactive.Include);
             Assert.IsNotNull(map, "the Map scene has no MapController");
+
+            if (NavSceneReuse.Reused)
+            {
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                if (menu != null && menu.IsOpen) menu.Close();
+                if (menu != null) menu.Select(PrincesPalace.Domain.UiKit.SystemMenuTabs.DefaultFor(menu.InDescent));
+                var shop = Object.FindAnyObjectByType<ShopController>(FindObjectsInactive.Include);
+                if (shop != null && shop.gameObject.activeSelf) shop.gameObject.SetActive(false);
+                map.Refresh();
+            }
+
+            _input = NavSceneReuse.TakeOverInput();
+            NavSceneReuse.ForgetFocusMemory();
+
+            yield return null;
+            yield return null;
+
             map.OpenShop();
             yield return null;
 

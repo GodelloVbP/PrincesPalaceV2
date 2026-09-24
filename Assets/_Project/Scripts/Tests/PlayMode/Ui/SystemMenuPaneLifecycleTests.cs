@@ -52,6 +52,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             TestGlobals.ResetAll();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
@@ -320,16 +321,30 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- fixture ---------------------------------------------------------------------
 
+        // SHARED ACROSS THIS FIXTURE while consecutive tests ask for the same
+        // scene (SharedScene). A reused scene has put its panes through MORE
+        // openings than a fresh one, which is the direction these tests are
+        // about, so reuse costs them nothing. Put back per test: the menu
+        // closed (Close resumes the clock Open paused), the party toast down
+        // and blank (Close strands it mid-hold, still showing), and the tab
+        // the menu opens on -- a fresh menu lands on its default in Start(),
+        // which a reused one ran long ago, and the dossier test cycles a pane
+        // that only enables under that default tab.
         private IEnumerator OpenTheMenu(string scene)
         {
-            yield return SceneManager.LoadSceneAsync(scene, LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure(scene);
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, $"{scene} has no SystemMenuController");
 
+            if (_menu.IsOpen) _menu.Close();
+            var toast = _menu.GetComponentsInChildren<PartyToast>(includeInactive: true).FirstOrDefault();
+            if (toast != null) toast.gameObject.SetActive(false);
+            var toastText = Named("PartyToastText")?.GetComponent<TMP_Text>();
+            if (toastText != null) toastText.text = "";
+
             _menu.Open();
+            _menu.Select(SystemMenuTabs.DefaultFor(_menu.InDescent));
             yield return null;
             yield return null;
         }

@@ -22,12 +22,25 @@ namespace PrincesPalace.PlayModeTests
     // granted to the Editor assembly and NOT to this one.
     public class ScreenWiringTests
     {
+        [TearDown]
+        public void Restore() => SharedScene.AfterTest();
+
+        // SHARED ACROSS THIS FIXTURE (SharedScene), one copy per scene run of
+        // consecutive tests. Every test here reads the built scene; the two
+        // that open the modals leave one open, so they are closed again here,
+        // topmost first, through the buttons a hand would press.
         private static IEnumerator LoadMainMenu()
         {
-            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
-            // Start() runs one frame after activation, not synchronously.
-            yield return null;
-            yield return null;
+            // Start() runs one frame after activation, not synchronously --
+            // Ensure waits it out on a load.
+            yield return SharedScene.Ensure("MainMenu");
+
+            var manage = FindByName("ManageSavesPanel");
+            if (manage != null && manage.activeSelf)
+                FindByName("CloseManageSavesButton").GetComponent<Button>().onClick.Invoke();
+            var slots = FindByName("SaveSlotPanel");
+            if (slots != null && slots.activeSelf)
+                FindByName("CloseSaveSlotButton").GetComponent<Button>().onClick.Invoke();
         }
 
         // ANY, not first. Every T this is asked for is a controller with
@@ -54,6 +67,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator BothModalsStartHidden()
         {
+            SharedScene.MarkDirty("asserts how the built scene starts, which LoadMainMenu's reset would force");
             yield return LoadMainMenu();
 
             Assert.IsFalse(FindByName("SaveSlotPanel").activeSelf, "the save slot modal should start closed");
@@ -151,9 +165,7 @@ namespace PrincesPalace.PlayModeTests
 
         private static IEnumerator LoadHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
         }
 
         [UnityTest]
@@ -195,6 +207,7 @@ namespace PrincesPalace.PlayModeTests
 
             try
             {
+                SharedScene.MarkDirty("asserts the currency the hub reads on enable, from the empty save set up above");
                 yield return LoadHub();
 
                 var label = FindByName("CurrencyLabel").GetComponent<TMPro.TMP_Text>();

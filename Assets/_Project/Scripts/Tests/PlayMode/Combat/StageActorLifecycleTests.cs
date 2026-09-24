@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -62,6 +61,10 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene): each test
+            // rebinds over it, and this stops what a rebind does not.
+            FightSceneFixture.QuietForReuse(_fight);
+            SharedScene.AfterTest();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             FightBeatPlayer.PlayerSpeedSource = () => 1f;
             FightController.BreathSpeedMultiplier = 1f;
@@ -74,9 +77,7 @@ namespace PrincesPalace.PlayModeTests
         private IEnumerator AFightAgainst(string spritePath)
         {
             LogAssert.ignoreFailingMessages = true;
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.EnsureFight();
             LogAssert.ignoreFailingMessages = false;
 
             _fight = Object.FindAnyObjectByType<FightController>();

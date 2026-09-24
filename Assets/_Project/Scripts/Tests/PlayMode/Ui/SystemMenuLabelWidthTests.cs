@@ -3,7 +3,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.UiKit;
@@ -45,12 +44,25 @@ namespace PrincesPalace.PlayModeTests
         // without re-measuring moves them further.
         private const float Tolerance = 8f;
 
+        [TearDown]
+        public void Restore() => SharedScene.AfterTest();
+
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). Every test
+        // measures built labels; the two that open the menu leave it open, so
+        // it is closed again here and the next test opens it the way a fresh
+        // hub does.
+        private static IEnumerator TheHub()
+        {
+            yield return SharedScene.Ensure("Hub");
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            if (menu != null && menu.IsOpen) menu.Close();
+        }
+
         [UnityTest]
         public IEnumerator EveryTabLabelIsAsWideAsTheBarWasBuiltFor()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return TheHub();
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(menu, "the hub has no SystemMenuController");
@@ -82,9 +94,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheLintelTitleCarriesItsOwnTracking()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return TheHub();
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             var title = menu.GetComponentsInChildren<Transform>(includeInactive: true)
@@ -103,9 +113,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator OrdinaryLabelsAreNotTracked()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return TheHub();
 
             // NOT HubTitleLabel any more: the button-theme migration gave it
             // TypographyRole.CeremonialTitle (the brief's own "Hub screen
@@ -132,9 +140,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator EachTabsBoxIsBuiltRoundItsOwnDrawnLabel()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return TheHub();
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             menu.Open();
@@ -167,9 +173,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheUnderlineIsTheWidthOfTheWordItMarks()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return TheHub();
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             menu.Open();

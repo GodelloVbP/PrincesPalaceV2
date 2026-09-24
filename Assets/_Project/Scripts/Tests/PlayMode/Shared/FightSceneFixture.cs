@@ -49,6 +49,40 @@ namespace PrincesPalace.PlayModeTests
             // than waiting for the first beat -- so a fixture reading
             // FightBeatPlayer.PlayerSpeedMultiplier before it ever plays a
             // beat (T8) sees 1, not whatever OnEnable happened to catch.
+            RepinSpeed();
+        }
+
+        // WHAT A FIGHT FIXTURE'S [TearDown] RUNS BEFORE THE NEXT TEST REUSES
+        // THE SCENE (SharedScene). Only the parts a rebind does not already
+        // put back: Bind's ResetStagePresentation snaps every figure home,
+        // revives the fades and forgets the last formation, but nothing in
+        // it stops a beat still playing, a cast still drawing, or a hit
+        // flash the last blow woke -- the overlay is built inactive and
+        // wakes itself, so a flash left awake would let "the blow woke the
+        // flash" pass on the previous test's blow.
+        //
+        // EndFight is what a scene change runs on the way out (Flush, then
+        // cancel every cast); the flashes go back to how the scene builds them.
+        internal static void QuietForReuse(Component fightRoot)
+        {
+            if (fightRoot == null) return;
+            var beats = fightRoot.GetComponentInChildren<FightBeatPlayer>(includeInactive: true);
+            if (beats != null) beats.EndFight();
+            foreach (var player in fightRoot.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true))
+                player.StopImmediately();
+            foreach (var flash in fightRoot.GetComponentsInChildren<StageHitFlash>(includeInactive: true))
+            {
+                flash.Clear();
+                flash.gameObject.SetActive(false);
+            }
+        }
+
+        // The after-load half on its own, for SharedScene: a reused Fight
+        // scene gets no second FightBootstrap.Start, but the previous test's
+        // teardown (TestGlobals.ResetAll or a fixture's own) may have moved
+        // the source, so every test that reuses the scene re-pins here.
+        internal static void RepinSpeed()
+        {
             FightBeatPlayer.PlayerSpeedSource = () => 1f;
 
             // Static, like the seam it adopts from -- an instance is only

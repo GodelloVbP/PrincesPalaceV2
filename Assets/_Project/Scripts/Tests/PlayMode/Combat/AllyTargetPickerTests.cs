@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -43,7 +42,15 @@ namespace PrincesPalace.PlayModeTests
         public void PlayBeatsFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
         [TearDown]
-        public void RestoreBeatSpeed() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void RestoreBeatSpeed()
+        {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene): each test
+            // rebinds over it (Bind resets the menu and its focus), and this
+            // stops what a rebind does not.
+            FightSceneFixture.QuietForReuse(_fight);
+            SharedScene.AfterTest();
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        }
 
         private GameObject Named(string name)
         {
@@ -79,9 +86,7 @@ namespace PrincesPalace.PlayModeTests
 
         private IEnumerator LoadFightWithAWard()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
@@ -117,6 +122,14 @@ namespace PrincesPalace.PlayModeTests
 
             _fight.Bind(session, EncounterClass.Normal);
             yield return null;
+
+            // THE ROOT FOCUS, walked back to ATTACK. Bind resets the menu but
+            // not which verb is focused, and OpenTheAllyPick counts its steps
+            // from ATTACK -- a fresh scene's focus, and where a reused one is
+            // left one step off by the previous test's own OpenTheAllyPick.
+            // MoveFocus is the press a pad makes; FocusedVerbForTest reads it.
+            for (int i = 0; i < 8 && _fight.FocusedVerbForTest != 0; i++) _fight.MoveFocus(1);
+            Assert.AreEqual(0, _fight.FocusedVerbForTest, "fixture: the root focus did not come back to ATTACK");
 
             Assert.AreSame(_shawn, session.Current, "fixture: the ward's owner has to be the one acting");
         }

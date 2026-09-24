@@ -5,7 +5,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
 
@@ -37,6 +36,8 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
+
             // Every global this fixture touched, plus the ones it did not --
             // one call, so the list cannot go stale here while it grows
             // somewhere else. See TestGlobals.
@@ -51,14 +52,29 @@ namespace PrincesPalace.PlayModeTests
 
         private string TextOf(string name) => Named(name).GetComponent<TMP_Text>().text;
 
+        // THE FIGHT IS SHARED ACROSS THIS FIXTURE (SharedScene). Every test
+        // Shows the screen with nearly the same settlement, so what the last
+        // Show painted would satisfy the next test's label checks even if its
+        // own Show painted nothing. The screen is hidden again, and every
+        // label and row Paint is responsible for is blanked and hidden, so
+        // each test sees only what its own Show wrote.
+        private static readonly System.Text.RegularExpressions.Regex PaintedLabel =
+            new System.Text.RegularExpressions.Regex(@"^(DefeatGoldLost|DefeatExp|DefeatDepth|DefeatEmbers|DefeatRow\d+(Stats|Name))$");
+        private static readonly System.Text.RegularExpressions.Regex PaintedRow =
+            new System.Text.RegularExpressions.Regex(@"^DefeatRow\d+$");
+
         private IEnumerator OpenTheFight()
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Fight");
 
             _defeat = Object.FindAnyObjectByType<DefeatController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_defeat, "the defeat screen was never wired into the fight scene");
+
+            _defeat.gameObject.SetActive(false);
+            foreach (var label in _defeat.GetComponentsInChildren<TMP_Text>(includeInactive: true))
+                if (PaintedLabel.IsMatch(label.name)) label.text = "";
+            foreach (var node in _defeat.GetComponentsInChildren<Transform>(includeInactive: true))
+                if (PaintedRow.IsMatch(node.name)) node.gameObject.SetActive(false);
         }
 
         // A settlement whose numbers are distinctive enough that finding them
@@ -91,6 +107,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheScreenStartsHiddenAndShowOpensIt()
         {
+            SharedScene.MarkDirty("asserts the defeat screen is hidden in a freshly loaded fight, which OpenTheFight's reset would force");
             yield return OpenTheFight();
             Assert.IsFalse(_defeat.gameObject.activeSelf);
 

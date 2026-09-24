@@ -59,6 +59,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             HubController.MotionSpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
@@ -79,17 +80,41 @@ namespace PrincesPalace.PlayModeTests
             go.GetComponent<Button>().onClick.Invoke();
         }
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene), and a gate
+        // press leaves it in one of two states a fresh load would not have.
+        // The draft path hands the panel back itself and leaves the draft
+        // open. The load path leaves the panel zoomed to 2.5, faded to black
+        // and the gate disabled -- deliberately, because in the game the scene
+        // is destroyed next; here Navigation.LoadOverride swallowed that load.
+        // Both are put back to the panel's framing as the fresh load found it.
+        private static Scene s_framedScene;
+        private static Vector2 s_framedPosition;
+
         private IEnumerator OpenTheHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _hub = Object.FindAnyObjectByType<HubController>();
             Assert.IsNotNull(_hub, "the Hub scene has no HubController");
 
             _draft = _hub.GetComponentInChildren<RelicDraftController>(includeInactive: true);
             Assert.IsNotNull(_draft, "the draft was never wired into the hub");
+
+            var panel = (RectTransform)_hub.transform;
+            if (s_framedScene != SceneManager.GetActiveScene())
+            {
+                // Untouched: nothing has pressed the gate in this copy yet.
+                s_framedScene = SceneManager.GetActiveScene();
+                s_framedPosition = panel.anchoredPosition;
+            }
+
+            _draft.gameObject.SetActive(false);
+            panel.localScale = Vector3.one;
+            panel.anchoredPosition = s_framedPosition;
+            var group = panel.GetComponent<CanvasGroup>();
+            if (group != null) group.alpha = 1f;
+            Named("StartRunGate").GetComponent<Button>().interactable = true;
+            _hub.Refresh();
         }
 
         // Presses the gate and waits for the mock-up transition to hand off
@@ -118,6 +143,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheDraftStartsClosedAndTheGateOpensIt()
         {
+            // OpenTheHub's reset closes the draft; this asserts that a fresh hub does.
+            SharedScene.MarkDirty("asserts the draft is closed on a freshly loaded hub, which the reset would force");
             yield return OpenTheHub();
             Assert.IsFalse(_draft.gameObject.activeSelf);
 
@@ -239,6 +266,7 @@ namespace PrincesPalace.PlayModeTests
                     .First(t => t.name.EndsWith("Name")).text)
                 .ToList();
 
+            SharedScene.MarkDirty("the claim is that the offer survives a real reload of the hub, so this second open must load it");
             yield return OpenTheHub();
             yield return PressStartRunGateAndWaitForTheDraft();
 

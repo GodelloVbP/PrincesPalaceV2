@@ -4,7 +4,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -31,7 +30,14 @@ namespace PrincesPalace.PlayModeTests
         public void PlayBeatsFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
         [TearDown]
-        public void RestoreBeatSpeed() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void RestoreBeatSpeed()
+        {
+            // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene): each test
+            // rebinds over it, and this stops what a rebind does not.
+            FightSceneFixture.QuietForReuse(_fight);
+            SharedScene.AfterTest();
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        }
 
         private GameObject Named(string name)
         {
@@ -51,9 +57,7 @@ namespace PrincesPalace.PlayModeTests
         // fixture never one-shots the target mid-test.
         private IEnumerator LoadFightWithAttackType(DamageType attackType)
         {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.EnsureFight();
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");

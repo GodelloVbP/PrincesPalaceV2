@@ -6,7 +6,6 @@ using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -52,6 +51,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -588,11 +588,28 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- fixture --------------------------------------------------------------
 
-        private static IEnumerator LoadScene(string name)
+        // THE SCENE IS SHARED ACROSS THIS FIXTURE (SharedScene) while
+        // consecutive tests ask for the same one. The pane itself needs no
+        // reset: closing the menu deactivates it, whose OnDisable drops any
+        // half-made selection, and OpenParty's reopen runs its OnEnable ->
+        // Refresh against the save [SetUp] just pointed at a fresh root.
+        //
+        // What does need it is the toast. Close stops its fade coroutine with
+        // the toast still showing, so without this a refusal test would read
+        // the previous test's refusal off it.
+        private IEnumerator LoadScene(string name)
         {
-            yield return SceneManager.LoadSceneAsync(name, LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure(name);
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            if (menu == null) yield break;
+            if (menu.IsOpen) menu.Close();
+
+            var toast = menu.GetComponentsInChildren<PartyToast>(includeInactive: true).FirstOrDefault();
+            if (toast != null) toast.gameObject.SetActive(false);
+            var toastText = menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .FirstOrDefault(t => t.name == "PartyToastText")?.GetComponent<TMP_Text>();
+            if (toastText != null) toastText.text = "";
         }
 
         private void OpenParty()

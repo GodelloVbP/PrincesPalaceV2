@@ -4,7 +4,6 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
@@ -40,6 +39,7 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            SharedScene.AfterTest();
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -59,30 +59,44 @@ namespace PrincesPalace.PlayModeTests
 
         private string TextOf(string name) => Named(name).GetComponent<TMP_Text>().text;
 
-        private IEnumerator OpenTheGlossary()
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). A glossary the
+        // last test left open is closed with its own Close button, so the
+        // next open runs OnEnable's Refresh against this test's save the way
+        // a fresh hub's first open does.
+        private IEnumerator TheHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _hub = Object.FindAnyObjectByType<HubController>();
             _glossary = _hub.GetComponentInChildren<GlossaryController>(includeInactive: true);
             Assert.IsNotNull(_glossary, "the glossary was never wired into the hub");
 
+            if (_glossary.gameObject.activeSelf) Click("GlossaryCloseButton");
+        }
+
+        // The screen keeps its category, page and selection across a close
+        // and reopen (only a reload resets them), so after opening it this
+        // presses the first category, which is what a fresh open lands on:
+        // category 0, page 0, nothing selected. A test that asserts that
+        // landing itself marks the scene dirty and opts out of the press.
+        private IEnumerator OpenTheGlossary(bool pressTheFirstCategory = true)
+        {
+            yield return TheHub();
+
             Click("RelicsBuilding");
             yield return null;
+            yield return null;
+
+            if (!pressTheFirstCategory) yield break;
+            Click("GlossaryCategory0");
             yield return null;
         }
 
         [UnityTest]
         public IEnumerator TheRelicsBuildingOpensIt()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
-
-            _hub = Object.FindAnyObjectByType<HubController>();
-            _glossary = _hub.GetComponentInChildren<GlossaryController>(includeInactive: true);
+            SharedScene.MarkDirty("asserts the glossary is closed on a freshly loaded hub, which TheHub's reset would force");
+            yield return TheHub();
 
             Assert.IsFalse(_glossary.gameObject.activeSelf);
 
@@ -97,11 +111,7 @@ namespace PrincesPalace.PlayModeTests
         {
             // It sat dark and unpressable from the day the hub was built. If it
             // is still in unbuiltButtons the click above cannot fire at all.
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
-
-            _hub = Object.FindAnyObjectByType<HubController>();
+            yield return TheHub();
 
             Assert.IsTrue(Named("RelicsBuilding").GetComponent<Button>().interactable);
         }
@@ -252,7 +262,10 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator SelectingARowFillsThePlate()
         {
-            yield return OpenTheGlossary();
+            // "Nothing is selected yet" is about the first open of a fresh
+            // hub, not about what OpenTheGlossary's category press clears.
+            SharedScene.MarkDirty("asserts nothing is selected on a fresh hub's first open, which the category-0 reset would force");
+            yield return OpenTheGlossary(pressTheFirstCategory: false);
 
             Assert.IsFalse(Named("GlossaryDetailLockedBy").activeSelf, "nothing is selected yet");
 

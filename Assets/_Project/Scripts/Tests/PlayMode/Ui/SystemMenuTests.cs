@@ -20,6 +20,9 @@ namespace PrincesPalace.PlayModeTests
     {
         private SystemMenuController _menu;
 
+        [TearDown]
+        public void AfterEach() => SharedScene.AfterTest();
+
         // ADAPTED for gamepad-navigation phase 2, step B: SystemMenuController
         // no longer polls Escape itself at all -- Open()/Close() are ordinary
         // method calls, pushing/popping a NavContext (plan section 3/4), so
@@ -187,14 +190,22 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene). What a test
+        // leaves up is the menu (open, which also leaves the clock paused --
+        // Close puts back the clock Open found) and the glossary; both are
+        // put back here through the controllers' own calls. On a fresh load
+        // neither is open and this does nothing.
         private IEnumerator OpenTheHub()
         {
-            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
+            yield return SharedScene.Ensure("Hub");
 
             _menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
             Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
+
+            if (_menu.IsOpen) _menu.Close();
+            var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
+            if (hub != null && hub.GlossaryIsOpen) hub.SetGlossary(false);
+            Time.timeScale = 1f;
         }
 
         // ---- the context rule ---------------------------------------------------
@@ -339,6 +350,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ItStartsClosedAndOpens()
         {
+            SharedScene.MarkDirty("asserts the menu is closed on load, not after a reset closed it");
             yield return OpenTheHub();
 
             Assert.IsFalse(_menu.IsOpen, "the overarching menu is open on load");
@@ -399,6 +411,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator OpeningStraightOntoATabIsNotResetByTheDefault()
         {
+            SharedScene.MarkDirty("needs the menu's first activation, when Start() has yet to run");
             yield return OpenTheHub();
 
             _menu.Open();
