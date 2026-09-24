@@ -245,5 +245,55 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "a dead hover falls back to the first living enemy, not a corpse");
         }
+
+        // gap-fight-b-1: the PLATE's own hover, not the figure's hit area
+        // ADeadHoverReadsAsNoHover exercises above. AddEnemyHover used to
+        // wire the plate through a raw EventTrigger; a plate is deactivated
+        // (SetShown(false)) the instant its monster dies, and Unity delivers
+        // no PointerExit to a disabled object, so _hoveredEnemyIndex and
+        // _inspectedActor stayed on the corpse forever -- not merely until
+        // the next refresh, which is what the marker-only test above could
+        // not tell apart from this. HoverIndex.OnDisable is what actually
+        // fires the missing exit; this pins THAT wiring, not just the
+        // symptom-level fallback.
+        [UnityTest]
+        public IEnumerator HoveringAPlate_ThenKillingItsEnemy_ClearsTheHoverAndTheStatusBox()
+        {
+            yield return LoadFight();
+            yield return BindARealEncounter();
+
+            var plate = Node("EnemyPlate0");
+            Assert.IsNotNull(plate, "no EnemyPlate0 in the Fight scene");
+
+            var hover = plate.GetComponent<HoverIndex>();
+            Assert.IsNotNull(hover, "EnemyPlate0 should carry a HoverIndex, not a raw EventTrigger");
+            hover.OnPointerEnter(null);
+            yield return null;
+
+            Assert.AreEqual(0, _fight.HoveredEnemyIndexForTest,
+                "precondition: hovering the plate set the hovered index");
+
+            var session = _fight.GetType()
+                .GetField("_session", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(_fight) as FightSession;
+            Assert.IsNotNull(session, "could not reach the bound session to kill an enemy under the hover");
+
+            session.Encounter.Enemies[0].CurrentHealth = 0;
+
+            // A direct health poke, unlike a real cast, fires none of the
+            // beat-resolution repaints on its own -- RefreshEnemyPlates only
+            // runs from RefreshUi, so this drives it explicitly rather than
+            // waiting frames for a repaint nothing will schedule.
+            _fight.RefreshUi();
+            yield return null; // OnDisable's own exit event lands the frame after SetShown(false)
+
+            Assert.AreEqual(-1, _fight.HoveredEnemyIndexForTest,
+                "the dead plate's OnDisable must clear the hover, not leave it pointed at the corpse");
+
+            var inspectedActor = _fight.GetType()
+                .GetField("_inspectedActor", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(_fight);
+            Assert.IsNull(inspectedActor, "the status box must not still be describing the dead enemy");
+        }
     }
 }

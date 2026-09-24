@@ -221,30 +221,36 @@ namespace PrincesPalace
         // pointer's field. _inspectedActor is cleared by an EXIT event, and
         // a stick press produces none -- so a pad target pick would have left
         // the box open over an actor nothing was pointing at any more.
+        // HoverIndex, NOT EventTrigger -- same rule as AddHover above, plus a
+        // second reason specific to this rack: a plate is deactivated
+        // (SetShown(false)) the instant its monster dies (RefreshEnemyPlates,
+        // FightController.Hud.cs), and Unity delivers no PointerExit to a
+        // disabled object. EventTrigger's own PointerExit entry would simply
+        // never fire, leaving _hoveredEnemyIndex and _inspectedActor pointed
+        // at a corpse. HoverIndex.OnDisable exists precisely for this and
+        // fires the exit itself.
         private void AddEnemyHover(GameObject plate, int index)
         {
-            var trigger = plate.GetComponent<EventTrigger>() ?? plate.AddComponent<EventTrigger>();
-
-            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ =>
+            var hover = plate.GetComponent<HoverIndex>() ?? plate.AddComponent<HoverIndex>();
+            hover.Index = index;
+            hover.Changed = (i, entered) =>
             {
-                OnEnemyHovered(index);
+                if (entered)
+                {
+                    OnEnemyHovered(i);
 
-                // The plate names a monster, so it opens that monster's box
-                // -- under the FIGURE, not beside the plate: the figure is
-                // the thing being asked about and the plate is its readout
-                // (FightController.Hud's PlaceStatusBox).
-                InspectEnemyAt(index, true);
-            });
-            trigger.triggers.Add(enter);
-
-            var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exit.callback.AddListener(_ =>
-            {
-                OnEnemyUnhovered(index);
-                InspectEnemyAt(index, false);
-            });
-            trigger.triggers.Add(exit);
+                    // The plate names a monster, so it opens that monster's
+                    // box -- under the FIGURE, not beside the plate: the
+                    // figure is the thing being asked about and the plate is
+                    // its readout (FightController.Hud's PlaceStatusBox).
+                    InspectEnemyAt(i, true);
+                }
+                else
+                {
+                    OnEnemyUnhovered(i);
+                    InspectEnemyAt(i, false);
+                }
+            };
         }
 
         // ---- the preview's one scripted turn ---------------------------------

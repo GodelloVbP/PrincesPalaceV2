@@ -2531,7 +2531,14 @@ namespace PrincesPalace
             // recent deliberate act: a player holding a mouse over a monster
             // has said which one they mean, while the pad's focus is wherever
             // the last stick press left it and is never absent.
-            var actor = _inspectedActor ?? FocusedActor();
+            //
+            // A DEAD _inspectedActor READS AS NO POINTER, same rule as
+            // FocusedActor and ConfirmFocus's no-hover branch: an exit event
+            // usually clears this on death (HoverIndex.OnDisable), but this
+            // is the defence-in-depth backstop for any path that sets
+            // _inspectedActor without going through that hover -- the box
+            // must never describe a corpse.
+            var actor = (_inspectedActor != null && _inspectedActor.IsAlive) ? _inspectedActor : FocusedActor();
 
             var rows = actor != null && _session != null
                 ? FightHudModel.StatusRowsFor(_session, actor)
