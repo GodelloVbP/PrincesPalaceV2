@@ -1167,8 +1167,15 @@ namespace PrincesPalace
         // so anything that ends a playback without calling back leaves every
         // verb disabled for the rest of the fight -- no error, no message, just
         // a screen that stops responding. An exception inside the beat
-        // coroutine does exactly that, and so did Flush before it learned to
-        // report.
+        // coroutine used to do exactly that, and so did Flush before it
+        // learned to report.
+        //
+        // IsPlaying IS TRUSTWORTHY HERE ONLY BECAUSE FightBeatPlayer MAKES IT
+        // SO: its playback clears the flag and reports from a finally, so a
+        // coroutine that died by exception cannot leave it stuck true (see
+        // PlayBeats). Before that, this watchdog asked the dead coroutine's
+        // own flag whether it was alive and was told yes forever. It stays as
+        // the backstop for a finish that is lost some other way.
         //
         // The two are set together and synchronously -- _isBusy = true is
         // immediately followed by Play, which sets IsPlaying in the same frame

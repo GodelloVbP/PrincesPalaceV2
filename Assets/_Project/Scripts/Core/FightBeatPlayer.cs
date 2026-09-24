@@ -176,6 +176,14 @@ namespace PrincesPalace
         private Coroutine _running;
         private Action _onFinished;
 
+        // Which playback is current. Bumped by every Supersede, so a stopped
+        // playback's finally can tell it has been replaced -- see PlayBeats.
+        private int _playback;
+
+        // The nested steps of the current playback, each a coroutine of its
+        // own (StartStep), kept so Supersede can stop them with their parent.
+        private readonly List<Coroutine> _steps = new List<Coroutine>();
+
         // Set by the controller so playback can find where a combatant is
         // standing without knowing anything about stages or slots.
         internal Func<CombatantState, RectTransform> SlotFor;
@@ -360,7 +368,7 @@ namespace PrincesPalace
 
             _onFinished = onFinished;
             IsPlaying = true;
-            _running = StartCoroutine(PlayBeats(beats));
+            _running = StartCoroutine(PlayBeats(beats, _playback));
         }
 
         // SUPERSEDE, NOT FLUSH -- and this is the same distinction one level
@@ -391,11 +399,24 @@ namespace PrincesPalace
         // moment that is not from the future.
         private void Supersede()
         {
+            // FIRST, so a stopped playback's own finally (PlayBeats) sees it is
+            // no longer the current one and neither paints nor reports.
+            _playback++;
+
             if (_running != null)
             {
                 StopCoroutine(_running);
                 _running = null;
             }
+
+            // The nested steps a beat was waiting on (CloseIn, a wind-up) run
+            // as coroutines of their own -- see StartStep -- so stopping the
+            // parent is not enough to stop them.
+            foreach (var step in _steps)
+            {
+                if (step != null) StopCoroutine(step);
+            }
+            _steps.Clear();
 
             if (popups != null)
             {
@@ -489,404 +510,151 @@ namespace PrincesPalace
         // and this needs to be settable directly from one.
         public Action<int, float> BeatStarted;
 
-        private IEnumerator PlayBeats(IReadOnlyList<CombatBeat> beats)
+        // IF THE PLAYBACK STOPS FOR ANY REASON, IsPlaying GOES FALSE AND THE
+        // FINISH PATH RUNS EXACTLY ONCE.
+        //
+        // An exception inside a coroutine stops it dead and Unity only logs
+        // it. Before this, the one try/catch in a beat covered the impact
+        // block, so a throw from anything else in the beat -- the opening
+        // SetStance, the lunge, PlayVfx (content-driven), ImpactDelayFor --
+        // left IsPlaying true and _onFinished unfired. FightController's busy
+        // flag is cleared only by that callback, and its watchdog
+        // (RescueAStrandedTurn) trusts IsPlaying, which the dead coroutine
+        // owned: every verb dead until the scene was left.
+        //
+        // Two layers, because C# refuses `yield return` inside a try that has
+        // a catch -- so a beat cannot simply be wrapped in one:
+        //
+        //  1. EVERY STEP OF A BEAT IS ADVANCED INSIDE A CATCH (GuardedSteps).
+        //     A throw abandons that one beat -- its outcome is still landed,
+        //     see AbandonBeat -- and playback carries on with the next. One
+        //     bad sprite path costs one beat's show, not the fight.
+        //
+        //  2. THE FINISH IS IN A FINALLY, which C# does allow around a yield.
+        //     Whatever stops this iterator by throwing -- including the few
+        //     lines of it outside layer 1 -- still unwinds through it. Gated on
+        //     `playback` so a SUPERSEDED playback, whose finish belongs to
+        //     Flush or to nobody (Play), does nothing if Unity disposes it.
+        private IEnumerator PlayBeats(IReadOnlyList<CombatBeat> beats, int playback)
         {
-            int beatIndex = 0;
-
-            foreach (var beat in beats)
+            try
             {
-                // Contract 1: adopted before ANY Scaled/Unscaled call this
-                // beat's body makes, so every conversion in it sees one
-                // product for the beat's whole duration -- even if the
-                // player steps the setting again before the NEXT beat opens
-                // (contract 4).
-                AdoptPlayerSpeed();
-                BeatStarted?.Invoke(beatIndex, PlayerSpeedMultiplier);
-                beatIndex++;
+                int beatIndex = 0;
 
-                // THE PRE-SNAPSHOT, which is the whole reason the session
-                // records two.
-                //
-                // A spell's bolt takes most of a second to arrive. Dropping the
-                // target's HP the instant the beat opens shows the damage before
-                // the spell has left the ceiling -- the number moves, then the
-                // thing that caused it happens. Painting what stood BEFORE the
-                // blow and only landing the after-state at the impact frame is
-                // what puts cause back in front of effect.
-                // THE FORMATION FIRST, THEN THE NUMBERS.
-                //
-                // Where everybody stands is settled before anything else about
-                // the beat is drawn, because the rest of the beat is measured
-                // against it: TravelFor reads the two figures' marks to
-                // work out where the actor stands to strike, and the damage
-                // popup is placed off the target's slot. Painted from the
-                // beat's own snapshot rather than from the live lists for the
-                // reason the vitals are -- a Move rewrites the party order in
-                // place, so live state is the order the ROUND finished on.
-                PaintFormation?.Invoke(beat.Formation);
-
-                // AND WHO IS UP NEXT AS OF THIS BEAT, from the same moment and
-                // for the same reason -- see PaintTurnOrder's own header. Sent
-                // here beside the formation rather than at the impact frame
-                // because the queue describes the beat as a whole rather than
-                // any instant inside it: whoever held the turn when it resolved
-                // holds slot 0 for as long as the beat is drawn.
-                PaintTurnOrder?.Invoke(beat.TurnOrder);
-
-                // AND THE FIGURES HAVE TO ARRIVE BEFORE THE BEAT GOES ON.
-                //
-                // A Move's own beat is the case this is for: the two party
-                // members cross over about a third of a second, and the enemy
-                // reply that follows in the SAME round would otherwise open
-                // while they were still passing each other -- aiming at the
-                // gap between them, landing its flash on whichever figure
-                // happened to be nearer. The other case is a line closing up
-                // over a corpse that has just finished fading.
-                //
-                // A while rather than a fixed wait: the walk's length is the
-                // animator's business (StageActorAnimator.GlideSeconds, scaled
-                // like everything else on the beat clock), and a beat that
-                // waited its own guess at that number would drift the day it
-                // changed. Nothing is moving on the overwhelming majority of
-                // beats, so this costs one delegate call.
-                //
-                // AND NEITHER OF THE TWO FIGURES THIS BEAT IS ABOUT IS STILL
-                // REELING FROM AN EARLIER ONE. One gate rather than two
-                // consecutive whiles, because there is one claim being made
-                // here and everything below depends on all of it: the bodies
-                // this beat measures are standing on the marks it measures
-                // them by. See StillReeling for what a second attacker used
-                // to land on.
-                //
-                // BEFORE PaintVitals, so the numbers on screen through the
-                // settle are still the ones the last blow left -- the reel
-                // being waited out belongs to that blow, and painting the
-                // incoming beat's pre-snapshot over it would move a health
-                // bar for a hit that has not opened yet.
-                while ((FormationIsMoving != null && FormationIsMoving()) || StillReeling(beat))
+                foreach (var beat in beats)
                 {
-                    yield return null;
+                    // Advanced by hand rather than yielded as a nested
+                    // coroutine: a yielded enumerator costs a frame even when
+                    // it has nothing left to do (see the CloseIn note below),
+                    // and one frame per beat is a timing change nobody asked
+                    // for. GuardedSteps itself cannot throw, so this loop
+                    // needs no catch of its own.
+                    var fault = new StepFault();
+                    var steps = GuardedSteps(PlayBeat(beat, beatIndex++), fault);
+                    while (steps.MoveNext()) yield return steps.Current;
+
+                    if (fault.Failed) AbandonBeat(beat);
                 }
-
-                PruneReeling();
-
-                PaintVitals?.Invoke(beat.PreSnapshot);
-
-                if (beat.Messages != null)
-                {
-                    foreach (var line in beat.Messages) PushLine?.Invoke(line);
-                }
-
-                // THE ACTOR'S POSE NOW; EVERYONE ELSE'S AT THE IMPACT INSTANT.
-                //
-                // The beat records a stance for every combatant it mentions,
-                // and all of them used to be applied here, when the beat
-                // opened. For the one taking the blow that is the wrong
-                // moment: the victim wore its "hurt" drawing through the
-                // attacker's whole wind-up, so a figure flinched from a swing
-                // that had not left its mark. Invisible while a still-drawing
-                // attacker had no wind-up at all (impact WAS the opening
-                // instant); a whole crouch-and-cross of pre-emptive flinching
-                // once StaticSwing gave it one, and longer still for any spell
-                // with a travel time. Cause has to come before effect on the
-                // stage as well as in the log, which is the same argument the
-                // two snapshots make.
-                //
-                // The actor is different: its stance IS the wind-up, so it has
-                // to be worn from the first frame. PoseVictims below is the
-                // other half, called from the impact block.
-                //
-                // AND IT CAN NOW BE UP TO THREE DRAWINGS RATHER THAN ONE --
-                // approach, wind-up, strike. CombatBeat's own header carries
-                // the precedence table; what follows is that table, applied.
-                // Everything about it collapses to today's single SetStance
-                // for a beat that authored neither of the two new poses, which
-                // is every beat in the game bar one.
-                string strikeStance = null;
-                if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strikeStance);
-
-                // WHICH drawing at which moment is CombatBeat's rule, so an
-                // EditMode test can pin the fallbacks; WHEN each moment falls
-                // is this file's, because only it knows what a walk-in or a
-                // crouch costs.
-                string openStance = CombatBeat.OpenStanceFor(
-                    beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
-                string arrivalStance = CombatBeat.ArrivalStanceFor(
-                    beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
-
-                // Whether this beat has a wind-up POSE at all, which is what
-                // decides below whether it also has to buy the WAIT to hold it
-                // through. Blank-is-unauthored, plus the no-strike-no-phases
-                // rule CombatBeat.Normalise states -- read through the same
-                // two functions above rather than re-tested here, so there is
-                // one answer to "did this beat author a wind-up".
-                bool hasWindup = !string.IsNullOrWhiteSpace(strikeStance)
-                                 && !string.IsNullOrWhiteSpace(beat.ActorWindupStance);
-
-                // What the actor is wearing right now, so the impact instant
-                // can tell whether it still has to change into the strike.
-                string wornStance = openStance;
-
-                if (beat.Actor != null && openStance != null)
-                {
-                    SetStance?.Invoke(beat.Actor, openStance);
-                }
-
-                // BEFORE THE LUNGE AND BEFORE THE SPELL, and it yields, so
-                // everything below waits for the figure to arrive. That is the
-                // whole of the difference between Close and Lunge.
-                //
-                // THE BRANCH IS OUT HERE, not left to CloseIn's own guard, and
-                // that is not tidiness. `yield return someEnumerator` costs a
-                // frame even when the enumerator yield-breaks on its first
-                // line: Unity resumes the parent on the next update either way.
-                // Written as an unconditional yield it therefore delayed the
-                // hit flash and the damage popup by a frame on EVERY beat in
-                // the game, for a feature three skills use -- caught by two
-                // PlayMode tests that sampled exactly one frame after the click,
-                // which is the only reason it was caught at all.
-                //
-                // THOSE TESTS NOW POLL FOR THE IMPACT WITH A DEADLINE instead,
-                // because a Lunge has since gained a real wind-up (StaticSwing)
-                // and lands a frame or two later on purpose. The trap above is
-                // still a trap; it is only no longer one that a
-                // frame-after-the-click sample would catch, so a new
-                // unconditional yield here has to be caught by reading, not by
-                // the suite.
-
-                // WHETHER THIS BEAT IS A SWING THAT CROSSES THE STAGE, decided
-                // ONCE here and read three times below -- the lunge's
-                // anticipation lead, the wind-up it waits out, and the contact
-                // effects at impact. All three have to agree, and asking again
-                // at the impact instant is how they would come to disagree.
-                bool staticSwing = IsStaticSwing(beat);
-
-                // THE CHARGE TWIN OF staticSwing -- see IsStaticCharge. A
-                // Charge never gets a lunge-style anticipation lead (it is not
-                // a lean, it is a committed rush that is already crossing
-                // during the swing), so this is read for the wind-up and the
-                // contact effects only, never for Lunge's third use above.
-                bool staticCharge = IsStaticCharge(beat);
-
-                if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
-
-                // ARRIVED, AND NOW HE RAISES IT. The one moment a Close has
-                // that no other approach does: the walk-in is over and the
-                // blow has not started, which is exactly where "then he holds
-                // his hammer over his head" goes.
-                if (arrivalStance != null)
-                {
-                    SetStance?.Invoke(beat.Actor, arrivalStance);
-                    wornStance = arrivalStance;
-                }
-
-                Lunge(beat, staticSwing);
-
-                // THE CHARGE'S OWN OUTBOUND TRAVEL TIME, computed once and
-                // read on both sides of AUDIT.md #59: Charge below hands it to
-                // the animator as the out-tween's duration, and the wind-up a
-                // few lines down waits out the SAME number before the impact
-                // instant fires. One value rather than each side deriving its
-                // own is what keeps the charger's arrival and the target's
-                // flinch from drifting apart again.
-                float chargeOutSeconds = Charge(beat);
-
-                PlayVfx?.Invoke(beat);
-
-                // THE CAST CUE, at the moment the beat opens. The pressure
-                // building through a spell's wind-up, as against the transient
-                // that punctuates its contact -- see SpellPresentation's
-                // castSfxPath for why the two are separate paths and not one.
-                // An empty path is a silent no-op, so this needs no guard.
-                SoundController.PlayClip(beat.Vfx.castSfxPath);
-
-                // Wind-up: the crouch and the cross for a Lunge, or the
-                // charge's own outbound travel (chargeOutSeconds, floored at
-                // ChargeMinOutSeconds) for a Charge -- up to the moment the
-                // blow would connect either way. A spell instead waits out its
-                // VFX's impact fraction below; only one of these three is ever
-                // non-zero for a given beat, so they add rather than compete.
-                if (staticSwing) yield return StaticSwing.Windup();
-                else if (staticCharge) yield return StaticSwing.Windup(chargeOutSeconds);
-
-                // A WIND-UP THE BEAT DID NOT ALREADY HAVE, and the only thing
-                // in this file that authoring a pose can BUY.
-                //
-                // A Lunge and a Charge already wait one out above, so a pose
-                // authored on either simply gets worn through the wait that
-                // was there. A Hold and a Close do not: a Hold never crosses
-                // anything, and a Close's walk-in finishes before the blow
-                // opens -- so without this a raised hammer would be drawn for
-                // one frame and then be a slam.
-                //
-                // StaticSwing's OWN NUMBER rather than a second constant: the
-                // crouch before a swing and the hammer held at the top of its
-                // arc are the same beat of anticipation, and two constants for
-                // one idea drift. Not StaticSwing.Windup() itself, though --
-                // that plays the swing's whoosh, and the cue belongs to a
-                // weapon cutting air rather than to every pose that pauses.
-                //
-                // CHARGED TO `spent` BELOW, never added on top: the settle
-                // gives back exactly what this took, so a beat with a wind-up
-                // is the same length as one without. Adding time here instead
-                // is the "beat runs long" failure SettleAfter's own header
-                // records going unnoticed once already.
-                float boughtWindup = 0f;
-                if (hasWindup && !staticSwing && !staticCharge)
-                {
-                    boughtWindup = StaticSwing.WindupSeconds;
-                    yield return new WaitForSeconds(Scaled(boughtWindup));
-                }
-
-                // SKIPPED FOR A STATIC CHARGE: chargeOutSeconds already IS
-                // Max(ChargeMinOutSeconds, impact) -- see ChargeOutSeconds --
-                // so the wind-up just waited out at least this much. Waiting
-                // it again here would either do nothing (the common case, no
-                // spell) or double an authored spell's own impact delay.
-                float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
-                if (impact > 0f && !staticCharge) yield return new WaitForSeconds(Scaled(impact));
-
-                // The blow lands: the numbers move, the target flashes and the
-                // floating figure appears, all on the same frame.
-                //
-                // GUARDED, because a throw here does not just lose a hit
-                // flash. An exception inside a coroutine stops that coroutine
-                // dead: the loop never reaches its end, _onFinished never
-                // fires, and FightController stays busy for the rest of the
-                // fight with every verb disabled. One bad sprite path or one
-                // null in a delegate would take the whole fight down, and the
-                // only trace is a line in the console.
-                //
-                // Logged rather than swallowed -- this is the house's graceful
-                // degradation, not a silence.
-                try
-                {
-                    // THE STRIKE, and it goes on first of everything here.
-                    //
-                    // ONLY IF THE ACTOR IS NOT ALREADY IN IT. A beat that
-                    // authored no phase poses opened in the strike and must
-                    // make exactly the SetStance calls it has always made --
-                    // an unconditional call here would fire a second one on
-                    // every beat in the game, repainting the whole stage for
-                    // nothing and quietly changing what the ordering pins in
-                    // this suite are measuring.
-                    if (strikeStance != null && wornStance != strikeStance)
-                    {
-                        SetStance?.Invoke(beat.Actor, strikeStance);
-                        wornStance = strikeStance;
-                    }
-
-                    // AND WHOEVER BECAME SOMETHING ELSE, on the same frame.
-                    // Before the flash below for the reason PoseVictims is:
-                    // changing form re-syncs the hit-flash silhouette to the
-                    // new drawing, and the whole point of the flash is to be
-                    // the shape of what he turned INTO.
-                    ApplyForms(beat);
-
-                    // FIRST, before the flash: SetStance is what re-syncs the
-                    // hit-flash overlay's silhouette to the drawing under it,
-                    // and a flash shaped like the pose the victim just left is
-                    // worse than no flash.
-                    PoseVictims(beat);
-
-                    PaintVitals?.Invoke(beat.Snapshot);
-
-                    // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT.
-                    //
-                    // It used to fire beside PlayVfx, which put a spell's own
-                    // sound a whole impact delay ahead of the blow it describes
-                    // -- half a second early for Frost Flare, and the wrong half
-                    // second, because the number, the flash and the recoil all
-                    // happen here. The comment that defended the old position
-                    // gave one reason: a spell with a sound but no frames should
-                    // still be audible. It still is -- ImpactDelayFor returns 0
-                    // for a beat with no frames, so a frames-less cast reaches
-                    // this line on the same frame it used to.
-                    SoundController.PlayClip(beat.Vfx.sfxPath);
-
-                    ShowAmount(beat);
-                    FlashTarget?.Invoke(beat);
-                    if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
-
-                    // AFTER the house's, so a form's heavier burst draws OVER
-                    // the arc rather than under it -- authored order is draw
-                    // order within a band (docs/ART_PIPELINE.md 5b), and two
-                    // casts obtain pool members in the order they were begun.
-                    // Ungated on approach: a form's blow punctuates the same
-                    // whether it lunged, charged or stood still.
-                    if (beat.FormVfx != null) PlayFormHitFx?.Invoke(beat);
-                    Recoil(beat);
-                    Punch(beat);
-                    ShakeStage?.Invoke(ShakeStrength(beat));
-                    Speak(beat);
-                }
-                catch (Exception error)
-                {
-                    Debug.LogException(error);
-                }
-
-                // HIT-STOP, and it is the single cheapest thing on this whole
-                // screen for making a blow feel like it landed.
-                //
-                // Everything freezes for a moment at contact -- the attacker
-                // mid-swing, the target mid-flinch, the numbers already on
-                // screen. The eye reads the pause as the blow meeting
-                // resistance, which is the one thing a hand-drawn frame cannot
-                // show and a timing change can. It is what Darkest Dungeon and
-                // every Vlambeer game do and it is why their static sprites
-                // hit harder than most animation.
-                //
-                // TAKEN OUT OF THE BEAT'S OWN BUDGET, not added to it. The
-                // hold below is what gives the player time to read the damage
-                // number, and a pause that simply appeared here would stretch
-                // every beat and desynchronise the round. Subtracted from
-                // `remaining`, with SettleAfter's own floor still doing its
-                // job underneath.
-                float stop = HitStopFor(beat);
-                if (stop > 0f) yield return new WaitForSeconds(Scaled(stop));
-
-                // WHAT THE BEAT ACTUALLY SPENT, which is the number the settle
-                // has to be sized against -- "the beat got longer" is the
-                // failure mode SettleAfter's own header records going
-                // unnoticed once.
-                //
-                // A swing spends StaticSwing.WindupSeconds and a charge spends
-                // chargeOutSeconds -- both report exactly what their own
-                // wind-up wait just spent, or SettleAfter would hand back a
-                // settle sized for a shorter beat than the one that actually
-                // played, and the whole beat would run long (the "no pause"
-                // bug SettleAfter's own header records). Everything else
-                // spends nothing and is charged StillPoseSeconds, which is
-                // what a flat pose has always cost. The floor is the only
-                // thing that can take a beat further, and only at the top of
-                // the range: at HitStop.MaxSeconds a swing's or a charge's
-                // remainder clamps up to MinSettleSeconds.
-                //
-                // AND A BOUGHT WIND-UP IS SPENT TIME LIKE ANY OTHER. It is
-                // added to StillPoseSeconds rather than replacing it: the 0.08
-                // is the notional cost of showing a drawing, which the beat
-                // still does, and boughtWindup is real seconds this beat
-                // actually waited on top of it.
-                float spent = staticSwing ? StaticSwing.WindupSeconds
-                    : staticCharge ? chargeOutSeconds
-                    : StillPoseSeconds + boughtWindup;
-                yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
-
-                // Back to idle before the next beat opens, so a pose belongs to
-                // the blow that caused it rather than persisting until something
-                // else happens to overwrite it. The defeated stay defeated --
-                // the controller decides that from IsAlive, not from here.
-                // The fallen fade AFTER the hold, so the defeated pose is seen
-                // before it goes. Fading on the frame the blow lands would make
-                // a kill read as the figure being deleted rather than dying.
-                FadeTheFallen?.Invoke(beat);
-
-                foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
-
-                yield return new WaitForSeconds(Scaled(BeatGapSeconds));
             }
+            finally
+            {
+                if (playback == _playback) FinishPlayback();
+            }
+        }
 
+        private sealed class StepFault
+        {
+            public bool Failed;
+        }
+
+        // Runs `steps` with every MoveNext inside a catch. A throw is logged,
+        // marks `fault`, and ends the run -- the rest of that iterator is not
+        // safe to resume.
+        //
+        // A NESTED ENUMERATOR (CloseIn, StaticSwing.Windup) is started as a
+        // coroutine of its own through this same guard, which is what Unity
+        // does with a yielded IEnumerator anyway, so its frame timing is
+        // unchanged; it is only the guard that is new. Unguarded, a throw in
+        // one would stop it and strand its parent waiting forever.
+        private IEnumerator GuardedSteps(IEnumerator steps, StepFault fault)
+        {
+            while (Advance(steps, fault, out object current))
+            {
+                if (current is IEnumerator nested)
+                {
+                    var inner = new StepFault();
+                    yield return StartStep(nested, inner);
+
+                    if (inner.Failed)
+                    {
+                        fault.Failed = true;
+                        yield break;
+                    }
+                    continue;
+                }
+
+                yield return current;
+            }
+        }
+
+        private static bool Advance(IEnumerator steps, StepFault fault, out object current)
+        {
+            current = null;
+            try
+            {
+                if (!steps.MoveNext()) return false;
+                current = steps.Current;
+                return true;
+            }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+                fault.Failed = true;
+                return false;
+            }
+        }
+
+        private Coroutine StartStep(IEnumerator nested, StepFault fault)
+        {
+            var step = StartCoroutine(GuardedSteps(nested, fault));
+            _steps.Add(step);
+            return step;
+        }
+
+        // A BEAT WHOSE SHOW BROKE STILL HAPPENED. The session resolved it
+        // before a frame was drawn, so the numbers it left are true whether
+        // or not the flash played: landed here without the show, so the next
+        // beat's pre-snapshot does not jump and a killed figure does not stay
+        // standing. Each piece guarded on its own -- whatever broke the beat
+        // may well break one of these too, and the others still have to run.
+        private void AbandonBeat(CombatBeat beat)
+        {
+            if (beat == null) return;
+
+            Guard(() => PaintVitals?.Invoke(beat.Snapshot));
+            Guard(() => FadeTheFallen?.Invoke(beat));
+            Guard(() =>
+            {
+                foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
+            });
+        }
+
+        private static void Guard(Action step)
+        {
+            try
+            {
+                step();
+            }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+            }
+        }
+
+        private void FinishPlayback()
+        {
             _running = null;
+            _steps.Clear();
             IsPlaying = false;
 
             // BACK TO LIVE STATE. Every beat has been shown, so the order the
@@ -898,19 +666,411 @@ namespace PrincesPalace
             // beat of a round is the last enemy's, so slot 0 holds that
             // monster until this line hands the row back to whoever the
             // schedule says acts next. That step is the point of the tracker.
-            PaintFormation?.Invoke(null);
-            PaintTurnOrder?.Invoke(null);
+            //
+            // Guarded like everything else on this path: the callback below
+            // is the one thing that must not be skipped.
+            Guard(() => PaintFormation?.Invoke(null));
+            Guard(() => PaintTurnOrder?.Invoke(null));
 
             // AND WHOSE SKIN EACH FIGURE IS IN, from the same moment and for
             // the same reason. This is where a transform's revert becomes
             // visible: it expired at its holder's turn start, which is not an
             // action and records no beat, so the round in which the timer ran
             // out ends with the ram walking back out as himself.
-            ResyncForms?.Invoke();
+            Guard(() => ResyncForms?.Invoke());
 
             var finished = _onFinished;
             _onFinished = null;
             finished?.Invoke();
+        }
+
+        private IEnumerator PlayBeat(CombatBeat beat, int beatIndex)
+        {
+            // Contract 1: adopted before ANY Scaled/Unscaled call this
+            // beat's body makes, so every conversion in it sees one
+            // product for the beat's whole duration -- even if the
+            // player steps the setting again before the NEXT beat opens
+            // (contract 4).
+            AdoptPlayerSpeed();
+            BeatStarted?.Invoke(beatIndex, PlayerSpeedMultiplier);
+
+            // THE PRE-SNAPSHOT, which is the whole reason the session
+            // records two.
+            //
+            // A spell's bolt takes most of a second to arrive. Dropping the
+            // target's HP the instant the beat opens shows the damage before
+            // the spell has left the ceiling -- the number moves, then the
+            // thing that caused it happens. Painting what stood BEFORE the
+            // blow and only landing the after-state at the impact frame is
+            // what puts cause back in front of effect.
+            // THE FORMATION FIRST, THEN THE NUMBERS.
+            //
+            // Where everybody stands is settled before anything else about
+            // the beat is drawn, because the rest of the beat is measured
+            // against it: TravelFor reads the two figures' marks to
+            // work out where the actor stands to strike, and the damage
+            // popup is placed off the target's slot. Painted from the
+            // beat's own snapshot rather than from the live lists for the
+            // reason the vitals are -- a Move rewrites the party order in
+            // place, so live state is the order the ROUND finished on.
+            PaintFormation?.Invoke(beat.Formation);
+
+            // AND WHO IS UP NEXT AS OF THIS BEAT, from the same moment and
+            // for the same reason -- see PaintTurnOrder's own header. Sent
+            // here beside the formation rather than at the impact frame
+            // because the queue describes the beat as a whole rather than
+            // any instant inside it: whoever held the turn when it resolved
+            // holds slot 0 for as long as the beat is drawn.
+            PaintTurnOrder?.Invoke(beat.TurnOrder);
+
+            // AND THE FIGURES HAVE TO ARRIVE BEFORE THE BEAT GOES ON.
+            //
+            // A Move's own beat is the case this is for: the two party
+            // members cross over about a third of a second, and the enemy
+            // reply that follows in the SAME round would otherwise open
+            // while they were still passing each other -- aiming at the
+            // gap between them, landing its flash on whichever figure
+            // happened to be nearer. The other case is a line closing up
+            // over a corpse that has just finished fading.
+            //
+            // A while rather than a fixed wait: the walk's length is the
+            // animator's business (StageActorAnimator.GlideSeconds, scaled
+            // like everything else on the beat clock), and a beat that
+            // waited its own guess at that number would drift the day it
+            // changed. Nothing is moving on the overwhelming majority of
+            // beats, so this costs one delegate call.
+            //
+            // AND NEITHER OF THE TWO FIGURES THIS BEAT IS ABOUT IS STILL
+            // REELING FROM AN EARLIER ONE. One gate rather than two
+            // consecutive whiles, because there is one claim being made
+            // here and everything below depends on all of it: the bodies
+            // this beat measures are standing on the marks it measures
+            // them by. See StillReeling for what a second attacker used
+            // to land on.
+            //
+            // BEFORE PaintVitals, so the numbers on screen through the
+            // settle are still the ones the last blow left -- the reel
+            // being waited out belongs to that blow, and painting the
+            // incoming beat's pre-snapshot over it would move a health
+            // bar for a hit that has not opened yet.
+            while ((FormationIsMoving != null && FormationIsMoving()) || StillReeling(beat))
+            {
+                yield return null;
+            }
+
+            PruneReeling();
+
+            PaintVitals?.Invoke(beat.PreSnapshot);
+
+            if (beat.Messages != null)
+            {
+                foreach (var line in beat.Messages) PushLine?.Invoke(line);
+            }
+
+            // THE ACTOR'S POSE NOW; EVERYONE ELSE'S AT THE IMPACT INSTANT.
+            //
+            // The beat records a stance for every combatant it mentions,
+            // and all of them used to be applied here, when the beat
+            // opened. For the one taking the blow that is the wrong
+            // moment: the victim wore its "hurt" drawing through the
+            // attacker's whole wind-up, so a figure flinched from a swing
+            // that had not left its mark. Invisible while a still-drawing
+            // attacker had no wind-up at all (impact WAS the opening
+            // instant); a whole crouch-and-cross of pre-emptive flinching
+            // once StaticSwing gave it one, and longer still for any spell
+            // with a travel time. Cause has to come before effect on the
+            // stage as well as in the log, which is the same argument the
+            // two snapshots make.
+            //
+            // The actor is different: its stance IS the wind-up, so it has
+            // to be worn from the first frame. PoseVictims below is the
+            // other half, called from the impact block.
+            //
+            // AND IT CAN NOW BE UP TO THREE DRAWINGS RATHER THAN ONE --
+            // approach, wind-up, strike. CombatBeat's own header carries
+            // the precedence table; what follows is that table, applied.
+            // Everything about it collapses to today's single SetStance
+            // for a beat that authored neither of the two new poses, which
+            // is every beat in the game bar one.
+            string strikeStance = null;
+            if (beat.Actor != null) beat.Stances.TryGetValue(beat.Actor, out strikeStance);
+
+            // WHICH drawing at which moment is CombatBeat's rule, so an
+            // EditMode test can pin the fallbacks; WHEN each moment falls
+            // is this file's, because only it knows what a walk-in or a
+            // crouch costs.
+            string openStance = CombatBeat.OpenStanceFor(
+                beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
+            string arrivalStance = CombatBeat.ArrivalStanceFor(
+                beat.Approach, strikeStance, beat.ActorApproachStance, beat.ActorWindupStance);
+
+            // Whether this beat has a wind-up POSE at all, which is what
+            // decides below whether it also has to buy the WAIT to hold it
+            // through. Blank-is-unauthored, plus the no-strike-no-phases
+            // rule CombatBeat.Normalise states -- read through the same
+            // two functions above rather than re-tested here, so there is
+            // one answer to "did this beat author a wind-up".
+            bool hasWindup = !string.IsNullOrWhiteSpace(strikeStance)
+                             && !string.IsNullOrWhiteSpace(beat.ActorWindupStance);
+
+            // What the actor is wearing right now, so the impact instant
+            // can tell whether it still has to change into the strike.
+            string wornStance = openStance;
+
+            if (beat.Actor != null && openStance != null)
+            {
+                SetStance?.Invoke(beat.Actor, openStance);
+            }
+
+            // BEFORE THE LUNGE AND BEFORE THE SPELL, and it yields, so
+            // everything below waits for the figure to arrive. That is the
+            // whole of the difference between Close and Lunge.
+            //
+            // THE BRANCH IS OUT HERE, not left to CloseIn's own guard, and
+            // that is not tidiness. `yield return someEnumerator` costs a
+            // frame even when the enumerator yield-breaks on its first
+            // line: Unity resumes the parent on the next update either way.
+            // Written as an unconditional yield it therefore delayed the
+            // hit flash and the damage popup by a frame on EVERY beat in
+            // the game, for a feature three skills use -- caught by two
+            // PlayMode tests that sampled exactly one frame after the click,
+            // which is the only reason it was caught at all.
+            //
+            // THOSE TESTS NOW POLL FOR THE IMPACT WITH A DEADLINE instead,
+            // because a Lunge has since gained a real wind-up (StaticSwing)
+            // and lands a frame or two later on purpose. The trap above is
+            // still a trap; it is only no longer one that a
+            // frame-after-the-click sample would catch, so a new
+            // unconditional yield here has to be caught by reading, not by
+            // the suite.
+
+            // WHETHER THIS BEAT IS A SWING THAT CROSSES THE STAGE, decided
+            // ONCE here and read three times below -- the lunge's
+            // anticipation lead, the wind-up it waits out, and the contact
+            // effects at impact. All three have to agree, and asking again
+            // at the impact instant is how they would come to disagree.
+            bool staticSwing = IsStaticSwing(beat);
+
+            // THE CHARGE TWIN OF staticSwing -- see IsStaticCharge. A
+            // Charge never gets a lunge-style anticipation lead (it is not
+            // a lean, it is a committed rush that is already crossing
+            // during the swing), so this is read for the wind-up and the
+            // contact effects only, never for Lunge's third use above.
+            bool staticCharge = IsStaticCharge(beat);
+
+            if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
+
+            // ARRIVED, AND NOW HE RAISES IT. The one moment a Close has
+            // that no other approach does: the walk-in is over and the
+            // blow has not started, which is exactly where "then he holds
+            // his hammer over his head" goes.
+            if (arrivalStance != null)
+            {
+                SetStance?.Invoke(beat.Actor, arrivalStance);
+                wornStance = arrivalStance;
+            }
+
+            Lunge(beat, staticSwing);
+
+            // THE CHARGE'S OWN OUTBOUND TRAVEL TIME, computed once and
+            // read on both sides of AUDIT.md #59: Charge below hands it to
+            // the animator as the out-tween's duration, and the wind-up a
+            // few lines down waits out the SAME number before the impact
+            // instant fires. One value rather than each side deriving its
+            // own is what keeps the charger's arrival and the target's
+            // flinch from drifting apart again.
+            float chargeOutSeconds = Charge(beat);
+
+            PlayVfx?.Invoke(beat);
+
+            // THE CAST CUE, at the moment the beat opens. The pressure
+            // building through a spell's wind-up, as against the transient
+            // that punctuates its contact -- see SpellPresentation's
+            // castSfxPath for why the two are separate paths and not one.
+            // An empty path is a silent no-op, so this needs no guard.
+            SoundController.PlayClip(beat.Vfx.castSfxPath);
+
+            // Wind-up: the crouch and the cross for a Lunge, or the
+            // charge's own outbound travel (chargeOutSeconds, floored at
+            // ChargeMinOutSeconds) for a Charge -- up to the moment the
+            // blow would connect either way. A spell instead waits out its
+            // VFX's impact fraction below; only one of these three is ever
+            // non-zero for a given beat, so they add rather than compete.
+            if (staticSwing) yield return StaticSwing.Windup();
+            else if (staticCharge) yield return StaticSwing.Windup(chargeOutSeconds);
+
+            // A WIND-UP THE BEAT DID NOT ALREADY HAVE, and the only thing
+            // in this file that authoring a pose can BUY.
+            //
+            // A Lunge and a Charge already wait one out above, so a pose
+            // authored on either simply gets worn through the wait that
+            // was there. A Hold and a Close do not: a Hold never crosses
+            // anything, and a Close's walk-in finishes before the blow
+            // opens -- so without this a raised hammer would be drawn for
+            // one frame and then be a slam.
+            //
+            // StaticSwing's OWN NUMBER rather than a second constant: the
+            // crouch before a swing and the hammer held at the top of its
+            // arc are the same beat of anticipation, and two constants for
+            // one idea drift. Not StaticSwing.Windup() itself, though --
+            // that plays the swing's whoosh, and the cue belongs to a
+            // weapon cutting air rather than to every pose that pauses.
+            //
+            // CHARGED TO `spent` BELOW, never added on top: the settle
+            // gives back exactly what this took, so a beat with a wind-up
+            // is the same length as one without. Adding time here instead
+            // is the "beat runs long" failure SettleAfter's own header
+            // records going unnoticed once already.
+            float boughtWindup = 0f;
+            if (hasWindup && !staticSwing && !staticCharge)
+            {
+                boughtWindup = StaticSwing.WindupSeconds;
+                yield return new WaitForSeconds(Scaled(boughtWindup));
+            }
+
+            // SKIPPED FOR A STATIC CHARGE: chargeOutSeconds already IS
+            // Max(ChargeMinOutSeconds, impact) -- see ChargeOutSeconds --
+            // so the wind-up just waited out at least this much. Waiting
+            // it again here would either do nothing (the common case, no
+            // spell) or double an authored spell's own impact delay.
+            float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
+            if (impact > 0f && !staticCharge) yield return new WaitForSeconds(Scaled(impact));
+
+            // The blow lands: the numbers move, the target flashes and the
+            // floating figure appears, all on the same frame.
+            //
+            // GUARDED HERE AS WELL AS BY GuardedSteps. That outer guard keeps
+            // the fight alive but abandons the rest of the beat; this one
+            // is finer, so a bad flash or popup still leaves the hold, the
+            // fade and the return to idle playing at their proper moments.
+            //
+            // Logged rather than swallowed -- this is the house's graceful
+            // degradation, not a silence.
+            try
+            {
+                // THE STRIKE, and it goes on first of everything here.
+                //
+                // ONLY IF THE ACTOR IS NOT ALREADY IN IT. A beat that
+                // authored no phase poses opened in the strike and must
+                // make exactly the SetStance calls it has always made --
+                // an unconditional call here would fire a second one on
+                // every beat in the game, repainting the whole stage for
+                // nothing and quietly changing what the ordering pins in
+                // this suite are measuring.
+                if (strikeStance != null && wornStance != strikeStance)
+                {
+                    SetStance?.Invoke(beat.Actor, strikeStance);
+                    wornStance = strikeStance;
+                }
+
+                // AND WHOEVER BECAME SOMETHING ELSE, on the same frame.
+                // Before the flash below for the reason PoseVictims is:
+                // changing form re-syncs the hit-flash silhouette to the
+                // new drawing, and the whole point of the flash is to be
+                // the shape of what he turned INTO.
+                ApplyForms(beat);
+
+                // FIRST, before the flash: SetStance is what re-syncs the
+                // hit-flash overlay's silhouette to the drawing under it,
+                // and a flash shaped like the pose the victim just left is
+                // worse than no flash.
+                PoseVictims(beat);
+
+                PaintVitals?.Invoke(beat.Snapshot);
+
+                // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT.
+                //
+                // It used to fire beside PlayVfx, which put a spell's own
+                // sound a whole impact delay ahead of the blow it describes
+                // -- half a second early for Frost Flare, and the wrong half
+                // second, because the number, the flash and the recoil all
+                // happen here. The comment that defended the old position
+                // gave one reason: a spell with a sound but no frames should
+                // still be audible. It still is -- ImpactDelayFor returns 0
+                // for a beat with no frames, so a frames-less cast reaches
+                // this line on the same frame it used to.
+                SoundController.PlayClip(beat.Vfx.sfxPath);
+
+                ShowAmount(beat);
+                FlashTarget?.Invoke(beat);
+                if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
+
+                // AFTER the house's, so a form's heavier burst draws OVER
+                // the arc rather than under it -- authored order is draw
+                // order within a band (docs/ART_PIPELINE.md 5b), and two
+                // casts obtain pool members in the order they were begun.
+                // Ungated on approach: a form's blow punctuates the same
+                // whether it lunged, charged or stood still.
+                if (beat.FormVfx != null) PlayFormHitFx?.Invoke(beat);
+                Recoil(beat);
+                Punch(beat);
+                ShakeStage?.Invoke(ShakeStrength(beat));
+                Speak(beat);
+            }
+            catch (Exception error)
+            {
+                Debug.LogException(error);
+            }
+
+            // HIT-STOP, and it is the single cheapest thing on this whole
+            // screen for making a blow feel like it landed.
+            //
+            // Everything freezes for a moment at contact -- the attacker
+            // mid-swing, the target mid-flinch, the numbers already on
+            // screen. The eye reads the pause as the blow meeting
+            // resistance, which is the one thing a hand-drawn frame cannot
+            // show and a timing change can. It is what Darkest Dungeon and
+            // every Vlambeer game do and it is why their static sprites
+            // hit harder than most animation.
+            //
+            // TAKEN OUT OF THE BEAT'S OWN BUDGET, not added to it. The
+            // hold below is what gives the player time to read the damage
+            // number, and a pause that simply appeared here would stretch
+            // every beat and desynchronise the round. Subtracted from
+            // `remaining`, with SettleAfter's own floor still doing its
+            // job underneath.
+            float stop = HitStopFor(beat);
+            if (stop > 0f) yield return new WaitForSeconds(Scaled(stop));
+
+            // WHAT THE BEAT ACTUALLY SPENT, which is the number the settle
+            // has to be sized against -- "the beat got longer" is the
+            // failure mode SettleAfter's own header records going
+            // unnoticed once.
+            //
+            // A swing spends StaticSwing.WindupSeconds and a charge spends
+            // chargeOutSeconds -- both report exactly what their own
+            // wind-up wait just spent, or SettleAfter would hand back a
+            // settle sized for a shorter beat than the one that actually
+            // played, and the whole beat would run long (the "no pause"
+            // bug SettleAfter's own header records). Everything else
+            // spends nothing and is charged StillPoseSeconds, which is
+            // what a flat pose has always cost. The floor is the only
+            // thing that can take a beat further, and only at the top of
+            // the range: at HitStop.MaxSeconds a swing's or a charge's
+            // remainder clamps up to MinSettleSeconds.
+            //
+            // AND A BOUGHT WIND-UP IS SPENT TIME LIKE ANY OTHER. It is
+            // added to StillPoseSeconds rather than replacing it: the 0.08
+            // is the notional cost of showing a drawing, which the beat
+            // still does, and boughtWindup is real seconds this beat
+            // actually waited on top of it.
+            float spent = staticSwing ? StaticSwing.WindupSeconds
+                : staticCharge ? chargeOutSeconds
+                : StillPoseSeconds + boughtWindup;
+            yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
+
+            // Back to idle before the next beat opens, so a pose belongs to
+            // the blow that caused it rather than persisting until something
+            // else happens to overwrite it. The defeated stay defeated --
+            // the controller decides that from IsAlive, not from here.
+            // The fallen fade AFTER the hold, so the defeated pose is seen
+            // before it goes. Fading on the frame the blow lands would make
+            // a kill read as the figure being deleted rather than dying.
+            FadeTheFallen?.Invoke(beat);
+
+            foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, FightSession.Stances.Idle);
+
+            yield return new WaitForSeconds(Scaled(BeatGapSeconds));
         }
 
         // ONE NUMBER PER THING THE BEAT LANDED ON.
