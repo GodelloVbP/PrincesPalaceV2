@@ -5,8 +5,8 @@
 
 Each case is a whole hook payload -- tool_name and tool_input in, allow or
 deny out -- run the way the hook itself is invoked: JSON on stdin, a decision
-on stdout. The four routed agents are reader (sonnet), implementer (opus),
-verifier (sonnet), and senior (opus); claude-code-guide (haiku or sonnet)
+on stdout. The five routed agents are reader (sonnet), fixer (sonnet),
+implementer (opus), verifier (sonnet), and senior (opus); claude-code-guide (haiku or sonnet)
 is the one built-in agent this project also allows. Everything else --
 general-purpose, Explore, Plan, claude, a missing subagent_type, a model
 override on a routed agent, a model naming Fable, a bare "opus" alias, an
@@ -41,7 +41,7 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
         self.assertIsNone(decision("Agent", tool_input), "should have been allowed: " + repr(tool_input))
 
     def test_each_type_with_no_model_given(self):
-        for subagent_type in ("reader", "implementer", "verifier"):
+        for subagent_type in ("reader", "fixer", "implementer", "verifier"):
             self.assertAllowed({"subagent_type": subagent_type})
         self.assertAllowed({"subagent_type": "senior", "prompt": ESCALATION_PROMPT})
         self.assertAllowed({"subagent_type": "claude-code-guide"})
@@ -49,6 +49,8 @@ class AllowsEachRoutedAgentTests(unittest.TestCase):
     def test_each_type_with_its_own_pinned_model_named_explicitly(self):
         self.assertAllowed({"subagent_type": "reader", "model": "sonnet"})
         self.assertAllowed({"subagent_type": "reader", "model": "claude-sonnet-5"})
+        self.assertAllowed({"subagent_type": "fixer", "model": "sonnet"})
+        self.assertAllowed({"subagent_type": "fixer", "model": "claude-sonnet-5"})
         self.assertAllowed({"subagent_type": "implementer", "model": "claude-opus-5-5"})
         self.assertAllowed({"subagent_type": "verifier", "model": "sonnet"})
         self.assertAllowed({"subagent_type": "verifier", "model": "claude-sonnet-5"})
@@ -158,6 +160,7 @@ class DeniesUnroutedSubagentTypesTests(unittest.TestCase):
     def test_a_typo_of_a_real_name(self):
         self.assertDenied({"subagent_type": "Reader"})
         self.assertDenied({"subagent_type": "implementor"})
+        self.assertDenied({"subagent_type": "Fixer"})
 
 
 class FailsClosedOnAMalformedAgentCallTests(unittest.TestCase):
@@ -196,6 +199,15 @@ class DeniesModelOverridesOnRoutedAgentsTests(unittest.TestCase):
     def test_reader_may_not_be_moved_to_haiku_or_opus(self):
         self.assertDenied({"subagent_type": "reader", "model": "haiku"})
         self.assertDenied({"subagent_type": "reader", "model": "claude-opus-5-5"})
+
+    def test_fixer_may_not_be_moved_to_opus_or_haiku(self):
+        # Owner decision 2026-09-24: fixer is the Sonnet lane for easy
+        # fixes; a harder fix goes to implementer by subagent_type, not
+        # by overriding fixer's model.
+        self.assertDenied({"subagent_type": "fixer", "model": "claude-opus-5-5"})
+        self.assertDenied({"subagent_type": "fixer", "model": "opus"})
+        self.assertDenied({"subagent_type": "fixer", "model": "haiku"})
+        self.assertDenied({"subagent_type": "fixer", "model": "claude-haiku-4-5"})
 
     def test_verifier_may_not_be_moved_to_opus(self):
         self.assertDenied({"subagent_type": "verifier", "model": "claude-opus-5-5"})

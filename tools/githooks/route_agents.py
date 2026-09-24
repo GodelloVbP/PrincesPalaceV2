@@ -2,7 +2,7 @@
 
 Wired as a PreToolUse hook on the Agent and Workflow tools; see
 .claude/settings.json. Reads the hook payload on stdin, writes a deny
-decision on stdout when the call would launch outside the four project
+decision on stdout when the call would launch outside the five project
 agents' pinned routing, and stays silent otherwise.
 
 Why this exists as code rather than a line in CLAUDE.md: on 2026-09-19,
@@ -26,15 +26,23 @@ still triages: is this doable as a bounded change, or does it go deep
 architectural? Doable goes to `implementer`; deep architectural goes to
 `senior`, with a stated reason.
 
-Four project agents exist under .claude/agents/ (reader/sonnet,
-implementer/opus, verifier/sonnet, senior/opus), each pinned to one
+Also 2026-09-24 (owner decision): easy fixes run on Sonnet 5, harder ones
+stay on Opus 5.5. `fixer` is that Sonnet lane -- a trivial fix whose brief
+already carries file:line, excerpt and failure scenario, confined to one
+file or system. It is pinned to sonnet/claude-sonnet-5 exactly like reader
+and verifier, so an Opus or haiku override on it is refused: the choice
+between `fixer` and `implementer` is made by picking the subagent_type,
+never by a per-call model field.
+
+Five project agents exist under .claude/agents/ (reader/sonnet,
+fixer/sonnet, implementer/opus, verifier/sonnet, senior/opus), each pinned to one
 model in its own frontmatter. claude-code-guide is a built-in agent this
 project also allows, at haiku or sonnet. Nothing else is a valid
 subagent_type for the Agent tool: general-purpose, Explore, Plan, claude,
 and any typo or omission are all refused, because each is a way to land back
 on the orchestrator's own model instead of the pinned one. A model override
 on tool_input is refused for the same reason even when the subagent_type is
-one of the four -- the whole point of a pinned agent is that its model is
+one of the five -- the whole point of a pinned agent is that its model is
 not a per-call decision. isolation: "remote" is refused because a remote
 launch is not covered by this hook's own visibility into what ran.
 
@@ -63,7 +71,7 @@ this project, and a hook is the only way that decision survives whoever is
 driving the session that day.
 
 The Workflow tool is refused outright: it is a second way to run arbitrary
-code outside the four pinned agents, and this hook has no per-workflow
+code outside the five pinned agents, and this hook has no per-workflow
 routing table to check it against.
 
 Deny mechanism chosen: the JSON hookSpecificOutput.permissionDecision shape
@@ -83,12 +91,13 @@ import re
 import sys
 
 # subagent_type values the Agent tool may be launched with, each pinned to
-# the model(s) named here. reader/implementer/verifier/senior are this
+# the model(s) named here. reader/fixer/implementer/verifier/senior are this
 # project's own agents (.claude/agents/*.md); claude-code-guide is the one
 # built-in agent this project also allows, since it answers questions about
 # Claude Code itself rather than doing project work.
 PINNED_MODELS = {
     "reader": {"sonnet", "claude-sonnet-5"},
+    "fixer": {"sonnet", "claude-sonnet-5"},
     "implementer": {"claude-opus-5-5"},
     "verifier": {"sonnet", "claude-sonnet-5"},
     "senior": {"claude-opus-5-5"},

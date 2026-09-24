@@ -25,7 +25,12 @@ Update rule: see §11.
 **Step one of every implementation launch: triage.** Is this doable as a
 bounded change, or does it go deep architectural? Doable goes to
 `implementer`; deep architectural goes to `senior` with a stated
-`Escalation:` reason (§6).
+`Escalation:` reason (§6). A trivial fix whose brief already carries
+file:line + excerpt + failure scenario, confined to one file or system with
+known tests, goes to `fixer` (Sonnet 5; owner decision 2026-09-24: easy
+fixes on Sonnet, harder ones on Opus 5.5). A fixer that finds the fix
+unclear, wider than the brief, or architectural stops and reports; the
+relaunch goes to `implementer` or `senior`.
 
 Say the reservation when it forms — a reaffirmed request is a decision.
 
@@ -224,7 +229,7 @@ not the symptom; pin formula fixes with literal values (`docs/CODE_STANDARDS.md`
 | Staged `.ps1` is ASCII outside comments | `tools/githooks/pre-commit` | commit |
 | `tools/domain-tests` builds after `Domain/`/`Tests/EditMode/` changes | `tools/githooks/pre-commit` | commit |
 | No `git add -A/-u/.`, no `git commit -a` | `tools/githooks/deny_broad_staging.py` | before the command runs |
-| Agent launches use the four project types with their pinned models; `Workflow` denied | `tools/githooks/route_agents.py` | before the command runs |
+| Agent launches use the five project types with their pinned models; `Workflow` denied | `tools/githooks/route_agents.py` | before the command runs |
 
 The two git hooks need `git config core.hooksPath tools/githooks` (§1). The
 two PreToolUse hooks (`deny_broad_staging.py`, `route_agents.py`) and the

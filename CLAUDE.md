@@ -26,22 +26,25 @@ orchestrator NEVER edits, runs tests, or writes scripts directly.
 Fable is not used on this project for now (owner, 2026-09-23); do not switch
 a session or agent to it.
 
-Four agent types, each pinned to one model, plus the built-in
+Five agent types, each pinned to one model, plus the built-in
 `claude-code-guide`. No other `subagent_type`, no model override, no
 `Workflow` tool — enforced by `tools/githooks/route_agents.py`. Owner
 decision, 2026-09-24: `implementer` moved to Opus 5.5 at medium effort and
 `reader` moved to Sonnet 5. The only Opus this project allows is exactly
 `claude-opus-5-5` — no other Opus, including a bare `opus` alias, is
-routed.
+routed. Also 2026-09-24: easy fixes run on Sonnet 5 (`fixer`), harder
+ones stay on Opus 5.5.
 
 **Triage before every implementation launch:** is this doable as a bounded
-change, or does it go deep architectural? Doable → `implementer`. Deep
+change, or does it go deep architectural? Trivial and already diagnosed
+(brief carries file:line + excerpt + failure) → `fixer`. Doable → `implementer`. Deep
 architectural → `senior`, with a stated reason — every Opus launch is
 hook-checked, not a per-call judgment call.
 
 | Type | Model | Use when |
 |---|---|---|
 | `reader` | Sonnet 5 | Locate files and extract facts. Returns file paths, line numbers, and relevant excerpts. Never interprets or diagnoses. |
+| `fixer` | Sonnet 5 | A trivial, pre-diagnosed fix: brief carries file:line + excerpt + failure scenario, one file or one system with known tests. Stops and reports back if the fix is unclear, reaches beyond the brief, or is architectural. Tests via the dotnet `[D]` loop or `tools/test.ps1 <area>` only — never `run_tests_parallel.ps1`. |
 | `implementer` | Opus 5.5, medium effort | The default for every implementation. Fix or build based on a brief. If a reader ran first, the brief includes reader's findings (file paths, line numbers, excerpts) — implementer acts on those without re-reading the tree. If no reader ran, implementer diagnoses, implements, tests, corrects. |
 | `verifier` | Sonnet 5 | Run one named gate once, report pass/fail. |
 | `senior` | Opus 5.5, medium effort | Deep architectural work only: brief must carry `Escalation:` with one of three criteria; hook-enforced. |
