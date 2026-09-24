@@ -1,0 +1,166 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: demo_wishing_well
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: demo_wishing_well
+    SortOrder: 0
+    Floors: 
+    Requires: []
+    Pages:
+    - Id: well
+      ArtKey: 
+      Title: A Wishing Well
+      Body: A mossy well sits at the crossing, its water black and still. Something
+        glints at the bottom.
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      - Text: Toss a coin (5 gold)
+        Requires:
+        - Kind: 4
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 5
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 0
+          Amount: -5
+          Item: 
+          CounterId: 
+        - Kind: 5
+          Amount: 1
+          Item: 
+          CounterId: wishing_well_tosses
+        Outcomes:
+        - Requires:
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 10
+            HasMin: 1
+            Max: 10
+            HasMax: 1
+            CounterId: wishing_well_tosses
+          Effects:
+          - Kind: 3
+            Amount: 50
+            Item: 
+            CounterId: 
+          Result: On the tenth coin the well glimmers gold -- your wish is granted.
+          GoTo: wish_granted
+          IsLeave: 0
+        - Requires: []
+          Effects: []
+          Result: The coin sinks without a sound.
+          GoTo: well
+          IsLeave: 0
+      - Text: Call on Shawn's luck
+        Requires:
+        - Kind: 0
+          CharacterId: sheep
+          CharacterDisplayName: Shawn
+          Ability: 0
+          Min: 0
+          HasMin: 0
+          Max: 0
+          HasMax: 0
+          CounterId: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 0
+          Amount: 10
+          Item: 
+          CounterId: 
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: Shawn's luck pays off -- a few coins surface.
+          GoTo: 
+          IsLeave: 1
+      - Text: Recite a well-worn prayer
+        Requires:
+        - Kind: 1
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 15
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+        HiddenUntilMet: 0
+        Effects:
+        - Kind: 1
+          Amount: 25
+          Item: 
+          CounterId: 
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: The party feels steadier.
+          GoTo: 
+          IsLeave: 1
+    - Id: wish_granted
+      ArtKey: 
+      Title: The Well Answers
+      Body: The water glows gold for a moment, then settles. Whatever you wished
+        for is already on its way.
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      - Text: Whisper one more charm
+        Requires:
+        - Kind: 2
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 5
+          Min: 20
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+        HiddenUntilMet: 1
+        Effects:
+        - Kind: 4
+          Amount: 1
+          Item: health_potion
+          CounterId: 
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: The well obliges one last time.
+          GoTo: 
+          IsLeave: 1

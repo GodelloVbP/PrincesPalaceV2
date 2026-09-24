@@ -82,6 +82,7 @@ namespace PrincesPalace.Content
                          // the unreachable shape this file's header says was
                          // deleted from the codebase.
                          ("Pool", _pools.Select(x => x.id)),
+                         ("Event", _events.Select(x => x.id)),
                      })
             {
                 foreach (string id in ids)

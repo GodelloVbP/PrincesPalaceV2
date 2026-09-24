@@ -236,6 +236,24 @@ namespace PrincesPalace.Domain.Tests
                 Resolver, track => track.CharacterId);
         }
 
+        // Characters (for the display-name map an inParty/memberLevel/ability
+        // requirement's reason text is baked with) and items (for an `item`
+        // effect's id) first -- the same ordering ContentBuilder.BuildEvents
+        // depends on.
+        private static List<string> EventIds()
+        {
+            var characterDisplayNames = ResolveCharacters().ToDictionary(c => c.Id, c => c.DisplayName);
+            var itemIds = ItemIds();
+
+            bool Resolver(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved,
+                          out List<string> errors) =>
+                EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, out resolved, out errors);
+
+            return Resolve<RawEventEntry, ResolvedEventDefinition>(
+                "events.json", ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events,
+                Resolver, evt => evt.Id);
+        }
+
         // Resolve as above, but keeping the RECORDS rather than their ids --
         // the cross-catalogue context a reward track is validated against
         // needs fields, not names.
@@ -291,6 +309,7 @@ namespace PrincesPalace.Domain.Tests
                 ["Achievements"] = AchievementIds(),
                 ["Relics"] = RelicIds(),
                 ["RewardTracks"] = RewardTrackIds(),
+                ["Events"] = EventIds(),
 
                 // A cost row has no id of its own either; the asset NAME is
                 // what the stamp records, zero-padded so the folder reads in

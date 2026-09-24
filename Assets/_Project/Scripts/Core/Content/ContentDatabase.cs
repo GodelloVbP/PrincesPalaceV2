@@ -36,6 +36,7 @@ namespace PrincesPalace.Content
         private const string RewardTrackResourcePath = "Content/RewardTracks";
         private const string PoolResourcePath = "Content/Pools";
         private const string LevelCurveResourcePath = "Content/LevelCurve";
+        private const string EventResourcePath = "Content/Events";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -50,6 +51,7 @@ namespace PrincesPalace.Content
         private static List<RewardTrackDefinitionAsset> _rewardTracks;
         private static List<PoolDefinition> _pools;
         private static List<LevelCurveDefinition> _levelCurve;
+        private static List<EventDefinition> _events;
 
         // The flat projection Domain actually reads, built once beside the
         // assets rather than per call: Character.ExpToNextLevel asks for it
@@ -123,6 +125,14 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<AchievementDefinition> Achievements
         {
             get { EnsureLoaded(); return _achievements; }
+        }
+
+        // Every event in the game, authored order. RunOrchestrator.Event.cs
+        // (phase 2) rolls one per floor through EventRoll -- see that type's
+        // own header for the eligibility rules.
+        public static IReadOnlyList<EventDefinition> Events
+        {
+            get { EnsureLoaded(); return _events; }
         }
 
         // Every item modifier ("Rift affix") in the pool, authored order.
@@ -936,6 +946,7 @@ namespace PrincesPalace.Content
             _skills = LoadOrdered<SkillDefinition>(SkillResourcePath);
             _achievements = LoadOrdered<AchievementDefinition>(AchievementResourcePath);
             _relics = LoadOrdered<RelicDefinition>(RelicResourcePath);
+            _events = LoadOrdered<EventDefinition>(EventResourcePath);
             _modifiers = LoadOrdered<ModifierDefinition>(ModifierResourcePath);
 
             // ORDERED BY LEVEL (LevelCurveDefinition.SortOrder), which is what

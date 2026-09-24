@@ -88,6 +88,15 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `stageScale` | float | `0` | A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1. |  |
 | `slotSpan` | int | `0` | How many of the stage's positions this monster occupies; 0 means unset and reads as 1. |  |
 
+## events.json -- `RawEventEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable identifier; persisted in the run's eventsSeen list so an event shows at most once per run. |  |
+| `floors` | int[] | `[]` | Floor numbers this event may appear on; empty means every floor. |  |
+| `requires` | RawEventRequirement[] (below) | `[]` | Event-level requirements; all must pass for this event to be eligible to be rolled at all. |  |
+| `pages` | RawEventPage[] (below) | `[]` | The event's page graph; the first page is where the event opens. |  |
+
 ## items.json -- `RawItemEntry`
 
 | Field | Type | Default | Description | Values |
@@ -340,6 +349,55 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `skillId` | string | `""` | A skill id from skills.json this monster may draw. |  |
 | `weight` | float | `1` | The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0. |  |
+
+### `RawEventChoice`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `text` | string | `""` | The choice's own button text. |  |
+| `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this choice; a choice with none is always selectable. |  |
+| `hiddenUntilMet` | bool | `false` | When true, this choice is hidden entirely (not shown locked) until its requirements pass. |  |
+| `effects` | RawEventEffect[] (below) | `[]` | Effects applied immediately when this choice is picked, before an outcome is chosen. A gold spend here implies its own gold requirement -- do not author one by hand. |  |
+| `outcomes` | RawEventOutcome[] (below) | `[]` | Ordered outcomes; the first whose requirements pass wins. |  |
+
+### `RawEventEffect`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item or counter. | Gold, HealPercent, DamagePercent, Exp, Item, Counter |
+| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, or a counter delta. |  |
+| `item` | string | `""` | The item id granted; required by item. |  |
+| `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
+
+### `RawEventOutcome`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this outcome; the last outcome in a choice must have none, so a choice can never fall through with nothing to show. |  |
+| `effects` | RawEventEffect[] (below) | `[]` | Effects applied when this outcome is chosen, in addition to the choice's own effects. |  |
+| `result` | string | `""` | The result text shown after this outcome is chosen. |  |
+| `goTo` | string | `""` | The next page's id, or the literal 'Leave' (case-insensitive) to close the event. |  |
+
+### `RawEventPage`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | `""` | Stable id for this page within its event; targeted by an outcome's goTo. |  |
+| `artKey` | string | `""` | Editor-time key for this page's art, loaded the way ScreenRegistry.WireReckoning loads item icons; empty hides the art frame rather than showing a white quad. |  |
+| `title` | string | `""` | The page's title, shown above the body. |  |
+| `body` | string | `""` | The page's body text; capped at EventEntryResolver.MaxBodyLength characters. |  |
+| `choices` | RawEventChoice[] (below) | `[]` | Up to 4 choices offered on this page. |  |
+
+### `RawEventRequirement`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `kind` | string | `""` | Which EventRequirementKind this is: inParty, memberLevel, ability, counter or gold. | InParty, MemberLevel, Ability, Counter, Gold |
+| `character` | string | `""` | The character id this requirement names; required by inParty, an optional narrowing for memberLevel/ability. |  |
+| `ability` | string | `""` | Which AbilityScore this checks; required by ability. |  |
+| `min` | int | `-1` | The minimum value required; -1 means omitted. Required by memberLevel/ability/gold; optional for counter. |  |
+| `max` | int | `-1` | The maximum value allowed; -1 means omitted. Only counter reads this. |  |
+| `counter` | string | `""` | The counter id this requirement reads; required by counter. |  |
 
 ### `RawModifierEffect`
 

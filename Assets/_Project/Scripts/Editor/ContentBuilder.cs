@@ -25,6 +25,7 @@ public static class ContentBuilder
     private const string ModifiersPath = ContentRoot + "/Modifiers";
     private const string RewardTracksPath = ContentRoot + "/RewardTracks";
     private const string PoolsPath = ContentRoot + "/Pools";
+    private const string EventsPath = ContentRoot + "/Events";
 
     // ---- progression v2 phase 2: the authored level cost table ----------
     private const string LevelCurvePath = ContentRoot + "/LevelCurve";
@@ -95,6 +96,7 @@ public static class ContentBuilder
         EnsureFolder(RewardTracksPath);
         EnsureFolder(PoolsPath);
         EnsureFolder(LevelCurvePath);
+        EnsureFolder(EventsPath);
         Mark("folders");
 
         // ONE IMPORT PASS FOR THE WHOLE CATALOGUE, not one per asset.
@@ -131,7 +133,7 @@ public static class ContentBuilder
             BuildTalents();
             BuildUpgrades();
             BuildEnemies();
-            BuildItems();
+            var itemIds = BuildItems();
             BuildSpellTiers();
             // SKILLS AFTER POOLS AND CHARACTERS, and now for two more
             // reasons: whether a bookOnly skill is reachable at all, and
@@ -172,6 +174,16 @@ public static class ContentBuilder
             // validated against RewardTrack.MaxLevel, which is code, not
             // content. Last so the block stays one contiguous addition.
             BuildLevelCurve();
+
+            // ---- event rooms phase 1: model + content ---------------------
+            // AFTER CHARACTERS AND ITEMS, load-bearing the same way relics
+            // come after achievements: an inParty/memberLevel/ability
+            // requirement is validated against the real character roster
+            // (and its display names, for "Requires Shawn"), and an item
+            // effect against the real item catalogue -- building events any
+            // earlier would validate against nothing and let a typo'd id
+            // through.
+            BuildEvents(characters, itemIds);
         }
         finally
         {
@@ -403,6 +415,25 @@ public static class ContentBuilder
         .Select(achievement => achievement.Id)
         .ToList();
 
+    // Requirements/effects that name a character are validated against the
+    // real roster AND get the real display name baked in for their reason
+    // text ("Requires Shawn") -- see EventEntryResolver's own header for why
+    // that travels in rather than being looked up at runtime.
+    private static void BuildEvents(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyCollection<string> itemIds)
+    {
+        var characterDisplayNames = characters.ToDictionary(c => c.Id, c => c.DisplayName);
+
+        bool Resolve(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved, out List<string> errors) =>
+            EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, out resolved, out errors);
+
+        Build<RawEventEntry, ResolvedEventDefinition, EventDefinition>(
+            "BuildEvents", "Assets/_Project/ContentData/events.json", EventsPath, "events",
+            json => JsonUtility.FromJson<RawEventFile>(json).events,
+            Resolve,
+            (asset, evt) => asset.SetData(evt),
+            evt => evt.Id);
+    }
+
     // The last content type written as C# object initialisers, and the reason
     // it took until now is that it was small enough to keep getting away with
     // it: two rows, six fields, no validation of any of them, and a sortOrder
@@ -598,14 +629,19 @@ public static class ContentBuilder
     // Resolved* enum mirrors because Domain can't reference the Unity-side
     // Content enums; the two are mapped by name here, which is the one
     // place that coupling lives.
-    private static void BuildItems()
+    // Returns every item id this method (and the two it calls) actually
+    // wrote -- BuildEvents validates an `item` effect's id against this the
+    // same way BuildRelics validates unlockedBy against achievement ids.
+    private static IReadOnlyCollection<string> BuildItems()
     {
+        var itemIds = new List<string>();
+
         const string jsonPath = "Assets/_Project/ContentData/items.json";
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildItems: no file at '{jsonPath}' — no items were created.");
             RecordFailure("BuildItems");
-            return;
+            return itemIds;
         }
 
         var file = JsonUtility.FromJson<RawItemFile>(File.ReadAllText(jsonPath));
@@ -614,7 +650,7 @@ public static class ContentBuilder
             Debug.LogError($"BuildItems: {jsonPath} has {errors.Count} problem(s) — no items were created:\n" +
                             string.Join("\n", errors));
             RecordFailure("BuildItems");
-            return;
+            return itemIds;
         }
 
         foreach (var item in resolved)
@@ -639,10 +675,12 @@ public static class ContentBuilder
             asset.iconPath = item.IconPath;
             asset.sortOrder = item.SortOrder;
             CreateContentAsset(asset, $"{ItemsPath}/{item.Id}.asset");
+            itemIds.Add(item.Id);
         }
 
-        BuildItemSets();
-        BuildWeapons();
+        itemIds.AddRange(BuildItemSets());
+        itemIds.AddRange(BuildWeapons());
+        return itemIds;
     }
 
     // Weapon families, generated from Assets/_Project/ContentData/weapons.json.
@@ -651,14 +689,16 @@ public static class ContentBuilder
     // produces IS items, in the same folder, of the same asset type, read back
     // through the same ContentDatabase.Items. Keeping all three generators
     // adjacent is what makes the collision check below meaningful.
-    private static void BuildWeapons()
+    private static IReadOnlyCollection<string> BuildWeapons()
     {
+        var weaponIds = new List<string>();
+
         const string jsonPath = "Assets/_Project/ContentData/weapons.json";
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildWeapons: no file at '{jsonPath}' — no weapons were created.");
             RecordFailure("BuildWeapons");
-            return;
+            return weaponIds;
         }
 
         var file = JsonUtility.FromJson<RawWeaponFile>(File.ReadAllText(jsonPath));
@@ -667,7 +707,7 @@ public static class ContentBuilder
             Debug.LogError($"BuildWeapons: {jsonPath} has {errors.Count} problem(s) — no weapons were created:\n" +
                             string.Join("\n", errors));
             RecordFailure("BuildWeapons");
-            return;
+            return weaponIds;
         }
 
         // Past the armour sets, so weapons never interleave with them in a
@@ -703,9 +743,11 @@ public static class ContentBuilder
             asset.iconPath = weapon.IconPath;
             asset.sortOrder = WeaponSortOffset + weapon.SortOrder;
             CreateContentAsset(asset, assetPath);
+            weaponIds.Add(weapon.Id);
         }
 
         Debug.Log($"BuildWeapons: generated {resolved.Count} weapon(s) from {file.families.Length} famil(y/ies).");
+        return weaponIds;
     }
 
     // ITS OWN FOLDER (Resources/Content/Modifiers), unlike BuildWeapons/
@@ -734,14 +776,16 @@ public static class ContentBuilder
     // Sort order is offset past the hand-authored items so a set never
     // interleaves with them; within the sets it is set, then piece, then
     // tier, which is the order a player would expect to browse.
-    private static void BuildItemSets()
+    private static IReadOnlyCollection<string> BuildItemSets()
     {
+        var setPieceIds = new List<string>();
+
         const string jsonPath = "Assets/_Project/ContentData/itemsets.json";
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildItemSets: no file at '{jsonPath}' — no armour sets were created.");
             RecordFailure("BuildItemSets");
-            return;
+            return setPieceIds;
         }
 
         var file = JsonUtility.FromJson<RawItemSetFile>(File.ReadAllText(jsonPath));
@@ -750,7 +794,7 @@ public static class ContentBuilder
             Debug.LogError($"BuildItemSets: {jsonPath} has {errors.Count} problem(s) — no armour sets were created:\n" +
                             string.Join("\n", errors));
             RecordFailure("BuildItemSets");
-            return;
+            return setPieceIds;
         }
 
         const int SetSortOffset = 100000;
@@ -780,9 +824,11 @@ public static class ContentBuilder
             asset.iconPath = piece.IconPath;
             asset.sortOrder = SetSortOffset + piece.SortOrder;
             CreateContentAsset(asset, assetPath);
+            setPieceIds.Add(piece.Id);
         }
 
         Debug.Log($"BuildItemSets: generated {resolved.Count} set piece(s) from {file.sets.Length} set(s).");
+        return setPieceIds;
     }
 
     // The one place the Domain mirror enum and the Unity-side enum are
