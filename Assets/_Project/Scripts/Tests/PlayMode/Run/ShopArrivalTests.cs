@@ -45,6 +45,11 @@ namespace PrincesPalace.PlayModeTests
         // is pure and reads no content, so this costs nothing and needs no
         // save writes.
         //
+        // Through GenerateLegFor -- the call RunManager.Map makes -- and not
+        // GenerateLeg(new SeededRandom(seed)), which is a different map for
+        // the same seed (GenerateLegFor opens RngStreams.Leg on the seed
+        // first).
+        //
         // Shop is 3 of 269 in the middle-room table, so a column of up to
         // three nodes offers one about 3% of the time; a few hundred seeds is
         // ample and the search is bounded so a table rebalance that removed
@@ -53,7 +58,7 @@ namespace PrincesPalace.PlayModeTests
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLeg(new SeededRandom(seed), 0);
+                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
                 if (map.AtDepth(1).Any(n => n.Type == RoomType.Shop)) return seed;
             }
 

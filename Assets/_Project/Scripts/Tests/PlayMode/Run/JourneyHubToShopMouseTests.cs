@@ -8,7 +8,6 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
-using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -47,7 +46,7 @@ namespace PrincesPalace.PlayModeTests
         {
             for (ulong seed = 1; seed < 4000UL; seed++)
             {
-                var map = DescentMapGenerator.GenerateLeg(new SeededRandom(seed), 0);
+                var map = DescentMapGenerator.GenerateLegFor(seed, 0);
                 var entry = map.AtDepth(1).FirstOrDefault();
                 if (entry == null || entry.Type != RoomType.Shop) continue;
 
