@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Progression;
@@ -319,25 +321,10 @@ public static class ScreenRegistry
                 // above now is: FadeTheFallen used to re-derive this with
                 // SlotFor(combatant).GetComponent<StageDeathFade>() every time
                 // a beat's snapshot mentioned a corpse.
-                fight.enemyDeathFades = new StageDeathFade[screen.EnemySlots.Count];
-                for (int i = 0; i < screen.EnemySlots.Count; i++)
-                {
-                    var fade = result.Attach<StageDeathFade>(screen.EnemySlots[i]);
-                    fade.sprite = result.Image(screen.EnemySprites[i]);
-                    fade.shadow = result.Image(screen.EnemyFootShadows[i]);
-                    fade.glow = result.Image(screen.EnemyFootGlows[i]);
-                    fight.enemyDeathFades[i] = fade;
-                }
-
-                fight.partyDeathFades = new StageDeathFade[screen.PartySlots.Count];
-                for (int i = 0; i < screen.PartySlots.Count; i++)
-                {
-                    var fade = result.Attach<StageDeathFade>(screen.PartySlots[i]);
-                    fade.sprite = result.Image(screen.PartySprites[i]);
-                    fade.shadow = result.Image(screen.PartyFootShadows[i]);
-                    fade.glow = result.Image(screen.PartyFootGlows[i]);
-                    fight.partyDeathFades[i] = fade;
-                }
+                fight.enemyDeathFades = AttachDeathFades(result, screen.EnemySlots, screen.EnemySprites,
+                    screen.EnemyFootShadows, screen.EnemyFootGlows);
+                fight.partyDeathFades = AttachDeathFades(result, screen.PartySlots, screen.PartySprites,
+                    screen.PartyFootShadows, screen.PartyFootGlows);
 
                 var player = result.Attach<FightBeatPlayer>(screen.DamagePopupPool);
                 player.popups = popupComponents.ToArray();
@@ -365,6 +352,25 @@ public static class ScreenRegistry
 
     private static UiCountAudit.Binding Count(string label, IReadOnlyList<NodeRef> declared, Func<int> bound) =>
         new UiCountAudit.Binding { Label = label, Declared = declared, BoundLength = bound };
+
+    // Attaches one StageDeathFade per slot -- the same four lines for the
+    // enemy side or the party side, so the two loops in Fight()'s Wire step
+    // cannot drift apart on what they set. Precedent: AttachHitFlash below.
+    private static StageDeathFade[] AttachDeathFades(UiEmitResult result, IReadOnlyList<NodeRef> slots,
+        IReadOnlyList<NodeRef> sprites, IReadOnlyList<NodeRef> footShadows, IReadOnlyList<NodeRef> footGlows)
+    {
+        var fades = new StageDeathFade[slots.Count];
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var fade = result.Attach<StageDeathFade>(slots[i]);
+            fade.sprite = result.Image(sprites[i]);
+            fade.shadow = result.Image(footShadows[i]);
+            fade.glow = result.Image(footGlows[i]);
+            fades[i] = fade;
+        }
+
+        return fades;
+    }
 
     // Attaches one hit-flash overlay and hands it the shared material -- the
     // same three lines for an enemy slot or a party slot, so the two Select
@@ -668,6 +674,31 @@ public static class ScreenRegistry
         };
     }
 
+    // Wires one offer strip (gear/book/relic) -- the same Button/Icon/Name/
+    // Meta/Price pull for all three, so the shop's three near-identical
+    // sections cannot drift apart on which field reads which node.
+    private static (Button[] buttons, Image[] icons, TMP_Text[] names, TMP_Text[] metas, TMP_Text[] prices) WireOfferCards(UiEmitResult result, List<ShopScreen.OfferCard> cards)
+    {
+        (Button[] buttons, Image[] icons, TMP_Text[] names, TMP_Text[] metas, TMP_Text[] prices) offer = default;
+        offer.buttons = cards.Select(c => result.Button(c.Button)).ToArray();
+        offer.icons = cards.Select(c => result.Image(c.Icon)).ToArray();
+        offer.names = cards.Select(c => result.Tmp(c.Name)).ToArray();
+        offer.metas = cards.Select(c => result.Tmp(c.Meta)).ToArray();
+        offer.prices = cards.Select(c => result.Tmp(c.Price)).ToArray();
+
+        // NO CountBindings: every field above is Select'd from this exact
+        // same `cards` list, so icons/names/metas/prices are the same
+        // length as buttons by construction -- a CountBinding here would be
+        // comparing a list's count to itself (n == n), the same reasoning
+        // the fight screen's own E4 comment already gives for dropping its
+        // eight per-array declarations (see the comment above
+        // AttachHitFlash). buttons itself stays covered by the existing
+        // ShopController.gearCards/bookCards/relicCards Count()
+        // registrations in the Map panel's CountBindings, unchanged by
+        // this extraction.
+        return offer;
+    }
+
     private static ShopController WireShop(UiEmitResult result, ShopScreen screen)
     {
         var shop = result.Attach<ShopController>(screen.Root);
@@ -704,23 +735,12 @@ public static class ScreenRegistry
         // E4 exists to catch a strip sized off one collection and filled
         // from another; a table with no paired strip has nothing for it to
         // compare.
-        shop.gearCards = screen.GearCards.Select(c => result.Button(c.Button)).ToArray();
-        shop.gearIcons = screen.GearCards.Select(c => result.Image(c.Icon)).ToArray();
-        shop.gearNames = screen.GearCards.Select(c => result.Tmp(c.Name)).ToArray();
-        shop.gearMetas = screen.GearCards.Select(c => result.Tmp(c.Meta)).ToArray();
-        shop.gearPrices = screen.GearCards.Select(c => result.Tmp(c.Price)).ToArray();
-
-        shop.bookCards = screen.BookCards.Select(c => result.Button(c.Button)).ToArray();
-        shop.bookIcons = screen.BookCards.Select(c => result.Image(c.Icon)).ToArray();
-        shop.bookNames = screen.BookCards.Select(c => result.Tmp(c.Name)).ToArray();
-        shop.bookMetas = screen.BookCards.Select(c => result.Tmp(c.Meta)).ToArray();
-        shop.bookPrices = screen.BookCards.Select(c => result.Tmp(c.Price)).ToArray();
-
-        shop.relicCards = screen.RelicCards.Select(c => result.Button(c.Button)).ToArray();
-        shop.relicIcons = screen.RelicCards.Select(c => result.Image(c.Icon)).ToArray();
-        shop.relicNames = screen.RelicCards.Select(c => result.Tmp(c.Name)).ToArray();
-        shop.relicMetas = screen.RelicCards.Select(c => result.Tmp(c.Meta)).ToArray();
-        shop.relicPrices = screen.RelicCards.Select(c => result.Tmp(c.Price)).ToArray();
+        (shop.gearCards, shop.gearIcons, shop.gearNames, shop.gearMetas, shop.gearPrices) =
+            WireOfferCards(result, screen.GearCards);
+        (shop.bookCards, shop.bookIcons, shop.bookNames, shop.bookMetas, shop.bookPrices) =
+            WireOfferCards(result, screen.BookCards);
+        (shop.relicCards, shop.relicIcons, shop.relicNames, shop.relicMetas, shop.relicPrices) =
+            WireOfferCards(result, screen.RelicCards);
 
         shop.packPrevButton = result.Button(screen.PackPrevPage);
         shop.packNextButton = result.Button(screen.PackNextPage);

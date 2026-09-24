@@ -76,6 +76,8 @@ public static partial class SceneBuilder
         _uiFont = null;
         _buttonSpriteLoaded = false;
         _spriteCache.Clear();
+        _typographyFonts.Clear();
+        _typographyMaterials.Clear();
 
         Directory.CreateDirectory(ScenesDir);
 

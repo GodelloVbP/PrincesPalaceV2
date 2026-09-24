@@ -220,7 +220,6 @@ public static class UiEmitter
         text.alignment = Alignment(node.TextAlign);
         text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
         text.raycastTarget = false; // a label is never the click target
-        if (decor) text.raycastTarget = false;
 
         // Truncated() -- see UiNode.Truncates' own comment. Word wrap off
         // and Ellipsis overflow together are what keep a too-long runtime
@@ -411,10 +410,15 @@ public static class UiEmitter
         labelRect.offsetMax = Vector2.zero;
 
         var text = labelGo.AddComponent<TextMeshProUGUI>();
-        text.font = SceneBuilder.UiFont;
         text.text = BakedText(node.Text);
-        text.fontSize = node.FontSize;
-        text.characterSpacing = node.Tracking;
+
+        // Same plain-defaults path ApplyTypography's Role == null branch
+        // takes for any other unstyled label -- an untethemed button's own
+        // node never carries a Role (Themed() is the only place that sets
+        // one, on the label CHILD it builds, not on the button itself, and
+        // that branch returns above before this code ever runs), so this is
+        // always that branch and never the styled one.
+        ApplyTypography(text, node);
         text.alignment = TextAlignmentOptions.Center;
 
         // Black ONLY for the missing-art fallback, which draws a light grey
