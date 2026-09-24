@@ -1323,6 +1323,18 @@ namespace PrincesPalace
             ContentTopCache.Clear();
             ClearOpaqueBoxCache();
 
+            // VfxPaddingCache (FightController.SpellVfx.cs) is NOT cleared
+            // here despite having the identical stale-measurement hazard as
+            // the three caches above -- see that field's own note. Clearing
+            // it broke SpellVfxTests.ATravellingEffectStartsOnTheCasterAnd
+            // EndsOnTheTarget: forcing a fresh pixel-scan of mud_burst's
+            // padding on THIS fight, rather than reusing a value warmed by
+            // an earlier fight/test, left the travelling layer's box stuck
+            // at its launch position (anchoredPosition.x read the caster's
+            // -320 instead of the target's 300 once the flight finished).
+            // Root cause not chased further; filed as AUDIT #209 instead of
+            // fixed blind.
+
             _confirmedDefeated.Clear();
 
             // AND NOBODY IS WEARING ANYBODY ELSE'S SKIN. A transformation
@@ -1330,6 +1342,13 @@ namespace PrincesPalace
             // would open the next fight with a combatant drawn as a form
             // whose Transformation object no longer exists.
             _form.Clear();
+
+            // AND NOBODY IS STILL POSED FROM THE LAST FIGHT. Keyed by
+            // CombatantState like _form and _confirmedDefeated, so the same
+            // rule applies: the next encounter's instances are different
+            // objects, and an uncleared entry here would just leak for the
+            // session's life rather than affect anything visible this fight.
+            _stance.Clear();
 
             // WHO OWNS WHICH SLOT, for the whole of this fight -- see the map's
             // own header. Seeded here rather than in Bind because this is the

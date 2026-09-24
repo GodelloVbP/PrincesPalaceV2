@@ -2114,3 +2114,32 @@ and "ATTACK is the default" is left to the hotkey number beside it: already on s
 glow, and impossible to mistake for focus or hover. The one-line change the finding predicted, at
 the cost the finding named. `ThemedMenuState.Primary` itself survives with one production user
 left, which is #175 below.
+
+### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `<pending commit>`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch
+
+`SpellPerformance.cs:103` declares `public bool Placed = true;`, and
+`SpellPerformancePlayer.cs:436` (`if (!instance.Placed) return;`) is what stops a
+layer with nowhere to go from taking a pool member.
+
+`FightController.SpellVfx.cs:203` (`PlaceOne`) handles that correctly for every
+placement but one. Its `on == null` branch at `:232-235` sets `Placed = false` and
+returns, with a five-line comment explaining exactly why. But the `formation` branch
+at `:208-212` returns BEFORE that check is reached, and `PlaceOnFormation`'s own
+nobody-to-stand-on exit (`:389`, `if (stood.Count == 0) return;`) returns without
+touching `Placed`. Its comment -- "A fault of no width would be a zero-sized
+graphic, so draw none" -- states the intent; the flag that implements it is the one
+thing not set.
+
+The result is a `Placed = true` instance with `Box`/`To`/`From` at their zero
+default: one pooled renderer spent, for the layer's whole lifetime, on a
+zero-sized box at the stage origin. Reachable whenever a cast-level formation layer
+outlives the last body under it, or is aimed at an off-stage or synthetic target.
+
+Not fixed here because the one-line fix (`instance.Placed = false;` before that
+return) belongs with a test that covers the case, and this round's spell work was
+already gated. Small, local, and the next spell commit should take it.
+
+**How it was fixed.** The one-line fix predicted above: `PlaceOnFormation`'s
+`stood.Count == 0` branch (current file: `FightController.SpellVfx.cs:642`) now sets
+`instance.Placed = false` before returning, the same shape as `PlaceOne`'s
+`on == null` branch (current file: `:380-384`).

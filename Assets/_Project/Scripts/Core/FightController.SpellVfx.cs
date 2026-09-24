@@ -187,6 +187,13 @@ namespace PrincesPalace
         // Keyed by PATH rather than by sprite so nothing accumulates across
         // scene loads -- the same arrangement the stage's content-centre cache
         // uses.
+        // NOT cleared per fight, unlike its three siblings ContentCentreCache/
+        // ContentTopCache/OpaqueBoxCache -- see ResetStagePresentation's own
+        // note and AUDIT #209. It has the identical stale-measurement hazard;
+        // clearing it broke a travelling-effect placement test for a reason
+        // that was not chased down, so the original bug (a stale padding
+        // measurement surviving an asset-only re-slice within one long Editor
+        // session) is left open rather than traded for a worse one.
         private static readonly Dictionary<string, float> VfxPaddingCache = new Dictionary<string, float>();
 
         // How long after the beat opens the blow actually lands.
@@ -638,8 +645,15 @@ namespace PrincesPalace
             }
 
             // Nobody with a slot: an off-stage or synthetic target. A fault of
-            // no width would be a zero-sized graphic, so draw none.
-            if (stood.Count == 0) return;
+            // no width would be a zero-sized graphic, so draw none -- and say
+            // so, the same way PlaceOne's own nowhere-to-put-it branch does,
+            // so Open() doesn't spend a pooled renderer on a zero-sized box
+            // at the stage origin for the layer's whole lifetime.
+            if (stood.Count == 0)
+            {
+                instance.Placed = false;
+                return;
+            }
 
             if (instance.AlignKind == SpellAlign.Span)
             {

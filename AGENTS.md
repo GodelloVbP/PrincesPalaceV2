@@ -59,7 +59,7 @@ Every worker brief must name:
 ```
 Objective:
 Done when: (specific acceptance evidence)
-Owner: (reader, implementer, or verifier)
+Owner: (reader, implementer, verifier, senior, or fixer)
 Edit surface: (exact paths; "none" for reader/verifier)
 References: (path + section, never pasted document bodies)
 Verification: (exact command or "none")
