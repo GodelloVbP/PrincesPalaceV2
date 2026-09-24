@@ -162,6 +162,19 @@ namespace PrincesPalace.Domain.Content
                 return;
             }
 
+            // Same guard as ItemSetEntryResolver's: only one of
+            // requiresAtZero/requiresAtMax authored parses the empty side to
+            // AbilityScoreBlock.Zero, which InterpolateScores below reads as
+            // a real "requires nothing at that end" -- the maxTier
+            // requirement would silently interpolate down to 0.
+            if (raw.requiresAtZero.Length == 0 ^ raw.requiresAtMax.Length == 0)
+            {
+                errors.Add($"{label}: authors only one of requiresAtZero/requiresAtMax -- " +
+                           $"both must be given together (or both left empty), " +
+                           $"otherwise the missing end silently interpolates to no requirement.");
+                return;
+            }
+
             if (secondary.HasValue && primary.Value.Score == secondary.Value.Score)
             {
                 errors.Add($"{label}: primary and secondary are both {AbilityScores.ShortName(primary.Value.Score)}, so the secondary curve would silently overwrite the primary one.");

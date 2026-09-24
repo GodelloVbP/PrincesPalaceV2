@@ -420,5 +420,27 @@ namespace PrincesPalace.Domain.Tests
             var weapon = Resolve(Sword()).First();
             Assert.AreEqual(AbilityScoreBlock.Zero, weapon.Requirements);
         }
+
+        // Only one of requiresAtZero/requiresAtMax authored: the empty side
+        // parses to AbilityScoreBlock.Zero, which InterpolateScores reads as
+        // a real requirement of nothing -- so a top-tier requirement would
+        // silently open up to 0 instead of erroring. Refused instead.
+        [Test]
+        public void AFamilyWithOnlyRequiresAtZeroAuthored_IsRejectedLoudly()
+        {
+            var family = Sword();
+            family.requiresAtZero = new[] { "strength 5" };
+
+            StringAssert.Contains("requiresAtZero", Errors(family)[0]);
+        }
+
+        [Test]
+        public void AFamilyWithOnlyRequiresAtMaxAuthored_IsRejectedLoudly()
+        {
+            var family = Sword();
+            family.requiresAtMax = new[] { "strength 15" };
+
+            StringAssert.Contains("requiresAtMax", Errors(family)[0]);
+        }
     }
 }

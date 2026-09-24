@@ -83,6 +83,30 @@ namespace PrincesPalace.Content
                          // deleted from the codebase.
                          ("Pool", _pools.Select(x => x.id)),
                          ("Event", _events.Select(x => x.id)),
+
+                         // Achievement ids join the sweep too: they are
+                         // written into save data the moment one is earned
+                         // (ResolvedAchievement.Id's own comment), the same
+                         // save-safety reason every other catalogue here is
+                         // in the sweep.
+                         ("Achievement", _achievements.Select(x => x.id)),
+
+                         // SpellTier and LevelCurve are NOT in this sweep,
+                         // and neither is a gap: SpellTierDefinition has no
+                         // id at all (ResolvedSpellTier keys a row by Level
+                         // within its own skill's tier list, not by a
+                         // catalogue-wide string), and neither does
+                         // LevelCurveDefinition (ResolvedLevelCost keys a row
+                         // by Level, full stop). There is nothing to add to
+                         // `seen`.
+                         //
+                         // RewardTrack is also left out on purpose:
+                         // ResolvedRewardTrack.CharacterId is deliberately
+                         // the SAME id as the character it belongs to (one
+                         // track per character, keyed by that character),
+                         // so sweeping it in here would flag every shipped
+                         // reward track as a "duplicate id" against its own
+                         // Character entry.
                      })
             {
                 foreach (string id in ids)
@@ -692,6 +716,18 @@ namespace PrincesPalace.Content
                         errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
                                    "FuryStartOfFight, but it is only legal on a character whose primary pool " +
                                    "starts at Zero, with an amount above 0.");
+                    }
+
+                    // THE RESOLVER'S OWN ElementalDamagePercent-needs-against
+                    // RULE, mirrored for the same loaded-catalogue reason:
+                    // RewardTrackDefinition.CollectedElementalTotals skips
+                    // any entry with no Against, so one with none would
+                    // authored-but-grant-nothing.
+                    if (level.Reward == TrackReward.ElementalDamagePercent && level.Against == null)
+                    {
+                        errors.Add($"Reward track '{track.Data.CharacterId}' level {level.Level} authors " +
+                                   "ElementalDamagePercent with no 'against' DamageType, which " +
+                                   "CollectedElementalTotals skips, so this would grant nothing.");
                     }
                 }
 

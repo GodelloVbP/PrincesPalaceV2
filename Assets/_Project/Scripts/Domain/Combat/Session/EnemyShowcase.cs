@@ -69,9 +69,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // It sits at index 0 of every authored pool (FightEncounter-
                 // Adapter puts it there), so walking the pool in order without
                 // this would open on the least interesting thing the mob does.
-                // Identified by its label rather than by IsPlainSwing, because
-                // a legacy skill authored at power 1.0 wears that shape too.
-                if (IsPlainAttack(ability))
+                if (ability.IsPlainSwing)
                 {
                     continue;
                 }
@@ -101,15 +99,12 @@ namespace PrincesPalace.Domain.Combat.Session
             int abilities = 0;
             for (int i = 0; i < pool.Count; i++)
             {
-                if (!IsPlainAttack(pool[i])) abilities++;
+                if (!pool[i].IsPlainSwing) abilities++;
             }
 
             // Plus the plain attack that always closes it.
             return abilities + 1;
         }
-
-        private static bool IsPlainAttack(EnemyAbility ability) =>
-            ability.IsLegacyAttack && ability.Label == FightSession.IntentAttack;
 
         private void Skip(string label)
         {

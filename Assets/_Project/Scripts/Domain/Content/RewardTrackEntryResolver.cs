@@ -389,6 +389,22 @@ namespace PrincesPalace.Domain.Content
                 against = parsedAgainst;
             }
 
+            // ElementalDamagePercent is PER-ELEMENT (RewardTrackDefinition.
+            // CollectedElementalTotals groups by Against, and
+            // ContentDatabase.Effective's ModifierEffects reads it per
+            // DamageType) -- an entry with no `against` resolves with
+            // Against == null and no error, and the only reader silently
+            // skips exactly that: `!entry.Against.HasValue` in
+            // CollectedElementalTotals. The reward would authored-but-grant-
+            // nothing, the same silent-ignore shape CheckFloor's amount
+            // check does not catch either. Refuse it at the source instead.
+            if (reward == TrackReward.ElementalDamagePercent && against == null)
+            {
+                error = $"{trackLabel}, {where}: {reward} names no 'against' DamageType -- CollectedElementalTotals " +
+                        "skips any entry without one, so this would grant nothing.";
+                return false;
+            }
+
             // RULE 5, the one cross-character rule left. (Rule 4 -- "a
             // filler element must be one the character can already deal at
             // level 1" -- went with the filler mix: a MILESTONE was always

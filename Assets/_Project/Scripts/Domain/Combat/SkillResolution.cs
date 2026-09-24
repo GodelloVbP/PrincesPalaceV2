@@ -254,16 +254,23 @@ namespace PrincesPalace.Domain.Combat
         {
             if (actor == null) return 0;
 
-            var scalingSet = axis switch
+            if (axis != ScalingAxis.Weapon && axis != ScalingAxis.Spell) return 0;
+
+            return CombatMath.ScaledAttack(actor, ScalingSetFor(actor, axis), 1f);
+        }
+
+        // THE axis-to-ScalingSet lookup, shared by AuthoredAttackTerm (which
+        // axis a skill explicitly names) and Damage (which axis Auto
+        // resolves to) so there is exactly one place that knows Weapon
+        // means WeaponScaling and Spell means SkillScaling.
+        private static ScalingSet ScalingSetFor(CombatantState actor, ScalingAxis axis)
+        {
+            return axis switch
             {
                 ScalingAxis.Weapon => actor.WeaponScaling,
                 ScalingAxis.Spell => actor.SkillScaling,
                 _ => ScalingSet.None,
             };
-
-            if (axis != ScalingAxis.Weapon && axis != ScalingAxis.Spell) return 0;
-
-            return CombatMath.ScaledAttack(actor, scalingSet, 1f);
         }
 
         // Armour no longer applies HERE at all, regardless of `ignoresDefense`
@@ -303,12 +310,7 @@ namespace PrincesPalace.Domain.Combat
             // flatAmount/power right along with Attack when the two are
             // meant to be independent levers.
             var resolvedAxis = axis == ScalingAxis.Auto ? ScalingAxes.For(type) : axis;
-            var scalingSet = resolvedAxis switch
-            {
-                ScalingAxis.Weapon => actor.WeaponScaling,
-                ScalingAxis.Spell => actor.SkillScaling,
-                _ => ScalingSet.None,
-            };
+            var scalingSet = ScalingSetFor(actor, resolvedAxis);
 
             int scaledAttack = CombatMath.ScaledAttack(actor, scalingSet, 1f);
             int raw = scaledAttack + flatAmount + power * resourceSpent;

@@ -635,6 +635,52 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(Problems(With(layer)));
         }
 
+        // THE SAME BOUND, ON THE PRE-LAYER BLOCK ITSELF. vfx.impactX/impactY/
+        // groundImpactY have no layer to sit on -- SpellPresentation.
+        // HasImpactPoint and HasGroundImpactY read them directly and gate on
+        // the same IsUnitFraction bound CheckPlacement enforces for a
+        // layer's impactX/impactY, so an out-of-range pixel coordinate here
+        // failed just as silently before CheckPresentation grew this check.
+        [Test]
+        public void APreLayerImpactXAbove1IsRefused()
+        {
+            var vfx = new SpellPresentation { impactX = 65f, impactY = 0.5f };
+
+            string message = Only(vfx);
+            StringAssert.Contains("vfx.impactX 65", message);
+            StringAssert.Contains("outside 0..1", message);
+        }
+
+        [Test]
+        public void APreLayerImpactYAbove1IsRefused()
+        {
+            var vfx = new SpellPresentation { impactX = 0.5f, impactY = 65f };
+
+            string message = Only(vfx);
+            StringAssert.Contains("vfx.impactY 65", message);
+            StringAssert.Contains("outside 0..1", message);
+        }
+
+        [Test]
+        public void APreLayerGroundImpactYAbove1IsRefused()
+        {
+            var vfx = new SpellPresentation { groundImpactY = 65f };
+
+            string message = Only(vfx);
+            StringAssert.Contains("vfx.groundImpactY 65", message);
+            StringAssert.Contains("outside 0..1", message);
+        }
+
+        // -1 (Unauthored) IS NOT A VIOLATION -- it means the sheet says
+        // nothing, and that stays legal.
+        [Test]
+        public void APreLayerUnauthoredImpactPointIsAccepted()
+        {
+            var vfx = new SpellPresentation();
+
+            CollectionAssert.IsEmpty(Problems(vfx));
+        }
+
         // ---- what each kind needs -----------------------------------------------
 
         [Test]

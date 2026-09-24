@@ -143,6 +143,35 @@ namespace PrincesPalace.Domain.Content
                 problems.Add($"{label}: vfx.hitCueSeconds {Num(vfx.hitCueSeconds)} needs layerFormat " +
                              $"{CurrentLayerFormat}; a pre-layer block derives its cue from impactFrame.");
             }
+
+            // THE SAME BOUND CheckPlacement enforces on a layer's impactX/
+            // impactY (see its own comment on the incident this closes): a
+            // pixel coordinate typed where a 0..1 fraction belonged reads as
+            // unauthored at runtime -- SpellPresentation.HasImpactPoint and
+            // HasGroundImpactY both gate on SpellLayer.IsUnitFraction, so an
+            // out-of-range value falls back silently instead of erroring.
+            // -1 (Unauthored) stays allowed; only a value that is NEITHER
+            // Unauthored NOR a unit fraction is refused.
+            bool hasImpactX = vfx.impactX >= 0f;
+            bool hasImpactY = vfx.impactY >= 0f;
+
+            if (hasImpactX && !SpellLayer.IsUnitFraction(vfx.impactX))
+            {
+                problems.Add($"{label}: vfx.impactX {Num(vfx.impactX)}, outside 0..1 -- it is a fraction " +
+                             "of the frame, not a pixel coordinate.");
+            }
+
+            if (hasImpactY && !SpellLayer.IsUnitFraction(vfx.impactY))
+            {
+                problems.Add($"{label}: vfx.impactY {Num(vfx.impactY)}, outside 0..1 -- it is a fraction " +
+                             "of the frame, not a pixel coordinate.");
+            }
+
+            if (vfx.groundImpactY >= 0f && !SpellLayer.IsUnitFraction(vfx.groundImpactY))
+            {
+                problems.Add($"{label}: vfx.groundImpactY {Num(vfx.groundImpactY)}, outside 0..1 -- it is a " +
+                             "fraction of the frame, not a pixel coordinate.");
+            }
         }
 
         // ---- one layer -----------------------------------------------------------

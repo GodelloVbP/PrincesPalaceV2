@@ -77,7 +77,7 @@ namespace PrincesPalace
         {
             if (string.IsNullOrEmpty(achievementId)) return false;
 
-            var definition = ContentDatabase.Achievements.FirstOrDefault(a => a != null && a.id == achievementId);
+            var definition = ContentDatabase.GetAchievement(achievementId);
             return definition != null && AchievementProgress.IsEarned(definition.Data, FactsFor(save));
         }
     }

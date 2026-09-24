@@ -126,6 +126,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(kit.Abilities[0].IsPlainSwing);
         }
 
+        // A legacy skill authored at power 1.0 wears the SAME numeric shape
+        // as the plain swing (skillPower 1.0), but it is still its own
+        // authored ability, labelled something other than "Attack" -- e.g. a
+        // curse with no separate scaling. IsPlainSwing has to tell the two
+        // apart by label, not by Power, or this one gets swallowed into the
+        // plain "Attack" telegraph and loses its own icon/status reveal.
+        [Test]
+        public void ALegacySkillAtPowerOne_IsNotThePlainSwing()
+        {
+            var ability = Legacy("Curse", 1f, 1f);
+
+            Assert.IsFalse(ability.IsPlainSwing,
+                "a legacy skill authored at power 1.0 is not the plain swing just because the numbers match");
+        }
+
         // ---- the telegraph -------------------------------------------------------
         //
         // The scope is read off the effect rather than authored, because an

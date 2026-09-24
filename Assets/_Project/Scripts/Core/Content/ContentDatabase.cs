@@ -535,6 +535,12 @@ namespace PrincesPalace.Content
             return _items.FirstOrDefault(i => i.id == id);
         }
 
+        public static AchievementDefinition GetAchievement(string id)
+        {
+            EnsureLoaded();
+            return _achievements.FirstOrDefault(a => a.id == id);
+        }
+
         // One skill by id, ignoring who owns it and whether they have
         // unlocked it — the sixth of the matched Get*(id) set. Talent-granted
         // abilities need it (a talent names a skill id, and both the

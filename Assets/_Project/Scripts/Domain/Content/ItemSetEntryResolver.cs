@@ -244,6 +244,24 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
+                // HALF A PAIR IS WORSE THAN NEITHER. requiresAtZero/
+                // requiresAtMax are read together below: both empty means
+                // "derive them" (or "no requirement" once derivesScores is
+                // false), and both authored means "use exactly this". Only
+                // one authored parses the empty side to
+                // AbilityScoreBlock.Zero, which the interpolation below
+                // reads as a real "requires nothing at that end" -- so an
+                // author who means the maxTier requirement to hold gets a
+                // top tier that silently opens up to 0 instead. Refuse it
+                // loudly rather than let it interpolate down.
+                if (piece.requiresAtZero.Length == 0 ^ piece.requiresAtMax.Length == 0)
+                {
+                    errors.Add($"{pieceLabel}: authors only one of requiresAtZero/requiresAtMax -- " +
+                               $"both must be given together (or both left empty to derive/omit), " +
+                               $"otherwise the missing end silently interpolates to no requirement.");
+                    continue;
+                }
+
                 var baseScore = AbilityScoreBlock.Zero;
                 var topScore = AbilityScoreBlock.Zero;
                 if (derivesScores)

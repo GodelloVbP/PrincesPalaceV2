@@ -391,6 +391,28 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("statProfile", Errors(set)[0]);
         }
 
+        // Only one of requiresAtZero/requiresAtMax authored: the empty side
+        // parses to AbilityScoreBlock.Zero, which the interpolation reads as
+        // a real requirement of nothing -- so a top-tier requirement would
+        // silently open up to 0 instead of erroring. Refused instead.
+        [Test]
+        public void APieceWithOnlyRequiresAtZeroAuthored_IsRejectedLoudly()
+        {
+            var set = Minimal();
+            set.pieces[0].requiresAtZero = new[] { "strength 3" };
+
+            StringAssert.Contains("requiresAtZero", Errors(set)[0]);
+        }
+
+        [Test]
+        public void APieceWithOnlyRequiresAtMaxAuthored_IsRejectedLoudly()
+        {
+            var set = Minimal();
+            set.pieces[0].requiresAtMax = new[] { "strength 15" };
+
+            StringAssert.Contains("requiresAtMax", Errors(set)[0]);
+        }
+
         [Test]
         public void AnUnknownStatProfileName_IsRejectedAndSaysWhatIsAvailable()
         {

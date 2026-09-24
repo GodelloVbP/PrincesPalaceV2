@@ -192,6 +192,31 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(Stats.DamageType.Lightning, entry.Against);
         }
 
+        // An ElementalDamagePercent row with no 'against' resolves with
+        // Against == null and no error, and RewardTrackDefinition.
+        // CollectedElementalTotals silently skips any entry with no Against
+        // -- so the reward would grant nothing. Refused at the source.
+        [Test]
+        public void AnElementalDamagePercentRowWithNoAgainst_IsRejected()
+        {
+            var characters = new Dictionary<string, RewardTrackCharacterContext>
+            {
+                ["sheep"] = new RewardTrackCharacterContext
+                {
+                    Level1DamageTypes = new[] { Stats.DamageType.Nature },
+                },
+            };
+
+            var levels = FullLevels();
+            Replace(levels, Level(6, "ElementalDamagePercent", 5));
+
+            bool ok = RewardTrackEntryResolver.TryResolveAll(
+                new List<RawRewardTrackEntry> { Track("sheep", levels) }, characters, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("against", string.Join("; ", errors));
+        }
+
         // ---- a valid two-track fixture ----
 
         [Test]

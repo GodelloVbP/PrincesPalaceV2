@@ -255,8 +255,7 @@ namespace PrincesPalace
 
         private static string AchievementName(string achievementId)
         {
-            var definition = ContentDatabase.Achievements
-                .FirstOrDefault(a => a != null && a.id == achievementId);
+            var definition = ContentDatabase.GetAchievement(achievementId);
 
             return definition == null ? achievementId : definition.Data.DisplayName;
         }

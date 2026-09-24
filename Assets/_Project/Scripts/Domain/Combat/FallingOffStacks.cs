@@ -63,11 +63,7 @@ namespace PrincesPalace.Domain.Combat
         {
             if (target == null || !target.StackTimers.TryGetValue(key, out var list)) return 0;
 
-            for (int i = list.Count - 1; i >= 0; i--)
-            {
-                list[i]--;
-                if (list[i] <= 0) list.RemoveAt(i);
-            }
+            TickList(list);
 
             return list.Count;
         }
@@ -82,11 +78,19 @@ namespace PrincesPalace.Domain.Combat
 
             foreach (var list in target.StackTimers.Values)
             {
-                for (int i = list.Count - 1; i >= 0; i--)
-                {
-                    list[i]--;
-                    if (list[i] <= 0) list.RemoveAt(i);
-                }
+                TickList(list);
+            }
+        }
+
+        // THE decrement/prune loop, shared by Tick (one key) and TickAll
+        // (every key) so there is exactly one place that knows a stack ages
+        // out at 0.
+        private static void TickList(List<int> list)
+        {
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                list[i]--;
+                if (list[i] <= 0) list.RemoveAt(i);
             }
         }
 

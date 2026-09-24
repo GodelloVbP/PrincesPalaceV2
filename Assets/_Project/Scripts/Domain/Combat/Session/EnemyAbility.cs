@@ -68,11 +68,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool IsLegacyAttack => !HasSkill;
 
-        // The entry every pool carries: the monster's own basic attack at full
-        // power and nothing else. Distinguished from an authored legacy skill
-        // by its power rather than by its label, because a label is content and
-        // this is a rule.
-        public bool IsPlainSwing => !HasSkill && Power == 1f;
+        // The entry every pool carries: the monster's own basic attack and
+        // nothing else. Identified by its label (FightSession.IntentAttack)
+        // rather than by Power == 1f: a legacy skill authored at power 1.0
+        // wears the same numeric shape as the plain swing but is still an
+        // authored ability with its own telegraph, and Power-based detection
+        // used to swallow it into the swing's plain "Attack" intent. Same
+        // rule EnemyShowcase used privately for exactly this reason before
+        // the two were unified onto this one property.
+        public bool IsPlainSwing => IsLegacyAttack && Label == FightSession.IntentAttack;
 
         // WHETHER ROOTED FORBIDS THIS ENTRY (plan 1.10). An authored ability
         // answers from its own content row; a legacy attack is a swing and is
