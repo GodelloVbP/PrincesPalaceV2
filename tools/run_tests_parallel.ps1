@@ -2,7 +2,11 @@ param(
     [switch]$SkipSync,
     [switch]$BuildContent,
     [switch]$BuildScenes,
-    [switch]$NoScenes
+    [switch]$NoScenes,
+    # PlayMode runner copies, split by fixture. 1 is the pre-sharding shape
+    # exactly: one PlayMode process in -TestRunner2, no -testFilter.
+    [ValidateRange(1, 6)]
+    [int]$Shards = 3
 )
 
 # SCENES ARE NOT BUILT UNLESS -BuildScenes IS PASSED. Building them on every
@@ -37,13 +41,19 @@ $SyncScenesToMain = $BuildScenes
 #
 # The serial predecessor (tools/run_tests.ps1, deleted at 5d46970d as part
 # of AUDIT #136) ran them one after the other, and each paid a full Unity
-# startup. They cannot share a project directory — Unity takes an exclusive
-# lock on Library/ — so parallelism needs a second copy rather than a second
+# startup. They cannot share a project directory -- Unity takes an exclusive
+# lock on Library/ -- so parallelism needs a second copy rather than a second
 # process. Wall clock drops to roughly the slower of the two platforms.
 #
-# Both copies get a divergent productName so Application.persistentDataPath
+# Every copy gets a divergent productName so Application.persistentDataPath
 # (and therefore save_slot_*.json) can never collide with the real project OR
 # with each other.
+#
+# PLAYMODE IS SHARDED (-Shards, default 3). PlayMode was 338s in one process
+# while EditMode took 23s beside it, so the PlayMode process WAS the gate.
+# Shard i runs in -TestRunner<i+1> (-TestRunner2, -TestRunner3, ...) on its
+# own slice of fixtures -- tools/playmode_shards.ps1 says how they are cut and
+# balanced. The -Bot<N> copies are tools/bot.ps1's and are never used here.
 
 # DERIVED, never hardcoded. Both of these were literal v1 paths, so the harness
 # would happily drive the wrong project -- and the editor version moved the
@@ -68,15 +78,27 @@ try {
 # Shares discovery, areas and the structural gate with tools/test.ps1, so the
 # gate below checks against the exact same definitions a slice would use.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
+. (Join-Path $PSScriptRoot "playmode_shards.ps1")
 
 $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $ProductLeaf = ($ProjectLeaf -replace "[^A-Za-z0-9]", "")
 
+# The EditMode runner is FIRST and stays the primary: generation runs there.
+# Label is the key every message and table uses; at -Shards 1 the PlayMode one
+# is plain "PlayMode" and its results file keeps its historical name.
 $Runners = @(
-    @{ Platform = "EditMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner";  Product = "${ProductLeaf}TestRunner" }
-    @{ Platform = "PlayMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner2"; Product = "${ProductLeaf}TestRunner2" }
+    @{ Platform = "EditMode"; Shard = 0; Label = "EditMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner"; Product = "${ProductLeaf}TestRunner"; Results = "test-results-EditMode.xml" }
 )
+for ($i = 1; $i -le $Shards; $i++) {
+    $n = $i + 1
+    $label = if ($Shards -eq 1) { "PlayMode" } else { "PlayMode#$i" }
+    $results = if ($Shards -eq 1) { "test-results-PlayMode.xml" } else { "test-results-PlayMode-shard$i.xml" }
+    $Runners += @{ Platform = "PlayMode"; Shard = $i; Label = $label; Path = "$ProjectParent\$ProjectLeaf-TestRunner$n"; Product = "${ProductLeaf}TestRunner$n"; Results = $results }
+}
+$PlayRunners = @($Runners | Where-Object { $_.Platform -eq "PlayMode" })
+# The merged PlayMode results live where the unsharded file always did.
+$MergedPlayResults = Join-Path $PlayRunners[0].Path "test-results-PlayMode.xml"
 
 # --- worktree refusal --------------------------------------------------
 # This script has no filter and no dotnet host for PlayMode -- every
@@ -89,7 +111,7 @@ $Runners = @(
 if (Test-IsLinkedWorktree) {
     Write-Host "REFUSED: this is a linked worktree ($SourceProject)."
     Write-Host "run_tests_parallel.ps1 has no dotnet path for PlayMode and always runs BOTH platforms through Unity, so it would build sibling project copies beside the WORKTREE rather than beside the main repo:"
-    foreach ($r in $Runners) { Write-Host "  [U] $($r.Platform) -> $($r.Path)" }
+    foreach ($r in $Runners) { Write-Host "  [U] $($r.Label) -> $($r.Path)" }
     Write-Host ""
     Write-Host "Run named [D] dotnet-hosted classes only (tools/test.ps1 -List marks each [D]/[U]) from a worktree, or run this from the main tree."
     exit 1
@@ -112,53 +134,11 @@ function Stamp {
     Write-Host ("  [{0,6:N1}s  +{1,5:N1}s] {2}" -f $now.TotalSeconds, $delta.TotalSeconds, $What)
 }
 
-function Repair-Metas {
-    param($DestAssets)
-
-    # /MIR skips a file whose size AND timestamp match the destination's, and
-    # two .meta files for the same asset are the same size to the byte while
-    # holding DIFFERENT GUIDs. When two isolated copies independently import
-    # or generate the same new asset around the same moment, each invents its
-    # own GUID, and from then on the mirror cannot tell the copies apart and
-    # never corrects the odd one out.
-    #
-    # Copying the right bytes over is NOT enough on its own: robocopy
-    # preserves the source timestamp, and Unity, seeing a .meta no newer than
-    # the one its Library was built from, keeps the stale GUID mapping. So the
-    # repaired file is stamped with the current time to force a reimport, and
-    # its asset is stamped with it so the asset itself is re-bound.
-    #
-    # Only genuinely differing files are touched — stamping every .meta each
-    # run would reimport the entire project every time.
-    #
-    # The symptom this prevents: a component plainly present in the scene file
-    # and invisible to FindObjectsByType, because the scene was built against
-    # the other runner's GUID — or, for generated content, a talent whose
-    # prerequisite silently resolves to null because its OWN runner's copy of
-    # the prerequisite kept a stale GUID the referencing asset no longer uses.
-    # Cost an afternoon, twice; cost a 3-test PlayMode failure the third time,
-    # the day the talent tree grew from 30 nodes to 150 and the odds of two
-    # same-size .meta files landing on the same timestamp stopped being rare.
-    Get-ChildItem -Path "$SourceProject\Assets" -Filter *.meta -Recurse -File | ForEach-Object {
-        $relative = $_.FullName.Substring("$SourceProject\Assets".Length + 1)
-        $destination = Join-Path $DestAssets $relative
-        if (-not (Test-Path $destination)) { return }
-        if ((Get-FileHash $_.FullName).Hash -eq (Get-FileHash $destination).Hash) { return }
-
-        Copy-Item $_.FullName $destination -Force
-        $now = Get-Date
-        (Get-Item $destination).LastWriteTime = $now
-        $asset = $destination -replace '\.meta$', ''
-        if (Test-Path $asset -PathType Leaf) { (Get-Item $asset).LastWriteTime = $now }
-    }
-}
-
-function Get-Guid {
-    param($MetaPath)
-    $line = Select-String -Path $MetaPath -Pattern "^guid:\s*([0-9a-f]{32})" -List
-    if (-not $line) { return $null }
-    return $line.Matches[0].Groups[1].Value
-}
+# The sync machinery -- the compiled meta repair and GUID check, and the
+# per-runner bodies run concurrently -- lives in tools/runner_sync.ps1, which
+# also carries the "why the meta repair exists" history. The sharding plan
+# and results merge live in tools/playmode_shards.ps1.
+. (Join-Path $PSScriptRoot "runner_sync.ps1")
 
 # Verifies every .meta under $SourceProject\Assets resolves to the SAME guid
 # in $DestAssets, and fails the whole run loudly, naming the exact asset,
@@ -177,50 +157,18 @@ function Get-Guid {
 # occasional new file. This check turns a maybe-related theory into a
 # provable yes/no the next time it happens, instead of another "passed on
 # rerun" shrug. See AUDIT.md's open item on this.
+#
+# Takes a fan-out result from $FanOutRunnerScript (the compare itself runs
+# there, per runner, concurrently) and exits the run on any mismatch.
 function Assert-GuidsMatch {
-    param($Runner)
+    param($Result)
 
-    $mismatches = @()
-    Get-ChildItem -Path "$SourceProject\Assets" -Filter *.meta -Recurse -File | ForEach-Object {
-        $relative = $_.FullName.Substring("$SourceProject\Assets".Length + 1)
-        $destination = Join-Path "$($Runner.Path)\Assets" $relative
-        if (-not (Test-Path $destination)) { return }
-
-        $srcGuid = Get-Guid $_.FullName
-        $dstGuid = Get-Guid $destination
-        if ($srcGuid -and $dstGuid -and $srcGuid -ne $dstGuid) {
-            $mismatches += "$relative : main=$srcGuid $($Runner.Platform)=$dstGuid"
-        }
-    }
-
+    $mismatches = @($Result.Mismatches)
     if ($mismatches.Count -gt 0) {
-        Write-Host "GUID MISMATCH after sync to $($Runner.Platform) ($($mismatches.Count) asset(s)) -- aborting rather than testing with a broken reference:"
+        Write-Host "GUID MISMATCH after sync to $($Result.Label) ($($mismatches.Count) asset(s)) -- aborting rather than testing with a broken reference:"
         $mismatches | Select-Object -First 15 | ForEach-Object { Write-Host "  $_" }
         exit 1
     }
-}
-
-function Sync-Runner {
-    param($Runner)
-
-    robocopy "$SourceProject\Assets" "$($Runner.Path)\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-    Repair-Metas -DestAssets "$($Runner.Path)\Assets"
-
-    robocopy "$SourceProject\Packages" "$($Runner.Path)\Packages" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-    robocopy "$SourceProject\ProjectSettings" "$($Runner.Path)\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-
-    # docs/ is not a Unity folder and the runner has no use for it -- except
-    # that a test now READS one of its files. ContentSchemaTests walks up from
-    # the working directory to whatever holds Assets/_Project/Scripts and
-    # compares docs/CONTENT_SCHEMA.md against what ContentSchema.Generate()
-    # produces. Under `dotnet test` that walk lands in the real repo and the
-    # test passes; under Unity it lands in this copy, which had no docs/ at
-    # all, so the test could only ever fail here. 5.6 MB, mirrored once.
-    robocopy "$SourceProject\docs" "$($Runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-
-    $settingsPath = Join-Path $Runner.Path "ProjectSettings\ProjectSettings.asset"
-    (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($Runner.Product)" |
-        Set-Content $settingsPath -Encoding utf8
 }
 
 # --- test-discovery gate ----------------------------------------------------
@@ -276,19 +224,82 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
+# --- the PlayMode shard plan ------------------------------------------------
+#
+# Planned here, before anything is synced or booted, so a bad partition costs
+# nothing. The class set is the same discovery the gates above just used.
+$PlayClasses = Get-PlayModeFixtureClasses -Index $discoveredIndex
+$ShardPlan = $null
+if ($Shards -gt 1) {
+    $ShardPlan = Get-PlayModeShardPlan -Index $discoveredIndex -Classes $PlayClasses -Shards $Shards
+
+    $partitionProblems = @(Test-ShardPartition -Classes $PlayClasses -Plan $ShardPlan -Index $discoveredIndex)
+    if ($partitionProblems.Count -gt 0) {
+        Write-Host "SHARD PARTITION IS WRONG ($($partitionProblems.Count)) -- refusing rather than running some classes twice or not at all:"
+        foreach ($p in $partitionProblems) { Write-Host "  $p" }
+        exit 1
+    }
+
+    # Windows caps a whole command line at 32,767 characters. Every
+    # PlayMode class name joined is ~5.6K today, so one shard's filter is
+    # nowhere near it; this refuses, naming the size, long before it is.
+    $FilterLimit = 24000
+    foreach ($s in $ShardPlan.Shards) {
+        if ($s.Classes.Count -eq 0) {
+            Write-Host "SHARD $($s.Index) IS EMPTY -- $($PlayClasses.Count) classes cannot fill $Shards shards. Use fewer -Shards."
+            exit 1
+        }
+        $s | Add-Member -NotePropertyName Filter -NotePropertyValue (Get-ShardFilter -Classes $s.Classes) -Force
+        if ($s.Filter.Length -gt $FilterLimit) {
+            Write-Host "SHARD $($s.Index)'s -testFilter is $($s.Filter.Length) chars, over this script's $FilterLimit cap (Windows' command-line limit is 32767). Use more -Shards, or move the filter to a file."
+            exit 1
+        }
+    }
+
+    Write-Host "PlayMode: $($PlayClasses.Count) fixture classes across $Shards shards, balanced by $($ShardPlan.Source):"
+    foreach ($s in $ShardPlan.Shards) {
+        $r = $PlayRunners[$s.Index - 1]
+        Write-Host ("  shard {0}: {1,3} classes, est {2,6:N1}  -> {3}" -f $s.Index, $s.Classes.Count, $s.Estimate, $r.Path)
+    }
+}
+
 # --- are the runners free? --------------------------------------------------
 #
-# BOTH of them, and before the sync -- mirroring main into a copy another
+# EVERY one of them, and before the sync -- mirroring main into a copy another
 # session's Unity has open is its own way to break a run, and this script
-# generates content and scenes into one of them. Costs one process-table read.
-# Refuses rather than waits; see Test-RunnerFree's header for why.
+# generates content and scenes into one of them. Costs one process-table read
+# each. Refuses rather than waits; see Test-RunnerFree's header for why.
 foreach ($runner in $Runners) {
-    if (-not (Test-RunnerFree -RunnerPath $runner.Path -Label "the $($runner.Platform) runner")) { exit 1 }
+    if (-not (Test-RunnerFree -RunnerPath $runner.Path -Label "the $($runner.Label) runner")) { exit 1 }
+}
+
+$freshRunners = @($Runners | Where-Object { -not (Test-Path (Join-Path $_.Path "Library")) })
+if ($SkipSync -and @($Runners | Where-Object { -not (Test-Path (Join-Path $_.Path "Assets")) }).Count -gt 0) {
+    Write-Host "-SkipSync, but these runner copies do not exist yet -- run once without -SkipSync to create them:"
+    $Runners | Where-Object { -not (Test-Path (Join-Path $_.Path "Assets")) } | ForEach-Object { Write-Host "  $($_.Path)" }
+    exit 1
 }
 
 if (-not $SkipSync) {
-    Write-Host "Syncing into $($Runners.Count) isolated test copies..."
-    foreach ($runner in $Runners) { Sync-Runner -Runner $runner; Stamp "sync -> $($runner.Platform)" }
+    # Created the way tools/bot.ps1 creates its -Bot<N> copies: the mirror
+    # below makes the folder, and the first Unity boot imports every asset.
+    if ($freshRunners.Count -gt 0) {
+        Write-Host ""
+        Write-Host "No Library/ yet in $($freshRunners.Count) runner copy/copies -- THIS RUN PAYS A FULL ASSET IMPORT"
+        Write-Host "in each of them before its tests start (several minutes, once). Later runs boot in ~13s:"
+        $freshRunners | ForEach-Object { Write-Host "  $($_.Path)" }
+        Write-Host ""
+    }
+
+    Write-Host "Syncing into $($Runners.Count) isolated test copies, concurrently..."
+    $syncResults = Invoke-PerRunner -Runners $Runners -Script $SyncRunnerScript -Shared @{ Source = $SourceProject }
+    $syncFailed = $false
+    foreach ($res in $syncResults) {
+        Write-Host ("    sync -> {0,-11} {1,5:N1}s  ({2} .meta repaired)" -f $res.Label, $res.Seconds, @($res.Repaired).Count)
+        foreach ($f in @($res.Failed)) { Write-Host "    SYNC FAILED into $($res.Path): $f"; $syncFailed = $true }
+    }
+    if ($syncFailed) { exit 1 }
+    Stamp "sync -> all $($Runners.Count) copies"
 
     # Verified, not assumed. A sync that silently leaves an old scene behind
     # produces dozens of NullReferenceExceptions from serialized fields that
@@ -447,7 +458,7 @@ if ($BuildContent -or $BuildScenesHere) {
     #
     # This is CLAUDE.md gotcha #1 and it has to be automatic. Content and
     # scenes are generated in the isolated copies, so main does not have them
-    # until they are copied back — and the very next run of this script mirrors
+    # until they are copied back -- and the very next run of this script mirrors
     # main OVER the copies, silently reverting everything that was just built.
     # Doing it here rather than by hand is the difference between "the suite is
     # green" and "the suite tested a stale scene".
@@ -533,7 +544,7 @@ if ($BuildContent -or $BuildScenesHere) {
     #
     # Scenes reference scripts by GUID, and a GUID is assigned by whichever
     # Unity imports a .cs file first. Two copies importing the same NEW script
-    # independently assign it two DIFFERENT GUIDs — so a scene built in copy 1
+    # independently assign it two DIFFERENT GUIDs -- so a scene built in copy 1
     # references a guid that means nothing in copy 2, and the component comes
     # back as a missing script. The symptom is a controller that is plainly
     # in the scene and that FindObjectsByType cannot see, which looks like
@@ -542,49 +553,96 @@ if ($BuildContent -or $BuildScenesHere) {
     # Copying the .meta files along with everything else is what makes all
     # three copies agree on identity. CLAUDE.md gotcha #2, reached by a route
     # it does not mention. Followed by the same hash-based repair pass
-    # Sync-Runner uses — this robocopy hits the exact same same-size/
+    # the pre-test sync uses -- this robocopy hits the exact same same-size/
     # different-GUID blind spot Repair-Metas exists for, just for freshly
     # GENERATED content assets instead of freshly imported scripts.
+    #
+    # EVERY PLAYMODE SHARD COPY, CONCURRENTLY. Sharding made "the secondary"
+    # plural: a shard copy skipped here would test last run's content and
+    # scenes while its siblings tested this run's (gotcha #1, one shard wide).
+    # Each runner's mirror, scene copy, meta repair and GUID compare run in
+    # its own runspace -- $FanOutRunnerScript in tools/runner_sync.ps1. The
+    # scenes come STRAIGHT FROM THE PRIMARY, because the mirror just
+    # overwrote each copy's scenes with main's: PlayMode used to receive the
+    # built scenes THROUGH main, which only worked while the sync-back was
+    # unconditional. Skipping it would hand PlayMode the last COMMITTED
+    # scenes while EditMode audited freshly built ones -- the platforms
+    # testing different builds, silently.
     Stamp "sync generated assets back to main"
-    foreach ($runner in $Runners | Select-Object -Skip 1) {
-        robocopy "$SourceProject\Assets" "$($runner.Path)\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-        Stamp "re-mirror main -> $($runner.Platform)"
-
-        # STRAIGHT FROM THE PRIMARY, because the mirror above just overwrote
-        # this runner's scenes with main's.
-        #
-        # PlayMode used to receive the built scenes THROUGH main, which only
-        # worked because the sync-back was unconditional. Now that it is not,
-        # skipping this would hand PlayMode the last COMMITTED scenes while
-        # EditMode audited freshly built ones -- the two platforms testing
-        # different builds, silently, which is worse than the staleness this
-        # whole change is about.
-        if ($BuildScenesHere) {
-            robocopy "$primary\Assets\_Project\Scenes" "$($runner.Path)\Assets\_Project\Scenes" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
-            Stamp "scenes -> $($runner.Platform)"
+    $fanOut = Invoke-PerRunner -Runners @($Runners | Select-Object -Skip 1) -Script $FanOutRunnerScript -Shared @{
+        Source = $SourceProject; Primary = $primary; CopyScenes = [bool]$BuildScenesHere
+    }
+    foreach ($res in $fanOut) {
+        Write-Host ("    re-mirror -> {0,-11} {1,5:N1}s  ({2} .meta repaired)" -f $res.Label, $res.Seconds, @($res.Repaired).Count)
+        if (@($res.Failed).Count -gt 0) {
+            Write-Host "SYNC FAILED into $($res.Path): $(@($res.Failed) -join ', ')"
+            exit 1
         }
-        Repair-Metas -DestAssets "$($runner.Path)\Assets"
-        Stamp "Repair-Metas $($runner.Platform)"
-        Assert-GuidsMatch -Runner $runner
-        Stamp "Assert-GuidsMatch $($runner.Platform)"
+        Assert-GuidsMatch -Result $res
+    }
+    Stamp "re-mirror + Repair-Metas + Assert-GuidsMatch -> $(@($fanOut).Count) copies"
+
+    # The scenes each copy will test are the ones just built, byte for byte:
+    # proved, not inferred from robocopy's exit code. Checked against the
+    # primary (where they were built) and, since -BuildScenes also synced them
+    # back, against main.
+    if ($BuildScenesHere) {
+        $builtScenes = Join-Path $primary "Assets\_Project\Scenes"
+        $sceneDiffs = @()
+        foreach ($other in @(@{ Label = "main"; Path = $SourceProject }) + @($Runners | Select-Object -Skip 1)) {
+            $d = [PP.RunnerSync.MetaSync]::DiffDirs($builtScenes, (Join-Path $other.Path "Assets\_Project\Scenes"), "*")
+            foreach ($x in $d) { $sceneDiffs += "$($other.Label): $x" }
+        }
+        if ($sceneDiffs.Count -gt 0) {
+            Write-Host "BUILT SCENES DID NOT FAN OUT ($($sceneDiffs.Count)) -- a copy would test scenes other than the ones just built:"
+            $sceneDiffs | ForEach-Object { Write-Host "  $_" }
+            exit 1
+        }
+        Stamp "scenes identical in main and all $(@($Runners).Count - 1) other copies"
     }
 }
 
-Write-Host "`nRunning EditMode and PlayMode concurrently..."
+if ($Shards -gt 1) {
+    Write-Host "`nRunning EditMode and $Shards PlayMode shards concurrently..."
+} else {
+    Write-Host "`nRunning EditMode and PlayMode concurrently..."
+}
 $script:LastStamp = $Watch.Elapsed
-$procs = @{}
-foreach ($runner in $Runners) {
-    $resultsPath = Join-Path $runner.Path "test-results-$($runner.Platform).xml"
-    if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
 
-    $procs[$runner.Platform] = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
+# Stale outputs from an earlier run must not be read as this run's: the
+# merged file, every runner's own results file, and each PlayMode copy's
+# profile CSV (the next balance is read from those).
+$staleOutputs = @($MergedPlayResults)
+$staleOutputs += @($Runners | ForEach-Object { Join-Path $_.Path $_.Results })
+$staleOutputs += @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" })
+foreach ($stale in $staleOutputs) {
+    if (Test-Path $stale) { Remove-Item $stale -Force }
+}
+
+$procs = @{}
+$launchedAt = @{}
+foreach ($runner in $Runners) {
+    $resultsPath = Join-Path $runner.Path $runner.Results
+    $runLogPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
+
+    $unityArgs = @(
         "-batchmode", "-nographics", "-silent-crashes",
         "-projectPath", "`"$($runner.Path)`"",
-        "-runTests", "-testPlatform", $runner.Platform,
+        "-runTests", "-testPlatform", $runner.Platform
+    )
+    # A shard runs only its own fixtures, filtered the way tools/test.ps1
+    # filters a slice. At -Shards 1 there is no filter, exactly as before.
+    if ($ShardPlan -and $runner.Shard -gt 0) {
+        $unityArgs += @("-testFilter", "`"$($ShardPlan.Shards[$runner.Shard - 1].Filter)`"")
+    }
+    $unityArgs += @(
         "-testResults", "`"$resultsPath`"",
-        "-logFile", "`"$(Join-Path $runner.Path "test-run-$($runner.Platform).log")`"",
+        "-logFile", "`"$runLogPath`"",
         "-buildTarget", "StandaloneWindows64"
     )
+
+    $procs[$runner.Label] = Start-UnityQuiet -FilePath $UnityExe -ArgumentList $unityArgs
+    $launchedAt[$runner.Label] = $Watch.Elapsed
 }
 
 $TestTimeoutSeconds = 1800
@@ -595,10 +653,39 @@ $timedOut = $false
 # exclusive lock on that runner copy's Library. The next run of this script then
 # cannot use the copy either, so one hung run poisons every run after it, and the
 # symptom arrives one run later looking nothing like the hang that caused it.
-$procs.Values | Wait-Process -Timeout $TestTimeoutSeconds -ErrorAction SilentlyContinue
+#
+# POLLED rather than Wait-Process, so each runner's own wall time and the
+# machine's RAM under N concurrent Unitys are measured on the way: the summed
+# working set of the processes this script launched (their import workers
+# are not counted), sampled every 2s, and each one's OS-tracked peak.
+$exitedAt = @{}
+$peakWs = @{}
+$peakSum = 0L
+$deadline = $Watch.Elapsed.TotalSeconds + $TestTimeoutSeconds
+while ($true) {
+    $sum = 0L
+    $alive = 0
+    foreach ($label in @($procs.Keys)) {
+        $p = $procs[$label]
+        if (-not $p) { continue }
+        try { $p.Refresh() } catch { }
+        if ($p.HasExited) {
+            if (-not $exitedAt.ContainsKey($label)) { $exitedAt[$label] = $Watch.Elapsed }
+            continue
+        }
+        $alive++
+        try {
+            $sum += $p.WorkingSet64
+            if (-not $peakWs.ContainsKey($label) -or $p.PeakWorkingSet64 -gt $peakWs[$label]) { $peakWs[$label] = $p.PeakWorkingSet64 }
+        } catch { }
+    }
+    if ($sum -gt $peakSum) { $peakSum = $sum }
+    if ($alive -eq 0 -or $Watch.Elapsed.TotalSeconds -ge $deadline) { break }
+    Start-Sleep -Milliseconds 2000
+}
 
 foreach ($runner in $Runners) {
-    $p = $procs[$runner.Platform]
+    $p = $procs[$runner.Label]
     if (-not $p) { continue }
     $p.Refresh()
     if ($p.HasExited) { continue }
@@ -610,42 +697,87 @@ foreach ($runner in $Runners) {
     # what is matched on, not the process name.
     $cim = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)" -ErrorAction SilentlyContinue
     if (-not $cim -or $cim.CommandLine -notlike "*$($runner.Path)*") {
-        Write-Host "$($runner.Platform) did not finish within $TestTimeoutSeconds s, and PID $($p.Id) no longer looks like the Unity this script started. Leaving it alone."
+        Write-Host "$($runner.Label) did not finish within $TestTimeoutSeconds s, and PID $($p.Id) no longer looks like the Unity this script started. Leaving it alone."
         $timedOut = $true
         continue
     }
 
-    Write-Host "$($runner.Platform) did not finish within $TestTimeoutSeconds s. Killing PID $($p.Id) so it stops holding $($runner.Path) for the next run."
+    Write-Host "$($runner.Label) did not finish within $TestTimeoutSeconds s. Killing PID $($p.Id) so it stops holding $($runner.Path) for the next run."
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     $timedOut = $true
 }
+Stamp "tests finished"
 
 $allPassed = $true
 
 # A killed Unity may still have left a partial results file behind, so the
 # timeout is failed on its own account rather than through the checks below.
 if ($timedOut) { $allPassed = $false }
+$shardResultPaths = @()
 foreach ($runner in $Runners) {
-    $resultsPath = Join-Path $runner.Path "test-results-$($runner.Platform).xml"
+    $resultsPath = Join-Path $runner.Path $runner.Results
     $logPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
+    $wall = ""
+    if ($exitedAt.ContainsKey($runner.Label)) {
+        $wall = "  wall {0:N1}s" -f ($exitedAt[$runner.Label] - $launchedAt[$runner.Label]).TotalSeconds
+    }
+    $mem = ""
+    if ($peakWs.ContainsKey($runner.Label)) { $mem = "  peak {0:N0} MB" -f ($peakWs[$runner.Label] / 1MB) }
 
     if (-not (Test-Path $resultsPath)) {
-        Write-Host "No results for $($runner.Platform). Tail of log:"
-        Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
+        Write-Host "No results for $($runner.Label) ($resultsPath). Tail of $logPath :"
+        Get-Content $logPath -Tail 40 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ }
         $allPassed = $false
         continue
     }
+    if ($runner.Platform -eq "PlayMode" -and $Shards -gt 1) { $shardResultPaths += $resultsPath }
 
     [xml]$results = Get-Content $resultsPath
     $root = $results.'test-run'
-    Write-Host "$($runner.Platform) -- Total: $($root.total)  Passed: $($root.passed)  Failed: $($root.failed)  Skipped: $($root.skipped)  Duration: $($root.duration)s"
+    Write-Host "$($runner.Label) -- Total: $($root.total)  Passed: $($root.passed)  Failed: $($root.failed)  Skipped: $($root.skipped)  Duration: $($root.duration)s$wall$mem"
+    if ($Shards -gt 1 -and $runner.Platform -eq "PlayMode") { Write-Host "    $resultsPath" }
 
     foreach ($f in $results.SelectNodes("//test-case[@result='Failed']")) {
-        Write-Host "`nFAILED: $($f.fullname)"
+        Write-Host "`nFAILED ($($runner.Label)): $($f.fullname)"
         if ($f.failure -and $f.failure.message) { Write-Host $f.failure.message.InnerText }
     }
 
     if ([int]$root.failed -ne 0) { $allPassed = $false }
+}
+
+# ONE PlayMode verdict out of N shards: every shard must have reported (a
+# missing one already failed the run above), the shards together must have
+# run every class exactly once, and the merged file is what a reader of
+# test-results-PlayMode.xml gets -- the whole suite, where it always was.
+if ($Shards -gt 1) {
+    if ($shardResultPaths.Count -eq $PlayRunners.Count) {
+        $coverage = @(Test-ShardCoverage -Paths $shardResultPaths -Classes $PlayClasses)
+        if ($coverage.Count -gt 0) {
+            Write-Host "`nSHARD COVERAGE IS WRONG ($($coverage.Count)) -- the shards did not run the suite exactly once:"
+            $coverage | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+            $allPassed = $false
+        }
+        $sum = Merge-ShardResults -Paths $shardResultPaths -OutPath $MergedPlayResults
+        Write-Host ("PlayMode ({0} shards combined) -- Total: {1}  Passed: {2}  Failed: {3}  Skipped: {4}" -f $PlayRunners.Count, $sum.total, $sum.passed, $sum.failed, $sum.skipped)
+        Write-Host "    merged: $MergedPlayResults"
+    } else {
+        Write-Host "PlayMode: only $($shardResultPaths.Count) of $($PlayRunners.Count) shards reported -- no merged results written."
+    }
+}
+if ($peakSum -gt 0) {
+    Write-Host ("Peak summed working set of the {0} test Unitys: {1:N0} MB (import workers not counted)" -f $procs.Count, ($peakSum / 1MB))
+}
+
+# The next run's balance, from this run's PlayMode profile CSVs -- sharded or
+# not, but ONLY from a green run. A failing fixture's time is not its time:
+# the first sharded run to go red spent 10s per case waiting out a
+# "never finished" deadline, and balancing on that put 18 fixtures in one
+# shard and 95 in another.
+if ($allPassed) {
+    $timed = Save-ShardTimings -CsvPaths @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" })
+    if ($timed -gt 0) { Write-Host "Fixture timings for the next balance: $timed fixtures -> $ShardTimingsFile" }
+} else {
+    Write-Host "Fixture timings NOT updated (run was not green); the next balance uses $ShardTimingsFile as it was."
 }
 
 if ($allPassed) { Write-Host "`nAll tests passed."; exit 0 }

@@ -349,8 +349,19 @@ namespace PrincesPalace.PlayModeTests
 
                 if (fadedFrame < 0 && body <= 0.001f) fadedFrame = frame;
 
+                // THE WALK HAS BEGUN when the animator has a new goal, not when
+                // the figure has visibly moved. The walk itself runs on the
+                // UNSCALED clock (StageActorAnimator.Gliding), which
+                // captureDeltaTime does not pin: at an idle machine's ~1ms
+                // real frames its first step was under MarkTolerance and was
+                // seen a frame or more later, and under load a ~20ms real
+                // frame moved it past tolerance on the very frame it began --
+                // so "has it moved" measured the machine, not the order.
+                // Mark is the goal the moment GlideTo is called, on the fixed
+                // beat clock the fade also runs on.
                 if (slideStarted < 0 &&
-                    Vector2.Distance(survivorAnimator.Home, FarMark) > MarkTolerance)
+                    (survivorAnimator.IsGliding ||
+                     Vector2.Distance(survivorAnimator.Mark, FarMark) > MarkTolerance))
                 {
                     slideStarted = frame;
                 }
@@ -361,7 +372,16 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(fadedFrame, 0, "the front monster never faded out");
             Assert.GreaterOrEqual(slideStarted, 0, "the survivor never closed up");
 
-            Assert.Greater(slideStarted, fadedFrame,
+            // AT OR AFTER, not strictly after: the walk is handed its goal on
+            // the same beat-clock frame the fade writes its last zero, so the
+            // first frame drawn with the survivor walking already shows no
+            // corpse. The old strict ">" only held because the old detector
+            // (visible movement past MarkTolerance, on the unscaled clock)
+            // lagged the real start by a frame or more on an idle machine; a
+            // loaded machine closed that lag and failed it. What is pinned is
+            // unchanged: no sampled frame has the body visible while the
+            // survivor is on its way.
+            Assert.GreaterOrEqual(slideStarted, fadedFrame,
                 $"the survivor left rank 1 on frame {slideStarted}, before the body had finished " +
                 $"fading on frame {fadedFrame} -- it walked through a corpse that was still on screen");
 

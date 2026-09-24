@@ -68,11 +68,13 @@ namespace PrincesPalace.PlayModeTests
             // than a screen does -- twenty frames here was five milliseconds
             // of a 200ms cycle, which is a mover that looks motionless. A
             // fixture check that it moves at all: a mover that never moved
-            // would pass every compounding assertion below.
+            // would pass every compounding assertion below. Watched on
+            // Time.time itself, the mover's own clock, rather than on real
+            // time, which a loaded machine lets run ahead of it.
             float lowest = float.MaxValue;
             float highest = 0f;
-            float until = Time.realtimeSinceStartup + 0.5f;
-            while (Time.realtimeSinceStartup < until)
+            float until = Time.time + 0.5f;
+            while (Time.time < until)
             {
                 yield return null;
                 lowest = Mathf.Min(lowest, rect.localScale.y);
@@ -91,8 +93,8 @@ namespace PrincesPalace.PlayModeTests
 
                 _host.SetActive(true);
 
-                until = Time.realtimeSinceStartup + 0.3f;
-                while (Time.realtimeSinceStartup < until)
+                until = Time.time + 0.3f;
+                while (Time.time < until)
                 {
                     yield return null;
 

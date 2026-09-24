@@ -124,12 +124,15 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1f / 1.5f, paceAtBeat0Top, 1e-4f,
                 "fixture: beat 0 did not adopt the display-1 row it opened at");
 
-            // Give beat 0 real time to be IN FLIGHT -- past its own
-            // top, short of its own end -- rather than pausing on the frame
-            // it started. At this pace (0.667x) the whole beat runs well
-            // over a second of real time, so 0.15s is comfortably inside it.
-            float settleUntil = Time.realtimeSinceStartup + 0.15f;
-            while (Time.realtimeSinceStartup < settleUntil) yield return null;
+            // Give beat 0 time to be IN FLIGHT -- past its own top, short
+            // of its own end -- rather than pausing on the frame it started.
+            // At this pace (0.667x) the whole beat runs well over a second,
+            // so 0.15s is comfortably inside it. Counted on Time.time, the
+            // clock the beat's WaitForSeconds run on: a real-time window
+            // measures the machine, since one clamped frame under load
+            // (maximumDeltaTime) advances the two by different amounts.
+            float settleUntil = Time.time + 0.15f;
+            while (Time.time < settleUntil) yield return null;
 
             Assert.AreEqual(1, _beatLog.Count,
                 "fixture: beat 1 already started before the pause -- too slow to catch beat 0 mid-flight");

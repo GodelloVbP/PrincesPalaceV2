@@ -51,3 +51,8 @@ tools/domain-tests/**/obj/
 # Python bytecode from the tools/ measurement scripts, which import each other
 # rather than each carrying its own copy of the constants they parse.
 tools/__pycache__/
+
+# Per-fixture PlayMode wall times from the last gate run, merged from every
+# shard's profile CSV -- run_tests_parallel.ps1 balances the next run's shards
+# on it. Machine-local, rewritten every run, useless to anyone else.
+tools/.test-timings.csv

@@ -56,13 +56,26 @@ namespace PrincesPalace.PlayModeTests
         // would make the assertion a tautology (docs/CODE_STANDARDS.md #8).
         private const float ChargeWindupFloorSeconds = 0.18f;
 
-        // MEASUREMENT SLOP, not a loosened floor. WaitForSeconds resolves on
-        // the frame where accumulated deltaTime first reaches its target, and
-        // that comparison can land inside a millisecond of the target rather
-        // than exactly on it -- observed here as low as 0.1795s against a
-        // 0.18s wait. Smaller than a single 60fps frame (~16.7ms), so a
-        // regression that skipped the wait entirely (firing on frame one)
-        // still fails this assertion by two orders of magnitude.
+        // MEASURED ON THE BEAT'S OWN CLOCK, at a pinned frame length. The
+        // charge's wait is a WaitForSeconds -- scaled game time -- so that is
+        // the clock this reads (Time.timeAsDouble), with Time.captureDeltaTime
+        // fixing every frame at SampleSeconds so the number cannot depend on
+        // how fast the machine produces frames.
+        //
+        // It used to read Time.realtimeSinceStartup, and that failed ~1 run in
+        // 9 under a loaded sharded gate (0.170s against the 0.175s floor).
+        // Not a slow wait: WaitForSeconds counts from the Time.time of the
+        // frame it started in, which is stamped at the TOP of that frame, and
+        // the real-time start was read partway through it, after however much
+        // of the frame the machine had already spent. Under load that gap
+        // grew past the slop and the real interval came out SHORTER than the
+        // game-time wait it was measuring.
+        private const float SampleSeconds = 0.01f;
+
+        // Half a sample: WaitForSeconds resolves on the first frame whose
+        // accumulated time reaches its target, and float accumulation can put
+        // that a hair under 0.18. A regression that skipped the wait (firing
+        // on the frame the beat opened) reads 0 and still fails by 0.175s.
         private const float TimingSlop = 0.005f;
 
         // THE BUG THIS PINS: a flat-art Charge fired its impact instant (the
@@ -74,35 +87,44 @@ namespace PrincesPalace.PlayModeTests
         // a Lunge.
         //
         // RUN AT REAL SPEED (BeatSpeedMultiplier = 1), deliberately unlike
-        // every other test in this file: the floor is 0.18s of WALL-CLOCK
-        // time, and scaling it down to milliseconds would put it under a
-        // single frame's own length, at which point any measured elapsed time
-        // -- however short the true wait -- clears the assertion and the test
-        // stops being able to catch the regression it exists for.
+        // every other test in this file: the floor is 0.18s of beat time, and
+        // scaling it down to milliseconds would put it under a single frame's
+        // own length, at which point any measured elapsed time -- however
+        // short the true wait -- clears the assertion and the test stops
+        // being able to catch the regression it exists for. At SampleSeconds
+        // it is 18 frames long.
         [UnityTest]
         public IEnumerator AChargeWaitsOutItsOwnTravelBeforeTheImpactInstant()
         {
             var player = NewPlayer();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
 
-            var beat = ChargeBeat();
-            float fireTime = -1f;
-            player.WireContactFxForTest(b => { if (fireTime < 0f) fireTime = Time.realtimeSinceStartup; });
+            // From the NEXT frame on; the frame Play runs in keeps whatever
+            // length it already had, which is fine -- the wait is stamped from
+            // that frame's start and every frame after it is pinned.
+            Time.captureDeltaTime = SampleSeconds;
 
-            float start = Time.realtimeSinceStartup;
+            var beat = ChargeBeat();
+            double fireTime = -1.0;
+            player.WireContactFxForTest(b => { if (fireTime < 0.0) fireTime = Time.timeAsDouble; });
+
+            double start = Time.timeAsDouble;
             bool finished = false;
             player.Play(new List<CombatBeat> { beat }, () => finished = true);
 
-            float deadline = start + 5f;
-            while (fireTime < 0f && Time.realtimeSinceStartup < deadline) yield return null;
+            // A hang guard in frames, not a measurement: five seconds of beat
+            // time at SampleSeconds.
+            const int FrameBudget = 500;
+            int frames = 0;
+            while (fireTime < 0.0 && frames++ < FrameBudget) yield return null;
 
-            Assert.Greater(fireTime, 0f,
+            Assert.Greater(fireTime, 0.0,
                 "the charge never fired its contact effect, so the timing below means nothing");
             Assert.GreaterOrEqual(fireTime - start, ChargeWindupFloorSeconds - TimingSlop,
                 "a charge's impact instant fired before its own floor travel time had elapsed -- " +
                 "the target flashed and recoiled before the charger crossed the stage");
 
-            while (!finished && Time.realtimeSinceStartup < deadline) yield return null;
+            while (!finished && frames++ < FrameBudget) yield return null;
             Assert.IsTrue(finished, "the charge beat never finished");
         }
 
@@ -325,6 +347,7 @@ namespace PrincesPalace.PlayModeTests
             foreach (var go in _spawned) if (go != null) Object.DestroyImmediate(go);
             _spawned.Clear();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            Time.captureDeltaTime = 0f;
         }
 
         // A bare player on its own object. No scene needed: these are about the
@@ -342,7 +365,7 @@ namespace PrincesPalace.PlayModeTests
             // docs/archive/PLAN_BATTLE_SPEED.md G3: no scene here, so FightBootstrap
             // never runs to install anything -- but this file's own tests
             // (AChargeWaitsOutItsOwnTravelBeforeTheImpactInstant) locally set
-            // BeatSpeedMultiplier back to 1 and measure real elapsed time
+            // BeatSpeedMultiplier back to 1 and measure elapsed beat time
             // against it, and PlayerSpeedSource is a process-wide static a
             // leaked value from elsewhere in the same batch could still
             // leave non-default. Pinned here, at the one place every test in

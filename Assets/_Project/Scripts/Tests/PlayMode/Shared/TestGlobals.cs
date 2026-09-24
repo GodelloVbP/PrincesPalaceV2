@@ -91,7 +91,7 @@ namespace PrincesPalace.PlayModeTests
             // it -- and then fails before closing hands every later test in the
             // process a frozen game. Nothing throws; the scaled coroutines
             // simply never finish, and it surfaces as an unrelated timeout.
-            UnityEngine.Time.timeScale = 1f;
+            ResetEngineClock();
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
 
             // BOTH HALVES of the player-facing product (docs/
@@ -110,6 +110,47 @@ namespace PrincesPalace.PlayModeTests
             SpellPerformancePlayer.ClockOverride = null;
             RequirementCurve.Percent = RequirementCurve.DefaultPercent;
             RequirementCurve.GearRequirementsEnabled = false;
+        }
+
+        // EVERY ENGINE TIME GLOBAL, back to what the project boots with.
+        // Called from ResetAll AND, before every test, from
+        // PlayModeTestProfiler.TestStarted -- before the fixture's [SetUp],
+        // so a fixture that sets one of these for itself still wins.
+        //
+        // Why the hook as well as ResetAll: a teardown only resets what its
+        // own fixture remembered, and the clock is also stopped by
+        // PRODUCTION. CarriedHealthOnRespecTests opened the hub's system menu
+        // (SystemMenuController.Pause, timeScale 0) and left it open; its
+        // Hub scene then outlived the fixture, and a following fixture that
+        // loads no scene of its own (FightBeatPhaseStanceTests,
+        // FightContactCueTests) ran every beat on a stopped clock -- "the
+        // beat never finished playing", 13 cases, in an order where no
+        // scene load happened in between to fire the menu's OnDisable and
+        // put the clock back. The single-process order only passed because
+        // FightAfterTheEliteTests' scene load happened to land in the gap.
+        //
+        // Defaults are read off the engine on first call rather than typed
+        // here, so ProjectSettings/TimeManager.asset stays their one home.
+        // The first call is the hook's, before the first test of the run,
+        // when nothing has had a chance to move them.
+        private static bool s_clockDefaultsTaken;
+        private static float s_fixedDeltaTime, s_maximumDeltaTime, s_maximumParticleDeltaTime;
+
+        public static void ResetEngineClock()
+        {
+            if (!s_clockDefaultsTaken)
+            {
+                s_clockDefaultsTaken = true;
+                s_fixedDeltaTime = UnityEngine.Time.fixedDeltaTime;
+                s_maximumDeltaTime = UnityEngine.Time.maximumDeltaTime;
+                s_maximumParticleDeltaTime = UnityEngine.Time.maximumParticleDeltaTime;
+            }
+            UnityEngine.Time.timeScale = 1f;
+            // Zero here also zeroes captureFramerate; they are one setting.
+            UnityEngine.Time.captureDeltaTime = 0f;
+            UnityEngine.Time.fixedDeltaTime = s_fixedDeltaTime;
+            UnityEngine.Time.maximumDeltaTime = s_maximumDeltaTime;
+            UnityEngine.Time.maximumParticleDeltaTime = s_maximumParticleDeltaTime;
         }
     }
 }

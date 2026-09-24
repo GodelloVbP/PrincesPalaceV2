@@ -13,9 +13,10 @@ Update rule: see §11.
 2. `git status --short`.
 3. `git config core.hooksPath` MUST print `tools/githooks`
    (`git config core.hooksPath tools/githooks` if not).
-4. Check `Temp\UnityLockfile` in both `C:\Games\Prince's Palace-v2-TestRunner`
-   and `-v2-TestRunner2` before tests — locked means another session is
-   mid-run against the same copies.
+4. Check `Temp\UnityLockfile` in `C:\Games\Prince's Palace-v2-TestRunner`,
+   `-v2-TestRunner2`, `-v2-TestRunner3` and `-v2-TestRunner4` before tests —
+   locked means another session is mid-run against the same copies (the gate
+   uses all four; `Test-RunnerFree` refuses on a held one).
 
 `docs/CODE_MAP.md` is searched, never read whole.
 

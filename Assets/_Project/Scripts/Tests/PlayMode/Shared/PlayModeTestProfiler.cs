@@ -18,7 +18,10 @@ namespace PrincesPalace.PlayModeTests
     // =====================================================================
     // DO NOT DELETE, RENAME OR REPLACE THIS CLASS WITHOUT MOVING ITS HOOKS.
     // It is NOT only a profiler. It is the PlayMode assembly's one
-    // TestRunCallback, and three pieces of test infrastructure run from it:
+    // TestRunCallback, and four pieces of test infrastructure run from it:
+    //   - TestGlobals.ResetEngineClock, before every test and fixture --
+    //     without it a clock another fixture (or a system menu it left
+    //     open) stopped freezes every scaled wait in the next one;
     //   - UnityEventRegistryPrune.BeforeTest, before every test -- without
     //     it every Single scene load slows as Unity's event registry grows;
     //   - TestSaveSandbox, before every test and fixture -- without it a
@@ -166,10 +169,12 @@ namespace PrincesPalace.PlayModeTests
                     try { SharedScene.CallbackSawTestStart(); } catch (Exception) { }
                     try { UnityEventRegistryPrune.BeforeTest(); } catch (Exception) { }
                     try { TestSaveSandbox.BeforeTest(); } catch (Exception) { }
+                    try { TestGlobals.ResetEngineClock(); } catch (Exception) { }
                 }
                 else if (kind == "fixture")
                 {
                     try { TestSaveSandbox.BeforeFixture(); } catch (Exception) { }
+                    try { TestGlobals.ResetEngineClock(); } catch (Exception) { }
                 }
 
                 EnsureHook();

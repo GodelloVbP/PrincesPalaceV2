@@ -48,6 +48,17 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // InvestingAPointKeepsTheCarriedFraction opens the hub's system
+            // menu, which pauses the game (timeScale 0), and its Hub scene
+            // outlives this fixture. Left open, the next fixture that loads
+            // no scene of its own inherited a stopped clock -- the 13
+            // "beat never finished" failures in FightBeatPhaseStanceTests and
+            // FightContactCueTests under a sharded order. Close it, which
+            // puts back the clock it took, and set it to 1 regardless.
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            if (menu != null && menu.IsOpen) menu.Close();
+            Time.timeScale = 1f;
+
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
