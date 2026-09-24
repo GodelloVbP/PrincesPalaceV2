@@ -207,7 +207,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> AttributeRowMinuses = new List<NodeRef>();
 
         // Indexed by SheetStats.Derived.
-        public List<NodeRef> StatRows = new List<NodeRef>();
         public List<NodeRef> StatNames = new List<NodeRef>();
         public List<NodeRef> StatValues = new List<NodeRef>();
         public List<NodeRef> StatPreviews = new List<NodeRef>();
@@ -1278,7 +1277,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(cx, y - DossierLayout.StatRowHeight * 0.5f)).AsDecor();
 
                 StatHighlights.Add(highlight);
-                StatRows.Add(highlight);
                 StatNames.Add(name);
                 StatValues.Add(value);
                 StatPreviews.Add(preview);
@@ -1487,17 +1485,5 @@ namespace PrincesPalace.Domain.UiKit.Screens
             Tooltip = panel;
             return panel;
         }
-    }
-
-    // The pack's filter tabs, in one list so a new category is one entry.
-    public static class PackFilters
-    {
-        public static readonly UiString[] All =
-        {
-            UiStrings.PackFilterAll,
-            UiStrings.PackFilterArmour,
-            UiStrings.PackFilterWeapons,
-            UiStrings.PackFilterSalves,
-        };
     }
 }

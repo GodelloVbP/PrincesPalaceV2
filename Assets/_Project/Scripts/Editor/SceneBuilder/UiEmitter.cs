@@ -66,7 +66,7 @@ public static class UiEmitter
         switch (node.Kind)
         {
             case UiNodeKind.Label:
-                EmitLabel(go, node, decor);
+                EmitLabel(go, node);
                 break;
             case UiNodeKind.Button:
                 EmitButton(go, node, solved);
@@ -206,7 +206,7 @@ public static class UiEmitter
     private static string BakedText(UiString text) =>
         text.IsTemplated ? text.AuditSample : text.Format();
 
-    private static void EmitLabel(GameObject go, UiNode node, bool decor)
+    private static void EmitLabel(GameObject go, UiNode node)
     {
         var text = go.AddComponent<TextMeshProUGUI>();
         text.text = BakedText(node.Text);

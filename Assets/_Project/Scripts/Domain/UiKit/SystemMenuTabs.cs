@@ -11,8 +11,8 @@ namespace PrincesPalace.Domain.UiKit
     // a build-time check refuses a strip that no longer fits.
     //
     // The set is CONTEXT-DRIVEN rather than fixed, which is the design pass's
-    // answer to "can a tab be disabled": no. Out of a run the menu has three
-    // tabs; in a run it has five, because Floor map and Run statistics have
+    // answer to "can a tab be disabled": no. Out of a run the menu has four
+    // tabs; in a run it has six, because Floor map and Run statistics have
     // something to show. A tab that cannot be used is absent, never greyed --
     // a greyed tab asks the player to work out why, and there is nowhere on a
     // tab to answer.

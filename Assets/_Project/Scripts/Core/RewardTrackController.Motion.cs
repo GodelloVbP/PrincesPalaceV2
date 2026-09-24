@@ -460,8 +460,7 @@ namespace PrincesPalace
         {
             for (int level = fromLevel; level <= throughLevel; level++)
             {
-                Animate(Burst(_nextRig, level));
-                _nextRig = (_nextRig + 1) % burstRoots.Length;
+                FireBurst(level);
 
                 // ACCELERATING, slightly. A fixed stagger over thirty-five
                 // levels is thirty-five identical events in a row; shortening
@@ -480,6 +479,18 @@ namespace PrincesPalace
             }
 
             _bursts = null;
+        }
+
+        // ONE ROUND-ROBIN RIG PICK, shared by ClaimBursts (a multi-level claim)
+        // and OnLevelGained (a level arriving while the panel is open). Both
+        // used to hand-roll this same pair; a rig picked one way for a claim
+        // and another way for an arrival would desync which rig is "next".
+        private void FireBurst(int level)
+        {
+            if (burstRoots == null || burstRoots.Length == 0) return;
+
+            Animate(Burst(_nextRig, level));
+            _nextRig = (_nextRig + 1) % burstRoots.Length;
         }
 
         // One burst, from ignition to nothing.
@@ -680,7 +691,7 @@ namespace PrincesPalace
         // anyway because it is the same three cues the fly-in and the glide
         // already own, and because a track that does not react to a level
         // arriving is the one thing a battle pass must not be.
-        private void OnLevelGained(int newLevel)
+        private void OnLevelGained(int before, int newLevel)
         {
             if (railFill != null)
             {
@@ -689,7 +700,7 @@ namespace PrincesPalace
 
             GlideTo(newLevel, FollowSeconds);
 
-            // THE SAME RIG THE CLAIM USES, at the level just reached.
+            // THE SAME RIG THE CLAIM USES, once per level crossed.
             //
             // Ignition and collection are different events and were drawn by
             // different code against the same node; now that a burst is four
@@ -697,10 +708,13 @@ namespace PrincesPalace
             // explosions to keep in step. What separates them is not the shape
             // -- it is that this one leaves a reward WAITING and the other
             // takes it away, which the pulse and the seal already say.
-            if (burstRoots != null && burstRoots.Length > 0)
+            //
+            // A gain can itself cross more than one level (a fight granting
+            // enough XP to skip a level outright), the same as a multi-level
+            // claim does -- FireBurst per level, not one burst for the jump.
+            for (int level = before + 1; level <= newLevel; level++)
             {
-                Animate(Burst(_nextRig, newLevel));
-                _nextRig = (_nextRig + 1) % burstRoots.Length;
+                FireBurst(level);
             }
         }
 

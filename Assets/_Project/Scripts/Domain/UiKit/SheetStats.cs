@@ -103,9 +103,11 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.Speed: return UiStrings.StatSpeed;
                 case SheetStat.ManaRegen: return UiStrings.StatManaRegen;
                 case SheetStat.PhysicalDefense: return UiStrings.StatPhysicalDefense;
+                case SheetStat.MagicalDefense: return UiStrings.StatMagicalDefense;
                 case SheetStat.MaxMana: return UiStrings.StatMaxMana;
                 case SheetStat.SignatureGain: return UiStrings.StatSignatureGain;
-                default: return UiStrings.StatMagicalDefense;
+                default: throw new System.ArgumentOutOfRangeException(nameof(stat), stat,
+                    "SheetStat has no label -- add a case above.");
             }
         }
 
@@ -277,13 +279,15 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.Speed: return stats.speed;
                 case SheetStat.ManaRegen: return stats.manaRegen;
                 case SheetStat.PhysicalDefense: return stats.physicalDefense;
+                case SheetStat.MagicalDefense: return stats.magicalDefense;
 
                 // Neither lives on StatBlock -- max mana and the signature are
                 // resolved per character in Core -- so the caller supplies them
                 // and this returns 0 rather than inventing a number.
                 case SheetStat.MaxMana: return 0;
                 case SheetStat.SignatureGain: return 0;
-                default: return stats.magicalDefense;
+                default: throw new System.ArgumentOutOfRangeException(nameof(stat), stat,
+                    "SheetStat has no value mapping -- add a case above.");
             }
         }
 

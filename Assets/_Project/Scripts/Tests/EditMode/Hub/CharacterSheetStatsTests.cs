@@ -45,6 +45,26 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(SheetStats.Abilities.Intersect(SheetStats.Derived).ToList());
         }
 
+        // Iterates the ENUM directly, not SheetStats.All -- a member that is
+        // declared but never added to Abilities/Derived would slip past every
+        // other test here. LabelFor and ValueOf both throw on an unhandled
+        // stat now (SheetStats.cs), so a forgotten case fails loudly here
+        // instead of silently reading as MagicalDefense.
+        [Test]
+        public void EveryDeclaredStatHasALabelAndAValue()
+        {
+            var stats = new StatBlock();
+            var scores = new AbilityScoreBlock();
+
+            foreach (SheetStat stat in Enum.GetValues(typeof(SheetStat)))
+            {
+                Assert.DoesNotThrow(() => SheetStats.LabelFor(stat),
+                    $"{stat} has no label -- add a case to SheetStats.LabelFor");
+                Assert.DoesNotThrow(() => SheetStats.ValueOf(stat, stats, scores),
+                    $"{stat} has no value mapping -- add a case to SheetStats.ValueOf");
+            }
+        }
+
         [Test]
         public void EveryStatHasItsOwnLabel()
         {

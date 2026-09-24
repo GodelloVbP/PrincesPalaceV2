@@ -11,8 +11,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // THE BAR IS BUILT IN MEASURED MODE and re-laid at runtime.
     //
     // That needs saying because it looks like a violation of this project's
-    // first rule. The tab SET is context-driven -- three tabs out of a run,
-    // five in one -- and the two sets use different layout rules, but a scene
+    // first rule. The tab SET is context-driven -- four tabs out of a run,
+    // six in one -- and the two sets use different layout rules, but a scene
     // is generated once. So the build authors every tab at its five-tab
     // position and SystemMenuController re-applies SystemMenuLayout for
     // whichever set is showing. The arithmetic still lives in exactly one

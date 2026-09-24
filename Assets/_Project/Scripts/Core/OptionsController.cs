@@ -52,6 +52,17 @@ namespace PrincesPalace
         private void OnEnable()
         {
             Wire();
+
+            // Runs every open, not just the first -- Wire()'s reset (inside its
+            // _wired guard) only ever fires once. Without this, closing Options
+            // while the mouse sits over a row leaves that row's hover plate at
+            // HoverAlpha for every reopen after, since nothing else clears it.
+            for (int i = 0; rowHovers != null && i < rowHovers.Length; i++)
+            {
+                if (rowHovers[i] == null) continue;
+                Fade(rowHovers[i], 0f);
+            }
+
             Refresh();
         }
 

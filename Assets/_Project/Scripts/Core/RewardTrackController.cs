@@ -315,7 +315,7 @@ namespace PrincesPalace
             // is not: on open, _level goes from 1 to whatever the save holds,
             // and treating that as a gain would ignite the player's own node
             // every single time the screen is looked at.
-            if (!first && _level > before) OnLevelGained(_level);
+            if (!first && _level > before) OnLevelGained(before, _level);
         }
 
         // THE SELECTED CHARACTER, resolved against the CURRENT save every

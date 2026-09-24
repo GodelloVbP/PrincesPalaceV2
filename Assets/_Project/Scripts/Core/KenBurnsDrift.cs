@@ -28,14 +28,6 @@ namespace PrincesPalace
         private RectTransform _rect;
         private Vector2 _basePosition;
 
-        // Never below 1. The layer is the full-bleed background, so any scale
-        // under 1 pulls its edges inside the canvas and shows bare camera
-        // colour down the sides -- the cosine below is what guarantees the
-        // curve only ever reaches 1 at its trough rather than crossing it.
-        // Forwarder onto AmbienceCurves.KenBurnsScaleAt.
-        public static float ScaleAt(float seconds, float maxScale, float periodSeconds) =>
-            AmbienceCurves.KenBurnsScaleAt(seconds, maxScale, periodSeconds);
-
         private void Awake()
         {
             _rect = GetComponent<RectTransform>();
@@ -44,7 +36,12 @@ namespace PrincesPalace
 
         private void Update()
         {
-            float scale = ScaleAt(Time.time, MaxScale, ScalePeriodSeconds);
+            // Never below 1. The layer is the full-bleed background, so any scale
+            // under 1 pulls its edges inside the canvas and shows bare camera
+            // colour down the sides -- the cosine in AmbienceCurves is what
+            // guarantees the curve only ever reaches 1 at its trough rather than
+            // crossing it.
+            float scale = AmbienceCurves.KenBurnsScaleAt(Time.time, MaxScale, ScalePeriodSeconds);
             _rect.localScale = new Vector3(scale, scale, 1f);
             _rect.anchoredPosition = _basePosition
                 + SlowDrift.OffsetAt(Time.time, PanAmplitude, PanPeriodSeconds, 0f);

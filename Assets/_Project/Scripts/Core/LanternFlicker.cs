@@ -40,11 +40,6 @@ namespace PrincesPalace
         private Vector3 _baseScale;
         private float _phase;
 
-        // Kept as a forwarder so existing call sites and the ambience builder do
-        // not all have to learn the new home at once. New code should ask the
-        // curve directly.
-        public static float IntensityAt(float seconds) => FlickerCurve.Lantern.At(seconds);
-
         private void Awake()
         {
             _image = GetComponent<Image>();

@@ -795,20 +795,7 @@ places to actually take, and only one of the three would fail to compile if miss
 is mechanical and safe, but `Domain/UiKit` and `Domain/Party` referencing `Domain/Combat` at all
 is an assembly-layering call this register does not get to make unasked.
 
-### 90. `FightSubmenuLayout.FrameContentCentreY`'s comment states a kit-delivery-old inset split
-
-`Domain/UiKit/FightSubmenuLayout.cs:240-246`. The comment reads "the top and bottom insets differ
-(4.5% vs 4%)", but the insets it is describing — `FrameInset` at `:218-219`, resolved from
-`Ui.ContainerContentInset(ContainerRatio.ThreeByFour)` — are documented three lines above as
-`.052`/`.055` (`:195-199`, "500 / (1 - .052 - .055) = 559.9"): 5.2%/5.5%, not 4.5%/4%. The
-container kit was re-spliced at least once between the two comments being written and the numbers
-were never reconciled — the arithmetic on `:246` (`FrameHeight * (FrameInset.Bottom - FrameInset.Top) * 0.5f`)
-is still correct, only the prose restating it is stale.
-
-**Why it is the owner's:** a one-line comment fix, but it is the kind of drift `docs/AUDIT.md`'s own
-`CODE_STANDARDS.md` §9 rule ("prefer a reference to a restatement in prose") argues should be
-replaced with a live read of `FrameInset.Top`/`.Bottom` rather than re-typed numbers again — that's
-a small design choice about this file's comment style, not just a typo fix.
+### ~~90. `FightSubmenuLayout.FrameContentCentreY`'s comment states a kit-delivery-old inset split~~ -- struck as obsolete: `FrameContentCentreY` and `FrameInset` were removed in `47358962` (2026-09-23, the flat-fill rework), full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 91. `SystemMenuLayout.StripFits` cannot return false while uniform mode is active
 
