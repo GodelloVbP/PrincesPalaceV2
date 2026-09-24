@@ -15,7 +15,8 @@ MonoBehaviour:
   data:
     Id: bloodlust
     DisplayName: Bloodlust
-    Description: Killing an enemy grants this character another turn.
+    Description: The first time this character kills an enemy each fight, they take
+      another turn.
     Effect: 3
     SortOrder: 2
     IconPath: Assets/_Project/Art/Items/Relics/Processed/bloodlust.png

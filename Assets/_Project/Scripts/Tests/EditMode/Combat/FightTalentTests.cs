@@ -1156,10 +1156,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(2, a.SignaturePool.Current, "B's turn re-armed A's cap");
         }
 
-        // SHATTER COUNTS THE WARDS IT BREAKS, not the people wearing them:
-        // wards stack, so two of his on one wearer are two wards.
+        // SHATTER COUNTS WEARERS, not ward entries (owner 2026-09-24): wards
+        // stack, but a wearer's whole ward breaks as ONE explosion, so two of
+        // his on one wearer read as one ward -- the same count as the blasts.
         [Test]
-        public void ShatterNamesEveryWardItBreaks_NotEveryWearer()
+        public void ShatterCountsEachWearersWholeWardAsOne()
         {
             var lamb = Hero("Lamb", speed: 10);
             Talents(lamb, new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 50));
@@ -1173,8 +1174,10 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(session.CastSkill(0, null), "fixture: the shatter went off");
 
-            Assert.IsTrue(Messages(session).Any(m => m.Contains("Lamb shatters 2 wards!")),
-                "two of his wards were on him, and both went");
+            var messages = Messages(session).ToList();
+            Assert.IsTrue(messages.Any(m => m.Contains("Lamb shatters 1 ward!")),
+                "two stacked wards on one wearer are one ward and one blast");
+            Assert.IsFalse(messages.Any(m => m.Contains("shatters 2 wards")));
             Assert.IsFalse(StatusEffects.IsWarded(lamb));
         }
     }

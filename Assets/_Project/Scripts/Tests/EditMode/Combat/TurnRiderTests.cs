@@ -193,8 +193,8 @@ namespace PrincesPalace.Domain.Tests
         {
             // A Ram wearing the Bloodlust relic would otherwise bank TWO extra
             // turns for one kill, which neither the talent nor the relic
-            // promises, and which stacks their two independent caps into a
-            // four-attack chain.
+            // promises -- and would burn Bloodlust's once-a-fight charge on a
+            // kill Trample had already paid for.
             //
             // Counting pending grants rather than reading messages is the
             // point: grants stack silently, so "hero is Current again" looks
@@ -232,88 +232,96 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(MessagesIn(round).Any(m => m.Contains("Bloodlust")));
         }
 
-        [Test]
-        public void BloodlustIsCappedPerChain()
-        {
-            // Kills are free, unlike banked actions, so without a cap a lucky
-            // room becomes an unbounded chain.
-            var foes = new List<CombatantState>();
-            for (int i = 0; i < FightTuning.MaxBloodlustChain + 1; i++)
-            {
-                foes.Add(Foe("Weak" + i, 1));
-            }
-            foes.Add(Foe("Tank", 1000));
-
-            var hero = Hero();
-            var (session, _, encounter) = Fight(hero, KitWith(BloodlustRelic), foes.ToArray());
-
-            for (int i = 0; i < FightTuning.MaxBloodlustChain; i++)
-            {
-                int slot = i;
-                var granted = Round(session, () => session.ExecuteAttack(encounter.Enemies[slot]));
-                Assert.AreEqual(0, EnemyTurnsIn(granted), "grant " + (slot + 1) + " of the chain");
-            }
-
-            int lastSlot = FightTuning.MaxBloodlustChain;
-            var capped = Round(session, () => session.ExecuteAttack(encounter.Enemies[lastSlot]));
-            Assert.GreaterOrEqual(EnemyTurnsIn(capped), 1, "the chain is capped");
-        }
-
-        // ---- one streak, two sources ------------------------------------------
+        // ---- Bloodlust: once per fight (owner 2026-09-24) ----------------------
         //
-        // The short-circuit above stops one kill buying two actions. These pin
-        // the other half: once Trample is capped, falling through to Bloodlust
-        // on the NEXT kill must not reopen a second, untouched budget. Both
-        // count against one streak, so the chain is the larger cap, not the
-        // sum. Counts are literal (Bloodlust's cap is 2) on purpose.
+        // The relic buys ONE extra action a fight, on the holder's first kill
+        // Trample did not already reward, and is then spent until a new
+        // FightSession. Counts are literal on purpose.
 
         [Test]
-        public void ACappedTrampleFallsThroughToBloodlust_ButTheStreakIsShared()
+        public void BloodlustGrantsOnTheFirstKill_ThenNeverAgainThisFight()
         {
-            // Trample 1 + Bloodlust 2 used to chain 1 + 2 = three extra actions
-            // (a four-attack turn). Shared streak: two extra actions, then the
-            // turn passes.
             var hero = Hero();
-            GiveTrample(hero, 1);
             var (session, _, encounter) = Fight(hero, KitWith(BloodlustRelic),
                 Foe("W0", 1), Foe("W1", 1), Foe("W2", 1), Foe("Tank", 1000));
 
             var first = Round(session, () => session.ExecuteAttack(encounter.Enemies[0]));
-            Assert.AreEqual(0, EnemyTurnsIn(first), "kill 1: Trample");
-            Assert.IsTrue(MessagesIn(first).Any(m => m.Contains("tramples")));
+            Assert.AreEqual(0, EnemyTurnsIn(first), "kill 1: Bloodlust's one extra action");
+            Assert.AreEqual(1, MessagesIn(first).Count(m => m.Contains("Bloodlust")));
 
             var second = Round(session, () => session.ExecuteAttack(encounter.Enemies[1]));
-            Assert.AreEqual(0, EnemyTurnsIn(second), "kill 2: Trample is capped, Bloodlust has room");
-            Assert.IsTrue(MessagesIn(second).Any(m => m.Contains("Bloodlust")));
+            Assert.IsFalse(encounter.Enemies[1].IsAlive);
+            Assert.GreaterOrEqual(EnemyTurnsIn(second), 1, "kill 2, same turn: spent");
+            Assert.IsFalse(MessagesIn(second).Any(m => m.Contains("Bloodlust")));
 
+            // A NEW TURN, same fight: still spent. This is what separates
+            // "once per fight" from the old per-turn chain cap.
+            Assert.AreSame(hero, encounter.Current, "fixture: the turn came back to the hero");
             var third = Round(session, () => session.ExecuteAttack(encounter.Enemies[2]));
             Assert.IsFalse(encounter.Enemies[2].IsAlive);
-            Assert.GreaterOrEqual(EnemyTurnsIn(third), 1,
-                "kill 3: two extra actions already taken, which is Bloodlust's cap too");
-            Assert.IsFalse(MessagesIn(third).Any(m => m.Contains("Bloodlust") || m.Contains("tramples")));
+            Assert.GreaterOrEqual(EnemyTurnsIn(third), 1, "kill 3, next turn: still spent");
+            Assert.IsFalse(MessagesIn(third).Any(m => m.Contains("Bloodlust")));
         }
 
         [Test]
-        public void ATrampleCapAboveBloodlustsIsTheWholeStreak()
+        public void BloodlustIsBackInTheNextFight()
         {
-            // Trample 3 + Bloodlust 2: three extra actions, all Trample's, and
-            // Bloodlust adds nothing on top -- its cap of 2 is already spent.
+            // The SAME combatant and kit in both fights, so nothing but the
+            // new FightSession can be what re-arms it.
             var hero = Hero();
-            GiveTrample(hero, 3);
+            var kit = KitWith(BloodlustRelic);
+
+            var (firstFight, _, firstEncounter) = Fight(hero, kit, Foe("W0", 1), Foe("Tank", 1000));
+            var spent = Round(firstFight, () => firstFight.ExecuteAttack(firstEncounter.Enemies[0]));
+            Assert.AreEqual(1, MessagesIn(spent).Count(m => m.Contains("Bloodlust")),
+                "fixture: fight 1 spent it");
+
+            var (secondFight, _, secondEncounter) = Fight(hero, kit, Foe("W0", 1), Foe("Tank", 1000));
+            var round = Round(secondFight, () => secondFight.ExecuteAttack(secondEncounter.Enemies[0]));
+
+            Assert.AreEqual(0, EnemyTurnsIn(round), "fight 2: one extra action again");
+            Assert.AreEqual(1, MessagesIn(round).Count(m => m.Contains("Bloodlust")));
+        }
+
+        // ---- the two riders together ------------------------------------------
+
+        [Test]
+        public void TrampleOnePlusBloodlust_IsTwoExtrasThisTurn_AndBloodlustStaysSpent()
+        {
+            // Kill 1 -> Trample (cap 1). Kill 2 -> Trample capped, Bloodlust
+            // grants and is spent. Kill 3 -> nothing: the turn passes. Then on
+            // the NEXT turn Trample is back (per turn) but Bloodlust is not
+            // (per fight): kill 4 tramples, kill 5 ends the turn.
+            var hero = Hero();
+            GiveTrample(hero, 1);
             var (session, _, encounter) = Fight(hero, KitWith(BloodlustRelic),
-                Foe("W0", 1), Foe("W1", 1), Foe("W2", 1), Foe("W3", 1), Foe("Tank", 1000));
+                Foe("W0", 1), Foe("W1", 1), Foe("W2", 1), Foe("W3", 1), Foe("W4", 1),
+                Foe("Tank", 1000));
 
-            for (int i = 0; i < 3; i++)
-            {
-                int slot = i;
-                var granted = Round(session, () => session.ExecuteAttack(encounter.Enemies[slot]));
-                Assert.AreEqual(0, EnemyTurnsIn(granted), "kill " + (slot + 1) + ": Trample");
-                Assert.IsFalse(MessagesIn(granted).Any(m => m.Contains("Bloodlust")));
-            }
+            var first = Round(session, () => session.ExecuteAttack(encounter.Enemies[0]));
+            Assert.AreEqual(0, EnemyTurnsIn(first), "kill 1: Trample");
+            Assert.IsTrue(MessagesIn(first).Any(m => m.Contains("tramples")));
+            Assert.IsFalse(MessagesIn(first).Any(m => m.Contains("Bloodlust")));
 
+            var second = Round(session, () => session.ExecuteAttack(encounter.Enemies[1]));
+            Assert.AreEqual(0, EnemyTurnsIn(second), "kill 2: Trample capped, Bloodlust grants");
+            Assert.IsTrue(MessagesIn(second).Any(m => m.Contains("Bloodlust")));
+            Assert.IsFalse(MessagesIn(second).Any(m => m.Contains("tramples")));
+
+            var third = Round(session, () => session.ExecuteAttack(encounter.Enemies[2]));
+            Assert.IsFalse(encounter.Enemies[2].IsAlive);
+            Assert.GreaterOrEqual(EnemyTurnsIn(third), 1, "kill 3: two extras taken, the turn passes");
+            Assert.IsFalse(MessagesIn(third).Any(m => m.Contains("Bloodlust") || m.Contains("tramples")));
+
+            Assert.AreSame(hero, encounter.Current, "fixture: the turn came back to the hero");
             var fourth = Round(session, () => session.ExecuteAttack(encounter.Enemies[3]));
-            Assert.IsFalse(encounter.Enemies[3].IsAlive);
-            Assert.GreaterOrEqual(EnemyTurnsIn(fourth), 1, "kill 4: the streak is at 3, past both caps");
+            Assert.AreEqual(0, EnemyTurnsIn(fourth), "kill 4, new turn: Trample's cap is per turn");
+            Assert.IsTrue(MessagesIn(fourth).Any(m => m.Contains("tramples")));
+
+            var fifth = Round(session, () => session.ExecuteAttack(encounter.Enemies[4]));
+            Assert.IsFalse(encounter.Enemies[4].IsAlive);
+            Assert.GreaterOrEqual(EnemyTurnsIn(fifth), 1, "kill 5: Bloodlust is spent for the fight");
+            Assert.IsFalse(MessagesIn(fifth).Any(m => m.Contains("Bloodlust") || m.Contains("tramples")));
         }
 
         [Test]

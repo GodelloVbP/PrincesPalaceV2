@@ -2,15 +2,10 @@ namespace PrincesPalace.Domain.Combat.Session
 {
     // Balance constants for a fight, moved out of v1's FightController.
     //
-    // In Domain because they are combat rules, not presentation. A cap on how
-    // many extra turns a kill can chain into is the same kind of fact as how
-    // much armour softens a hit.
+    // In Domain because they are combat rules, not presentation. How often a
+    // relic fires is the same kind of fact as how much armour softens a hit.
     public static class FightTuning
     {
-        // How many extra turns one Bloodlust chain can produce. Kills are
-        // free, so without a cap a lucky room turns into an unbounded chain.
-        public const int MaxBloodlustChain = 2;
-
         // ---- counting relics -----------------------------------------------------
         //
         // "Every Nth" is counted PER FIGHT and per character, not per run: a

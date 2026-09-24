@@ -121,8 +121,7 @@ namespace PrincesPalace.Domain.Combat
 
         // A kill does not consume the action: you may act again, at most
         // Magnitude extra times per turn. Capped because a chain of kills
-        // with no ceiling is unbounded by construction, the same reason
-        // FightTuning.MaxBloodlustChain exists.
+        // with no ceiling is unbounded by construction.
         ExtraAttackOnKill,
 
         // ── Wrath: the transform as a juggernaut ─────────────────────────

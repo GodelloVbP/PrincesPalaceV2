@@ -615,13 +615,14 @@ namespace PrincesPalace.Domain.Combat.Session
             int selfMultiplier = caster.Talents.Best(TalentEffectType.ShatterSelfWardMultiplier);
             bool appliesVulnerable = caster.Talents.Has(TalentEffectType.ShatterAppliesVulnerable);
 
-            // COUNTED IN ENTRIES, not wearers. Wards stack, so one wearer can
-            // carry several of his (a Ward cast on himself over a Runic
-            // conversion, say) and every one of them goes below; the blasts
-            // stay one per WEARER, which is the loop's rule and not this
-            // line's to change.
-            int shattered = wearers.Sum(w => w.Statuses.Count(s =>
-                s.Type == StatusEffectType.Shielded && ReferenceEquals(s.Source, caster)));
+            // COUNTED IN WEARERS, the same unit as the blasts below. Wards
+            // stack, so one wearer can carry several of his (a Ward cast on
+            // himself over a Runic conversion, say), but owner 2026-09-24:
+            // Shatter breaks a wearer's WHOLE ward as one, "always 1
+            // explosion" however many entries make it up. Counting entries
+            // here (9ce7368b) made the line promise more blasts than the loop
+            // throws.
+            int shattered = wearers.Count;
 
             var summary = new StringBuilder(shattered == 1
                 ? $"{caster.Name} shatters 1 ward!"

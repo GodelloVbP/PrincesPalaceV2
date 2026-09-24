@@ -98,8 +98,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // content (SaveData.SquadOfThreeReady); unused rows are hidden, so
         // there is no cost to this covering the common case exactly rather
         // than leaving headroom above it. Pinned against EffectiveMaxSquadSize
-        // by ReckoningTests -- a save that also buys the one purchasable
-        // extra slot outgrows this by one row.
+        // by ReckoningTests. The one purchasable extra slot cannot outgrow
+        // it: EffectiveMaxSquadSize caps the squad at
+        // FightHudSpec.StageSlotsPerSide, which is 3.
         public const int RowCount = 3;
 
         public UiNode Root;
@@ -791,8 +792,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ITEM-MODIFIER PLAN PHASE F: 400 -> 590. The AFFIXES section moved
         // from ONE shared block above every member to its OWN block inside
         // EACH member's (ItemStatLines.SquadBody, ModifierComparisonLines) --
-        // the max squad is now three (SaveData.EffectiveMaxSquadSize, plus
-        // the one purchasable extra slot on top), and a fully different
+        // the max squad is now three (SaveData.EffectiveMaxSquadSize, which
+        // caps at FightHudSpec.StageSlotsPerSide = 3 even with the one
+        // purchasable extra slot bought), and a fully different
         // three-slot Convergent item on both sides can now print a heading,
         // up to three gain lines, AND up to three "Losing: <name>" lines PER
         // MEMBER, where before the whole squad shared one heading and three

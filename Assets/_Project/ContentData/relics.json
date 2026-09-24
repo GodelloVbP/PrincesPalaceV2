@@ -21,7 +21,7 @@
     {
       "id": "bloodlust",
       "displayName": "Bloodlust",
-      "description": "Killing an enemy grants this character another turn.",
+      "description": "The first time this character kills an enemy each fight, they take another turn.",
       "effect": "Bloodlust",
       "rarity": "common",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bloodlust.png"

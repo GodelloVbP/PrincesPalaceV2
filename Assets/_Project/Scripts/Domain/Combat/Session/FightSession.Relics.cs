@@ -531,9 +531,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ONCE PER ACTION, however many things that action killed, and only
         // when Trample did not already grant this kill's extra action (see
-        // AdvanceAfterAction). Bloodlust grants a turn, and a swing that fells
-        // two enemies should not grant two. Returns whether a turn was
-        // granted; the shared streak it counts against is reset by the
+        // AdvanceAfterAction). Bloodlust grants a turn, once per fight, and a
+        // swing that fells two enemies should not grant two. Returns whether
+        // a turn was granted; Trample's per-turn count is reset by the
         // caller, not here.
         private bool RelicsOnKill(CombatantState actor)
         {

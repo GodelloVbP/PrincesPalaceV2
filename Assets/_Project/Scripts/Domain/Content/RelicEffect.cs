@@ -44,8 +44,9 @@ namespace PrincesPalace.Domain.Content
         // compound it.
         MagicalShield,
 
-        // After the character's action kills an enemy, they get an extra
-        // turn (capped — see FightTuning.MaxBloodlustChain).
+        // The first time the character's action kills an enemy in a fight,
+        // they get one extra action; then it is spent until the next fight
+        // (FightSession.TryGrantBloodlust).
         Bloodlust,
 
         // Every 4th cast lands with half its own base potency again on top.
