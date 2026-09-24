@@ -350,15 +350,17 @@ namespace PrincesPalace.PlayModeTests
                 if (fadedFrame < 0 && body <= 0.001f) fadedFrame = frame;
 
                 // THE WALK HAS BEGUN when the animator has a new goal, not when
-                // the figure has visibly moved. The walk itself runs on the
-                // UNSCALED clock (StageActorAnimator.Gliding), which
-                // captureDeltaTime does not pin: at an idle machine's ~1ms
-                // real frames its first step was under MarkTolerance and was
-                // seen a frame or more later, and under load a ~20ms real
-                // frame moved it past tolerance on the very frame it began --
-                // so "has it moved" measured the machine, not the order.
-                // Mark is the goal the moment GlideTo is called, on the fixed
-                // beat clock the fade also runs on.
+                // the figure has visibly moved. The walk used to run on the
+                // UNSCALED clock, which captureDeltaTime does not pin: at an
+                // idle machine's ~1ms real frames its first step was under
+                // MarkTolerance and was seen a frame or more later, and under
+                // load a ~20ms real frame moved it past tolerance on the very
+                // frame it began -- so "has it moved" measured the machine,
+                // not the order. It steps by engine time now (see
+                // StageActorAnimator's header), but the goal is still the
+                // earlier and exact signal: Mark is the goal the moment
+                // GlideTo is called, on the fixed beat clock the fade also
+                // runs on.
                 if (slideStarted < 0 &&
                     (survivorAnimator.IsGliding ||
                      Vector2.Distance(survivorAnimator.Mark, FarMark) > MarkTolerance))

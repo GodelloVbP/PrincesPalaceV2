@@ -24,6 +24,24 @@ namespace PrincesPalace
     // target recoils reads as one exchange; sequencing them would need a
     // queue and a much larger change to how FightController resolves a turn
     // (the whole chain currently resolves synchronously in one frame).
+    //
+    // ONE CLOCK FOR EVERY MOVE HERE, AND IT IS Time.deltaTime -- the lunge,
+    // the walk, the punch and the afterimage fade alike, and StageShake too.
+    // Every duration here is already FightBeatPlayer.Scaled (authored seconds
+    // over the battle-speed pace), which is engine time, and the beat that
+    // drives these waits on WaitForSeconds, also engine time. The only
+    // production writer of Time.timeScale is the pause (SystemMenuController,
+    // which the character sheet opens through): hit-stop is the beat player
+    // WAITING, not the clock stopping, and battle speed divides durations
+    // rather than touching timeScale. So nothing on this stage has a
+    // timeScale drop to survive, and the one it does meet is a pause it must
+    // stop for. The walk, the punch and the stage kick used to step by
+    // unscaledDeltaTime and so played on behind an open menu while the lunge
+    // beside them froze -- and under a capture's pinned captureDeltaTime
+    // they ran at wall speed, which that pin does not reach (TESTING.md).
+    // Idle breath and hover are the deliberate exception, and they live in
+    // FightController.StageVisuals, not here: ambient, not beat-driven
+    // (PLAN_BATTLE_SPEED contract 9).
     public class StageActorAnimator : MonoBehaviour
     {
         // The strike should read as fast and hard, so the two halves are
@@ -129,6 +147,16 @@ namespace PrincesPalace
         // is the case for every headless test that never shows a sprite.
         private Image _spriteImage;
         private readonly List<Image> _ghosts = new List<Image>();
+
+        // THE FADE EACH POOLED GHOST IS WEARING, so reuse can stop it. Once the
+        // pool is full FreeGhost hands back the oldest ghost even while it is
+        // still fading -- on a charge that is the normal case, not an edge: a
+        // 0.18s rush sheds a ghost nearly every frame and each lives 0.14s, so
+        // the sixth arrives while the first is mid-fade. Without the stop, two
+        // FadeGhost coroutines wrote one Image's alpha, and the OLDER one
+        // finished first and switched the freshly placed ghost off a few frames
+        // into its own fade.
+        private readonly Dictionary<Image, Coroutine> _ghostFades = new Dictionary<Image, Coroutine>();
         private float _sinceGhost;
 
         // How many the OUTBOUND leg dropped, read by TweenBack to decide
@@ -648,7 +676,10 @@ namespace PrincesPalace
             float elapsed = 0f;
             while (elapsed < seconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                // Engine time, like the rest of this class (header): a pause
+                // holds the walk where it is, and the beat waiting on
+                // IsGliding waits with it.
+                elapsed += Time.deltaTime;
 
                 // Smoothstep: eased at both ends, unlike the lunge's
                 // snap-out/ease-back. A walk has no impact to emphasise, so
@@ -776,7 +807,7 @@ namespace PrincesPalace
             float elapsed = 0f;
             while (elapsed < seconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.deltaTime;
 
                 // Ease-out back to shape, so it springs rather than melts.
                 float t = Mathf.Clamp01(elapsed / seconds);
@@ -1001,7 +1032,14 @@ namespace PrincesPalace
             ghost.color = new Color(1f, 1f, 1f, GhostStartAlpha);
             ghost.gameObject.SetActive(true);
 
-            StartCoroutine(FadeGhost(ghost));
+            // One fade per ghost: a reused one's previous fade is stopped
+            // before the new one starts (see _ghostFades).
+            if (_ghostFades.TryGetValue(ghost, out var previous) && previous != null)
+            {
+                StopCoroutine(previous);
+            }
+
+            _ghostFades[ghost] = StartCoroutine(FadeGhost(ghost));
         }
 
         // An inactive pooled ghost, a fresh clone of the live sprite node while

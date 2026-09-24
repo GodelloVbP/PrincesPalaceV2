@@ -64,6 +64,12 @@ namespace PrincesPalace.PlayModeTests
 
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             FightController.BreathSpeedMultiplier = 1f;
+
+            // The two tests that pause and pin the clock put it back even
+            // when an assertion throws halfway (TestGlobals does it again
+            // before the next test; this is not left to that alone).
+            Time.timeScale = 1f;
+            Time.captureDeltaTime = 0f;
         }
 
         private GameObject Named(string name) =>
@@ -442,6 +448,188 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(sawGhostOnShortMove,
                 "a 20px lean trailed - the blur is meant for the fast parts, not every twitch");
+
+            Object.Destroy(stage.gameObject);
+        }
+
+        // ---- the pause holds the stage ------------------------------------------
+
+        // THE SYSTEM MENU PAUSES WITH Time.timeScale = 0, and every move on the
+        // stage has to stop with it -- the walk, the punch and the kick used to
+        // step by unscaledDeltaTime and played on behind the menu while the
+        // lunge beside them froze. Hit-stop and battle speed never touch
+        // timeScale (StageActorAnimator's header), so there is no stop this
+        // must survive.
+        //
+        // Two halves: started DURING a pause (nothing moves off its first
+        // pose, stated as literals), and caught MID-FLIGHT by one (nothing
+        // moves at all until the resume). Then the resume must land every one
+        // exactly home. On a bare rig at 1x with the frame pinned, so the
+        // clock is the only variable.
+        [UnityTest]
+        public IEnumerator APauseHoldsTheWalkThePunchAndTheKickWhereTheyAre()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            var stage = new GameObject("Stage", typeof(RectTransform)).GetComponent<RectTransform>();
+            var slot = new GameObject("Slot", typeof(RectTransform), typeof(StageActorAnimator));
+            slot.transform.SetParent(stage, false);
+            var animator = slot.GetComponent<StageActorAnimator>();
+            var slotRect = (RectTransform)slot.transform;
+
+            var rackGo = new GameObject("Rack", typeof(RectTransform), typeof(StageShake));
+            rackGo.transform.SetParent(stage, false);
+            var shake = rackGo.GetComponent<StageShake>();
+            var rack = (RectTransform)rackGo.transform;
+
+            Time.captureDeltaTime = 1f / 60f;
+            yield return null;
+            animator.Rehome();
+            shake.Rehome();
+
+            var walkTo = new Vector2(200f, 0f);
+
+            // ---- started during a pause ----
+            Time.timeScale = 0f;
+            yield return null;   // a frame whose deltaTime is already zero
+
+            animator.GlideTo(walkTo, Vector3.one, 0.3f);
+            animator.Punch(1f);
+            shake.Kick(1f);
+
+            for (int i = 0; i < 10; i++) yield return null;
+
+            Assert.IsTrue(animator.IsGliding, "the walk finished during the pause");
+            Assert.AreEqual(Vector2.zero, slotRect.anchoredPosition,
+                "the walk left its mark while the game was paused");
+            // PunchStretch -0.26 at full strength: x = 1 - 0.26, y = 1 + 0.26 x 0.55.
+            Assert.AreEqual(0.74f, slotRect.localScale.x, 0.0001f,
+                "the punch sprang back while the game was paused");
+            Assert.AreEqual(1.143f, slotRect.localScale.y, 0.0001f,
+                "the punch sprang back while the game was paused");
+            Assert.AreEqual(Vector2.zero, rack.anchoredPosition,
+                "the kick rattled the rack while the game was paused");
+
+            // ---- caught mid-flight ----
+            Time.timeScale = 1f;
+            for (int i = 0; i < 4; i++) yield return null;
+
+            Assert.IsTrue(animator.IsGliding, "fixture: the walk was over before the second pause");
+            Assert.AreNotEqual(Vector2.zero, slotRect.anchoredPosition, "fixture: the walk never started");
+
+            Time.timeScale = 0f;
+            yield return null;
+
+            var heldAt = slotRect.anchoredPosition;
+            var heldScale = slotRect.localScale;
+            var heldRack = rack.anchoredPosition;
+
+            for (int i = 0; i < 10; i++)
+            {
+                yield return null;
+                Assert.AreEqual(heldAt, slotRect.anchoredPosition, $"paused frame {i}: the walk moved");
+                Assert.AreEqual(heldScale, slotRect.localScale, $"paused frame {i}: the punch moved");
+                Assert.AreEqual(heldRack, rack.anchoredPosition,
+                    $"paused frame {i}: the rack was thrown to a new offset -- a paused kick must hold still");
+            }
+
+            // ---- resumed ----
+            Time.timeScale = 1f;
+            for (int i = 0; i < 60 && animator.IsGliding; i++) yield return null;
+            for (int i = 0; i < 30; i++) yield return null;   // the punch and kick are shorter; margin
+
+            Assert.IsFalse(animator.IsGliding, "the walk never arrived after the resume");
+            Assert.AreEqual(walkTo, slotRect.anchoredPosition, "the walk did not arrive exactly on its mark");
+            Assert.AreEqual(Vector3.one, slotRect.localScale, "the punch did not spring back to shape");
+            Assert.AreEqual(Vector2.zero, rack.anchoredPosition, "the kick did not put the rack back home");
+
+            Object.Destroy(stage.gameObject);
+        }
+
+        // ---- a reused afterimage has one fade --------------------------------------
+
+        // THE POOL HOLDS FIVE, AND A CHARGE SHEDS MORE THAN FIVE INSIDE ONE
+        // FADE. 900px over 0.18s at 60fps drops a ghost nearly every frame
+        // and each lives 0.14s, so the sixth reuses the first while it is
+        // still fading. Its old FadeGhost used to keep running: two
+        // coroutines on one Image, and the older one ended first and switched
+        // the freshly placed ghost off four frames into its new life.
+        //
+        // PINNED AS A LITERAL LIFETIME. At a pinned 1/60s frame a 0.14s fade
+        // writes on its emit frame and eight more (t = 0 .. 8/60 < 0.14), and
+        // is off on the ninth -- 9 frames from placement to gone, for every
+        // ghost, reused or not. A re-emit is detected by the ghost MOVING,
+        // not by its alpha: with two writers the alpha on the emit frame is
+        // whichever wrote last.
+        [UnityTest]
+        public IEnumerator AReusedAfterimageLivesItsFullFadeAndNoLonger()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            var stage = new GameObject("Stage", typeof(RectTransform)).GetComponent<RectTransform>();
+            var slot = new GameObject("Slot", typeof(RectTransform), typeof(StageActorAnimator));
+            slot.transform.SetParent(stage, false);
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            var spriteGo = new GameObject("Sprite", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            spriteGo.transform.SetParent(slot.transform, false);
+            var image = spriteGo.GetComponent<Image>();
+            image.sprite = Sprite.Create(new Texture2D(4, 4), new Rect(0, 0, 4, 4), new Vector2(0.5f, 0f));
+
+            Time.captureDeltaTime = 1f / 60f;
+            yield return null;
+            animator.Rehome();
+            animator.BindSprite(image);
+
+            animator.Play(new Vector2(900f, 0f), 0f, 0.18f);
+
+            var placedAt = new Dictionary<Image, Vector3>();
+            var placedFrame = new Dictionary<Image, int>();
+            var lifetimes = new List<int>();
+            int reuses = 0;
+
+            for (int frame = 0; frame < 120; frame++)
+            {
+                var ghosts = stage.GetComponentsInChildren<Image>(true)
+                    .Where(g => g.name == "Afterimage").ToList();
+
+                foreach (var ghost in ghosts)
+                {
+                    bool active = ghost.gameObject.activeSelf;
+                    var at = ghost.rectTransform.position;
+                    bool tracked = placedFrame.ContainsKey(ghost);
+
+                    if (active && (!tracked || (at - placedAt[ghost]).sqrMagnitude > 0.01f))
+                    {
+                        if (tracked) reuses++;
+                        placedAt[ghost] = at;
+                        placedFrame[ghost] = frame;
+                    }
+                    else if (!active && tracked)
+                    {
+                        lifetimes.Add(frame - placedFrame[ghost]);
+                        placedFrame.Remove(ghost);
+                        placedAt.Remove(ghost);
+                    }
+                }
+
+                if (frame > 0 && !animator.IsPlaying && ghosts.All(g => !g.gameObject.activeSelf)) break;
+                yield return null;
+            }
+
+            Assert.Greater(reuses, 0,
+                "fixture: no ghost was reused while still fading, so the pool never overflowed and " +
+                "nothing here tests the reuse");
+            Assert.IsEmpty(placedFrame.Keys, "a ghost was still on screen when the move was long over");
+            Assert.IsNotEmpty(lifetimes, "fixture: no ghost ever finished fading");
+
+            foreach (int life in lifetimes)
+            {
+                Assert.AreEqual(9, life,
+                    $"a ghost lived {life} frames instead of 9 -- a reused ghost's earlier fade was still " +
+                    "running and switched it off (or held it on) on its own schedule. Every lifetime: " +
+                    string.Join(", ", lifetimes));
+            }
 
             Object.Destroy(stage.gameObject);
         }

@@ -578,10 +578,11 @@ namespace PrincesPalace.PlayModeTests
             try
             {
                 // Read back, do not encode. EncodeToPNG is the expensive half,
-                // and doing it per frame stretches the wall clock the beat's own
-                // unscaled-time reactions (StageActorAnimator.Punch, StageShake)
-                // still run against. The frames are held and written once the
-                // beat is over.
+                // and doing it per frame stretches the wall clock the idle
+                // breath (the one unscaled clock left on the stage) runs
+                // against. The punch and the kick step by engine time now and
+                // follow the pinned frame. The frames are held and written
+                // once the beat is over.
                 yield return TheBeat(rec, i => frames.Add(rig.Grab()));
             }
             finally

@@ -115,7 +115,24 @@ namespace PrincesPalace
 
             while (elapsed < seconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                // ENGINE TIME, the one clock every stage move steps by
+                // (StageActorAnimator's header says why), so a pause holds
+                // the kick rather than letting it play out behind the menu.
+                //
+                // AND A FRAME THE CLOCK DID NOT ADVANCE DRAWS NO NEW NOISE.
+                // The envelope alone would freeze, but the offset inside it
+                // is re-rolled every frame -- so a paused kick would rattle
+                // the rack at its frozen amplitude for as long as the menu
+                // stayed open. Holding the last offset is what "paused" means
+                // for noise.
+                float step = Time.deltaTime;
+                if (step <= 0f)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                elapsed += step;
 
                 // Squared falloff, so the kick is nearly over by the time the
                 // eye has found it. Linear decay reads as a slow settle.
