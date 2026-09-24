@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Stats;
@@ -134,6 +135,92 @@ namespace PrincesPalace.Domain.Tests
             var result = requirement.Evaluate(context);
 
             Assert.AreEqual(expectedPassed, result.Passed);
+        }
+
+        // A counter's id is an internal name; the player sees generic wording,
+        // "Not yet" below min and "No longer" past max. Literal strings.
+        [TestCase(9, "Not yet")]
+        [TestCase(11, "No longer")]
+        public void Counter_ReasonNeverShowsTheCounterId(int counterValue, string expectedReason)
+        {
+            var context = new FakeEventContext();
+            context.Counters["wishing_well_tosses"] = counterValue;
+            var requirement = EventRequirement.Counter("wishing_well_tosses", 10, 10);
+
+            var result = requirement.Evaluate(context);
+
+            Assert.IsFalse(result.Passed);
+            Assert.AreEqual(expectedReason, result.Reason);
+        }
+
+        [Test]
+        public void Counter_MaxOnly_PastTheMax_SaysNoLonger()
+        {
+            var context = new FakeEventContext();
+            context.Counters["wishing_well_tosses"] = 4;
+            var requirement = EventRequirement.Counter("wishing_well_tosses", null, 3);
+
+            var result = requirement.Evaluate(context);
+
+            Assert.IsFalse(result.Passed);
+            Assert.AreEqual("No longer", result.Reason);
+        }
+
+        // ---- Authored reason ----------------------------------------------------
+
+        [Test]
+        public void AnAuthoredReason_ReplacesTheGeneratedOne_ForACounter()
+        {
+            var context = new FakeEventContext();
+            context.Counters["wishing_well_tosses"] = 2;
+            var requirement = EventRequirement.Counter("wishing_well_tosses", 10, null)
+                .WithAuthoredReason("The well has not heard you enough");
+
+            var result = requirement.Evaluate(context);
+
+            Assert.IsFalse(result.Passed);
+            Assert.AreEqual("The well has not heard you enough", result.Reason);
+        }
+
+        [Test]
+        public void AnAuthoredReason_ReplacesTheGeneratedOne_ForAnyOtherKind()
+        {
+            var context = new FakeEventContext();
+            var requirement = EventRequirement.InParty("sheep", "Shawn").WithAuthoredReason("Only a sheep would try this");
+
+            var result = requirement.Evaluate(context);
+
+            Assert.IsFalse(result.Passed);
+            Assert.AreEqual("Only a sheep would try this", result.Reason);
+        }
+
+        [Test]
+        public void AWhitespaceAuthoredReason_FallsBackToTheGeneratedOne()
+        {
+            var requirement = EventRequirement.Gold(5).WithAuthoredReason("   ");
+
+            var result = requirement.Evaluate(new FakeEventContext { GoldValue = 0 });
+
+            Assert.AreEqual("Requires 5 gold", result.Reason);
+        }
+
+        [Test]
+        public void ACharacterGate_NamesTheCharacterByDisplayName_NotItsId()
+        {
+            var context = new FakeEventContext();
+            var requirement = EventRequirement.AbilityAtLeast(AbilityScore.Charisma, 20, "sheep", "Shawn");
+
+            var result = requirement.Evaluate(context);
+
+            Assert.AreEqual("Requires Shawn with 20 CHA", result.Reason);
+        }
+
+        [Test]
+        public void PossibleReasons_ListsBothCounterCaptions_ForAMinAndMaxGate()
+        {
+            var requirement = EventRequirement.Counter("wishing_well_tosses", 10, 10);
+
+            CollectionAssert.AreEqual(new[] { "Not yet", "No longer" }, requirement.PossibleReasons().ToArray());
         }
 
         // ---- Gold ---------------------------------------------------------------

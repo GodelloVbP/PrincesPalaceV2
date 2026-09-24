@@ -18,10 +18,24 @@ namespace PrincesPalace.Domain.Content
     // once, rather than the runtime doing a lookup Domain cannot make.
     public static class EventEntryResolver
     {
-        // Named per plan contract 14 ("the content build caps body length");
-        // phase 3 verifies this actually fits the screen at the smallest
-        // canvas frame.
+        // Every player-facing string an event carries has a cap here, and
+        // each cap is the length of the sample EventScreen's box is audited
+        // against (UiStrings.EventTitle/EventBody/EventChoice/EventChoiceLocked
+        // build their samples FROM these constants). So the screen is always
+        // measured at exactly the longest string the build lets through, and
+        // moving a cap re-measures the box at the next scene build instead of
+        // drifting past it.
+        //
+        // Body and outcome result share one box (a result replaces the body).
         public const int MaxBodyLength = 600;
+        public const int MaxTitleLength = 28;
+        public const int MaxChoiceTextLength = 50;
+
+        // Checked against every caption a CHOICE-level requirement can show,
+        // authored or generated (the implied gold gate included). Event-level
+        // and outcome-level rows never show a caption, so theirs is not
+        // measured.
+        public const int MaxLockReasonLength = 46;
 
         private const int MaxChoicesPerPage = 4;
         private const string LeaveKeyword = "Leave";
@@ -157,9 +171,9 @@ namespace PrincesPalace.Domain.Content
             resolvedPage = default;
             string pageLabel = $"{eventLabel} page '{raw.id}'";
 
-            if ((raw.body ?? "").Length > MaxBodyLength)
+            if (!WithinCap(pageLabel, "title", raw.title, MaxTitleLength, out error)
+                || !WithinCap(pageLabel, "body", raw.body, MaxBodyLength, out error))
             {
-                error = $"{pageLabel}: body is {raw.body.Length} characters, over the {MaxBodyLength}-character cap.";
                 return false;
             }
 
@@ -216,6 +230,11 @@ namespace PrincesPalace.Domain.Content
             resolvedChoice = default;
             string choiceLabel = $"{eventLabel} page '{pageId}' choice '{raw.text}'";
 
+            if (!WithinCap(choiceLabel, "text", raw.text, MaxChoiceTextLength, out error))
+            {
+                return false;
+            }
+
             if (!TryResolveRequirements(raw.requires, choiceLabel, characterDisplayNamesById,
                     incrementedCounters, requiredCounters, out var requires, out error))
             {
@@ -236,6 +255,17 @@ namespace PrincesPalace.Domain.Content
                 Array.Copy(requires, withImplied, requires.Length);
                 withImplied[requires.Length] = implied;
                 requires = withImplied;
+            }
+
+            foreach (var requirement in requires)
+            {
+                foreach (var reason in requirement.PossibleReasons())
+                {
+                    if (!WithinCap(choiceLabel, "lock reason", reason, MaxLockReasonLength, out error))
+                    {
+                        return false;
+                    }
+                }
             }
 
             var rawOutcomes = raw.outcomes ?? Array.Empty<RawEventOutcome>();
@@ -287,6 +317,11 @@ namespace PrincesPalace.Domain.Content
             }
 
             if (!TryResolveEffects(raw.effects, choiceLabel, knownItemIds, incrementedCounters, out var effects, out error))
+            {
+                return false;
+            }
+
+            if (!WithinCap(choiceLabel, "outcome result", raw.result, MaxBodyLength, out error))
             {
                 return false;
             }
@@ -430,6 +465,9 @@ namespace PrincesPalace.Domain.Content
                         error = $"{label}: requirement kind '{row.kind}' is not a known EventRequirementKind.";
                         return false;
                 }
+
+                // Any kind: the author's caption replaces the generated one.
+                list[list.Count - 1].WithAuthoredReason(row.reason);
             }
 
             resolved = list.ToArray();
@@ -546,6 +584,22 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
+        // One refusal shape for every capped string: where, which field, how
+        // long, what the cap is. The label already names the event (and page
+        // and choice where there is one).
+        private static bool WithinCap(string label, string field, string value, int cap, out string error)
+        {
+            int length = (value ?? "").Length;
+            if (length > cap)
+            {
+                error = $"{label}: {field} is {length} characters, over the {cap}-character cap.";
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
         private static bool TryKnownCharacter(string characterId, string label, string requirementKindName,
             IReadOnlyDictionary<string, string> characterDisplayNamesById, out string displayName, out string error)
         {
@@ -560,6 +614,13 @@ namespace PrincesPalace.Domain.Content
             if (characterDisplayNamesById == null || !characterDisplayNamesById.TryGetValue(characterId, out displayName))
             {
                 error = $"{label}: {requirementKindName} requirement names character '{characterId}', which is not in characters.json.";
+                return false;
+            }
+
+            // The caption shows this name; an empty one would read "Requires ".
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                error = $"{label}: {requirementKindName} requirement names character '{characterId}', which has no display name.";
                 return false;
             }
 

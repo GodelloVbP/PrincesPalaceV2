@@ -37,7 +37,7 @@ outcome  { requires[], effects[], result, goTo }       first match wins
 
 ## Requirements
 
-One flat row, `{ kind, character, ability, min, max, counter }`. A list is AND.
+One flat row, `{ kind, character, ability, min, max, counter, reason }`. A list is AND.
 The same rows gate an event (`event.requires`), a choice and an outcome.
 
 | kind | fields | passes when |
@@ -51,6 +51,23 @@ The same rows gate an event (`event.requires`), a choice and an outcome.
 A choice that fails shows greyed with the first failing reason and cannot be
 picked; `hiddenUntilMet: true` hides it instead. Never author a gold gate for
 a gold spend: the spend adds its own.
+
+### Lock reasons
+
+Every row has a generated caption, and none of them shows an internal id:
+
+| kind | generated caption |
+|---|---|
+| `inParty` | `Requires Shawn` (the character's display name) |
+| `memberLevel` | `Requires a level 15 party member`, or `Requires Shawn at level 15` |
+| `ability` | `Requires 20 CHA`, or `Requires Shawn with 20 CHA` |
+| `counter` | `Not yet` while below `min`, `No longer` once past `max` |
+| `gold` | `Requires 5 gold` |
+
+A counter cannot say what it counts, so give any counter gate on a choice its
+own `reason` (`"reason": "The well has not heard you enough"`). `reason` works
+on every kind and replaces the generated caption outright. Only choice rows
+show a caption; `reason` on an event-level or outcome row is ignored.
 
 ## Effects
 
@@ -99,9 +116,26 @@ rename an event id once a save exists.
 
 At most 4 choices per page; at least one choice per page with no `requires`
 and not `hiddenUntilMet`; the last outcome of a choice has no `requires`;
-`body` at most `EventEntryResolver.MaxBodyLength` characters (600, measured to
-fit the panel); every character, item, ability, page and counter named must
-exist. Errors name the event and page.
+every character, item, ability, page and counter named must exist.
+
+Text length, in characters. Each cap is the length of the sample the panel's
+box is audited against at every scene build (the samples in `UiStrings` are
+built from these constants), so anything the content build lets through fits:
+
+| field | cap | constant in `EventEntryResolver` |
+|---|---|---|
+| page `title` | 28 | `MaxTitleLength` |
+| page `body` | 600 | `MaxBodyLength` |
+| outcome `result` (shown in the body's place) | 600 | `MaxBodyLength` |
+| choice `text` | 50 | `MaxChoiceTextLength` |
+| lock reason on a choice row, authored or generated | 46 | `MaxLockReasonLength` |
+
+The lock-reason cap covers generated captions too, so a long display name in
+`Requires <name> with 20 CHA` is refused at build rather than clipped on
+screen. Raising a cap is a layout change: the box has to fit the longer
+sample, and a scene build (`-BuildScenes`) re-measures it.
+
+Errors name the event, page, choice where there is one, and the field.
 
 ## Testing a new event
 

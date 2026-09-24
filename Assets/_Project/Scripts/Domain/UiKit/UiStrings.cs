@@ -369,31 +369,37 @@ namespace PrincesPalace.Domain.UiKit
         // --- the event panel (EventScreen / EventController) --------------------
         // Every event word is content; these templates exist so E1 measures
         // each box against its worst case rather than against nothing, the
-        // DebugRowPlain shape. The body's sample is exactly the content
-        // build's cap long, so the build refuses a body box that cannot hold
-        // the longest body the resolver lets through.
+        // DebugRowPlain shape. Every sample whose string content can author
+        // is built to exactly its EventEntryResolver cap, so the scene build
+        // refuses a box that cannot hold the longest string the content build
+        // lets through, and a cap that moves re-measures its box.
         public static readonly UiString EventTitle =
-            UiString.Define("event.title", "{0}", "The Well of Forgotten Wishes");
+            UiString.Define("event.title", "{0}",
+                AtCap("The Well of Forgotten Wishes ", Content.EventEntryResolver.MaxTitleLength));
         public static readonly UiString EventBody =
-            UiString.Define("event.body", "{0}", EventBodyAtCap());
+            UiString.Define("event.body", "{0}", AtCap(EventBodyProse, Content.EventEntryResolver.MaxBodyLength));
         public static readonly UiString EventEffects =
             UiString.Define("event.effects", "{0}", "+9999 gold  ·  Party healed 100%  ·  +99999 XP");
         public static readonly UiString EventChoice =
-            UiString.Define("event.choice", "{0}", "Offer the stranger the last of the party's rations");
+            UiString.Define("event.choice", "{0}",
+                AtCap("Offer the stranger the last of the party's rations ", Content.EventEntryResolver.MaxChoiceTextLength));
         public static readonly UiString EventChoiceLocked =
-            UiString.Define("event.choice_locked", "{0}", "Requires wishing_well_tosses between 10 and 10");
+            UiString.Define("event.choice_locked", "{0}",
+                AtCap("Requires the Wandering Bog Witch with 20 CHA and more ", Content.EventEntryResolver.MaxLockReasonLength));
         public static readonly UiString EventLeave = UiString.Define("event.leave", "Leave");
 
         // Ordinary prose rather than one repeated glyph: a wall of 'W' would
         // size the box for text no author writes, and word wrap is part of
         // what is being measured.
-        private static string EventBodyAtCap()
+        private const string EventBodyProse =
+            "The water is black and perfectly still, and something glints far below. " +
+            "A rope hangs from the winch, frayed where hands have worried it. ";
+
+        // The prose repeated or cut to exactly `cap` characters.
+        private static string AtCap(string prose, int cap)
         {
-            const string Prose = "The water is black and perfectly still, and something glints far below. " +
-                                 "A rope hangs from the winch, frayed where hands have worried it. ";
-            int cap = Content.EventEntryResolver.MaxBodyLength;
-            var text = new System.Text.StringBuilder(cap + Prose.Length);
-            while (text.Length < cap) text.Append(Prose);
+            var text = new System.Text.StringBuilder(cap + prose.Length);
+            while (text.Length < cap) text.Append(prose);
             return text.ToString(0, cap);
         }
 

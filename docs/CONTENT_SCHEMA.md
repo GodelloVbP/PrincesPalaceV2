@@ -354,7 +354,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `text` | string | `""` | The choice's own button text. |  |
+| `text` | string | `""` | The choice's own button text; capped at EventEntryResolver.MaxChoiceTextLength characters. |  |
 | `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this choice; a choice with none is always selectable. |  |
 | `hiddenUntilMet` | bool | `false` | When true, this choice is hidden entirely (not shown locked) until its requirements pass. |  |
 | `effects` | RawEventEffect[] (below) | `[]` | Effects applied immediately when this choice is picked, before an outcome is chosen. A gold spend here implies its own gold requirement -- do not author one by hand. |  |
@@ -375,7 +375,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this outcome; the last outcome in a choice must have none, so a choice can never fall through with nothing to show. |  |
 | `effects` | RawEventEffect[] (below) | `[]` | Effects applied when this outcome is chosen, in addition to the choice's own effects. |  |
-| `result` | string | `""` | The result text shown after this outcome is chosen. |  |
+| `result` | string | `""` | The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body. |  |
 | `goTo` | string | `""` | The next page's id, or the literal 'Leave' (case-insensitive) to close the event. |  |
 
 ### `RawEventPage`
@@ -384,7 +384,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `id` | string | `""` | Stable id for this page within its event; targeted by an outcome's goTo. |  |
 | `artPath` | string | `""` | This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event>_<page>.png): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives. |  |
-| `title` | string | `""` | The page's title, shown above the body. |  |
+| `title` | string | `""` | The page's title, shown above the body; capped at EventEntryResolver.MaxTitleLength characters. |  |
 | `body` | string | `""` | The page's body text; capped at EventEntryResolver.MaxBodyLength characters. |  |
 | `choices` | RawEventChoice[] (below) | `[]` | Up to 4 choices offered on this page. |  |
 
@@ -398,6 +398,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `min` | int | `-1` | The minimum value required; -1 means omitted. Required by memberLevel/ability/gold; optional for counter. |  |
 | `max` | int | `-1` | The maximum value allowed; -1 means omitted. Only counter reads this. |  |
 | `counter` | string | `""` | The counter id this requirement reads; required by counter. |  |
+| `reason` | string | `""` | Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it. |  |
 
 ### `RawModifierEffect`
 

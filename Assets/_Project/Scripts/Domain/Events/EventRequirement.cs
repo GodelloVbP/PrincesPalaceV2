@@ -63,6 +63,19 @@ namespace PrincesPalace.Domain.Events
         public bool HasMax;
         public string CounterId = "";
 
+        // The author's own caption for a locked choice. When set it replaces
+        // the generated one for every kind: a counter's generated caption
+        // cannot say what the counter means to the player, and a character
+        // or level caption may want the story's voice. Empty means generated.
+        public string AuthoredReason = "";
+
+        // Shown for a counter gate with no authored reason. Deliberately
+        // generic: the counter id is an internal name ("wishing_well_tosses")
+        // and a number range says nothing a player can act on. "Not yet"
+        // while below min, "No longer" once past max.
+        public const string CounterBelowMinReason = "Not yet";
+        public const string CounterAboveMaxReason = "No longer";
+
         // For the serializer only -- every real instance comes from a
         // factory below.
         public EventRequirement()
@@ -105,56 +118,67 @@ namespace PrincesPalace.Domain.Events
         public static EventRequirement Gold(int min) =>
             new EventRequirement(EventRequirementKind.Gold, "", "", default, min, true, 0, false, "");
 
+        // Sets the author's caption (see AuthoredReason) and returns this, so
+        // the resolver can chain it onto a factory. Whitespace-only is empty.
+        public EventRequirement WithAuthoredReason(string reason)
+        {
+            AuthoredReason = string.IsNullOrWhiteSpace(reason) ? "" : reason.Trim();
+            return this;
+        }
+
+        // Every caption this requirement can ever show, for the content
+        // build's length cap. Independent of the run, so the build can check
+        // it once rather than hoping each run's state produces a short one.
+        public IEnumerable<string> PossibleReasons()
+        {
+            if (!string.IsNullOrEmpty(AuthoredReason))
+            {
+                yield return AuthoredReason;
+                yield break;
+            }
+
+            if (Kind == EventRequirementKind.Counter)
+            {
+                if (HasMin || !HasMax) yield return CounterBelowMinReason;
+                if (HasMax) yield return CounterAboveMaxReason;
+                yield break;
+            }
+
+            yield return GeneratedReason(0);
+        }
+
         public EventRequirementResult Evaluate(IEventContext context)
         {
+            int counterValue = Kind == EventRequirementKind.Counter ? context.CounterValue(CounterId) : 0;
+            bool passed = Passes(context, counterValue);
+            string reason = string.IsNullOrEmpty(AuthoredReason) ? GeneratedReason(counterValue) : AuthoredReason;
+            return new EventRequirementResult(passed, reason);
+        }
+
+        private bool Passes(IEventContext context, int counterValue)
+        {
+            bool named = !string.IsNullOrEmpty(CharacterId);
+            bool namedInSquad = named && context.SquadIds != null && context.SquadIds.Contains(CharacterId);
+
             switch (Kind)
             {
                 case EventRequirementKind.InParty:
-                {
-                    bool passed = context.SquadIds != null && context.SquadIds.Contains(CharacterId);
-                    return new EventRequirementResult(passed, $"Requires {CharacterDisplayName}");
-                }
+                    return namedInSquad;
 
                 case EventRequirementKind.MemberLevel:
-                {
-                    if (!string.IsNullOrEmpty(CharacterId))
-                    {
-                        bool passed = context.SquadIds != null && context.SquadIds.Contains(CharacterId)
-                                      && context.LevelOf(CharacterId) >= Min;
-                        return new EventRequirementResult(passed, $"Requires {CharacterDisplayName} at level {Min}");
-                    }
-
-                    bool any = context.SquadIds != null && context.SquadIds.Any(id => context.LevelOf(id) >= Min);
-                    return new EventRequirementResult(any, $"Requires a level {Min} party member");
-                }
+                    if (named) return namedInSquad && context.LevelOf(CharacterId) >= Min;
+                    return context.SquadIds != null && context.SquadIds.Any(id => context.LevelOf(id) >= Min);
 
                 case EventRequirementKind.Ability:
-                {
-                    string shortName = AbilityScores.ShortName(Ability);
-                    if (!string.IsNullOrEmpty(CharacterId))
-                    {
-                        bool passed = context.SquadIds != null && context.SquadIds.Contains(CharacterId)
-                                      && context.EffectiveAbilityScore(CharacterId, Ability) >= Min;
-                        return new EventRequirementResult(passed, $"Requires {CharacterDisplayName} with {Min} {shortName}");
-                    }
-
-                    bool any = context.SquadIds != null
-                               && context.SquadIds.Any(id => context.EffectiveAbilityScore(id, Ability) >= Min);
-                    return new EventRequirementResult(any, $"Requires {Min} {shortName}");
-                }
+                    if (named) return namedInSquad && context.EffectiveAbilityScore(CharacterId, Ability) >= Min;
+                    return context.SquadIds != null
+                           && context.SquadIds.Any(id => context.EffectiveAbilityScore(id, Ability) >= Min);
 
                 case EventRequirementKind.Counter:
-                {
-                    int value = context.CounterValue(CounterId);
-                    bool passed = (!HasMin || value >= Min) && (!HasMax || value <= Max);
-                    return new EventRequirementResult(passed, CounterReason());
-                }
+                    return (!HasMin || counterValue >= Min) && (!HasMax || counterValue <= Max);
 
                 case EventRequirementKind.Gold:
-                {
-                    bool passed = context.Gold >= Min;
-                    return new EventRequirementResult(passed, $"Requires {Min} gold");
-                }
+                    return context.Gold >= Min;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(Kind), Kind,
@@ -162,12 +186,40 @@ namespace PrincesPalace.Domain.Events
             }
         }
 
-        private string CounterReason()
+        // Player-facing: never an internal id. Characters show the display
+        // name baked in at content build, abilities their short name, and a
+        // counter only the generic wording above. counterValue picks between
+        // the two counter captions; the other kinds ignore it.
+        private string GeneratedReason(int counterValue)
         {
-            if (HasMin && HasMax) return $"Requires {CounterId} between {Min} and {Max}";
-            if (HasMin) return $"Requires {CounterId} at least {Min}";
-            if (HasMax) return $"Requires {CounterId} at most {Max}";
-            return $"Requires {CounterId}";
+            switch (Kind)
+            {
+                case EventRequirementKind.InParty:
+                    return $"Requires {CharacterDisplayName}";
+
+                case EventRequirementKind.MemberLevel:
+                    return string.IsNullOrEmpty(CharacterId)
+                        ? $"Requires a level {Min} party member"
+                        : $"Requires {CharacterDisplayName} at level {Min}";
+
+                case EventRequirementKind.Ability:
+                {
+                    string shortName = AbilityScores.ShortName(Ability);
+                    return string.IsNullOrEmpty(CharacterId)
+                        ? $"Requires {Min} {shortName}"
+                        : $"Requires {CharacterDisplayName} with {Min} {shortName}";
+                }
+
+                case EventRequirementKind.Counter:
+                    return HasMax && counterValue > Max ? CounterAboveMaxReason : CounterBelowMinReason;
+
+                case EventRequirementKind.Gold:
+                    return $"Requires {Min} gold";
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(Kind), Kind,
+                        "EventRequirement has no reason for this kind.");
+            }
         }
 
         // Contract 6: a choice whose effects spend gold N gets an implied

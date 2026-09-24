@@ -55,6 +55,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(EventEntryResolver.MaxBodyLength, UiStrings.EventBody.AuditSample.Length);
         }
 
+        // Title, choice text and lock caption are content-authored too; each
+        // box must be declared with the sample that is exactly its resolver
+        // cap long, so the scene build measures the longest string content
+        // can put there.
+        [Test]
+        public void EveryAuthoredTextBoxIsMeasuredAgainstASampleExactlyAtItsCap()
+        {
+            var screen = EventScreen.Build();
+            var nodes = Walk(screen.Root).ToList();
+
+            Assert.AreEqual(UiStrings.EventTitle.Key, nodes.First(n => n.Name == "EventTitle").Text.Key);
+            Assert.AreEqual(UiStrings.EventChoice.Key, nodes.First(n => n.Name == "EventChoice0Text").Text.Key);
+            Assert.AreEqual(UiStrings.EventChoiceLocked.Key, nodes.First(n => n.Name == "EventChoice0Lock").Text.Key);
+
+            Assert.AreEqual(EventEntryResolver.MaxTitleLength, UiStrings.EventTitle.AuditSample.Length);
+            Assert.AreEqual(EventEntryResolver.MaxChoiceTextLength, UiStrings.EventChoice.AuditSample.Length);
+            Assert.AreEqual(EventEntryResolver.MaxLockReasonLength, UiStrings.EventChoiceLocked.AuditSample.Length);
+        }
+
         // Pinned as literals: this is the size art is commissioned at
         // (docs/EVENTS.md, docs/ART_PIPELINE.md), and a change here is a
         // change to every brief already sent out.

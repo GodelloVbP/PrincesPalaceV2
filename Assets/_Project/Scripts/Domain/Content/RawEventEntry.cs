@@ -21,6 +21,8 @@ namespace PrincesPalace.Domain.Content
         public int max = -1;
         [ContentDoc("The counter id this requirement reads; required by counter.")]
         public string counter = "";
+        [ContentDoc("Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it.")]
+        public string reason = "";
     }
 
     // One effect row, exactly as typed into a choice's or outcome's `effects`
@@ -49,7 +51,7 @@ namespace PrincesPalace.Domain.Content
         public RawEventRequirement[] requires = Array.Empty<RawEventRequirement>();
         [ContentDoc("Effects applied when this outcome is chosen, in addition to the choice's own effects.")]
         public RawEventEffect[] effects = Array.Empty<RawEventEffect>();
-        [ContentDoc("The result text shown after this outcome is chosen.")]
+        [ContentDoc("The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body.")]
         public string result = "";
         [ContentDoc("The next page's id, or the literal 'Leave' (case-insensitive) to close the event.")]
         public string goTo = "";
@@ -61,7 +63,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventChoice
     {
-        [ContentDoc("The choice's own button text.")]
+        [ContentDoc("The choice's own button text; capped at EventEntryResolver.MaxChoiceTextLength characters.")]
         public string text = "";
         [ContentDoc("Requirements gating this choice; a choice with none is always selectable.")]
         public RawEventRequirement[] requires = Array.Empty<RawEventRequirement>();
@@ -82,7 +84,7 @@ namespace PrincesPalace.Domain.Content
         public string id = "";
         [ContentDoc("This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event>_<page>.png): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives.")]
         public string artPath = "";
-        [ContentDoc("The page's title, shown above the body.")]
+        [ContentDoc("The page's title, shown above the body; capped at EventEntryResolver.MaxTitleLength characters.")]
         public string title = "";
         [ContentDoc("The page's body text; capped at EventEntryResolver.MaxBodyLength characters.")]
         public string body = "";

@@ -271,6 +271,153 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
         }
 
+        // ---- the string caps -------------------------------------------------
+
+        // Pinned as literals: each is the length of the sample EventScreen's
+        // box is audited against, so a change here is a change to what the
+        // screen must fit (and needs a scene build to re-measure).
+        [Test]
+        public void TheCapsAreTheFittedSampleLengths()
+        {
+            Assert.AreEqual(600, EventEntryResolver.MaxBodyLength);
+            Assert.AreEqual(28, EventEntryResolver.MaxTitleLength);
+            Assert.AreEqual(50, EventEntryResolver.MaxChoiceTextLength);
+            Assert.AreEqual(46, EventEntryResolver.MaxLockReasonLength);
+        }
+
+        // An event with a second, gated choice, so a requirement on it is
+        // legal (the Leave choice stays the unconditional one).
+        private static RawEventEntry WithGatedChoice(params RawEventRequirement[] requires)
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].choices = new[]
+            {
+                entry.pages[0].choices[0],
+                new RawEventChoice
+                {
+                    text = "Gated",
+                    requires = requires,
+                    outcomes = new[] { new RawEventOutcome { goTo = "Leave" } },
+                },
+            };
+            return entry;
+        }
+
+        [Test]
+        public void ATitleOverTheCap_IsRefusedNamingTheEventAndField()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].title = new string('x', 29);
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual("event 'e1' page 'p1': title is 29 characters, over the 28-character cap.", errors.Single());
+        }
+
+        [Test]
+        public void ATitleExactlyAtTheCap_Resolves()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].title = new string('x', 28);
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
+        [Test]
+        public void AChoiceTextOverTheCap_IsRefusedNamingTheEventAndField()
+        {
+            var entry = MinimalEvent();
+            string text = new string('x', 51);
+            entry.pages[0].choices[0].text = text;
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual($"event 'e1' page 'p1' choice '{text}': text is 51 characters, over the 50-character cap.",
+                errors.Single());
+        }
+
+        [Test]
+        public void AnOutcomeResultOverTheBodyCap_IsRefused()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].choices[0].outcomes[0].result = new string('x', 601);
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual("event 'e1' page 'p1' choice 'Leave': outcome result is 601 characters, over the 600-character cap.",
+                errors.Single());
+        }
+
+        [Test]
+        public void AnAuthoredReasonOverTheCap_IsRefusedNamingTheEventAndField()
+        {
+            var entry = WithGatedChoice(new RawEventRequirement { kind = "gold", min = 5, reason = new string('x', 47) });
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual("event 'e1' page 'p1' choice 'Gated': lock reason is 47 characters, over the 46-character cap.",
+                errors.Single());
+        }
+
+        // The cap covers generated captions too: a long display name makes a
+        // long "Requires <name> with <n> <score>", and the build is the only
+        // place that can see it before a player does.
+        [Test]
+        public void AGeneratedReasonOverTheCap_IsRefused()
+        {
+            var characters = new Dictionary<string, string> { ["owl"] = "Odette the Exceedingly Long-Named Owl" };
+            var entry = WithGatedChoice(new RawEventRequirement
+                { kind = "ability", ability = "charisma", min = 20, character = "owl" });
+
+            bool ok = EventEntryResolver.TryResolveAll(new List<RawEventEntry> { entry }, characters, KnownItems,
+                out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual("event 'e1' page 'p1' choice 'Gated': lock reason is 58 characters, over the 46-character cap.",
+                errors.Single());
+        }
+
+        [Test]
+        public void AnAuthoredReason_TravelsOntoTheResolvedRequirement()
+        {
+            var entry = WithGatedChoice(new RawEventRequirement
+                { kind = "inParty", character = "sheep", reason = "Only Shawn would try this" });
+
+            bool ok = Resolve(entry, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual("Only Shawn would try this", resolved[0].Pages[0].Choices[1].Requires[0].AuthoredReason);
+        }
+
+        // Outcome rows never show a caption, so their generated reason is
+        // not measured: a long name there is not an error.
+        [Test]
+        public void ALongGeneratedReasonOnAnOutcomeRow_IsNotMeasured()
+        {
+            var characters = new Dictionary<string, string> { ["owl"] = "Odette the Exceedingly Long-Named Owl" };
+            var entry = MinimalEvent();
+            entry.pages[0].choices[0].outcomes = new[]
+            {
+                new RawEventOutcome
+                {
+                    requires = new[] { new RawEventRequirement { kind = "inParty", character = "owl" } },
+                    goTo = "Leave",
+                },
+                new RawEventOutcome { goTo = "Leave" },
+            };
+
+            bool ok = EventEntryResolver.TryResolveAll(new List<RawEventEntry> { entry }, characters, KnownItems,
+                out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
         // ---- the counter typo guard (contract 9) -------------------------------
 
         [Test]
