@@ -525,11 +525,25 @@ namespace PrincesPalace.Domain.Combat.Session
             AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
         }
 
-        // THE ENTRIES APPLIED DURING THE TURN THAT IS RUNNING, which do not
-        // age at the end of it -- see StatusEffects' WARDS header for the
-        // argument and TickAtTurnEnd for where the set is read. Cleared by
-        // OpenTurnFor and NOT by ReopenTurnFor, because an extra action is the
-        // same turn (AUDIT #113).
+        // A STATUS APPLIED DURING ITS WEARER'S OWN TURN does not age at the
+        // end of that turn -- see StatusEffects' WARDS header for the argument
+        // and TickAtTurnEnd, which spends each entry from this set as it
+        // skips it. "Its wearer's own turn" is the encounter's Current: that
+        // is who holds the turn from the AdvanceTurn that hands it over,
+        // through OpenTurnFor and every extra action (ReopenTurnFor keeps
+        // Current, AUDIT #113), to the turn-end tick that sits immediately
+        // before the next AdvanceTurn.
+        //
+        // NOT CLEARED BY ANYBODY'S TURN OPENING. This was
+        // _statusesAppliedThisTurn, which took every entry applied during any
+        // turn and was emptied inside OpenTurnFor -- a few lines AFTER
+        // ApplyRunicWardConversion had already raised that turn's ward, so
+        // the Runic ward aged at the end of the very turn it went up on.
+        // Entries now go in only for the wearer whose turn it is and leave
+        // only when that wearer's turn end spends them, so "the turn it went
+        // up on" belongs to the wearer and the entry, not to whoever acts
+        // next. A status put on somebody else never goes in: their next turn
+        // end is the first of their N, exactly as for one they raise themselves.
         //
         // Holds the ActiveStatus itself rather than the wearer and the type:
         // two chills of the same size on the same clock are told apart by
@@ -541,7 +555,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // joined that clock with plan D1 and they need the identical exemption:
         // a Vulnerable a caster puts on THEMSELVES (Court of Whispers, Ashen
         // Reckoning) must not be aged by the end of the turn that applied it.
-        private readonly HashSet<ActiveStatus> _statusesAppliedThisTurn = new HashSet<ActiveStatus>();
+        private readonly HashSet<ActiveStatus> _sparedAtWearersTurnEnd = new HashSet<ActiveStatus>();
+
+        private void SpareIfAppliedOnWearersTurn(CombatantState wearer, ActiveStatus applied)
+        {
+            if (applied == null || wearer == null) return;
+            if (ReferenceEquals(wearer, _encounter.Current)) _sparedAtWearersTurnEnd.Add(applied);
+        }
 
         // THE ONE PLACE A STATUS IS APPLIED TO A COMBATANT during a fight.
         //
@@ -624,7 +644,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int magnitude, int turns, CombatantState source)
         {
             var applied = StatusEffects.Apply(recipient.Statuses, type, magnitude, turns, source);
-            if (applied != null) _statusesAppliedThisTurn.Add(applied);
+            SpareIfAppliedOnWearersTurn(recipient, applied);
             return applied;
         }
 
@@ -963,12 +983,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // turn-start tick.
         public void TickStatusesAtTurnEndForTest(CombatantState actor) => TickStatusesAtTurnEnd(actor);
 
-        // THE TURN BOUNDARY ITSELF. _statusesAppliedThisTurn is cleared once
-        // per turn inside OpenTurnFor (TickLambTurnStart), which a test driving
-        // the two tick seams directly never reaches -- so without this a status
-        // the fixture applied stays exempt from every turn end forever and the
-        // sweep looks broken when it is working exactly as written.
-        public void CrossTurnBoundaryForTest() => _statusesAppliedThisTurn.Clear();
+        // THE TURN BOUNDARY ITSELF, for a test that drives the two tick seams
+        // directly with no turn ever advanced. A fixture's Current is
+        // whoever the encounter put first, so a status the fixture applied to
+        // that combatant is spared at their next turn end. This drops every
+        // pending spare, which is what a real turn end would have done: the
+        // test then reads as "applied on some earlier turn", and the next
+        // tick ages it.
+        public void CrossTurnBoundaryForTest() => _sparedAtWearersTurnEnd.Clear();
 
         // ApplyChilledForTest's sibling (FightSession.SpeedBuffs.cs): the ONE
         // status-application seam (plan D6), for a test that wants Burn or

@@ -95,20 +95,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // stack now, so two casters covering one tank have to be able to be
         // paid for their own work without paying either of them twice.
         //
-        // Cleared when the WARDER's turn begins, which is what makes "per turn"
-        // mean a round of his rather than a round of anyone's.
+        // A caster's own entries are dropped when HIS turn begins, which is
+        // what makes "per turn" mean a round of his rather than a round of
+        // anyone's. Only his: clearing the whole set on any warder's turn
+        // would reset a second Lamb's cap on the first one's turn.
         private readonly HashSet<(CombatantState caster, CombatantState wearer)> _wardPayoutsThisTurn =
             new HashSet<(CombatantState caster, CombatantState wearer)>();
 
-        // THE WARDS PUT UP DURING THE TURN THAT IS CURRENTLY OPEN, whoever
-        // they landed on.
-        //
         // A ward's clock runs at the END of the wearer's own turn and does not
-        // count the turn it was raised on (StatusEffects' own WARDS header),
-        // and this is the only thing in the game that knows which turn that
-        // was. The set itself is _statusesAppliedThisTurn, declared with the
-        // ApplyStatusTo seam in FightSession.Riders.cs -- a ward is no longer
-        // the only thing that needs the exemption.
+        // count the wearer's turn it was raised on (StatusEffects' own WARDS
+        // header). Which wards are spared is SpareIfAppliedOnWearersTurn's call,
+        // declared with the ApplyStatusTo seam in FightSession.Riders.cs -- a
+        // ward is no longer the only thing that needs the exemption.
 
         // THE ONE PLACE A WARD GOES UP. Every ward in the game -- the five
         // skills through WardOne, and the three relic wards -- comes through
@@ -117,7 +115,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RaiseWard(CombatantState wearer, int points, int turns, CombatantState source)
         {
             var ward = StatusEffects.ApplyWard(wearer.Statuses, points, turns, source);
-            if (ward != null) _statusesAppliedThisTurn.Add(ward);
+            SpareIfAppliedOnWearersTurn(wearer, ward);
         }
 
         // Counts the ending actor's turn-end statuses down and says what
@@ -131,7 +129,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null) return;
 
-            var expired = StatusEffects.TickAtTurnEnd(actor, _statusesAppliedThisTurn);
+            var expired = StatusEffects.TickAtTurnEnd(actor, _sparedAtWearersTurnEnd);
             if (expired.Count == 0) return;
 
             // A SHIELD SAYS SOMETHING DIFFERENT, and says it by the count
@@ -617,7 +615,17 @@ namespace PrincesPalace.Domain.Combat.Session
             int selfMultiplier = caster.Talents.Best(TalentEffectType.ShatterSelfWardMultiplier);
             bool appliesVulnerable = caster.Talents.Has(TalentEffectType.ShatterAppliesVulnerable);
 
-            var summary = new StringBuilder($"{caster.Name} shatters {wearers.Count} ward(s)!");
+            // COUNTED IN ENTRIES, not wearers. Wards stack, so one wearer can
+            // carry several of his (a Ward cast on himself over a Runic
+            // conversion, say) and every one of them goes below; the blasts
+            // stay one per WEARER, which is the loop's rule and not this
+            // line's to change.
+            int shattered = wearers.Sum(w => w.Statuses.Count(s =>
+                s.Type == StatusEffectType.Shielded && ReferenceEquals(s.Source, caster)));
+
+            var summary = new StringBuilder(shattered == 1
+                ? $"{caster.Name} shatters 1 ward!"
+                : $"{caster.Name} shatters {shattered} wards!");
 
             foreach (var wearer in wearers)
             {
@@ -762,16 +770,10 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null) return;
 
-            if (actor.Talents.Best(TalentEffectType.WoolWhenWardedAllyHit) > 0)
-            {
-                _wardPayoutsThisTurn.Clear();
-            }
-
-            // UNCONDITIONALLY, unlike the payout set above -- that one is the
-            // Lamb's own bookkeeping and costs nothing to leave standing for a
-            // party with no Lamb in it, where this one decides whether a ward
-            // ages at all. See its own declaration.
-            _statusesAppliedThisTurn.Clear();
+            // HIS entries only, and whether or not he holds the talent today:
+            // an entry keyed on him can only exist because he was paid, and
+            // the rule is per caster however many casters there are.
+            _wardPayoutsThisTurn.RemoveWhere(payout => ReferenceEquals(payout.caster, actor));
 
             if (actor.SelfWardGraceTurns > 0)
             {

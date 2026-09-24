@@ -126,6 +126,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(10, ward.Magnitude);
         }
 
+        // THE TURN IT WENT UP ON DOES NOT COUNT, for a ward raised inside the
+        // turn-open itself. It used to: the exemption was a set that
+        // OpenTurnFor emptied a few lines AFTER this conversion had put its
+        // ward in it, so the Runic ward aged at the end of the very turn it
+        // went up on. 99 is FightTuning.MagicalShieldDurationTurns.
+        [Test]
+        public void TheConvertedWard_DoesNotAgeAtTheEndOfTheTurnItWentUpOn()
+        {
+            var hero = Hero(mana: 100, speed: 50);
+            hero.PrimaryPool.Current = 40;
+            var foe = Foe(speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ManaToWardOnTurnStartPercent, 0));
+
+            var session = Session(hero, foe);
+            session.ExecuteAttack(foe);
+            Assert.AreSame(hero, session.Current, "fixture: the hero holds the next turn too");
+
+            var ward = hero.Statuses.First(s => s.Type == StatusEffectType.Shielded);
+            Assert.AreEqual(99, ward.TurnsRemaining);
+
+            session.ExecuteAttack(foe);
+            Assert.AreSame(hero, session.Current, "fixture: and the one after");
+            Assert.AreEqual(99, ward.TurnsRemaining, "the turn it went up on counted");
+
+            session.ExecuteAttack(foe);
+            Assert.AreEqual(98, ward.TurnsRemaining, "and the next one did not");
+        }
+
         [Test]
         public void TheWardConversion_NeverFiresWithoutTheModifier()
         {

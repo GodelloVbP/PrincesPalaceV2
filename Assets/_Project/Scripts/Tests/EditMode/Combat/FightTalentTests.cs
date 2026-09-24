@@ -1010,5 +1010,172 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(lamb.SignaturePool.Current, atStart + 2,
                 "at most the one payout a genuine hit earns, never one per tick");
         }
+
+        // ---- the turn a status went up on, through real turns ------------------
+        //
+        // "N turns" is the WEARER's next N turns, and the turn it went up on
+        // counts only if it was the wearer's own. These run through
+        // FightSession's own turn loop rather than a hand-built "applied this
+        // turn" list, because the defect the stamp replaced lived in WHO
+        // cleared that list and when -- which a hand-built list skips.
+
+        // Plays player turns (plain swings) until `who` holds the turn. Enemy
+        // turns resolve inside each swing.
+        private static void PlayUntil(FightSession session, CombatantState who, CombatantState foe)
+        {
+            for (int guard = 0; guard < 20 && !ReferenceEquals(session.Current, who); guard++)
+            {
+                Assert.IsTrue(session.IsPlayerTurn, "fixture: an enemy turn was left hanging");
+                session.ExecuteAttack(foe);
+            }
+
+            Assert.AreSame(who, session.Current, "fixture: never reached " + who.Name + "'s turn");
+        }
+
+        [Test]
+        public void AWardOnAnAlly_StandsThroughTheWearersNextTwoTurns()
+        {
+            var lamb = Hero("Lamb", speed: 10);
+            var bob = Hero("Bob", speed: 8);
+            var foe = Foe(health: 100000, attack: 1);
+            var ward = Skill(SkillEffect.Ward, "Fleece Ward");
+            ward.WardTurns = 2;
+
+            var (session, _) = Fight(new[] { lamb, bob }, new[] { foe }, Kit(ward));
+            session.Begin();
+            Assert.AreSame(lamb, session.Current, "fixture: the Lamb opens");
+
+            Assert.IsTrue(session.CastSkill(0, bob), "fixture: the ward went up");
+            var raised = bob.Statuses.Single(s => s.Type == StatusEffectType.Shielded);
+            Assert.AreEqual(2, raised.TurnsRemaining);
+
+            PlayUntil(session, bob, foe);
+            session.ExecuteAttack(foe);
+            Assert.AreEqual(1, raised.TurnsRemaining,
+                "the Lamb's turn was not Bob's, so Bob's first turn end is the first of his two");
+
+            PlayUntil(session, bob, foe);
+            Assert.IsTrue(bob.Statuses.Contains(raised), "gone before his second turn");
+            session.ExecuteAttack(foe);
+            Assert.IsFalse(bob.Statuses.Contains(raised), "outlived his two turns");
+        }
+
+        [Test]
+        public void AWardHeRaisesOnHimself_DoesNotCountTheTurnItWentUpOn()
+        {
+            var lamb = Hero("Lamb", speed: 10);
+            var foe = Foe(health: 100000, attack: 1);
+            var ward = Skill(SkillEffect.Ward, "Fleece Ward");
+            ward.WardTurns = 1;
+
+            var (session, _) = Fight(new[] { lamb }, new[] { foe }, Kit(ward));
+            session.Begin();
+
+            Assert.IsTrue(session.CastSkill(0, lamb), "fixture: the ward went up");
+            var raised = lamb.Statuses.Single(s => s.Type == StatusEffectType.Shielded);
+            Assert.AreEqual(1, raised.TurnsRemaining, "the end of the turn it went up on counted");
+
+            PlayUntil(session, lamb, foe);
+            Assert.IsTrue(lamb.Statuses.Contains(raised), "gone before his next turn");
+            session.ExecuteAttack(foe);
+            Assert.IsFalse(lamb.Statuses.Contains(raised), "outlived its one turn");
+        }
+
+        // The same rule for a standing modifier, at the application seam: on
+        // the wearer's own turn it skips that turn's end; on anybody else's it
+        // ages at the wearer's next one.
+        [Test]
+        public void AStatusOnSomebodyElse_AgesAtTheirNextTurnEnd_ButOnTheActorItWaitsOneTurn()
+        {
+            var hero = Hero("Hero", speed: 10);
+            var foe = Foe();
+            var (session, _) = Fight(new[] { hero }, new[] { foe }, Kit());
+            session.Begin();
+            Assert.AreSame(hero, session.Current, "fixture: the hero holds the turn");
+
+            session.ApplyStatusToForTest(foe, StatusEffectType.Vulnerable, 25, 2, hero);
+            session.ApplyStatusToForTest(hero, StatusEffectType.Protect, 25, 2, hero);
+            var exposed = foe.Statuses.Single(s => s.Type == StatusEffectType.Vulnerable);
+            var guarded = hero.Statuses.Single(s => s.Type == StatusEffectType.Protect);
+
+            session.TickStatusesAtTurnEndForTest(foe);
+            session.TickStatusesAtTurnEndForTest(hero);
+
+            Assert.AreEqual(1, exposed.TurnsRemaining, "the foe's next turn end is the first of its two");
+            Assert.AreEqual(2, guarded.TurnsRemaining, "the hero's own turn it went up on counted");
+        }
+
+        // PER CASTER, not per anybody-with-the-talent. Two ward-casters both
+        // hold the payout talent; A is paid for the first hit, then B's turn
+        // opens -- which must leave A's cap alone, because A has not had a
+        // turn since he was paid. It used to clear the whole set, so A was
+        // paid again.
+        //
+        // The casters are MONSTERS, and that is fixture, not content: the hit
+        // has to come through the real damage pipeline (the plain swing) at a
+        // warded body, and a player swing only lands on the enemy side (on
+        // the front one, which is why the dummy leads the line). The
+        // payout rule reads the caster's talents and pool whoever he is.
+        [Test]
+        public void AWardPayoutCapResetsOnTheCastersOwnTurn_NotAnotherCasters()
+        {
+            var hero = Hero("Hero", speed: 10);
+            var a = Foe("CasterA", attack: 1, speed: 1);
+            var b = Foe("CasterB", attack: 1, speed: 9);
+            var dummy = Foe("Dummy", health: 100000, attack: 1, speed: 1);
+            foreach (var caster in new[] { a, b })
+            {
+                caster.SignaturePool = Wool();
+                Talents(caster, new TalentEffect(TalentEffectType.WoolWhenWardedAllyHit, 2));
+            }
+
+            var (session, _) = Fight(new[] { hero }, new[] { dummy, a, b }, Kit());
+            session.Begin();
+            Assert.AreSame(hero, session.Current, "fixture: the hero opens");
+
+            // Between the hero's two swings, B acts and A does not.
+            var between = session.Encounter.UpcomingTurns(8)
+                .SkipWhile(c => ReferenceEquals(c, hero))
+                .TakeWhile(c => !ReferenceEquals(c, hero))
+                .ToList();
+            CollectionAssert.Contains(between, b, "fixture: B's turn must open between the swings");
+            CollectionAssert.DoesNotContain(between, a, "fixture: A must not get a turn between them");
+
+            // B's thin ward drains first (soonest to lapse), then A's; B's
+            // second one sits behind A's and is never reached.
+            StatusEffects.ApplyWard(dummy.Statuses, 1, 3, b);
+            StatusEffects.ApplyWard(dummy.Statuses, 1000, 9, a);
+            StatusEffects.ApplyWard(dummy.Statuses, 1000, 9, b);
+
+            Assert.IsTrue(session.ExecuteAttack(dummy), "fixture: the first swing landed");
+            Assert.AreEqual(2, a.SignaturePool.Current, "fixture: A was paid for the first hit");
+            Assert.AreEqual(2, b.SignaturePool.Current, "fixture: B was paid for the first hit");
+            Assert.AreSame(hero, session.Current, "fixture: the hero swings again");
+
+            Assert.IsTrue(session.ExecuteAttack(dummy), "fixture: the second swing landed");
+            Assert.AreEqual(2, a.SignaturePool.Current, "B's turn re-armed A's cap");
+        }
+
+        // SHATTER COUNTS THE WARDS IT BREAKS, not the people wearing them:
+        // wards stack, so two of his on one wearer are two wards.
+        [Test]
+        public void ShatterNamesEveryWardItBreaks_NotEveryWearer()
+        {
+            var lamb = Hero("Lamb", speed: 10);
+            Talents(lamb, new TalentEffect(TalentEffectType.ShatterDamagePercentOfAttack, 50));
+            var foe = Foe(health: 100000);
+
+            var (session, _) = Fight(new[] { lamb }, new[] { foe }, Kit(Skill(SkillEffect.Shatter, "Shatter")));
+            session.Begin();
+            StatusEffects.ApplyWard(lamb.Statuses, 30, 5, lamb);
+            StatusEffects.ApplyWard(lamb.Statuses, 30, 5, lamb);
+            session.DrainBeats();
+
+            Assert.IsTrue(session.CastSkill(0, null), "fixture: the shatter went off");
+
+            Assert.IsTrue(Messages(session).Any(m => m.Contains("Lamb shatters 2 wards!")),
+                "two of his wards were on him, and both went");
+            Assert.IsFalse(StatusEffects.IsWarded(lamb));
+        }
     }
 }

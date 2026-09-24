@@ -63,9 +63,10 @@ namespace PrincesPalace.Domain.Combat
         //
         // RETURNS THE ENTRY it applied or refreshed. The caller needs it for
         // the same reason ApplyWard's caller does: a status on the AtTurnEnd
-        // clock does not age at the end of the turn it was applied during, and
-        // the only way to say "this one, not that one" about two instances
-        // with the same magnitude and the same clock is to hold the entry.
+        // clock does not age at the end of the wearer's turn it was applied
+        // during, and the only way to say "this one, not that one" about two
+        // instances with the same magnitude and the same clock is to hold the
+        // entry.
         //
         // REFUSES Shielded OUTRIGHT, still. Wards stack like everything else
         // on the Stack side now, but ApplyWard stays their one entry point for
@@ -503,9 +504,15 @@ namespace PrincesPalace.Domain.Combat
         // THE TURN IT WENT UP DOES NOT COUNT. A ward raised during the
         // wearer's own turn N is exempt from that turn's end tick, so a
         // one-turn ward covers the enemy phase after N and stands through the
-        // whole of N+1, going at the end of it. FightSession owns the
+        // whole of N+1, going at the end of it. FightSession decides the
         // exemption (it is the only thing that knows whose turn it is) and
-        // hands the entries it raised this turn to TickWardsAtTurnEnd.
+        // hands the spared entries to TickAtTurnEnd, which spends them.
+        //
+        // A WARD RAISED ON SOMEBODY ELSE'S TURN IS NOT EXEMPTED, and that is
+        // the same rule rather than an exception to it: the turn it went up
+        // on was not the wearer's, so the wearer's next turn end is already
+        // the first of their N. A two-turn ward Odette puts on Shawn stands
+        // through Shawn's next two turns, exactly like one he raises himself.
         //
         // N turns therefore means "standing through the wearer's next N
         // turns", which is what an author says out loud -- the same spelling
@@ -670,9 +677,10 @@ namespace PrincesPalace.Domain.Combat
         // (SkillEntryResolver refuses a sizeless Ward) or a Flock share of a
         // ward that was already nothing.
         // RETURNS THE ENTRY IT PUT UP, or null for the non-positive no-op.
-        // The caller needs it: a ward does not count the turn it was raised
-        // on, and the only way to say "this one, not that one" about two pools
-        // with the same size and the same clock is to hold the entry itself.
+        // The caller needs it: a ward does not count the wearer's turn it was
+        // raised on, and the only way to say "this one, not that one" about
+        // two pools with the same size and the same clock is to hold the
+        // entry itself.
         public static ActiveStatus ApplyWard(List<ActiveStatus> statuses, int points, int turns,
             CombatantState source = null)
         {
@@ -835,17 +843,20 @@ namespace PrincesPalace.Domain.Combat
         // argument for every standing modifier, so there is now one turn-end
         // clock rather than a ward exception.
         //
-        // `appliedThisTurn` is the entries applied DURING the turn that is
+        // `spared` is the entries applied during THIS WEARER'S turn that is
         // ending, which do not count it -- see the WARDS header for why, and
-        // FightSession.Riders for who keeps the set. Null means "nothing was
-        // applied", which is most turns.
+        // FightSession.Riders for who decides what goes in it. An entry found
+        // there is SPENT from it here: skipped once, then aged like anything
+        // else at the wearer's next turn end. Spent BEFORE the Golden Fleece
+        // check so a never-expiring ward does not linger in the collection.
+        // Null means "nothing was spared", which is most turns.
         //
         // A ward whose caster holds The Golden Fleece is skipped outright:
         // that capstone is a stopped clock, not a bigger number, so there is
         // nothing here for it to count. NeverExpires answers false for every
         // non-ward, so the check costs nothing for the rest.
         public static IReadOnlyList<StatusEffectType> TickAtTurnEnd(CombatantState wearer,
-            ICollection<ActiveStatus> appliedThisTurn = null)
+            ICollection<ActiveStatus> spared = null)
         {
             if (wearer == null) return Array.Empty<StatusEffectType>();
 
@@ -856,8 +867,8 @@ namespace PrincesPalace.Domain.Combat
             foreach (var status in wearer.Statuses.ToList())
             {
                 if (DurationClock(status.Type) != StatusClock.AtTurnEnd) continue;
+                if (spared != null && spared.Remove(status)) continue;
                 if (NeverExpires(status)) continue;
-                if (appliedThisTurn != null && appliedThisTurn.Contains(status)) continue;
 
                 status.TurnsRemaining--;
                 if (status.TurnsRemaining > 0) continue;

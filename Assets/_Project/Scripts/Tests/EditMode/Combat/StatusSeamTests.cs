@@ -75,17 +75,33 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // AND THE SEAM REACHES THE TURN-END EXEMPTION. A status applied through
-        // it has to land in _statusesAppliedThisTurn, or every AtTurnEnd status
-        // loses the turn it was applied during -- the exact off-by-one plan D1
-        // exists to close.
+        // it to the combatant whose turn it is has to be spared that turn's
+        // end, or every AtTurnEnd status loses the turn it was applied during
+        // -- the exact off-by-one plan D1 exists to close. Behavioural rather
+        // than the source scan it replaced: the scan pinned a line naming the
+        // old set, and WHO emptied that set was the defect.
         [Test]
-        public void TheSeamRecordsWhatItApplied_SoTheTurnItLandedOnDoesNotCount()
+        public void TheSeamSparesWhatItAppliedOnTheWearersOwnTurn_AndNothingElse()
         {
-            string source = File.ReadAllText(
-                ProductionFiles().Single(p => Path.GetFileName(p) == "FightSession.Riders.cs"));
+            var hero = new Combat.CombatantState("Hero", true, 100, 10, 10, 50);
+            var foe = new Combat.CombatantState("Foe", false, 100, 10, 10, 1);
+            var session = new Combat.Session.FightSession(
+                new Combat.CombatEncounter(new[] { hero }, new[] { foe }), null, null, new Rng.SeededRandom(1));
+            Assert.AreSame(hero, session.Current, "fixture: the hero holds the turn");
 
-            Assert.IsTrue(source.Contains("_statusesAppliedThisTurn.Add(applied)"),
-                "RecordStatus must add the entry it applied to the turn-end exemption set");
+            session.ApplyStatusToForTest(hero, Combat.StatusEffectType.Vulnerable, 25, 1, hero);
+            session.ApplyStatusToForTest(foe, Combat.StatusEffectType.Vulnerable, 25, 1, hero);
+
+            session.TickStatusesAtTurnEndForTest(hero);
+            session.TickStatusesAtTurnEndForTest(foe);
+
+            Assert.AreEqual(1, hero.Statuses.Count,
+                "applied on the wearer's own turn, so that turn's end must not count");
+            Assert.AreEqual(0, foe.Statuses.Count,
+                "applied on somebody else's turn, so the wearer's next turn end is the first of its one");
+
+            session.TickStatusesAtTurnEndForTest(hero);
+            Assert.AreEqual(0, hero.Statuses.Count, "spared once, not twice");
         }
 
         private static List<string> ProductionFiles()

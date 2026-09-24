@@ -220,16 +220,19 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE TURN IT WENT UP DOES NOT COUNT. Handed to the end-of-turn tick
-        // as a raised-this-turn entry, a one-turn ward survives that turn's
-        // end and goes at the end of the next one.
+        // as a spared entry, a one-turn ward survives that turn's end and goes
+        // at the end of the next one -- and the tick SPENDS the spare, so it
+        // cannot shelter the ward twice. Which wards are spared is
+        // FightSession's call, pinned through real turns in FightTalentTests.
         [Test]
         public void AWardRaisedThisTurn_SurvivesThisTurnsEnd_AndGoesAtTheNextOne()
         {
             var lamb = Fighter();
             Ward(lamb, lamb, 60, turns: 1);
-            var raised = new List<ActiveStatus>(lamb.Statuses);
+            var spared = new List<ActiveStatus>(lamb.Statuses);
 
-            Assert.AreEqual(0, StatusEffects.TickAtTurnEnd(lamb, raised).Count, "the turn it went up counted");
+            Assert.AreEqual(0, StatusEffects.TickAtTurnEnd(lamb, spared).Count, "the turn it went up counted");
+            CollectionAssert.IsEmpty(spared, "the spare was not spent");
             Assert.AreEqual(60, StatusEffects.WardPoints(lamb));
 
             Assert.AreEqual(1, StatusEffects.TickAtTurnEnd(lamb).Count);
