@@ -102,9 +102,14 @@ rename an event id once a save exists.
 
 ## Art
 
-- **Where:** `Assets/_Project/Art/Events/<event>_<page>.png`, written into the
-  page as `"artPath": "Assets/_Project/Art/Events/<event>_<page>.png"`
-  (Assets-relative, with extension; the build refuses a Resources-style path).
+- **Where:** one folder per event, named by its id:
+  `Assets/_Project/Art/Events/<event_id>/<page_id>.png`, written into the page
+  as `"artPath": "Assets/_Project/Art/Events/<event_id>/<page_id>.png"`
+  (Assets-relative, with extension). Example: the demo's `well` page is
+  `Assets/_Project/Art/Events/demo_wishing_well/well.png`. The build refuses
+  a Resources-style path, and refuses art under `Art/Events/` that is not
+  one folder deep in its own event's folder (`EventEntryResolver`). The file
+  name is by convention the page id; pages of one event may share a file.
 - **Size:** the frame is **960 x 720** at 1080p (4:3 landscape). Deliver at
   that size or an exact multiple (1920 x 1440). Off-ratio art is letterboxed,
   not stretched.

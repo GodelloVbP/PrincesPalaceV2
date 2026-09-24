@@ -82,7 +82,7 @@ namespace PrincesPalace.Domain.Content
     {
         [ContentDoc("Stable id for this page within its event; targeted by an outcome's goTo.")]
         public string id = "";
-        [ContentDoc("This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event>_<page>.png): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives.")]
+        [ContentDoc("This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event_id>/<page_id>.png; the build refuses art under Art/Events/ that is not in its own event's folder): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives.")]
         public string artPath = "";
         [ContentDoc("The page's title, shown above the body; capped at EventEntryResolver.MaxTitleLength characters.")]
         public string title = "";

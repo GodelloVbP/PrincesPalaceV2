@@ -147,7 +147,7 @@ namespace PrincesPalace.Domain.Content
             var resolvedPages = new List<ResolvedEventPage>(rawPages.Length);
             foreach (var rawPage in rawPages)
             {
-                if (!TryResolvePage(rawPage, eventLabel, pageIds, characterDisplayNamesById, knownItemIds,
+                if (!TryResolvePage(rawPage, raw.id, eventLabel, pageIds, characterDisplayNamesById, knownItemIds,
                         incrementedCounters, requiredCounters, out var page, out error))
                 {
                     return false;
@@ -161,7 +161,39 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolvePage(RawEventPage raw, string eventLabel, HashSet<string> pageIds,
+        public const string EventArtRoot = "Assets/_Project/Art/Events/";
+
+        // ONE FOLDER PER EVENT, NAMED BY ITS ID: Art/Events/<event_id>/<file>.
+        //
+        // Owner's call, 2026-09-24. Nothing at runtime depends on the layout --
+        // ScreenRegistry.WireEvent bakes each page's art by its full path -- so
+        // a file filed elsewhere would still show. What this refuses is the
+        // drift: art for one event sitting loose in the root or in another
+        // event's folder, which is how a delete-this-event pass later takes the
+        // wrong files or leaves some behind. Art outside Art/Events/ (a shared
+        // background, say) is not this rule's business and passes.
+        private static bool IsFiledInItsEventFolder(string pageLabel, string eventId, string artPath, out string error)
+        {
+            error = null;
+            if (string.IsNullOrWhiteSpace(artPath) || !artPath.StartsWith(EventArtRoot, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            string rest = artPath.Substring(EventArtRoot.Length);
+            int slash = rest.IndexOf('/');
+            bool oneFolderDeep = slash > 0 && slash < rest.Length - 1 && rest.IndexOf('/', slash + 1) < 0;
+            if (oneFolderDeep && string.Equals(rest.Substring(0, slash), eventId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            error = $"{pageLabel}: artPath '{artPath}' must be filed as {EventArtRoot}{eventId}/<file> " +
+                    "-- every event keeps its art in a folder named by its id.";
+            return false;
+        }
+
+        private static bool TryResolvePage(RawEventPage raw, string eventId, string eventLabel, HashSet<string> pageIds,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
             HashSet<string> incrementedCounters,
@@ -177,7 +209,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!ArtPathConvention.Check(pageLabel, "artPath", raw.artPath, out error))
+            if (!ArtPathConvention.Check(pageLabel, "artPath", raw.artPath, out error)
+                || !IsFiledInItsEventFolder(pageLabel, eventId, raw.artPath, out error))
             {
                 return false;
             }

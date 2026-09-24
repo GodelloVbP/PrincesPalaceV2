@@ -611,8 +611,10 @@ provenance the same way every other recipe's do.
 frame is **960 x 720 at 1080p, 4:3 landscape** (`EventScreen.ArtWidth` /
 `ArtHeight`, pinned in `EventScreenTests`). Commission at that size or an
 exact multiple (1920 x 1440); the image keeps its aspect, so off-ratio art
-letterboxes rather than stretches. File it as
-`Assets/_Project/Art/Events/<event>_<page>.png` and write that Assets-relative
+letterboxes rather than stretches. File it in the event's own folder,
+`Assets/_Project/Art/Events/<event_id>/<page_id>.png` (e.g.
+`Art/Events/demo_wishing_well/well.png`; the content build refuses art under
+`Art/Events/` filed anywhere else), and write that Assets-relative
 path, extension included, into `artPath` -- it is baked into the Map scene
 like an item `iconPath`, so it needs step 3's `-BuildScenes`. Full authoring
 guide: `docs/EVENTS.md`.

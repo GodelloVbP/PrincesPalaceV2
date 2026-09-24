@@ -87,12 +87,55 @@ namespace PrincesPalace.Domain.Tests
         public void AnAssetsRelativeArtPath_ResolvesOntoThePagesArtKey()
         {
             var entry = MinimalEvent();
-            entry.pages[0].artPath = "Assets/_Project/Art/Events/demo_well.png";
+            entry.pages[0].artPath = "Assets/_Project/Art/Events/e1/p1.png";
 
             bool ok = Resolve(entry, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual("Assets/_Project/Art/Events/demo_well.png", resolved[0].Pages[0].ArtKey);
+            Assert.AreEqual("Assets/_Project/Art/Events/e1/p1.png", resolved[0].Pages[0].ArtKey);
+        }
+
+        // One folder per event, named by its id (owner's call 2026-09-24).
+        // Literal paths throughout: each case is a filing mistake an author
+        // could make, and the refusal must name the folder it wanted.
+        [TestCase("Assets/_Project/Art/Events/e1_p1.png")]
+        [TestCase("Assets/_Project/Art/Events/other_event/p1.png")]
+        [TestCase("Assets/_Project/Art/Events/e1/sub/p1.png")]
+        [TestCase("Assets/_Project/Art/Events/E1/p1.png")]
+        [TestCase("Assets/_Project/Art/Events/e1/")]
+        public void EventArtOutsideItsOwnEventFolder_IsRefused(string artPath)
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].artPath = artPath;
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("Assets/_Project/Art/Events/e1/<file>", string.Join(" ", errors));
+        }
+
+        [Test]
+        public void TheShippedDemoShape_Resolves()
+        {
+            var entry = MinimalEvent("demo_wishing_well");
+            entry.pages[0].artPath = "Assets/_Project/Art/Events/demo_wishing_well/well.png";
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
+        // The folder rule is about Art/Events/ only; a page reusing a shared
+        // background elsewhere under Art/ is not misfiled event art.
+        [Test]
+        public void ArtOutsideTheEventsRoot_IsNotTheFolderRulesBusiness()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].artPath = "Assets/_Project/Art/Backgrounds/cavern.png";
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
         }
 
         // ---- unknown kinds --------------------------------------------------
