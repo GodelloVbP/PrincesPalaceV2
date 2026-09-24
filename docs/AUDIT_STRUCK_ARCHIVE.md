@@ -2115,7 +2115,7 @@ glow, and impossible to mistake for focus or hover. The one-line change the find
 the cost the finding named. `ThemedMenuState.Primary` itself survives with one production user
 left, which is #175 below.
 
-### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `<pending commit>`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch
+### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `818a00eb`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch
 
 `SpellPerformance.cs:103` declares `public bool Placed = true;`, and
 `SpellPerformancePlayer.cs:436` (`if (!instance.Placed) return;`) is what stops a

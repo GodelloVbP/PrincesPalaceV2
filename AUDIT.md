@@ -2394,7 +2394,7 @@ the palace and any other art that is supposed to glow the same shader treatment 
 spell layers now have. That keeps "what blooms" an authored property of the thing
 rather than a threshold everything is measured against.
 
-### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `<pending commit>`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch. Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
+### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `818a00eb`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch. Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 183. The reel is four times slower, and the two legs that moved are the two that are motion
 
