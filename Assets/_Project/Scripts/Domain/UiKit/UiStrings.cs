@@ -496,6 +496,10 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("reckoning.no_relics", "YOU CARRY NOTHING INTO THE DARK");
         public static readonly UiString ReckoningRelicHeld =
             UiString.Define("reckoning.relic_held", "HELD FOR THIS DESCENT");
+        // Which page of the relic list is up. Only shown when there is more
+        // than one: the shop sells relics with no cap and rerolls its shelf.
+        public static readonly UiString ReckoningRelicPage =
+            UiString.Define("reckoning.relic_page", "{0} / {1}", "99 / 99");
         public static readonly UiString ReckoningTallyHeading =
             UiString.Define("reckoning.tally_heading", "WHAT THEY DID, THIS FIGHT");
         // Reuses the defeat screen's shape on purpose: the same four numbers

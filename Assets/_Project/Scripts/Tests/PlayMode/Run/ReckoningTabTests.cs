@@ -282,6 +282,61 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotEmpty(TextOf("ReckoningRelic0Name"));
         }
 
+        [UnityTest]
+        public IEnumerator SevenRelicsPageRatherThanLosingTheOnesThatDoNotFit()
+        {
+            // The shop sells relics with no cap and rerolls its shelf, so a run
+            // past one page is reachable. The rows past the last one used to be
+            // dropped without a word.
+            var ids = Enumerable.Range(0, 7).Select(i => "relic_paging_" + i).ToList();
+            RunManager.Run.relicIds = new List<string>(ids);
+            int perPage = PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.RelicRowCount;
+            Assert.Less(perPage, ids.Count, "this test needs more relics than one page holds");
+
+            yield return ShowAReckoning();
+
+            Click("ReckoningTab1");
+            yield return null;
+
+            Assert.IsTrue(Named("ReckoningRelicPrevPage").activeInHierarchy, "no pager with seven relics");
+            Assert.IsTrue(Named("ReckoningRelicNextPage").activeInHierarchy);
+            Assert.AreEqual("1 / 2", TextOf("ReckoningRelicPageLabel"));
+            Assert.AreEqual(ids[0], TextOf("ReckoningRelic0Name"));
+
+            Click("ReckoningRelicNextPage");
+            yield return null;
+
+            Assert.AreEqual("2 / 2", TextOf("ReckoningRelicPageLabel"));
+            Assert.AreEqual(ids[perPage], TextOf("ReckoningRelic0Name"), "the second page does not start where the first ended");
+            Assert.IsTrue(Named("ReckoningRelic" + (ids.Count - perPage - 1)).activeSelf, "the seventh relic is not shown");
+            Assert.AreEqual(ids[6], TextOf("ReckoningRelic" + (ids.Count - perPage - 1) + "Name"));
+            Assert.IsFalse(Named("ReckoningRelic" + (ids.Count - perPage)).activeSelf, "a short last page is padded");
+
+            // Clamped past the end, as Glossary's pager is.
+            Click("ReckoningRelicNextPage");
+            yield return null;
+            Assert.AreEqual("2 / 2", TextOf("ReckoningRelicPageLabel"));
+
+            Click("ReckoningRelicPrevPage");
+            yield return null;
+            Assert.AreEqual(ids[0], TextOf("ReckoningRelic0Name"));
+        }
+
+        [UnityTest]
+        public IEnumerator OnePageOfRelicsShowsNoPager()
+        {
+            RunManager.Run.relicIds = new List<string> { "relic_paging_0", "relic_paging_1" };
+
+            yield return ShowAReckoning();
+
+            Click("ReckoningTab1");
+            yield return null;
+
+            Assert.IsFalse(Named("ReckoningRelicPrevPage").activeSelf);
+            Assert.IsFalse(Named("ReckoningRelicNextPage").activeSelf);
+            Assert.IsFalse(Named("ReckoningRelicPageLabel").activeSelf);
+        }
+
         // ---- the animation ------------------------------------------------------------
 
         [UnityTest]

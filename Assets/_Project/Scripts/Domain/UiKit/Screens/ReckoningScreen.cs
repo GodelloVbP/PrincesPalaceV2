@@ -86,7 +86,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // alpha is the one dial this holds.
         //
         // 0xB4 is 71%, down from fully opaque. At FF the glow was too hot
-        // against the frame's violet — seen in the running game, which is the
+        // against the frame's violet â€” seen in the running game, which is the
         // only place it could be seen, since the Reckoning is a sub-panel and
         // ScreenshotTool only knows top-level ones. The flare's own curve then
         // swings this further down again, so the peak is what is being set
@@ -142,6 +142,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RelicNames = new List<NodeRef>();
         public List<NodeRef> RelicMetas = new List<NodeRef>();
         public List<NodeRef> RelicBodies = new List<NodeRef>();
+
+        // The relic list's pager. Hidden by the controller while everything
+        // held fits on one page, which is the common case.
+        public NodeRef RelicPageLabel;
+        public NodeRef RelicPrevPageButton;
+        public NodeRef RelicNextPageButton;
 
         public List<NodeRef> TallyRows = new List<NodeRef>();
         public List<NodeRef> TallyNames = new List<NodeRef>();
@@ -240,9 +246,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string BarTrackTint = "#33224F";
 
         // How many relics one page of the RELICS tab shows. The design says
-        // "infinite slots per run"; six is what fits without paging, and the
-        // controller says so out loud when a run holds more.
-        public const int RelicRowCount = 5;
+        // "infinite slots per run" and the shop means it -- relics sell with
+        // no cap and the shelf rerolls -- so the tab PAGES (Paging, the pager
+        // on the heading line) rather than dropping whatever does not fit.
+        //
+        // Four, not five: the band between the tab strip (bottom ~77) and the
+        // Continue plate (top ~-216) is ~293px, which is the heading plus four
+        // 56px rows. A fifth row sat under Continue -- a real overlap the
+        // audit cannot see, because Continue carries the phase's one
+        // AllowOverlap. ReckoningScreenTests pins the clearance directly.
+        public const int RelicRowCount = 4;
+
+        private const float RelicHeadingY = 52f;
+        private const float RelicTopRowY = 2f;
+        private const float RelicRowPitch = 60f;
 
         private const float TabY = 100f;
         private const float TabPitch = 250f;
@@ -322,7 +339,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // 720 wide at x 160, so the box spans -200 to 520: it EMBRACES the
             // button, whose own left edge is at -170, rather than starting
             // where the art stops. The sprite's core is offset back inside its
-            // own texture, which lands it under the arrowhead — see
+            // own texture, which lands it under the arrowhead â€” see
             // ProceduralSpriteBaker.BakeEmber for why that is what makes the
             // glow surround the arrow instead of pointing away from it.
             //
@@ -573,13 +590,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var children = new List<UiNode>
             {
-                Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(700f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
+                Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(460f, 34f), 20,
+                    "#B8A8D9", Place.At(0f, RelicHeadingY)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
+
+            // THE PAGER SHARES THE HEADING'S LINE, to the right of it. There is
+            // no band below the rows to put it in -- that is Continue's.
+            var pager = Ui.Pager("ReckoningRelicPrevPage", Place.At(330f, RelicHeadingY),
+                "ReckoningRelicNextPage", Place.At(500f, RelicHeadingY), new UiVec(52f, 44f), 20,
+                "ReckoningRelicPageLabel", UiStrings.ReckoningRelicPage, Place.At(415f, RelicHeadingY),
+                new UiVec(100f, 34f), 16, "#B8A8D9");
+            pager.Label.AsDecor().Inactive();
+            pager.Prev.Inactive();
+            pager.Next.Inactive();
+            RelicPageLabel = pager.Label;
+            RelicPrevPageButton = pager.Prev;
+            RelicNextPageButton = pager.Next;
+            children.Add(pager.Label);
+            children.Add(pager.Prev);
+            children.Add(pager.Next);
 
             for (int i = 0; i < RelicRowCount; i++)
             {
-                float y = -20f - i * 60f;
+                float y = RelicTopRowY - i * RelicRowPitch;
 
                 var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(420f, 30f), 21,
                         "#EDE6FF", Place.At(-280f, 12f))

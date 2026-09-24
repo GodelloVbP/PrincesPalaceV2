@@ -324,6 +324,56 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(offenders);
         }
 
+        [Test]
+        public void TheRelicPageLeavesContinueAndTheTabStripClear()
+        {
+            // THE AUDIT CANNOT CHECK THIS ONE. Continue carries the summary
+            // phase's AllowOverlap ("the page frames beneath it ... leave its
+            // band clear"), and A1 skips every pair either side of which has a
+            // reason -- so a relic row drawn under the button passed the audit.
+            // One did: the fifth row, until RelicRowCount dropped to four.
+            // Asserted on the solved rects, at every frame.
+            foreach (var frame in UiFrames.All)
+            {
+                var all = UiSolver.Solve(Tree(), frame).Descendants().ToList();
+                SolvedNode One(string name) => all.Single(n => n.Name == name);
+
+                var relicContent = new List<SolvedNode>
+                {
+                    One("ReckoningRelicHeading"),
+                    One("ReckoningRelicPrevPage"),
+                    One("ReckoningRelicPageLabel"),
+                    One("ReckoningRelicNextPage"),
+                };
+                for (int i = 0; i < ReckoningScreen.RelicRowCount; i++)
+                {
+                    relicContent.Add(One("ReckoningRelic" + i));
+                }
+
+                var phaseChrome = new List<SolvedNode> { One("ReckoningContinueButton") };
+                for (int i = 0; i < 3; i++) phaseChrome.Add(One("ReckoningTab" + i));
+
+                var offenders = new List<string>();
+                foreach (var content in relicContent)
+                {
+                    foreach (var chrome in phaseChrome)
+                    {
+                        if (content.Rect.Overlaps(chrome.Rect)) offenders.Add($"{content.Name} under {chrome.Name}");
+                    }
+
+                    foreach (var other in relicContent)
+                    {
+                        if (string.CompareOrdinal(content.Name, other.Name) < 0 && content.Rect.Overlaps(other.Rect))
+                        {
+                            offenders.Add($"{content.Name} on {other.Name}");
+                        }
+                    }
+                }
+
+                CollectionAssert.IsEmpty(offenders, $"at {UiFrames.Describe(frame)}");
+            }
+        }
+
         private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;
