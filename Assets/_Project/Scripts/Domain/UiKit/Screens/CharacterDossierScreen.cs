@@ -104,6 +104,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef UnassignedEmptyHint;
         public List<NodeRef> UnassignedRows = new List<NodeRef>();
         public List<NodeRef> UnassignedNames = new List<NodeRef>();
+        public List<NodeRef> UnassignedIcons = new List<NodeRef>();
         public List<NodeRef> UnassignedSelections = new List<NodeRef>();
 
         public NodeRef PackPanel;
@@ -870,20 +871,44 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
+                // The book's art, the same 48x48 source the slot above draws,
+                // shown at 32 because the row is 40 tall. Same left-aligned
+                // icon-then-name shape as the slot, so a book reads as the
+                // same object before and after it is placed. Inactive until
+                // the controller has a sprite for it (ItemIcons.Apply plus
+                // SetShown, the pack cell's pattern): an Image with no sprite
+                // is a white quad, not nothing.
+                const float rowIconSize = 32f;
+                const float rowIconMargin = 8f;
+                const float rowIconGap = 8f;
+                float rowIconX = -DossierLayout.ContentAWidth * 0.5f + rowIconMargin + rowIconSize * 0.5f;
+
+                var icon = Ui.Sprite($"DossierUnassigned{i}Icon", null,
+                        new UiVec(rowIconSize, rowIconSize), Place.At(rowIconX, 0f))
+                    .Inactive()
+                    .AsDecor();
+
+                // NOT .Inactive(): it used to be, and nothing ever activated
+                // it, so every unassigned row was an empty box a player had
+                // to click blind. The row itself is what starts hidden.
+                float rowNameLeft = rowIconX + rowIconSize * 0.5f + rowIconGap;
+                float rowNameRight = DossierLayout.ContentAWidth * 0.5f - 12f;
                 var name = Ui.Label($"DossierUnassigned{i}Name", UiString.Runtime,
-                        new UiVec(DossierLayout.ContentAWidth - 24f, 22f), 15, Text,
-                        Place.At(0f, 0f)).Inactive().AsDecor();
+                        new UiVec(rowNameRight - rowNameLeft, 22f), 15, Text,
+                        Place.At((rowNameLeft + rowNameRight) * 0.5f, 0f)).AsDecor();
 
                 var row = Ui.Button($"DossierUnassigned{i}", UiString.Runtime,
                         new UiVec(DossierLayout.ContentAWidth, rowHeight), 1, Place.At(cx, y))
                     .NoChrome()
                     .Inactive()
-                    .AllowOverlap("the selection tint and the name sit inside their own row by construction");
+                    .AllowOverlap("the selection tint, the icon and the name sit inside their own row by construction");
                 row.Children.Add(selection);
+                row.Children.Add(icon);
                 row.Children.Add(name);
 
                 UnassignedRows.Add(row);
                 UnassignedSelections.Add(selection);
+                UnassignedIcons.Add(icon);
                 UnassignedNames.Add(name);
                 children.Add(row);
             }

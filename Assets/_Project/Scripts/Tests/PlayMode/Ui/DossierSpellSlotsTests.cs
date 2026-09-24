@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -369,6 +370,160 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(0, RunManager.Run.learnedSpells.Count,
                 "pressing an empty slot on the new character taught them the book selected on the previous one");
+        }
+
+        // ---- every book draws its art and says what it does ------------------
+        //
+        // Owner ask 2026-09-24: "point the art for the spellbooks so they also
+        // work in the inventory, and make sure there is a hover showing what a
+        // spellbook does". Two defects sat under it, both invisible in code:
+        // DossierUnassigned{i}Name and DossierSpellSlot{i}Icon were built
+        // inactive and nothing ever activated them, so the rows were blank and
+        // the slot art was bound but never on screen. This walks EVERY book
+        // that authored an iconPath (not a sample), through the unassigned
+        // rows five at a time and then through slot 0, so a book whose art
+        // failed to bake names itself.
+        [UnityTest]
+        public IEnumerator EveryBookShowsItsArtInTheDossierAndItsHoverSaysWhatItDoes()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new System.Collections.Generic.List<string> { "sheep", "owl", "bear" };
+            SaveSlotManager.SaveCurrent();
+            RunManager.StartRun(20260924UL);
+
+            var owner = SaveSlotManager.CurrentSave?.ActiveSquad()?.FirstOrDefault(c => c != null);
+            Assert.IsNotNull(owner);
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks(owner.definitionId),
+                $"'{owner.definitionId}' refuses spell books, so the slots this test reads are hidden");
+
+            var books = ContentDatabase.Skills
+                .Where(s => s != null && !string.IsNullOrEmpty(s.iconPath))
+                .ToList();
+            Assert.GreaterOrEqual(books.Count, 17, "fewer books carry an iconPath than the 17 authored on 2026-09-24");
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            menu.Open();
+            menu.Select(0);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
+            dossier.ShowSpells(true);
+
+            var run = RunManager.Run;
+            var tooltip = Named(dossier, "DossierTooltip");
+            var title = Named(dossier, "DossierTooltipTitle")?.GetComponent<TMPro.TMP_Text>();
+            var body = Named(dossier, "DossierTooltipBody")?.GetComponent<TMPro.TMP_Text>();
+            Assert.IsNotNull(tooltip, "the dossier has no tooltip");
+            Assert.IsNotNull(title);
+            Assert.IsNotNull(body);
+
+            const int Visible = 5;
+            for (int start = 0; start < books.Count; start += Visible)
+            {
+                var chunk = books.Skip(start).Take(Visible).ToList();
+                run.learnedSpells.Clear();
+                run.unassignedSpellBooks.Clear();
+                run.unassignedSpellBooks.AddRange(chunk.Select(b => b.id));
+                dossier.Refresh();
+                yield return null;
+
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    string id = chunk[i].id;
+
+                    var name = Named(dossier, $"DossierUnassigned{i}Name");
+                    Assert.IsNotNull(name, $"DossierUnassigned{i}Name is missing from the built scene");
+                    Assert.IsTrue(name.activeInHierarchy, $"row {i} ('{id}') is up but its name is not");
+                    Assert.AreEqual(chunk[i].Data.DisplayName, name.GetComponent<TMPro.TMP_Text>().text);
+
+                    var icon = Named(dossier, $"DossierUnassigned{i}Icon");
+                    Assert.IsNotNull(icon, $"DossierUnassigned{i}Icon is missing from the built scene");
+                    Assert.IsTrue(icon.activeInHierarchy, $"'{id}' is an unassigned row with no art on screen");
+                    var image = icon.GetComponent<Image>();
+                    Assert.IsTrue(image.enabled && image.sprite != null, $"'{id}' has no baked sprite");
+
+                    // THE POINTER, with the focus parked on the panel's
+                    // close button -- a declared node with no tooltip of its
+                    // own. Focus outranks hover (TooltipFocus), and the
+                    // module never lets the selection go null inside a
+                    // declared set (NavigationInputModule.
+                    // ReselectIfOutsideDeclaredSet), so with the focus on a
+                    // slot this hover would be swallowed by design. Driven
+                    // through the component, the way
+                    // DossierGamepadNavigationTests drives the pack cells.
+                    var rowNode = Named(dossier, $"DossierUnassigned{i}");
+                    EventSystem.current.SetSelectedGameObject(Named(dossier, "DossierSpellsClose"));
+                    yield return null;
+
+                    var hover = rowNode.GetComponent<HoverIndex>();
+                    Assert.IsNotNull(hover, $"DossierUnassigned{i} carries no HoverIndex, so nothing shows on hover");
+                    hover.OnPointerEnter(null);
+                    yield return null;
+
+                    Assert.IsTrue(tooltip.activeSelf, $"hovering '{id}' showed no tooltip (focus on '{EventSystem.current.currentSelectedGameObject?.name}')");
+                    Assert.AreEqual(chunk[i].Data.DisplayName, title.text);
+                    StringAssert.Contains(chunk[i].Data.Description, body.text,
+                        $"the tooltip for '{id}' does not say what the book does");
+
+                    hover.OnPointerExit(null);
+                    yield return null;
+                    Assert.IsFalse(tooltip.activeSelf, $"leaving '{id}' left its tooltip up");
+
+                    // THE STICK: selecting the row shows the same box.
+                    EventSystem.current.SetSelectedGameObject(rowNode);
+                    yield return null;
+                    Assert.IsTrue(tooltip.activeSelf, $"focusing '{id}' with the pad showed no tooltip");
+                    Assert.AreEqual(chunk[i].Data.DisplayName, title.text);
+                }
+
+                // The same books once placed: slot 0 draws the art the row
+                // drew and its hover says the same thing.
+                foreach (var book in chunk)
+                {
+                    run.unassignedSpellBooks.Clear();
+                    run.learnedSpells.Clear();
+                    run.learnedSpells.Add(new LearnedSpellEntry
+                    {
+                        characterId = owner.definitionId,
+                        skillId = book.id,
+                        slot = 0,
+                    });
+                    dossier.Refresh();
+                    yield return null;
+
+                    var slotIcon = Named(dossier, "DossierSpellSlot0Icon");
+                    Assert.IsNotNull(slotIcon, "DossierSpellSlot0Icon is missing from the built scene");
+                    Assert.IsTrue(slotIcon.activeInHierarchy, $"'{book.id}' fills slot 0 with no art on screen");
+                    Assert.IsNotNull(slotIcon.GetComponent<Image>().sprite);
+
+                    var slotNode = Named(dossier, "DossierSpellSlot0");
+                    EventSystem.current.SetSelectedGameObject(Named(dossier, "DossierSpellsClose"));
+                    yield return null;
+                    EventSystem.current.SetSelectedGameObject(slotNode);
+                    yield return null;
+                    Assert.IsTrue(tooltip.activeSelf, $"focusing slot 0 holding '{book.id}' showed no tooltip");
+                    Assert.AreEqual(book.Data.DisplayName, title.text);
+                    StringAssert.Contains(book.Data.Description, body.text);
+                }
+            }
+
+            // An empty slot has nothing to describe: no icon, no box.
+            run.learnedSpells.Clear();
+            dossier.Refresh();
+            yield return null;
+            Assert.IsFalse(Named(dossier, "DossierSpellSlot0Icon").activeInHierarchy,
+                "an empty slot still shows the last book's art");
+            EventSystem.current.SetSelectedGameObject(Named(dossier, "DossierSpellsClose"));
+            yield return null;
+            EventSystem.current.SetSelectedGameObject(Named(dossier, "DossierSpellSlot0"));
+            yield return null;
+            Assert.IsFalse(tooltip.activeSelf, "an empty slot opened a tooltip with nothing to say");
         }
 
         private static GameObject Named(Component root, string name) =>

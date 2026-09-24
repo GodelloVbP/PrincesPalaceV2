@@ -153,7 +153,7 @@ namespace PrincesPalace
         // FALLS BACK TO A BARE NUMBER on a blank tag, which is the same
         // fallback FightHudModel.CostLabel already uses: a number with no unit
         // is incomplete, a number with the WRONG unit is a lie.
-        private static string SpellCost(SkillDefinition skill)
+        internal static string SpellCost(SkillDefinition skill)
         {
             int cost = skill.Data.ManaCost;
             if (cost <= 0) return "NO COST";

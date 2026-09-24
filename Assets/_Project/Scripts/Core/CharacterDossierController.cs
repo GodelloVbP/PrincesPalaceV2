@@ -69,6 +69,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] unassignedRows;
         [SerializeField] internal TMP_Text[] unassignedNames;
         [SerializeField] internal Image[] unassignedSelections;
+        [SerializeField] internal Image[] unassignedIcons;
 
         // The skills panel (owner bug report, 2026-09-19: "Skills in the
         // char menu, when you click on it, nothing happens" -- there was no
@@ -336,6 +337,8 @@ namespace PrincesPalace
             AttachHovers(attributeCells, OnAttributeHover);
             AttachHovers(slotCells, OnSlotHover);
             AttachHovers(packCells, OnPackHover);
+            AttachHovers(spellSlots, OnSpellSlotHover);
+            AttachHovers(unassignedRows, OnUnassignedHover);
 
             // Opening/closing the attributes panel is VIEWING, same as the
             // hovers just above -- wired above the lockedForFight guard
@@ -499,7 +502,7 @@ namespace PrincesPalace
         // a SelectIndex (the module, added by Register) both report into
         // TooltipFocusRouter, which decides which of them may call the
         // handler: focus outranks hover, and a pointer leaving a node the
-        // stick is standing on changes nothing. Three surfaces, one
+        // stick is standing on changes nothing. Five surfaces, one
         // arbitration, and each handler below is still the only place that
         // screen's tooltip is built.
         private void AttachHovers(Button[] buttons, System.Action<int, bool> changed)
@@ -1448,9 +1451,14 @@ namespace PrincesPalace
                     // skillId is exactly that, so the empty case needs no
                     // separate branch here, the same graceful path a shop
                     // card's no-offer icon already takes.
-                    if (spellSlotIcons != null && i < spellSlotIcons.Length)
+                    // AND SetShown, the pack cell's and equip slot's pattern:
+                    // the icon node is built inactive, and Apply only toggles
+                    // the Image component, so without this line the art was
+                    // bound, looked up, assigned -- and never on screen.
+                    if (spellSlotIcons != null && i < spellSlotIcons.Length && spellSlotIcons[i] != null)
                     {
-                        ItemIcons.Apply(spellSlotIcons[i], icons, skillId);
+                        bool hasArt = ItemIcons.Apply(spellSlotIcons[i], icons, skillId);
+                        spellSlotIcons[i].gameObject.SetShown(hasArt);
                     }
 
                     // A green preview when the currently selected book would
@@ -1483,6 +1491,14 @@ namespace PrincesPalace
                     {
                         var definition = ContentDatabase.GetSkill(_unassignedSnapshot[i]);
                         unassignedNames[i].SetContent(definition?.Data.DisplayName ?? _unassignedSnapshot[i]);
+                    }
+
+                    // The same table the slot above reads: a book's art is
+                    // one bake of its skill's iconPath, wherever it is drawn.
+                    if (unassignedIcons != null && i < unassignedIcons.Length && unassignedIcons[i] != null)
+                    {
+                        bool hasArt = ItemIcons.Apply(unassignedIcons[i], icons, _unassignedSnapshot[i]);
+                        unassignedIcons[i].gameObject.SetShown(hasArt);
                     }
 
                     if (unassignedSelections != null && i < unassignedSelections.Length && unassignedSelections[i] != null)
@@ -2771,6 +2787,58 @@ namespace PrincesPalace
 
             ShowTooltip(entry.Name, body, RectOf(packCells, index));
             ShowPreviewFor(entry);
+        }
+
+        // A BOOK SAYS WHAT IT DOES, placed or not. Both surfaces below are
+        // callers of one body builder, and the cost line in it is the
+        // glossary's own SpellCost -- priced in the pool's tag, the same text
+        // the glossary's spell entry already shows -- so there is no third
+        // spelling of "8 MP" to drift. The shop's card meta line (BookFactLine)
+        // is deliberately NOT reused here: it is purchase advice ("for 2 of
+        // 3", "1 unassigned copy"), which on a row that IS the unassigned copy
+        // says nothing about the spell.
+        private void OnSpellSlotHover(int slot, bool entered)
+        {
+            if (!entered) { HideTooltip(); return; }
+
+            var squad = Squad();
+            var character = (_index >= 0 && _index < squad.Count) ? squad[_index] : null;
+            string skillId = character == null
+                ? null
+                : RunManager.Run?.learnedSpells?
+                    .FirstOrDefault(e => e != null && e.characterId == character.definitionId && e.slot == slot)?.skillId;
+
+            ShowBookTooltip(skillId, RectOf(spellSlots, slot));
+        }
+
+        private void OnUnassignedHover(int row, bool entered)
+        {
+            if (!entered || _unassignedSnapshot == null || row >= _unassignedSnapshot.Count)
+            {
+                HideTooltip();
+                return;
+            }
+
+            ShowBookTooltip(_unassignedSnapshot[row], RectOf(unassignedRows, row));
+        }
+
+        // An empty slot or an id the catalogue no longer has hides the box
+        // rather than showing a title with nothing under it.
+        private void ShowBookTooltip(string skillId, RectTransform near)
+        {
+            var skill = string.IsNullOrEmpty(skillId) ? null : ContentDatabase.GetSkill(skillId);
+            if (skill == null) { HideTooltip(); return; }
+
+            ShowTooltip(skill.Data.DisplayName, BookTooltipBody(skill), near);
+        }
+
+        private static string BookTooltipBody(SkillDefinition skill)
+        {
+            if (skill == null) return "";
+
+            string cost = GlossaryEntries.SpellCost(skill);
+            string description = skill.Data.Description ?? "";
+            return string.IsNullOrWhiteSpace(description) ? cost : $"{cost}\n{description}";
         }
 
         private void ShowTooltip(string title, string body, RectTransform near)
