@@ -97,7 +97,7 @@ namespace PrincesPalace.Domain.Tests
             // as one that assigns it, and the restore is the same line either
             // way.
             ("Time.timeScale",
-                @"Time\.timeScale\s*=",
+                @"Time\.timeScale\s*=(?!=)",
                 @"Time\.timeScale\s*=\s*1f"),
 
             // A spell effect's whole scaled lifetime is 13ms at test speed, so
@@ -202,6 +202,21 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(dead,
                 "these rules match no test file at all, so they protect nothing - fix the pattern, " +
                 "or delete the rule and its reset in TestGlobals: " + string.Join(", ", dead));
+        }
+
+        [Test]
+        public void TimeTimeScaleWritePattern_DoesNotMatchAComparison()
+        {
+            // A fixture that only ever reads the clock -- "if (Time.timeScale
+            // == 1f)" -- never flips the global, and the Write pattern must
+            // not think it did. Pinned literally so a future edit to the
+            // regex cannot silently widen it back to matching "==".
+            var write = Globals.Single(g => g.Name == "Time.timeScale").Write;
+
+            Assert.IsFalse(Regex.IsMatch("if (Time.timeScale == 1f) { }", write),
+                "the Write pattern for Time.timeScale must not match the == comparison");
+            Assert.IsTrue(Regex.IsMatch("Time.timeScale = 0.5f;", write),
+                "the Write pattern for Time.timeScale must still match a real assignment");
         }
     }
 }

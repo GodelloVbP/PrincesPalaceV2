@@ -21,9 +21,13 @@ namespace PrincesPalace.PlayModeTests
     // [Explicit] alone is not enough: tools/test.ps1 filters with
     // ".*\.(Class)\..*", which matches each method's full name, and NUnit runs
     // an explicit node the filter matched. So an AREA run (test.ps1 run), which
-    // names every class in the area, ran all seven cases (~300s) and was how a
-    // stray save file got written. [Explicit] stays so the gate (no filter)
-    // does not even list them.
+    // used to name every class in the area including this one, ran all seven
+    // cases (~300s) and was how a stray save file got written. Area expansion
+    // (tools/test_areas.ps1's Get-AreaClassNames / $AreaExpansionExcludedClasses)
+    // now leaves this class out of that sweep, and -Changed inherits the same
+    // exclusion since it resolves through the same helper. [Explicit] still
+    // stays so the gate (no filter) does not even list them, and naming this
+    // class explicitly still reaches it -- see the PP_BENCHMARK line below.
     //
     //   $env:PP_BENCHMARK='1'; tools/test.ps1 SceneLoadBenchmarkTests
     //

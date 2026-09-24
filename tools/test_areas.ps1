@@ -242,7 +242,12 @@ $TestClassPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|p
 # optional dotted qualifier admits any namespace or alias prefix while the
 # group still captures the bare attribute name, so the Shared/ refusal below
 # keeps reporting "carries a [Test]" rather than the qualified form.
-$TestAttrPattern = '\[\s*(?:[A-Za-z_][\w.]*\.)?(Test|UnityTest|TestCase|TestCaseSource|Theory)\b'
+# Case-sensitive (matched with -cmatch/-cnotmatch below) and anchored so an
+# indexer like "_starts[test.Id]" cannot read as a [Test] attribute: C#
+# attribute names are exact-case, and (?<!\w) refuses a "[" that is itself
+# preceded by an identifier character -- the shape an indexer or array
+# access has and a real attribute never does.
+$TestAttrPattern = '(?<!\w)\[\s*(?:[A-Za-z_][\w.]*\.)?(Test|UnityTest|TestCase|TestCaseSource|Theory)\b'
 
 # Every class DECLARATION, wider than $TestClassPattern on purpose: it also
 # sees "internal", which NUnit will not run and discovery therefore does not
@@ -378,6 +383,36 @@ function Get-TestAreas {
     return $map
 }
 
+# Classes that belong to an area's folder (so -List still shows them there,
+# they still carry structural/duplicate/blind-spot checks, and naming one
+# explicitly on the command line still runs it) but that an AREA SWEEP --
+# a named area, or -Changed resolving to one -- must not pull in by itself.
+#
+# SceneLoadBenchmarkTests is the one entry: its methods are [Explicit], which
+# stops NUnit's own no-filter default run, but an area sweep builds its
+# -testFilter/--filter from CLASS names, and [Explicit] does not defend
+# against being named. Left in, "tools/test.ps1 run" (and any -Changed that
+# resolves to Run) silently added ~290s of benchmark to what was asked for.
+# "tools/test.ps1 SceneLoadBenchmarkTests" (named explicitly) still reaches
+# it -- this set is consulted only by the area-expansion helper below, never
+# by the substring-on-class-name lookup in test.ps1.
+$AreaExpansionExcludedClasses = @("SceneLoadBenchmarkTests")
+
+# The one place "every class in this area" is computed, so -List's area
+# listing, a named-area run and a -Changed area both agree with each other
+# and with $AreaExpansionExcludedClasses above -- no second copy of the
+# exclusion to drift out of step with this one.
+function Get-AreaClassNames {
+    param(
+        [Parameter(Mandatory)][string]$Area,
+        [hashtable]$Classes = (Get-TestClasses -Index (Get-TestIndex)),
+        [hashtable]$Areas = (Get-TestAreas -Index (Get-TestIndex))
+    )
+    return $Classes.Keys | Where-Object {
+        $Areas[$_] -eq $Area -and $AreaExpansionExcludedClasses -notcontains $_
+    }
+}
+
 # ---------------------------------------------------------------------------
 # THE STRUCTURAL GATE. What run_tests_parallel.ps1 refuses to run over.
 #
@@ -461,7 +496,7 @@ function Get-StructuralViolations {
                 # check below already relied on for exactly this reason.
                 $code = Get-CodeOnly $content
 
-                if ($folder -eq $SharedFolder -and $code -match $TestAttrPattern) {
+                if ($folder -eq $SharedFolder -and $code -cmatch $TestAttrPattern) {
                     $violations += "$rel carries a [$($Matches[1])]. $SharedFolder is for helpers only -- move it into its area folder."
                 }
 
@@ -530,7 +565,7 @@ function Get-DiscoveryBlindSpots {
             # refusal above reads it: a helper whose header quotes a [Test] in
             # prose is not a file carrying tests, and treating it as one turns
             # every internal class beside it into a reported blind spot.
-            if ($code -notmatch $TestAttrPattern) { continue }
+            if ($code -cnotmatch $TestAttrPattern) { continue }
 
             # EVERY declared class, not any. "Pass the file if ANY of its
             # classes was discovered" let a file with "public class FooTests"

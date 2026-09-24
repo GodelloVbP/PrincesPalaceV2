@@ -271,6 +271,8 @@ function Invoke-SelfCheck {
            Ok   = { ($structural | Where-Object { $_ -match 'CommentedOutAttrFixtureTests' }).Count -eq 0 } }
         @{ Name = "the internal helper beside it is NOT a blind spot"
            Ok   = { ($blindSpots | Where-Object { $_ -match 'CommentedOutAttrFixtureHelpers' }).Count -eq 0 } }
+        @{ Name = "an indexer that reads like '[test.Id]' in Shared/ is NOT refused as a [Test] attribute"
+           Ok   = { ($structural | Where-Object { $_ -match 'IndexerFalsePositiveFixtureTests' }).Count -eq 0 } }
         @{ Name = "a generic fixture is refused"
            Ok   = { ($structural | Where-Object { $_ -match "generic fixture 'class GenericFixtureTests" }).Count -eq 1 } }
         @{ Name = "a public nested fixture is refused"
@@ -350,7 +352,7 @@ if ($List) {
     }
     Write-Host "Named areas -- the folder each class's file sits in:`n"
     foreach ($area in $AreaNames) {
-        $hits = ($classes.Keys | Where-Object { $testAreas[$_] -eq $area } | Sort-Object) -join ", "
+        $hits = ((Get-AreaClassNames -Area $area -Classes $classes -Areas $testAreas) | Sort-Object) -join ", "
         Write-Host "  $area"
         Write-Host "    $hits`n"
     }
@@ -465,7 +467,7 @@ if ($Changed) {
 
     $changedWanted = @()
     foreach ($area in $resolution.Areas) {
-        $changedWanted += $classes.Keys | Where-Object { $testAreas[$_] -eq $area }
+        $changedWanted += Get-AreaClassNames -Area $area -Classes $classes -Areas $testAreas
     }
     $changedWanted += $resolution.Classes
 
@@ -492,7 +494,7 @@ if ($Changed) {
         if ($AreaNames -contains $term.ToLower()) {
             $area = $term.ToLower()
             $usedArea = $true
-            $wanted += $classes.Keys | Where-Object { $testAreas[$_] -eq $area }
+            $wanted += Get-AreaClassNames -Area $area -Classes $classes -Areas $testAreas
             continue
         }
 

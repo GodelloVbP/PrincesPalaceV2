@@ -1,6 +1,6 @@
 # tools/test_areas_fixture/ -- a deliberately broken test tree
 
-Thirteen files -- eight wrong in exactly one way, three deliberately right -- so that
+Fourteen files -- eight wrong in exactly one way, four deliberately right -- so that
 `tools/test.ps1 -List -SelfCheck` can point discovery at this folder instead
 of `Assets/_Project/Scripts/Tests` and watch every refusal in
 `tools/test_areas.ps1` fire. A gate nobody has seen fail is a gate nobody
@@ -28,6 +28,7 @@ not on any compile path here.
 | `EditMode/Shared/QualifiedAttrFixtureTests.cs` | a suite in `Shared/` writing `[NUnit.Framework.Test]` in full, which the unqualified `$TestAttrPattern` could not see at all | `Get-StructuralViolations` |
 | `EditMode/Shared/CommentedOutAttrFixtureTests.cs` | nothing -- the second control: a helper whose only `[Test]` is in a comment (and one more in a string), beside an internal class. Neither refusal may fire, because the attribute scans read the code with comments and literals stripped | `Get-StructuralViolations` and `Get-DiscoveryBlindSpots` must both stay quiet |
 | `EditMode/Combat/PartialFixtureTests.cs` + `PartialFixtureTests.MoreCases.cs` | nothing -- the third control: one `partial` class, split across two files, both in the same area folder -- the shape this codebase's own production code already uses (`FightController.Hud.cs`, `TmpBootstrap.Typography.cs`) and a real duplicate-name accident is not | `Get-DuplicateClassNames` must stay quiet |
+| `EditMode/Shared/IndexerFalsePositiveFixtureTests.cs` | nothing -- the fourth control: an indexer expression `_starts[test.Id]` whose bracket used to read as `[Test]` under the old case-insensitive, unanchored `$TestAttrPattern`. Neither the lower-case variable name nor the `[` sitting right after an identifier may be mistaken for a real attribute | `Get-StructuralViolations` must stay quiet |
 
 The self-check asserts the exact COUNT of each list as well as its contents,
 so a refusal that starts over-firing fails here too. Adding a case means
