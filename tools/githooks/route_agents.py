@@ -55,7 +55,7 @@ or reviews the agent.
 `unknown-cause` was removed on 2026-09-23: a generic "difficult" criterion
 reopens exactly the judgment call this hook exists to close. `architecture`
 and `cross-layer` are decided by triage before launch; `two-failed-cycles`
-is the fallback when a Sonnet implementer already tried and failed twice.
+is the fallback when an implementer already tried and failed twice.
 
 A model value containing "fable" is refused outright, regardless of
 subagent_type: the owner decided on 2026-09-23 that Fable is not used on

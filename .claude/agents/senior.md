@@ -23,8 +23,8 @@ where `<criterion>` is exactly one of:
   contracts/lifecycles, and the concrete failure risks.
 - `cross-layer` (by triage) — one change that must land atomically across
   Domain + Core + Editor/scene generation with ordering, serialization or
-  lifecycle risk, where splitting it across Sonnet owners would break it.
-- `two-failed-cycles` (fallback) — a Sonnet implementer failed two
+  lifecycle risk, where splitting it across separate implementer owners would break it.
+- `two-failed-cycles` (fallback) — an implementer failed two
   correction cycles on this same issue. The brief names what each attempt
   did and why it failed.
 

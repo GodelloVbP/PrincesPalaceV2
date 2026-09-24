@@ -54,7 +54,7 @@ Workers cannot launch agents. `senior` REQUIRES a brief with a line
 - `architecture` (by triage) — redesigns a contract or lifecycle.
 - `cross-layer` (by triage) — must land atomically across Domain + Core +
   Editor/scene generation, with ordering, serialization or lifecycle risk.
-- `two-failed-cycles` (fallback) — a Sonnet implementer already failed two
+- `two-failed-cycles` (fallback) — an implementer already failed two
   correction cycles on this same issue.
 
 scoped to only that portion, or it refuses — see `docs/WORKFLOW.md` §6.
