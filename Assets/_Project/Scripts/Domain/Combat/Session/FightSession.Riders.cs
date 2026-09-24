@@ -19,10 +19,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // five call sites until 2026-09-06 and one of them had already stopped.
         private bool _killedThisAction;
 
-        private CombatantState _bloodlustChainActor;
-        private int _bloodlustChainCount;
-        private CombatantState _trampleChainActor;
-        private int _trampleChainCount;
+        // ONE STREAK FOR EVERY EXTRA ACTION A KILL CAN BUY, whichever rider
+        // granted it. Trample and Bloodlust each read their own cap against
+        // this same count, so the chain is bounded by the larger of the two
+        // caps, never their sum. Two counters, one per source, is what let a
+        // capped Trample fall through to a Bloodlust whose own count had been
+        // held at zero the whole time -- Trample 1 + Bloodlust 2 = a four-attack
+        // chain, the exact thing the short-circuit below was written to stop.
+        private CombatantState _extraActionChainActor;
+        private int _extraActionChainCount;
 
         // Set by whichever grant fired, read and cleared once by
         // AdvanceAfterAction immediately after AdvanceTurn. It is the only
@@ -154,33 +159,28 @@ namespace PrincesPalace.Domain.Combat.Session
             // Trample is tried BEFORE Bloodlust and SHORT-CIRCUITS it, rather
             // than both firing: a Ram wearing the Bloodlust relic would
             // otherwise bank two extra turns for one kill, which neither the
-            // talent nor the relic promises, and which stacks their two
-            // independent caps into a four-attack chain. One kill, one extra
-            // action, from whichever source is available.
-            bool trampled = false;
+            // talent nor the relic promises. One kill, one extra action, from
+            // whichever source still has room -- and both sources count
+            // against the ONE streak above, so falling through to Bloodlust
+            // once Trample is capped cannot stack their two caps into a
+            // four-attack chain either.
+            bool granted = false;
             if (killedThisAction)
             {
-                trampled = TryGrantTrample(_encounter.Current);
-            }
-            else
-            {
-                // An action that killed nothing ends the chain, which is what
-                // makes the cap read as "per turn" rather than "per fight".
-                // Cleared HERE rather than inside TryGrantTrample, because that
-                // method is only reached on a kill, and a counter that only
-                // resets on the path that increments it never resets at all.
-                _trampleChainActor = null;
-                _trampleChainCount = 0;
+                var actor = _encounter.Current;
+                granted = TryGrantTrample(actor) || RelicsOnKill(actor);
             }
 
-            if (killedThisAction && !trampled)
+            // Any action that did not earn an extra one ends the streak -- a
+            // kill past the cap as much as an action that killed nothing --
+            // which is what makes the cap read as "per turn" rather than "per
+            // fight". Cleared HERE rather than inside either grant, because a
+            // counter that only resets on the path that increments it never
+            // resets at all.
+            if (!granted)
             {
-                RelicsOnKill(_encounter.Current);
-            }
-            else
-            {
-                _bloodlustChainActor = null;
-                _bloodlustChainCount = 0;
+                _extraActionChainActor = null;
+                _extraActionChainCount = 0;
             }
 
             // THE END OF THE TURN, and the one clock in the game that runs
@@ -285,46 +285,44 @@ namespace PrincesPalace.Domain.Combat.Session
         private bool TryGrantTrample(CombatantState actor)
         {
             int cap = actor == null ? 0 : actor.Talents.Best(TalentEffectType.ExtraAttackOnKill);
-            if (cap <= 0 || !actor.IsPlayerSide || !actor.IsAlive)
-            {
-                _trampleChainActor = null;
-                _trampleChainCount = 0;
-                return false;
-            }
+            if (cap <= 0 || !actor.IsPlayerSide || !actor.IsAlive) return false;
 
-            int soFar = ReferenceEquals(actor, _trampleChainActor) ? _trampleChainCount : 0;
-            if (soFar >= cap || !_encounter.GrantExtraTurn(actor))
-            {
-                return false;
-            }
+            int soFar = ExtraActionsSoFar(actor);
+            if (soFar >= cap || !_encounter.GrantExtraTurn(actor)) return false;
 
-            _trampleChainActor = actor;
-            _trampleChainCount = soFar + 1;
-            _grantedExtraTurnTo = actor;
+            CountExtraAction(actor, soFar);
             AppendMessage($"{actor.Name} tramples straight over the body and keeps going!");
             return true;
         }
 
         // Bloodlust: killing an enemy earns the actor an extra turn on the
-        // spot, capped so a good room cannot become an unbounded chain.
-        private void TryGrantBloodlust(CombatantState actor)
+        // spot, capped so a good room cannot become an unbounded chain. The
+        // cap is read against the shared streak, so extra actions Trample
+        // already granted this turn count toward it.
+        private bool TryGrantBloodlust(CombatantState actor)
         {
-            int chainSoFar = actor == _bloodlustChainActor ? _bloodlustChainCount : 0;
-
-            if (actor.IsPlayerSide && actor.IsAlive
-                && HasRelic(actor, RelicEffect.Bloodlust)
-                && chainSoFar < FightTuning.MaxBloodlustChain
-                && _encounter.GrantExtraTurn(actor))
+            if (actor == null || !actor.IsPlayerSide || !actor.IsAlive
+                || !HasRelic(actor, RelicEffect.Bloodlust))
             {
-                _bloodlustChainActor = actor;
-                _bloodlustChainCount = chainSoFar + 1;
-                _grantedExtraTurnTo = actor;
-                AppendMessage($"{actor.Name}'s Bloodlust surges - one more turn!");
-                return;
+                return false;
             }
 
-            _bloodlustChainActor = null;
-            _bloodlustChainCount = 0;
+            int soFar = ExtraActionsSoFar(actor);
+            if (soFar >= FightTuning.MaxBloodlustChain || !_encounter.GrantExtraTurn(actor)) return false;
+
+            CountExtraAction(actor, soFar);
+            AppendMessage($"{actor.Name}'s Bloodlust surges - one more turn!");
+            return true;
+        }
+
+        private int ExtraActionsSoFar(CombatantState actor) =>
+            ReferenceEquals(actor, _extraActionChainActor) ? _extraActionChainCount : 0;
+
+        private void CountExtraAction(CombatantState actor, int soFar)
+        {
+            _extraActionChainActor = actor;
+            _extraActionChainCount = soFar + 1;
+            _grantedExtraTurnTo = actor;
         }
 
         // From the kit, not from a save-file lookup. v1 read the relic loadout

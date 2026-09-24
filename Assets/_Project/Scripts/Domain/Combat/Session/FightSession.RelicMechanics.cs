@@ -436,10 +436,6 @@ namespace PrincesPalace.Domain.Combat.Session
             // is exactly when the holder is most likely to already be full,
             // and "draws 40 HP" over an unmoved bar is the same defect the
             // heal arms in FightSession.Skills.cs carried.
-            // The return, not the request: the siphon fires on a kill, which
-            // is exactly when the holder is most likely to already be full,
-            // and "draws 40 HP" over an unmoved bar is the same defect the
-            // heal arms in FightSession.Skills.cs carried.
             int drawn = HealAndCount(actor, amount);
             if (drawn <= 0) return;
 

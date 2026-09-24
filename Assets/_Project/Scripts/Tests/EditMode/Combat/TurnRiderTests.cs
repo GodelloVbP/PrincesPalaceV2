@@ -259,6 +259,63 @@ namespace PrincesPalace.Domain.Tests
             Assert.GreaterOrEqual(EnemyTurnsIn(capped), 1, "the chain is capped");
         }
 
+        // ---- one streak, two sources ------------------------------------------
+        //
+        // The short-circuit above stops one kill buying two actions. These pin
+        // the other half: once Trample is capped, falling through to Bloodlust
+        // on the NEXT kill must not reopen a second, untouched budget. Both
+        // count against one streak, so the chain is the larger cap, not the
+        // sum. Counts are literal (Bloodlust's cap is 2) on purpose.
+
+        [Test]
+        public void ACappedTrampleFallsThroughToBloodlust_ButTheStreakIsShared()
+        {
+            // Trample 1 + Bloodlust 2 used to chain 1 + 2 = three extra actions
+            // (a four-attack turn). Shared streak: two extra actions, then the
+            // turn passes.
+            var hero = Hero();
+            GiveTrample(hero, 1);
+            var (session, _, encounter) = Fight(hero, KitWith(BloodlustRelic),
+                Foe("W0", 1), Foe("W1", 1), Foe("W2", 1), Foe("Tank", 1000));
+
+            var first = Round(session, () => session.ExecuteAttack(encounter.Enemies[0]));
+            Assert.AreEqual(0, EnemyTurnsIn(first), "kill 1: Trample");
+            Assert.IsTrue(MessagesIn(first).Any(m => m.Contains("tramples")));
+
+            var second = Round(session, () => session.ExecuteAttack(encounter.Enemies[1]));
+            Assert.AreEqual(0, EnemyTurnsIn(second), "kill 2: Trample is capped, Bloodlust has room");
+            Assert.IsTrue(MessagesIn(second).Any(m => m.Contains("Bloodlust")));
+
+            var third = Round(session, () => session.ExecuteAttack(encounter.Enemies[2]));
+            Assert.IsFalse(encounter.Enemies[2].IsAlive);
+            Assert.GreaterOrEqual(EnemyTurnsIn(third), 1,
+                "kill 3: two extra actions already taken, which is Bloodlust's cap too");
+            Assert.IsFalse(MessagesIn(third).Any(m => m.Contains("Bloodlust") || m.Contains("tramples")));
+        }
+
+        [Test]
+        public void ATrampleCapAboveBloodlustsIsTheWholeStreak()
+        {
+            // Trample 3 + Bloodlust 2: three extra actions, all Trample's, and
+            // Bloodlust adds nothing on top -- its cap of 2 is already spent.
+            var hero = Hero();
+            GiveTrample(hero, 3);
+            var (session, _, encounter) = Fight(hero, KitWith(BloodlustRelic),
+                Foe("W0", 1), Foe("W1", 1), Foe("W2", 1), Foe("W3", 1), Foe("Tank", 1000));
+
+            for (int i = 0; i < 3; i++)
+            {
+                int slot = i;
+                var granted = Round(session, () => session.ExecuteAttack(encounter.Enemies[slot]));
+                Assert.AreEqual(0, EnemyTurnsIn(granted), "kill " + (slot + 1) + ": Trample");
+                Assert.IsFalse(MessagesIn(granted).Any(m => m.Contains("Bloodlust")));
+            }
+
+            var fourth = Round(session, () => session.ExecuteAttack(encounter.Enemies[3]));
+            Assert.IsFalse(encounter.Enemies[3].IsAlive);
+            Assert.GreaterOrEqual(EnemyTurnsIn(fourth), 1, "kill 4: the streak is at 3, past both caps");
+        }
+
         [Test]
         public void ARiderNeverFiresOnceTheFightIsDecided()
         {

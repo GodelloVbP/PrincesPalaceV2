@@ -529,18 +529,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- the rest ------------------------------------------------------------
 
-        // CALLED ON EVERY KILL, not only when a relic wants it. Bloodlust keeps
-        // chain state that has to be RESET when the chain breaks, so a call
-        // skipped because nobody was carrying the relic would leave a stale
-        // count behind for whoever picks one up later in the fight.
-        // ONCE PER ACTION, however many things that action killed.
-        //
-        // Bloodlust grants a turn, and a swing that fells two enemies should
-        // not grant two. It also has to be called when NOTHING died -- see
-        // below.
-        private void RelicsOnKill(CombatantState actor)
+        // ONCE PER ACTION, however many things that action killed, and only
+        // when Trample did not already grant this kill's extra action (see
+        // AdvanceAfterAction). Bloodlust grants a turn, and a swing that fells
+        // two enemies should not grant two. Returns whether a turn was
+        // granted; the shared streak it counts against is reset by the
+        // caller, not here.
+        private bool RelicsOnKill(CombatantState actor)
         {
-            TryGrantBloodlust(actor);
+            return TryGrantBloodlust(actor);
         }
 
         // ONCE PER BODY, which is a different moment and deliberately a second
