@@ -6,7 +6,18 @@ param(
     # PlayMode runner copies, split by fixture. 1 is the pre-sharding shape
     # exactly: one PlayMode process in -TestRunner2, no -testFilter.
     [ValidateRange(1, 6)]
-    [int]$Shards = 3
+    [int]$Shards = 3,
+    # THE COMMIT GATE: run only the tests the uncommitted change can affect
+    # (tools/test_select.ps1), promoted to the full run by the resolver's
+    # full-suite tier, an unmapped file, or the safety net. Never a quiet
+    # subset: every promotion prints its reason.
+    [switch]$Changed,
+    # Resolve these paths instead of the working tree (forward slashes,
+    # repo-relative). For checking what a change WOULD select; the gate
+    # itself uses the working tree.
+    [string[]]$ChangedPaths,
+    # Print the selection and the shard plan, then stop before any sync.
+    [switch]$DryRun
 )
 
 # SCENES ARE NOT BUILT UNLESS -BuildScenes IS PASSED. Building them on every
@@ -54,6 +65,16 @@ $SyncScenesToMain = $BuildScenes
 # Shard i runs in -TestRunner<i+1> (-TestRunner2, -TestRunner3, ...) on its
 # own slice of fixtures -- tools/playmode_shards.ps1 says how they are cut and
 # balanced. The -Bot<N> copies are tools/bot.ps1's and are never used here.
+#
+# -Changed IS THE COMMIT GATE. The same machinery on a selected slice: the
+# EditMode runner gets a -testFilter of the selected EditMode classes, the
+# PlayMode shards contiguous ranges of the selected PlayMode classes, one
+# shard per ~60s of recorded fixture time. Every guard below still runs. It
+# promotes itself to the full run, printing why, when: the safety net fires
+# (tools/test_select.ps1's Get-FullRunPromotion), -BuildScenes is passed
+# (every scene is rewritten, and a scene change forces the full suite), or
+# the selection itself says full. A green FULL run records HEAD in
+# tools/.last-full-green; a red one prints the map-gap report.
 
 # DERIVED, never hardcoded. Both of these were literal v1 paths, so the harness
 # would happily drive the wrong project -- and the editor version moved the
@@ -79,26 +100,34 @@ try {
 # gate below checks against the exact same definitions a slice would use.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 . (Join-Path $PSScriptRoot "playmode_shards.ps1")
+. (Join-Path $PSScriptRoot "test_select.ps1")
 
 $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $ProductLeaf = ($ProjectLeaf -replace "[^A-Za-z0-9]", "")
 
 # The EditMode runner is FIRST and stays the primary: generation runs there.
-# Label is the key every message and table uses; at -Shards 1 the PlayMode one
-# is plain "PlayMode" and its results file keeps its historical name.
-$Runners = @(
-    @{ Platform = "EditMode"; Shard = 0; Label = "EditMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner"; Product = "${ProductLeaf}TestRunner"; Results = "test-results-EditMode.xml" }
-)
-for ($i = 1; $i -le $Shards; $i++) {
-    $n = $i + 1
-    $label = if ($Shards -eq 1) { "PlayMode" } else { "PlayMode#$i" }
-    $results = if ($Shards -eq 1) { "test-results-PlayMode.xml" } else { "test-results-PlayMode-shard$i.xml" }
-    $Runners += @{ Platform = "PlayMode"; Shard = $i; Label = $label; Path = "$ProjectParent\$ProjectLeaf-TestRunner$n"; Product = "${ProductLeaf}TestRunner$n"; Results = $results }
+# Label is the key every message and table uses; at one PlayMode shard it is
+# plain "PlayMode" and its results file keeps its historical name.
+#
+# A -Changed slice can leave a platform with nothing to run: the EditMode copy
+# is still listed when it has to generate (-BuildContent), with RunTests off,
+# and dropped otherwise; zero PlayMode shards means no PlayMode copy at all.
+function New-GateRunners {
+    param([int]$PlayShards, [bool]$EditTests, [bool]$EditNeeded)
+    $list = @()
+    if ($EditTests -or $EditNeeded) {
+        $list += @{ Platform = "EditMode"; Shard = 0; Label = "EditMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner"; Product = "${ProductLeaf}TestRunner"; Results = "test-results-EditMode.xml"; RunTests = $EditTests }
+    }
+    for ($i = 1; $i -le $PlayShards; $i++) {
+        $n = $i + 1
+        $label = if ($PlayShards -eq 1) { "PlayMode" } else { "PlayMode#$i" }
+        $results = if ($PlayShards -eq 1) { "test-results-PlayMode.xml" } else { "test-results-PlayMode-shard$i.xml" }
+        $list += @{ Platform = "PlayMode"; Shard = $i; Label = $label; Path = "$ProjectParent\$ProjectLeaf-TestRunner$n"; Product = "${ProductLeaf}TestRunner$n"; Results = $results; RunTests = $true }
+    }
+    return $list
 }
-$PlayRunners = @($Runners | Where-Object { $_.Platform -eq "PlayMode" })
-# The merged PlayMode results live where the unsharded file always did.
-$MergedPlayResults = Join-Path $PlayRunners[0].Path "test-results-PlayMode.xml"
+$Runners = New-GateRunners -PlayShards $Shards -EditTests $true -EditNeeded $true
 
 # --- worktree refusal --------------------------------------------------
 # This script has no filter and no dotnet host for PlayMode -- every
@@ -224,14 +253,101 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
+# --- what to run: the whole suite, or a -Changed slice ----------------------
+#
+# Decided here, before anything is synced or booted, so a promotion or a bad
+# partition costs nothing. The class sets are the same discovery the gates
+# above just used.
+$sharedArea = $SharedFolder.ToLower()
+$AllPlayClasses = @(Get-PlayModeFixtureClasses -Index $discoveredIndex)
+$AllEditClasses = @($discoveredIndex.Keys | Where-Object {
+    $discoveredIndex[$_].Platform -eq "EditMode" -and $discoveredIndex[$_].Area -ne $sharedArea
+} | Sort-Object)
+$EditClasses = $AllEditClasses
+$PlayClasses = $AllPlayClasses
+$Slice = $false
+
+if ($ChangedPaths -and -not $Changed) {
+    Write-Host "-ChangedPaths only means something with -Changed."
+    exit 1
+}
+
+if ($Changed) {
+    Write-Host ""
+    Write-Host "-Changed: selecting the tests this change can affect (tools/test_select.ps1)"
+    $fullWhy = @()
+    $promotion = Get-FullRunPromotion
+    if ($promotion) { $fullWhy += "safety net: $promotion" }
+    if ($BuildScenes) { $fullWhy += "-BuildScenes rewrites every scene, and a scene change forces the full suite" }
+
+    if ($ChangedPaths) {
+        $changedList = @($ChangedPaths | ForEach-Object { $_ -replace '\\', '/' } | Where-Object { $_ })
+        $others = @(Get-ChangedFiles | Where-Object { $changedList -notcontains $_ })
+        Write-Host "Resolving the $($changedList.Count) path(s) given by -ChangedPaths, NOT the working tree: $($others.Count) other changed file(s) there are not considered."
+    } else {
+        $changedList = @(Get-ChangedFiles)
+    }
+
+    # Printed even when the run is promoted: the mapping is how a wrong map
+    # gets noticed, and a promoted run is when nobody would look otherwise.
+    $selection = Resolve-GateSelection -Paths $changedList -Index $discoveredIndex
+    Write-GateSelection -Selection $selection -Index $discoveredIndex
+    $fullWhy += @($selection.FullReasons)
+
+    if ($fullWhy.Count -gt 0) {
+        Write-Host ""
+        Write-Host "FULL RUN, not a slice, because:"
+        foreach ($w in $fullWhy) { Write-Host "  $w" }
+    } else {
+        $picked = @($selection.Classes)
+        if ($BuildContent) {
+            # The build rewrites Resources/Content, which the area map sends to
+            # 'content'; the resolution above ran before that tree moved.
+            $contentClasses = @(Get-AreaClasses -Index $discoveredIndex -Areas @("content"))
+            Write-Host "+ area content ($($contentClasses.Count) classes): -BuildContent regenerates Resources/Content"
+            $picked = @($picked + $contentClasses | Sort-Object -Unique)
+        }
+        if ($picked.Count -eq 0) {
+            Write-Host ""
+            Write-Host "Nothing to run: every changed file is ignored (docs, .meta, outside Assets/Packages/ProjectSettings/tools). No Unity was started."
+            exit 0
+        }
+        $Slice = $true
+        $EditClasses = @($AllEditClasses | Where-Object { $picked -contains $_ })
+        $PlayClasses = @($AllPlayClasses | Where-Object { $picked -contains $_ })
+    }
+}
+
+# One PlayMode shard per this many seconds of recorded fixture time in a
+# slice: a shard costs a ~30s boot, so splitting 40s of tests three ways buys
+# nothing but three boots.
+$SliceSecondsPerShard = 60
+$PlayShardCount = $Shards
+if ($Slice) {
+    $PlayShardCount = 0
+    if ($PlayClasses.Count -gt 0) {
+        $one = Get-PlayModeShardPlan -Index $discoveredIndex -Classes $PlayClasses -Shards 1
+        $est = $one.Shards[0].Estimate
+        $want = $Shards
+        if ($one.Source -like "timings*") { $want = [int][Math]::Ceiling($est / $SliceSecondsPerShard) }
+        $PlayShardCount = [Math]::Max(1, [Math]::Min($Shards, [Math]::Min($want, $PlayClasses.Count)))
+        Write-Host ("Slice: {0} EditMode + {1} PlayMode classes. PlayMode est {2:N0} ({3}) -> {4} shard(s), one per ~{5}s, at most -Shards {6}." -f $EditClasses.Count, $PlayClasses.Count, $est, $one.Source, $PlayShardCount, $SliceSecondsPerShard, $Shards)
+    } else {
+        Write-Host "Slice: $($EditClasses.Count) EditMode classes, no PlayMode class -- no PlayMode copy is started."
+    }
+}
+
 # --- the PlayMode shard plan ------------------------------------------------
 #
 # Planned here, before anything is synced or booted, so a bad partition costs
-# nothing. The class set is the same discovery the gates above just used.
-$PlayClasses = Get-PlayModeFixtureClasses -Index $discoveredIndex
+# nothing. A slice is planned exactly like the whole suite, over its own
+# classes: contiguous ranges of THEIR run order, so a slice never runs a
+# fixture after a predecessor the unsharded suite would not have given it
+# (header of tools/playmode_shards.ps1) -- only after fewer of them.
 $ShardPlan = $null
-if ($Shards -gt 1) {
-    $ShardPlan = Get-PlayModeShardPlan -Index $discoveredIndex -Classes $PlayClasses -Shards $Shards
+$FilterLimit = 24000
+if ($PlayShardCount -gt 0 -and ($Slice -or $PlayShardCount -gt 1)) {
+    $ShardPlan = Get-PlayModeShardPlan -Index $discoveredIndex -Classes $PlayClasses -Shards $PlayShardCount
 
     $partitionProblems = @(Test-ShardPartition -Classes $PlayClasses -Plan $ShardPlan -Index $discoveredIndex)
     if ($partitionProblems.Count -gt 0) {
@@ -243,10 +359,9 @@ if ($Shards -gt 1) {
     # Windows caps a whole command line at 32,767 characters. Every
     # PlayMode class name joined is ~5.6K today, so one shard's filter is
     # nowhere near it; this refuses, naming the size, long before it is.
-    $FilterLimit = 24000
     foreach ($s in $ShardPlan.Shards) {
         if ($s.Classes.Count -eq 0) {
-            Write-Host "SHARD $($s.Index) IS EMPTY -- $($PlayClasses.Count) classes cannot fill $Shards shards. Use fewer -Shards."
+            Write-Host "SHARD $($s.Index) IS EMPTY -- $($PlayClasses.Count) classes cannot fill $PlayShardCount shards. Use fewer -Shards."
             exit 1
         }
         $s | Add-Member -NotePropertyName Filter -NotePropertyValue (Get-ShardFilter -Classes $s.Classes) -Force
@@ -255,12 +370,41 @@ if ($Shards -gt 1) {
             exit 1
         }
     }
+}
 
-    Write-Host "PlayMode: $($PlayClasses.Count) fixture classes across $Shards shards, balanced by $($ShardPlan.Source):"
+# The EditMode half of a slice, filtered the same way. The full run has no
+# EditMode filter, exactly as before.
+$EditFilter = $null
+if ($Slice -and $EditClasses.Count -gt 0) {
+    $EditFilter = Get-ShardFilter -Classes $EditClasses
+    if ($EditFilter.Length -gt $FilterLimit) {
+        Write-Host "The EditMode -testFilter is $($EditFilter.Length) chars, over this script's $FilterLimit cap. Run the full gate (drop -Changed)."
+        exit 1
+    }
+}
+
+$Runners = New-GateRunners -PlayShards $PlayShardCount -EditTests ($EditClasses.Count -gt 0) -EditNeeded ([bool]($BuildContent -or $BuildScenesHere))
+$PlayRunners = @($Runners | Where-Object { $_.Platform -eq "PlayMode" })
+# The merged PlayMode results live where the unsharded file always did.
+$MergedPlayResults = if ($PlayRunners.Count -gt 0) { Join-Path $PlayRunners[0].Path "test-results-PlayMode.xml" } else { $null }
+
+if ($ShardPlan) {
+    Write-Host "PlayMode: $($PlayClasses.Count) fixture classes across $PlayShardCount shard(s), balanced by $($ShardPlan.Source):"
     foreach ($s in $ShardPlan.Shards) {
         $r = $PlayRunners[$s.Index - 1]
         Write-Host ("  shard {0}: {1,3} classes, est {2,6:N1}  -> {3}" -f $s.Index, $s.Classes.Count, $s.Estimate, $r.Path)
     }
+}
+
+if ($DryRun) {
+    Write-Host ""
+    $what = if ($Slice) { "SLICE" } else { "FULL" }
+    Write-Host "DRY RUN ($what): stopping before the sync; no Unity started. Would run in:"
+    foreach ($r in $Runners) {
+        $note = if ($r.RunTests) { "" } else { " (generation only, no tests)" }
+        Write-Host "  $($r.Label) -> $($r.Path)$note"
+    }
+    exit 0
 }
 
 # --- are the runners free? --------------------------------------------------
@@ -602,17 +746,16 @@ if ($BuildContent -or $BuildScenesHere) {
     }
 }
 
-if ($Shards -gt 1) {
-    Write-Host "`nRunning EditMode and $Shards PlayMode shards concurrently..."
-} else {
-    Write-Host "`nRunning EditMode and PlayMode concurrently..."
-}
+$TestRunners = @($Runners | Where-Object { $_.RunTests })
+$runningWhat = @($TestRunners | ForEach-Object { $_.Label }) -join ", "
+$sliceTag = if ($Slice) { "SLICE" } else { "FULL SUITE" }
+Write-Host "`nRunning the $sliceTag concurrently in: $runningWhat"
 $script:LastStamp = $Watch.Elapsed
 
 # Stale outputs from an earlier run must not be read as this run's: the
 # merged file, every runner's own results file, and each PlayMode copy's
 # profile CSV (the next balance is read from those).
-$staleOutputs = @($MergedPlayResults)
+$staleOutputs = @($MergedPlayResults | Where-Object { $_ })
 $staleOutputs += @($Runners | ForEach-Object { Join-Path $_.Path $_.Results })
 $staleOutputs += @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" })
 foreach ($stale in $staleOutputs) {
@@ -621,7 +764,7 @@ foreach ($stale in $staleOutputs) {
 
 $procs = @{}
 $launchedAt = @{}
-foreach ($runner in $Runners) {
+foreach ($runner in $TestRunners) {
     $resultsPath = Join-Path $runner.Path $runner.Results
     $runLogPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
 
@@ -631,9 +774,13 @@ foreach ($runner in $Runners) {
         "-runTests", "-testPlatform", $runner.Platform
     )
     # A shard runs only its own fixtures, filtered the way tools/test.ps1
-    # filters a slice. At -Shards 1 there is no filter, exactly as before.
+    # filters a slice. A full run at -Shards 1 has no filter, exactly as
+    # before; a -Changed slice filters EditMode too.
     if ($ShardPlan -and $runner.Shard -gt 0) {
         $unityArgs += @("-testFilter", "`"$($ShardPlan.Shards[$runner.Shard - 1].Filter)`"")
+    }
+    if ($EditFilter -and $runner.Platform -eq "EditMode") {
+        $unityArgs += @("-testFilter", "`"$EditFilter`"")
     }
     $unityArgs += @(
         "-testResults", "`"$resultsPath`"",
@@ -714,7 +861,8 @@ $allPassed = $true
 # timeout is failed on its own account rather than through the checks below.
 if ($timedOut) { $allPassed = $false }
 $shardResultPaths = @()
-foreach ($runner in $Runners) {
+$allResultPaths = @()
+foreach ($runner in $TestRunners) {
     $resultsPath = Join-Path $runner.Path $runner.Results
     $logPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
     $wall = ""
@@ -730,12 +878,13 @@ foreach ($runner in $Runners) {
         $allPassed = $false
         continue
     }
-    if ($runner.Platform -eq "PlayMode" -and $Shards -gt 1) { $shardResultPaths += $resultsPath }
+    $allResultPaths += $resultsPath
+    if ($runner.Platform -eq "PlayMode" -and $ShardPlan) { $shardResultPaths += $resultsPath }
 
     [xml]$results = Get-Content $resultsPath
     $root = $results.'test-run'
     Write-Host "$($runner.Label) -- Total: $($root.total)  Passed: $($root.passed)  Failed: $($root.failed)  Skipped: $($root.skipped)  Duration: $($root.duration)s$wall$mem"
-    if ($Shards -gt 1 -and $runner.Platform -eq "PlayMode") { Write-Host "    $resultsPath" }
+    if ($PlayShardCount -gt 1 -and $runner.Platform -eq "PlayMode") { Write-Host "    $resultsPath" }
 
     foreach ($f in $results.SelectNodes("//test-case[@result='Failed']")) {
         Write-Host "`nFAILED ($($runner.Label)): $($f.fullname)"
@@ -748,20 +897,38 @@ foreach ($runner in $Runners) {
 # ONE PlayMode verdict out of N shards: every shard must have reported (a
 # missing one already failed the run above), the shards together must have
 # run every class exactly once, and the merged file is what a reader of
-# test-results-PlayMode.xml gets -- the whole suite, where it always was.
-if ($Shards -gt 1) {
+# test-results-PlayMode.xml gets -- the whole suite (or slice), where it
+# always was. A one-shard slice is filtered too, so it is checked the same way.
+if ($ShardPlan) {
     if ($shardResultPaths.Count -eq $PlayRunners.Count) {
         $coverage = @(Test-ShardCoverage -Paths $shardResultPaths -Classes $PlayClasses)
         if ($coverage.Count -gt 0) {
-            Write-Host "`nSHARD COVERAGE IS WRONG ($($coverage.Count)) -- the shards did not run the suite exactly once:"
+            Write-Host "`nSHARD COVERAGE IS WRONG ($($coverage.Count)) -- the shards did not run the selected classes exactly once:"
             $coverage | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
             $allPassed = $false
         }
-        $sum = Merge-ShardResults -Paths $shardResultPaths -OutPath $MergedPlayResults
-        Write-Host ("PlayMode ({0} shards combined) -- Total: {1}  Passed: {2}  Failed: {3}  Skipped: {4}" -f $PlayRunners.Count, $sum.total, $sum.passed, $sum.failed, $sum.skipped)
-        Write-Host "    merged: $MergedPlayResults"
+        if ($PlayShardCount -gt 1) {
+            $sum = Merge-ShardResults -Paths $shardResultPaths -OutPath $MergedPlayResults
+            Write-Host ("PlayMode ({0} shards combined) -- Total: {1}  Passed: {2}  Failed: {3}  Skipped: {4}" -f $PlayRunners.Count, $sum.total, $sum.passed, $sum.failed, $sum.skipped)
+            Write-Host "    merged: $MergedPlayResults"
+        }
     } else {
         Write-Host "PlayMode: only $($shardResultPaths.Count) of $($PlayRunners.Count) shards reported -- no merged results written."
+    }
+}
+# A slice's EditMode filter, checked by class: every selected class must
+# show up as a fixture. Only the class check -- the EditMode suite has
+# TestCaseSource cases that share a display name, which the per-case
+# duplicate check in Test-ShardCoverage was written for PlayMode and misreads.
+if ($EditFilter) {
+    $editRes = @($TestRunners | Where-Object { $_.Platform -eq "EditMode" } | ForEach-Object { Join-Path $_.Path $_.Results } | Where-Object { Test-Path $_ })
+    if ($editRes.Count -eq 1) {
+        $missing = @(Test-ShardCoverage -Paths $editRes -Classes $EditClasses | Where-Object { $_ -like "class *" })
+        if ($missing.Count -gt 0) {
+            Write-Host "`nEDITMODE FILTER MISSED ($($missing.Count)) -- selected classes the run never reached:"
+            $missing | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+            $allPassed = $false
+        }
     }
 }
 if ($peakSum -gt 0) {
@@ -773,14 +940,36 @@ if ($peakSum -gt 0) {
 # the first sharded run to go red spent 10s per case waiting out a
 # "never finished" deadline, and balancing on that put 18 fixtures in one
 # shard and 95 in another.
-if ($allPassed) {
-    $timed = Save-ShardTimings -CsvPaths @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" })
+#
+# A slice MERGES into the file rather than replacing it: it timed only its own
+# fixtures, and the next full run still has to balance all of them.
+if ($allPassed -and $PlayRunners.Count -gt 0) {
+    $timed = Save-ShardTimings -CsvPaths @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" }) -Merge:$Slice
     if ($timed -gt 0) { Write-Host "Fixture timings for the next balance: $timed fixtures -> $ShardTimingsFile" }
-} else {
+} elseif (-not $allPassed) {
     Write-Host "Fixture timings NOT updated (run was not green); the next balance uses $ShardTimingsFile as it was."
 }
 
-if ($allPassed) { Write-Host "`nAll tests passed."; exit 0 }
+# The safety net's anchor and the map-gap evidence -- FULL runs only. A green
+# slice proves nothing about what it skipped, so it never moves the anchor.
+if (-not $Slice) {
+    if ($allPassed) {
+        Save-LastFullGreen
+    } else {
+        $failing = Get-FailingClasses -ResultPaths $allResultPaths -Index $discoveredIndex
+        Write-MapGapReport -FailingClasses $failing -Index $discoveredIndex
+    }
+}
+
+$totalWall = "{0:N0}s" -f $Watch.Elapsed.TotalSeconds
+if ($allPassed) {
+    if ($Slice) {
+        Write-Host "`nAll tests passed -- a SLICE: $($EditClasses.Count) EditMode + $($PlayClasses.Count) PlayMode classes, $totalWall wall. The full run happens by itself after $LastGreenMaxCommits commits or $($LastGreenMaxHours)h."
+    } else {
+        Write-Host "`nAll tests passed (full suite, $totalWall wall)."
+    }
+    exit 0
+}
 Write-Host "`nSome tests failed."
 exit 1
 

@@ -640,7 +640,16 @@ function Get-TestHosts {
 # staging guard. They are not on any path Unity compiles, loads or executes, so
 # no arrangement of them can change a test result. The tools/ rule exists for
 # scripts that drive the suite itself, which these do not.
-$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$)'
+#
+# The last alternative ignores everything outside the four trees a test run can
+# read -- Assets/, Packages/, ProjectSettings/ (Unity) and tools/ (the dotnet
+# host and the harness) -- EXCEPT the root files MSBuild and the compilers pick
+# up by walking upward from tools/domain-tests, which force the full suite
+# below. Loose root files (a downloaded sprite sheet, an output/ folder of
+# generated art) matched nothing and made every -Changed run refuse as
+# UNMAPPED while they sat untracked, which taught people to skip -Changed.
+$RootBuildFiles = 'Directory\.Build\.[^/]+|Directory\.Packages\.props|global\.json|(?i:nuget\.config)|\.editorconfig'
+$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$|(?!(Assets|Packages|ProjectSettings|tools)/)(?!(' + $RootBuildFiles + ')$).)'
 
 # The full-suite tier, one alternative per reason:
 #
@@ -671,7 +680,10 @@ $ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks
 #     ContentBuilder had a row mapping it to 'content', which was the same
 #     mistake in miniature: it writes every Resources/Content asset, and the
 #     combat, run, hub and art suites all read them.
-$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/|Assets/_Project/Scripts/.*\.asmdef$|Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/Shared/|Assets/_Project/Scripts/Domain/CollectionOps\.cs$|Assets/_Project/Scripts/Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|PreviewRequestWatcher|ContentBuilder))'
+#   $RootBuildFiles  -- Directory.Build.*, global.json, NuGet.config,
+#     .editorconfig at the root: they change how tools/domain-tests compiles
+#     every EditMode file it hosts.
+$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/|Assets/_Project/Scripts/.*\.asmdef$|Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/Shared/|Assets/_Project/Scripts/Domain/CollectionOps\.cs$|Assets/_Project/Scripts/Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|PreviewRequestWatcher|ContentBuilder)|(' + $RootBuildFiles + ')$)'
 
 # An ORDERED array, not a hashtable -- @{} enumerates in arbitrary order in
 # PS 5.1, and even [ordered] would bury the first-match-wins contract this
@@ -839,6 +851,23 @@ $PathAreas = @(
     # alone, and 'ui' runs none of the fight settlement or run-state suites
     # this code is actually the seam for.
     @{ Pattern = '^Assets/_Project/Scripts/Core/Bot/'; Areas = @('combat', 'run') }
+    # Core files the catch-all below claimed as 'ui' alone although a PlayMode
+    # fixture in ANOTHER area names the type directly -- found 2026-09-24 by
+    # scanning every Tests/PlayMode/<Combat|Hub|Run|Art> file (comments and
+    # strings stripped) for each catch-all file's top-level types. 'ui' stays
+    # on every row: these rows add areas, they never take the old one away.
+    # Whole filenames, partials included, so Navigation does not also claim
+    # NavigationInputModule by prefix. Re-derive before adding a guess here.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(CanvasCapture|CharacterDossierController)\.cs$'; Areas = @('ui', 'art', 'combat', 'hub', 'run') }
+    # SystemMenuController sets Time.timeScale; Navigation owns every scene load.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(Navigation|SystemMenuController)\.cs$'; Areas = @('ui', 'combat', 'hub', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(GameSettings|HoverIndex|NavigationInputModule|ReckoningController|RewardTracks|RunOrchestrator\.Spells)\.cs$'; Areas = @('ui', 'combat', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(SpellParticleRenderer|SpellPerformancePlayer|SpellVfxPlayer)\.cs$'; Areas = @('ui', 'art', 'combat') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/BeaconPulse\.cs$'; Areas = @('ui', 'combat', 'hub') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/EmberFlare\.cs$'; Areas = @('ui', 'hub', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterVoice|DamagePopup|FocusMarker|FrameSequenceLoader|ListScroll|OptionsController|ThemedButtonState)\.cs$'; Areas = @('ui', 'combat') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(DebugMenuController|GlossaryController|KenBurnsDrift|LanternFlicker|MoteDrift|RelicDraftController|SlowDrift|StarTwinkle)\.cs$'; Areas = @('ui', 'hub') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(CharacterIdentity|ExitsController|HoldToConfirm|ItemDescription|OptionRow|PartyController|ResetProgressController|RewardTrackController(\.\w+)?|RoomResolver|RunEncounter|RunEventContext|RunLedger|SquadTrack)\.cs$'; Areas = @('ui', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/UI/';   Areas = @('ui') }

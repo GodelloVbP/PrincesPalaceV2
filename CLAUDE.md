@@ -95,8 +95,13 @@ there. `Raw*Entry` fields, defaults, and the enum names they parse against:
 - Iterate: `tools/test.ps1 <area>` or `tools/test.ps1 -Changed`.
 - Select the commit gate by change class in `docs/TESTING.md`. Game/runtime,
   editor, content, generated artifact, test, and dependency changes use
-  `tools/run_tests_parallel.ps1`; agent/workflow prose or configuration alone
-  uses its documented focused policy gate and an independent verifier.
+  `tools/run_tests_parallel.ps1 -Changed`: only the tests the change can
+  affect, promoted to the full run by itself (full-suite paths, an unmapped
+  file, `-BuildScenes`, or 5 commits / 24h since the last full green) and
+  saying why. Agent/workflow prose or configuration alone uses its
+  documented focused policy gate and an independent verifier.
+- The full run (`tools/run_tests_parallel.ps1`, no flag) before any release
+  or merge the owner names.
 - Add `-BuildScenes` when a `[SerializeField]` or a screen tree changed, and
   again before committing it; `-BuildContent` likewise for content.
 - Commit only test-passing checkpoints.

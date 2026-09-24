@@ -121,9 +121,11 @@ The implementer runs focused tests while editing. Once editing is stable,
 one verifier runs the selected change-class gate exactly once, in one
 foreground call, and reports the state it verified (HEAD sha + uncommitted file
 list). `docs/TESTING.md` is the canonical gate matrix. Game/runtime/editor,
-content, generated artifact, test, and dependency changes require the full
-Unity gate. Agent/workflow prose or configuration alone uses the focused policy
-gate and does not run Unity. Prefer a fresh verifier when the owner's context
+content, generated artifact, test, and dependency changes require the Unity
+gate, `run_tests_parallel.ps1 -Changed`: the impacted slice, promoted to the
+full run by its own rules (the report says which). The full run, no flag,
+before any release/merge the owner names. Agent/workflow prose or
+configuration alone uses the focused policy gate and does not run Unity. Prefer a fresh verifier when the owner's context
 is already large.
 
 Rerun the gate WHEN: files relevant to the selected gate changed after its
@@ -217,6 +219,7 @@ not the symptom; pin formula fixes with literal values (`docs/CODE_STANDARDS.md`
 | No serialized UI reference left null | `UiWiringSweep` | scene build |
 | No `SetField`-style wiring | lint test | test run |
 | Every test class maps to an area | `run_tests_parallel.ps1` | test run, no bypass |
+| A `-Changed` slice runs full after 5 commits or 24h without a green full run | `run_tests_parallel.ps1 -Changed` (`tools/.last-full-green`) | test run |
 | Asset and `.meta` commit together | `tools/githooks/pre-commit` | commit |
 | Staged `.ps1` is ASCII outside comments | `tools/githooks/pre-commit` | commit |
 | `tools/domain-tests` builds after `Domain/`/`Tests/EditMode/` changes | `tools/githooks/pre-commit` | commit |

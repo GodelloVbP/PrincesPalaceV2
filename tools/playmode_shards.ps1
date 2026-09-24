@@ -293,8 +293,12 @@ function Test-ShardCoverage {
 
 # Merges every shard's test-profile-PlayMode.csv into $ShardTimingsFile for the
 # next run's balance. The profiler's own columns, plus which shard wrote the row.
+#
+# -Merge (a -Changed slice): this run timed only its own fixtures, so the rows
+# the file already holds for every OTHER fixture are kept; without it a slice
+# would leave the next full run balancing 200 fixtures on their mean.
 function Save-ShardTimings {
-    param([string[]]$CsvPaths)
+    param([string[]]$CsvPaths, [switch]$Merge)
     $rows = @()
     for ($i = 0; $i -lt $CsvPaths.Count; $i++) {
         if (-not (Test-Path $CsvPaths[$i])) { continue }
@@ -304,6 +308,16 @@ function Save-ShardTimings {
         }
     }
     if ($rows.Count -eq 0) { return 0 }
+    if ($Merge -and (Test-Path $ShardTimingsFile)) {
+        $ran = @{}
+        foreach ($r in $rows) { if ($r.fixture) { $ran[$r.fixture] = $true } }
+        try {
+            $kept = @(Import-Csv $ShardTimingsFile | Where-Object { $_.fixture -and -not $ran.ContainsKey($_.fixture) })
+            $rows = @($kept) + @($rows)
+        } catch {
+            Write-Host "  (timings file $ShardTimingsFile unreadable: $($_.Exception.Message) -- writing this slice's rows only)"
+        }
+    }
     $rows | Export-Csv -Path $ShardTimingsFile -NoTypeInformation -Encoding UTF8
     return @($rows | Where-Object { $_.kind -eq "fixture" }).Count
 }

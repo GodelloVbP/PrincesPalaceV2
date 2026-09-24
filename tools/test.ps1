@@ -59,9 +59,10 @@ param(
 # actually is, and it is nothing on `combat`. Do not read the 4s as the
 # number for everything.
 #
-# This is for the edit-run-edit loop. Before committing, run the full thing:
-#     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
-# ...which REFUSES to run at all while a test file sits outside an area
+# This is for the edit-run-edit loop. Before committing, run the gate:
+#     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1 -Changed
+# ...which selects by type name rather than by area (tools/test_select.ps1),
+# promotes itself to the full run when it has to, and REFUSES to run at all while a test file sits outside an area
 # folder, or out of discovery's sight -- see tools/test_areas.ps1.
 #
 # Usage:
