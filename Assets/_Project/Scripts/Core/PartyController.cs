@@ -570,6 +570,16 @@ namespace PrincesPalace
         private void OnDisable()
         {
             if (Formation != null && Formation.SelectedId != null) Cancel();
+
+            // A DRAG IS A CARRY TOO, and EndDrag never arrives if the pane
+            // disables mid-drag (closing the pane or switching hub tab drops
+            // the pointer capture along with it) -- so without this,
+            // _dragging stays true and IgnoreClick() (~381) swallows every
+            // seat/card click forever on the next open, since nothing else
+            // ever sets it back to false or restamps _dragResolvedFrame.
+            _dragging = false;
+            _dragResolvedFrame = -1;
+            HideGhost();
         }
 
         // ---- commands -----------------------------------------------------------

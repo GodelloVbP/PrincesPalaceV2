@@ -291,6 +291,86 @@ namespace PrincesPalace.PlayModeTests
                 line.GetComponent<TMPro.TMP_Text>()?.text);
         }
 
+        // ---- paging drops the stale selection (this bug class) --------------
+        //
+        // CharacterDossierController.Step reset _alreadyKnownRefusal on a page
+        // but left _selectedUnassignedRow standing, so a book selected on
+        // character A stayed "selected" once the pane showed character B --
+        // and pressing an empty slot on B taught THEM A's book. Fixed by
+        // clearing the row in Step, mirroring the refusal clear next to it.
+        [UnityTest]
+        public IEnumerator PagingAfterSelectingABookDropsTheSelectionRatherThanHandingItToTheNextCharacter()
+        {
+            const string Book = "mud_burst";
+
+            // Ordered explicitly rather than trusting the default squad order:
+            // the default puts Bjorn (refuses books) second, which cannot
+            // reach this bug at all.
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new System.Collections.Generic.List<string> { "sheep", "owl", "bear" };
+            SaveSlotManager.SaveCurrent();
+
+            RunManager.StartRun(20260911UL);
+
+            var squad = SaveSlotManager.CurrentSave?.ActiveSquad()?.Where(c => c != null).ToList();
+            Assert.IsNotNull(squad);
+            Assert.GreaterOrEqual(squad.Count, 2, "need at least two squad members to page between");
+            Assert.IsTrue(ContentDatabase.CanHoldSpellBooks(squad[1].definitionId),
+                $"'{squad[1].definitionId}' refuses spell books, so paging to them cannot reach the bug");
+
+            var run = RunManager.Run;
+            run.learnedSpells.Clear();
+            run.unassignedSpellBooks.Clear();
+            run.unassignedSpellBooks.Add(Book);
+            SaveSlotManager.SaveCurrent();
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+            menu.Open();
+            menu.Select(0);
+            yield return null;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the Character pane has no dossier controller");
+
+            dossier.ShowSpells(true);
+            dossier.Refresh();
+            yield return null;
+
+            var row = Named(dossier, "DossierUnassigned0");
+            Assert.IsNotNull(row, "DossierUnassigned0 is missing from the built scene");
+            Assert.IsTrue(row.activeInHierarchy, "the unassigned copy is not offered, so nothing can be selected");
+            row.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            var next = menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == "DossierNextCharacter");
+            Assert.IsNotNull(next, "the dossier has no next-character button");
+            next.onClick.Invoke();
+            yield return null;
+
+            // THE SAME BUTTON Step() WIRES (LB/RB drives StepSection, which IS
+            // Step) -- so this click exercises exactly the path the brief
+            // names, not a stand-in for it.
+            var preview = Named(dossier, "DossierSpellSlot0Selection");
+            Assert.IsNotNull(preview, "DossierSpellSlot0Selection is missing from the built scene");
+            Assert.IsFalse(preview.activeInHierarchy,
+                "the would-fill preview is still lit after paging -- the previous character's row selection " +
+                "survived the page");
+
+            var slot = Named(dossier, "DossierSpellSlot0");
+            Assert.IsNotNull(slot, "DossierSpellSlot0 is missing from the built scene");
+            slot.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(0, RunManager.Run.learnedSpells.Count,
+                "pressing an empty slot on the new character taught them the book selected on the previous one");
+        }
+
         private static GameObject Named(Component root, string name) =>
             root.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;

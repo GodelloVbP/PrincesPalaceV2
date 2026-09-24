@@ -154,5 +154,53 @@ namespace PrincesPalace.PlayModeTests
                 "a talent screen opened over an already-kindled save started the glow small, so " +
                 "restoring from a save is animating rather than snapping");
         }
+
+        // ---- paging mid-beat drops the beat too (this bug class) ------------
+        //
+        // StepCharacter cleared _selectedSlot on a page but left
+        // _kindlingSlot/_kindlingPath standing, so a kindle beat started on
+        // character A kept running -- DriveKindling has no idea the viewer
+        // changed -- and painted A's catch/crust/glow onto this same shared
+        // orb index under character B for the rest of the beat's duration.
+        [UnityTest]
+        public IEnumerator PagingCharacterMidKindleStopsTheBeatFromPaintingTheNewCharacter()
+        {
+            TalentController.MotionSpeedMultiplier = 1f;
+
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var squad = SaveSlotManager.CurrentSave.ActiveSquad().Where(c => c != null).ToList();
+            Assert.GreaterOrEqual(squad.Count, 2, "need at least two squad members to page between");
+
+            var character = squad[0];
+            character.embers = 99;
+            character.unlockedTalentIds.Clear();
+            talents.Refresh();
+            yield return null;
+
+            var glow = GlowNamed(talents, "Orb0_0Glow");
+            Assert.IsNotNull(glow, "path 0's root stone has no glow child -- wiring drifted");
+
+            Press(talents, "Orb0_0");
+            yield return null;
+            Press(talents, "InvestButton");
+
+            // A few frames in -- well inside KindleSeconds -- so the beat is
+            // demonstrably mid-flight rather than already finished.
+            for (int i = 0; i < 3; i++) yield return null;
+            Assert.Less(glow.localScale.x, 0.99f,
+                "fixture: the glow should still be mid-ramp, not already settled -- nothing to page away from");
+
+            var next = ButtonNamed(talents, "NextCharacterButton");
+            Assert.IsNotNull(next, "the talent screen has no NextCharacterButton");
+            next.onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(1f, glow.localScale.x, 0.01f,
+                "the previous character's kindle beat is still painting this orb after paging -- the glow " +
+                "should have been snapped back to full size by the page, not left mid-ramp under the new " +
+                "character");
+        }
     }
 }

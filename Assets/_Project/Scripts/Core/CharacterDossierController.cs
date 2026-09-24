@@ -1676,6 +1676,12 @@ namespace PrincesPalace
 
             // The refusal named a character. Paging is leaving them.
             _alreadyKnownRefusal = false;
+
+            // The selected row named a book on the shelf the OLD character was
+            // looking at. Paging swaps the shelf out from under it, and a
+            // stale index left pointing at that row would teach whatever book
+            // now sits there to the new character on the next PressSlot.
+            _selectedUnassignedRow = -1;
             Refresh();
         }
 

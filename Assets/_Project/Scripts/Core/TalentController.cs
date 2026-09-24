@@ -249,6 +249,35 @@ namespace PrincesPalace
             // the selection cannot survive the switch -- it would describe an
             // orb that is no longer under the cursor.
             _selectedSlot = -1;
+
+            // A kindling beat mid-flight belongs to the character it started
+            // on. Left running, DriveKindling keeps painting that beat's
+            // scale, crust and ring onto this shared orb index every frame --
+            // now under the new character -- and force-writes the "just
+            // kindled" end state onto whatever stone sits there when the beat
+            // finishes, regardless of whether the new character has even
+            // taken it. Mirrors ConfirmRespec's clear (~511), plus an
+            // explicit scale reset: PaintOrbs repaints colour and rings for
+            // every orb on Refresh below, but it never touches orbs[index]'s
+            // or orbGlows[index]'s rect scale (AUDIT #141 -- that is normally
+            // left to ButtonPressAnimator, which has nothing to animate here
+            // since no button was pressed on the new character), so a scale
+            // frozen mid-catch would otherwise ride along untouched.
+            if (_kindlingSlot >= 0)
+            {
+                int kindledIndex = TalentScreen.OrbIndex(_kindlingPath, _kindlingSlot);
+                if (kindledIndex >= 0 && kindledIndex < orbs.Length && orbs[kindledIndex] != null)
+                {
+                    var rect = orbs[kindledIndex].transform as RectTransform;
+                    if (rect != null) rect.localScale = Vector3.one;
+                }
+
+                if (Has(orbGlows, kindledIndex)) orbGlows[kindledIndex].rectTransform.localScale = Vector3.one;
+
+                _kindlingSlot = -1;
+                _kindlingPath = -1;
+            }
+
             AimPushIn();
             Refresh();
         }

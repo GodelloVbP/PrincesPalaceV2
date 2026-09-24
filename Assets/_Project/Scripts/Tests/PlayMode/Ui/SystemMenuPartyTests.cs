@@ -401,6 +401,59 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front], "the swap itself should still stand");
         }
 
+        // ---- OnDisable ends a mid-flight drag too (this bug class) --------------
+        //
+        // OnDisable already cancelled a Formation selection ("A CARRY IS A
+        // TRANSACTION, AND LEAVING ENDS IT", above) but left _dragging and
+        // _dragResolvedFrame alone: closing the pane mid-drag never routes
+        // through EndDrag, so without the fix _dragging stays true and
+        // IgnoreClick() (~381: `_dragging || Time.frameCount ==
+        // _dragResolvedFrame`) swallows every seat/card click on every future
+        // reopen -- forever, since nothing else clears it.
+        [UnityTest]
+        public IEnumerator ClosingThePaneMidDragLeavesTheNextOpenClickable()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "bear", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            var fromGo = NodeOf("PartySeat0Button");
+            var drag = DragSourceOf(fromGo);
+            drag.OnBeginDrag(FakePointer(fromGo));
+            yield return null;
+
+            var ghost = NodeOf("PartyDragGhost");
+            Assert.IsNotNull(ghost, "the Party pane has no PartyDragGhost");
+            Assert.IsTrue(ghost.activeSelf, "fixture: the ghost should be showing mid-drag");
+
+            // The close a pane change or a hub tab switch triggers -- no
+            // EndDrag in between, exactly the scenario the brief names.
+            _menu.Close();
+            yield return null;
+
+            Assert.IsFalse(ghost.activeSelf, "the drag ghost is still up after the pane that owned the drag closed");
+
+            OpenParty();
+            var reopened = Party();
+            yield return null;
+
+            // THE BUTTON'S OWN onClick, not ClickSeat directly -- IgnoreClick()
+            // gates the wired listener (~202), not the command method, so a
+            // direct call would pass even with the bug present.
+            NodeOf("PartySeat0Button").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual("sheep", reopened.Formation.SelectedId,
+                "the reopened pane's first click was swallowed -- a stale _dragging from the closed-mid-drag " +
+                "pane is still eating clicks");
+        }
+
         // ---- P4: the toast fades rather than hard-cutting ------------------------
 
         [UnityTest]
