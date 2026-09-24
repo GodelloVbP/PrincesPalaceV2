@@ -200,7 +200,10 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
-                if (choice.Requires.Length == 0 && !choice.HiddenUntilMet)
+                // "Unconditional" is the runtime gate's own answer, not a
+                // second reading of the raw fields: a way out the build
+                // accepts must be one EventChoiceGate can never lock.
+                if (EventChoiceGate.Requirements(choice).Count == 0 && !choice.HiddenUntilMet)
                 {
                     hasUnconditionalChoice = true;
                 }

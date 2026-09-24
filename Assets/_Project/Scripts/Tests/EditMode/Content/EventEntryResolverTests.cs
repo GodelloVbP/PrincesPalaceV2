@@ -486,6 +486,55 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(5, spendingChoice.Requires[0].Min);
         }
 
+        // ---- "unconditional" is the runtime gate's own answer --------------------
+        // A choice that spends gold is locked for a player short of it, so it
+        // cannot be the page's way out. The build reads EventChoiceGate, the
+        // same rule the panel, ChooseEventOption and the bot read.
+
+        [Test]
+        public void APageWhoseOnlyRequirementFreeChoiceSpendsGold_IsRefused_NamingEventAndPage()
+        {
+            var entry = MinimalEvent("toll_gate");
+            entry.pages[0].id = "bridge";
+            entry.pages[0].choices[0].effects = new[] { new RawEventEffect { kind = "gold", amount = -50 } };
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            string all = string.Join(" ", errors);
+            StringAssert.Contains("no unconditional choice", all);
+            StringAssert.Contains("toll_gate", all);
+            StringAssert.Contains("'bridge'", all);
+        }
+
+        [Test]
+        public void TheSameGoldSpendingPage_PlusAFreeLeave_Builds()
+        {
+            var entry = MinimalEvent("toll_gate");
+            entry.pages[0].id = "bridge";
+            entry.pages[0].choices[0].effects = new[] { new RawEventEffect { kind = "gold", amount = -50 } };
+            entry.pages[0].choices = new[]
+            {
+                entry.pages[0].choices[0],
+                new RawEventChoice { text = "Leave", outcomes = new[] { new RawEventOutcome { goTo = "Leave" } } },
+            };
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
+        [Test]
+        public void AChoiceThatGainsGold_StillCountsAsUnconditional()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].choices[0].effects = new[] { new RawEventEffect { kind = "gold", amount = 25 } };
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+        }
+
         // ---- duplicate ids --------------------------------------------------------
 
         [Test]
