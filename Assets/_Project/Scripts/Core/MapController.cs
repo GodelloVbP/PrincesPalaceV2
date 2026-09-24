@@ -58,6 +58,10 @@ namespace PrincesPalace
         // MapController.Walk.cs's Arrive() rather than by Navigation.Go.
         [SerializeField] internal ShopController shop;
 
+        // An event room's panel, mounted the same way; opened through
+        // ShowEventPanel (MapController.Event.cs).
+        [SerializeField] internal EventController eventPanel;
+
         // The debug menu, F1 in the editor or a development build only -- the
         // same gate and the same reason as HubController's copy.
         [SerializeField] internal GameObject debugMenuPanel;

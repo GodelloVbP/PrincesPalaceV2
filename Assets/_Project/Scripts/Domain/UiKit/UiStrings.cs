@@ -366,6 +366,37 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString EventEffectItem =
             UiString.Define("event.effect_item", "+{0} {1}", "+99 Ceremonial Greatsword of the Undying");
 
+        // --- the event panel (EventScreen / EventController) --------------------
+        // Every event word is content; these templates exist so E1 measures
+        // each box against its worst case rather than against nothing, the
+        // DebugRowPlain shape. The body's sample is exactly the content
+        // build's cap long, so the build refuses a body box that cannot hold
+        // the longest body the resolver lets through.
+        public static readonly UiString EventTitle =
+            UiString.Define("event.title", "{0}", "The Well of Forgotten Wishes");
+        public static readonly UiString EventBody =
+            UiString.Define("event.body", "{0}", EventBodyAtCap());
+        public static readonly UiString EventEffects =
+            UiString.Define("event.effects", "{0}", "+9999 gold  ·  Party healed 100%  ·  +99999 XP");
+        public static readonly UiString EventChoice =
+            UiString.Define("event.choice", "{0}", "Offer the stranger the last of the party's rations");
+        public static readonly UiString EventChoiceLocked =
+            UiString.Define("event.choice_locked", "{0}", "Requires wishing_well_tosses between 10 and 10");
+        public static readonly UiString EventLeave = UiString.Define("event.leave", "Leave");
+
+        // Ordinary prose rather than one repeated glyph: a wall of 'W' would
+        // size the box for text no author writes, and word wrap is part of
+        // what is being measured.
+        private static string EventBodyAtCap()
+        {
+            const string Prose = "The water is black and perfectly still, and something glints far below. " +
+                                 "A rope hangs from the winch, frayed where hands have worried it. ";
+            int cap = Content.EventEntryResolver.MaxBodyLength;
+            var text = new System.Text.StringBuilder(cap + Prose.Length);
+            while (text.Length < cap) text.Append(Prose);
+            return text.ToString(0, cap);
+        }
+
         // Short names, because the value beside them is what is being read.
         // Spelled out where the abbreviation would be a guess (Speed, Attack).
         public static readonly UiString StatStrength = UiString.Define("stat.str", "STR");

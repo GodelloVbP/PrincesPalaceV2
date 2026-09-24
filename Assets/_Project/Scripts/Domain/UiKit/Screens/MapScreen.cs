@@ -161,6 +161,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // exactly the ordering AUDIT.md #173's Shop line calls out as the gap.
         public ShopScreen Shop;
 
+        // An event room's panel, nested exactly as the shop is and for the
+        // same reason; declared before the system menu among Root's children
+        // so Start opens the menu OVER an event, as it does over the shop.
+        public EventScreen Event;
+
         // The debug menu, the hub's own copy mounted here too (F1, dev
         // builds only): spell books, relics and every Tools row act on the
         // descent, and the hub has none to act on.
@@ -294,6 +299,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var shop = ShopScreen.Build();
             screen.Shop = shop;
 
+            var eventRoom = EventScreen.Build();
+            screen.Event = eventRoom;
+
             // The old paperdoll is gone; the system menu's Character pane is
             // the character screen now. SheetPanel opens the menu instead, so
             // every caller -- C, I, Escape, the hub's building -- reaches the
@@ -311,7 +319,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Debug = debug;
 
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, systemMenu.Root,
+                viewport, title, depth, gold, pendingBook, abandon, roomMessage, shop.Root, eventRoom.Root, systemMenu.Root,
                 debug.Root);
 
             return screen;

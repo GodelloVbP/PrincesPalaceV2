@@ -9,7 +9,7 @@
       "pages": [
         {
           "id": "well",
-          "artKey": "",
+          "artPath": "",
           "title": "A Wishing Well",
           "body": "A mossy well sits at the crossing, its water black and still. Something glints at the bottom.",
           "choices": [
@@ -79,7 +79,7 @@
         },
         {
           "id": "wish_granted",
-          "artKey": "",
+          "artPath": "",
           "title": "The Well Answers",
           "body": "The water glows gold for a moment, then settles. Whatever you wished for is already on its way.",
           "choices": [

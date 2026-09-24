@@ -21,11 +21,12 @@ controller (+ its own parts, for Fight), its tests, and its content data
 | Screen | Screen tree | Controller | Content |
 |---|---|---|---|
 | Main Menu / Save Slots | `Domain/UiKit/Screens/MainMenuScreen.cs` + `MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs` | `characters.json` |
-| Run Map | `Domain/UiKit/Screens/MapScreen.cs` | `MapController.cs` + `MapController.Walk.cs` | `enemies.json` (room pools) |
+| Run Map | `Domain/UiKit/Screens/MapScreen.cs` | `MapController.cs` + `MapController.Walk.cs` + `MapController.Event.cs` | `enemies.json` (room pools) |
 | Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 4 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
 | Rewards / Item Choice ("The Reckoning") | `Domain/UiKit/Screens/ReckoningScreen.cs` (wired as `fight.reckoning` inside the Fight scene via `ScreenRegistry.cs`) | `ReckoningController.cs` | `items.json`, `itemsets.json` |
 | Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`). Column A's four rows each open a covering pane: Pack (`BuildPackPanel`), Spells (`BuildSpellsPanel`), Skills (`BuildSkillsPanel` -- read-only, no per-entry Selectable, `DeclareSkills`) and the reward track | `CharacterDossierController.cs` | `characters.json`, `items.json` |
 | Shop / Store | `Domain/UiKit/Screens/ShopScreen.cs` (nested panel inside the Map scene, wired via `ScreenRegistry.cs`; laid out to `docs/handoffs/shop_v2/Shop Screen v2.dc.html`) | `ShopController.cs` | `items.json`, `relics.json`, `skills.json` |
+| Event room | `Domain/UiKit/Screens/EventScreen.cs` (nested panel inside the Map scene, wired by `ScreenRegistry.WireEvent`, which bakes each page's `artPath` into `eventArt`) | `EventController.cs` (paints `RunOrchestrator.CurrentEvent()`; opened by `MapController.Event.cs`) | `events.json`; authoring guide `docs/EVENTS.md` |
 | Hub | `Domain/UiKit/Screens/HubScreen.cs` + `HubAmbience.cs` | `HubController.cs`, `HubBuildingLooper.cs` | — |
 | Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
 | Relics (start-of-run draft) | `Domain/UiKit/Screens/RelicDraftScreen.cs` (wired into Hub via `ScreenRegistry.cs`) | `RelicDraftController.cs` | `relics.json` |
@@ -1231,7 +1232,13 @@ apply / persist-once, `LeaveEvent` clears the room. The panel reads
 `CurrentEvent()` (an `EventView`, `Domain/Events/EventView.cs`). State lives on
 `RunSnapshot.event*` and the profile's `SaveData.eventCounters`;
 `RunEventContext` (Core) is the live `IEventContext`. `MapController.OpenEvent`
-calls the partial method `ShowEventPanel`, which the event screen implements.
+calls the partial method `ShowEventPanel`, implemented in `MapController.Event.cs`:
+it opens `EventController` (`Core/EventController.cs`) with `Finished = Refresh`.
+The controller owns no event state: every paint reads `CurrentEvent()`, rows
+are packed over the VISIBLE choices (so row i is not choice i -- it keeps the
+authored index per row), locked rows are `interactable = false` and left off
+its one vertical rail, and its `NavContext` has no Cancel (leaving is always
+an explicit row) but keeps Start for the system menu.
 
 ### Two more one-rulebook seams (`Core/EquipmentOps.cs`, `Core/TalentOps.cs`)
 

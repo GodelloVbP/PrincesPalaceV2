@@ -54,6 +54,11 @@ namespace PrincesPalace.Domain.Content
                 // keyed on the suffix "Path" would not see it.
                 { "iconSheet", ArtPathKind.EditorBaked },
 
+                // An event page's picture. Baked for the same reason iconPath
+                // is: ScreenRegistry.WireEvent loads every page's art into the
+                // Map scene's table, so the runtime only ever looks it up.
+                { "artPath", ArtPathKind.EditorBaked },
+
                 // Loaded at runtime, off Resources.
                 { "spritePath", ArtPathKind.RuntimeLoaded },
                 { "battleSpritePath", ArtPathKind.RuntimeLoaded },

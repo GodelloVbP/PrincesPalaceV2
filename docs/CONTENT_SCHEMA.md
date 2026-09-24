@@ -383,7 +383,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
 | `id` | string | `""` | Stable id for this page within its event; targeted by an outcome's goTo. |  |
-| `artKey` | string | `""` | Editor-time key for this page's art, loaded the way ScreenRegistry.WireReckoning loads item icons; empty hides the art frame rather than showing a white quad. |  |
+| `artPath` | string | `""` | This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event>_<page>.png): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives. |  |
 | `title` | string | `""` | The page's title, shown above the body. |  |
 | `body` | string | `""` | The page's body text; capped at EventEntryResolver.MaxBodyLength characters. |  |
 | `choices` | RawEventChoice[] (below) | `[]` | Up to 4 choices offered on this page. |  |

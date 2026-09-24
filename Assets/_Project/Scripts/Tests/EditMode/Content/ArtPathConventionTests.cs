@@ -211,6 +211,8 @@ namespace PrincesPalace.Domain.Tests
                 "Assets/_Project/Art/Items/helmets_str/level_1.png", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "iconSheet",
                 "Assets/_Project/Art/Items/longswords", out _));
+            Assert.IsTrue(ArtPathConvention.Check("x", "artPath",
+                "Assets/_Project/Art/Events/demo_wishing_well_well.png", out _));
         }
 
         // Art is optional throughout this project and the missing-art fallbacks

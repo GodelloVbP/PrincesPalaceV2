@@ -576,6 +576,7 @@ public static class ScreenRegistry
     {
         MapScreen screen = null;
         ShopController shopController = null;
+        EventController eventController = null;
 
         return new ScreenDef
         {
@@ -625,6 +626,12 @@ public static class ScreenRegistry
                 // owner's 2026-09-19 ask -- "press Start in the shop to check
                 // on your chars").
                 shopController.systemMenu = map.systemMenu;
+
+                // The event panel, nested and sharing the menu exactly as the
+                // shop does, so Start over an event opens the same overlay.
+                eventController = WireEvent(result, screen.Event);
+                map.eventPanel = eventController;
+                eventController.systemMenu = map.systemMenu;
             },
 
             // Gate 2's own count bindings (docs/PLAN_SHOP.md §7.3): the six
@@ -651,6 +658,12 @@ public static class ScreenRegistry
                     () => shopController.relicCards.Length),
                 Count("ShopController.packRows", screen.Shop.PackRows.Select(r => r.Row).ToList(),
                     () => shopController.packRows.Length),
+                Count("EventController.choiceButtons", screen.Event.ChoiceRows.Select(r => r.Button).ToList(),
+                    () => eventController.choiceButtons.Length),
+                Count("EventController.choiceTexts", screen.Event.ChoiceRows.Select(r => r.Text).ToList(),
+                    () => eventController.choiceTexts.Length),
+                Count("EventController.choiceLocks", screen.Event.ChoiceRows.Select(r => r.Lock).ToList(),
+                    () => eventController.choiceLocks.Length),
             },
         };
     }
@@ -719,6 +732,40 @@ public static class ScreenRegistry
         shop.packSellAllButtons = screen.PackRows.Select(r => result.Button(r.SellAll)).ToArray();
 
         return shop;
+    }
+
+    private static EventController WireEvent(UiEmitResult result, EventScreen screen)
+    {
+        var panel = result.Attach<EventController>(screen.Root);
+        UiAutoBind.Bind(result, panel, screen);
+
+        // Every page's art, keyed by its authored artPath -- WireShop's
+        // itemArt shape, for WireShop's reason: AssetDatabase is the
+        // builder's world, not the runtime's. A path whose file is not there
+        // yet loads null and is left out, so the page shows its empty frame
+        // (ItemIcons.Apply) rather than a white quad, and dropping the file in
+        // later needs only a scene rebuild.
+        panel.eventArt = ContentDatabase.Events
+            .Where(e => e != null && e.Data != null && e.Data.Pages != null)
+            .SelectMany(e => e.Data.Pages)
+            .Select(p => p?.ArtKey)
+            .Where(key => !string.IsNullOrEmpty(key))
+            .Distinct()
+            .Select(key => new IconEntry(key, SceneBuilder.LoadSpriteByKey(key)))
+            .Where(entry => entry.Sprite != null)
+            .ToArray();
+
+        // NO CountBindings for eventArt: a lookup table keyed by artPath, with
+        // no strip of UI of the same length to pair it with -- WireShop's
+        // itemArt reasoning exactly.
+
+        // Off a row sub-object, which UiAutoBind cannot see -- the lines E4's
+        // count binding in Map() pairs against ChoiceRows.
+        panel.choiceButtons = screen.ChoiceRows.Select(r => result.Button(r.Button)).ToArray();
+        panel.choiceTexts = screen.ChoiceRows.Select(r => result.Tmp(r.Text)).ToArray();
+        panel.choiceLocks = screen.ChoiceRows.Select(r => result.Tmp(r.Lock)).ToArray();
+
+        return panel;
     }
 
     // The hub's atmosphere. Same bounded hatch as DressAmbience: it ATTACHES

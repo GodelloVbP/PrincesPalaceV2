@@ -65,6 +65,36 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(resolved[0].Pages[0].Choices[0].Outcomes[0].IsLeave);
         }
 
+        // ---- art path ---------------------------------------------------------
+
+        // artPath is baked into the Map scene by AssetDatabase, which cannot
+        // see a Resources-relative path: written that way the page would show
+        // its empty frame forever with nothing logged. ArtPathConventionTests
+        // pins the rule; this pins that the event resolver actually asks it.
+        [Test]
+        public void AResourcesRelativeArtPath_IsRefusedNamingTheField()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].artPath = "Events/demo_well";
+
+            bool ok = Resolve(entry, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("artPath", string.Join(" ", errors));
+        }
+
+        [Test]
+        public void AnAssetsRelativeArtPath_ResolvesOntoThePagesArtKey()
+        {
+            var entry = MinimalEvent();
+            entry.pages[0].artPath = "Assets/_Project/Art/Events/demo_well.png";
+
+            bool ok = Resolve(entry, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual("Assets/_Project/Art/Events/demo_well.png", resolved[0].Pages[0].ArtKey);
+        }
+
         // ---- unknown kinds --------------------------------------------------
 
         [Test]

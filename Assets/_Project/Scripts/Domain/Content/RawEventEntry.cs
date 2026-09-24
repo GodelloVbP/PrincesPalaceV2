@@ -80,8 +80,8 @@ namespace PrincesPalace.Domain.Content
     {
         [ContentDoc("Stable id for this page within its event; targeted by an outcome's goTo.")]
         public string id = "";
-        [ContentDoc("Editor-time key for this page's art, loaded the way ScreenRegistry.WireReckoning loads item icons; empty hides the art frame rather than showing a white quad.")]
-        public string artKey = "";
+        [ContentDoc("This page's art, Assets-relative with its extension (Assets/_Project/Art/Events/<event>_<page>.png): baked into the Map scene at build time the way item iconPath is, so a new file needs a scene rebuild. Empty, or a file that is not there, hides the image and keeps the frame. Commission at the size docs/EVENTS.md gives.")]
+        public string artPath = "";
         [ContentDoc("The page's title, shown above the body.")]
         public string title = "";
         [ContentDoc("The page's body text; capped at EventEntryResolver.MaxBodyLength characters.")]

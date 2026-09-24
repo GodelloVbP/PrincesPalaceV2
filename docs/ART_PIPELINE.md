@@ -607,6 +607,16 @@ provenance the same way every other recipe's do.
    sync back, the committed scene ends up pointing at a Sprite sub-asset
    that doesn't exist in main's copy of the file.
 
+**Event-room page art** (`events.json` → `pages[].artPath`): the panel's art
+frame is **960 x 720 at 1080p, 4:3 landscape** (`EventScreen.ArtWidth` /
+`ArtHeight`, pinned in `EventScreenTests`). Commission at that size or an
+exact multiple (1920 x 1440); the image keeps its aspect, so off-ratio art
+letterboxes rather than stretches. File it as
+`Assets/_Project/Art/Events/<event>_<page>.png` and write that Assets-relative
+path, extension included, into `artPath` -- it is baked into the Map scene
+like an item `iconPath`, so it needs step 3's `-BuildScenes`. Full authoring
+guide: `docs/EVENTS.md`.
+
 ### 5a. Delivering a combat actor's stances
 
 The stance kit has its own checklist, because two of its steps used to be a

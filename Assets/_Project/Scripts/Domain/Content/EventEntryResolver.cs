@@ -163,6 +163,11 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!ArtPathConvention.Check(pageLabel, "artPath", raw.artPath, out error))
+            {
+                return false;
+            }
+
             var rawChoices = raw.choices ?? Array.Empty<RawEventChoice>();
             if (rawChoices.Length > MaxChoicesPerPage)
             {
@@ -196,7 +201,7 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            resolvedPage = new ResolvedEventPage(raw.id, raw.artKey ?? "", raw.title ?? "", raw.body ?? "", resolvedChoices.ToArray());
+            resolvedPage = new ResolvedEventPage(raw.id, raw.artPath ?? "", raw.title ?? "", raw.body ?? "", resolvedChoices.ToArray());
             error = null;
             return true;
         }

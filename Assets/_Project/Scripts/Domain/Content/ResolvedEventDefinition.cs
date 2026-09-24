@@ -9,6 +9,10 @@ namespace PrincesPalace.Domain.Content
     public sealed class ResolvedEventPage
     {
         public string Id = "";
+
+        // The page's authored artPath. Named a key here because that is all
+        // the runtime does with it: look it up in the table
+        // ScreenRegistry.WireEvent baked from these same strings.
         public string ArtKey = "";
         public string Title = "";
         public string Body = "";
