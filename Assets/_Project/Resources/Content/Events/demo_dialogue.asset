@@ -1,0 +1,262 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: demo_dialogue
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: demo_dialogue
+    SortOrder: 2
+    Floors: e7030000
+    Requires:
+    - Kind: 0
+      CharacterId: sheep
+      CharacterDisplayName: Shawn
+      Ability: 0
+      Min: 0
+      HasMin: 0
+      Max: 0
+      HasMax: 0
+      CounterId: 
+      RequireStanding: 0
+      AuthoredReason: 
+    - Kind: 0
+      CharacterId: owl
+      CharacterDisplayName: Odette
+      Ability: 0
+      Min: 0
+      HasMin: 0
+      Max: 0
+      HasMax: 0
+      CounterId: 
+      RequireStanding: 0
+      AuthoredReason: 
+    Pages:
+    - Id: landing
+      ArtKey: 
+      Title: A Lit Lantern
+      Body: A lantern sways at the far end of the landing, though no hand holds it.
+      Choices:
+      - Text: Buy the lantern outright
+        Requires:
+        - Kind: 4
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 99999
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: Prince does not pay that well
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      - Text: Ask the lantern its name
+        Requires:
+        - Kind: 1
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 999
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 1
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      - Text: Follow the light
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 0
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 5
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The lantern leads you down a stair of old stone. A few coins glint
+            on the steps, and at the bottom someone large is already warming his
+            paws at it.
+          GoTo: bearer
+          IsLeave: 0
+        - Requires: []
+          Effects:
+          - Kind: 0
+            Amount: 5
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The lantern leads you down a stair of old stone. A few coins glint
+            on the steps.
+          GoTo: quiet
+          IsLeave: 0
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: A lantern sways at the far end of the landing, though no hand holds
+          it. Its light is warm, and it is waiting for you.
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 1
+        Side: 0
+        Text: Another reality, another landing. Prince says this one has <i>excellent</i>
+          monsters. I believe him about half the time.
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 2
+        Side: 0
+        Text: The other half, he sends me in first. If that lantern starts talking,
+          I am not the one answering it.
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Hold still, both of you. That lantern burns from the far side of the
+          wall, so somebody in the next reality lit it for us. Whoever they are,
+          they are expecting company, and they are not a patient host.
+    - Id: bearer
+      ArtKey: 
+      Title: The Lantern Bearer
+      Body: Bjorn is already at the bottom of the stair.
+      Choices:
+      - Text: Press on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: farewell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast:
+      - CharacterId: bear
+        Side: 0
+      Lines:
+      - SpeakerId: bear
+        IsNarration: 0
+        Expression: 1
+        Side: 0
+        Text: Ha! I knew I smelled lamp oil. Took you long enough. Stand back, little
+          ones, this light bites.
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The lantern gutters once, as if it heard him.
+    - Id: quiet
+      ArtKey: 
+      Title: The Lantern Bearer
+      Body: The stair is empty.
+      Choices:
+      - Text: Press on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: farewell
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The stair is empty. Whoever lit the lantern has gone on ahead, and
+          left the light for you.
+    - Id: farewell
+      ArtKey: 
+      Title: Out of the Dark
+      Body: The lantern goes out.
+      Choices:
+      - Text: Leave
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: You leave with the lantern's warmth still in your paws. Prince
+            will call it a detour. It was not.
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: At the end of the stair the lantern goes out, as if it had done its
+          job.
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Somewhere above, a door you never noticed closes softly.
+    BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png

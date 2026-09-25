@@ -27,6 +27,8 @@ namespace PrincesPalace.Domain.Content
         // drifting past it.
         //
         // Body and outcome result share one box (a result replaces the body).
+        // A result that plays on the dialogue stage takes MaxLineLength
+        // instead (TryCheckStagedResults).
         public const int MaxBodyLength = 600;
         public const int MaxTitleLength = 28;
         public const int MaxChoiceTextLength = 50;
@@ -183,7 +185,8 @@ namespace PrincesPalace.Domain.Content
             var candidate = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray(), eventBackdrop);
 
             // Needs the whole page graph, so it runs once every page resolved.
-            if (!TryCheckSpeakersPresent(candidate, eventLabel, out error))
+            if (!TryCheckSpeakersPresent(candidate, eventLabel, out error)
+                || !TryCheckStagedResults(candidate, eventLabel, out error))
             {
                 return false;
             }

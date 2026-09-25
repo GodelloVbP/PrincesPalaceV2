@@ -132,7 +132,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 100;
             Save.SetEventCounter(DemoCounter, 9);
 
-            var tenth = RunOrchestrator.ChooseEventOption(TossIndex());
+            var tenth = EventPicks.OnCurrentPage(TossIndex());
             Assert.AreEqual(EventChoiceOutcome.Ok, tenth.Outcome);
 
             SaveSlotManager.Forget();
@@ -158,7 +158,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 100;
             Save.SetEventCounter(DemoCounter, before);
 
-            RunOrchestrator.ChooseEventOption(TossIndex());
+            EventPicks.OnCurrentPage(TossIndex());
 
             Assert.AreEqual(after, Save.EventCounter(DemoCounter));
             Assert.AreEqual(expectedPage, RunManager.Run.eventPageId);
@@ -172,7 +172,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 100;
             RunManager.Run.goldEarned = 40;
 
-            RunOrchestrator.ChooseEventOption(TossIndex());
+            EventPicks.OnCurrentPage(TossIndex());
 
             Assert.AreEqual(95, RunManager.Run.gold);
             Assert.AreEqual(40, RunManager.Run.goldEarned);
@@ -187,7 +187,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.gold = 0;
             RunManager.Run.goldEarned = 0;
 
-            var result = RunOrchestrator.ChooseEventOption(ShawnIndex());
+            var result = EventPicks.OnCurrentPage(ShawnIndex());
 
             Assert.AreEqual(EventChoiceOutcome.Ok, result.Outcome);
             Assert.AreEqual(10, RunManager.Run.gold);
@@ -216,12 +216,12 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(shown.Enabled);
             Assert.AreEqual("Requires a level 15 party member", shown.LockReason);
 
-            var refused = RunOrchestrator.ChooseEventOption(gated);
+            var refused = EventPicks.OnCurrentPage(gated);
             Assert.AreEqual(EventChoiceOutcome.Refused, refused.Outcome);
             Assert.AreEqual(EventRefusal.Locked, refused.Reason);
 
             // And the implied gate: 3 gold cannot toss a 5-gold coin.
-            var toss = RunOrchestrator.ChooseEventOption(TossIndex());
+            var toss = EventPicks.OnCurrentPage(TossIndex());
             Assert.AreEqual(EventRefusal.Locked, toss.Reason);
             Assert.AreEqual("Requires 5 gold", RunOrchestrator.CurrentEvent().Choices[TossIndex()].LockReason);
 
@@ -241,7 +241,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.Run.currentHealth.RemoveAll(e => e.characterId == member.definitionId);
             RunManager.Run.currentHealth.Add(new RunHealthEntry { characterId = member.definitionId, hp = 1 });
 
-            var result = RunOrchestrator.ChooseEventOption(LevelGatedIndex());
+            var result = EventPicks.OnCurrentPage(LevelGatedIndex());
 
             Assert.AreEqual(EventChoiceOutcome.Ok, result.Outcome);
             Assert.AreEqual("Party healed 25%", result.EffectsLine);
@@ -274,7 +274,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var node = ArriveAtTheFirstEvent();
 
-            var result = RunOrchestrator.ChooseEventOption(PlainLeaveIndex());
+            var result = EventPicks.OnCurrentPage(PlainLeaveIndex());
 
             Assert.IsTrue(result.Closed);
             CollectionAssert.Contains(RunManager.Run.clearedNodeIds, node.Id);
@@ -290,7 +290,7 @@ namespace PrincesPalace.PlayModeTests
             ArriveAtTheFirstEvent();
             RunManager.Run.gold = 100;
 
-            RunOrchestrator.ChooseEventOption(TossIndex());
+            EventPicks.OnCurrentPage(TossIndex());
             Assert.AreEqual(1, Save.EventCounter(DemoCounter));
 
             RunManager.EndRun();

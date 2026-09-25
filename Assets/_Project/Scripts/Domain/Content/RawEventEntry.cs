@@ -57,7 +57,7 @@ namespace PrincesPalace.Domain.Content
         public RawEventRequirement[] requires = Array.Empty<RawEventRequirement>();
         [ContentDoc("Effects applied when this outcome is chosen, in addition to the choice's own effects.")]
         public RawEventEffect[] effects = Array.Empty<RawEventEffect>();
-        [ContentDoc("The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body.")]
+        [ContentDoc("The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body, or at MaxLineLength when it plays on the dialogue stage (the choice's page or the goTo page has lines).")]
         public string result = "";
         [ContentDoc("The next page's id, or the literal 'Leave' (case-insensitive) to close the event.")]
         public string goTo = "";

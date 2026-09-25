@@ -50,9 +50,9 @@ namespace PrincesPalace
         // ---- the dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, D2/D3) -------------
         //
         // Shown instead of the legacy frame and text column when the page has
-        // lines (EventView.HasLines), or when the event concluded from a page
-        // that had them; every other page paints exactly as before (contract
-        // 14), with no playback at all.
+        // lines, or when the event concluded and has lines on any page
+        // (EventView.Staged); every other page paints exactly as before
+        // (contract 14), with no playback at all.
 
         // The legacy layout's two halves, switched off under the stage.
         [SerializeField] internal GameObject artFrame;
@@ -94,6 +94,17 @@ namespace PrincesPalace
         private const int LeaveRow = -1;
         private readonly int[] _rowAction = new int[EventScreen.ChoiceRowCount];
 
+        // The page those rows were painted from ("" when concluded). A pick
+        // names it, so a press that lands after the run has moved on is
+        // refused as StalePage rather than read against the new page.
+        private string _paintedPageId = "";
+
+        // The frame an accepted choose last ran on. A Submit and a mouse
+        // click landing on the same frame both reach Press before either
+        // repaint runs, so the second one carries the page the first press
+        // just painted -- StalePage can't catch that, it's the current page.
+        private int _lastChooseFrame = -1;
+
         // The concluded state has no page, so CurrentEvent() gives it no
         // title or art. The panel keeps showing the page the player was on
         // rather than blanking the header under the result they are reading.
@@ -101,10 +112,10 @@ namespace PrincesPalace
         private string _heldTitle;
         private string _heldArtKey;
 
-        // The same hold for the stage (contract 3): an event that concludes
-        // from a page with lines shows its result on that page's stage, with
-        // the single Leave, rather than dropping back to the legacy layout.
-        private bool _heldHadLines;
+        // The page's backdrop, held the same way, so a concluded stage keeps
+        // the ground the player chose on. Whether it concludes on the stage
+        // at all is not held: EventView.Staged answers it from the event, so
+        // a resume from a save, which holds nothing, paints the same (D4).
         private string _heldBackdropKey;
 
         // The playing page, or null on a legacy page (contract 14).
@@ -244,12 +255,13 @@ namespace PrincesPalace
                 return;
             }
 
+            _paintedPageId = view.PageId;
+
             if (!view.Concluded)
             {
                 _heldEventId = view.EventId;
                 _heldTitle = view.Title;
                 _heldArtKey = view.ArtKey;
-                _heldHadLines = view.HasLines;
                 _heldBackdropKey = view.BackdropKey;
             }
 
@@ -259,9 +271,10 @@ namespace PrincesPalace
 
             // Contract 14: a page without lines never touches the stage, and
             // the rows go back to their legacy spot in case the page before
-            // this one had lines. Contract 3: a concluded event keeps the
-            // stage only if the page it concluded from had lines.
-            bool staged = view.HasLines || (held && _heldHadLines);
+            // this one had lines. Contract 3: a concluded event shows its
+            // result on the stage when the event has lines anywhere (D4),
+            // whether it concluded just now or was resumed from a save.
+            bool staged = view.Staged;
             ShowStage(staged);
 
             if (staged)
@@ -633,6 +646,11 @@ namespace PrincesPalace
             // selection on the frame it opens them.
             if (_playback != null && !_playback.AcceptsChoicePress(Time.frameCount)) return;
 
+            // At most one choose per frame -- a same-frame Submit + click
+            // double-press would otherwise both reach here before Paint()
+            // repaints, so the second carries the page the first just made current.
+            if (_lastChooseFrame == Time.frameCount) return;
+
             if (_rowAction[row] == LeaveRow)
             {
                 RunOrchestrator.LeaveEvent();
@@ -640,7 +658,8 @@ namespace PrincesPalace
                 return;
             }
 
-            var result = RunOrchestrator.ChooseEventOption(_rowAction[row]);
+            _lastChooseFrame = Time.frameCount;
+            var result = RunOrchestrator.ChooseEventOption(_rowAction[row], _paintedPageId);
             if (result.Closed)
             {
                 Close();
@@ -648,7 +667,8 @@ namespace PrincesPalace
             }
 
             // Applied or refused, the page to show is whatever the run now
-            // says -- a refusal leaves it unchanged, which repaints the same.
+            // says -- a refusal leaves it unchanged, which repaints the same;
+            // a StalePage refusal repaints the page the run is really on.
             Paint();
         }
 

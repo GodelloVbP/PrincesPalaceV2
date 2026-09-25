@@ -771,7 +771,7 @@ namespace PrincesPalace
                     break;
                 }
 
-                var outcome = RunOrchestrator.ChooseEventOption(open.Index);
+                var outcome = RunOrchestrator.ChooseEventOption(open.Index, view.PageId);
                 if (!outcome.WasApplied)
                 {
                     result.Hits.Add(new InvariantHit("EventChoiceRefused",

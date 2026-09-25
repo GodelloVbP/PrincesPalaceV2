@@ -257,6 +257,49 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
+        // A RESULT THAT PLAYS ON THE STAGE TAKES THE LINE CAP (owner's call,
+        // D4). The stage shows an outcome's result as a narration beat in the
+        // dialogue box (contract 3), which is measured for MaxLineLength, not
+        // the legacy body column's MaxBodyLength. It plays there when the page
+        // the choice sits on has lines (the pick is made on the stage) or when
+        // the outcome's goTo page has lines (the result opens that page's
+        // stage). A result between two line-less pages keeps MaxBodyLength,
+        // already checked per outcome. Runs over the whole resolved graph
+        // because a goTo page may be authored after the page that names it.
+        private static bool TryCheckStagedResults(ResolvedEventDefinition evt, string eventLabel, out string error)
+        {
+            foreach (var page in evt.Pages)
+            {
+                if (page == null) continue;
+
+                foreach (var choice in page.Choices)
+                {
+                    if (choice == null) continue;
+
+                    for (int i = 0; i < choice.Outcomes.Length; i++)
+                    {
+                        var outcome = choice.Outcomes[i];
+                        int length = (outcome?.Result ?? "").Length;
+                        if (length <= MaxLineLength) continue;
+
+                        var destination = outcome.IsLeave ? null : evt.PageById(outcome.GoTo);
+                        string why;
+                        if (page.HasLines) why = $"page '{page.Id}' has lines";
+                        else if (destination != null && destination.HasLines) why = $"its goTo page '{destination.Id}' has lines";
+                        else continue;
+
+                        error = $"{eventLabel} page '{page.Id}' choice '{choice.Text}' outcome #{i + 1}: result is {length} " +
+                                $"characters, over the {MaxLineLength}-character cap for a result that plays on the " +
+                                $"dialogue stage ({why}). Shorten it, or move the rest into the destination page's lines.";
+                        return false;
+                    }
+                }
+            }
+
+            error = null;
+            return true;
+        }
+
         // Case-insensitive match against an enum's member NAMES only.
         // Enum.TryParse would also take "3" or "1, 2" and hand back a value no
         // author meant.

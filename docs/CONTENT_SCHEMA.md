@@ -397,7 +397,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 |---|---|---|---|---|
 | `requires` | RawEventRequirement[] (below) | `[]` | Requirements gating this outcome; the last outcome in a choice must have none, so a choice can never fall through with nothing to show. |  |
 | `effects` | RawEventEffect[] (below) | `[]` | Effects applied when this outcome is chosen, in addition to the choice's own effects. |  |
-| `result` | string | `""` | The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body. |  |
+| `result` | string | `""` | The result text shown after this outcome is chosen, in the body's place; capped at EventEntryResolver.MaxBodyLength characters like the body, or at MaxLineLength when it plays on the dialogue stage (the choice's page or the goTo page has lines). |  |
 | `goTo` | string | `""` | The next page's id, or the literal 'Leave' (case-insensitive) to close the event. |  |
 
 ### `RawEventPage`

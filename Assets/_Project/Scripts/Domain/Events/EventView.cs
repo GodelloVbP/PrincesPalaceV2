@@ -43,7 +43,9 @@ namespace PrincesPalace.Domain.Events
     // with dialogue lines plays on the stage, one without shows exactly as
     // before (contract 14). Gated on the lines, never on BackdropKey -- every
     // page carries a backdrop, defaulted at content build. The concluded
-    // state has no page and so no lines.
+    // state has no page and so no lines; it plays on the stage when the
+    // EVENT has lines on any page (EventHasLines, D4), so a resume from a
+    // save paints what the live pick painted. Staged is that one rule.
     public sealed class EventView
     {
         public readonly string EventId;
@@ -58,11 +60,18 @@ namespace PrincesPalace.Domain.Events
         public readonly string BackdropKey;
         public readonly IReadOnlyList<EventLineView> Lines;
 
+        // ResolvedEventDefinition.HasAnyLines for the open event.
+        public readonly bool EventHasLines;
+
         public bool HasLines => Lines.Count > 0;
+
+        // Stage or legacy layout: this page has lines, or the event concluded
+        // and has lines somewhere.
+        public bool Staged => HasLines || (Concluded && EventHasLines);
 
         public EventView(string eventId, string pageId, string artKey, string title, string body,
             bool concluded, string resultText, string effectsLine, IReadOnlyList<EventChoiceView> choices,
-            string backdropKey = "", IReadOnlyList<EventLineView> lines = null)
+            string backdropKey = "", IReadOnlyList<EventLineView> lines = null, bool eventHasLines = false)
         {
             EventId = eventId ?? "";
             PageId = pageId ?? "";
@@ -75,6 +84,7 @@ namespace PrincesPalace.Domain.Events
             Choices = choices ?? Array.Empty<EventChoiceView>();
             BackdropKey = backdropKey ?? "";
             Lines = lines ?? Array.Empty<EventLineView>();
+            EventHasLines = eventHasLines || Lines.Count > 0;
         }
     }
 
@@ -173,6 +183,11 @@ namespace PrincesPalace.Domain.Events
         // The choice's requirements (or the gold its own spend implies) do
         // not pass. The panel should never have let it be pressed.
         Locked,
+
+        // The pick named a page that is no longer the run's current one: a
+        // second press that landed before the repaint the first one caused.
+        // Nothing happened; the page the first press opened stays.
+        StalePage,
     }
 
     public enum EventChoiceOutcome

@@ -155,7 +155,7 @@ namespace PrincesPalace.PlayModeTests
             SetHp("owl", 10);
             SetHp("bear", 0);
 
-            var result = RunOrchestrator.ChooseEventOption(Pet);
+            var result = EventPicks.OnCurrentPage(Pet);
 
             Assert.AreEqual(EventChoiceOutcome.Ok, result.Outcome);
             Assert.AreEqual(MaxHp("sheep"), Hp("sheep"));
@@ -170,7 +170,7 @@ namespace PrincesPalace.PlayModeTests
             StartRunAndOpen(UngatedEvent);
             SetHp("sheep", 0);
 
-            var result = RunOrchestrator.ChooseEventOption(0);
+            var result = EventPicks.OnCurrentPage(0);
 
             Assert.AreEqual(EventChoiceOutcome.Ok, result.Outcome);
             Assert.AreEqual(0, Hp("sheep"));
@@ -197,7 +197,7 @@ namespace PrincesPalace.PlayModeTests
             var shown = Shown(Pet);
             Assert.IsFalse(shown.Enabled);
             Assert.AreEqual("Requires Shawn standing", shown.LockReason);
-            Assert.AreEqual(EventRefusal.Locked, RunOrchestrator.ChooseEventOption(Pet).Reason);
+            Assert.AreEqual(EventRefusal.Locked, EventPicks.OnCurrentPage(Pet).Reason);
             Assert.AreEqual(0, Hp("sheep"));
         }
 
@@ -220,8 +220,8 @@ namespace PrincesPalace.PlayModeTests
             StartRunAndOpen(GatedEvent);
             Run.relicIds.Clear();
 
-            var first = RunOrchestrator.ChooseEventOption(TakeRelic);
-            var second = RunOrchestrator.ChooseEventOption(TakeRelic);
+            var first = EventPicks.OnCurrentPage(TakeRelic);
+            var second = EventPicks.OnCurrentPage(TakeRelic);
 
             Assert.AreEqual(1, Run.relicIds.Count(id => id == _relicId));
             Assert.AreEqual("Relic: Fixture Relic", first.EffectsLine);
@@ -236,7 +236,7 @@ namespace PrincesPalace.PlayModeTests
             StartRunAndOpen(GatedEvent);
             Assert.AreEqual(4, ItemOfferRoll.CurrentSquadFavor(), "fixture: Shawn's authored 4 is the squad max");
 
-            var result = RunOrchestrator.ChooseEventOption(Feed);
+            var result = EventPicks.OnCurrentPage(Feed);
             Assert.AreEqual("+10 Prince's favor", result.EffectsLine);
             Assert.AreEqual(14, ItemOfferRoll.CurrentSquadFavor());
 
@@ -264,8 +264,8 @@ namespace PrincesPalace.PlayModeTests
             StartRunAndOpen(GatedEvent);
 
             var before = RunOrchestrator.RollOffers(null, _ => 0);
-            RunOrchestrator.ChooseEventOption(Feed);
-            RunOrchestrator.ChooseEventOption(Feed);
+            EventPicks.OnCurrentPage(Feed);
+            EventPicks.OnCurrentPage(Feed);
             var after = RunOrchestrator.RollOffers(null, _ => 0);
 
             Assert.AreEqual(24, ItemOfferRoll.CurrentSquadFavor());
@@ -293,7 +293,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(Shelf(unboosted), Shelf(Run.shopStock), "fixture: a shelf is a pure function of its position");
 
             // A large grant so the plus ladder's step chance reaches its cap.
-            for (int i = 0; i < 50; i++) RunOrchestrator.ChooseEventOption(Feed);
+            for (int i = 0; i < 50; i++) EventPicks.OnCurrentPage(Feed);
             Assert.AreEqual(504, ItemOfferRoll.CurrentSquadFavor());
 
             // Existing stock stays exactly as it was rolled.
@@ -313,7 +313,7 @@ namespace PrincesPalace.PlayModeTests
         {
             StartRunAndOpen(GatedEvent);
 
-            var result = RunOrchestrator.ChooseEventOption(ColdOne);
+            var result = EventPicks.OnCurrentPage(ColdOne);
             Assert.AreEqual("Special pools full each turn this leg", result.EffectsLine);
             Assert.AreEqual(0, Run.eventBuffs.Single().legStartStep);
             Assert.IsTrue(EventBuffs.AnyActive(Run.eventBuffs, EventBuffs.FillSpecialPool, Run.legStartStep));

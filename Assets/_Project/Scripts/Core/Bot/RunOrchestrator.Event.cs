@@ -22,7 +22,8 @@ namespace PrincesPalace
     //                                         pool and PERSISTS the pick before
     //                                         anything is shown. The room is
     //                                         NOT cleared.
-    //   ChooseEventOption(i) (0..n times)    validate / apply / persist once.
+    //   ChooseEventOption(i, page) (0..n)    validate / apply / persist once;
+    //                                         a stale page is refused.
     //   LeaveEvent                           closes the event and clears the
     //                                         room -- the only thing that does,
     //                                         exactly as LeaveShop.
@@ -69,8 +70,11 @@ namespace PrincesPalace
                 // Concluded: the last choice left, with something to say.
                 // The last page's art and title would be a guess; the result
                 // text is what the player is reading, so the header is empty.
+                // An event with lines anywhere concludes on the stage (D4),
+                // drawn over the event's own backdrop when no page is held.
                 return new EventView(run.eventId, "", "", "", "", true,
-                    run.eventResult, effectsLine, new List<EventChoiceView>());
+                    run.eventResult, effectsLine, new List<EventChoiceView>(),
+                    definition.BackdropKey, null, definition.HasAnyLines);
             }
 
             var page = definition.PageById(run.eventPageId);
@@ -89,7 +93,7 @@ namespace PrincesPalace
             var lines = EventLineView.ListFor(page, id => ContentDatabase.GetCharacter(id)?.Data);
 
             return new EventView(run.eventId, page.Id, page.ArtKey, page.Title, page.Body, false,
-                run.eventResult, effectsLine, choices, page.BackdropKey, lines);
+                run.eventResult, effectsLine, choices, page.BackdropKey, lines, definition.HasAnyLines);
         }
 
         // By id, over the authored catalogue. Null for an id content no longer
@@ -180,23 +184,38 @@ namespace PrincesPalace
         // ---- choosing ------------------------------------------------------------------
 
         // Picks choice `index` (its AUTHORED position on the page, as
-        // EventChoiceView.Index gives it).
+        // EventChoiceView.Index gives it) on page `pageId`, the page the
+        // caller painted or read the index from (EventView.PageId).
         //
-        // 1. VALIDATE, touching nothing: an event is open, the index is on the
-        //    page, and EventChoiceGate passes -- the same gate the panel greys
-        //    with, so a locked choice is refused here too (contract 7).
+        // THE PAGE IS PART OF THE PICK. An index means nothing without the
+        // page it was read off: two presses before a repaint would otherwise
+        // read the second against the page the first one opened, and pick a
+        // row the player never saw. A pick for any page but the run's current
+        // one is refused as StalePage and touches nothing.
+        //
+        // 1. VALIDATE, touching nothing: an event is open, the caller's page
+        //    is the current one, the index is on the page, and
+        //    EventChoiceGate passes -- the same gate the panel greys with, so
+        //    a locked choice is refused here too (contract 7).
         // 2. APPLY: the choice's own effects first, THEN the outcome is
         //    resolved against the updated state (a counter ticked by this
         //    very pick is what the tenth-toss outcome reads -- EventFlow's
         //    documented contract), then the outcome's effects. The next page,
         //    or the concluded state, or a closed room.
         // 3. PERSIST, once.
-        public static EventChoiceResult ChooseEventOption(int index)
+        public static EventChoiceResult ChooseEventOption(int index, string pageId)
         {
             // 1. VALIDATE.
             var run = RunManager.Run;
             var save = SaveSlotManager.CurrentSave;
             if (!EventIsOpenOn(run) || save == null) return EventChoiceResult.Refused(EventRefusal.NoEvent);
+
+            // Exact and ordinal. A press left over from a page reaches the
+            // concluded state ("") as StalePage too, never as a pick.
+            if (!string.Equals(pageId ?? "", run.eventPageId ?? "", System.StringComparison.Ordinal))
+            {
+                return EventChoiceResult.Refused(EventRefusal.StalePage);
+            }
 
             var definition = FindEvent(run.eventId);
             var page = string.IsNullOrEmpty(run.eventPageId) ? null : definition.PageById(run.eventPageId);

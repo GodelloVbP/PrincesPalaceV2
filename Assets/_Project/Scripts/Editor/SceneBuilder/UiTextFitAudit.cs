@@ -14,13 +14,11 @@ using PrincesPalace.Domain.UiKit;
 // Templated strings are measured at their AuditSample ("Gold: 999999    Relics:
 // 99"), not their template. Measuring "Gold: {0}    Relics: {1}" would pass
 // happily and every real overflow would ship.
+//
+// The measurement itself is PrincesPalace.UiTextFit (Core), shared with the
+// PlayMode checks that measure runtime-only text in the same labels.
 public static class UiTextFitAudit
 {
-    // A pixel or two of slack: TMP's preferred values and a hand-authored box
-    // will not agree exactly, and failing a build over sub-pixel rounding would
-    // train people to widen every box "just in case".
-    private const float Tolerance = 1f;
-
     public static void Run(string screenName, UiNode tree, UiEmitResult result)
     {
         var problems = new List<string>();
@@ -56,9 +54,7 @@ public static class UiTextFitAudit
                 sample = sample?.ToUpperInvariant();
             }
 
-            var preferred = label.GetPreferredValues(sample, boxWidth, 0f);
-
-            if (preferred.x <= boxWidth + Tolerance && preferred.y <= boxHeight + Tolerance) continue;
+            if (PrincesPalace.UiTextFit.Fits(label, sample, out var preferred)) continue;
 
             problems.Add(
                 $"  '{node.Name}' ({node.Kind}) is {boxWidth:0.#}x{boxHeight:0.#} but \"{sample}\" needs " +

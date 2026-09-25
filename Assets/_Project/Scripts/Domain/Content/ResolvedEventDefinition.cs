@@ -194,6 +194,25 @@ namespace PrincesPalace.Domain.Content
         // itself follows.
         public ResolvedEventPage StartPage => Pages != null && Pages.Length > 0 ? Pages[0] : null;
 
+        // Whether any page plays on the dialogue stage. The concluded state
+        // has no page of its own, so this is what decides its presentation:
+        // an event with lines anywhere shows its result on the stage, one
+        // without shows the legacy layout (D4; nothing persisted, so a resume
+        // from a save paints the same as the live pick did).
+        public bool HasAnyLines
+        {
+            get
+            {
+                if (Pages == null) return false;
+                foreach (var page in Pages)
+                {
+                    if (page != null && page.HasLines) return true;
+                }
+
+                return false;
+            }
+        }
+
         public ResolvedEventPage PageById(string pageId)
         {
             if (Pages == null) return null;

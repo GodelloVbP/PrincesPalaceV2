@@ -337,6 +337,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float NameHeight = 40f;
         private const float EpithetHeight = 26f;
         public const float NameWithEpithetY = 12f;
+        public const int EpithetFontSize = 18;
         private const float EpithetY = -21f;
 
         private const float StageTitlePadX = 48f;
@@ -435,7 +436,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Truncated();
             StageName = name;
 
-            var epithet = Ui.Label("StageEpithet", UiStrings.EventEpithet, new UiVec(PlateTextWidth, EpithetHeight), 18,
+            var epithet = Ui.Label("StageEpithet", UiStrings.EventEpithet, new UiVec(PlateTextWidth, EpithetHeight), EpithetFontSize,
                     EffectsText, Place.At(0f, EpithetY))
                 .Styled(TypographyRole.Body)
                 .TextAligned(UiTextAlign.Left)
