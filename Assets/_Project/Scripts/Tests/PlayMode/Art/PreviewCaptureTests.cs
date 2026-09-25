@@ -404,7 +404,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotEmpty(enemies, "no enemies in content to cast at");
 
             var built = FightEncounterAdapter.Build(
-                new List<string> { plan.CasterId },
+                new List<string>(plan.Party),
                 enemies,
                 new Domain.Rng.SeededRandom(20260810),
                 relicIds: null,

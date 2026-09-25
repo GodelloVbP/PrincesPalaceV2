@@ -320,5 +320,36 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(plan.Ok);
             Assert.IsTrue(plan.Notes.Any(n => n.Contains("roster lead")));
         }
+
+        // ---- the two kinds added 2026-09-25, against real content -------------
+        //
+        // PreviewStageTests (dotnet) pins the rules with hand-built skills;
+        // these pin that the shipped rows reach them through ForSpell.
+
+        [Test]
+        public void ThornTitheIsStagedAgainstOneEnemyWithShawnAlone()
+        {
+            var plan = PreviewFight.ForSpell("thorn_tithe");
+
+            Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            Assert.AreEqual(SkillEffect.Afflict, plan.Skill.Effect);
+            Assert.AreEqual(PreviewFight.FormationLone, plan.Formation);
+            CollectionAssert.AreEqual(new[] { "sheep" }, plan.Party);
+        }
+
+        // The bear (speed 8, dexterity 12: 9) stands beside Shawn (10); the
+        // owl (11, dexterity 12: 12) would open the player side and is passed
+        // over. Literal, off characters.json as of 2026-09-25 -- a speed
+        // retune that changes who is slower than Shawn changes this line.
+        [Test]
+        public void PalacePassageIsStagedWithShawnAndASlowerSquadmate()
+        {
+            var plan = PreviewFight.ForSpell("palace_passage");
+
+            Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            Assert.AreEqual(SkillEffect.SwapAllies, plan.Skill.Effect);
+            Assert.AreEqual(PreviewFight.FormationLone, plan.Formation);
+            CollectionAssert.AreEqual(new[] { "sheep", "bear" }, plan.Party);
+        }
     }
 }

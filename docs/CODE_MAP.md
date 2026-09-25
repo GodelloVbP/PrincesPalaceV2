@@ -567,7 +567,9 @@ who casts it, how many enemies it needs to be visible against, what has to be
 waived and said out loud, and which setups are refused by name rather than
 approximated; read by BOTH routes, the Editor one through `FightBootstrap`'s
 `DevForced*` keys and the headless one through `PreviewCaptureTests`, so a
-photograph is of the fight `-Launch` would field), `RarityColors.cs`, VFX primitives (`RadialGlowImage`,
+photograph is of the fight `-Launch` would field; the half that follows from
+the skill alone -- supported effects, formation, party size and squadmates --
+is `Domain/Preview/PreviewStage.cs`, pinned by `PreviewStageTests`), `RarityColors.cs`, VFX primitives (`RadialGlowImage`,
 `BeaconPulse`, `SolidCircleImage`, `SpellVfxPlayer`), the ambient-motion
 primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
 `KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and

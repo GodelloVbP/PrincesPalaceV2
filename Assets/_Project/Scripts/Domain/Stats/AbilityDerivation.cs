@@ -141,6 +141,17 @@ namespace PrincesPalace.Domain.Stats
             return (scores.dexterity - NeutralScore) / SpeedDivisor;
         }
 
+        // A character's Speed from their content row alone -- the row's own
+        // speed plus the Dexterity term, before relics. Named once because two
+        // readers must agree on it: the tooling party build
+        // (FightEncounterAdapter.ToCombatant) and the spell preview's squad
+        // pick (PreviewStage.Squad), which has to know who opens the player
+        // side before the fight it is planning exists.
+        public static int BaseSpeed(StatBlock stats, AbilityScoreBlock scores)
+        {
+            return stats.speed + SpeedBonus(scores);
+        }
+
         // Charisma: how fast a character's own signature resource fills each
         // turn, +1 per 4 points, signed. Read by BuildSignatureResource
         // rather than folded into DerivedStats, for the same reason mana

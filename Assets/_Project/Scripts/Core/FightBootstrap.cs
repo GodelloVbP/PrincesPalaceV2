@@ -429,7 +429,9 @@ namespace PrincesPalace
                 if (!plan.Ok) return null;
 
                 previewSkills = new List<string> { forcedSkill };
-                party = new List<string> { plan.CasterId };
+                // The caster first, then whoever the cast's ally picks need
+                // (Palace Passage's second body) -- PreviewStage.Squad.
+                party = new List<string>(plan.Party);
                 if (string.IsNullOrEmpty(formation)) formation = plan.Formation;
             }
             else if (!string.IsNullOrEmpty(forcedSquad))

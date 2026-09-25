@@ -52,20 +52,61 @@ namespace PrincesPalace.PlayModeTests
         // rate it was authored at.
         private const int CaptureFps = 60;
 
-        // 0.75s at 60fps. The pilot's last droplet clears at 0.63s -- the
-        // shed's window plus lifeMax, unaffected by the cue -- since the
-        // spray now bursts at the 0.25s cue (arrival exactly, pulled from
-        // 0.327s 2026-09-08) and clears sooner itself, at 0.59s, ceding the
-        // pace to the shed. This is the whole cast plus a few frames of
-        // empty stage to prove it ended.
-        private const int Frames = 45;
+        // 1.10s at 60fps. The pilot's own last droplet clears at 0.63s, but
+        // this window now has to outlast every spell PP_RUNTIME_SPELL can
+        // name -- the longest of them fades about 0.95s after release (the
+        // ending fade plus its particles) -- so 66 frames is that 0.95s plus
+        // a handful of empty-stage frames to prove it ended, the same margin
+        // the original 45-frame window (0.63s + 0.12s) kept for the pilot.
+        private const int Frames = 66;
 
-        // The spell whose composition this exists to show. Not a parameter:
-        // this fixture is the pilot's evidence, and a filter that could point
-        // it anywhere would need the caster resolution and refusals
-        // PreviewFight already owns -- which is what tools/preview.ps1 -Spell
-        // is for.
-        private const string SpellId = "prismatic_orb";
+        // The spell whose composition this exists to show, from
+        // PP_RUNTIME_SPELL when tools/screenshot.ps1 -Runtime -Spell <id> set
+        // one, defaulting to the pilot so today's -RuntimeFilter
+        // SpellRuntimeCaptureTests behaviour is unchanged when nothing is
+        // passed. Still not open to just anything: ForSpell below owns the
+        // caster resolution and refusals, the same way tools/preview.ps1
+        // -Spell does, and an id it cannot stand a fight up for is refused
+        // there by name rather than approximated here.
+        private static readonly string SpellId = ResolveSpellId();
+
+        // Read directly here rather than through PreviewCaptureTests' own
+        // env-var family: PreviewEnvironmentLintTests requires that family's
+        // prefix appear in exactly one file (PreviewCaptureTests.cs, which is
+        // [Explicit] and never runs in the gate), because a second fixture
+        // reading one would test a different subset depending on the shell it
+        // was started from. This capture is driven by tools/screenshot.ps1,
+        // not tools/preview.ps1, so it gets its own variable rather than
+        // reaching into that reserved family.
+        private const string SpellVariable = "PP_RUNTIME_SPELL";
+
+        private static string ResolveSpellId()
+        {
+            string raw = System.Environment.GetEnvironmentVariable(SpellVariable);
+            return string.IsNullOrWhiteSpace(raw) ? PilotSpellId : raw.Trim();
+        }
+
+        // THE WATER PILOT, which the two M8 overlap tests below are written
+        // against and nothing else. Their frame numbers (SecondCastFrame,
+        // WaterOverFaultFrame) and their premise (a tail of droplets still
+        // alive half a second after release) are the pilot's own timings; with
+        // PP_RUNTIME_SPELL naming winters_rebuke or blackglass_spear the
+        // first cast's particles are gone before frame 30 and the overlap
+        // assertion fails for a reason that says nothing about the spell being
+        // captured. So they Ignore themselves for any other spell rather than
+        // retime themselves per spell -- the frame series above is the part
+        // that is general.
+        private const string PilotSpellId = "prismatic_orb";
+
+        private static void OnlyForThePilot(string what)
+        {
+            if (SpellId == PilotSpellId) return;
+
+            Assert.Ignore(what + " is timed against the " + PilotSpellId + " pilot's own tail, and " +
+                          SpellVariable + " names '" + SpellId + "'. Run it with no -Spell (or -Spell " +
+                          PilotSpellId + ") to check the overlap; the frame series for '" + SpellId +
+                          "' is TheWaterPilotRecordsAsAFrameSeries.");
+        }
 
         // 1.25s at 60fps, which holds one whole pilot cast (0.63s) plus a
         // second one opened half a second in.
@@ -100,7 +141,11 @@ namespace PrincesPalace.PlayModeTests
         // up: PreviewFight chooses the caster and the formation, so a recording
         // and a preview are photographs of the same encounter rather than of two
         // fixtures that drifted.
-        private IEnumerator StandTheFightUp(int enemies)
+        // `enemies` null fields what the PLAN says (PreviewFight.EnemyCountFor
+        // over its formation), which is what tools/preview.ps1 fields for the
+        // same spell: one for a single-target cast, three for an all-target
+        // one. A number overrides it -- see the overlap tests.
+        private IEnumerator StandTheFightUp(int? enemies)
         {
             var plan = PreviewFight.ForSpell(SpellId);
             Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
@@ -145,11 +190,12 @@ namespace PrincesPalace.PlayModeTests
             // for -- which is right for a recording of the pilot alone and
             // wrong for the overlap below, where a cinderfault needs a
             // formation to open under.
-            var fielded = PreviewFight.EnemiesWithArt(enemies);
+            var fielded = PreviewFight.EnemiesWithArt(
+                enemies ?? PreviewFight.EnemyCountFor(plan.Formation, 3));
             Assert.IsNotEmpty(fielded, "no enemies in content to cast at");
 
             var built = FightEncounterAdapter.Build(
-                new List<string> { plan.CasterId },
+                new List<string>(plan.Party),
                 fielded,
                 new Domain.Rng.SeededRandom(20260908),
                 relicIds: null,
@@ -179,10 +225,10 @@ namespace PrincesPalace.PlayModeTests
                               "-RuntimeFilter SpellRuntimeCaptureTests");
             }
 
-            // ONE ENEMY, which is what PreviewFight's own formation rule gives
-            // a single-target spell and therefore what tools/preview.ps1
-            // photographs.
-            yield return StandTheFightUp(1);
+            // THE PLAN'S FORMATION, which is what tools/preview.ps1
+            // photographs for the same spell: one enemy for a single-target
+            // cast (the pilot, an Afflict), three for an all-target one.
+            yield return StandTheFightUp(null);
 
             var fight = _fight;
             var canvas = _canvas;
@@ -225,9 +271,9 @@ namespace PrincesPalace.PlayModeTests
             // produced twice before the particle pool's members were being
             // activated at all.
             Assert.Greater(lit, 20,
-                "only " + lit + " of " + Frames + " recorded frames had anything drawn on them. The " +
-                "pilot's layers span 0.63s, which is 38 frames at " + CaptureFps + "fps, so a series " +
-                "this empty is a recording of the stage rather than of the cast.");
+                "only " + lit + " of " + Frames + " recorded frames had anything drawn on them -- '" + SpellId +
+                "' cast at " + CaptureFps + "fps, so a series this empty is a recording of the stage " +
+                "rather than of the cast.");
 
             Debug.Log("[SpellRuntime] wrote " + Frames + " frames to " + OutputDir + " (" + lit +
                       " of them with the cast drawing; frame 0 is the release, " + waited +
@@ -259,6 +305,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TwoConsecutiveCastsOverlapWithTheFirstsDropletsStillOwned()
         {
+            OnlyForThePilot("The two-cast overlap");
+
             yield return StandTheFightUp(1);
 
             var module = _fight.PerformancePlayerForTest;
@@ -317,6 +365,8 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator ACinderfaultAndAWaterTailOverlapOnOneTarget()
         {
+            OnlyForThePilot("The cinderfault-and-water overlap");
+
             yield return StandTheFightUp(3);
 
             var module = _fight.PerformancePlayerForTest;

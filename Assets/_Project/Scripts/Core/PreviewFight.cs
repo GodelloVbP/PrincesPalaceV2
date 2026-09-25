@@ -5,6 +5,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Preview;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace
@@ -45,33 +46,11 @@ namespace PrincesPalace
         public const string FormationLone = "lone";
         public const string FormationFull = "full";
 
-        // Which SkillEffects the preview knows how to stand a fight up for.
-        //
-        // Deliberately a short list, and deliberately not "everything the
-        // session can resolve". Each member here has a stage arrangement that
-        // makes its cast visible -- a target to hit, a wound to heal, a slot
-        // to summon into. The rest (Ward, Shatter, the three Gifts, Provoke,
-        // RestorePartyMana) need a talent tree, an existing ward or a drained
-        // party before they show anything at all, and faking one would make
-        // the picture a picture of the fake.
-        private static readonly SkillEffect[] Supported =
-        {
-            SkillEffect.DamageSingle,
-            SkillEffect.DamageAll,
-            SkillEffect.HealSelf,
-            SkillEffect.HealParty,
-            // Mend, and any other single-ally heal: a wounded party is a
-            // stage arrangement this already knows how to build, which is
-            // the whole test for membership here.
-            SkillEffect.HealSingle,
-            SkillEffect.BuffParty,
-            SkillEffect.Summon,
-            SkillEffect.Transform,
-            // Court needs no fabricated prerequisite: a normal three-enemy
-            // field shows Fear and the caster's drawback, while the focused
-            // domain test owns the authored-boss fallback branch.
-            SkillEffect.Enthrall,
-        };
+        // Which SkillEffects the preview knows how to stand a fight up for,
+        // and what stage each needs, live in Domain as PreviewStage -- the
+        // part of this plan that follows from the skill alone, so its rules
+        // run under the dotnet host (PreviewStageTests). This file keeps the
+        // part that needs content: the skill lookup, the roster, the enemies.
 
         // WHICH ELEMENT A PREVIEW CASTS, and what its art therefore is.
         //
@@ -189,6 +168,13 @@ namespace PrincesPalace
             // The character definition id who casts it.
             public string CasterId;
 
+            // EVERYONE ON THE PLAYER SIDE, caster first, in the order
+            // FightEncounterAdapter.Build takes them -- the adapter gives the
+            // preview skill to the first member only. Just the caster for
+            // every effect but one that picks more allies than that (Palace
+            // Passage picks two); see PreviewStage.Squad for who is added.
+            public List<string> Party = new List<string>();
+
             // WHICH ELEMENT THE CAST PRESSES, as the DamageType's own name, or
             // empty for "whichever PreviewElementOf picks". Carried on the plan
             // rather than re-derived at each of the three places that need it
@@ -240,14 +226,10 @@ namespace PrincesPalace
             var skill = definition.Data;
             plan.Skill = skill;
 
-            if (!Supported.Contains(skill.Effect))
+            var stage = PreviewStage.For(skill);
+            if (!stage.Ok)
             {
-                plan.Refusal =
-                    $"'{skillId}' resolves as {skill.Effect}, which the spell preview does not know how to " +
-                    "stand a fight up for. It needs something the preview cannot fabricate honestly (a talent " +
-                    "tree, an existing ward, a drained party). Supported: " +
-                    string.Join(", ", Supported.Select(e => e.ToString())) + ". " +
-                    "Cast it from a real run instead of being shown an approximation of it.";
+                plan.Refusal = stage.Refusal;
                 return plan;
             }
 
@@ -279,29 +261,23 @@ namespace PrincesPalace
                       "authors no art, so the stage shows the damage number and nothing else");
             }
 
-            plan.CasterId = ChooseCaster(skill, Roster(), plan);
+            var roster = Roster();
+            plan.CasterId = ChooseCaster(skill, roster, plan);
             if (plan.CasterId == null) return plan;
 
-            // THE FORMATION IS THE EFFECT'S, not the author's. A Summon into a
-            // full stage has no slot and reports a skipped ability; DamageAll
-            // against one enemy is indistinguishable from DamageSingle.
-            if (skill.Effect == SkillEffect.Summon)
+            // THE STAGE IS THE EFFECT'S, not the author's: the formation, the
+            // squad and the wound all fall out of PreviewStage.For above.
+            var squad = PreviewStage.Squad(stage, plan.CasterId, roster);
+            if (squad == null)
             {
-                plan.Formation = FormationLone;
-                plan.Notes.Add("one enemy fielded, so the summon has a slot to arrive in");
-            }
-            else if (skill.Effect == SkillEffect.DamageAll || skill.Targeting == SkillTargeting.AllEnemies)
-            {
-                plan.Formation = FormationFull;
-                plan.Notes.Add("three enemies fielded, so an all-target cast has more than one thing to hit");
+                plan.Refusal = $"'{skillId}' cannot be staged: " + stage.Refusal;
+                return plan;
             }
 
-            if (skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty
-                || skill.Effect == SkillEffect.HealSingle)
-            {
-                plan.PartyStartsWounded = true;
-                plan.Notes.Add("the party opens at half health, so a heal has something to restore");
-            }
+            plan.Party = squad;
+            plan.Formation = stage.FullFormation ? FormationFull : FormationLone;
+            plan.PartyStartsWounded = stage.PartyStartsWounded;
+            plan.Notes.AddRange(stage.Notes);
 
             if (definition.Data.UnlockLevel > 1)
             {
@@ -430,6 +406,7 @@ namespace PrincesPalace
             }
 
             plan.CasterId = definition.id;
+            plan.Party = new List<string> { definition.id };
 
             // NOT A REFUSAL. A character with no battle art still has a
             // portrait and a dossier worth looking at, and the fallback plate

@@ -338,7 +338,7 @@ namespace PrincesPalace
                 RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
                 ContentDatabase.BuildPrimaryPool(definition.Data.PrimaryPoolId, scores, modifiers, stats.manaRegen),
                 RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
-                RelicModifiers.Apply(stats.speed + AbilityDerivation.SpeedBonus(scores), RelicStat.Speed, modifiers));
+                RelicModifiers.Apply(AbilityDerivation.BaseSpeed(stats, scores), RelicStat.Speed, modifiers));
 
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
 

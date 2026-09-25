@@ -14,7 +14,18 @@ param(
     # them: the filter below was a hardcoded single class, so a capture test
     # written for one screen could only be run by hand-assembling the Unity
     # command line. A test nothing can run is a test nobody runs.
-    [string]$RuntimeFilter = "RuntimeScreenshotTests"
+    [string]$RuntimeFilter = "RuntimeScreenshotTests",
+
+    # Narrows SpellRuntimeCaptureTests to one skills.json id, by setting
+    # PP_RUNTIME_SPELL for the PlayMode process this launches. Empty leaves
+    # that variable empty too (never inherited from an earlier shell), which
+    # SpellRuntimeCaptureTests reads as its own default (prismatic_orb).
+    # Meaningless with any other -RuntimeFilter; nothing here reads it back to
+    # complain, since screenshot.ps1 does not load skills.json to validate an
+    # id the same way tools/preview.ps1 -Spell does -- an unknown id is
+    # refused by PreviewFight.ForSpell inside the test, and its log line is
+    # printed by the existing failure/tail-of-log paths below.
+    [string]$Spell = ""
 )
 
 # Headless visual QA: renders screens from the SceneBuilder-generated scenes to
@@ -175,6 +186,11 @@ if ($Runtime) {
     $resultsPath = Join-Path $TestProject "test-results-runtime-screenshot.xml"
     if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
 
+    # ALWAYS SET, empty included -- an inherited PP_RUNTIME_SPELL from an
+    # earlier shell would otherwise point SpellRuntimeCaptureTests at a spell
+    # this command line never named.
+    $env:PP_RUNTIME_SPELL = $Spell
+
     Write-Host "Capturing the RUNNING game to $runtimeOut ..."
     $proc = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-silent-crashes",
@@ -193,6 +209,33 @@ if ($Runtime) {
         exit 1
     }
 
+    # COPY BACK FIRST, VERDICT SECOND. The copy-back used to sit after the
+    # failed-test check below, so ONE failing test in a -RuntimeFilter class
+    # exited 1 before ANY frame reached $runtimeOut -- including the frames a
+    # different, passing test in the same class had already written. They
+    # were still in the TestRunner copy ($runnerOut), unannounced, until the
+    # next -Runtime run cleared that tree at the top of this branch. Seen
+    # 2026-09-25: -Spell winters_rebuke failed the pilot-timed overlap test in
+    # SpellRuntimeCaptureTests and the 66-frame main series, which had passed,
+    # came back as zero PNGs. The failure message even promised "the pictures
+    # below, if any" and then exited before listing any.
+    #
+    # Copy back the WHOLE tree under $runnerOut, preserving the relative
+    # subsystem/label folders -- not just the *.png the existence check below
+    # is satisfied by. A labelled series' companion files (slots.json alongside
+    # PartyFormationCaptureTests' frames) belong next to the pictures they
+    # describe, not silently dropped because they aren't a .png.
+    $produced = @(Get-ChildItem $runnerOut -Recurse -File -Filter *.png -ErrorAction SilentlyContinue)
+    if ($produced.Count -gt 0) {
+        $runnerOutFull = (Get-Item $runnerOut).FullName.TrimEnd('\')
+        Get-ChildItem $runnerOut -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $relative = $_.FullName.Substring($runnerOutFull.Length).TrimStart('\')
+            $destPath = Join-Path $runtimeOut $relative
+            New-Item -ItemType Directory -Force -Path (Split-Path $destPath -Parent) | Out-Null
+            Copy-Item $_.FullName $destPath -Force
+        }
+    }
+
     # THE RESULTS FILE, WHICH THIS BRANCH ALREADY DELETES AND USED TO NEVER
     # READ. -Runtime does not render screens directly; it drives a PlayMode
     # test class that renders them, so "did any png appear" is the weaker
@@ -206,38 +249,35 @@ if ($Runtime) {
     # here, because the png check below is what has always governed and a
     # -runTests run that wrote no XML at all already fails on it. This can
     # only add a refusal where NUnit recorded one.
+    #
+    # STILL EXIT 1 on a failure -- the frames being kept does not make the run
+    # green. They are listed so the author can see which tests' output they
+    # are holding, and the failure lines say which test did not finish.
     if (Test-Path $resultsPath) {
         [xml]$runtimeResults = Get-Content $resultsPath
         $failedCount = [int]$runtimeResults.'test-run'.failed
         if ($failedCount -ne 0) {
-            Write-Host "$failedCount runtime capture test(s) FAILED -- the pictures below, if any, are from a run that did not finish:"
+            Write-Host "$failedCount runtime capture test(s) FAILED:"
             foreach ($f in $runtimeResults.SelectNodes("//test-case[@result='Failed']")) {
                 Write-Host "  FAILED: $($f.fullname)"
                 if ($f.failure -and $f.failure.message) { Write-Host "    $($f.failure.message.InnerText)" }
+            }
+            if ($produced.Count -gt 0) {
+                Write-Host "Frames the run did write (from the tests that got that far), copied to $runtimeOut :"
+                Get-ChildItem $runtimeOut -Recurse -File | ForEach-Object { Write-Host "  $($_.FullName)" }
+            } else {
+                Write-Host "No frames were written by any test in the run."
             }
             exit 1
         }
     }
 
-    $produced = Get-ChildItem $runnerOut -Recurse -File -Filter *.png -ErrorAction SilentlyContinue
-    if (-not $produced -or $produced.Count -eq 0) {
+    if ($produced.Count -eq 0) {
         Write-Host "No runtime captures were produced. Tail of log:"
         Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
         exit 1
     }
 
-    # Copy back the WHOLE tree under $runnerOut, preserving the relative
-    # subsystem/label folders -- not just the *.png this existence check above
-    # is satisfied by. A labelled series' companion files (slots.json alongside
-    # PartyFormationCaptureTests' frames) belong next to the pictures they
-    # describe, not silently dropped because they aren't a .png.
-    $runnerOutFull = (Get-Item $runnerOut).FullName.TrimEnd('\')
-    Get-ChildItem $runnerOut -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
-        $relative = $_.FullName.Substring($runnerOutFull.Length).TrimStart('\')
-        $destPath = Join-Path $runtimeOut $relative
-        New-Item -ItemType Directory -Force -Path (Split-Path $destPath -Parent) | Out-Null
-        Copy-Item $_.FullName $destPath -Force
-    }
     Get-ChildItem $runtimeOut -Recurse -File | ForEach-Object { Write-Host "  $($_.FullName)" }
     exit 0
 }

@@ -967,7 +967,7 @@ emitter is previewed by running the real code:
 ```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Spell <id>
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Spell <id> -Element Wind
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/screenshot.ps1 -Runtime -RuntimeFilter SpellRuntimeCaptureTests
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/screenshot.ps1 -Runtime -RuntimeFilter SpellRuntimeCaptureTests -Spell <id>
 ```
 
 `preview.ps1` writes four to six sampled stills to `tools/screenshots/preview/`
@@ -985,6 +985,14 @@ element it pressed and whether the ask or the default chose it. `screenshot.ps1
 `tools/screenshots/runtime/`, which is the only thing that answers "does it read
 as heavy" -- and it WIPES the previous run's PNGs, so copy a comparison set out
 first. `ffmpeg -framerate 60 -i spell_<id>_f%02d.png out.mp4` makes it a video.
+
+`-Spell` defaults to `prismatic_orb`. The two overlap tests in that class are timed
+against the pilot and Ignore themselves for any other spell; a failing test no
+longer discards the frames a passing one wrote (they are copied back, listed,
+and the run still exits 1). Which effects the preview and the runtime capture can
+stage is `PreviewStage.Supported` (Domain/Preview): Afflict casts at one enemy,
+SwapAllies fields a second squadmate no faster than the caster so both picks
+land. Reclaim, Hasten, Ward, Shatter, the Gifts and Provoke are refused by name.
 
 ### A monster casting it
 
