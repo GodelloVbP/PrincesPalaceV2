@@ -9,6 +9,7 @@ using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat.Presentation;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
@@ -52,13 +53,53 @@ namespace PrincesPalace.PlayModeTests
         // rate it was authored at.
         private const int CaptureFps = 60;
 
-        // 1.10s at 60fps. The pilot's own last droplet clears at 0.63s, but
-        // this window now has to outlast every spell PP_RUNTIME_SPELL can
-        // name -- the longest of them fades about 0.95s after release (the
-        // ending fade plus its particles) -- so 66 frames is that 0.95s plus
-        // a handful of empty-stage frames to prove it ended, the same margin
-        // the original 45-frame window (0.63s + 0.12s) kept for the pilot.
-        private const int Frames = 66;
+        // DERIVED PER SPELL FROM THE CAST'S OWN CLOCK, not a fixed frame
+        // count. A fixed window (66 frames, raised from 45 in commit
+        // 8ea8c149) kept being wrong for whichever spell PP_RUNTIME_SPELL
+        // named next -- winters_rebuke and blackglass_spear both travel and
+        // run past it -- and a frame count derived from ClearedSeconds ALONE
+        // is wrong the same way, for a reason real capture evidence caught: a
+        // real cast's hit cue landed at capture frame 42 (0.70s of CAPTURE
+        // time) while its own hitCueSeconds is 0.46. FightBeatPlayer holds a
+        // beat's own clock (Time.time, which SpellPerformancePlayer's Cursor
+        // ages on) still for a hit-stop, but Update -- and with it a capture
+        // frame -- keeps running every tick regardless of timeScale. So
+        // capture frames and the spell's own authored seconds are not one
+        // ratio; a frame count computed from ClearedSeconds up front assumes
+        // they are and is wrong by however long the beat held.
+        //
+        // THE FIX POLLS THE CAST'S OWN CLOCK INSTEAD OF PREDICTING IT.
+        // SpellPerformancePlayer.HasReached reads the live cast's Cursor --
+        // the exact clock Advance releases a cast against -- so the loop
+        // below keeps recording real capture frames until THAT clock, not a
+        // frame count derived from it, has delivered ClearedSeconds +
+        // FrameEndMargin of authored playback.
+        private const float FrameEndMargin = 0.25f;
+
+        // THE TARGET CLOCK'S OWN CAP, so a spell that authors 'loop' or
+        // 'hold' with nothing to end it cannot ask the loop below to wait
+        // forever. Every shipped spell clears in under 1.1s of authored
+        // playback; 4s is generous headroom rather than a bound anything is
+        // expected to approach.
+        private const float MaxCaptureSeconds = 4f;
+
+        // THE LOOP'S OWN SAFETY VALVE, in CAPTURE frames rather than the
+        // authored seconds MaxCaptureSeconds bounds -- the two are not the
+        // same unit once a hit-stop can hold the authored clock still while
+        // capture frames keep coming (see above). Ten seconds of capture
+        // frames is well past the ~0.24s a single hit-stop hold cost the
+        // real evidence this fixes was measured against, several times over,
+        // while still being finite: a cast whose Cursor is genuinely stuck
+        // (a bug, not a hold) fails the loop below rather than hanging it.
+        private const int LoopSafetyFrames = 10 * CaptureFps;
+
+        // How long a cast plays before nothing of it is drawn, from
+        // SpellPerformance -- the same expression FightController.ResolveCast
+        // uses to release a handle, read here from Resources rather than a
+        // live SpellVfxPlayer so it works before any player has loaded frames.
+        private static float ClearedSecondsOf(SpellPresentation vfx, int targetCount) =>
+            SpellPerformance.Resolve(vfx, targetCount, path => FrameSequenceLoader.Load(path)?.Length ?? 0)
+                .ClearedSeconds;
 
         // The spell whose composition this exists to show, from
         // PP_RUNTIME_SPELL when tools/screenshot.ps1 -Runtime -Spell <id> set
@@ -241,7 +282,12 @@ namespace PrincesPalace.PlayModeTests
 
             // FRAME ZERO IS THE FRAME THE CAST FIRST DRAWS, so the series opens
             // on the ball leaving rather than on however many frames of wind-up
-            // the beat happened to take.
+            // the beat happened to take. NOT the same instant as release on the
+            // cast's own clock, though -- a beat's hit-stop can hold that clock
+            // (Time.time) still while Update, and a drawn frame with it, keeps
+            // running, so "first drawn" and "release" can be capture frames
+            // apart. That is exactly why the recording below polls the cast's
+            // own Cursor rather than assuming a frame count derived from it.
             int waited = 0;
             while (!AnythingDrawn(fight) && waited < 240)
             {
@@ -251,10 +297,34 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.Less(waited, 240, "the cast never drew anything, so there is no recording to make");
 
+            // THE HANDLE THIS RECORDING BELONGS TO. ForceFirstAction drives
+            // the cast through the normal beat flow rather than through
+            // PlaySpellVfxForTest, so LastBegunForTest is the only way to
+            // name it -- and it must already be live, because AnythingDrawn
+            // above only turns true once Paint has run for a live cast.
+            var module = fight.PerformancePlayerForTest;
+            var handle = module.LastBegunForTest;
+            Assert.IsTrue(module.IsLive(handle),
+                "'" + SpellId + "' drew something on stage but LastBegunForTest names no live cast, so " +
+                "there is no clock to record this series against.");
+
+            int targetCount = fight.SessionForTest.Encounter.Enemies.Count(e => e != null && e.IsAlive);
+            float clearedSeconds = ClearedSecondsOf(ShippedVfx(SpellId), targetCount);
+            float targetCursor = Mathf.Min(clearedSeconds + FrameEndMargin, MaxCaptureSeconds);
+
             Directory.CreateDirectory(OutputDir);
 
+            // POLLED AGAINST THE CAST'S OWN CLOCK, not a frame count derived
+            // from it -- a fixed ratio between capture frames and Cursor
+            // seconds does not hold across a hit-stop hold (see the header
+            // above HasReached). A do/while rather than a while so the frame
+            // the clock actually crosses targetCursor on is still recorded,
+            // the same inclusive shape the fixed-count loop this replaces had.
             int lit = 0;
-            for (int frame = 0; frame < Frames; frame++)
+            int frame = 0;
+            bool reached;
+
+            do
             {
                 if (AnythingDrawn(fight)) lit++;
 
@@ -264,21 +334,33 @@ namespace PrincesPalace.PlayModeTests
                 FileAssert.Exists(path);
 
                 yield return null;
-            }
+
+                reached = module.HasReached(handle, targetCursor);
+                frame++;
+            } while (!reached && frame < LoopSafetyFrames);
+
+            int frames = frame;
+
+            Assert.IsTrue(reached,
+                "'" + SpellId + "' had not reached " + targetCursor.ToString("F2") + "s on its own " +
+                "performance clock after " + LoopSafetyFrames + " capture frames -- its cast clock looks " +
+                "stuck rather than merely held by a hit-stop.");
 
             // THE SERIES IS OF SOMETHING. A recording of an empty stage is the
             // failure this cannot see by eye -- and the one the pilot actually
             // produced twice before the particle pool's members were being
             // activated at all.
             Assert.Greater(lit, 20,
-                "only " + lit + " of " + Frames + " recorded frames had anything drawn on them -- '" + SpellId +
+                "only " + lit + " of " + frames + " recorded frames had anything drawn on them -- '" + SpellId +
                 "' cast at " + CaptureFps + "fps, so a series this empty is a recording of the stage " +
                 "rather than of the cast.");
 
-            Debug.Log("[SpellRuntime] wrote " + Frames + " frames to " + OutputDir + " (" + lit +
-                      " of them with the cast drawing; frame 0 is the release, " + waited +
-                      " frames after the press). ffmpeg -framerate " + CaptureFps + " -i spell_" +
-                      SpellId + "_f%02d.png out.mp4 makes it a video.");
+            Debug.Log("[SpellRuntime] wrote " + frames + " frames to " + OutputDir + " (" + lit +
+                      " of them with the cast drawing; frame 0 is the first drawn, " + waited +
+                      " frames after the press; recorded until the cast's own clock reached " +
+                      targetCursor.ToString("F2") + "s of " + clearedSeconds.ToString("F2") +
+                      "s cleared). ffmpeg -framerate " + CaptureFps + " -i spell_" + SpellId +
+                      "_f%02d.png out.mp4 makes it a video.");
         }
 
         // ---- M8: two consecutive casts, the first's droplets still alive ---------

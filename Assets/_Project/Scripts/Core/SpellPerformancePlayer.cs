@@ -198,6 +198,16 @@ namespace PrincesPalace
 
         // ---- the interface combat calls ------------------------------------------
 
+        // THE MOST RECENTLY BEGUN CAST'S OWN HANDLE. ForceFirstAction drives a
+        // cast through the normal beat flow, and PlaySpellVfx's return value
+        // is swallowed by the beat player long before any test sees it -- so
+        // a PlayMode test recording THAT cast, rather than one it began
+        // itself through PlaySpellVfxForTest, has no other way to name which
+        // cast is its own. Public for the reason every seam here is:
+        // InternalsVisibleTo names the EDITOR assembly only, so a PlayMode
+        // test reaches this or reaches nothing.
+        public CastHandle LastBegunForTest { get; private set; }
+
         public CastHandle Begin(SpellPerformance performance)
         {
             // NOTHING TO PLAY IS NOT A CAST. Refused here rather than by each
@@ -280,7 +290,9 @@ namespace PrincesPalace
             if (!cast.Live) return CastHandle.None;
             Paint(slot, 0f);
 
-            return new CastHandle(slot, cast.Generation);
+            var handle = new CastHandle(slot, cast.Generation);
+            LastBegunForTest = handle;
+            return handle;
         }
 
         // Ticked from Update with the module's own clock, and from a test with
@@ -332,6 +344,24 @@ namespace PrincesPalace
         public bool IsLive(CastHandle handle) =>
             handle.IsLive && handle.Slot >= 0 && handle.Slot < _casts.Count &&
             _casts[handle.Slot].Generation == handle.Generation && _casts[handle.Slot].Live;
+
+        // WHETHER THIS CAST'S OWN CLOCK -- Cursor, in authored seconds -- has
+        // delivered `seconds` of playback. A cast that already released has
+        // necessarily reached every value there is: Advance only releases a
+        // cast once Cursor has crossed its performance's ClearedSeconds and
+        // nothing is still drawing, so "not live" reads as "reached", not as
+        // "unknown".
+        //
+        // WHY A CALLER CANNOT WATCH CAPTURE FRAMES INSTEAD OF ASKING THIS.
+        // Cursor ages on Now() (Time.time, paced), and a beat's own hit-stop
+        // hold freezes it by dropping timeScale to sell an impact --
+        // Update, and with it a capture frame, keeps running every tick
+        // regardless of timeScale. A recording driven off a frame count
+        // computed from ClearedSeconds is measuring the wrong clock the
+        // moment a beat holds; this is the clock a PlayMode capture polls
+        // instead (see SpellRuntimeCaptureTests).
+        public bool HasReached(CastHandle handle, float seconds) =>
+            !IsLive(handle) || _casts[handle.Slot].Cursor >= seconds;
 
         // Which member of which band an instance of a live cast holds, or -1.
         // The seam the overlap tests read: "these two casts hold different
