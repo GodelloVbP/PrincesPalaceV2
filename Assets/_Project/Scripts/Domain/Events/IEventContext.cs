@@ -31,5 +31,12 @@ namespace PrincesPalace.Domain.Events
 
         // The run's current gold.
         int Gold { get; }
+
+        // Whether the named character's carried run health is above 0. A
+        // character with no health entry has not been hurt this run and is
+        // standing -- the reading EncounterRoll.FieldableParty gives a
+        // missing entry. Says nothing about squad membership; `inParty` with
+        // `alive` asks both.
+        bool IsStanding(string characterId);
     }
 }

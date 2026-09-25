@@ -359,6 +359,16 @@ namespace PrincesPalace
         // derived from them on read (EventEffectSummary), not stored as text.
         public string eventResult = "";
         public List<EventEffect> eventResultEffects = new List<EventEffect>();
+
+        // Buffs events granted this run (docs/PLAN_PETTING_ZOO.md): Prince's
+        // favor for the run, a full special pool for one leg. One model for
+        // both scopes, see EventBuffEntry; read through EventBuffs, never by
+        // hand. Run-scoped by construction: StartRun replaces the snapshot,
+        // and a leg buff goes quiet when AdvanceLeg moves legStartStep, so
+        // nothing clears this list.
+        //
+        // Purely additive, so CurrentVersion does not move.
+        public List<EventBuffEntry> eventBuffs = new List<EventBuffEntry>();
     }
 
     // One learned spell, in one of a character's three slots this run.

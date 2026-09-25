@@ -245,10 +245,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var characterDisplayNames = ResolveCharacters().ToDictionary(c => c.Id, c => c.DisplayName);
             var itemIds = ItemIds();
+            var relicDisplayNames = RelicIds().ToDictionary(id => id, id => id);
 
             bool Resolver(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved,
                           out List<string> errors) =>
-                EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, out resolved, out errors);
+                EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, relicDisplayNames,
+                    out resolved, out errors);
 
             return Resolve<RawEventEntry, ResolvedEventDefinition>(
                 "events.json", ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events,

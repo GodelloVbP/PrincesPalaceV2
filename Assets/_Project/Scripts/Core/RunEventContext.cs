@@ -44,6 +44,18 @@ namespace PrincesPalace
 
         public int Gold => _run?.gold ?? 0;
 
+        public bool IsStanding(string characterId)
+        {
+            if (_run?.currentHealth == null || string.IsNullOrEmpty(characterId)) return true;
+
+            foreach (var entry in _run.currentHealth)
+            {
+                if (entry != null && entry.characterId == characterId) return entry.hp > 0;
+            }
+
+            return true;
+        }
+
         // Roster, not squad: IEventContext's own contract says callers ask
         // this only of ids they already know are in the squad, and the roster
         // is where the Character lives either way.

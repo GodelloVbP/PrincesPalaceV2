@@ -376,10 +376,12 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 
 | Field | Type | Default | Description | Values |
 |---|---|---|---|---|
-| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item or counter. | Gold, HealPercent, DamagePercent, Exp, Item, Counter |
-| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, or a counter delta. |  |
+| `kind` | string | `""` | Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor or fillSpecialPool. | Gold, HealPercent, DamagePercent, Exp, Item, Counter, Relic, PrincesFavor, FillSpecialPool |
+| `amount` | int | `0` | The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it. |  |
 | `item` | string | `""` | The item id granted; required by item. |  |
 | `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
+| `character` | string | `""` | healPercent only, optional: heal just this character id by amount percent of their max HP. Never revives: a member at 0 HP stays at 0. Empty heals the whole squad. Refused on any other kind. |  |
+| `relic` | string | `""` | The relic id (relics.json) added to the run; required by relic. Already held is a no-op. |  |
 
 ### `RawEventLine`
 
@@ -422,6 +424,7 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `max` | int | `-1` | The maximum value allowed; -1 means omitted. Only counter reads this. |  |
 | `counter` | string | `""` | The counter id this requirement reads; required by counter. |  |
 | `reason` | string | `""` | Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it. |  |
+| `alive` | bool | `false` | inParty only: when true the character must also be standing (run health above 0); a downed member fails with the caption 'Requires <name> standing'. Refused on any other kind. |  |
 
 ### `RawModifierEffect`
 

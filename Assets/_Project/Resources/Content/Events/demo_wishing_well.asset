@@ -45,6 +45,7 @@ MonoBehaviour:
           Max: 0
           HasMax: 0
           CounterId: 
+          RequireStanding: 0
           AuthoredReason: 
         HiddenUntilMet: 0
         Effects:
@@ -52,10 +53,18 @@ MonoBehaviour:
           Amount: -5
           Item: 
           CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
         - Kind: 5
           Amount: 1
           Item: 
           CounterId: wishing_well_tosses
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
         Outcomes:
         - Requires:
           - Kind: 3
@@ -67,12 +76,17 @@ MonoBehaviour:
             Max: 10
             HasMax: 1
             CounterId: wishing_well_tosses
+            RequireStanding: 0
             AuthoredReason: 
           Effects:
           - Kind: 3
             Amount: 50
             Item: 
             CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
           Result: On the tenth coin the well glimmers gold -- your wish is granted.
           GoTo: wish_granted
           IsLeave: 0
@@ -92,6 +106,7 @@ MonoBehaviour:
           Max: 0
           HasMax: 0
           CounterId: 
+          RequireStanding: 0
           AuthoredReason: 
         HiddenUntilMet: 0
         Effects:
@@ -99,6 +114,10 @@ MonoBehaviour:
           Amount: 10
           Item: 
           CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
         Outcomes:
         - Requires: []
           Effects: []
@@ -116,6 +135,7 @@ MonoBehaviour:
           Max: 0
           HasMax: 0
           CounterId: 
+          RequireStanding: 0
           AuthoredReason: 
         HiddenUntilMet: 0
         Effects:
@@ -123,6 +143,10 @@ MonoBehaviour:
           Amount: 25
           Item: 
           CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
         Outcomes:
         - Requires: []
           Effects: []
@@ -159,6 +183,7 @@ MonoBehaviour:
           Max: 0
           HasMax: 0
           CounterId: 
+          RequireStanding: 0
           AuthoredReason: 
         HiddenUntilMet: 1
         Effects:
@@ -166,6 +191,10 @@ MonoBehaviour:
           Amount: 1
           Item: health_potion
           CounterId: 
+          CharacterId: 
+          CharacterDisplayName: 
+          RelicId: 
+          RelicDisplayName: 
         Outcomes:
         - Requires: []
           Effects: []

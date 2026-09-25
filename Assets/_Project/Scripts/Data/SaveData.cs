@@ -5,6 +5,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Economy;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
@@ -802,6 +803,12 @@ namespace PrincesPalace
             // a relic renamed between quitting and resuming ends the draft a
             // round early, having handed over one fewer relic than it says.
             activeRun.relicIds.RemoveAll(id => ContentDatabase.GetRelic(id) == null);
+
+            // THE RUN'S EVENT BUFFS, beside its relics and for the same
+            // reason: a kind a later build dropped would otherwise ride along
+            // unread, and a null row would be one every reader has to guard.
+            activeRun.eventBuffs ??= new List<EventBuffEntry>();
+            EventBuffs.Prune(activeRun.eventBuffs);
 
             // THE RUN'S BOSS KILLS, which are money. RunSettlement pays an
             // ember per boss the profile has never killed and then writes that

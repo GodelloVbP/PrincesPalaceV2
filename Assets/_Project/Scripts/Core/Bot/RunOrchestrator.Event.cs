@@ -323,6 +323,14 @@ namespace PrincesPalace
                     return;
 
                 case EventEffectKind.HealPercent:
+                    if (effect.TargetsOneMember)
+                    {
+                        // Never a revive, and absent or downed is no heal and
+                        // no line (RunEncounter.HealMemberByPercent).
+                        if (RunEncounter.HealMemberByPercent(run, effect.CharacterId, effect.Amount)) applied.Add(effect);
+                        return;
+                    }
+
                     RunEncounter.HealPartyByPercent(run, effect.Amount);
                     applied.Add(effect);
                     return;
@@ -357,7 +365,36 @@ namespace PrincesPalace
                     save.AddEventCounter(effect.CounterId, effect.Amount);
                     applied.Add(effect);
                     return;
+
+                case EventEffectKind.Relic:
+                    // IDEMPOTENT: a relic already held is not a second copy
+                    // and not a second line. An id content no longer has is
+                    // skipped, the Item case's rule.
+                    if (ContentDatabase.GetRelic(effect.RelicId) == null) return;
+                    run.relicIds ??= new List<string>();
+                    if (run.relicIds.Contains(effect.RelicId)) return;
+                    run.relicIds.Add(effect.RelicId);
+                    applied.Add(effect);
+                    return;
+
+                case EventEffectKind.PrincesFavor:
+                    AddEventBuff(run, EventBuffs.PrincesFavor, effect.Amount, EventBuffs.WholeRun);
+                    applied.Add(effect);
+                    return;
+
+                case EventEffectKind.FillSpecialPool:
+                    // THIS LEG: the step the leg began on is stored, and the
+                    // buff goes quiet when AdvanceLeg moves past it.
+                    AddEventBuff(run, EventBuffs.FillSpecialPool, 1, run.legStartStep);
+                    applied.Add(effect);
+                    return;
             }
+        }
+
+        private static void AddEventBuff(RunSnapshot run, string kind, int amount, int legStartStep)
+        {
+            run.eventBuffs ??= new List<EventBuffEntry>();
+            run.eventBuffs.Add(new EventBuffEntry { kind = kind, amount = amount, legStartStep = legStartStep });
         }
 
         private static string ItemDisplayName(string itemId)

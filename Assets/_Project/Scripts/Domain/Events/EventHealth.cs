@@ -25,6 +25,16 @@ namespace PrincesPalace.Domain.Events
             return to > maxHealth ? maxHealth : to;
         }
 
+        // The ONE-MEMBER heal (a healPercent effect naming a character):
+        // unlike the party heal above it NEVER REVIVES. A downed character
+        // stays at 0 (PLAN_PETTING_ZOO D5: a downed Shawn counts as absent,
+        // so a pet cannot stand him back up).
+        public static int HealedWithoutRevive(int current, int maxHealth, int percent)
+        {
+            if (current <= 0) return 0;
+            return Healed(current, maxHealth, percent);
+        }
+
         // FLOORED AT 1 AND NEVER KILLS (plan contract 10, assumption 7). A
         // character already at 0 stays at 0 -- flooring them to 1 would make
         // a damage effect a revive.

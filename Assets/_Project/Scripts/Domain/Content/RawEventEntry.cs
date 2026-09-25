@@ -23,6 +23,8 @@ namespace PrincesPalace.Domain.Content
         public string counter = "";
         [ContentDoc("Optional caption a locked choice shows for this row, replacing the generated one for any kind. Empty means generated (a counter's generated caption is 'Not yet' / 'No longer', never its id). On a choice row it is capped at EventEntryResolver.MaxLockReasonLength characters; event- and outcome-level rows never show it.")]
         public string reason = "";
+        [ContentDoc("inParty only: when true the character must also be standing (run health above 0); a downed member fails with the caption 'Requires <name> standing'. Refused on any other kind.")]
+        public bool alive;
     }
 
     // One effect row, exactly as typed into a choice's or outcome's `effects`
@@ -30,14 +32,18 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEventEffect
     {
-        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item or counter.")]
+        [ContentDoc("Which EventEffectKind this is: gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor or fillSpecialPool.")]
         public string kind = "";
-        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, or a counter delta.")]
+        [ContentDoc("The amount this effect changes: gold (+ gain/- spend), heal/damage percent (1-100), exp, a counter delta, or princesFavor's run-long bonus (> 0). fillSpecialPool takes exactly 1; relic ignores it.")]
         public int amount;
         [ContentDoc("The item id granted; required by item.")]
         public string item = "";
         [ContentDoc("The counter id this effect changes; required by counter.")]
         public string counter = "";
+        [ContentDoc("healPercent only, optional: heal just this character id by amount percent of their max HP. Never revives: a member at 0 HP stays at 0. Empty heals the whole squad. Refused on any other kind.")]
+        public string character = "";
+        [ContentDoc("The relic id (relics.json) added to the run; required by relic. Already held is a no-op.")]
+        public string relic = "";
     }
 
     // One branch of a choice, exactly as typed into a choice's `outcomes`

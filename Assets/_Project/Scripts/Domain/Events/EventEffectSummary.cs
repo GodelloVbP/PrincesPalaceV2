@@ -41,7 +41,10 @@ namespace PrincesPalace.Domain.Events
                     if (effect.Amount < 0) return UiStrings.EventEffectGoldSpend.Format(-effect.Amount);
                     return "";
                 case EventEffectKind.HealPercent:
-                    return UiStrings.EventEffectHeal.Format(effect.Amount);
+                    if (!effect.TargetsOneMember) return UiStrings.EventEffectHeal.Format(effect.Amount);
+                    return effect.Amount >= 100
+                        ? UiStrings.EventEffectHealMemberFull.Format(effect.CharacterDisplayName)
+                        : UiStrings.EventEffectHealMember.Format(effect.CharacterDisplayName, effect.Amount);
                 case EventEffectKind.DamagePercent:
                     return UiStrings.EventEffectDamage.Format(effect.Amount);
                 case EventEffectKind.Exp:
@@ -54,6 +57,13 @@ namespace PrincesPalace.Domain.Events
                 }
                 case EventEffectKind.Counter:
                     return "";
+                case EventEffectKind.Relic:
+                    return UiStrings.EventEffectRelic.Format(
+                        string.IsNullOrEmpty(effect.RelicDisplayName) ? effect.RelicId : effect.RelicDisplayName);
+                case EventEffectKind.PrincesFavor:
+                    return UiStrings.EventEffectPrincesFavor.Format(effect.Amount);
+                case EventEffectKind.FillSpecialPool:
+                    return UiStrings.EventEffectFillSpecialPool.Format();
                 default:
                     return "";
             }

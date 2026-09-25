@@ -213,6 +213,33 @@ namespace PrincesPalace
         internal static void HurtPartyByPercent(RunSnapshot run, int percent) =>
             ShiftPartyHealth(run, (current, max) => EventHealth.Damaged(current, max, percent));
 
+        // ONE MEMBER, NEVER A REVIVE (a healPercent effect naming a
+        // character). Unlike the party heal above, a member at 0 stays at 0,
+        // and one who is not in the active squad is not touched: this heal
+        // answers "whoever is here and standing", which is the only reading
+        // an event gated on `inParty alive` can rely on.
+        //
+        // Returns whether the member's health entry was reached (in squad and
+        // standing), so the effects line never claims a heal that did not
+        // happen. Does not persist, for the reason HealPartyByPercent gives.
+        internal static bool HealMemberByPercent(RunSnapshot run, string characterId, int percent)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (run == null || save == null || string.IsNullOrEmpty(characterId)) return false;
+
+            var character = save.ActiveSquad().FirstOrDefault(c => c != null && c.definitionId == characterId);
+            if (character == null) return false;
+
+            run.currentHealth ??= new List<RunHealthEntry>();
+            int maxHealth = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+
+            var entry = HealthEntryFor(run, characterId, maxHealth);
+            if (entry.hp <= 0) return false;
+
+            entry.hp = EventHealth.HealedWithoutRevive(entry.hp, maxHealth, percent);
+            return true;
+        }
+
         private static void ShiftPartyHealth(RunSnapshot run, Func<int, int, int> shift)
         {
             var save = SaveSlotManager.CurrentSave;

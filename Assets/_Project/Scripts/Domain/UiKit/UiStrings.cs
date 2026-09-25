@@ -365,6 +365,18 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("event.effect_exp", "+{0} XP", "+99999 XP");
         public static readonly UiString EventEffectItem =
             UiString.Define("event.effect_item", "+{0} {1}", "+99 Ceremonial Greatsword of the Undying");
+        // One member's heal (healPercent with a character). Never a revive, so
+        // it only ever appears for someone who was standing.
+        public static readonly UiString EventEffectHealMember =
+            UiString.Define("event.effect_heal_member", "{0} healed {1}%", "Wandering Bog Witch healed 99%");
+        public static readonly UiString EventEffectHealMemberFull =
+            UiString.Define("event.effect_heal_member_full", "{0} fully healed", "Wandering Bog Witch fully healed");
+        public static readonly UiString EventEffectRelic =
+            UiString.Define("event.effect_relic", "Relic: {0}", "Relic: World-Ender's Crown of Ash");
+        public static readonly UiString EventEffectPrincesFavor =
+            UiString.Define("event.effect_princes_favor", "+{0} Prince's favor", "+999 Prince's favor");
+        public static readonly UiString EventEffectFillSpecialPool =
+            UiString.Define("event.effect_fill_special_pool", "Special pools full each turn this leg");
 
         // --- the event panel (EventScreen / EventController) --------------------
         // Every event word is content; these templates exist so E1 measures

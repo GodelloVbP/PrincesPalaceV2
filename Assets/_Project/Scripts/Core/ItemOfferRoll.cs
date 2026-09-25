@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Rewards;
@@ -157,14 +158,28 @@ namespace PrincesPalace
         // highest-not-sum -- lives with the roll it feeds, and so the fight
         // controller does not have to learn how a definitionId maps to a
         // definition.
+        //
+        // PLUS THE RUN'S EVENT FAVOR, added AFTER the squad max and never
+        // inside it: an event's "+10 Prince's favor" is a gift to the run,
+        // not to a member, so it must not change which member is the best
+        // and must not vanish when that member is benched
+        // (docs/PLAN_PETTING_ZOO.md, Fawns). SquadFavor itself stays the
+        // pure max-not-sum rule.
         public static int CurrentSquadFavor()
         {
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return 0;
 
-            return SquadFavor(save.ActiveSquad()
+            int squad = SquadFavor(save.ActiveSquad()
                 .Select(c => FavorOf(c, ContentDatabase.Characters
                     .FirstOrDefault(d => d != null && d.id == c.definitionId))));
+
+            var run = save.activeRun;
+            int fromEvents = run != null && run.hasRun
+                ? EventBuffs.ActiveAmount(run.eventBuffs, EventBuffs.PrincesFavor, run.legStartStep)
+                : 0;
+
+            return squad + fromEvents;
         }
 
         // WHAT "ONE ROLLED COPY" MEANS, WITH TWO CALLERS.

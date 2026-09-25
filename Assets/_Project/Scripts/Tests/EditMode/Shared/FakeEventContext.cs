@@ -16,6 +16,9 @@ namespace PrincesPalace.Domain.Tests
         public Dictionary<string, int> Counters = new Dictionary<string, int>();
         public int GoldValue;
 
+        // Ids whose run health is 0; everyone else is standing.
+        public HashSet<string> Downed = new HashSet<string>();
+
         public IReadOnlyList<string> SquadIds => Squad;
         public int Gold => GoldValue;
 
@@ -25,5 +28,7 @@ namespace PrincesPalace.Domain.Tests
             Abilities.TryGetValue((characterId, ability), out int v) ? v : 0;
 
         public int CounterValue(string counterId) => Counters.TryGetValue(counterId, out int v) ? v : 0;
+
+        public bool IsStanding(string characterId) => !Downed.Contains(characterId);
     }
 }

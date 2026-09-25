@@ -40,10 +40,26 @@ namespace PrincesPalace.Domain.Content
         private const int MaxChoicesPerPage = 4;
         private const string LeaveKeyword = "Leave";
 
+        // No relic catalogue: any `relic` effect is refused as unknown. Kept
+        // for callers whose events grant no relic (most fixture tests).
         public static bool TryResolveAll(
             IReadOnlyList<RawEventEntry> entries,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
+            out List<ResolvedEventDefinition> resolved,
+            out List<string> errors) =>
+            TryResolveAll(entries, characterDisplayNamesById, knownItemIds,
+                new Dictionary<string, string>(), out resolved, out errors);
+
+        // `relicDisplayNamesById` is relics.json as ContentBuilder resolved it
+        // just before events (relics build first). Its keys are the ids a
+        // `relic` effect may name; its values are baked into the effect for
+        // the effects line, the same reason character names travel in.
+        public static bool TryResolveAll(
+            IReadOnlyList<RawEventEntry> entries,
+            IReadOnlyDictionary<string, string> characterDisplayNamesById,
+            IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
             out List<ResolvedEventDefinition> resolved,
             out List<string> errors)
         {
@@ -58,7 +74,7 @@ namespace PrincesPalace.Domain.Content
                 for (int i = 0; i < entries.Count; i++)
                 {
                     if (TryResolveOne(entries[i], i, resolved.Count, characterDisplayNamesById, knownItemIds,
-                            incrementedCounters, requiredCounters, out var single, out string error))
+                            relicDisplayNamesById, incrementedCounters, requiredCounters, out var single, out string error))
                     {
                         resolved.Add(single);
                     }
@@ -99,6 +115,7 @@ namespace PrincesPalace.Domain.Content
         private static bool TryResolveOne(RawEventEntry raw, int index, int sortOrder,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
             HashSet<string> incrementedCounters,
             List<(string CounterId, string Label)> requiredCounters,
             out ResolvedEventDefinition resolvedEvent, out string error)
@@ -155,7 +172,7 @@ namespace PrincesPalace.Domain.Content
             foreach (var rawPage in rawPages)
             {
                 if (!TryResolvePage(rawPage, raw.id, eventLabel, eventBackdrop, pageIds, characterDisplayNamesById, knownItemIds,
-                        incrementedCounters, requiredCounters, out var page, out error))
+                        relicDisplayNamesById, incrementedCounters, requiredCounters, out var page, out error))
                 {
                     return false;
                 }
@@ -213,6 +230,7 @@ namespace PrincesPalace.Domain.Content
             HashSet<string> pageIds,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
             HashSet<string> incrementedCounters,
             List<(string CounterId, string Label)> requiredCounters,
             out ResolvedEventPage resolvedPage, out string error)
@@ -245,7 +263,7 @@ namespace PrincesPalace.Domain.Content
             foreach (var rawChoice in rawChoices)
             {
                 if (!TryResolveChoice(rawChoice, eventLabel, raw.id, pageIds, characterDisplayNamesById, knownItemIds,
-                        incrementedCounters, requiredCounters, out var choice, out error))
+                        relicDisplayNamesById, incrementedCounters, requiredCounters, out var choice, out error))
                 {
                     return false;
                 }
@@ -285,6 +303,7 @@ namespace PrincesPalace.Domain.Content
         private static bool TryResolveChoice(RawEventChoice raw, string eventLabel, string pageId, HashSet<string> pageIds,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
             HashSet<string> incrementedCounters,
             List<(string CounterId, string Label)> requiredCounters,
             out ResolvedEventChoice resolvedChoice, out string error)
@@ -303,7 +322,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!TryResolveEffects(raw.effects, choiceLabel, knownItemIds, incrementedCounters, out var effects, out error))
+            if (!TryResolveEffects(raw.effects, choiceLabel, characterDisplayNamesById, knownItemIds,
+                    relicDisplayNamesById, incrementedCounters, out var effects, out error))
             {
                 return false;
             }
@@ -342,7 +362,7 @@ namespace PrincesPalace.Domain.Content
             {
                 bool isLast = i == rawOutcomes.Length - 1;
                 if (!TryResolveOutcome(rawOutcomes[i], choiceLabel, isLast, pageIds, characterDisplayNamesById,
-                        knownItemIds, incrementedCounters, requiredCounters, out var outcome, out error))
+                        knownItemIds, relicDisplayNamesById, incrementedCounters, requiredCounters, out var outcome, out error))
                 {
                     return false;
                 }
@@ -359,6 +379,7 @@ namespace PrincesPalace.Domain.Content
             HashSet<string> pageIds,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
             HashSet<string> incrementedCounters,
             List<(string CounterId, string Label)> requiredCounters,
             out ResolvedEventOutcome resolvedOutcome, out string error)
@@ -378,7 +399,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            if (!TryResolveEffects(raw.effects, choiceLabel, knownItemIds, incrementedCounters, out var effects, out error))
+            if (!TryResolveEffects(raw.effects, choiceLabel, characterDisplayNamesById, knownItemIds,
+                    relicDisplayNamesById, incrementedCounters, out var effects, out error))
             {
                 return false;
             }
@@ -436,6 +458,14 @@ namespace PrincesPalace.Domain.Content
                     return false;
                 }
 
+                // `alive` would be silently ignored anywhere else, so it is
+                // refused rather than accepted as a no-op.
+                if (row.alive && kind != EventRequirementKind.InParty)
+                {
+                    error = $"{label}: alive is only read by an inParty requirement, not by {row.kind}.";
+                    return false;
+                }
+
                 switch (kind)
                 {
                     case EventRequirementKind.InParty:
@@ -446,7 +476,7 @@ namespace PrincesPalace.Domain.Content
                             return false;
                         }
 
-                        list.Add(EventRequirement.InParty(row.character, displayName));
+                        list.Add(EventRequirement.InParty(row.character, displayName, row.alive));
                         break;
                     }
 
@@ -538,7 +568,10 @@ namespace PrincesPalace.Domain.Content
         }
 
         private static bool TryResolveEffects(RawEventEffect[] raw, string label,
-            IReadOnlyCollection<string> knownItemIds, HashSet<string> incrementedCounters,
+            IReadOnlyDictionary<string, string> characterDisplayNamesById,
+            IReadOnlyCollection<string> knownItemIds,
+            IReadOnlyDictionary<string, string> relicDisplayNamesById,
+            HashSet<string> incrementedCounters,
             out EventEffect[] resolved, out string error)
         {
             resolved = Array.Empty<EventEffect>();
@@ -556,7 +589,16 @@ namespace PrincesPalace.Domain.Content
                 if (!Enum.TryParse<EventEffectKind>(row.kind, ignoreCase: true, out var kind))
                 {
                     error = $"{label}: effect kind '{row.kind}' is not a known EventEffectKind " +
-                            "(gold, healPercent, damagePercent, exp, item, counter).";
+                            "(gold, healPercent, damagePercent, exp, item, counter, relic, princesFavor, fillSpecialPool).";
+                    return false;
+                }
+
+                // Only healPercent reads `character`. Anywhere else it would
+                // read as "just this member" and quietly hit everyone.
+                bool namesCharacter = !string.IsNullOrWhiteSpace(row.character);
+                if (namesCharacter && kind != EventEffectKind.HealPercent)
+                {
+                    error = $"{label}: character is only read by a healPercent effect, not by {row.kind}.";
                     return false;
                 }
 
@@ -579,7 +621,19 @@ namespace PrincesPalace.Domain.Content
                             return false;
                         }
 
-                        list.Add(EventEffect.HealPercent(row.amount));
+                        if (!namesCharacter)
+                        {
+                            list.Add(EventEffect.HealPercent(row.amount));
+                            break;
+                        }
+
+                        if (!TryKnownCharacter(row.character, label, "healPercent effect", characterDisplayNamesById,
+                                out string healedName, out error))
+                        {
+                            return false;
+                        }
+
+                        list.Add(EventEffect.HealMemberPercent(row.character, healedName, row.amount));
                         break;
 
                     case EventEffectKind.DamagePercent:
@@ -633,6 +687,48 @@ namespace PrincesPalace.Domain.Content
 
                         incrementedCounters.Add(row.counter);
                         list.Add(EventEffect.Counter(row.counter, row.amount));
+                        break;
+
+                    case EventEffectKind.Relic:
+                    {
+                        if (string.IsNullOrWhiteSpace(row.relic))
+                        {
+                            error = $"{label}: relic effect needs a relic id.";
+                            return false;
+                        }
+
+                        if (relicDisplayNamesById == null
+                            || !relicDisplayNamesById.TryGetValue(row.relic, out string relicName))
+                        {
+                            error = $"{label}: relic effect names '{row.relic}', which is not a relic in relics.json.";
+                            return false;
+                        }
+
+                        list.Add(EventEffect.RelicGrant(row.relic,
+                            string.IsNullOrWhiteSpace(relicName) ? row.relic : relicName));
+                        break;
+                    }
+
+                    case EventEffectKind.PrincesFavor:
+                        if (row.amount <= 0)
+                        {
+                            error = $"{label}: princesFavor effect amount must be greater than 0, was {row.amount}.";
+                            return false;
+                        }
+
+                        list.Add(EventEffect.PrincesFavor(row.amount));
+                        break;
+
+                    case EventEffectKind.FillSpecialPool:
+                        // No strength to it: the pool is full or it is not.
+                        // Exactly 1, so a 2 or a 50 is not mistaken for "more".
+                        if (row.amount != 1)
+                        {
+                            error = $"{label}: fillSpecialPool effect amount must be 1, was {row.amount}.";
+                            return false;
+                        }
+
+                        list.Add(EventEffect.FillSpecialPool());
                         break;
 
                     default:

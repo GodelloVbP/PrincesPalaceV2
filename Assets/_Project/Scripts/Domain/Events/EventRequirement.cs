@@ -63,6 +63,11 @@ namespace PrincesPalace.Domain.Events
         public bool HasMax;
         public string CounterId = "";
 
+        // InParty only: the character must also be standing (run health
+        // above 0). A downed member is still in the squad -- still present
+        // for a dialogue speaker check (EventCastPresence) -- but cannot act.
+        public bool RequireStanding;
+
         // The author's own caption for a locked choice. When set it replaces
         // the generated one for every kind: a counter's generated caption
         // cannot say what the counter means to the player, and a character
@@ -96,9 +101,9 @@ namespace PrincesPalace.Domain.Events
             CounterId = counterId ?? "";
         }
 
-        public static EventRequirement InParty(string characterId, string characterDisplayName) =>
+        public static EventRequirement InParty(string characterId, string characterDisplayName, bool alive = false) =>
             new EventRequirement(EventRequirementKind.InParty, characterId, characterDisplayName,
-                default, 0, false, 0, false, "");
+                default, 0, false, 0, false, "") { RequireStanding = alive };
 
         public static EventRequirement MemberLevel(int min, string characterId = "", string characterDisplayName = "") =>
             new EventRequirement(EventRequirementKind.MemberLevel, characterId, characterDisplayName,
@@ -163,7 +168,7 @@ namespace PrincesPalace.Domain.Events
             switch (Kind)
             {
                 case EventRequirementKind.InParty:
-                    return namedInSquad;
+                    return namedInSquad && (!RequireStanding || context.IsStanding(CharacterId));
 
                 case EventRequirementKind.MemberLevel:
                     if (named) return namedInSquad && context.LevelOf(CharacterId) >= Min;
@@ -195,7 +200,9 @@ namespace PrincesPalace.Domain.Events
             switch (Kind)
             {
                 case EventRequirementKind.InParty:
-                    return $"Requires {CharacterDisplayName}";
+                    return RequireStanding
+                        ? $"Requires {CharacterDisplayName} standing"
+                        : $"Requires {CharacterDisplayName}";
 
                 case EventRequirementKind.MemberLevel:
                     return string.IsNullOrEmpty(CharacterId)

@@ -158,7 +158,7 @@ public static class ContentBuilder
             // them the other way round would validate against nothing and let a
             // typo'd gate through.
             var achievementIds = BuildAchievements();
-            BuildRelics(achievementIds, characters.Select(c => c.Id).ToList());
+            var relicDisplayNames = BuildRelics(achievementIds, characters.Select(c => c.Id).ToList());
 
             // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
             // track's rules 4/5 and its UnlockSkill/signature captions are
@@ -183,7 +183,8 @@ public static class ContentBuilder
             // effect against the real item catalogue -- building events any
             // earlier would validate against nothing and let a typo'd id
             // through.
-            BuildEvents(characters, itemIds);
+            // And after relics: a `relic` effect names one (PLAN_PETTING_ZOO P1).
+            BuildEvents(characters, itemIds, relicDisplayNames);
         }
         finally
         {
@@ -362,7 +363,9 @@ public static class ContentBuilder
     // A relic has no cross-references to wire up; RelicEntryResolver
     // validates everything (a known id, a known effect, no two relics sharing
     // an effect) up front.
-    private static void BuildRelics(IReadOnlyCollection<string> achievementIds,
+    // Returns display names by id, because BuildEvents validates a `relic`
+    // effect against them and bakes the name into its effects line.
+    private static IReadOnlyDictionary<string, string> BuildRelics(IReadOnlyCollection<string> achievementIds,
                                     IReadOnlyCollection<string> characterIds)
     {
         // A LOCAL FUNCTION, because RelicEntryResolver is the one resolver
@@ -372,12 +375,13 @@ public static class ContentBuilder
         bool Resolve(IReadOnlyList<RawRelicEntry> entries, out List<ResolvedRelic> resolved, out List<string> errors) =>
             RelicEntryResolver.TryResolveAll(entries, achievementIds, characterIds, out resolved, out errors);
 
-        Build<RawRelicEntry, ResolvedRelic, RelicDefinition>(
+        return Build<RawRelicEntry, ResolvedRelic, RelicDefinition>(
             "BuildRelics", "Assets/_Project/ContentData/relics.json", RelicsPath, "relics",
             json => JsonUtility.FromJson<RawRelicFile>(json).relics,
             Resolve,
             (asset, relic) => asset.SetData(relic),
-            relic => relic.Id);
+            relic => relic.Id)
+        .ToDictionary(relic => relic.Id, relic => relic.DisplayName);
     }
 
     // Writes one RewardTrackDefinitionAsset per authored character in
@@ -420,12 +424,13 @@ public static class ContentBuilder
     // real roster AND get the real display name baked in for their reason
     // text ("Requires Shawn") -- see EventEntryResolver's own header for why
     // that travels in rather than being looked up at runtime.
-    private static void BuildEvents(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyCollection<string> itemIds)
+    private static void BuildEvents(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyCollection<string> itemIds,
+                                    IReadOnlyDictionary<string, string> relicDisplayNames)
     {
         var characterDisplayNames = characters.ToDictionary(c => c.Id, c => c.DisplayName);
 
         bool Resolve(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved, out List<string> errors) =>
-            EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, out resolved, out errors);
+            EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, relicDisplayNames, out resolved, out errors);
 
         var events = Build<RawEventEntry, ResolvedEventDefinition, EventDefinition>(
             "BuildEvents", "Assets/_Project/ContentData/events.json", EventsPath, "events",

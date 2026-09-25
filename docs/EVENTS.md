@@ -37,12 +37,12 @@ outcome  { requires[], effects[], result, goTo }       first match wins
 
 ## Requirements
 
-One flat row, `{ kind, character, ability, min, max, counter, reason }`. A list is AND.
+One flat row, `{ kind, character, alive, ability, min, max, counter, reason }`. A list is AND.
 The same rows gate an event (`event.requires`), a choice and an outcome.
 
 | kind | fields | passes when |
 |---|---|---|
-| `inParty` | `character` | that character is in the active squad |
+| `inParty` | `character`, `alive?` | that character is in the active squad; with `alive: true`, also standing (run HP above 0). `alive` on any other kind is refused |
 | `memberLevel` | `min`, `character?` | any squad member (or the named one) is at least level `min` |
 | `ability` | `ability`, `min`, `character?` | any squad member's **effective** score (gear and talents included) is at least `min` |
 | `counter` | `counter`, `min?`, `max?` | the counter's value is inside `[min, max]` |
@@ -58,7 +58,7 @@ Every row has a generated caption, and none of them shows an internal id:
 
 | kind | generated caption |
 |---|---|
-| `inParty` | `Requires Shawn` (the character's display name) |
+| `inParty` | `Requires Shawn` (the character's display name); with `alive`, `Requires Shawn standing` |
 | `memberLevel` | `Requires a level 15 party member`, or `Requires Shawn at level 15` |
 | `ability` | `Requires 20 CHA`, or `Requires Shawn with 20 CHA` |
 | `counter` | `Not yet` while below `min`, `No longer` once past `max` |
@@ -71,16 +71,26 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 
 ## Effects
 
-`{ kind, amount, item, counter }`, applied in order.
+`{ kind, amount, item, counter, character, relic }`, applied in order.
 
-| kind | amount |
-|---|---|
-| `gold` | positive gains (counts as earned), negative spends (does not) |
-| `healPercent` | 1-100 of each member's max HP |
-| `damagePercent` | 1-100; floors at 1 HP, never kills |
-| `exp` | split across the party as after a fight |
-| `item` | how many of `item` go to the stockpile |
-| `counter` | added to `counter` |
+| kind | amount | effects line |
+|---|---|---|
+| `gold` | positive gains (counts as earned), negative spends (does not) | `+25 gold` / `-5 gold` |
+| `healPercent` | 1-100 of each member's max HP. The party heal stands a downed member back up | `Party healed 30%` |
+| `healPercent` + `character` | 1-100 of that one member's max HP. **Never revives**: a member at 0 stays at 0, and one not in the squad is untouched (no line either way). `character` on any other kind is refused | `Shawn healed 30%`, or `Shawn fully healed` at 100 |
+| `damagePercent` | 1-100; floors at 1 HP, never kills | `Party hurt 10%` |
+| `exp` | split across the party as after a fight | `+50 XP` |
+| `item` | how many of `item` go to the stockpile | `+2 Health Potion` |
+| `counter` | added to `counter` | none |
+| `relic` | ignored. Adds `relic` to the run's relics; already held does nothing (no line). The build refuses an id not in `relics.json` | `Relic: Kinship` |
+| `princesFavor` | > 0. Added to the squad's Prince's favor for the rest of the **run**, after the squad's best member (item offers and shop stock rolled from now on; a shelf already rolled is not rerolled) | `+10 Prince's favor` |
+| `fillSpecialPool` | exactly 1. For the rest of this **leg**, each character's special pool (signature, else primary) is full when their turn opens | `Special pools full each turn this leg` |
+
+`princesFavor` and `fillSpecialPool` are run buffs (`RunSnapshot.eventBuffs`).
+A run buff ends with the run; a leg buff also ends when the party takes the
+exit to the next leg. Both survive a quit and reload.
+Until phase P3 of `docs/PLAN_PETTING_ZOO.md` lands, `fillSpecialPool` is
+stored and shown but the fight does not read it yet.
 
 ## Counters
 
