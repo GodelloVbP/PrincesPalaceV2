@@ -28,7 +28,7 @@ post-arc branch. Whether 10 is acceptable is decided on P0's numbers (D1).
 |---|---|
 | `zoo` (opens) | Pet the sheep → step/petter pages · Strut for the peacock [CHA ≥20, greyed] → Leave with result · Feed the fawns → Leave with result · Crack open a cold one [level ≥15, greyed] → Leave with result |
 | `step1_pair`, `step1_solo`, `step2`…`step10`, `post_arc` | "Carry on" → `zoo_after_pet` |
-| `petter` | "Bjorn pets" [inParty bear, alive, hidden] → `zoo_after_pet` · "Odette pets" [inParty owl, alive, hidden] → `zoo_after_pet` · "Leave the sheep be" → `zoo` (nothing changed, so returning is safe) |
+| `petter` | "Bjorn pets" [inParty bear, alive, hidden] → `zoo_after_pet` · "Odette pets" [inParty owl, alive, hidden] → `zoo_after_pet` · "Leave the sheep be" → `zoo_after_pet` (declining uses up the sheep for this visit; back to `zoo` let a first-available bot loop zoo ↔ petter forever) |
 | `zoo_after_pet` | Peacock · Fawns · Cold one (same as `zoo`) · "Say goodbye" → Leave |
 
 - **Petting never ends the visit, and it can happen only once per visit:** every route that
@@ -131,7 +131,8 @@ dialogue-stage and Spell-VFX sessions, which share the TestRunner.
 - **Resolver on the real Zoo definition:** validator-legal, every `goTo` resolves, and every
   page has an unconditional row.
 - **Graph:** from each healing route, `zoo_after_pet` is reached and has no sheep row. Pet
-  twice in one visit is impossible. "Leave the sheep be" changes nothing.
+  twice in one visit is impossible. "Leave the sheep be" changes nothing except
+  removing the sheep row. No path loops back to `zoo`.
 - **Counter 0→10:** steps 1…10; Kinship granted on the 10th pet, not the 9th; the 11th pet →
   `post_arc` plus Kinship.
 - **Owl present / benched:** pair text / solo text, and the counter moves in both cases.

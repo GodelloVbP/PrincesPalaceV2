@@ -12,7 +12,8 @@ namespace PrincesPalace.Domain.Tests
     // Kinship (docs/PLAN_PETTING_ZOO.md, "Kinship"): the bearer's first damage
     // packet with amount > 0 in a fight is turned aside whole, in
     // FightSession.ApplyAndCountDamage after the pools hear it and before the
-    // Phoenix Egg. Fixture relics only -- relics.json has no Kinship row yet.
+    // Phoenix Egg. Fixture relics only; the real relics.json row is
+    // pinned in PettingZooEventTests.
     public class KinshipTests
     {
         private const string Bearer = "sheep";

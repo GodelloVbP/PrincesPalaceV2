@@ -70,10 +70,17 @@ namespace PrincesPalace.PlayModeTests
             RunManager.StartRun(SeedWithAnEventInTheFirstColumn());
             var node = RunManager.Map.AtDepth(1).First(n => n.Type == RoomType.Event);
 
+            // Every other authored event (petting_zoo, ...) counts as seen
+            // this run, so the pool is the demo alone and the roll must pick it.
+            foreach (var definition in ContentDatabase.Events)
+            {
+                if (definition.id != DemoEvent) RunManager.Run.eventsSeen.Add(definition.id);
+            }
+
             Assert.AreEqual(RunOrchestrator.Arrival.Event, RunOrchestrator.ArriveAt(node),
-                "fixture: the demo event is eligible on floor 1 and the run has seen nothing yet");
+                "fixture: the demo event is eligible on floor 1 and the run has seen nothing else");
             Assert.AreEqual(DemoEvent, RunManager.Run.eventId,
-                "fixture: the demo is the only authored event, so the pool of one must pick it");
+                "fixture: every other event is marked seen, so the pool of one must pick the demo");
             return node;
         }
 

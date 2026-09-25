@@ -1,0 +1,1587 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a04c8e410f566d4c95baac0a724b55d, type: 3}
+  m_Name: petting_zoo
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EventDefinition
+  data:
+    Id: petting_zoo
+    SortOrder: 1
+    Floors: 
+    Requires: []
+    Pages:
+    - Id: zoo
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
+      Title: The Petting Zoo
+      Body: 'Somewhere between two realities, someone has fenced off a paddock and
+        hung a sign: PETTING ZOO. A sheep chews at the rail. A peacock fans its tail
+        at nobody in particular. Two fawns nose at an empty trough, and a cooler
+        of cold ones sweats by the gate. Prince''s contract says nothing about petting
+        zoos. It doesn''t forbid them either.'
+      Choices:
+      - Text: Pet the sheep
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          - Kind: 0
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step1_pair
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step1_solo
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 1
+            HasMin: 1
+            Max: 1
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step2
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 2
+            HasMin: 1
+            Max: 2
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step3
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 3
+            HasMin: 1
+            Max: 3
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step4
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 4
+            HasMin: 1
+            Max: 4
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step5
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 5
+            HasMin: 1
+            Max: 5
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step6
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 6
+            HasMin: 1
+            Max: 6
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step7
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 7
+            HasMin: 1
+            Max: 7
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step8
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 8
+            HasMin: 1
+            Max: 8
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: 
+          GoTo: step9
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 9
+            HasMin: 1
+            Max: 9
+            HasMax: 1
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 6
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: kinship
+            RelicDisplayName: Kinship
+          Result: 
+          GoTo: step10
+          IsLeave: 0
+        - Requires:
+          - Kind: 0
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            Ability: 0
+            Min: 0
+            HasMin: 0
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 1
+            AuthoredReason: 
+          - Kind: 3
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 0
+            Min: 10
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: zoo_sheep
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: sheep
+            CharacterDisplayName: Shawn
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 5
+            Amount: 1
+            Item: 
+            CounterId: zoo_sheep
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          - Kind: 6
+            Amount: 0
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: kinship
+            RelicDisplayName: Kinship
+          Result: 
+          GoTo: post_arc
+          IsLeave: 0
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: petter
+          IsLeave: 0
+      - Text: Strut for the peacock
+        Requires:
+        - Kind: 2
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 5
+          Min: 20
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 30
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 200
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 29
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 190
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 28
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 180
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 27
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 170
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 26
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 160
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 25
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 150
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 24
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 140
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 23
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 130
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 22
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 120
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 21
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 110
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires: []
+          Effects:
+          - Kind: 0
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+      - Text: Feed the fawns
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 7
+            Amount: 10
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The fawns eat out of your hand and trail you all the way to the
+            gate. Word reaches Prince, who purrs about it for days.
+          GoTo: 
+          IsLeave: 1
+      - Text: Crack open a cold one
+        Requires:
+        - Kind: 1
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 15
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 8
+            Amount: 1
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: It's cold, it's crisp, and it goes straight to everyone's head.
+            Whatever waits down the road, the party meets it at full strength.
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: zoo_after_pet
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
+      Title: The Petting Zoo
+      Body: The sheep wanders back to the far rail. There's time to pick one more
+        thing before the contract calls you on.
+      Choices:
+      - Text: Strut for the peacock
+        Requires:
+        - Kind: 2
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 5
+          Min: 20
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 30
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 200
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 29
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 190
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 28
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 180
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 27
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 170
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 26
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 160
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 25
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 150
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 24
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 140
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 23
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 130
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 22
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 120
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires:
+          - Kind: 2
+            CharacterId: 
+            CharacterDisplayName: 
+            Ability: 5
+            Min: 21
+            HasMin: 1
+            Max: 0
+            HasMax: 0
+            CounterId: 
+            RequireStanding: 0
+            AuthoredReason: 
+          Effects:
+          - Kind: 0
+            Amount: 110
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+        - Requires: []
+          Effects:
+          - Kind: 0
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The peacock looks your strut up and down, then fans its tail in
+            grudging approval. The crowd along the fence throws coins.
+          GoTo: 
+          IsLeave: 1
+      - Text: Feed the fawns
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 7
+            Amount: 10
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: The fawns eat out of your hand and trail you all the way to the
+            gate. Word reaches Prince, who purrs about it for days.
+          GoTo: 
+          IsLeave: 1
+      - Text: Crack open a cold one
+        Requires:
+        - Kind: 1
+          CharacterId: 
+          CharacterDisplayName: 
+          Ability: 0
+          Min: 15
+          HasMin: 1
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 0
+          AuthoredReason: 
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 8
+            Amount: 1
+            Item: 
+            CounterId: 
+            CharacterId: 
+            CharacterDisplayName: 
+            RelicId: 
+            RelicDisplayName: 
+          Result: It's cold, it's crisp, and it goes straight to everyone's head.
+            Whatever waits down the road, the party meets it at full strength.
+          GoTo: 
+          IsLeave: 1
+      - Text: Say goodbye
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: 
+          IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: petter
+      ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
+      Title: The Sheep Waits
+      Body: The sheep looks your party over and seems unimpressed. It was expecting
+        someone woollier. Still, a scratch is a scratch, if anyone cares to give
+        it one.
+      Choices:
+      - Text: Bjorn pets the sheep
+        Requires:
+        - Kind: 0
+          CharacterId: bear
+          CharacterDisplayName: Bjorn
+          Ability: 0
+          Min: 0
+          HasMin: 0
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 1
+          AuthoredReason: 
+        HiddenUntilMet: 1
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: bear
+            CharacterDisplayName: Bjorn
+            RelicId: 
+            RelicDisplayName: 
+          Result: Bjorn scratches the sheep behind the ears with one enormous claw.
+            It leans right into it. Pick one more thing before you go.
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      - Text: Odette pets the sheep
+        Requires:
+        - Kind: 0
+          CharacterId: owl
+          CharacterDisplayName: Odette
+          Ability: 0
+          Min: 0
+          HasMin: 0
+          Max: 0
+          HasMax: 0
+          CounterId: 
+          RequireStanding: 1
+          AuthoredReason: 
+        HiddenUntilMet: 1
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects:
+          - Kind: 1
+            Amount: 100
+            Item: 
+            CounterId: 
+            CharacterId: owl
+            CharacterDisplayName: Odette
+            RelicId: 
+            RelicDisplayName: 
+          Result: Odette preens a tuft of the sheep's wool back into place. The sheep
+            allows this. Pick one more thing before you go.
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      - Text: Leave the sheep be
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step1_pair
+      ArtKey: 
+      Title: A Sheep?
+      Body: 'Shawn: "Is that... A sheep?"
+
+        Odette: "I presume so."
+
+        Shawn:
+        "..."
+
+        Odette: "Is that a good or a bad thing?"
+
+        Shawn: "I...
+        I don''t know..."
+
+        (Shawn proceeds to pet the sheep.)'
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step1_solo
+      ArtKey: 
+      Title: A Sheep?
+      Body: 'Shawn: "Is that... A sheep?"
+
+        Shawn: "..."
+
+        Shawn: "I...
+        I don''t know how I feel about this."
+
+        (Shawn proceeds to pet the
+        sheep.)'
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step2
+      ArtKey: 
+      Title: The Sheep, Visit 2
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step3
+      ArtKey: 
+      Title: The Sheep, Visit 3
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step4
+      ArtKey: 
+      Title: The Sheep, Visit 4
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step5
+      ArtKey: 
+      Title: The Sheep, Visit 5
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step6
+      ArtKey: 
+      Title: The Sheep, Visit 6
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step7
+      ArtKey: 
+      Title: The Sheep, Visit 7
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step8
+      ArtKey: 
+      Title: The Sheep, Visit 8
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step9
+      ArtKey: 
+      Title: The Sheep, Visit 9
+      Body: -> placeholder
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: step10
+      ArtKey: 
+      Title: The Sheep, Visit 10
+      Body: '-> placeholder
+
+
+        Future visits with Shawn grant Kinship for
+        that run.'
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    - Id: post_arc
+      ArtKey: 
+      Title: The Sheep, Again
+      Body: '-> placeholder
+
+
+        Future visits with Shawn grant Kinship for
+        that run.'
+      Choices:
+      - Text: Carry on
+        Requires: []
+        HiddenUntilMet: 0
+        Effects: []
+        Outcomes:
+        - Requires: []
+          Effects: []
+          Result: 
+          GoTo: zoo_after_pet
+          IsLeave: 0
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png

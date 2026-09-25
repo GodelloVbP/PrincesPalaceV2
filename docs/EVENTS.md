@@ -35,6 +35,23 @@ outcome  { requires[], effects[], result, goTo }       first match wins
 | Recite a well-worn prayer | `memberLevel min 15`: greyed with "Requires a level 15 party member" |
 | Whisper one more charm (page 2) | `ability charisma min 20` with `hiddenUntilMet`: takes no row at all until it passes |
 
+## The Petting Zoo
+
+`petting_zoo` is the first real event (`docs/PLAN_PETTING_ZOO.md`, page graph
+there). Things it does that a new event may want to copy:
+
+- **A once-per-visit action.** Every route that heals goes to `zoo_after_pet`,
+  which repeats the other rows but has no sheep row, so a second pet has no route.
+  Declining ("Leave the sheep be") goes there too: no route leads back to `zoo`,
+  so a first-available bot cannot loop.
+- **A counter arc in one choice.** "Pet the sheep" has no choice-level effects.
+  Each outcome gates on the pre-increment `zoo_sheep` and bumps it itself; the
+  unconditional last outcome (`petter`) bumps nothing.
+- **Outcomes into a script page leave `result` empty**, because a result replaces
+  the next page's body. Step text lives in the page body until it moves into `lines`.
+- Pinned by `PettingZooEventTests` (content, fast host) and `PettingZooRunTests`
+  (through the run, needs built content).
+
 ## Requirements
 
 One flat row, `{ kind, character, alive, ability, min, max, counter, reason }`. A list is AND.
@@ -89,8 +106,8 @@ show a caption; `reason` on an event-level or outcome row is ignored.
 `princesFavor` and `fillSpecialPool` are run buffs (`RunSnapshot.eventBuffs`).
 A run buff ends with the run; a leg buff also ends when the party takes the
 exit to the next leg. Both survive a quit and reload.
-Until phase P3 of `docs/PLAN_PETTING_ZOO.md` lands, `fillSpecialPool` is
-stored and shown but the fight does not read it yet.
+The fight reads `fillSpecialPool` at the end of each turn opening (`FightSession.OpenTurnFor`);
+an extra action does not refill.
 
 ## Counters
 

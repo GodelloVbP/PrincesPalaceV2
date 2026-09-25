@@ -110,6 +110,830 @@
       ]
     },
     {
+      "id": "petting_zoo",
+      "floors": [],
+      "requires": [],
+      "pages": [
+        {
+          "id": "zoo",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/zoo.png",
+          "title": "The Petting Zoo",
+          "body": "Somewhere between two realities, someone has fenced off a paddock and hung a sign: PETTING ZOO. A sheep chews at the rail. A peacock fans its tail at nobody in particular. Two fawns nose at an empty trough, and a cooler of cold ones sweats by the gate. Prince's contract says nothing about petting zoos. It doesn't forbid them either.",
+          "choices": [
+            {
+              "text": "Pet the sheep",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "max": 0 },
+                    { "kind": "inParty", "character": "owl" }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step1_pair"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "max": 0 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step1_solo"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 1, "max": 1 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step2"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 2, "max": 2 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step3"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 3, "max": 3 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step4"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 4, "max": 4 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step5"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 5, "max": 5 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step6"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 6, "max": 6 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step7"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 7, "max": 7 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step8"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 8, "max": 8 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 }
+                  ],
+                  "result": "",
+                  "goTo": "step9"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 9, "max": 9 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 },
+                    { "kind": "relic", "relic": "kinship" }
+                  ],
+                  "result": "",
+                  "goTo": "step10"
+                },
+                {
+                  "requires": [
+                    { "kind": "inParty", "character": "sheep", "alive": true },
+                    { "kind": "counter", "counter": "zoo_sheep", "min": 10 }
+                  ],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "sheep" },
+                    { "kind": "counter", "counter": "zoo_sheep", "amount": 1 },
+                    { "kind": "relic", "relic": "kinship" }
+                  ],
+                  "result": "",
+                  "goTo": "post_arc"
+                },
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "petter"
+                }
+              ]
+            },
+            {
+              "text": "Strut for the peacock",
+              "requires": [
+                { "kind": "ability", "ability": "charisma", "min": 20 }
+              ],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 30 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 200 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 29 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 190 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 28 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 180 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 27 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 170 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 26 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 160 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 25 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 150 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 24 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 140 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 23 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 130 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 22 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 120 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 21 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 110 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "gold", "amount": 100 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                }
+              ]
+            },
+            {
+              "text": "Feed the fawns",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "princesFavor", "amount": 10 }
+                  ],
+                  "result": "The fawns eat out of your hand and trail you all the way to the gate. Word reaches Prince, who purrs about it for days.",
+                  "goTo": "Leave"
+                }
+              ]
+            },
+            {
+              "text": "Crack open a cold one",
+              "requires": [
+                { "kind": "memberLevel", "min": 15 }
+              ],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "fillSpecialPool", "amount": 1 }
+                  ],
+                  "result": "It's cold, it's crisp, and it goes straight to everyone's head. Whatever waits down the road, the party meets it at full strength.",
+                  "goTo": "Leave"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "zoo_after_pet",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/zoo.png",
+          "title": "The Petting Zoo",
+          "body": "The sheep wanders back to the far rail. There's time to pick one more thing before the contract calls you on.",
+          "choices": [
+            {
+              "text": "Strut for the peacock",
+              "requires": [
+                { "kind": "ability", "ability": "charisma", "min": 20 }
+              ],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 30 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 200 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 29 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 190 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 28 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 180 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 27 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 170 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 26 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 160 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 25 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 150 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 24 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 140 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 23 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 130 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 22 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 120 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [
+                    { "kind": "ability", "ability": "charisma", "min": 21 }
+                  ],
+                  "effects": [
+                    { "kind": "gold", "amount": 110 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                },
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "gold", "amount": 100 }
+                  ],
+                  "result": "The peacock looks your strut up and down, then fans its tail in grudging approval. The crowd along the fence throws coins.",
+                  "goTo": "Leave"
+                }
+              ]
+            },
+            {
+              "text": "Feed the fawns",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "princesFavor", "amount": 10 }
+                  ],
+                  "result": "The fawns eat out of your hand and trail you all the way to the gate. Word reaches Prince, who purrs about it for days.",
+                  "goTo": "Leave"
+                }
+              ]
+            },
+            {
+              "text": "Crack open a cold one",
+              "requires": [
+                { "kind": "memberLevel", "min": 15 }
+              ],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "fillSpecialPool", "amount": 1 }
+                  ],
+                  "result": "It's cold, it's crisp, and it goes straight to everyone's head. Whatever waits down the road, the party meets it at full strength.",
+                  "goTo": "Leave"
+                }
+              ]
+            },
+            {
+              "text": "Say goodbye",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "Leave"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "petter",
+          "artPath": "Assets/_Project/Art/Events/petting_zoo/zoo.png",
+          "title": "The Sheep Waits",
+          "body": "The sheep looks your party over and seems unimpressed. It was expecting someone woollier. Still, a scratch is a scratch, if anyone cares to give it one.",
+          "choices": [
+            {
+              "text": "Bjorn pets the sheep",
+              "requires": [
+                { "kind": "inParty", "character": "bear", "alive": true }
+              ],
+              "hiddenUntilMet": true,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "bear" }
+                  ],
+                  "result": "Bjorn scratches the sheep behind the ears with one enormous claw. It leans right into it. Pick one more thing before you go.",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            },
+            {
+              "text": "Odette pets the sheep",
+              "requires": [
+                { "kind": "inParty", "character": "owl", "alive": true }
+              ],
+              "hiddenUntilMet": true,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [
+                    { "kind": "healPercent", "amount": 100, "character": "owl" }
+                  ],
+                  "result": "Odette preens a tuft of the sheep's wool back into place. The sheep allows this. Pick one more thing before you go.",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            },
+            {
+              "text": "Leave the sheep be",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step1_pair",
+          "artPath": "",
+          "title": "A Sheep?",
+          "body": "Shawn: \"Is that... A sheep?\"\nOdette: \"I presume so.\"\nShawn: \"...\"\nOdette: \"Is that a good or a bad thing?\"\nShawn: \"I... I don't know...\"\n(Shawn proceeds to pet the sheep.)",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step1_solo",
+          "artPath": "",
+          "title": "A Sheep?",
+          "body": "Shawn: \"Is that... A sheep?\"\nShawn: \"...\"\nShawn: \"I... I don't know how I feel about this.\"\n(Shawn proceeds to pet the sheep.)",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step2",
+          "artPath": "",
+          "title": "The Sheep, Visit 2",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step3",
+          "artPath": "",
+          "title": "The Sheep, Visit 3",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step4",
+          "artPath": "",
+          "title": "The Sheep, Visit 4",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step5",
+          "artPath": "",
+          "title": "The Sheep, Visit 5",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step6",
+          "artPath": "",
+          "title": "The Sheep, Visit 6",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step7",
+          "artPath": "",
+          "title": "The Sheep, Visit 7",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step8",
+          "artPath": "",
+          "title": "The Sheep, Visit 8",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step9",
+          "artPath": "",
+          "title": "The Sheep, Visit 9",
+          "body": "-> placeholder",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step10",
+          "artPath": "",
+          "title": "The Sheep, Visit 10",
+          "body": "-> placeholder\n\nFuture visits with Shawn grant Kinship for that run.",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "post_arc",
+          "artPath": "",
+          "title": "The Sheep, Again",
+          "body": "-> placeholder\n\nFuture visits with Shawn grant Kinship for that run.",
+          "choices": [
+            {
+              "text": "Carry on",
+              "requires": [],
+              "hiddenUntilMet": false,
+              "effects": [],
+              "outcomes": [
+                {
+                  "requires": [],
+                  "effects": [],
+                  "result": "",
+                  "goTo": "zoo_after_pet"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "demo_dialogue",
       "floors": [999],
       "requires": [

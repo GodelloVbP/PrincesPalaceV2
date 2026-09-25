@@ -66,6 +66,20 @@ namespace PrincesPalace.PlayModeTests
             go.GetComponent<Button>().onClick.Invoke();
         }
 
+        // The event and counter rows move whenever an event is authored (one
+        // open row per event, then two per counter), so those tests find
+        // their row by its label rather than by a position.
+        private string RowLabelled(string prefix)
+        {
+            for (int i = 0; i < DebugMenuCatalog.RowsPerPage; i++)
+            {
+                var label = Named($"DebugRow{i}Name");
+                if (label != null && label.GetComponent<TMP_Text>().text.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase)) return $"DebugRow{i}";
+            }
+
+            throw new AssertionException($"no debug row labelled '{prefix}...' on this page");
+        }
+
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
         // THE HUB IS SHARED ACROSS THIS FIXTURE (SharedScene), so what one
@@ -360,8 +374,8 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Rows 7.. are the event rows, after the seven above: one "open" per
-        // authored event (the demo is the only one), then an add and a reset
-        // per known counter.
+        // authored event, then an add and a reset per known counter -- found
+        // by label (RowLabelled), since each new event shifts them.
 
         [UnityTest]
         public IEnumerator OpenEventOpensTheDemoWhereThePartyStands()
@@ -369,10 +383,8 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheMenu();
             SharedScene.MarkDirty("opens an event over the hub, which this fixture has no cheap way to close");
             RunManager.StartRun(20260923UL);
-            Assert.AreEqual(1, ContentDatabase.Events.Count, "fixture: row 7 is the only event's row");
-
             Select(DebugCategory.Tools);
-            Click("DebugRow7");
+            Click(RowLabelled("OPEN EVENT: demo_wishing_well"));
             yield return null;
 
             Assert.IsTrue(RunOrchestrator.EventIsOpen);
@@ -390,11 +402,11 @@ namespace PrincesPalace.PlayModeTests
 
             Select(DebugCategory.Tools);
             Click("DebugQty2"); // x10
-            Click("DebugRow8");
+            Click(RowLabelled("wishing_well_tosses: +"));
             yield return null;
             Assert.AreEqual(10, Save.EventCounter("wishing_well_tosses"));
 
-            Click("DebugRow9");
+            Click(RowLabelled("wishing_well_tosses: RESET"));
             yield return null;
             Assert.AreEqual(0, Save.EventCounter("wishing_well_tosses"));
         }

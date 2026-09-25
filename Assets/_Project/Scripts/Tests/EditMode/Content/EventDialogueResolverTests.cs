@@ -134,7 +134,11 @@ namespace PrincesPalace.Domain.Tests
         public void DemoWishingWell_StillResolvesUnchanged()
         {
             var entries = ContentDataFiles.ParseFile<RawEventFile>(ContentDataFiles.DataPath("events.json")).events;
-            bool ok = EventEntryResolver.TryResolveAll(entries, KnownCharacters, KnownItems, out var resolved, out var errors);
+            // The real file also holds petting_zoo, whose `relic` effect names
+            // kinship; without a relic catalogue the resolver refuses it.
+            var knownRelics = new Dictionary<string, string> { ["kinship"] = "Kinship" };
+            bool ok = EventEntryResolver.TryResolveAll(entries, KnownCharacters, KnownItems, knownRelics,
+                out var resolved, out var errors);
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
 
             var well = resolved.Single(e => e.Id == "demo_wishing_well");

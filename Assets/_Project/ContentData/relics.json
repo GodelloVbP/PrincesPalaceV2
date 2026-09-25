@@ -1,5 +1,5 @@
 {
-  "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends — nothing here is permanent progression. rarity is an AUTHORED statement about how often the relic should be offered — unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from; changing a relic's band is this one word and nothing else. OMIT effect for a relic that has no mechanic yet — it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
+  "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends — nothing here is permanent progression. The exception is a relic with draftable: false (kinship), which is never offered in a draft or the shop and only arrives through an event's relic effect, still for that run only; its rarity sets only its colour band. rarity is an AUTHORED statement about how often the relic should be offered — unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from; changing a relic's band is this one word and nothing else. OMIT effect for a relic that has no mechanic yet — it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned an `effect`. Give it one when it earns one; until then it is honest about being furniture. Of the 20 relics from balance pass 2 (magic_marker through phoenix_egg), loaded_dice and dancers_anklet still point iconPath at Assets/_Project/Art/Generated/disc_metal.png -- a baked metallic-coin placeholder (see ProceduralSpriteBaker) -- until each earns real art from Art/Items/Relics/Processed/; the other eighteen already have it. None of the 20 are mechanic-less, only unillustrated.",
   "relics": [
     {
@@ -350,6 +350,16 @@
       "effect": "PhoenixEgg",
       "rarity": "ultrarare",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png"
+    },
+    {
+      "id": "kinship",
+      "displayName": "Kinship",
+      "description": "The first blow Shawn takes each fight is turned aside.",
+      "effect": "Kinship",
+      "rarity": "rare",
+      "iconPath": "",
+      "bearer": "sheep",
+      "draftable": false
     }
   ]
 }

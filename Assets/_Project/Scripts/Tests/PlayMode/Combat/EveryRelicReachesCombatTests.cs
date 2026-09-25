@@ -209,8 +209,10 @@ namespace PrincesPalace.PlayModeTests
             // Every OTHER unlocked-from-the-start relic must appear in BOTH
             // -- the convergence gate is specific to mechanic (g), not a
             // general filter that happens to catch more than it should.
+            // draftable: false is excluded for the same reason as in `stuck`.
             var otherUnlocked = ContentDatabase.Relics
-                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && r.id != "rampaging_bulls_horn")
+                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && r.Data.Draftable
+                            && r.id != "rampaging_bulls_horn")
                 .Select(r => r.id)
                 .ToList();
 
@@ -221,6 +223,16 @@ namespace PrincesPalace.PlayModeTests
                 "unlocked relics missing WITHOUT a convergence party: " + string.Join(", ", missingWithout));
             Assert.IsEmpty(missingWith,
                 "unlocked relics missing WITH a convergence party: " + string.Join(", ", missingWith));
+
+            // The exemption above must mean "never offered", not "not checked":
+            // kinship (event-granted, draftable: false) is in content and is
+            // offered by neither pool.
+            var kinship = ContentDatabase.Relics.SingleOrDefault(r => r != null && r.id == "kinship");
+            Assert.IsNotNull(kinship, "fixture: relics.json has the kinship row");
+            Assert.IsFalse(kinship.Data.Draftable, "fixture: kinship is event-only");
+            Assert.IsFalse(withoutConvergence.Contains("kinship"), "kinship must never be offered by the pool");
+            Assert.IsFalse(withConvergence.Contains("kinship"), "kinship must never be offered by the pool");
+            Assert.IsFalse(available.Contains("kinship"), "kinship must never be offered by the pool");
         }
 
         // END TO END, through the real draft entry point: a squad with no
