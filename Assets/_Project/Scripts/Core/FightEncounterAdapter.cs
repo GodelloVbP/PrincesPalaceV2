@@ -7,6 +7,7 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
@@ -540,6 +541,14 @@ namespace PrincesPalace
             // so far applies to THIS fight too, not just the ones after the
             // kill that earned it.
             session.RunWideBonusDamagePercent = RunManager.Run?.bonusDamagePercent ?? 0;
+
+            // The Cold One (docs/PLAN_PETTING_ZOO.md): an event's
+            // fillSpecialPool buff, in force while the run is still on the leg
+            // it was granted on. Resolved HERE, the way the line above is, so
+            // the session gets a plain flag and never reads the run.
+            var run = RunManager.Run;
+            session.FillsSpecialPoolAtTurnStart = run != null
+                && EventBuffs.AnyActive(run.eventBuffs, EventBuffs.FillSpecialPool, run.legStartStep);
 
             return new BuiltFight
             {

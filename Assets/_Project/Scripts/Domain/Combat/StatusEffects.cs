@@ -961,7 +961,7 @@ namespace PrincesPalace.Domain.Combat
         // whatever they happen to swing. It is emphatically NOT the holder's
         // or the source's attack type -- the source is usually long dead by
         // the time a tick lands, which is the same fact
-        // FightSession.Riders' RecordUnattributedDamage already states about
+        // FightSession.Ledger's DealStatusTickPacket already states about
         // the ledger.
         //
         // ONE HOME, because two things read it and they must not disagree:
@@ -1055,21 +1055,39 @@ namespace PrincesPalace.Domain.Combat
         // PoisonDamage/PoisonAbsorbed used to keep: what left the pool
         // versus what left health, so a signature pool eating a tick whole
         // is still counted rather than reading as "nothing happened".
+        //
+        // `Thrown` is the third figure: the mitigated total SENT at the holder,
+        // before anything ate it. It differs from ToHealth + Absorbed when a
+        // sink turned a packet aside (Kinship), a Phoenix Egg shell took it, a
+        // spike cap shrank it, or it was overkill. It is what the pools hear,
+        // because the funnel's rule for the pools is "the blow was thrown".
         public readonly struct TickRow
         {
             public readonly StatusEffectType Status;
             public readonly DamageType Element;
             public readonly int ToHealth;
             public readonly int Absorbed;
+            public readonly int Thrown;
 
-            public TickRow(StatusEffectType status, DamageType element, int toHealth, int absorbed)
+            public TickRow(StatusEffectType status, DamageType element, int toHealth, int absorbed, int thrown = 0)
             {
                 Status = status;
                 Element = element;
                 ToHealth = toHealth;
                 Absorbed = absorbed;
+                Thrown = thrown;
             }
         }
+
+        // WHERE ONE INSTANCE'S MITIGATED TICK IS LANDED, returning what a
+        // signature pool absorbed of it (CombatMath.ApplyDamage's own answer).
+        // Null means CombatMath.ApplyDamage itself -- the pure path every
+        // Domain-only caller and test takes. FightSession supplies its damage
+        // funnel instead (FightSession.Ledger.DealStatusTickPacket), so Kinship,
+        // the Phoenix Egg, the ledger and the death settlement hear a tick the
+        // way they hear every other packet, while the mitigation above stays
+        // exactly this file's (no DamagePipeline, as before).
+        public delegate int DotPacketSink(CombatantState holder, int amount, DamageType element);
 
         public readonly struct TickReport
         {
@@ -1116,8 +1134,13 @@ namespace PrincesPalace.Domain.Combat
         // Returns null when nothing of this type was live (or none of it had
         // a positive Magnitude) -- the empty case, told apart from "dealt
         // zero" the same way every other Tick-adjacent report does.
+        //
+        // `sink` lands each instance (see DotPacketSink); null is the pure
+        // CombatMath path. Still ONE CALL PER INSTANCE either way, so Last
+        // Stand's spike cap and a soaking pool see the same sequence as ever.
+        // ToHealth is MEASURED off health, never trusted from the sink.
         public static TickRow? ApplyDotDamage(CombatantState combatant, StatusEffectType type,
-            IEnumerable<ActiveStatus> instances, ElementalAffinity affinity)
+            IEnumerable<ActiveStatus> instances, ElementalAffinity affinity, DotPacketSink sink = null)
         {
             var element = ElementOf(type);
             if (combatant == null || element.HasValue == false) return null;
@@ -1125,6 +1148,7 @@ namespace PrincesPalace.Domain.Combat
             bool any = false;
             int toHealth = 0;
             int absorbed = 0;
+            int thrown = 0;
 
             foreach (var status in instances)
             {
@@ -1133,11 +1157,14 @@ namespace PrincesPalace.Domain.Combat
 
                 int amount = MitigatedTickAmount(status.Magnitude, type, element.Value, affinity);
                 int before = combatant.CurrentHealth;
-                absorbed += CombatMath.ApplyDamage(combatant, amount);
+                absorbed += sink != null
+                    ? sink(combatant, amount, element.Value)
+                    : CombatMath.ApplyDamage(combatant, amount);
                 toHealth += before - combatant.CurrentHealth;
+                thrown += amount;
             }
 
-            return any ? new TickRow(type, element.Value, toHealth, absorbed) : (TickRow?)null;
+            return any ? new TickRow(type, element.Value, toHealth, absorbed, thrown) : (TickRow?)null;
         }
 
         // WHEN THIS STATUS'S COUNTER MOVES. The one table, replacing the
@@ -1217,25 +1244,50 @@ namespace PrincesPalace.Domain.Combat
         // caller that must pass the real figure, because it is the only
         // layer that can look one up (AffinityOf reads the session's own
         // enemy-kit table, which this pure-Domain class cannot reach).
+        //
+        // THREE HALVES, and FightSession calls them one at a time rather than
+        // through this method: DamagingTypesDue, then ApplyDotDamage per type
+        // (with its funnel as the sink, and each row's beat opened BEFORE the
+        // row lands, so a line the funnel says -- Kinship, an egg hatching --
+        // sits on the tick's own beat), then TickRegenAndDurations. This
+        // method is those three in that order with the pure sink, which is
+        // what every Domain-only caller wants.
         public static TickReport Tick(CombatantState combatant, ElementalAffinity affinity = default)
         {
             var rows = new List<TickRow>();
-            int regenHealed = 0;
 
-            var damagingTypesThisTick = new List<StatusEffectType>();
-            foreach (var status in combatant.Statuses)
-            {
-                if (DurationClock(status.Type) != StatusClock.AtTick) continue;
-                if (!ElementOf(status.Type).HasValue) continue;
-                if (!damagingTypesThisTick.Contains(status.Type)) damagingTypesThisTick.Add(status.Type);
-            }
-
-            foreach (var type in damagingTypesThisTick)
+            foreach (var type in DamagingTypesDue(combatant))
             {
                 var row = ApplyDotDamage(combatant, type,
                     combatant.Statuses.Where(s => s.Type == type), affinity);
                 if (row.HasValue) rows.Add(row.Value);
             }
+
+            var (regenHealed, expired) = TickRegenAndDurations(combatant);
+            return new TickReport(rows, regenHealed, expired);
+        }
+
+        // The damaging AtTick types the holder carries, in first-carried
+        // order, read ONCE before anything lands -- so a type whose last
+        // instance a death or a hatch changes mid-tick is still its own row.
+        public static List<StatusEffectType> DamagingTypesDue(CombatantState combatant)
+        {
+            var types = new List<StatusEffectType>();
+            foreach (var status in combatant.Statuses)
+            {
+                if (DurationClock(status.Type) != StatusClock.AtTick) continue;
+                if (!ElementOf(status.Type).HasValue) continue;
+                if (!types.Contains(status.Type)) types.Add(status.Type);
+            }
+            return types;
+        }
+
+        // The rest of the turn-start tick, AFTER every damaging row: Regen
+        // heals, and the AtTick family counts down and expires.
+        public static (int regenHealed, List<StatusEffectType> expired) TickRegenAndDurations(
+            CombatantState combatant)
+        {
+            int regenHealed = 0;
 
             foreach (var status in combatant.Statuses)
             {
@@ -1258,7 +1310,7 @@ namespace PrincesPalace.Domain.Combat
             combatant.Statuses.RemoveAll(
                 s => DurationClock(s.Type) == StatusClock.AtTick && s.TurnsRemaining <= 0);
 
-            return new TickReport(rows, regenHealed, expired);
+            return (regenHealed, expired);
         }
     }
 }

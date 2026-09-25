@@ -93,6 +93,49 @@ namespace PrincesPalace.Domain.Combat.Session
             // thrown, not about a relic that made it bigger.
             NoteDamageForPools(actor, target, amount);
 
+            var landed = LandPacket(actor, target, amount, type);
+
+            // What a HIT books as taken: the figure sent minus what a pool
+            // absorbed, clamped to the health there was (AUDIT #124a). This is
+            // NOT always the health lost -- a Last Stand spike cap or a cheated
+            // death inside ApplyDamageDetailed leaves health higher than this
+            // says -- and that is a known, reported gap (2026-09-25) left as it
+            // was for hits. A status tick books the measured figure instead;
+            // see DealStatusTickPacket.
+            if (landed.Ordinary) Ledger.Took(LedgerIdOf(target), landed.BookedAsSent, landed.Result.Absorbed);
+
+            return landed.Result;
+        }
+
+        // ONE PACKET SETTLING, after its pools have heard it (the caller's
+        // job, because a hit's pools hear each packet and a status tick's hear
+        // each row). Everything a packet does to its target and to the relics
+        // watching lives here, so a hit and a tick cannot drift apart on any
+        // of it -- except the damage-taken row, which the caller books from
+        // the figures returned, for the reason ApplyAndCountDamage gives.
+        //
+        // `Ordinary` is false on the three early exits (Kinship, an egg shell,
+        // an egg hatching): each of those books its own rows or none, and the
+        // caller books nothing more for them.
+        private readonly struct LandedPacket
+        {
+            public readonly CombatMath.DamageResult Result;
+            public readonly bool Ordinary;
+            public readonly int BookedAsSent;
+            public readonly int HealthLost;
+
+            public LandedPacket(CombatMath.DamageResult result, bool ordinary = false,
+                int bookedAsSent = 0, int healthLost = 0)
+            {
+                Result = result;
+                Ordinary = ordinary;
+                BookedAsSent = bookedAsSent;
+                HealthLost = healthLost;
+            }
+        }
+
+        private LandedPacket LandPacket(CombatantState actor, CombatantState target, int amount, DamageType type)
+        {
             // Kinship: the bearer's first positive packet of the fight is
             // turned aside whole -- see FightSession.Kinship. BELOW the pools
             // (the blow was thrown) and ABOVE both egg checks (a cancelled
@@ -102,7 +145,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // rows. Absorbed stays 0 so no caller reports a soak.
             if (TryKinshipCancel(target, amount))
             {
-                return CombatMath.DamageResult.CancelledPacket;
+                return new LandedPacket(CombatMath.DamageResult.CancelledPacket);
             }
 
             // Phoenix Egg, already hatched: every further hit eats the
@@ -113,7 +156,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // shell.
             if (target != null && target.IsPhoenixEgg)
             {
-                return PhoenixEggAbsorb(actor, target, amount, type);
+                return new LandedPacket(PhoenixEggAbsorb(actor, target, amount, type));
             }
 
             // Phoenix Egg, about to hatch: this hit would otherwise be
@@ -125,7 +168,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 && HasRelic(target, RelicEffect.PhoenixEgg)
                 && _locks.OncePerCombat(target, FightTuning.PhoenixEggLockKey))
             {
-                return PhoenixEggHatch(actor, target, amount, type);
+                return new LandedPacket(PhoenixEggHatch(actor, target, amount, type));
             }
 
             // Cursed Idol's own bonus -- see FightSession.BalanceRelics.
@@ -168,7 +211,13 @@ namespace PrincesPalace.Domain.Combat.Session
             // exactly that reason (it used to gate on `amount > 0`, before
             // absorption was even known, so a fully-absorbed hit still
             // shaved a cooldown for a blow that landed on the shield).
-            if (target != null && target.IsPlayerSide && toHealth > 0
+            //
+            // AND A HIT HAS A HITTER. A status tick lands through here with
+            // no actor (DealStatusTickPacket), and a tick is not "a hit" --
+            // the rule GrantSignatureForHitTaken's header already states for
+            // the Fragile Lamb. Without this a poisoned wearer would shave a
+            // cooldown at every turn start. No hit path passes a null actor.
+            if (actor != null && target != null && target.IsPlayerSide && toHealth > 0
                 && HasRelic(target, RelicEffect.BerserkersVest)
                 && _locks.OncePerTurn(target, FightTuning.BerserkersVestLockKey))
             {
@@ -197,11 +246,45 @@ namespace PrincesPalace.Domain.Combat.Session
             // of #124 and is still an open owner's call. This line changes the
             // ledger and nothing else.
             int booked = target != null && toHealth > healthBefore ? healthBefore : toHealth;
+            int healthLost = target == null ? 0 : healthBefore - target.CurrentHealth;
 
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
-            Ledger.Took(LedgerIdOf(target), booked, result.Absorbed);
 
-            return result;
+            return new LandedPacket(result, ordinary: true, bookedAsSent: booked, healthLost: healthLost);
+        }
+
+        // ONE INSTANCE OF A STATUS TICK, through the funnel -- the
+        // StatusEffects.DotPacketSink FightSession hands ApplyDotDamage.
+        //
+        // What it shares with a hit is LandPacket: Kinship, the Phoenix Egg,
+        // World Ender's Crown, the absorb, the dealt row (a no-op: no actor).
+        // What it does NOT share, each on purpose:
+        //
+        //   The pools. TickStatuses tells them once per ROW, as before this
+        //   routed through here: several poison instances are one blow.
+        //
+        //   The damage-taken figure. Booked as the health ACTUALLY LOST
+        //   (owner 2026-09-25), which is what a tick always booked. The hit
+        //   path's figure can overstate under a spike cap -- see
+        //   ApplyAndCountDamage.
+        //
+        //   Credit. Nobody, as ever: the status was applied turns ago by
+        //   someone who may be dead, and SettleDeath's own header names this
+        //   caller. Settled here, once per body, by the same
+        //   alive-before/dead-after shape DealDamage uses.
+        private int DealStatusTickPacket(CombatantState holder, int amount, DamageType element)
+        {
+            bool wasAlive = holder != null && holder.IsAlive;
+
+            var landed = LandPacket(null, holder, amount, element);
+            if (landed.Ordinary) Ledger.Took(LedgerIdOf(holder), landed.HealthLost, landed.Result.Absorbed);
+
+            if (wasAlive && holder != null && !holder.IsAlive)
+            {
+                SettleDeath(actor: null, target: holder, credit: KillCredit.Nobody);
+            }
+
+            return landed.Result.Absorbed;
         }
 
         // THE DAMAGE SEAM FOR THE POOLS, and it is here for the same reason
@@ -214,9 +297,9 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // ITS OWN METHOD rather than a block inside ApplyAndCountDamage,
         // because there are two callers and the second is the one that proved
-        // a block was the wrong shape: a poison tick applies its own damage
-        // inside StatusEffects.Tick and only comes past here afterwards to be
-        // counted (RecordUnattributedDamage). While the pool bookkeeping lived
+        // a block was the wrong shape: a status tick's pools hear each ROW
+        // (FightSession.Riders.ReportDamageTick) while its instances land one
+        // packet at a time (DealStatusTickPacket). While the pool bookkeeping lived
         // inside the funnel's body, poison was damage the pools could not hear
         // -- so a poisoned Bjorn standing still lost 20 health AND 10 Fury a
         // turn, which is precisely backwards for a bar that fills by being
@@ -260,31 +343,6 @@ namespace PrincesPalace.Domain.Combat.Session
             // side of Wool's deliberately narrow rule is untouched by moving
             // it: that one is gainOnAttack, and it still lives at the verb.
             GrantSignatureForHitTaken(target);
-        }
-
-        // Damage with no one to blame: a poison tick, a detonation resolving
-        // after its applier is already dead. Counted as taken, credited to
-        // nobody -- inventing an attacker would put points in a column the
-        // player would then not be able to account for.
-        //
-        // THE POOLS ARE TOLD HERE TOO, which is the whole reason this is not
-        // just a Ledger.Took call. A status tick is damage its victim took by
-        // every account that matters to a resource pool: it pays
-        // gainOnDamageTaken, and it makes the turn it landed in not an idle
-        // one. Credit is the only thing missing from it, and credit is a
-        // question about the ATTACKER -- passing null says there isn't one
-        // rather than skipping the bookkeeping the victim is owed.
-        // `absorbed` is the part a signature pool ate before health, kept apart
-        // from `amount` for the same reason the funnel's own Ledger.Took call
-        // keeps them apart: a point a pool ate was never taken by health, and
-        // one number for both would double-count every absorbed point. The
-        // pools are told the RAW total, which is what the funnel does too --
-        // whether the turn was idle is a fact about the blow, not about how
-        // much of it got through.
-        private void RecordUnattributedDamage(CombatantState target, int amount, int absorbed = 0)
-        {
-            Ledger.Took(LedgerIdOf(target), amount, absorbed);
-            NoteDamageForPools(null, target, amount + absorbed);
         }
 
         // Heals report nothing, so the amount is measured rather than trusted:
@@ -353,7 +411,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Ledger.WentDown(LedgerIdOf(target));
 
             // Credited to nobody: no kill row, and no rider eligibility. The
-            // poison tick in TickStatuses is the one caller that asks for
+            // status tick (DealStatusTickPacket) is the one caller that asks for
             // this, and it asks in writing -- an omission there would be
             // indistinguishable from the bug this method exists to kill.
             //

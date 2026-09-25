@@ -121,7 +121,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // kind it is holding. A damage-over-time tick is the case that needs
         // it: the tick has no actor at all (FightSession.Riders records it
         // with Actor = null -- nobody is credited for it, the same fact
-        // RecordUnattributedDamage states about the ledger), so an
+        // DealStatusTickPacket states about the ledger), so an
         // unconditional paint would ask ActorAttackType(null), get nothing,
         // and fall through to Physical -- colouring a poison tick's flash and
         // popup like a sword blow.

@@ -398,6 +398,15 @@ namespace PrincesPalace.Domain.Combat.Session
             // Phoenix Egg: the shell's own 3-turn clock.
             TickPhoenixEgg(actor);
 
+            GainSignatureForTurn(actor);
+
+            // LAST, after everything above -- see FillSpecialPool.
+            FillSpecialPool(actor);
+        }
+
+        // The signature pool's per-turn allowance, with its overflow line.
+        private void GainSignatureForTurn(CombatantState actor)
+        {
             var signature = actor.SignaturePool;
             if (signature == null) return;
 
@@ -408,6 +417,43 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{actor.Name}'s {signature.DisplayName} is as full as it will get.");
             }
+        }
+
+        // THE COLD ONE (docs/PLAN_PETTING_ZOO.md): while an event's
+        // fillSpecialPool buff is in force for this leg, a player character's
+        // special pool is full at the moment they can act. Set by the caller
+        // (FightEncounterAdapter) before Begin(), from the run's eventBuffs --
+        // the session never reads the run, the same shape as
+        // RunWideBonusDamagePercent.
+        public bool FillsSpecialPoolAtTurnStart { get; set; }
+
+        // THE LAST STEP OF OpenTurnFor, and the order is the contract:
+        //
+        //   after the primary tick and the Runic ward, so the ward is sized
+        //   off the mana the turn really opened with, not off the fill;
+        //
+        //   after the status ticks, so a poison tick a soaking pool ate is
+        //   already paid and the pool is full when control arrives;
+        //
+        //   after the transform tick, so a form that swaps pools is filled in
+        //   its new form;
+        //
+        //   after the signature gain, which it makes moot.
+        //
+        // NOT in ReopenTurnFor: an extra action re-pays nothing (AUDIT #113).
+        // Nothing between here and the player's control spends a player pool
+        // -- AutoResolveEnemyTurns stops at the first unskipped player turn,
+        // and neither AutoResolveEggTurns nor PrepareEnemyIntents touches one.
+        //
+        // The special pool is the SIGNATURE pool if there is one, else the
+        // primary (owner D4): Shawn's wool, Bjorn's fury, Odette's mana.
+        // Enemies are never filled, and neither is a body a tick just felled.
+        private void FillSpecialPool(CombatantState actor)
+        {
+            if (!FillsSpecialPoolAtTurnStart || !actor.IsPlayerSide || !actor.IsAlive) return;
+
+            var pool = actor.SignaturePool ?? actor.PrimaryPool;
+            pool?.Gain(pool.Max);
         }
 
         // THE SAME ACTOR TAKES ANOTHER ACTION. Trample and Bloodlust buy an
@@ -449,7 +495,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // rather than on a turn is the bug: TickStatuses (the poison tick and
         // every duration countdown), TickCooldowns, TickSpeedBuffs,
         // TickLambTurnStart, TickTransform, TickPhoenixEgg, and the signature
-        // pool's per-turn gain.
+        // pool's per-turn gain. The Cold One's FillSpecialPool is not repaid
+        // either -- but note the ward above: an extra action re-runs the Runic
+        // conversion on whatever mana is left of the turn's fill.
         private void ReopenTurnFor(CombatantState actor)
         {
             if (actor == null) return;
@@ -704,103 +752,49 @@ namespace PrincesPalace.Domain.Combat.Session
             if (thornedNow.Count > 0) _thornedAtTurnStart[actor] = thornedNow;
             else _thornedAtTurnStart.Remove(actor);
 
-            var report = StatusEffects.Tick(actor, AffinityOf(actor));
-
             // CHILLED'S TEARDOWN IS NOT HERE ANY MORE. It moved to
             // TickStatusesAtTurnEnd with the clock (plan D1): Chilled is an
-            // AtTurnEnd status now, so StatusEffects.Tick never reports it
+            // AtTurnEnd status now, so the turn-start tick never reports it
             // expired and a revoke here would be dead code waiting to be read
             // as coverage. The teardown follows whichever clock removed the
             // entry -- that is the general rule, and this is the one status
             // that currently has a teardown at all.
-            if (report.IsEmpty) return;
 
+            // THE DAMAGING ROWS, ONE AT A TIME, THROUGH THE FUNNEL (2026-09-25).
+            //
+            // StatusEffects.Tick used to land every row itself through
+            // CombatMath.ApplyDamage and only then report, so a tick was the
+            // one damage in the session the funnel never saw: Kinship could
+            // not turn it aside, a lethal one killed a Phoenix Egg wearer
+            // outright, and the crown never saw it cross. Each instance now
+            // lands through DealStatusTickPacket (FightSession.Ledger), which
+            // books the ledger row and settles a death -- credited to nobody,
+            // as ever. The mitigation is still StatusEffects' own; nothing here
+            // goes near DamagePipeline.
+            //
+            // THE BEAT OPENS BEFORE THE ROW LANDS, so anything the funnel says
+            // while landing it ("Kinship turns the blow aside.", an egg
+            // hatching, the crown) sits on the tick's own beat rather than on
+            // whatever blow was recorded last. Its number and the hurt pose go
+            // on afterwards, once the row says what reached the holder.
+            //
             // ONE BEAT PER ROW (plan D5) -- a tick carrying two damage types
             // (Poison and a fresh Burn, say) shows and records both,
             // separately, rather than folding them into one number under one
-            // element. GATED ON THE WHOLE ROW, not on the part that reached
-            // health: a signature pool spending itself before health does
-            // still leaves ToHealth at zero, and reading that as "nothing
-            // happened" is how points of armour got spent with no line, no
-            // ledger row and no word to the pools.
-            //
-            // SETTLED AT MOST ONCE FOR THE WHOLE TICK, unlike the beat/message/
-            // ledger calls above, which run once per row. Every row's damage
-            // already landed inside StatusEffects.Tick, before this loop ever
-            // starts, so a target already dead when row 2 is reported did not
-            // die twice -- SettleDeath's own guard only refuses a target that
-            // is still ALIVE, not one settled a moment ago by row 1 in this
-            // same tick, so calling it again here would double the "went
-            // down" count for one body. `settled` is this method's own guard
-            // for that, the same shape DealDamage's wasAlive/now-dead check
-            // enforces on every other damage path.
-            bool settled = false;
-            foreach (var row in report.Rows)
+            // element.
+            foreach (var type in StatusEffects.DamagingTypesDue(actor))
             {
-                int amount = row.ToHealth + row.Absorbed;
-                if (amount <= 0) continue;
+                bool ownsBeat = OpenStatusTickBeat(actor, preTick, type, isHealing: false);
 
-                // THE TICK BECOMES A BEAT, so the stage plays it the way it
-                // plays every other blow: the hurt pose, the recoil, the
-                // flash tinted with the status's own element, the number.
-                // Owner 2026-09-19 -- "poison damage or DoTs are not clear".
-                // Until now a tick was log-only, because it never opened one.
-                //
-                // OPENED BEFORE THE LINES BELOW, so they land ON it rather
-                // than being retro-attached to whatever beat happened to be
-                // last (AppendMessage's own fallback). That is also what
-                // moves the line from the end of the PREVIOUS blow to the
-                // moment the tick is shown.
-                bool ownsBeat = BeginStatusTickBeat(actor, preTick, row.Status, amount, isHealing: false);
+                var row = StatusEffects.ApplyDotDamage(actor, type,
+                    actor.Statuses.Where(s => s.Type == type), AffinityOf(actor), DealStatusTickPacket);
 
-                // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
-                // already uses ("attacks X for N damage!" followed by "X's Wool
-                // soaks M of it."). Printing the health figure instead would
-                // announce "suffers 0 damage!" for a tick the armour stopped,
-                // and leave the soak line with no antecedent for "it".
-                AppendMessage($"{actor.Name} suffers {amount} {TickVerb(row.Status)} damage!");
+                if (row.HasValue) ReportDamageTick(actor, row.Value, ownsBeat);
 
-                if (row.Absorbed > 0 && actor.SignaturePool != null)
-                {
-                    AppendMessage(
-                        $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {row.Absorbed} of it.");
-                }
-
-                // Counted as TAKEN and credited to nobody. The status was
-                // applied turns ago by someone who may now be dead, and
-                // back-crediting it would put points in a column the player
-                // cannot account for against any blow they watched land.
-                //
-                // Both halves handed over separately, exactly as the funnel's
-                // own Ledger.Took call does: what a pool ate was never taken by
-                // health, and folding the two into one number would double-count
-                // every absorbed point. ONCE PER ROW (plan D5) -- a tick
-                // carrying two damage types calls this twice, not once with a
-                // summed figure, so the ledger can still tell them apart.
-                RecordUnattributedDamage(actor, row.ToHealth, row.Absorbed);
-
-                // And if the tick killed, that death is settled with the same
-                // KillCredit.Nobody the comment above argues for -- WRITTEN
-                // DOWN rather than left as a missing call. This is the one
-                // deliberate exception to "a death raises the rider flag and
-                // takes a kill row", and an exception spelled as an absence is
-                // indistinguishable from the bug SettleDeath exists to kill.
-                // The call is a no-op on the Nobody branch by design; what it
-                // buys is that `grep SettleDeath` finds every death decision
-                // in the file family, this one included.
-                if (!settled && !actor.IsAlive)
-                {
-                    SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
-                    settled = true;
-                }
-
-                // COMMITTED AFTER THE DEATH IS SETTLED, and that ordering is
-                // the point: SettleDeath records no beat of its own, so the
-                // tick's beat is the only thing that can show the kill --
-                // CommitBeat's snapshot is what FightController.FadeTheFallen
-                // reads to fade a body, exactly as it does for a killing
-                // swing.
-                if (ownsBeat) CommitBeat();
+                // A row that landed nothing and said nothing (a shell ate it
+                // silently) leaves no beat behind; one that said something --
+                // Kinship's line -- is committed to carry it, with no number.
+                if (ownsBeat) CommitOrDropStatusTickBeat();
 
                 // The next row's beat, if there is one, opens on live vitals
                 // rather than on preTick -- this row's beat has already shown
@@ -809,7 +803,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 preTick = null;
             }
 
-            if (report.RegenHealed > 0)
+            var (regenHealed, expired) = StatusEffects.TickRegenAndDurations(actor);
+
+            if (regenHealed > 0)
             {
                 // THE SAME MECHANISM, WITH THE HEAL FLASH FALLING OUT OF IT
                 // -- FlashOne already branches on IsHealing, so a regen tick
@@ -820,10 +816,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // its own actor): a body does not flinch away from its own
                 // mending.
                 bool ownsBeat = BeginStatusTickBeat(
-                    actor, preTick, StatusEffectType.Regen, report.RegenHealed, isHealing: true);
+                    actor, preTick, StatusEffectType.Regen, regenHealed, isHealing: true);
 
-                AppendMessage($"{actor.Name} regenerates {report.RegenHealed} health.");
-                Ledger.Restored(LedgerIdOf(actor), report.RegenHealed);
+                AppendMessage($"{actor.Name} regenerates {regenHealed} health.");
+                Ledger.Restored(LedgerIdOf(actor), regenHealed);
 
                 if (ownsBeat) CommitBeat();
             }
@@ -832,9 +828,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // the same tick are three removals and one thing a player needs
             // told; saying it three times reads as a bug in the log rather
             // than as three stacks having lapsed together.
-            foreach (var expired in report.Expired.Distinct())
+            foreach (var type in expired.Distinct())
             {
-                AppendMessage($"{actor.Name}'s {expired} wears off.");
+                AppendMessage($"{actor.Name}'s {type} wears off.");
             }
         }
 
@@ -884,27 +880,76 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null || !actor.IsAlive) return;
             if (!_thornedAtTurnStart.TryGetValue(actor, out var instances) || instances.Count == 0) return;
 
+            // Opened BEFORE the row lands, and landed through the funnel, for
+            // the reasons TickStatuses gives: this is a tick off the clock,
+            // and the same Kinship/egg/crown/ledger/death rules hold for it.
             var preTick = SnapshotVitals();
-            var row = StatusEffects.ApplyDotDamage(actor, StatusEffectType.Thorned, instances, AffinityOf(actor));
-            if (!row.HasValue) return;
+            bool ownsBeat = OpenStatusTickBeat(actor, preTick, StatusEffectType.Thorned, isHealing: false);
 
-            int amount = row.Value.ToHealth + row.Value.Absorbed;
+            var row = StatusEffects.ApplyDotDamage(actor, StatusEffectType.Thorned, instances, AffinityOf(actor),
+                DealStatusTickPacket);
+            if (row.HasValue) ReportDamageTick(actor, row.Value, ownsBeat, n => $"{actor.Name}'s thorns lash back for {n} damage!");
+
+            if (ownsBeat) CommitOrDropStatusTickBeat();
+        }
+
+        // WHAT ONE LANDED DAMAGING ROW SAYS, on the beat already open for it
+        // (OpenStatusTickBeat): its number and the hurt pose, the line, the
+        // soak, and the pools told once for the row.
+        //
+        // THE POOLS HEAR THE ROW, NOT EACH INSTANCE, and they hear what was
+        // THROWN rather than what landed. One row per tick is one blow, which
+        // is how a poisoned Bjorn has always been paid (gainOnDamageTaken
+        // once, not once per stacked instance); and a row Kinship turned aside
+        // or a shell ate was still thrown -- the funnel's own rule for a
+        // cancelled hit (ApplyAndCountDamage). Told here, after the landing,
+        // where the tick's pools were always told, so a
+        // soaking pool absorbs before it is paid, as before.
+        //
+        // `line` words the damage sentence for an amount; null is the
+        // turn-start tick's own ("suffers N poison damage!").
+        private void ReportDamageTick(CombatantState actor, StatusEffects.TickRow row, bool ownsBeat,
+            Func<int, string> line = null)
+        {
+            NoteDamageForPools(null, actor, row.Thrown);
+
+            // THE MAGNITUDE, THEN WHAT ATE IT -- the shape the enemy swing
+            // already uses ("attacks X for N damage!" followed by "X's Wool
+            // soaks M of it."). Printing the health figure instead would
+            // announce "suffers 0 damage!" for a tick the armour stopped, and
+            // leave the soak line with no antecedent for "it". GATED ON THE
+            // WHOLE FIGURE, not on the part that reached health, for the same
+            // reason: a pool spending itself before health is still a tick.
+            int amount = row.ToHealth + row.Absorbed;
             if (amount <= 0) return;
 
-            bool ownsBeat = BeginStatusTickBeat(actor, preTick, StatusEffectType.Thorned, amount, isHealing: false);
-
-            AppendMessage($"{actor.Name}'s thorns lash back for {amount} damage!");
-
-            if (row.Value.Absorbed > 0 && actor.SignaturePool != null)
+            if (ownsBeat)
             {
-                AppendMessage(
-                    $"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {row.Value.Absorbed} of it.");
+                // ASSIGNED, NOT THROUGH RecordBeatAmount. The beat was open
+                // while the row landed, so the funnel's RecordAbsorbed has
+                // already put a soaking pool's share on beat.Absorbed; and
+                // RecordBeatAmount adds beat.Absorbed back onto its argument
+                // (its ward rule), which would count that share twice. The
+                // figure is the one a tick beat always showed: what was thrown
+                // at health plus what a pool ate of it.
+                _recordingBeat.Amount = amount;
+                _recordingBeat.IsHealing = false;
+
+                // The hurt drawing, worn at the impact instant like any other
+                // victim's (FightBeatPlayer.PoseVictims) and put back to idle
+                // when the beat closes. Only now, once something landed: a
+                // tick Kinship turned aside poses nobody.
+                SetStance(actor, Stances.Hurt);
             }
 
-            RecordUnattributedDamage(actor, row.Value.ToHealth, row.Value.Absorbed);
-            SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
+            AppendMessage(line == null
+                ? $"{actor.Name} suffers {amount} {TickVerb(row.Status)} damage!"
+                : line(amount));
 
-            if (ownsBeat) CommitBeat();
+            if (row.Absorbed > 0 && actor.SignaturePool != null)
+            {
+                AppendMessage($"{actor.Name}'s {actor.SignaturePool.DisplayName} soaks {row.Absorbed} of it.");
+            }
         }
 
         // A STATUS TICK THE STAGE CAN SEE, or false when something else already
@@ -921,7 +966,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // hit-cue floor all stay in one place.
         //
         // ACTOR = NULL FOR DAMAGE. Nobody is credited for a tick (see
-        // RecordUnattributedDamage), and a null actor is also what makes the
+        // FightSession.Ledger.DealStatusTickPacket), and a null actor is also what makes the
         // victim flinch: FightBeatPlayer skips the recoil and the squash for
         // a target that IS the actor, which is right for a self-heal and
         // wrong for a poison. Every other reader of beat.Actor in the view
@@ -941,7 +986,30 @@ namespace PrincesPalace.Domain.Combat.Session
                                          Dictionary<CombatantState, Vitals> pre,
                                          StatusEffectType type, int amount, bool isHealing)
         {
-            if (victim == null || amount <= 0 || _recordingBeat != null) return false;
+            if (amount <= 0 || !OpenStatusTickBeat(victim, pre, type, isHealing)) return false;
+
+            RecordBeatAmount(amount, isHealing);
+
+            // The hurt drawing, worn at the impact instant like any other
+            // victim's (FightBeatPlayer.PoseVictims) and put back to idle
+            // when the beat closes. A heal poses nobody: there is no
+            // being-mended drawing, and wearing "hurt" for a regen tick would
+            // say the opposite of what happened.
+            if (!isHealing) SetStance(victim, Stances.Hurt);
+
+            return true;
+        }
+
+        // THE EMPTY TICK BEAT: actor, target, snapshot, approach and element,
+        // with no number and no pose yet. A damaging row opens this BEFORE it
+        // lands, so the funnel's own lines land on it, and ReportDamageTick
+        // adds the number and the pose once the row says what reached the
+        // holder. Same refusals as BeginStatusTickBeat, minus the amount.
+        private bool OpenStatusTickBeat(CombatantState victim,
+                                        Dictionary<CombatantState, Vitals> pre,
+                                        StatusEffectType type, bool isHealing)
+        {
+            if (victim == null || _recordingBeat != null) return false;
 
             _recordingBeat = new CombatBeat
             {
@@ -954,8 +1022,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 Approach = StageApproach.Hold,
             };
 
-            RecordBeatAmount(amount, isHealing);
-
             // THE ELEMENT COMES FROM THE STATUS, not from anyone's weapon --
             // StatusEffects.ElementOf is the one home for that question, and
             // a status that deals damage without declaring one keeps the
@@ -963,14 +1029,29 @@ namespace PrincesPalace.Domain.Combat.Session
             var element = StatusEffects.ElementOf(type);
             if (element.HasValue) _recordingBeat.DeclareDamageType(element.Value);
 
-            // The hurt drawing, worn at the impact instant like any other
-            // victim's (FightBeatPlayer.PoseVictims) and put back to idle
-            // when the beat closes. A heal poses nobody: there is no
-            // being-mended drawing, and wearing "hurt" for a regen tick would
-            // say the opposite of what happened.
-            if (!isHealing) SetStance(victim, Stances.Hurt);
-
             return true;
+        }
+
+        // Closes a tick beat OpenStatusTickBeat opened. Committed when it has
+        // anything to show -- a number, or a line the funnel said while the
+        // row landed (Kinship turning it aside) -- and DROPPED when it has
+        // neither, which is what a tick that opened no beat at all looked like
+        // before the beat moved ahead of the landing (a shell eating a tick
+        // whole). CommitBeat after the death is settled, as ever: the funnel
+        // settled it during the landing, and this beat's snapshot is what
+        // FightController.FadeTheFallen reads to fade the body.
+        private void CommitOrDropStatusTickBeat()
+        {
+            if (_recordingBeat == null) return;
+
+            if (_recordingBeat.Amount > 0 || _recordingBeat.Messages.Count > 0)
+            {
+                CommitBeat();
+            }
+            else
+            {
+                _recordingBeat = null;
+            }
         }
 
         // ---- seams for tests -------------------------------------------------
