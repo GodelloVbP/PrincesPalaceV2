@@ -423,7 +423,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case SkillEffect.SwapAllies:
-                    ResolveSwapAllies(actor, targets);
+                    ResolveSwapAllies(actor, skill, targets);
                     break;
 
                 case SkillEffect.Afflict:
@@ -1025,7 +1025,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // THE ROOTED REFUSAL IS NOT HERE. It is a CanResolveSkill refusal, so
         // it spends nothing -- see 1.12. By the time this runs the cast is
         // committed and the swap must happen.
-        private void ResolveSwapAllies(CombatantState actor, IReadOnlyList<CombatantState> targets)
+        private void ResolveSwapAllies(CombatantState actor, ResolvedSkill skill, IReadOnlyList<CombatantState> targets)
         {
             if (targets == null || targets.Count < 2) return;
 
@@ -1035,7 +1035,17 @@ namespace PrincesPalace.Domain.Combat.Session
             if (first < 0 || second < 0 || first == second) return;
 
             BeginBeat(actor, targets[0], isCast: true);
-            SetStance(actor, Stances.Idle);
+
+            // THROUGH THE SAME DOOR EVERY OTHER RESOLVER USES. This arm used
+            // to pose the caster with a bare SetStance(Idle) and never call
+            // RecordSpellPresentation, so palace_passage's authored layers
+            // (both "target-centre", resolving against targets[0] -- the
+            // beat's Target set above, before the swap moves anyone) never
+            // reached the beat and the cast played with no VFX at all.
+            // RecordSpellPresentation both attaches the layers and poses the
+            // caster (StanceFor falls back to "cast" since no SwapAllies
+            // skill has authored a stance), so the manual Idle is gone too.
+            RecordSpellPresentation(skill);
 
             if (!_encounter.SwapPartySlots(first, second)) return;
 

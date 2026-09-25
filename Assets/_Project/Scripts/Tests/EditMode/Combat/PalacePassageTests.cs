@@ -291,6 +291,54 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void ASwapRecordsTheSkillsPresentationOnTheBeat()
+        {
+            // THE AUTHORED LAYERS, OR NOTHING -- palace_passage's real
+            // skills.json entry has a two-layer "target-centre" VFX
+            // (ritual sprite + settle emitter, both keyed to
+            // "Spells/palace_passage"/"..._particles"), but ResolveSwapAllies
+            // used to open the beat and pose the caster without ever calling
+            // RecordSpellPresentation, so that authored VFX never reached the
+            // beat and the cast played with nothing on screen. Every other
+            // resolver (HealSingle, BuffParty, HealParty, ...) calls
+            // RecordSpellPresentation right after BeginBeat; this pins the
+            // swap resolver to the same contract with a literal path, the way
+            // EnemyAiTests.cs pins a beat's Vfx.path/sfxPath elsewhere.
+            var skill = new ResolvedSkill("palace_passage", "Palace Passage", "", "sheep", 1,
+                SkillEffect.SwapAllies, SkillTargeting.SingleAlly, PassageMana, 0, false, 0, 0, false,
+                null, new SpellPresentation
+                {
+                    layerFormat = SpellLayerRules.CurrentLayerFormat,
+                    layers = new[]
+                    {
+                        new SpellLayer
+                        {
+                            id = "ritual", render = "sprite", place = "target-centre",
+                            at = "release", path = "Spells/palace_passage", seconds = 0.66f,
+                        },
+                    },
+                }, 0, cooldownTurns: 3, freeAction: true);
+
+            var (session, caster, mid, rear) = Fight(skill);
+
+            // Picks deliberately EXCLUDE the caster, so the beat's target and
+            // the acting caster are two different bodies and the assertion
+            // below cannot pass by accident.
+            Assert.IsTrue(session.CastSkillOnPicks(0, new[] { mid, rear }), "the cast was refused");
+
+            var beat = session.DrainBeats().FirstOrDefault(b => b.Vfx != null && b.Vfx.HasLayers);
+            Assert.IsNotNull(beat, "the swap's beat carries no spell presentation at all");
+            Assert.AreEqual("Spells/palace_passage", beat.Vfx.layers[0].path,
+                "the beat's presentation is not the skill's authored VFX");
+
+            // THE BEAT'S TARGET IS targets[0] -- set by BeginBeat(actor,
+            // targets[0]) before the swap moves anyone -- so "target-centre"
+            // in both authored layers resolves against Mid (the first pick),
+            // not the Caster and not Rear.
+            Assert.AreSame(mid, beat.Target, "target-centre VFX would resolve to the wrong body");
+        }
+
+        [Test]
         public void ThePassageDoesNotEndTheTurn_ButOnlyOncePerTurn()
         {
             // THE FREE ACTION, and exactly what it locks. The first Passage
