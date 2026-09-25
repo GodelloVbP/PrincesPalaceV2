@@ -775,9 +775,23 @@ public static class ScreenRegistry
             .Where(entry => entry.Sprite != null)
             .ToArray();
 
-        // NO CountBindings for eventArt: a lookup table keyed by artPath, with
-        // no strip of UI of the same length to pair it with -- WireShop's
-        // itemArt reasoning exactly.
+        // Every backdrop the dialogue stage can draw (docs/PLAN_DIALOGUE_STAGE.md
+        // contract 7), the same bake for the same reason: each event's
+        // defaulted key and each page's effective one. A missing file drops
+        // out and the stage draws its solid ground (contract 15).
+        panel.backdropArt = ContentDatabase.Events
+            .Where(e => e != null && e.Data != null)
+            .SelectMany(e => new[] { e.Data.BackdropKey }
+                .Concat((e.Data.Pages ?? Array.Empty<PrincesPalace.Domain.Content.ResolvedEventPage>()).Select(p => p?.BackdropKey)))
+            .Where(key => !string.IsNullOrEmpty(key))
+            .Distinct()
+            .Select(key => new IconEntry(key, SceneBuilder.LoadSpriteByKey(key)))
+            .Where(entry => entry.Sprite != null)
+            .ToArray();
+
+        // NO CountBindings for eventArt or backdropArt: lookup tables keyed by
+        // path, with no strip of UI of the same length to pair them with --
+        // WireShop's itemArt reasoning exactly.
 
         // Off a row sub-object, which UiAutoBind cannot see -- the lines E4's
         // count binding in Map() pairs against ChoiceRows.

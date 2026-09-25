@@ -48,12 +48,21 @@ public sealed class UiKitImportPostprocessor : AssetPostprocessor
     // lines.
     private const string PcPlatesRoot = "/Resources/Plates/";
 
+    // THE DIALOGUE STAGE'S BOX AND NAME PLATE (docs/PLAN_DIALOGUE_STAGE.md
+    // contract 8), the same hairline-gold-on-dark frames the kit is, drawn at
+    // exactly half their painted size -- the kit's reason for mips and BC7
+    // exactly. The one setting that differs is the size cap: the box is
+    // painted 2560 wide, and the kit's 2048 cap would resample it before it
+    // is ever drawn, so this root keeps its full width.
+    private const string DialogueRoot = "/Art/UI/Dialogue/";
+
     private void OnPreprocessTexture()
     {
         if (string.IsNullOrEmpty(assetPath)
             || (!assetPath.Contains(ButtonsRoot)
                 && !assetPath.Contains(FightButtonsRoot)
-                && !assetPath.Contains(PcPlatesRoot)))
+                && !assetPath.Contains(PcPlatesRoot)
+                && !assetPath.Contains(DialogueRoot)))
         {
             return;
         }
@@ -70,7 +79,7 @@ public sealed class UiKitImportPostprocessor : AssetPostprocessor
         importer.mipmapEnabled = true;
         importer.filterMode = FilterMode.Trilinear;
 
-        importer.maxTextureSize = 2048;
+        importer.maxTextureSize = assetPath.Contains(DialogueRoot) ? 4096 : 2048;
         importer.textureCompression = TextureImporterCompression.CompressedHQ;
     }
 
@@ -91,6 +100,9 @@ public sealed class UiKitImportPostprocessor : AssetPostprocessor
             ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
         AssetDatabase.ImportAsset(
             "Assets/_Project/Resources/Plates",
+            ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+        AssetDatabase.ImportAsset(
+            "Assets/_Project/Art/UI/Dialogue",
             ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
         AssetDatabase.Refresh();
         Debug.Log("REIMPORT-COMPLETE: UiKit");

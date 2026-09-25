@@ -388,6 +388,18 @@ namespace PrincesPalace.Domain.UiKit
                 AtCap("Requires the Wandering Bog Witch with 20 CHA and more ", Content.EventEntryResolver.MaxLockReasonLength));
         public static readonly UiString EventLeave = UiString.Define("event.leave", "Leave");
 
+        // The dialogue stage's box and plate (docs/PLAN_DIALOGUE_STAGE.md).
+        // Same at-cap rule: the scene build measures the box against a line
+        // exactly EventEntryResolver.MaxLineLength long (contract 13) and the
+        // epithet against CharacterEntryResolver.MaxEpithetLength. The name
+        // has no content cap to measure against, so its label is Runtime
+        // and truncates instead.
+        public static readonly UiString EventLine =
+            UiString.Define("event.line", "{0}", AtCap(EventBodyProse, Content.EventEntryResolver.MaxLineLength));
+        public static readonly UiString EventEpithet =
+            UiString.Define("event.epithet", "{0}",
+                AtCap("Warden of the Sunken Pasture ", Content.CharacterEntryResolver.MaxEpithetLength));
+
         // Ordinary prose rather than one repeated glyph: a wall of 'W' would
         // size the box for text no author writes, and word wrap is part of
         // what is being measured.

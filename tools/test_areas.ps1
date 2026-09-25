@@ -771,6 +771,14 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Content/';   Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Dungeon/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/DebugMenu/'; Areas = @('ui', 'content') }
+    # Event rooms' rules and the views the panel paints. Unmapped until the
+    # dialogue stage (docs/PLAN_DIALOGUE_STAGE.md) touched EventView, so any
+    # edit here promoted -Changed to the full run. EventCastPresence is the
+    # content build's presence dataflow and its fixture is in Content only;
+    # the rest reach resolver/flow tests (content), the room rules and the
+    # arrival walk (run), and the panel and stage tests (ui).
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Events/EventCastPresence\.cs$'; Areas = @('content') }
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Events/'; Areas = @('content', 'run', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Economy/';   Areas = @('run') }
     # Same shape as the two Domain/Content names above: the affix LINES an
     # item modifier renders are content and ui, but the only fixture that
@@ -953,6 +961,10 @@ $PathAreas = @(
     # moment a content build touched Resources or anyone edited a music table.
     @{ Pattern = '^Assets/_Project/Resources/Audio/';   Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/Content/'; Areas = @('content') }
+    # Dialogue busts (tools/normalize_dialogue_busts.py output), loaded by
+    # Resources path from the event stage. 'content' for DialogueBustTests and
+    # the content build's missing-expression warning, 'ui' for the stage.
+    @{ Pattern = '^Assets/_Project/Resources/Portraits/Dialogue/'; Areas = @('content', 'ui') }
     # The enemy intent badges. 'combat' for the lookup tables that name them and
     # 'ui' for the screen side.
     @{ Pattern = '^Assets/_Project/Resources/Intent/';   Areas = @('combat', 'ui') }
@@ -986,6 +998,9 @@ $PathAreas = @(
     # stage's hit reaction, so 'combat'+'art' rather than a bespoke
     # 'shader' area of its own for one file.
     @{ Pattern = '^Assets/_Project/Resources/(Shaders|Materials)/'; Areas = @('art', 'combat') }
+    # The dialogue box and name plate: drawn only by the event stage, whose
+    # tree and audit tests are in ui. 'art' kept for the import settings.
+    @{ Pattern = '^Assets/_Project/Art/UI/Dialogue/'; Areas = @('ui', 'art') }
     @{ Pattern = '^Assets/_Project/Art/';         Areas = @('art') }
     # TMP font assets. 'ui' rather than 'art': the thing that breaks when one
     # of these changes is text metrics -- a re-baked atlas shifts glyph

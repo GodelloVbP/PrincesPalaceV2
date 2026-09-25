@@ -863,6 +863,16 @@ public static class ProceduralSpriteBaker
             float down = Mathf.Clamp01(1f - y);
             return (1f, Smoothstep(down * down));
         });
+
+        // scrim_floor turned upside down: the dialogue stage's top bar, which
+        // the page title sits on. Baked as its own shape rather than drawn as
+        // a flipped floor, because a negative scale on a stretched sprite is
+        // a footprint the audit cannot read the way it reads a plain rect.
+        BakeGradient("scrim_ceiling", 128, y =>
+        {
+            float up = Mathf.Clamp01(y);
+            return (1f, Smoothstep(up * up));
+        });
     }
 
     // The heat under the Continue arrow.
@@ -1170,7 +1180,7 @@ public static class ProceduralSpriteBaker
         "hairline_fade", "rail_ramp", "rail_glow", "shimmer_band", "track_drop",
         "band_fade", "card_ground", "soft_edge_stripe",
         "bar_track", "bar_fill", "bar_bloom",
-        "scrim_band", "dossier_veil", "scrim_floor",
+        "scrim_band", "dossier_veil", "scrim_floor", "scrim_ceiling",
     };
 
     private static void Import(string path)

@@ -84,8 +84,12 @@ namespace PrincesPalace
                 choices.Add(new EventChoiceView(i, choice?.Text, EventChoiceGate.Evaluate(choice, context)));
             }
 
+            // The dialogue stage's half (docs/PLAN_DIALOGUE_STAGE.md D2): the
+            // page's backdrop and its lines joined to their speakers.
+            var lines = EventLineView.ListFor(page, id => ContentDatabase.GetCharacter(id)?.Data);
+
             return new EventView(run.eventId, page.Id, page.ArtKey, page.Title, page.Body, false,
-                run.eventResult, effectsLine, choices);
+                run.eventResult, effectsLine, choices, page.BackdropKey, lines);
         }
 
         // By id, over the authored catalogue. Null for an id content no longer

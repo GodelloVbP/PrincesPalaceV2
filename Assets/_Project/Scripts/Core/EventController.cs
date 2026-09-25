@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Events;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -39,6 +40,41 @@ namespace PrincesPalace
         // AssetDatabase. A page whose key is absent shows the empty frame.
         [UiOptional("no event authors art yet -- the demo event deliberately has none, to exercise the missing-art path")]
         [SerializeField] internal IconEntry[] eventArt;
+
+        // ---- the dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, D2) ----------------
+        //
+        // Shown instead of the legacy frame and text column when the page has
+        // lines (EventView.HasLines); every other page paints exactly as
+        // before (contract 14). D2 is the STATIC stage: the page's first line
+        // with its speaker, laid out. Stepping, the typewriter and the slides
+        // are D3's.
+
+        // The legacy layout's two halves, switched off under the stage.
+        [SerializeField] internal GameObject artFrame;
+        [SerializeField] internal GameObject textColumn;
+
+        // The rows' one panel, which both presentations share and the stage
+        // moves above its box.
+        [SerializeField] internal RectTransform choicesPanel;
+
+        [SerializeField] internal RectTransform dialogueStage;
+        [SerializeField] internal Image stageBackdrop;
+        [SerializeField] internal Image stageSetPiece;
+
+        // Two, for D3's speaker slide; D2 paints [0] and keeps [1] off.
+        [SerializeField] internal Image[] stageBusts;
+        [SerializeField] internal RectTransform stageBox;
+        [SerializeField] internal TMP_Text stageLineText;
+        [SerializeField] internal RectTransform stageNamePlate;
+        [SerializeField] internal TMP_Text stageName;
+        [SerializeField] internal TMP_Text stageEpithet;
+        [SerializeField] internal TMP_Text stageTitle;
+
+        // Every backdrop key an event or page can name, baked by
+        // ScreenRegistry.WireEvent like eventArt. A key that is absent draws
+        // the stage's solid ground (contract 15).
+        [UiOptional("a backdrop whose file is missing is left out of the bake, and an empty table is legal -- the stage then draws its solid ground (contract 15)")]
+        [SerializeField] internal IconEntry[] backdropArt;
 
         // The map's own menu instance, shared as the shop shares it.
         [SerializeField] internal SystemMenuController systemMenu;
@@ -125,17 +161,182 @@ namespace PrincesPalace
             string title = view.Concluded ? (held ? _heldTitle : "") : view.Title;
             string artKey = view.Concluded ? (held ? _heldArtKey : "") : view.ArtKey;
 
-            ItemIcons.Apply(artImage, eventArt, artKey);
-            titleLabel.Set(UiStrings.EventTitle, title);
+            // Contract 14: a page without lines never touches the stage, and
+            // the rows go back to their legacy spot in case the page before
+            // this one had lines.
+            bool staged = view.HasLines;
+            ShowStage(staged);
 
-            // The result REPLACES the body (contract 11): it is what just
-            // happened, and the page text above it is what the player already
-            // read to choose.
-            bodyLabel.Set(UiStrings.EventBody, string.IsNullOrEmpty(view.ResultText) ? view.Body : view.ResultText);
-            effectsLabel.Set(UiStrings.EventEffects, view.EffectsLine);
+            if (staged)
+            {
+                PaintStage(view);
+            }
+            else
+            {
+                ItemIcons.Apply(artImage, eventArt, artKey);
+                titleLabel.Set(UiStrings.EventTitle, title);
+
+                // The result REPLACES the body (contract 11): it is what just
+                // happened, and the page text above it is what the player
+                // already read to choose.
+                bodyLabel.Set(UiStrings.EventBody, string.IsNullOrEmpty(view.ResultText) ? view.Body : view.ResultText);
+                effectsLabel.Set(UiStrings.EventEffects, view.EffectsLine);
+            }
 
             PaintRows(view);
             RefreshNavigation();
+        }
+
+        // ---- the dialogue stage ---------------------------------------------------
+
+        // Where the tree put the rows, captured before the stage first moves
+        // them, so a lines-less page after a staged one is laid out exactly
+        // as the build laid it out.
+        private bool _choicesHomeKnown;
+        private Vector2 _choicesHomeAnchorMin;
+        private Vector2 _choicesHomeAnchorMax;
+        private Vector2 _choicesHomePivot;
+        private Vector2 _choicesHomePosition;
+
+        private void ShowStage(bool staged)
+        {
+            if (dialogueStage != null) dialogueStage.gameObject.SetActive(staged);
+            if (artFrame != null) artFrame.SetActive(!staged);
+            if (textColumn != null) textColumn.SetActive(!staged);
+
+            if (choicesPanel == null) return;
+
+            if (!_choicesHomeKnown)
+            {
+                _choicesHomeKnown = true;
+                _choicesHomeAnchorMin = choicesPanel.anchorMin;
+                _choicesHomeAnchorMax = choicesPanel.anchorMax;
+                _choicesHomePivot = choicesPanel.pivot;
+                _choicesHomePosition = choicesPanel.anchoredPosition;
+            }
+
+            if (!staged)
+            {
+                choicesPanel.anchorMin = _choicesHomeAnchorMin;
+                choicesPanel.anchorMax = _choicesHomeAnchorMax;
+                choicesPanel.pivot = _choicesHomePivot;
+                choicesPanel.anchoredPosition = _choicesHomePosition;
+            }
+        }
+
+        // The page's FIRST line, statically (D2). Choices show at once; D3
+        // gates them behind the last line. The result text of the choice
+        // that led here is not shown on a staged page yet -- contract 3's
+        // result-then-lines ordering is D3's.
+        private void PaintStage(EventView view)
+        {
+            var line = view.Lines[0];
+            bool narration = line.IsNarration;
+            var side = line.Side;
+
+            PaintBackdrop(view.BackdropKey);
+
+            // Contract 15: no set piece hides layer 2 (Apply disables the
+            // Image on a miss, so it is never a white quad).
+            ItemIcons.Apply(stageSetPiece, eventArt, view.ArtKey);
+
+            stageTitle.Set(UiStrings.EventTitle, view.Title);
+
+            PaintBust(narration ? null : line, side);
+            if (stageBusts != null && stageBusts.Length > 1 && stageBusts[1] != null)
+            {
+                stageBusts[1].gameObject.SetActive(false);
+            }
+
+            Pin(stageBox, DialogueStageLayout.BoxPin(narration, side), 0f, DialogueStageLayout.BoxBottom);
+
+            // Narration has no plate (contract 8). A speaker with no bust
+            // still gets one (contract 15).
+            stageNamePlate.gameObject.SetActive(!narration);
+            if (!narration)
+            {
+                Pin(stageNamePlate, DialogueStageLayout.PlatePin(side), 0.5f, DialogueStageLayout.PlateCentreY);
+                stageName.SetContent(line.SpeakerName);
+
+                bool hasEpithet = !string.IsNullOrEmpty(line.Epithet);
+                stageEpithet.gameObject.SetActive(hasEpithet);
+                if (hasEpithet) stageEpithet.Set(UiStrings.EventEpithet, line.Epithet);
+
+                var namePosition = stageName.rectTransform.anchoredPosition;
+                namePosition.y = hasEpithet ? EventScreen.NameWithEpithetY : 0f;
+                stageName.rectTransform.anchoredPosition = namePosition;
+            }
+
+            // TMP's synthetic italic: SourceSans3 ships Regular/SemiBold/Bold
+            // only. A real SourceSans3-Italic is pending the owner's OK to
+            // download. Authored <i> inside a line uses the same path.
+            stageLineText.fontStyle = narration ? FontStyles.Italic : FontStyles.Normal;
+            stageLineText.Set(UiStrings.EventLine, line.Text);
+
+            if (choicesPanel != null)
+            {
+                Pin(choicesPanel, DialogueStageLayout.ChoicesPin(narration, side), 0f, DialogueStageLayout.ChoicesBottom);
+            }
+        }
+
+        // Cover-crop (contract 7): the sprite's own aspect, scaled until it
+        // fills the stage at the stage's aspect, centred; the stage's
+        // RectMask2D crops the overhang. No sprite hides the Image and leaves
+        // the solid ground under it.
+        private void PaintBackdrop(string backdropKey)
+        {
+            if (!ItemIcons.Apply(stageBackdrop, backdropArt, backdropKey)) return;
+
+            var sprite = stageBackdrop.sprite;
+            var canvas = dialogueStage.rect.size;
+            var cover = DialogueStageLayout.CoverSize(
+                new UiVec(sprite.rect.width, sprite.rect.height), new UiVec(canvas.x, canvas.y));
+
+            var rect = stageBackdrop.rectTransform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(cover.X, cover.Y);
+        }
+
+        // Requested expression, then neutral, then no bust (contract 11);
+        // the plate and text still show without one (contract 15).
+        private void PaintBust(EventLineView line, DialogueSide side)
+        {
+            if (stageBusts == null || stageBusts.Length == 0 || stageBusts[0] == null) return;
+            var bust = stageBusts[0];
+
+            Sprite sprite = null;
+            if (line != null)
+            {
+                string path = DialogueBust.FirstAvailable(line.BustFolder, line.Expression,
+                    candidate => (sprite = Resources.Load<Sprite>(candidate)) != null);
+                if (string.IsNullOrEmpty(path)) sprite = null;
+            }
+
+            bust.gameObject.SetActive(sprite != null);
+            if (sprite == null) return;
+
+            bust.sprite = sprite;
+            bust.preserveAspect = true;
+
+            var size = DialogueStageLayout.BustSize(new UiVec(sprite.rect.width, sprite.rect.height));
+            var rect = bust.rectTransform;
+            rect.sizeDelta = new Vector2(size.X, size.Y);
+            Pin(rect, DialogueStageLayout.BustPin(side, size.X), 0f, 0f);
+
+            // Painted facing right (contract 9): mirrored on the right so the
+            // speaker faces inward. The pin's centre pivot keeps it in place.
+            rect.localScale = new Vector3(DialogueStageLayout.BustMirrorX(side), 1f, 1f);
+        }
+
+        // A bottom-edge pin: x from DialogueStageLayout, y measured up from
+        // the stage's bottom edge to the given pivot height.
+        private static void Pin(RectTransform rect, StagePin pin, float pivotY, float y)
+        {
+            if (rect == null) return;
+            rect.anchorMin = rect.anchorMax = new Vector2(pin.AnchorX, 0f);
+            rect.pivot = new Vector2(pin.PivotX, pivotY);
+            rect.anchoredPosition = new Vector2(pin.OffsetX, y);
         }
 
         private void PaintRows(EventView view)
