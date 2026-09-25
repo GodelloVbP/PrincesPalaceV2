@@ -67,10 +67,17 @@ namespace PrincesPalace.Domain.UiKit
         // one menu to open and know it when they build their context.
         private readonly Action _systemMenu;
 
+        // This context's optional first refusal on Submit (INavSubmitClaim).
+        // A function for the claimant's reason: whether the claim is live
+        // changes while the context stays pushed.
+        private readonly Func<INavSubmitClaim> _submitClaim;
+
         public NavContext(object entry, IReadOnlyDictionary<string, object> selectables, Action cancel,
             Func<INavCancelClaim> claimant = null, Func<INavTabStrip> tabStrip = null,
-            Action systemMenu = null, Func<INavSectionStrip> sectionStrip = null)
+            Action systemMenu = null, Func<INavSectionStrip> sectionStrip = null,
+            Func<INavSubmitClaim> submitClaim = null)
         {
+            _submitClaim = submitClaim;
             Entry = entry;
             Selectables = selectables ?? EmptySelectables;
             Cancel = cancel;
@@ -111,6 +118,15 @@ namespace PrincesPalace.Domain.UiKit
             if (claimant != null && claimant.ClaimCancel()) return;
 
             Cancel?.Invoke();
+        }
+
+        // SUBMIT'S FIRST OFFER. Answers whether the press was spent here; a
+        // context with no claim answers false and Submit goes to the selected
+        // Button as it always has.
+        public bool RaiseSubmit()
+        {
+            var claim = _submitClaim?.Invoke();
+            return claim != null && claim.ClaimSubmit();
         }
 
         // THE TRIGGER SHORTCUT'S ONLY EFFECT (owner's 2026-09-19 hardware-

@@ -82,7 +82,7 @@ Resume from save: Result (if any) -> page line 1.
 - D0 Busts: `tools/normalize_dialogue_busts.py` + Resources output for current art + recipe, content fields `dialogueBustPath`/`epithet`. Re-run when the repainted art lands.
 - D1 Data: page lines/cast/backdrop, event backdrop, the presence dataflow, expression/tag/length checks, `docs/CONTENT_SCHEMA.md` regenerated, tests.
 - D2 Stage: layers in `Domain/UiKit/Screens/EventScreen.cs`, `ScreenRegistry.WireEvent`, `AllowOverlap` for bust/box with reason, cover-crop, scene rebuild (`-BuildScenes`).
-- D3 Playback: the state machine above, the typewriter, slides, the Submit claim, result ordering, resume.
+- D3 Playback: the state machine above, the typewriter, slides, the Submit claim, result ordering, resume. As built: `Domain/Events/DialoguePlayback.cs` (60 chars/s, 0.2s slides, press frames not durations, a `Closed` terminal state beyond the table's six), `INavSubmitClaim` in `Domain/UiKit/INavCancelClaim.cs`, the stage click as a runtime `PointerPressRelay` on the stage root (no new node, no new SerializeField). Rows are hidden as a panel until Choices. A concluded event resumed from a save has no held page, so it shows the legacy layout.
 - D4 Fixture + captures: a separate fixture event `demo_dialogue` (two speakers, narration, result, missing bust, four choice rows locked and open; `demo_wishing_well` untouched). Named captures: longest line and epithet, both sides, narration, missing bust, result, four choice rows, at all four aspects, plus a runtime overflow check on the box text (UiAudit only sees build-time geometry). Captures steal focus, so they run when the owner is away.
 
 ## Open owner calls (non-blocking)

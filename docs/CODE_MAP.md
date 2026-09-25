@@ -441,6 +441,14 @@ stated last resort neither shipped screen can reach: a focus-driven tooltip
 has no cursor to be moved off the thing it covers. `Core/TooltipFit.cs` is
 the separate "grow the box to fit its body" half.
 
+**Submit** is offered first to the top context's `INavSubmitClaim`
+(`NavContext.RaiseSubmit`, called from `NavigationInputModule.Process` before
+`base.Process()`); a claimed press clears the selection so uGUI's own Submit
+has no target that call. Only `EventController` claims it, while a staged
+page's `DialoguePlayback` (`Domain/Events/DialoguePlayback.cs`) is short of
+Choices; every other context declares no claim and Submit reaches the
+selected Button unchanged.
+
 **Cancel** reaches `NavContext.RaiseCancel`, which offers the press to the
 active pane (`INavCancelClaim`) before running the context's own handler --
 `PartyController` claims it while carrying, nothing else implements it. With

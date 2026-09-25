@@ -23,7 +23,13 @@ namespace PrincesPalace
     // CANCEL DOES NOTHING HERE (plan contract 12). Leaving is always an
     // authored choice or the concluded state's own Leave, so a stray back
     // press can never skip a room. Start still reaches the system menu.
-    public class EventController : MonoBehaviour
+    //
+    // A STAGED PAGE PLAYS (docs/PLAN_DIALOGUE_STAGE.md, D3). DialoguePlayback
+    // owns the state machine; this class feeds it presses (Submit through
+    // INavSubmitClaim, a left press on the stage through PointerPressRelay),
+    // unscaled time, and the system menu's open/closed, and paints what it
+    // answers. The rows stay hidden until it reaches Choices.
+    public class EventController : MonoBehaviour, INavSubmitClaim
     {
         [SerializeField] internal Image artImage;
         [SerializeField] internal TMP_Text titleLabel;
@@ -41,13 +47,12 @@ namespace PrincesPalace
         [UiOptional("no event authors art yet -- the demo event deliberately has none, to exercise the missing-art path")]
         [SerializeField] internal IconEntry[] eventArt;
 
-        // ---- the dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, D2) ----------------
+        // ---- the dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, D2/D3) -------------
         //
         // Shown instead of the legacy frame and text column when the page has
-        // lines (EventView.HasLines); every other page paints exactly as
-        // before (contract 14). D2 is the STATIC stage: the page's first line
-        // with its speaker, laid out. Stepping, the typewriter and the slides
-        // are D3's.
+        // lines (EventView.HasLines), or when the event concluded from a page
+        // that had them; every other page paints exactly as before (contract
+        // 14), with no playback at all.
 
         // The legacy layout's two halves, switched off under the stage.
         [SerializeField] internal GameObject artFrame;
@@ -61,7 +66,8 @@ namespace PrincesPalace
         [SerializeField] internal Image stageBackdrop;
         [SerializeField] internal Image stageSetPiece;
 
-        // Two, for D3's speaker slide; D2 paints [0] and keeps [1] off.
+        // Two, for the speaker slide: the outgoing speaker leaves on one
+        // while the incoming one arrives on the other.
         [SerializeField] internal Image[] stageBusts;
         [SerializeField] internal RectTransform stageBox;
         [SerializeField] internal TMP_Text stageLineText;
@@ -94,6 +100,31 @@ namespace PrincesPalace
         private string _heldEventId;
         private string _heldTitle;
         private string _heldArtKey;
+
+        // The same hold for the stage (contract 3): an event that concludes
+        // from a page with lines shows its result on that page's stage, with
+        // the single Leave, rather than dropping back to the legacy layout.
+        private bool _heldHadLines;
+        private string _heldBackdropKey;
+
+        // The playing page, or null on a legacy page (contract 14).
+        private DialoguePlayback _playback;
+
+        // Which beat the stage last painted, so a frame repaints only when
+        // the playback moved on.
+        private int _paintedBeat = -1;
+
+        // Which of stageBusts holds the current speaker; the other is the
+        // outgoing one during a slide.
+        private int _activeBust;
+        private readonly float[] _bustRestX = new float[2];
+        private readonly DialogueSide[] _bustSide = new DialogueSide[2];
+
+        private bool _rowsShown = true;
+
+        // TMP draws every character up to this; set once a line is full, so
+        // a count that disagrees with TMP's by a character never clips it.
+        private const int AllCharacters = 99999;
 
         private bool _wired;
         private NavContext _navContext;
@@ -134,6 +165,69 @@ namespace PrincesPalace
                 int row = i;
                 choiceButtons[i].onClick.AddListener(() => Press(row));
             }
+
+            WireStageClick();
+        }
+
+        // THE LEFT PRESS THAT ADVANCES A LINE (contract 17). Added at runtime
+        // on the stage root, ListScroll's bargain: a transparent Image
+        // raycasts against the stage's whole rect, and every piece inside the
+        // stage is decor with raycastTarget cleared, so a press anywhere on
+        // the stage lands here. The rows are the stage's later sibling and
+        // draw over it, so once they show they take their own clicks first.
+        private void WireStageClick()
+        {
+            if (dialogueStage == null) return;
+
+            var go = dialogueStage.gameObject;
+            // Explicit null checks, not `??`: in the Editor a missing
+            // component comes back as Unity's fake null, which `??` keeps.
+            var catcher = go.GetComponent<Image>();
+            if (catcher == null) catcher = go.AddComponent<Image>();
+            catcher.color = new Color(0f, 0f, 0f, 0f);
+            catcher.raycastTarget = true;
+
+            var relay = go.GetComponent<PointerPressRelay>();
+            if (relay == null) relay = go.AddComponent<PointerPressRelay>();
+            relay.Pressed = AdvanceFromStage;
+        }
+
+        private void AdvanceFromStage()
+        {
+            if (_playback == null || _playback.State == DialogueState.Choices) return;
+            _playback.Advance(Time.frameCount);
+            ApplyPlayback();
+        }
+
+        // SUBMIT/A/ENTER WHILE LINES PLAY (INavSubmitClaim). Claimed in every
+        // state but Choices -- including Entering and Transitioning, where the
+        // playback ignores it, so the press is spent rather than left to reach
+        // anything else. In Choices, and on a legacy page, Submit goes to the
+        // selected row as it always has.
+        bool INavSubmitClaim.ClaimSubmit()
+        {
+            if (_playback == null || !isActiveAndEnabled) return false;
+            if (_playback.State == DialogueState.Choices || _playback.State == DialogueState.Closed) return false;
+
+            _playback.Advance(Time.frameCount);
+            ApplyPlayback();
+            return true;
+        }
+
+        // Unscaled, as the UI's own animations are (ColumnOpenAnimator, the
+        // reckoning's sweeps): the system menu stops Time.timeScale, and the
+        // battle speed preset is the fight's own multiplier, not this room's.
+        // The menu suspends the playback explicitly, read off its IsOpen so
+        // every way it opens and closes is covered, not only Start.
+        private void Update()
+        {
+            if (_playback == null) return;
+
+            if (systemMenu != null && systemMenu.IsOpen) _playback.Suspend();
+            else _playback.Resume();
+
+            _playback.Tick(Time.unscaledDeltaTime);
+            ApplyPlayback();
         }
 
         // ---- painting -----------------------------------------------------------
@@ -155,6 +249,8 @@ namespace PrincesPalace
                 _heldEventId = view.EventId;
                 _heldTitle = view.Title;
                 _heldArtKey = view.ArtKey;
+                _heldHadLines = view.HasLines;
+                _heldBackdropKey = view.BackdropKey;
             }
 
             bool held = view.Concluded && _heldEventId == view.EventId;
@@ -163,16 +259,19 @@ namespace PrincesPalace
 
             // Contract 14: a page without lines never touches the stage, and
             // the rows go back to their legacy spot in case the page before
-            // this one had lines.
-            bool staged = view.HasLines;
+            // this one had lines. Contract 3: a concluded event keeps the
+            // stage only if the page it concluded from had lines.
+            bool staged = view.HasLines || (held && _heldHadLines);
             ShowStage(staged);
 
             if (staged)
             {
-                PaintStage(view);
+                StartStage(view, title, artKey, held ? _heldBackdropKey : view.BackdropKey);
             }
             else
             {
+                _playback = null;
+
                 ItemIcons.Apply(artImage, eventArt, artKey);
                 titleLabel.Set(UiStrings.EventTitle, title);
 
@@ -184,7 +283,11 @@ namespace PrincesPalace
             }
 
             PaintRows(view);
-            RefreshNavigation();
+
+            // A legacy page shows its rows at once; a staged one hides them
+            // until the playback reaches Choices.
+            SetRowsShown(_playback == null || _playback.ChoicesShown, force: true);
+            ApplyPlayback();
         }
 
         // ---- the dialogue stage ---------------------------------------------------
@@ -224,28 +327,80 @@ namespace PrincesPalace
             }
         }
 
-        // The page's FIRST line, statically (D2). Choices show at once; D3
-        // gates them behind the last line. The result text of the choice
-        // that led here is not shown on a staged page yet -- contract 3's
-        // result-then-lines ordering is D3's.
-        private void PaintStage(EventView view)
+        // A new playback for this page: the result first when there is one,
+        // then the page's lines (contract 3). Resume from a save lands here
+        // through Open with the persisted result, so it replays the result
+        // and then line 1 (contract 18). Nothing here calls ChooseEventOption:
+        // replay is presentation only.
+        private void StartStage(EventView view, string title, string artKey, string backdropKey)
         {
-            var line = view.Lines[0];
-            bool narration = line.IsNarration;
-            var side = line.Side;
-
-            PaintBackdrop(view.BackdropKey);
+            PaintBackdrop(backdropKey);
 
             // Contract 15: no set piece hides layer 2 (Apply disables the
             // Image on a miss, so it is never a white quad).
-            ItemIcons.Apply(stageSetPiece, eventArt, view.ArtKey);
+            ItemIcons.Apply(stageSetPiece, eventArt, artKey);
 
-            stageTitle.Set(UiStrings.EventTitle, view.Title);
+            stageTitle.Set(UiStrings.EventTitle, title);
 
-            PaintBust(narration ? null : line, side);
-            if (stageBusts != null && stageBusts.Length > 1 && stageBusts[1] != null)
+            _playback = new DialoguePlayback(DialogueBeat.Sequence(view.ResultText, view.EffectsLine, view.Lines));
+            _paintedBeat = -1;
+            _activeBust = 0;
+            HideBust(0);
+            HideBust(1);
+        }
+
+        // THE PLAYBACK, DRAWN. Called every frame from Update and straight
+        // after each press, so the rows a press opens are up (and on the
+        // rail) before the dispatcher settles that same frame's selection.
+        private void ApplyPlayback()
+        {
+            if (_playback == null) return;
+
+            if (_playback.BeatIndex != _paintedBeat)
             {
-                stageBusts[1].gameObject.SetActive(false);
+                _paintedBeat = _playback.BeatIndex;
+                var beat = _playback.Current;
+                if (beat != null) PaintBeat(beat, _playback.Cue);
+            }
+
+            PlaceBusts();
+
+            if (stageLineText != null)
+            {
+                var current = _playback.Current;
+                int visible = _playback.VisibleCharacters;
+                stageLineText.maxVisibleCharacters =
+                    current != null && visible >= current.VisibleLength ? AllCharacters : visible;
+            }
+
+            SetRowsShown(_playback.ChoicesShown, force: false);
+        }
+
+        // One beat's box, plate, text and bust, laid out for its side.
+        private void PaintBeat(DialogueBeat beat, BustCue cue)
+        {
+            var line = beat.Line;
+            bool narration = line.IsNarration;
+            var side = line.Side;
+
+            switch (cue)
+            {
+                case BustCue.Hidden:
+                    HideBust(0);
+                    HideBust(1);
+                    break;
+                case BustCue.SlideIn:
+                    PaintBust(_activeBust, line);
+                    HideBust(1 - _activeBust);
+                    break;
+                case BustCue.SwapInPlace:
+                    PaintBust(_activeBust, line);
+                    break;
+                case BustCue.SlideOutIn:
+                    // The bust on screen becomes the outgoing one, as painted.
+                    _activeBust = 1 - _activeBust;
+                    PaintBust(_activeBust, line);
+                    break;
             }
 
             Pin(stageBox, DialogueStageLayout.BoxPin(narration, side), 0f, DialogueStageLayout.BoxBottom);
@@ -270,13 +425,91 @@ namespace PrincesPalace
             // TMP's synthetic italic: SourceSans3 ships Regular/SemiBold/Bold
             // only. A real SourceSans3-Italic is pending the owner's OK to
             // download. Authored <i> inside a line uses the same path.
-            stageLineText.fontStyle = narration ? FontStyles.Italic : FontStyles.Normal;
-            stageLineText.Set(UiStrings.EventLine, line.Text);
+            //
+            // The result beat slants its text by tag instead, so the effects
+            // line under it stays upright and gold, as the legacy layout's
+            // effects label is.
+            if (beat.IsResult)
+            {
+                stageLineText.fontStyle = FontStyles.Normal;
+                string text = string.IsNullOrEmpty(line.Text) ? "" : "<i>" + line.Text + "</i>";
+                if (beat.Effects.Length > 0)
+                {
+                    if (text.Length > 0) text += "\n";
+                    text += "<color=" + FightHudPalette.GoldText + ">" + beat.Effects + "</color>";
+                }
 
+                stageLineText.Set(UiStrings.EventLine, text);
+            }
+            else
+            {
+                stageLineText.fontStyle = narration ? FontStyles.Italic : FontStyles.Normal;
+                stageLineText.Set(UiStrings.EventLine, line.Text);
+            }
+
+            // Pinned by the beat on screen, so when the last beat opens the
+            // rows they stand clear of its plate.
             if (choicesPanel != null)
             {
                 Pin(choicesPanel, DialogueStageLayout.ChoicesPin(narration, side), 0f, DialogueStageLayout.ChoicesBottom);
             }
+        }
+
+        // Each bust at its rest pin, pushed toward its OWN screen edge by one
+        // bust width while sliding: the outgoing one leaves, the incoming one
+        // arrives. Eased so neither starts or stops dead.
+        private void PlaceBusts()
+        {
+            if (stageBusts == null) return;
+
+            float progress = _playback.SlideProgress;
+            float t = Mathf.SmoothStep(0f, 1f, progress);
+            var cue = _playback.Cue;
+
+            OffsetBust(_activeBust, cue == BustCue.SlideIn || cue == BustCue.SlideOutIn ? 1f - t : 0f);
+
+            int outgoing = 1 - _activeBust;
+            if (_playback.Outgoing != null && progress < 1f) OffsetBust(outgoing, t);
+            else if (cue != BustCue.Hidden) HideBust(outgoing);
+        }
+
+        private void OffsetBust(int index, float fraction)
+        {
+            var bust = BustAt(index);
+            if (bust == null || !bust.gameObject.activeSelf) return;
+
+            var rect = bust.rectTransform;
+            float away = _bustSide[index] == DialogueSide.Left ? -1f : 1f;
+            rect.anchoredPosition = new Vector2(_bustRestX[index] + away * rect.sizeDelta.x * fraction, 0f);
+        }
+
+        private Image BustAt(int index) =>
+            stageBusts != null && index >= 0 && index < stageBusts.Length ? stageBusts[index] : null;
+
+        private void HideBust(int index)
+        {
+            var bust = BustAt(index);
+            if (bust != null) bust.gameObject.SetActive(false);
+        }
+
+        // Close mid-slide (Transition table): the current bust to its rest
+        // pin and the outgoing one gone, so nothing is left half-slid.
+        private void SnapBusts()
+        {
+            OffsetBust(_activeBust, 0f);
+            HideBust(1 - _activeBust);
+        }
+
+        // The rows appear only when the playback reaches Choices (contract
+        // 17). Hidden as a whole panel, so while lines play no row is active,
+        // selectable or on the rail, and the D-pad has nothing to move to.
+        private void SetRowsShown(bool shown, bool force)
+        {
+            if (!force && shown == _rowsShown) return;
+            _rowsShown = shown;
+
+            if (choicesPanel != null) choicesPanel.gameObject.SetActive(shown);
+            RefreshNavigation();
         }
 
         // Cover-crop (contract 7): the sprite's own aspect, scaled until it
@@ -300,10 +533,10 @@ namespace PrincesPalace
 
         // Requested expression, then neutral, then no bust (contract 11);
         // the plate and text still show without one (contract 15).
-        private void PaintBust(EventLineView line, DialogueSide side)
+        private void PaintBust(int index, EventLineView line)
         {
-            if (stageBusts == null || stageBusts.Length == 0 || stageBusts[0] == null) return;
-            var bust = stageBusts[0];
+            var bust = BustAt(index);
+            if (bust == null) return;
 
             Sprite sprite = null;
             if (line != null)
@@ -316,13 +549,17 @@ namespace PrincesPalace
             bust.gameObject.SetActive(sprite != null);
             if (sprite == null) return;
 
+            var side = line.Side;
             bust.sprite = sprite;
             bust.preserveAspect = true;
 
             var size = DialogueStageLayout.BustSize(new UiVec(sprite.rect.width, sprite.rect.height));
             var rect = bust.rectTransform;
             rect.sizeDelta = new Vector2(size.X, size.Y);
-            Pin(rect, DialogueStageLayout.BustPin(side, size.X), 0f, 0f);
+            var pin = DialogueStageLayout.BustPin(side, size.X);
+            Pin(rect, pin, 0f, 0f);
+            _bustRestX[index] = pin.OffsetX;
+            _bustSide[index] = side;
 
             // Painted facing right (contract 9): mirrored on the right so the
             // speaker faces inward. The pin's centre pivot keeps it in place.
@@ -389,6 +626,13 @@ namespace PrincesPalace
             // does not ask the Button first.
             if (!choiceButtons[row].interactable || !choiceButtons[row].gameObject.activeInHierarchy) return;
 
+            // A staged page's rows take only a press that started after they
+            // appeared (contract 17), never the one that finished the last
+            // line. Belt and braces: the rows are inactive until then, so no
+            // pointer press can start on one, and the Submit claim clears the
+            // selection on the frame it opens them.
+            if (_playback != null && !_playback.AcceptsChoicePress(Time.frameCount)) return;
+
             if (_rowAction[row] == LeaveRow)
             {
                 RunOrchestrator.LeaveEvent();
@@ -410,6 +654,12 @@ namespace PrincesPalace
 
         private void Close()
         {
+            if (_playback != null)
+            {
+                _playback.Close();
+                SnapBusts();
+            }
+
             gameObject.SetActive(false); // OnDisable pops the context
             Finished?.Invoke();
         }
@@ -424,7 +674,7 @@ namespace PrincesPalace
             if (_navContext == null)
             {
                 _navContext = new NavContext(entry: null, selectables: null, cancel: null,
-                    systemMenu: HandleSystemMenu);
+                    systemMenu: HandleSystemMenu, submitClaim: () => this);
             }
 
             NavigationInputModule.Contexts?.PushIfAbsent(_navContext);
@@ -451,7 +701,7 @@ namespace PrincesPalace
                 var button = choiceButtons[i];
                 if (button == null) continue;
 
-                if (button.gameObject.activeSelf && button.interactable)
+                if (_rowsShown && button.gameObject.activeSelf && button.interactable)
                 {
                     members.Add(button);
                     selectables[$"eventChoice{i}"] = button.gameObject;

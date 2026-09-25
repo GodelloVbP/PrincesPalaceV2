@@ -24,6 +24,24 @@ namespace PrincesPalace.Domain.UiKit
         bool ClaimCancel();
     }
 
+    // FIRST REFUSAL ON A SUBMIT PRESS, for a context whose Submit means
+    // something other than "press the selected Button" -- the dialogue stage,
+    // where Submit/A/Enter advances a line with no row selected at all
+    // (docs/PLAN_DIALOGUE_STAGE.md contract 17). Same shape as INavCancelClaim
+    // and for the same reason: the context answers at the moment of the press
+    // whether it spent it, rather than a flag somebody has to remember to
+    // clear.
+    //
+    // Contract: return true ONLY if this press was consumed. The dispatcher
+    // then clears the selection before uGUI's own Submit dispatch, so the
+    // same press cannot also reach a Button. False (and every context that
+    // declares no claim) leaves Submit exactly as it was: to the selected
+    // Button.
+    public interface INavSubmitClaim
+    {
+        bool ClaimSubmit();
+    }
+
     // FIRST -- and only -- OFFER OF A TAB-STEP PRESS: the trigger (LT/RT)
     // shortcut docs/GAMEPAD_NAVIGATION_PLAN.md section 7's "Tabs" contract
     // asks for (plan phase 3, item 2; reassigned from the shoulders to the

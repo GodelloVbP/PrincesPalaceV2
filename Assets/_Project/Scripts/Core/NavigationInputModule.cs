@@ -197,6 +197,19 @@ namespace PrincesPalace
 
             UpdateMoveGate();
 
+            // SUBMIT'S FIRST OFFER (INavSubmitClaim): the top context may
+            // spend the press before uGUI sends it to the selected Button --
+            // the dialogue stage advancing a line. A spent press clears the
+            // selection so base.Process() has no Submit target this call; the
+            // reselection rule below then settles the frame against whatever
+            // the claim left, which is how the rows the last line opened get
+            // their entry focused on the same frame. A context with no claim
+            // answers false and nothing here changes.
+            if (topAtStart != null && input.GetButtonDown(submitButton) && topAtStart.RaiseSubmit())
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
+
             // CAPTURED BEFORE base.Process() RUNS -- phase 4 item 4's own
             // mixed-input pass found that this is load-bearing, not
             // defensive. PointerInputModule.DeselectIfSelectionChanged nulls

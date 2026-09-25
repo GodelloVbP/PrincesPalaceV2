@@ -178,5 +178,40 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.IsFalse(NavContext.ForFight(null).RaiseSystemMenu());
         }
+
+        // ---- submit claim (the dialogue stage) ---------------------------------
+
+        private sealed class SubmitClaim : INavSubmitClaim
+        {
+            public bool Answer;
+            public int Asked;
+
+            public bool ClaimSubmit()
+            {
+                Asked++;
+                return Answer;
+            }
+        }
+
+        [Test]
+        public void RaiseSubmit_OnAContextWithNoClaim_AnswersFalse()
+        {
+            // False is what leaves Submit to the selected Button, untouched:
+            // every context but the event panel's.
+            Assert.IsFalse(Bare().RaiseSubmit());
+            Assert.IsFalse(new NavContext(null, null, null, submitClaim: () => null).RaiseSubmit());
+        }
+
+        [Test]
+        public void RaiseSubmit_AsksTheClaimEachPress_AndReportsItsAnswer()
+        {
+            var claim = new SubmitClaim { Answer = true };
+            var context = new NavContext(null, null, null, submitClaim: () => claim);
+
+            Assert.IsTrue(context.RaiseSubmit());
+            claim.Answer = false;
+            Assert.IsFalse(context.RaiseSubmit());
+            Assert.AreEqual(2, claim.Asked);
+        }
     }
 }
