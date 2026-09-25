@@ -1,0 +1,209 @@
+{
+  "characters": [
+    {
+      "canvas": [
+        1122,
+        1402
+      ],
+      "files": [
+        {
+          "expression": "happy",
+          "output": "sheep/happy.png",
+          "outputSha256": "fe8f10389afcb9d4b11756a72ebe0db9ff0c4f91e287253a9b91976f54adeae6",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_happy.png",
+          "sourceSha256": "7fa22f6a0c1cbbd6c51f257e34fce6d2a3a49ff4785500256787cc6c16cef1d0",
+          "sourceSize": [
+            1122,
+            1402
+          ]
+        },
+        {
+          "expression": "annoyed",
+          "output": "sheep/annoyed.png",
+          "outputSha256": "bdbc49e354a5e1a02b43eca6da08569c1072f93fc87d1dbe3bdbd97c94285ab1",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_annoyed.png",
+          "sourceSha256": "f5c29a683ac030e58a9f03ced2f6ae55e2aad018cb9136e059c6269014f3a84c",
+          "sourceSize": [
+            1122,
+            1402
+          ]
+        },
+        {
+          "expression": "nervous",
+          "output": "sheep/nervous.png",
+          "outputSha256": "be77926d22e11a10ef3511c69c079141f810fd54222ef939a4f10bac0a4dec79",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_nervous.png",
+          "sourceSha256": "cd7b16ba42fac1e66c86bedb2a7180503d9ce545582e70192c138fdf8de77c12",
+          "sourceSize": [
+            1122,
+            1402
+          ]
+        },
+        {
+          "expression": "sad",
+          "output": "sheep/sad.png",
+          "outputSha256": "60a505107f1a226bf3ab85f024a3825756e4faa4f8911909c32747256467c122",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_sad.png",
+          "sourceSha256": "3c785dce6a0733f5b6dda473160f9a925fe120bea144eadd468837bb48050586",
+          "sourceSize": [
+            1122,
+            1402
+          ]
+        },
+        {
+          "expression": "surprised",
+          "output": "sheep/surprised.png",
+          "outputSha256": "54264de966d9fa0a451616e4b0a2a036d443171605b8477768d492f600be1786",
+          "source": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_surprised.png",
+          "sourceSha256": "5d81323ca0119bf8bb655865442caafe3c3a9a7c59c7a17b6431852837a6ac62",
+          "sourceSize": [
+            1122,
+            1363
+          ]
+        }
+      ],
+      "id": "sheep",
+      "missingExpressions": [
+        "neutral"
+      ],
+      "namePrefix": "Shawn",
+      "sourceFolder": "Sheep"
+    },
+    {
+      "canvas": [
+        1122,
+        1402
+      ],
+      "files": [
+        {
+          "expression": "neutral",
+          "output": "owl/neutral.png",
+          "outputSha256": "64183ac9f261961ddd98b6539b0839e9ffaddc46ff04d036972f6e2c5b31deed",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_neutral.png",
+          "sourceSha256": "098119721e37db7a939bec6bec8719d2cbb66db07c9d5521b9b5144416bd498f",
+          "sourceSize": [
+            1094,
+            1366
+          ]
+        },
+        {
+          "expression": "happy",
+          "output": "owl/happy.png",
+          "outputSha256": "a034b7fee37f18d39298e6edded87078030043215cc59fbe8ae61423dc18de0f",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_happy.png",
+          "sourceSha256": "63c539d83f89e6ac6918f69fb45994c79b8a100998f7893753638225c86d7eec",
+          "sourceSize": [
+            1117,
+            1375
+          ]
+        },
+        {
+          "expression": "annoyed",
+          "output": "owl/annoyed.png",
+          "outputSha256": "d63b3da32518f125e1533cb9fff502d0d91f962f93de7673e18f0a103be4c804",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_annoyed.png",
+          "sourceSha256": "7c3a5ee5af707726cb314ddb5256fe9854b41d3aa1f73756d7224dafcbd043d7",
+          "sourceSize": [
+            1122,
+            1402
+          ]
+        },
+        {
+          "expression": "nervous",
+          "output": "owl/nervous.png",
+          "outputSha256": "ad32c2529c940d8bbc541c9ad1ffd679c1c5f25f8e6e09ba2e1642970035f104",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_nervous.png",
+          "sourceSha256": "d419d592387b945639542bfb888ead9b36895e25d8642f85a1d41daccce67c8c",
+          "sourceSize": [
+            1082,
+            1372
+          ]
+        },
+        {
+          "expression": "sad",
+          "output": "owl/sad.png",
+          "outputSha256": "53f79907663e91c93c28dca70c7a8a79f30851b94c16e28cb6ea335b8e02eafa",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_sad.png",
+          "sourceSha256": "487de65a2ec43b3b5ad1f91910c2c7eb3d066ef77d75b734c9e3405df835af49",
+          "sourceSize": [
+            1095,
+            1385
+          ]
+        },
+        {
+          "expression": "surprised",
+          "output": "owl/surprised.png",
+          "outputSha256": "29c312aa9d08257d246bd69d0d26afc3dc88362e73ac234e3a8377746ea5d5c0",
+          "source": "Assets/_Project/Art/Portraits/Owl/Processed/Odette_surprised.png",
+          "sourceSha256": "d839384f0513010d40408bcf5633477181264ec64050a9010a81097856563325",
+          "sourceSize": [
+            1097,
+            1367
+          ]
+        }
+      ],
+      "id": "owl",
+      "missingExpressions": [],
+      "namePrefix": "Odette",
+      "sourceFolder": "Owl"
+    },
+    {
+      "canvas": [
+        1122,
+        1379
+      ],
+      "files": [
+        {
+          "expression": "neutral",
+          "output": "bear/neutral.png",
+          "outputSha256": "3e0b4371f38442378a98c35991a3d26da2e451cddc04dbde292f5e885ae8d546",
+          "source": "Assets/_Project/Art/Portraits/Bear/Processed/Bjorn_neutral.png",
+          "sourceSha256": "39ddf197207913c92f99ecb9b0d7eb8acf0cabf7f8385be1cf84dac431c23e3f",
+          "sourceSize": [
+            1122,
+            1379
+          ]
+        }
+      ],
+      "id": "bear",
+      "missingExpressions": [
+        "happy",
+        "annoyed",
+        "nervous",
+        "sad",
+        "surprised"
+      ],
+      "namePrefix": "Bjorn",
+      "sourceFolder": "Bear"
+    }
+  ],
+  "expressions": [
+    "neutral",
+    "happy",
+    "annoyed",
+    "nervous",
+    "sad",
+    "surprised"
+  ],
+  "params": {
+    "characters": [
+      [
+        "Sheep",
+        "sheep",
+        "Shawn"
+      ],
+      [
+        "Owl",
+        "owl",
+        "Odette"
+      ],
+      [
+        "Bear",
+        "bear",
+        "Bjorn"
+      ]
+    ]
+  },
+  "tool": "tools/normalize_dialogue_busts.py",
+  "version": 1
+}

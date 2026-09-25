@@ -25,6 +25,7 @@
       "battleSpriteFacing": "Right",
       "plateTheme": "Silver",
       "plateArt": "Plates/pc_sheep",
+      "dialogueBustPath": "Portraits/Dialogue/sheep",
       "signatureId": "wool",
       "signatureDisplayName": "Wool",
       "signatureCapacity": 10,
@@ -56,6 +57,7 @@
       "battleSpriteFacing": "Right",
       "plateTheme": "Crimson",
       "plateArt": "Plates/pc_bear",
+      "dialogueBustPath": "Portraits/Dialogue/bear",
       "primaryPoolId": "fury"
     },
     {
@@ -80,7 +82,8 @@
       "battleSpritePath": "Characters/owl",
       "battleSpriteFacing": "Right",
       "plateTheme": "Blue",
-      "plateArt": "Plates/pc_owl"
+      "plateArt": "Plates/pc_owl",
+      "dialogueBustPath": "Portraits/Dialogue/owl"
     }
   ]
 }

@@ -48,3 +48,5 @@ MonoBehaviour:
     PlateTheme: 5
     PrimaryPoolId: mana
     PlateArt: Plates/pc_sheep
+    Epithet: 
+    DialogueBustPath: Portraits/Dialogue/sheep

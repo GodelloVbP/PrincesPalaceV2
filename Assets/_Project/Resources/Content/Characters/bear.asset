@@ -48,3 +48,5 @@ MonoBehaviour:
     PlateTheme: 1
     PrimaryPoolId: fury
     PlateArt: Plates/pc_bear
+    Epithet: 
+    DialogueBustPath: Portraits/Dialogue/bear

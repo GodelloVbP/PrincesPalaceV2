@@ -82,6 +82,14 @@ namespace PrincesPalace.Domain.Content
                 // dossier loads it through CharacterPortraits now, which is
                 // Resources, which is this convention.
                 { "portraitPath", ArtPathKind.RuntimeLoaded },
+
+                // THE DIALOGUE STAGE'S BUST FOLDER, same convention and for
+                // the same reason: tools/normalize_dialogue_busts.py writes
+                // one PNG per expression under Resources/Portraits/Dialogue/
+                // <characterId>/, and Domain.Content.DialogueBust joins this
+                // folder with an expression at RUNTIME -- there is no
+                // build-time moment that could bake a specific expression in.
+                { "dialogueBustPath", ArtPathKind.RuntimeLoaded },
                 // DOTTED, because the field moved inside a nested block and the
                 // key is what an author types. A spell's presentation is one
                 // "vfx" object now -- see SpellPresentation -- so the JSON reads

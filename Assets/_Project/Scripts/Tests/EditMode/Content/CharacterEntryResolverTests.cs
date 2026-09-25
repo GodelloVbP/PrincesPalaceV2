@@ -307,6 +307,139 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("extension", error);
         }
 
+        // ---- epithet ---------------------------------------------------------
+        //
+        // The gold line under the name on the dialogue name plate. OPTIONAL,
+        // unlike plateTheme and plateArt above it: an unauthored epithet is a
+        // valid look (no gold line), not a missing-art hole. What is tested
+        // here mirrors PoolEntryResolverTests' shortTag cap -- trimmed before
+        // the cap is measured, and refused over it by name.
+
+        private static RawCharacterEntry ProbeWithEpithet(string epithet)
+        {
+            var probe = Probe("Blue");
+            probe.epithet = epithet;
+            return probe;
+        }
+
+        private static bool ResolveEpithet(string epithet, out ResolvedCharacter resolved, out string error)
+        {
+            var entries = new List<RawCharacterEntry>
+            {
+                Starter("a", 1), Starter("b", 2), Starter("c", 3), ProbeWithEpithet(epithet),
+            };
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
+            resolved = ok ? all.Single(c => c.Id == "probe") : null;
+            error = ok ? null : string.Join(" | ", errors);
+            return ok;
+        }
+
+        [Test]
+        public void AnEmptyEpithet_ResolvesToEmpty()
+        {
+            Assert.IsTrue(ResolveEpithet("", out var resolved, out string error), error);
+            Assert.AreEqual("", resolved.Epithet);
+        }
+
+        [Test]
+        public void AnAuthoredEpithet_IsTrimmedOntoTheCharacter()
+        {
+            Assert.IsTrue(ResolveEpithet("  Prince the cat  ", out var resolved, out string error), error);
+            Assert.AreEqual("Prince the cat", resolved.Epithet);
+        }
+
+        [Test]
+        public void AnEpithetAtTheCap_Resolves()
+        {
+            string atCap = new string('x', CharacterEntryResolver.MaxEpithetLength);
+            Assert.IsTrue(ResolveEpithet(atCap, out var resolved, out string error), error);
+            Assert.AreEqual(atCap, resolved.Epithet);
+        }
+
+        [Test]
+        public void AnEpithetOverTheCap_IsRefusedByName()
+        {
+            string overCap = new string('x', CharacterEntryResolver.MaxEpithetLength + 1);
+            Assert.IsFalse(ResolveEpithet(overCap, out _, out string error),
+                "an epithet over the cap must not silently overflow the name plate");
+
+            StringAssert.Contains("probe", error, "the refusal must name the character");
+            StringAssert.Contains("epithet", error, "the refusal must name the field");
+            StringAssert.Contains((CharacterEntryResolver.MaxEpithetLength + 1).ToString(), error,
+                "the refusal must name how long the authored value actually is");
+        }
+
+        // Whitespace-only trims to empty BEFORE the cap is measured, so a
+        // string of spaces past the cap is not a false refusal -- it is the
+        // same "no epithet authored" case the blank string is.
+        [Test]
+        public void AWhitespaceOnlyEpithet_ResolvesToEmpty()
+        {
+            string spaces = new string(' ', CharacterEntryResolver.MaxEpithetLength + 5);
+            Assert.IsTrue(ResolveEpithet(spaces, out var resolved, out string error), error);
+            Assert.AreEqual("", resolved.Epithet);
+        }
+
+        // ---- dialogueBustPath ------------------------------------------------
+        //
+        // Where a character's dialogue busts live. RuntimeLoaded, like
+        // portraitPath and plateArt, but -- unlike plateArt -- OPTIONAL: a
+        // dialogue page with no bust art is still a readable page, so an
+        // empty value is not refused the way an empty plateArt is.
+
+        private static RawCharacterEntry ProbeWithDialogueBustPath(string dialogueBustPath)
+        {
+            var probe = Probe("Blue");
+            probe.dialogueBustPath = dialogueBustPath;
+            return probe;
+        }
+
+        private static bool ResolveDialogueBustPath(string dialogueBustPath, out ResolvedCharacter resolved, out string error)
+        {
+            var entries = new List<RawCharacterEntry>
+            {
+                Starter("a", 1), Starter("b", 2), Starter("c", 3), ProbeWithDialogueBustPath(dialogueBustPath),
+            };
+            bool ok = CharacterEntryResolver.TryResolveAll(entries, KnownPools, out var all, out var errors);
+            resolved = ok ? all.Single(c => c.Id == "probe") : null;
+            error = ok ? null : string.Join(" | ", errors);
+            return ok;
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void AnUnauthoredDialogueBustPath_ResolvesToEmpty_NotRefused(string authored)
+        {
+            Assert.IsTrue(ResolveDialogueBustPath(authored, out var resolved, out string error),
+                "unlike plateArt, an unauthored dialogueBustPath must not refuse the build: " + error);
+            Assert.AreEqual("", resolved.DialogueBustPath);
+        }
+
+        [Test]
+        public void AnAuthoredDialogueBustPath_IsTrimmedOntoTheCharacter()
+        {
+            Assert.IsTrue(
+                ResolveDialogueBustPath("  Portraits/Dialogue/sheep  ", out var resolved, out string error), error);
+            Assert.AreEqual("Portraits/Dialogue/sheep", resolved.DialogueBustPath);
+        }
+
+        [Test]
+        public void AnAssetsRelativeDialogueBustPath_IsRefusedAsTheWrongConvention()
+        {
+            Assert.IsFalse(
+                ResolveDialogueBustPath("Assets/_Project/Resources/Portraits/Dialogue/sheep", out _, out string error),
+                "dialogueBustPath is Resources.Load'ed at runtime, so an Assets/ path loads nothing");
+            StringAssert.Contains("RESOURCES-relative", error);
+        }
+
+        [Test]
+        public void ADialogueBustPathCarryingAFileExtension_IsRefused()
+        {
+            Assert.IsFalse(ResolveDialogueBustPath("Portraits/Dialogue/sheep.png", out _, out string error),
+                "Resources.Load takes the path without an extension and returns null with one");
+            StringAssert.Contains("extension", error);
+        }
+
         // ---- primaryPoolId -------------------------------------------------
         //
         // Which resource a character's skills spend, as a pools.json id. The

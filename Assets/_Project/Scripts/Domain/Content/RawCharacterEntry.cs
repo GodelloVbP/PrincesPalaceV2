@@ -84,6 +84,28 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet.")]
         public string battleSpritePath = "";
 
+        // THE GOLD LINE UNDER THE NAME on the dialogue name plate -- "Prince
+        // the cat" rather than a mechanical fact, so it is free text and not
+        // matched against anything. Optional and capped short: it sits next
+        // to a name on a plate, not in a paragraph.
+        [ContentDoc("Optional short line shown under this character's name on the dialogue name plate, e.g. 'Prince the cat'. Max 32 characters; empty means the plate shows no epithet.")]
+        public string epithet = "";
+
+        // THIS CHARACTER'S DIALOGUE BUST, the ONE shared canvas per
+        // character that tools/normalize_dialogue_busts.py writes under
+        // Resources/Portraits/Dialogue/<characterId>/<expression>.png.
+        // Resources-relative FOLDER (no extension, no expression suffix --
+        // the runtime appends "/<expression>"), the same convention
+        // portraitPath and plateArt already follow. Empty means no bust art
+        // yet and the missing-art fallback is showing none at all -- unlike
+        // plateArt this is NOT required, because a dialogue page with no
+        // bust art is still a readable page (narration, or a character
+        // whose art has not shipped), where a fight-HUD plate with no face
+        // is a hole in the row itself. See Domain.Content.DialogueBust for
+        // the path join and the expression fallback order this feeds.
+        [ContentDoc("Resources-relative FOLDER (no extension) of this character's dialogue busts, one PNG per expression named by Domain.Content.DialogueBust, e.g. 'Portraits/Dialogue/sheep'; empty means no bust art yet and the dialogue stage shows none.")]
+        public string dialogueBustPath = "";
+
         // Which way the battle art is drawn in its source file. "Right" or
         // "Left"; the stage mirrors as needed so a character always faces the
         // opposition rather than off the edge of the screen.

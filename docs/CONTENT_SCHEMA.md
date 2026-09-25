@@ -37,6 +37,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `princesFavor` | int | `0` | This character's luck stat; a separate axis from the six ability scores, 0 is the honest default. |  |
 | `portraitPath` | string | `""` | Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder. |  |
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |
+| `epithet` | string | `""` | Optional short line shown under this character's name on the dialogue name plate, e.g. 'Prince the cat'. Max 32 characters; empty means the plate shows no epithet. |  |
+| `dialogueBustPath` | string | `""` | Resources-relative FOLDER (no extension) of this character's dialogue busts, one PNG per expression named by Domain.Content.DialogueBust, e.g. 'Portraits/Dialogue/sheep'; empty means no bust art yet and the dialogue stage shows none. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
 | `plateTheme` | string | `""` | Which UiKit.ButtonTheme this character's fight-HUD cards are coloured with (rim and name), matched case-insensitively. Required: an empty or unknown value refuses the build. | Gold, Crimson, Violet, Blue, Green, Silver |
 | `plateArt` | string | `""` | Resources-relative path (no extension) to this character's fight-HUD plate, e.g. 'Plates/pc_sheep'. Required: an empty path, or one that loads nothing, refuses the build. |  |

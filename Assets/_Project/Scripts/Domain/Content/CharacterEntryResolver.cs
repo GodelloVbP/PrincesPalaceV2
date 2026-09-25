@@ -35,6 +35,13 @@ namespace PrincesPalace.Domain.Content
         public const int MinAbilityScore = 1;
         public const int MaxAbilityScore = 30;
 
+        // The dialogue name plate's epithet line -- "Prince the cat" sits
+        // next to a name, not in a paragraph, so this is the same shape of
+        // cap PoolEntryResolver.MaxShortTagLength is for a meter row: the
+        // field fits what draws it or it is refused rather than silently
+        // clipped or overflowing.
+        public const int MaxEpithetLength = 32;
+
         // How many characters a fresh profile fields, and therefore how many
         // must carry startsInSquad. The stage's own capacity -- there are
         // three player slots and there is no arrangement in which a fourth
@@ -253,6 +260,7 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "portraitPath", raw.portraitPath, out error)) return false;
             if (!ArtPathConvention.Check(label, "battleSpritePath", raw.battleSpritePath, out error)) return false;
             if (!ArtPathConvention.Check(label, "plateArt", raw.plateArt, out error)) return false;
+            if (!ArtPathConvention.Check(label, "dialogueBustPath", raw.dialogueBustPath, out error)) return false;
 
             // REQUIRED, and checked AFTER the convention so a row that
             // authored the path the wrong way round hears which mistake it
@@ -269,6 +277,20 @@ namespace PrincesPalace.Domain.Content
                         "the surface their name, meters and status badges are drawn on. Write it " +
                         "Resources-relative and without an extension, e.g. 'Plates/pc_sheep'; " +
                         "tools/normalize_pc_plates.py is what produces the file.";
+                return false;
+            }
+
+            // OPTIONAL, unlike plateTheme and plateArt above it: an
+            // unauthored epithet just means the name plate shows no gold
+            // line under the name, which is a valid look and not a hole in
+            // the row. Trimmed before the cap is measured, so leading or
+            // trailing whitespace an author left in cannot push a line over
+            // by characters nobody can see.
+            string epithet = (raw.epithet ?? string.Empty).Trim();
+            if (epithet.Length > MaxEpithetLength)
+            {
+                error = $"{label}: epithet '{epithet}' is {epithet.Length} characters and the name plate fits " +
+                        $"{MaxEpithetLength}.";
                 return false;
             }
 
@@ -342,7 +364,9 @@ namespace PrincesPalace.Domain.Content
                 raw.squadSlot,
                 plateTheme,
                 primaryPoolId,
-                raw.plateArt.Trim());
+                raw.plateArt.Trim(),
+                epithet,
+                (raw.dialogueBustPath ?? string.Empty).Trim());
             error = null;
             return true;
         }

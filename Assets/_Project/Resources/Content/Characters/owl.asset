@@ -48,3 +48,5 @@ MonoBehaviour:
     PlateTheme: 3
     PrimaryPoolId: mana
     PlateArt: Plates/pc_owl
+    Epithet: 
+    DialogueBustPath: Portraits/Dialogue/owl

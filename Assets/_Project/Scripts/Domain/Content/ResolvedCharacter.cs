@@ -102,6 +102,23 @@ namespace PrincesPalace.Domain.Content
         // than a wrong one.
         public string PlateArt = "";
 
+        // THE GOLD LINE UNDER THE NAME on the dialogue name plate
+        // (RawCharacterEntry.epithet). Optional and capped at
+        // CharacterEntryResolver.MaxEpithetLength; empty means the plate
+        // shows no epithet, which is a valid look and not a missing-art
+        // fallback the way an empty PlateArt would be.
+        public string Epithet = "";
+
+        // WHERE THIS CHARACTER'S DIALOGUE BUSTS LIVE, Resources-relative
+        // and a FOLDER rather than a file (RawCharacterEntry.dialogueBustPath)
+        // -- tools/normalize_dialogue_busts.py writes one PNG per expression
+        // under it, and Domain.Content.DialogueBust joins this with an
+        // expression at runtime. Empty means no bust art yet; unlike PlateArt
+        // this is never required, so an empty value is reachable from content
+        // and simply means the dialogue stage shows no bust for this
+        // character.
+        public string DialogueBustPath = "";
+
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.SignaturePool for why that distinction is kept
         // sharp.
@@ -146,7 +163,15 @@ namespace PrincesPalace.Domain.Content
             // constructor and the fixtures, where "this character has no
             // plate art" is the honest answer and PcPlateSprites returns
             // null for it without complaint.
-            string plateArt = "")
+            string plateArt = "",
+            // Trailing and optional for the same reason plateArt just
+            // above it is: content DOES author both (CharacterEntryResolver
+            // checks epithet's cap and dialogueBustPath's convention on
+            // every row), but neither is REQUIRED the way plateArt is, so
+            // an empty default here is the honest answer for the fixtures
+            // and the serializer constructor that never touch either.
+            string epithet = "",
+            string dialogueBustPath = "")
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -171,6 +196,8 @@ namespace PrincesPalace.Domain.Content
             PlateTheme = plateTheme;
             PrimaryPoolId = string.IsNullOrWhiteSpace(primaryPoolId) ? "mana" : primaryPoolId;
             PlateArt = plateArt ?? "";
+            Epithet = epithet ?? "";
+            DialogueBustPath = dialogueBustPath ?? "";
         }
     }
 }
