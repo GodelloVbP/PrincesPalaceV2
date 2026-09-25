@@ -94,9 +94,13 @@ namespace PrincesPalace
             var earned = Achievements.EarnedIds(save);
             var alreadyHeld = RunManager.Run?.relicIds ?? new List<string>();
 
+            // Draftable carried through, so RelicPool.Available drops a
+            // draftable: false relic from the one pool both the draft and the
+            // shop's relic shelf draw from.
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy, r.Data.RequiresConvergenceAbility))
+                .Select(r => new RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy,
+                    r.Data.RequiresConvergenceAbility, r.Data.Draftable))
                 .ToList();
 
             // Mechanic (g): does anybody in the squad actually have a

@@ -194,10 +194,11 @@ namespace PrincesPalace.Domain.Tests
         private static List<string> RelicIds()
         {
             var achievementIds = AchievementIds();
+            var characterIds = ResolveCharacters().Select(c => c.Id).ToList();
 
             bool Resolver(IReadOnlyList<RawRelicEntry> entries, out List<ResolvedRelic> resolved,
                           out List<string> errors) =>
-                RelicEntryResolver.TryResolveAll(entries, achievementIds, out resolved, out errors);
+                RelicEntryResolver.TryResolveAll(entries, achievementIds, characterIds, out resolved, out errors);
 
             return Resolve<RawRelicEntry, ResolvedRelic>(
                 "relics.json", ContentDataFiles.ParseFile<RawRelicFile>(ContentDataFiles.DataPath("relics.json")).relics,

@@ -196,6 +196,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- what the resolver refuses to ship ---------------------------------------
 
         private static readonly string[] Known = { "first_forest_boss" };
+        private static readonly string[] KnownCharacters = { "sheep" };
 
         private static RawRelicEntry Relic(RawRelicModifier[] modifiers) =>
             new RawRelicEntry { id = "x", displayName = "X", effect = "None", modifiers = modifiers };
@@ -205,7 +206,7 @@ namespace PrincesPalace.Domain.Tests
         {
             bool ok = RelicEntryResolver.TryResolveAll(
                 new List<RawRelicEntry> { Relic(new[] { new RawRelicModifier { type = "Wingspan", amount = 5 } }) },
-                Known, out _, out var errors);
+                Known, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("not a known RelicModifierType", errors[0]);
@@ -218,7 +219,7 @@ namespace PrincesPalace.Domain.Tests
             // which is indistinguishable from a mistyped amount.
             bool ok = RelicEntryResolver.TryResolveAll(
                 new List<RawRelicEntry> { Relic(new[] { new RawRelicModifier { type = "AttackPercent", amount = 0 } }) },
-                Known, out _, out var errors);
+                Known, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("would do nothing", errors[0]);
@@ -236,7 +237,7 @@ namespace PrincesPalace.Domain.Tests
             };
 
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { raw }, Known, out var resolved, out var errors);
+                new List<RawRelicEntry> { raw }, Known, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
@@ -248,7 +249,7 @@ namespace PrincesPalace.Domain.Tests
         public void APlaceholderHasNoBehaviourAndSaysSo()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(new RawRelicModifier[0]) }, Known, out var resolved, out _);
+                new List<RawRelicEntry> { Relic(new RawRelicModifier[0]) }, Known, KnownCharacters, out var resolved, out _);
 
             Assert.IsTrue(ok, "a mechanic-less relic is still valid content");
             Assert.IsFalse(resolved[0].HasBehaviour);

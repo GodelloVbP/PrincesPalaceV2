@@ -18,9 +18,14 @@ namespace PrincesPalace.Domain.Relics
         // RequiresConvergenceAbility.
         public readonly bool RequiresConvergenceAbility;
 
+        // See ResolvedRelic.Draftable. False keeps it out of Available, and
+        // so out of the draft and the shop's relic shelf alike.
+        public readonly bool Draftable;
+
         public RelicOption(string id, RelicRarity rarity, string unlockedBy = "",
-                           bool requiresConvergenceAbility = false)
+                           bool requiresConvergenceAbility = false, bool draftable = true)
         {
+            Draftable = draftable;
             Id = id;
             Rarity = rarity;
             UnlockedBy = unlockedBy ?? "";
@@ -63,7 +68,10 @@ namespace PrincesPalace.Domain.Relics
         {
             if (all == null) return new List<RelicOption>();
 
+            // An undraftable relic is granted some other way (an event) and
+            // is never offered, whatever else is true of it.
             return all
+                .Where(r => r.Draftable)
                 .Where(r => r.IsUnlockedFromTheStart
                             || (earnedAchievements != null && earnedAchievements.Contains(r.UnlockedBy)))
                 .Where(r => !r.RequiresConvergenceAbility || partyHasConvergenceAbility)

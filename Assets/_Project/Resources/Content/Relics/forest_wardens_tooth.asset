@@ -24,3 +24,5 @@ MonoBehaviour:
     UnlockedBy: first_forest_boss
     Modifiers: []
     RequiresConvergenceAbility: 0
+    Bearer: 
+    Draftable: 1

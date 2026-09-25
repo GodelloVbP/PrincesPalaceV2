@@ -1062,6 +1062,21 @@ namespace PrincesPalace.Domain.Combat.Session
             // GrantSignatureForHitTaken.
             var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy), KillCredit.Nobody);
 
+            // Kinship turned the blow aside (FightSession.Kinship): it landed
+            // NOTHING, so every rider on a landed hit is skipped exactly as the
+            // miss branch above skips them -- no on-hit status, no hurt pose or
+            // grunt, no damage number, no "attacks X for N" line. The funnel
+            // already wrote "Kinship turns the blow aside." onto this beat,
+            // and that is the only line. NOT RecordMiss: nothing was dodged,
+            // and the stage would draw a MISS. The taunt is still spent, for
+            // the miss branch's reason -- the enemy did act on it.
+            if (landed.Cancelled)
+            {
+                StatusEffects.ConsumeProvoke(enemy.Statuses);
+                CommitBeat();
+                return true; // physical, for the miss branch's reason
+            }
+
             if (landed.Absorbed > 0)
             {
                 AppendMessage($"{target.Name}'s {target.SignaturePool.DisplayName} soaks {landed.Absorbed} of it.");

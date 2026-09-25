@@ -165,7 +165,8 @@ namespace PrincesPalace.PlayModeTests
             // party (finding 6, code review).
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new Domain.Relics.RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy, r.Data.RequiresConvergenceAbility))
+                .Select(r => new Domain.Relics.RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy,
+                    r.Data.RequiresConvergenceAbility, r.Data.Draftable))
                 .ToList();
 
             // Every relic unlocked from the start (unlockedBy empty) must
@@ -178,7 +179,10 @@ namespace PrincesPalace.PlayModeTests
                 .ToHashSet();
 
             var stuck = ContentDatabase.Relics
-                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && !available.Contains(r.id))
+                // draftable: false is never offered by design (an event grants
+                // it), so it is not "stuck".
+                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && r.Data.Draftable
+                            && !available.Contains(r.id))
                 .Select(r => r.id)
                 .ToList();
 

@@ -17,6 +17,7 @@ namespace PrincesPalace.Domain.Content
         // achievements exist is the file that defines them.
         public static bool TryResolveAll(IReadOnlyList<RawRelicEntry> entries,
             IReadOnlyCollection<string> knownAchievementIds,
+            IReadOnlyCollection<string> knownCharacterIds,
             out List<ResolvedRelic> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedRelic>();
@@ -24,7 +25,8 @@ namespace PrincesPalace.Domain.Content
 
             for (int i = 0; i < entries.Count; i++)
             {
-                if (TryResolveOne(entries[i], i, resolved.Count, knownAchievementIds, out var single, out string error))
+                if (TryResolveOne(entries[i], i, resolved.Count, knownAchievementIds, knownCharacterIds,
+                        out var single, out string error))
                 {
                     resolved.Add(single);
                 }
@@ -67,7 +69,8 @@ namespace PrincesPalace.Domain.Content
         }
 
         private static bool TryResolveOne(RawRelicEntry raw, int index, int sortOrder,
-            IReadOnlyCollection<string> knownAchievementIds, out ResolvedRelic resolvedRelic, out string error)
+            IReadOnlyCollection<string> knownAchievementIds, IReadOnlyCollection<string> knownCharacterIds,
+            out ResolvedRelic resolvedRelic, out string error)
         {
             resolvedRelic = default;
             string label = string.IsNullOrEmpty(raw.id) ? $"relics.json entry #{index + 1}" : $"relic '{raw.id}'";
@@ -179,10 +182,36 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            // A BEARER COVERS THE EFFECT ONLY. FightEncounterAdapter folds
+            // every run relic's modifiers onto every party member before any
+            // kit exists, so a bearer on a relic with modifiers would give
+            // the numbers to the whole party while the text says one
+            // character. Refused here rather than half-honoured there.
+            string bearer = (raw.bearer ?? "").Trim();
+            if (bearer.Length > 0 && modifiers.Count > 0)
+            {
+                error = $"{label}: bearer '{bearer}' is set on a relic with modifiers. A bearer limits the " +
+                        "relic's effect only; FightEncounterAdapter applies relic modifiers to every party " +
+                        "member, so they would not be limited to the bearer. Drop the bearer or the modifiers.";
+                return false;
+            }
+
+            // A misspelled bearer is a relic whose effect reaches NOBODY, and
+            // that fails silently -- the same reason unlockedBy is checked
+            // above. Validated against the real roster (characters.json),
+            // handed in by ContentBuilder like the achievement ids.
+            if (bearer.Length > 0 && (knownCharacterIds == null || !knownCharacterIds.Contains(bearer)))
+            {
+                error = $"{label}: bearer '{bearer}' is not a character id in characters.json " +
+                        $"({(knownCharacterIds == null || knownCharacterIds.Count == 0 ? "none defined" : string.Join(", ", knownCharacterIds))}).";
+                return false;
+            }
+
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
 
             resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effect, sortOrder,
-                raw.iconPath ?? "", rarity, unlockedBy, modifiers, raw.requiresConvergenceAbility);
+                raw.iconPath ?? "", rarity, unlockedBy, modifiers, raw.requiresConvergenceAbility,
+                bearer, raw.draftable);
             error = null;
             return true;
         }

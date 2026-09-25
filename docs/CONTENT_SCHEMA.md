@@ -182,12 +182,14 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `id` | string | (none -- required) | Stable identifier; written into save data via unlock/achievement references. |  |
 | `displayName` | string | (none -- required) | The name shown for this relic when offered. |  |
 | `description` | string | `""` | Flavor/rules text shown to the player. |  |
-| `effect` | string | `""` | Which RelicEffect this grants, matched case-insensitively; empty resolves to None. | None, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg |
+| `effect` | string | `""` | Which RelicEffect this grants, matched case-insensitively; empty resolves to None. | None, DualWield, MagicalShield, Bloodlust, ChargingCrystal, BallerinasSlippers, TinFoilPipe, ToothedNecklace, BountyHunterContract, SwordInABox, LuckyDeck, DrownedLantern, FirstRune, SaltLedger, LongCount, MagicMarker, JarOfBearUrine, WorldEndersCrown, CursedIdol, AmassingStar, RampagingBullsHorn, IceFingernail, LoadedDice, MonkeyKingsScepter, SparringSaber, SparringBuckler, EssenceSiphon, DisgruntledLackey, InconspicuousKey, DancersAnklet, BerserkersVest, PhoenixEgg, Kinship |
 | `iconPath` | string | `""` | Editor-time path to this relic's icon under Assets/_Project/Art/Items/Relics/Processed/; empty falls back to a flat accent-coloured circle. |  |
 | `rarity` | string | `""` | How rare the offer is, one of RelicRarity's names; empty means Common. | Common, Uncommon, Rare, UltraRare, Mythic, Godlike |
 | `unlockedBy` | string | `""` | The achievement id that must be earned before this relic can be offered; empty means available from the first run. |  |
 | `modifiers` | RawRelicModifier[] (below) | `[]` | Numeric stat changes this relic grants; see RawRelicModifier. |  |
 | `requiresConvergenceAbility` | bool | `false` | Whether this relic is only ever offered to a party that already has a convergence/ultimate ability. |  |
+| `bearer` | string | `""` | Optional character id; when set, only that character gets this relic's effect. Refused together with modifiers, which apply party-wide. |  |
+| `draftable` | bool | `true` | Whether this relic can be offered in a relic draft or the shop's relic shelf; false for relics granted another way, such as by an event. |  |
 
 ## reward_tracks.json -- `RawRewardTrackEntry`
 

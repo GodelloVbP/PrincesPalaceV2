@@ -93,11 +93,24 @@ namespace PrincesPalace.Domain.Combat.Session
             // thrown, not about a relic that made it bigger.
             NoteDamageForPools(actor, target, amount);
 
+            // Kinship: the bearer's first positive packet of the fight is
+            // turned aside whole -- see FightSession.Kinship. BELOW the pools
+            // (the blow was thrown) and ABOVE both egg checks (a cancelled
+            // lethal blow must not hatch the egg or spend its lock). Returns
+            // before everything else on purpose: no Cursed Idol, no crown
+            // check, no wool absorb, no RecordAbsorbed, no vest, no ledger
+            // rows. Absorbed stays 0 so no caller reports a soak.
+            if (TryKinshipCancel(target, amount))
+            {
+                return CombatMath.DamageResult.CancelledPacket;
+            }
+
             // Phoenix Egg, already hatched: every further hit eats the
             // egg's OWN pool instead of the wearer's health -- see
-            // PhoenixEggAbsorb's own header. Checked first and returns
-            // outright: nothing below (Cursed Idol's bonus, the crown's
-            // crossing-check) applies to a shell.
+            // PhoenixEggAbsorb's own header. Checked first after Kinship
+            // (which skips a shell) and returns outright: nothing below
+            // (Cursed Idol's bonus, the crown's crossing-check) applies to a
+            // shell.
             if (target != null && target.IsPhoenixEgg)
             {
                 return PhoenixEggAbsorb(actor, target, amount, type);

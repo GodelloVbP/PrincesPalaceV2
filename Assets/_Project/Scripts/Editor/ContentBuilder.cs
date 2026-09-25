@@ -158,7 +158,7 @@ public static class ContentBuilder
             // them the other way round would validate against nothing and let a
             // typo'd gate through.
             var achievementIds = BuildAchievements();
-            BuildRelics(achievementIds);
+            BuildRelics(achievementIds, characters.Select(c => c.Id).ToList());
 
             // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
             // track's rules 4/5 and its UnlockSkill/signature captions are
@@ -362,14 +362,15 @@ public static class ContentBuilder
     // A relic has no cross-references to wire up; RelicEntryResolver
     // validates everything (a known id, a known effect, no two relics sharing
     // an effect) up front.
-    private static void BuildRelics(IReadOnlyCollection<string> achievementIds)
+    private static void BuildRelics(IReadOnlyCollection<string> achievementIds,
+                                    IReadOnlyCollection<string> characterIds)
     {
         // A LOCAL FUNCTION, because RelicEntryResolver is the one resolver
         // that takes a second argument: the achievement ids a relic may name
         // as its unlock gate. Closing over them here is what lets relics use
         // the shared Build path rather than a fourth bespoke copy of it.
         bool Resolve(IReadOnlyList<RawRelicEntry> entries, out List<ResolvedRelic> resolved, out List<string> errors) =>
-            RelicEntryResolver.TryResolveAll(entries, achievementIds, out resolved, out errors);
+            RelicEntryResolver.TryResolveAll(entries, achievementIds, characterIds, out resolved, out errors);
 
         Build<RawRelicEntry, ResolvedRelic, RelicDefinition>(
             "BuildRelics", "Assets/_Project/ContentData/relics.json", RelicsPath, "relics",

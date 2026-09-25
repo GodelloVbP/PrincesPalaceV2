@@ -211,5 +211,12 @@ namespace PrincesPalace.Domain.Content
         // pool survived, or dies outright if the egg's pool reaches 0
         // first. Once per combat.
         PhoenixEgg,
+
+        // The first damage packet with amount > 0 that reaches the bearer in
+        // a fight is turned aside whole -- after dodge and ward, before the
+        // Phoenix Egg, any source. Once per fight; see FightSession.Kinship.
+        // Authored with a `bearer`, and never drafted (docs/PLAN_PETTING_ZOO.md).
+        // APPENDED, not inserted: relic assets serialize this enum as an int.
+        Kinship,
     }
 }

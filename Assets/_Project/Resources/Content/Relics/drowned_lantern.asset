@@ -24,3 +24,5 @@ MonoBehaviour:
     UnlockedBy: 
     Modifiers: []
     RequiresConvergenceAbility: 0
+    Bearer: 
+    Draftable: 1

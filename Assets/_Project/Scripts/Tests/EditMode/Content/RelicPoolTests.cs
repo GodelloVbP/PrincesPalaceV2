@@ -225,5 +225,38 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEquivalent(new[] { "dual_wield", "bulls_horn" }, available.Select(r => r.Id));
         }
+
+        // ---- draftable: false (Kinship) -------------------------------------------
+
+        [Test]
+        public void AnUndraftableRelicIsNeverAvailable()
+        {
+            var all = new[] { Open("dual_wield"), new RelicOption("kinship", RelicRarity.Common, draftable: false) };
+
+            var available = RelicPool.Available(all, new HashSet<string>(), partyHasConvergenceAbility: true);
+
+            CollectionAssert.AreEquivalent(new[] { "dual_wield" }, available.Select(r => r.Id));
+        }
+
+        // The draft's own draw, over the pool RunOrchestrator.AvailableRelicOptions
+        // builds: across many seeds the undraftable relic is never offered, even
+        // when the pool is small enough that it would otherwise always be.
+        [Test]
+        public void AnUndraftableRelicIsNeverInADraftOffer()
+        {
+            var all = new[]
+            {
+                Open("a"), Open("b"), new RelicOption("kinship", RelicRarity.Common, draftable: false),
+            };
+
+            for (ulong seed = 1; seed <= 50; seed++)
+            {
+                var rng = new PrincesPalace.Domain.Rng.SeededRandom(seed);
+                var offer = RelicPool.DraftWeighted(RelicPool.Available(all, new HashSet<string>()),
+                    bound => rng.NextInt(0, bound));
+
+                CollectionAssert.AreEquivalent(new[] { "a", "b" }, offer.Select(r => r.Id), $"seed {seed}");
+            }
+        }
     }
 }

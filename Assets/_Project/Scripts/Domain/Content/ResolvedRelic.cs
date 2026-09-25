@@ -32,6 +32,20 @@ namespace PrincesPalace.Domain.Content
         // Mechanic (g). See RawRelicEntry.requiresConvergenceAbility.
         public bool RequiresConvergenceAbility;
 
+        // See RawRelicEntry.bearer. Empty means every holder gets the effect.
+        public string Bearer = "";
+
+        // See RawRelicEntry.draftable. The initializer is load-bearing: an
+        // asset built before this field existed deserializes to TRUE, not to
+        // bool's default, so no shipped relic silently leaves the draft.
+        public bool Draftable = true;
+
+        // Whether this relic's EFFECT reaches a combatant with this character
+        // id. Modifiers are not asked -- the resolver refuses a bearer on a
+        // relic that has any (RelicEntryResolver).
+        public bool ReachesCharacter(string characterId) =>
+            string.IsNullOrEmpty(Bearer) || string.Equals(Bearer, characterId, StringComparison.Ordinal);
+
         // A relic has to DO something, one way or the other, to be worth
         // offering. Asked here so the draft and the glossary can both tell a
         // real relic from a placeholder without re-deriving the rule.
@@ -51,8 +65,11 @@ namespace PrincesPalace.Domain.Content
         public ResolvedRelic(string id, string displayName, string description, RelicEffect effect, int sortOrder,
                              string iconPath = "", RelicRarity rarity = RelicRarity.Common, string unlockedBy = "",
                              IReadOnlyList<RelicModifier> modifiers = null,
-                             bool requiresConvergenceAbility = false)
+                             bool requiresConvergenceAbility = false,
+                             string bearer = "", bool draftable = true)
         {
+            Bearer = bearer ?? "";
+            Draftable = draftable;
             Rarity = rarity;
             UnlockedBy = unlockedBy ?? "";
             Modifiers = ToArray(modifiers);

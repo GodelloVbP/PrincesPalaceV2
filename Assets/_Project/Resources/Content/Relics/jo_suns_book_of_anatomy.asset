@@ -28,3 +28,5 @@ MonoBehaviour:
       HasAgainst: 0
       AgainstMagical: 0
     RequiresConvergenceAbility: 0
+    Bearer: 
+    Draftable: 1

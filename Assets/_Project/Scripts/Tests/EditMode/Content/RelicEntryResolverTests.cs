@@ -13,6 +13,9 @@ namespace PrincesPalace.Domain.Tests
         // parameter was added to prevent.
         private static readonly string[] KnownAchievements = { "first_forest_boss", "character_level_30" };
 
+        // The roster a `bearer` is validated against, for the same reason.
+        private static readonly string[] KnownCharacters = { "sheep", "owl", "bear" };
+
         private static RawRelicEntry Relic(string id = "dual_wield", string effect = "DualWield")
         {
             return new RawRelicEntry { id = id, displayName = "Dual Wield", effect = effect };
@@ -21,7 +24,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AMinimalRelic_ResolvesWithItsEffect()
         {
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("dual_wield", resolved[0].Id);
@@ -31,7 +34,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void IconPath_IsOptionalAndDefaultsEmpty()
         {
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("", resolved[0].IconPath);
@@ -43,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
             var raw = Relic();
             raw.iconPath = "Assets/_Project/Art/Items/Relics/Processed/relic_dualwield.png";
 
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/relic_dualwield.png", resolved[0].IconPath);
@@ -53,7 +56,7 @@ namespace PrincesPalace.Domain.Tests
         public void EffectParsing_IsCaseInsensitive()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(effect: "dualwield") }, KnownAchievements, out var resolved, out var errors);
+                new List<RawRelicEntry> { Relic(effect: "dualwield") }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
@@ -63,7 +66,7 @@ namespace PrincesPalace.Domain.Tests
         public void MissingId_IsRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "") }, KnownAchievements, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("id is required", errors[0]);
@@ -75,7 +78,7 @@ namespace PrincesPalace.Domain.Tests
             var raw = Relic();
             raw.displayName = "";
 
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, out _, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("displayName is required", errors[0]);
@@ -85,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
         public void UnknownEffectName_IsRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(effect: "NotARealEffect") }, KnownAchievements, out _, out var errors);
+                new List<RawRelicEntry> { Relic(effect: "NotARealEffect") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("not a known RelicEffect", errors[0]);
@@ -95,7 +98,7 @@ namespace PrincesPalace.Domain.Tests
         public void DuplicateIds_AreRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "x"), Relic(id: "x", effect: "Bloodlust") }, KnownAchievements, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "x"), Relic(id: "x", effect: "Bloodlust") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("Duplicate relic id", errors[0]);
@@ -108,7 +111,7 @@ namespace PrincesPalace.Domain.Tests
         public void DuplicateEffects_AreRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "a"), Relic(id: "b") }, KnownAchievements, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "a"), Relic(id: "b") }, KnownAchievements, KnownCharacters, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("one relic per effect", errors[0]);
@@ -127,13 +130,72 @@ namespace PrincesPalace.Domain.Tests
                 new RawRelicEntry { id = "bloodlust", displayName = "Bloodlust", effect = "Bloodlust" },
             };
 
-            bool ok = RelicEntryResolver.TryResolveAll(entries, KnownAchievements, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(entries, KnownAchievements, KnownCharacters, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(3, resolved.Count);
             CollectionAssert.AreEquivalent(
                 new[] { RelicEffect.DualWield, RelicEffect.MagicalShield, RelicEffect.Bloodlust },
                 resolved.ConvertAll(r => r.Effect));
+        }
+
+        // ---- bearer and draftable (Kinship, docs/PLAN_PETTING_ZOO.md) ------------
+
+        [Test]
+        public void BearerAndDraftable_DefaultToEveryoneAndOffered()
+        {
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual("", resolved[0].Bearer);
+            Assert.IsTrue(resolved[0].Draftable);
+        }
+
+        [Test]
+        public void BearerAndDraftable_PassThroughWhenAuthored()
+        {
+            var raw = Relic("kinship", "Kinship");
+            raw.bearer = "sheep";
+            raw.draftable = false;
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual("sheep", resolved[0].Bearer);
+            Assert.IsFalse(resolved[0].Draftable);
+            Assert.IsTrue(resolved[0].ReachesCharacter("sheep"));
+            Assert.IsFalse(resolved[0].ReachesCharacter("bear"));
+        }
+
+        [Test]
+        public void AnUnknownBearer_IsRefusedByName()
+        {
+            var raw = Relic("kinship", "Kinship");
+            raw.bearer = "shep";
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual(1, errors.Count);
+            StringAssert.Contains("bearer 'shep' is not a character id", errors[0]);
+            StringAssert.Contains("sheep, owl, bear", errors[0]);
+        }
+
+        // The adapter flattens relic modifiers onto every party member, so a
+        // bearer could not keep them to one character. Refused, not half-kept.
+        [Test]
+        public void ABearerOnARelicWithModifiers_IsRefused()
+        {
+            var raw = Relic("kinship", "Kinship");
+            raw.bearer = "sheep";
+            raw.modifiers = new[] { new RawRelicModifier { type = "AttackPercent", amount = 10 } };
+
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, KnownCharacters, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            Assert.AreEqual(1, errors.Count);
+            StringAssert.Contains("bearer 'sheep'", errors[0]);
+            StringAssert.Contains("every party member", errors[0]);
         }
     }
 }

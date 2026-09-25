@@ -406,5 +406,27 @@ namespace PrincesPalace.EditModeTests
             Assert.IsTrue(books.All(e => e.kind == ShopEntryKind.Book));
             Assert.IsTrue(relics.All(e => e.kind == ShopEntryKind.Relic));
         }
+
+        // draftable: false (Kinship) never reaches the relic shelf: the shelf
+        // rolls from RunOrchestrator.AvailableRelicOptions, which is
+        // RelicPool.Available. A pool of one real relic plus the undraftable
+        // one leaves one card and two placeholders on every seed.
+        [Test]
+        public void AnUndraftableRelicIsNeverOnTheRelicShelf()
+        {
+            var all = new[]
+            {
+                new RelicOption("dual_wield", RelicRarity.Common),
+                new RelicOption("kinship", RelicRarity.Common, draftable: false),
+            };
+
+            for (ulong seed = 1; seed <= 50; seed++)
+            {
+                var shelf = ShopStock.RollRelics(RelicPool.Available(all, new HashSet<string>()), Stream(seed));
+
+                Assert.IsFalse(shelf.Any(e => e.contentId == "kinship"), $"seed {seed}");
+                Assert.AreEqual(1, shelf.Count(e => !e.noOffer), $"seed {seed}");
+            }
+        }
     }
 }

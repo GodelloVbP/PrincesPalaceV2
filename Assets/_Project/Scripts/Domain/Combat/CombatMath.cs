@@ -556,11 +556,22 @@ namespace PrincesPalace.Domain.Combat
             public readonly int Absorbed;
             public readonly bool CheatedDeath;
 
-            public DamageResult(int absorbed, bool cheatedDeath)
+            // The whole packet was turned aside before any arithmetic ran
+            // (Kinship, FightSession.Kinship.cs). Nothing reached health AND
+            // nothing was absorbed -- Absorbed stays 0 on purpose, because a
+            // caller that reads Absorbed > 0 prints "soaks N of it", and no
+            // pool or ward soaked anything. A caller that shows the blow
+            // (a damage number, a recoil) reads this to show nothing instead.
+            public readonly bool Cancelled;
+
+            public DamageResult(int absorbed, bool cheatedDeath, bool cancelled = false)
             {
                 Absorbed = absorbed;
                 CheatedDeath = cheatedDeath;
+                Cancelled = cancelled;
             }
+
+            public static DamageResult CancelledPacket => new DamageResult(0, false, cancelled: true);
         }
 
         public static DamageResult ApplyDamageDetailed(CombatantState target, int amount)

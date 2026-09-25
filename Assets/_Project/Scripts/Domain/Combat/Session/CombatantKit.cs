@@ -134,9 +134,16 @@ namespace PrincesPalace.Domain.Combat.Session
             PlateArt = plateArt ?? "";
             Facing = facing;
 
+            // A BEARER'S RELIC GIVES NOBODY ELSE ITS EFFECT. Run relics reach
+            // every fielded kit (FightEncounterAdapter), so this is the one
+            // place a `bearer` can be honoured for every effect check at
+            // once: FightSession.HasRelic asks this set and nothing else.
+            // Relics stays the full list -- it is what the kit CARRIES, and
+            // the bearer rule is about what it does, not what is held.
             _relicEffects = new HashSet<RelicEffect>();
             for (int i = 0; i < Relics.Count; i++)
             {
+                if (Relics[i] == null || !Relics[i].ReachesCharacter(Id)) continue;
                 _relicEffects.Add(Relics[i].Effect);
             }
         }

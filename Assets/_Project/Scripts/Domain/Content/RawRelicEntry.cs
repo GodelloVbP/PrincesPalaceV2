@@ -57,6 +57,24 @@ namespace PrincesPalace.Domain.Content
         // all of them.
         [ContentDoc("Whether this relic is only ever offered to a party that already has a convergence/ultimate ability.")]
         public bool requiresConvergenceAbility;
+
+        // A relic the run holds but only ONE character acts on. Run relics
+        // reach every fielded kit, so without this an event reward meant for
+        // Shawn would work for whoever else was carrying the run.
+        //
+        // EFFECT ONLY. FightEncounterAdapter flattens relic modifiers onto
+        // every party member regardless, so RelicEntryResolver refuses a
+        // bearer on a relic that also has modifiers rather than let the
+        // field promise something the adapter does not keep.
+        [ContentDoc("Optional character id; when set, only that character gets this relic's effect. Refused together with modifiers, which apply party-wide.")]
+        public string bearer = "";
+
+        // False keeps a relic out of every offer -- the draft and the shop's
+        // relic shelf both read RunOrchestrator.AvailableRelicOptions. For a
+        // relic that is granted some other way (an event), where drafting it
+        // would skip the story that grants it.
+        [ContentDoc("Whether this relic can be offered in a relic draft or the shop's relic shelf; false for relics granted another way, such as by an event.")]
+        public bool draftable = true;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.
