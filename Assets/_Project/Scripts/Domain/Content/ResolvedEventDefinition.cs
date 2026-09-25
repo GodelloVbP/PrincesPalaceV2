@@ -18,17 +18,85 @@ namespace PrincesPalace.Domain.Content
         public string Body = "";
         public ResolvedEventChoice[] Choices = Array.Empty<ResolvedEventChoice>();
 
+        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+
+        // The EFFECTIVE backdrop: the page's own when it names one, else its
+        // event's (already defaulted to EventEntryResolver.DefaultBackdrop).
+        // A key for the same reason ArtKey is -- baked at scene build and
+        // looked up at runtime. Empty only from a hand-built fixture, which
+        // contract 15 draws as solid dark.
+        public string BackdropKey = "";
+
+        // Every distinct non-narration speaker on this page, in order of
+        // first appearance, with the side the build settled for them
+        // (contract 5). Empty when the page has no lines.
+        public ResolvedEventCastMember[] Cast = Array.Empty<ResolvedEventCastMember>();
+        public ResolvedEventLine[] Lines = Array.Empty<ResolvedEventLine>();
+
+        // Contract 14: a page without lines shows exactly as before -- body
+        // at once, choices at once, no stage.
+        public bool HasLines => Lines != null && Lines.Length > 0;
+
         public ResolvedEventPage()
         {
         }
 
-        public ResolvedEventPage(string id, string artKey, string title, string body, ResolvedEventChoice[] choices)
+        public ResolvedEventPage(string id, string artKey, string title, string body, ResolvedEventChoice[] choices,
+            string backdropKey = "", ResolvedEventCastMember[] cast = null, ResolvedEventLine[] lines = null)
         {
             Id = id ?? "";
             ArtKey = artKey ?? "";
             Title = title ?? "";
             Body = body ?? "";
             Choices = choices ?? Array.Empty<ResolvedEventChoice>();
+            BackdropKey = backdropKey ?? "";
+            Cast = cast ?? Array.Empty<ResolvedEventCastMember>();
+            Lines = lines ?? Array.Empty<ResolvedEventLine>();
+        }
+    }
+
+    // One speaker's settled side on one page.
+    [Serializable]
+    public sealed class ResolvedEventCastMember
+    {
+        public string CharacterId = "";
+        public DialogueSide Side;
+
+        public ResolvedEventCastMember()
+        {
+        }
+
+        public ResolvedEventCastMember(string characterId, DialogueSide side)
+        {
+            CharacterId = characterId ?? "";
+            Side = side;
+        }
+    }
+
+    // One validated dialogue line. Side is resolved at build (contract 5),
+    // so the runtime reads it rather than recomputing the alternation.
+    // Narration carries no speaker, Neutral and Left, none of which the
+    // stage reads for it.
+    [Serializable]
+    public sealed class ResolvedEventLine
+    {
+        public string SpeakerId = "";
+        public bool IsNarration;
+        public DialogueExpression Expression;
+        public DialogueSide Side;
+        public string Text = "";
+
+        public ResolvedEventLine()
+        {
+        }
+
+        public ResolvedEventLine(string speakerId, bool isNarration, DialogueExpression expression, DialogueSide side, string text)
+        {
+            SpeakerId = speakerId ?? "";
+            IsNarration = isNarration;
+            Expression = expression;
+            Side = side;
+            Text = text ?? "";
         }
     }
 
@@ -100,17 +168,25 @@ namespace PrincesPalace.Domain.Content
         public EventRequirement[] Requires = Array.Empty<EventRequirement>();
         public ResolvedEventPage[] Pages = Array.Empty<ResolvedEventPage>();
 
+        // The event-level backdrop with the default already applied
+        // (EventEntryResolver.DefaultBackdrop when authored empty). Each
+        // page's BackdropKey is what the stage draws; this is kept so the
+        // scene build can bake every key an event can show.
+        public string BackdropKey = "";
+
         public ResolvedEventDefinition()
         {
         }
 
-        public ResolvedEventDefinition(string id, int sortOrder, int[] floors, EventRequirement[] requires, ResolvedEventPage[] pages)
+        public ResolvedEventDefinition(string id, int sortOrder, int[] floors, EventRequirement[] requires, ResolvedEventPage[] pages,
+            string backdropKey = "")
         {
             Id = id ?? "";
             SortOrder = sortOrder;
             Floors = floors ?? Array.Empty<int>();
             Requires = requires ?? Array.Empty<EventRequirement>();
             Pages = pages ?? Array.Empty<ResolvedEventPage>();
+            BackdropKey = backdropKey ?? "";
         }
 
         // The page an event opens on. Authored order, first page -- the same

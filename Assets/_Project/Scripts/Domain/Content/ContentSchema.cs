@@ -92,6 +92,8 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawAchievementEntry), nameof(RawAchievementEntry.condition))] = typeof(AchievementCondition),
                 [(typeof(RawEventRequirement), nameof(RawEventRequirement.kind))] = typeof(Events.EventRequirementKind),
                 [(typeof(RawEventEffect), nameof(RawEventEffect.kind))] = typeof(Events.EventEffectKind),
+                [(typeof(RawEventLine), nameof(RawEventLine.expression))] = typeof(DialogueExpression),
+                [(typeof(RawEventCastMember), nameof(RawEventCastMember.side))] = typeof(DialogueSide),
                 [(typeof(RawTrackLevel), nameof(RawTrackLevel.reward))] = typeof(Progression.TrackReward),
                 [(typeof(RawTrackLevel), nameof(RawTrackLevel.against))] = typeof(Stats.DamageType),
                 [(typeof(RawTrackLevel), nameof(RawTrackLevel.resource))] = typeof(Progression.TrackResourceTarget),

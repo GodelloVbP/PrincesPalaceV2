@@ -90,6 +90,40 @@ namespace PrincesPalace.Domain.Content
         public string body = "";
         [ContentDoc("Up to 4 choices offered on this page.")]
         public RawEventChoice[] choices = Array.Empty<RawEventChoice>();
+
+        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+        // A page with no lines behaves exactly as before (contract 14).
+
+        [ContentDoc("Optional full-bleed backdrop for this page, Assets-relative with its extension, baked at scene build like artPath. Empty inherits the event's backdrop. Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
+        public string backdrop = "";
+        [ContentDoc("Optional side overrides for this page's speakers. A speaker not listed takes a side by first appearance on the page: first distinct speaker left, second right, third left, alternating. Every entry must speak on this page, and a character may be listed once.")]
+        public RawEventCastMember[] cast = Array.Empty<RawEventCastMember>();
+        [ContentDoc("Dialogue lines played before the choices, in order; at most EventEntryResolver.MaxLinesPerPage. Every non-narration speaker must be guaranteed in the party at this page by requirements on the way in (see docs/EVENTS.md, Dialogue lines).")]
+        public RawEventLine[] lines = Array.Empty<RawEventLine>();
+    }
+
+    // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+
+    // One row of a page's `cast` array: pins a speaker to a side.
+    [Serializable]
+    public class RawEventCastMember
+    {
+        [ContentDoc("The character id (characters.json) this row places; must speak on this page.")]
+        public string character = "";
+        [ContentDoc("Which screen edge the bust stands against: left or right (case-insensitive). A right-side bust is mirrored so it faces inward.")]
+        public string side = "";
+    }
+
+    // One row of a page's `lines` array.
+    [Serializable]
+    public class RawEventLine
+    {
+        [ContentDoc("Who says this: a character id (characters.json), or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate.")]
+        public string speaker = "";
+        [ContentDoc("The speaker's face for this line; empty means neutral. Refused on narration.")]
+        public string expression = "";
+        [ContentDoc("The line's text; at most EventEntryResolver.MaxLineLength characters, tags included. The only markup allowed is <i>...</i> (lowercase, balanced, not nested); any other tag, <b> included, is refused.")]
+        public string text = "";
     }
 
     // One event, exactly as typed into events.json.
@@ -104,6 +138,11 @@ namespace PrincesPalace.Domain.Content
         public RawEventRequirement[] requires = Array.Empty<RawEventRequirement>();
         [ContentDoc("The event's page graph; the first page is where the event opens.")]
         public RawEventPage[] pages = Array.Empty<RawEventPage>();
+
+        // ---- Dialogue stage (docs/PLAN_DIALOGUE_STAGE.md, phase D1) ----
+
+        [ContentDoc("The dialogue stage's full-bleed backdrop, Assets-relative with its extension, baked at scene build like a page's artPath; a page's own backdrop overrides it. Empty means EventEntryResolver.DefaultBackdrop (Assets/_Project/Art/Backgrounds/Dungeon.png). Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/.")]
+        public string backdrop = "";
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

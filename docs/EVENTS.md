@@ -142,6 +142,43 @@ sample, and a scene build (`-BuildScenes`) re-measures it.
 
 Errors name the event, page, choice where there is one, and the field.
 
+## Dialogue lines
+
+A page can play dialogue before its choices (`docs/PLAN_DIALOGUE_STAGE.md`).
+A page with no `lines` works exactly as it did before: body and choices shown at once.
+
+- **`lines`**: `[{speaker, expression, text}]`. `speaker` is a character id
+  or `narration` (no bust, no name plate). `expression` is one of neutral,
+  happy, annoyed, nervous, sad or surprised. Empty means neutral, and
+  narration takes none. A missing bust file warns at build and never
+  refuses. The line falls back to neutral, then to no bust.
+- **Caps**: 12 lines per page (`MaxLinesPerPage`), 200 characters per line
+  (`MaxLineLength`). Tags count toward the 200.
+- **Markup**: `<i>...</i>` only, lowercase, balanced, not nested. Any other
+  `<` is refused, `<b>` included.
+- **`cast`**: `[{character, side}]` pins a speaker to `left` or `right`.
+  Unlisted speakers alternate by first appearance: the first distinct
+  speaker goes left, the second right, and so on. A listed character that
+  never speaks on the page is refused.
+- **`backdrop`**: event-level (default `Art/Backgrounds/Dungeon.png`), and a
+  page can override it. Filed under `Art/Backgrounds/` or the event's own
+  `Art/Events/<event_id>/`.
+- **Presence**: a speaker must be *guaranteed* in the squad on their page.
+  Only a named `inParty`, `memberLevel` or `ability` row guarantees a
+  character. On the start page that means the event's own `requires`. On
+  any other page, it takes a row on every choice or outcome route that
+  leads in. The build refuses a speaker that one route leaves out.
+  Knocked-out members still count, so presence means squad membership only.
+- **The last outcome is unconditional**, so it is also the fallback variant.
+  Point it at a page that is narration-only or uses guaranteed speakers.
+  Put character variants (`inParty sheep` -> a Shawn page) in the
+  conditional outcomes above it.
+- **Counter timing**: choice-level effects apply *before* outcomes are
+  evaluated, and outcome-level effects apply *after*. Either works, but an
+  event states which one it uses. The Petting Zoo convention bumps the
+  counter in the outcome's effects and gates each outcome on the
+  pre-increment value.
+
 ## Testing a new event
 
 Debug menu (F1) > Tools > open event by id, where the party stands. It also

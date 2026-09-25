@@ -129,6 +129,9 @@ MonoBehaviour:
           Result: The party feels steadier.
           GoTo: 
           IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
     - Id: wish_granted
       ArtKey: 
       Title: The Well Answers
@@ -169,3 +172,7 @@ MonoBehaviour:
           Result: The well obliges one last time.
           GoTo: 
           IsLeave: 1
+      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
+      Cast: []
+      Lines: []
+    BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png

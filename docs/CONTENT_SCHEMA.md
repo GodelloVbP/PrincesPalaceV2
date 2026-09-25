@@ -98,6 +98,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `floors` | int[] | `[]` | Floor numbers this event may appear on; empty means every floor. |  |
 | `requires` | RawEventRequirement[] (below) | `[]` | Event-level requirements; all must pass for this event to be eligible to be rolled at all. |  |
 | `pages` | RawEventPage[] (below) | `[]` | The event's page graph; the first page is where the event opens. |  |
+| `backdrop` | string | `""` | The dialogue stage's full-bleed backdrop, Assets-relative with its extension, baked at scene build like a page's artPath; a page's own backdrop overrides it. Empty means EventEntryResolver.DefaultBackdrop (Assets/_Project/Art/Backgrounds/Dungeon.png). Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/. |  |
 
 ## items.json -- `RawItemEntry`
 
@@ -352,6 +353,13 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `skillId` | string | `""` | A skill id from skills.json this monster may draw. |  |
 | `weight` | float | `1` | The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0. |  |
 
+### `RawEventCastMember`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `character` | string | `""` | The character id (characters.json) this row places; must speak on this page. |  |
+| `side` | string | `""` | Which screen edge the bust stands against: left or right (case-insensitive). A right-side bust is mirrored so it faces inward. | Left, Right |
+
 ### `RawEventChoice`
 
 | Field | Type | Default | Description | Values |
@@ -371,6 +379,14 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `item` | string | `""` | The item id granted; required by item. |  |
 | `counter` | string | `""` | The counter id this effect changes; required by counter. |  |
 
+### `RawEventLine`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `speaker` | string | `""` | Who says this: a character id (characters.json), or the literal 'narration' (case-insensitive) for an unvoiced line with no bust and no name plate. |  |
+| `expression` | string | `""` | The speaker's face for this line; empty means neutral. Refused on narration. | Neutral, Happy, Annoyed, Nervous, Sad, Surprised |
+| `text` | string | `""` | The line's text; at most EventEntryResolver.MaxLineLength characters, tags included. The only markup allowed is <i>...</i> (lowercase, balanced, not nested); any other tag, <b> included, is refused. |  |
+
 ### `RawEventOutcome`
 
 | Field | Type | Default | Description | Values |
@@ -389,6 +405,9 @@ Referenced from a field above (an array element or a nested block, such as `vfx`
 | `title` | string | `""` | The page's title, shown above the body; capped at EventEntryResolver.MaxTitleLength characters. |  |
 | `body` | string | `""` | The page's body text; capped at EventEntryResolver.MaxBodyLength characters. |  |
 | `choices` | RawEventChoice[] (below) | `[]` | Up to 4 choices offered on this page. |  |
+| `backdrop` | string | `""` | Optional full-bleed backdrop for this page, Assets-relative with its extension, baked at scene build like artPath. Empty inherits the event's backdrop. Must be filed under Assets/_Project/Art/Backgrounds/ or this event's own Assets/_Project/Art/Events/<event_id>/. |  |
+| `cast` | RawEventCastMember[] (below) | `[]` | Optional side overrides for this page's speakers. A speaker not listed takes a side by first appearance on the page: first distinct speaker left, second right, third left, alternating. Every entry must speak on this page, and a character may be listed once. |  |
+| `lines` | RawEventLine[] (below) | `[]` | Dialogue lines played before the choices, in order; at most EventEntryResolver.MaxLinesPerPage. Every non-narration speaker must be guaranteed in the party at this page by requirements on the way in (see docs/EVENTS.md, Dialogue lines). |  |
 
 ### `RawEventRequirement`
 

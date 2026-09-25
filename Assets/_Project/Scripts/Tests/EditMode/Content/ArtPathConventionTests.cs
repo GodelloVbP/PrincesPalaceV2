@@ -44,10 +44,16 @@ namespace PrincesPalace.Domain.Tests
         // to this file in both directions. A field ending in "Art" that is
         // NOT a path is the false positive, and the fix for one is to
         // classify it or rename it, which is what the sweep is for.
+        //
+        // AND "backdrop", added 2026-09-25 with the dialogue stage: an event's
+        // and a page's layer-0 art, named by the plan's data section. Same
+        // trade as "Art" above -- the sweep widens by one name rather than the
+        // field taking a suffix the owner's spec does not use.
         private static bool IsPathShaped(string fieldName) =>
             fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet")
             || fieldName.EndsWith("Art")
-            || string.Equals(fieldName, "path", StringComparison.Ordinal);
+            || string.Equals(fieldName, "path", StringComparison.Ordinal)
+            || string.Equals(fieldName, "backdrop", StringComparison.Ordinal);
 
         // ONE LEVEL DOWN AS WELL AS ON THE ENTRY ITSELF, reported dotted.
         //

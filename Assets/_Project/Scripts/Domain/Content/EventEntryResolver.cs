@@ -16,7 +16,7 @@ namespace PrincesPalace.Domain.Content
     // before events.json (same ordering reason achievements come before
     // relics), so the real display name is baked into the requirement here,
     // once, rather than the runtime doing a lookup Domain cannot make.
-    public static class EventEntryResolver
+    public static partial class EventEntryResolver
     {
         // Every player-facing string an event carries has a cap here, and
         // each cap is the length of the sample EventScreen's box is audited
@@ -144,10 +144,17 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            if (!TryResolveBackdrop(eventLabel, raw.id, raw.backdrop, out error))
+            {
+                return false;
+            }
+
+            string eventBackdrop = string.IsNullOrWhiteSpace(raw.backdrop) ? DefaultBackdrop : raw.backdrop.Trim();
+
             var resolvedPages = new List<ResolvedEventPage>(rawPages.Length);
             foreach (var rawPage in rawPages)
             {
-                if (!TryResolvePage(rawPage, raw.id, eventLabel, pageIds, characterDisplayNamesById, knownItemIds,
+                if (!TryResolvePage(rawPage, raw.id, eventLabel, eventBackdrop, pageIds, characterDisplayNamesById, knownItemIds,
                         incrementedCounters, requiredCounters, out var page, out error))
                 {
                     return false;
@@ -156,7 +163,15 @@ namespace PrincesPalace.Domain.Content
                 resolvedPages.Add(page);
             }
 
-            resolvedEvent = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray());
+            var candidate = new ResolvedEventDefinition(raw.id, sortOrder, floors, requires, resolvedPages.ToArray(), eventBackdrop);
+
+            // Needs the whole page graph, so it runs once every page resolved.
+            if (!TryCheckSpeakersPresent(candidate, eventLabel, out error))
+            {
+                return false;
+            }
+
+            resolvedEvent = candidate;
             error = null;
             return true;
         }
@@ -172,7 +187,8 @@ namespace PrincesPalace.Domain.Content
         // event's folder, which is how a delete-this-event pass later takes the
         // wrong files or leaves some behind. Art outside Art/Events/ (a shared
         // background, say) is not this rule's business and passes.
-        private static bool IsFiledInItsEventFolder(string pageLabel, string eventId, string artPath, out string error)
+        private static bool IsFiledInItsEventFolder(string pageLabel, string eventId, string artPath, out string error,
+            string fieldName = "artPath")
         {
             error = null;
             if (string.IsNullOrWhiteSpace(artPath) || !artPath.StartsWith(EventArtRoot, StringComparison.Ordinal))
@@ -188,12 +204,13 @@ namespace PrincesPalace.Domain.Content
                 return true;
             }
 
-            error = $"{pageLabel}: artPath '{artPath}' must be filed as {EventArtRoot}{eventId}/<file> " +
+            error = $"{pageLabel}: {fieldName} '{artPath}' must be filed as {EventArtRoot}{eventId}/<file> " +
                     "-- every event keeps its art in a folder named by its id.";
             return false;
         }
 
-        private static bool TryResolvePage(RawEventPage raw, string eventId, string eventLabel, HashSet<string> pageIds,
+        private static bool TryResolvePage(RawEventPage raw, string eventId, string eventLabel, string eventBackdrop,
+            HashSet<string> pageIds,
             IReadOnlyDictionary<string, string> characterDisplayNamesById,
             IReadOnlyCollection<string> knownItemIds,
             HashSet<string> incrementedCounters,
@@ -251,7 +268,16 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            resolvedPage = new ResolvedEventPage(raw.id, raw.artPath ?? "", raw.title ?? "", raw.body ?? "", resolvedChoices.ToArray());
+            if (!TryResolveBackdrop(pageLabel, eventId, raw.backdrop, out error)
+                || !TryResolveLines(raw, pageLabel, characterDisplayNamesById, out var cast, out var lines, out error))
+            {
+                return false;
+            }
+
+            string pageBackdrop = string.IsNullOrWhiteSpace(raw.backdrop) ? eventBackdrop : raw.backdrop.Trim();
+
+            resolvedPage = new ResolvedEventPage(raw.id, raw.artPath ?? "", raw.title ?? "", raw.body ?? "", resolvedChoices.ToArray(),
+                pageBackdrop, cast, lines);
             error = null;
             return true;
         }
@@ -414,7 +440,7 @@ namespace PrincesPalace.Domain.Content
                 {
                     case EventRequirementKind.InParty:
                     {
-                        if (!TryKnownCharacter(row.character, label, "inParty", characterDisplayNamesById,
+                        if (!TryKnownCharacter(row.character, label, "inParty requirement", characterDisplayNamesById,
                                 out string displayName, out error))
                         {
                             return false;
@@ -434,7 +460,7 @@ namespace PrincesPalace.Domain.Content
 
                         string displayName = "";
                         if (!string.IsNullOrWhiteSpace(row.character)
-                            && !TryKnownCharacter(row.character, label, "memberLevel", characterDisplayNamesById,
+                            && !TryKnownCharacter(row.character, label, "memberLevel requirement", characterDisplayNamesById,
                                 out displayName, out error))
                         {
                             return false;
@@ -460,7 +486,7 @@ namespace PrincesPalace.Domain.Content
 
                         string displayName = "";
                         if (!string.IsNullOrWhiteSpace(row.character)
-                            && !TryKnownCharacter(row.character, label, "ability", characterDisplayNamesById,
+                            && !TryKnownCharacter(row.character, label, "ability requirement", characterDisplayNamesById,
                                 out displayName, out error))
                         {
                             return false;
@@ -636,27 +662,29 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryKnownCharacter(string characterId, string label, string requirementKindName,
+        // `what` names the field doing the naming ("inParty requirement",
+        // "speaker", "cast entry") so the refusal reads right for each.
+        private static bool TryKnownCharacter(string characterId, string label, string what,
             IReadOnlyDictionary<string, string> characterDisplayNamesById, out string displayName, out string error)
         {
             displayName = "";
 
             if (string.IsNullOrWhiteSpace(characterId))
             {
-                error = $"{label}: {requirementKindName} requirement needs a character id.";
+                error = $"{label}: {what} needs a character id.";
                 return false;
             }
 
             if (characterDisplayNamesById == null || !characterDisplayNamesById.TryGetValue(characterId, out displayName))
             {
-                error = $"{label}: {requirementKindName} requirement names character '{characterId}', which is not in characters.json.";
+                error = $"{label}: {what} names character '{characterId}', which is not in characters.json.";
                 return false;
             }
 
             // The caption shows this name; an empty one would read "Requires ".
             if (string.IsNullOrWhiteSpace(displayName))
             {
-                error = $"{label}: {requirementKindName} requirement names character '{characterId}', which has no display name.";
+                error = $"{label}: {what} names character '{characterId}', which has no display name.";
                 return false;
             }
 

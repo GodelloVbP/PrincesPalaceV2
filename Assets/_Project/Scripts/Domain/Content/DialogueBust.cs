@@ -56,5 +56,28 @@ namespace PrincesPalace.Domain.Content
 
             yield return Neutral;
         }
+
+        // The file name (no extension) a resolved expression is stored
+        // under: the enum member, lowercased -- "Surprised" -> "surprised".
+        public static string FileNameOf(DialogueExpression expression) =>
+            expression.ToString().ToLowerInvariant();
+
+        // The first Resources path in the fallback chain that `exists`
+        // accepts, or "" when none does (or the character has no folder).
+        // The existence test is the caller's, so the content build can ask
+        // the file system and the runtime can ask Resources.Load with the
+        // same walk -- the two can never disagree about which rung wins.
+        public static string FirstAvailable(string bustFolder, string expression, System.Func<string, bool> exists)
+        {
+            if (string.IsNullOrWhiteSpace(bustFolder) || exists == null) return "";
+
+            foreach (string candidate in Fallbacks(expression))
+            {
+                string path = ResourcePath(bustFolder, candidate);
+                if (exists(path)) return path;
+            }
+
+            return "";
+        }
     }
 }

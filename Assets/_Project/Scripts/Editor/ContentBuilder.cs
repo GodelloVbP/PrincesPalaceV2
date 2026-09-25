@@ -426,12 +426,57 @@ public static class ContentBuilder
         bool Resolve(IReadOnlyList<RawEventEntry> entries, out List<ResolvedEventDefinition> resolved, out List<string> errors) =>
             EventEntryResolver.TryResolveAll(entries, characterDisplayNames, itemIds, out resolved, out errors);
 
-        Build<RawEventEntry, ResolvedEventDefinition, EventDefinition>(
+        var events = Build<RawEventEntry, ResolvedEventDefinition, EventDefinition>(
             "BuildEvents", "Assets/_Project/ContentData/events.json", EventsPath, "events",
             json => JsonUtility.FromJson<RawEventFile>(json).events,
             Resolve,
             (asset, evt) => asset.SetData(evt),
             evt => evt.Id);
+
+        WarnOnMissingDialogueBusts(events, characters);
+    }
+
+    // PLAN_DIALOGUE_STAGE contract 11: a line whose bust has no file WARNS
+    // and never refuses -- art arrives after content, and the stage already
+    // degrades to name plate + text. Here rather than in EventEntryResolver
+    // because the resolver is pure Domain with no file system and no warning
+    // channel. Walks the SAME fallback chain the runtime will
+    // (DialogueBust.FirstAvailable), so it warns exactly when the player
+    // would see no bust at all: a missing "happy" that falls back to an
+    // existing "neutral" is the designed fallback, not a warning.
+    // One warning per character/expression pair, naming the first line.
+    private const string ResourcesRoot = "Assets/_Project/Resources/";
+
+    private static void WarnOnMissingDialogueBusts(IReadOnlyList<ResolvedEventDefinition> events,
+        IReadOnlyList<ResolvedCharacter> characters)
+    {
+        var folders = characters.ToDictionary(c => c.Id, c => c.DialogueBustPath ?? "");
+        var warned = new HashSet<string>();
+
+        foreach (var evt in events)
+        {
+            foreach (var page in evt.Pages)
+            {
+                for (int i = 0; i < page.Lines.Length; i++)
+                {
+                    var line = page.Lines[i];
+                    if (line.IsNarration) continue;
+
+                    folders.TryGetValue(line.SpeakerId, out string folder);
+                    string expression = DialogueBust.FileNameOf(line.Expression);
+                    string found = DialogueBust.FirstAvailable(folder, expression,
+                        path => File.Exists($"{ResourcesRoot}{path}.png"));
+                    if (found.Length > 0 || !warned.Add($"{line.SpeakerId}/{expression}")) continue;
+
+                    string where = string.IsNullOrWhiteSpace(folder)
+                        ? "the character has no dialogueBustPath"
+                        : $"neither {ResourcesRoot}{DialogueBust.ResourcePath(folder, expression)}.png nor its neutral fallback exists";
+                    Debug.LogWarning($"BuildEvents: event '{evt.Id}' page '{page.Id}' line #{i + 1}: no dialogue bust for " +
+                                     $"'{line.SpeakerId}' ({expression}) -- {where}. The line shows its name plate and " +
+                                     "text without a bust until the art lands.");
+                }
+            }
+        }
     }
 
     // The last content type written as C# object initialisers, and the reason

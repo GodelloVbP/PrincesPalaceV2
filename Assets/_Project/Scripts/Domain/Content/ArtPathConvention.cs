@@ -59,6 +59,12 @@ namespace PrincesPalace.Domain.Content
                 // Map scene's table, so the runtime only ever looks it up.
                 { "artPath", ArtPathKind.EditorBaked },
 
+                // The dialogue stage's full-bleed layer 0, on an event and
+                // optionally on a page (one key serves both: an author types
+                // "backdrop" either way). Baked like artPath beside it --
+                // docs/PLAN_DIALOGUE_STAGE.md contract 7.
+                { "backdrop", ArtPathKind.EditorBaked },
+
                 // Loaded at runtime, off Resources.
                 { "spritePath", ArtPathKind.RuntimeLoaded },
                 { "battleSpritePath", ArtPathKind.RuntimeLoaded },

@@ -68,5 +68,37 @@ namespace PrincesPalace.Domain.Tests
                     $"the fallback chain for '{expression}' must end on neutral");
             }
         }
+
+        // ---- FileNameOf / FirstAvailable ----------------------------------------
+
+        [Test]
+        public void FileNameOf_IsTheLowercasedMemberName()
+        {
+            Assert.AreEqual("neutral", DialogueBust.FileNameOf(DialogueExpression.Neutral));
+            Assert.AreEqual("surprised", DialogueBust.FileNameOf(DialogueExpression.Surprised));
+        }
+
+        [Test]
+        public void FirstAvailable_PrefersTheRequestedExpression()
+        {
+            var files = new[] { "Portraits/Dialogue/owl/happy", "Portraits/Dialogue/owl/neutral" };
+            Assert.AreEqual("Portraits/Dialogue/owl/happy",
+                DialogueBust.FirstAvailable("Portraits/Dialogue/owl", "happy", files.Contains));
+        }
+
+        [Test]
+        public void FirstAvailable_FallsBackToNeutral()
+        {
+            var files = new[] { "Portraits/Dialogue/bear/neutral" };
+            Assert.AreEqual("Portraits/Dialogue/bear/neutral",
+                DialogueBust.FirstAvailable("Portraits/Dialogue/bear", "sad", files.Contains));
+        }
+
+        [Test]
+        public void FirstAvailable_NothingThere_OrNoFolder_IsEmpty()
+        {
+            Assert.AreEqual("", DialogueBust.FirstAvailable("Portraits/Dialogue/bear", "sad", _ => false));
+            Assert.AreEqual("", DialogueBust.FirstAvailable("", "sad", _ => true));
+        }
     }
 }
