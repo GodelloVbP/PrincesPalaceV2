@@ -73,6 +73,7 @@ import collections
 import json
 import math
 import os
+import re
 import sys
 
 try:
@@ -855,6 +856,31 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
         print(f"  {name}.png  {frame_w}x{frame_h}  {coverage}% visible")
 
     names = written
+
+    # A recipe that now emits FEWER frames than last run leaves the old tail
+    # sitting in out_dir -- nothing above ever looks past len(frames), so
+    # f11.png survives a 12-to-11 shrink untouched. That is not cosmetic: a
+    # pre-layer vfx block with fps 0 fits the whole FOLDER into `seconds`, so
+    # a stale frame silently retimes the spell (palace_passage, 12->11
+    # frames, 2026-09-25 -- f11.png had to be deleted by hand). Match
+    # f<digits>.png exactly so this only ever removes names this function
+    # itself writes, never an unrelated file someone left in the folder. This
+    # can only run past the HAND_ASSEMBLED refusal in main(), which exits
+    # before out_dir is even computed for a hand-assembled id -- slice_sheet
+    # is never called for one.
+    stale_pattern = re.compile(r"^f(\d+)\.png$")
+    removed = []
+    for entry in os.listdir(out_dir):
+        match = stale_pattern.match(entry)
+        if match and int(match.group(1)) >= len(frames):
+            os.remove(os.path.join(out_dir, entry))
+            removed.append(entry)
+            meta_path = os.path.join(out_dir, entry + ".meta")
+            if os.path.isfile(meta_path):
+                os.remove(meta_path)
+                removed.append(os.path.basename(meta_path))
+    if removed:
+        print(f"  removed stale frame(s) left by a shorter recipe: {', '.join(sorted(removed))}")
 
     # A blank frame is legitimate ONLY as a lead-in beat (see the
     # golem_boulder note by HAND_ASSEMBLED). One in the middle of a sequence

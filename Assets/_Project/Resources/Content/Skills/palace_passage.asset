@@ -58,7 +58,7 @@ MonoBehaviour:
         at: release
         offset: 0
         path: Spells/palace_passage
-        seconds: 0.72
+        seconds: 0.66
         fps: 0
         startFrame: 0
         until: once
@@ -141,14 +141,14 @@ MonoBehaviour:
           sourceDx: 0
           sourceDy: 0
           spreadDegrees: 155
-          aimDegrees: 90
+          aimDegrees: 270
           speedMin: 55
           speedMax: 175
           inherit: 0
           drag: 1.8
           gravity: -300
-          lifeMin: 0.35
-          lifeMax: 0.65
+          lifeMin: 0.22
+          lifeMax: 0.42
           sizeMin: 0.11
           sizeMax: 0.28
           spinMin: -180

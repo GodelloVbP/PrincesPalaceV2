@@ -2,96 +2,34 @@
   "_notes": [
     "Winter's Rebuke: cells 1-12 are the authored begin, release, impact, and settle timeline.",
     "The 1254px atlas does not divide by four; explicit measured edges preserve every cell without borrowing gutter pixels.",
-    "Authored alpha and dark material are preserved. Impact is authored in skills.json against source cell 6, except Crownfall source cell 7."
+    "Authored alpha and dark material are preserved. Impact is authored in skills.json against source cell 6, except Crownfall source cell 7.",
+    "SPLICE (2026-09-25, SPELL_VFX_ARC_AUDIT / IMPLEMENTER_HANDOFF): f0-f8 stay on v1 cells 1-9. f9-f10 come from v2 cells 10-11 (a thinning mist column, then a thin ground ring), so the tear collapses instead of holding v1 cell 12's frost cloud. v2 cell 9 is omitted (a second dense eruption: after v1 cell 8 it reads as the spell restarting) and v2 cell 12 is omitted (only a bleed strip from the row above). v2 redrew every cell with added haze, so only these tail cells come from it.",
+    "The two v2 rects start 18px below the cell edge (y 645, h 295): the top rows of both v2 cells are an icicle tip bleeding down from the row above (alpha up to 240 at row 0, a wedge still at alpha 49 on row 14 and gone by row 18). pad_to_common_canvas centres the 295px cell, so those two frames sit 9px higher than their uncut position."
   ],
-  "sheet": "Spells/Winter's Rebuke/winters_rebuke_atlas_v1.png",
-  "rects": [
-    [
-      0,
-      0,
-      314,
-      314
-    ],
-    [
-      314,
-      0,
-      313,
-      314
-    ],
-    [
-      627,
-      0,
-      313,
-      314
-    ],
-    [
-      940,
-      0,
-      314,
-      314
-    ],
-    [
-      0,
-      314,
-      314,
-      313
-    ],
-    [
-      314,
-      314,
-      313,
-      313
-    ],
-    [
-      627,
-      314,
-      313,
-      313
-    ],
-    [
-      940,
-      314,
-      314,
-      313
-    ],
-    [
-      0,
-      627,
-      314,
-      313
-    ],
-    [
-      314,
-      627,
-      313,
-      313
-    ],
-    [
-      627,
-      627,
-      313,
-      313
-    ],
-    [
-      940,
-      627,
-      314,
-      313
-    ]
-  ],
-  "names": [
-    "f0",
-    "f1",
-    "f2",
-    "f3",
-    "f4",
-    "f5",
-    "f6",
-    "f7",
-    "f8",
-    "f9",
-    "f10",
-    "f11"
+  "sources": [
+    {
+      "sheet": "Spells/Winter's Rebuke/winters_rebuke_atlas_v1.png",
+      "rects": [
+        [0, 0, 314, 314],
+        [314, 0, 313, 314],
+        [627, 0, 313, 314],
+        [940, 0, 314, 314],
+        [0, 314, 314, 313],
+        [314, 314, 313, 313],
+        [627, 314, 313, 313],
+        [940, 314, 314, 313],
+        [0, 627, 314, 313]
+      ],
+      "names": ["f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8"]
+    },
+    {
+      "sheet": "Spells/Winter's Rebuke/winters_rebuke_atlas_v2.png",
+      "rects": [
+        [314, 645, 313, 295],
+        [627, 645, 313, 295]
+      ],
+      "names": ["f9", "f10"]
+    }
   ],
   "keyed": false,
   "canvas": [

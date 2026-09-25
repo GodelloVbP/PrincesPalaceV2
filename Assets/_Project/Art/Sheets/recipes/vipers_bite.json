@@ -2,96 +2,35 @@
   "_notes": [
     "Viper's Bite: cells 1-12 are the authored begin, release, impact, and settle timeline.",
     "The 1254px atlas does not divide by four; explicit measured edges preserve every cell without borrowing gutter pixels.",
-    "Authored alpha and dark material are preserved. Impact is authored in skills.json against source cell 6, except Crownfall source cell 7."
+    "Authored alpha and dark material are preserved. Impact is authored in skills.json against source cell 6, except Crownfall source cell 7.",
+    "SPLICE (2026-09-25, owner override of IMPLEMENTER_HANDOFF's v2-cell-11 pick): f0-f7 stay on v1 cells 1-8 (start/release/impact). f8-f11 come from v3 (tail-candidate sheet) cells 9-12 -- the cleaner drainage/solid-gel ending, all four tail cells from one sheet rather than mixing v3 9-10 with v2 11. v3 redrew every cell with added haze, so only these tail cells are taken from it -- the v1 start/impact cells are kept as shipped.",
+    "v3 cells 11-12 (f10, f11) carry ~16px of top-edge bleed from the row above (alpha up to 251, fading out by row 13-16), matching bleed already present in shipped v1 cells. Left untrimmed: pad_to_common_canvas centres a shorter cell rather than anchoring it, so trimming only the top would shift the art ~8px relative to the untrimmed cells instead of preserving its position -- see report."
   ],
-  "sheet": "Spells/Viper's Bite/vipers_bite_atlas_v1.png",
-  "rects": [
-    [
-      0,
-      0,
-      314,
-      314
-    ],
-    [
-      314,
-      0,
-      313,
-      314
-    ],
-    [
-      627,
-      0,
-      313,
-      314
-    ],
-    [
-      940,
-      0,
-      314,
-      314
-    ],
-    [
-      0,
-      314,
-      314,
-      313
-    ],
-    [
-      314,
-      314,
-      313,
-      313
-    ],
-    [
-      627,
-      314,
-      313,
-      313
-    ],
-    [
-      940,
-      314,
-      314,
-      313
-    ],
-    [
-      0,
-      627,
-      314,
-      313
-    ],
-    [
-      314,
-      627,
-      313,
-      313
-    ],
-    [
-      627,
-      627,
-      313,
-      313
-    ],
-    [
-      940,
-      627,
-      314,
-      313
-    ]
-  ],
-  "names": [
-    "f0",
-    "f1",
-    "f2",
-    "f3",
-    "f4",
-    "f5",
-    "f6",
-    "f7",
-    "f8",
-    "f9",
-    "f10",
-    "f11"
+  "sources": [
+    {
+      "sheet": "Spells/Viper's Bite/vipers_bite_atlas_v1.png",
+      "rects": [
+        [0, 0, 314, 314],
+        [314, 0, 313, 314],
+        [627, 0, 313, 314],
+        [940, 0, 314, 314],
+        [0, 314, 314, 313],
+        [314, 314, 313, 313],
+        [627, 314, 313, 313],
+        [940, 314, 314, 313]
+      ],
+      "names": ["f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7"]
+    },
+    {
+      "sheet": "Spells/Viper's Bite/vipers_bite_atlas_v3.png",
+      "rects": [
+        [0, 627, 314, 313],
+        [314, 627, 313, 313],
+        [627, 627, 313, 313],
+        [940, 627, 314, 313]
+      ],
+      "names": ["f8", "f9", "f10", "f11"]
+    }
   ],
   "keyed": false,
   "canvas": [

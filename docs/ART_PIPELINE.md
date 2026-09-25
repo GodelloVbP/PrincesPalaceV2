@@ -681,6 +681,12 @@ python tools/slice_spell_sheet.py <id> --preview
 The preview renders the sequence at the speed content actually declares,
 dissolve and all, to `tools/screenshots/vfx/{id}.gif`.
 
+A re-run that emits fewer frames than the folder currently holds prunes the
+stale tail itself (`f<N>.png`/`.meta` at or past the new count) — a leftover
+frame is not inert, a pre-layer `fps: 0` layer fits the whole folder into
+`seconds` and it silently retimes the spell. `SpellVfxRecipeDriftTests`
+(EditMode) pins that no shipped folder holds more frames than its recipe.
+
 ### The `vfx` block
 
 | field | default | what it does |

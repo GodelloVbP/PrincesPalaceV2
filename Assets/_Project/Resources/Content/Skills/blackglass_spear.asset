@@ -213,17 +213,17 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: tear
-        render: still
+        render: sprite
         place: target-centre
         follow: 0
         at: hit
-        offset: 0
+        offset: 0.16
         path: Spells/blackglass_spear
-        seconds: 0.85
+        seconds: 0.24
         fps: 0
-        startFrame: 12
-        until: hold
-        fade: 0.45
+        startFrame: 10
+        until: once
+        fade: 0.12
         dx: 0
         dy: 0
         scale: 1
@@ -309,7 +309,7 @@ MonoBehaviour:
           drag: 1.8
           gravity: -720
           lifeMin: 0.28
-          lifeMax: 0.55
+          lifeMax: 0.46
           sizeMin: 0.1
           sizeMax: 0.26
           spinMin: -180

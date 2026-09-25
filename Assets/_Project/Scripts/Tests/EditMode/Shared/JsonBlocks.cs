@@ -306,6 +306,53 @@ namespace PrincesPalace.Domain.Tests
             return values;
         }
 
+        // The array of plain strings at `key`, or an empty list when absent or
+        // not an array. Only what a recipe's `"names": ["f0", "f1", ...]` needs
+        // -- a flat array of quoted strings, no nested objects inside it, same
+        // scope as Numbers above but for the type recipes actually use it for.
+        internal static List<string> Strings(string block, string key)
+        {
+            var values = new List<string>();
+
+            int at = ValueAt(block, key);
+            if (at < 0 || block[at] != '[')
+            {
+                return values;
+            }
+
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+            int stringStart = -1;
+
+            for (int i = at; i < block.Length; i++)
+            {
+                char c = block[i];
+
+                if (inString)
+                {
+                    if (escaped) escaped = false;
+                    else if (c == '\\') escaped = true;
+                    else if (c == '"')
+                    {
+                        inString = false;
+                        values.Add(block.Substring(stringStart, i - stringStart));
+                    }
+                    continue;
+                }
+
+                if (c == '"') { inString = true; stringStart = i + 1; continue; }
+                if (c == '[') depth++;
+                else if (c == ']')
+                {
+                    depth--;
+                    if (depth == 0) break;
+                }
+            }
+
+            return values;
+        }
+
         // Where `key`'s value starts, skipping the colon and any whitespace.
         // The quotes around the key are part of the search, which is what stops
         // "groundLine" matching "_groundLineNote".

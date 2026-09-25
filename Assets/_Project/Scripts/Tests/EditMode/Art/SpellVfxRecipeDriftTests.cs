@@ -439,6 +439,155 @@ namespace PrincesPalace.Domain.Tests
                 "the refusal states neither the authored count nor the folder's own: " + broken[0]);
         }
 
+        // ---- recipe-vs-disk drift: a shrinking recipe leaves its old tail behind ----
+        //
+        // The two sweeps above read skills.json, which only ever sees the frames
+        // a skill actually plays -- a stale frame past the LAST one a skill
+        // indexes is invisible to both of them. This reads the recipe itself and
+        // asks how many frames it emits, because that is the number
+        // slice_spell_sheet.py's own pruning (added alongside this test) is
+        // supposed to keep the folder at: a pre-layer vfx block with fps 0 fits
+        // the whole FOLDER into `seconds`, so a leftover frame does not sit
+        // there harmlessly, it silently retimes the spell. Seen for real on
+        // palace_passage, 2026-09-25: a recipe edit dropped 12 frames to 11 and
+        // f11.png was left on disk until someone deleted it by hand.
+        //
+        // THREE SHAPES, in the order slice_sheet() itself checks them: a
+        // `sequence` (spin N or hold N expands a step to N frames, anything
+        // else is one), else `sources` (one frame per named cell, summed
+        // across sheets), else a plain `names` array (one frame per cell). A
+        // `sequence` wins over `sources` when a recipe has both --
+        // prismatic_orb_water does, and its 14-step sequence with one hold:2
+        // is the 15 frames that ship, not the 6+8=14 cells its two sources cut.
+        private static int ExpectedFrameCount(string recipeJson)
+        {
+            if (JsonBlocks.HasKey(recipeJson, "sequence"))
+            {
+                int total = 0;
+                foreach (string step in JsonBlocks.ObjectsInArray(recipeJson, "sequence"))
+                {
+                    double? spin = JsonBlocks.Number(step, "spin");
+                    double? hold = JsonBlocks.Number(step, "hold");
+                    total += spin.HasValue ? (int)spin.Value : hold.HasValue ? (int)hold.Value : 1;
+                }
+
+                return total;
+            }
+
+            if (JsonBlocks.HasKey(recipeJson, "sources"))
+            {
+                int total = 0;
+                foreach (string source in JsonBlocks.ObjectsInArray(recipeJson, "sources"))
+                {
+                    total += JsonBlocks.Strings(source, "names").Count;
+                }
+
+                return total;
+            }
+
+            return JsonBlocks.Strings(recipeJson, "names").Count;
+        }
+
+        // The walk itself, over every *.json under Art/Sheets/recipes/ that has
+        // a shipped folder. A recipe with no folder yet is not drift -- it is
+        // unshipped, and EveryFolderASkillPlaysHasARecordedProvenance is the
+        // test that cares whether something plays it.
+        private static List<string> DriftAmongRecipes()
+        {
+            var drift = new List<string>();
+            if (!Directory.Exists(RecipeDir())) return drift;
+
+            foreach (string file in Directory.GetFiles(RecipeDir(), "*.json"))
+            {
+                string vfxId = Path.GetFileNameWithoutExtension(file);
+                int expected = ExpectedFrameCount(File.ReadAllText(file));
+
+                string folder = Path.Combine(ResourcesRoot(), "Spells", vfxId);
+                if (!Directory.Exists(folder)) continue;
+
+                int actual = Directory.GetFiles(folder, "f*.png").Length;
+                if (actual > expected)
+                {
+                    drift.Add($"{vfxId}: recipe emits {expected} frame(s) but the folder holds {actual}");
+                }
+            }
+
+            return drift;
+        }
+
+        [Test]
+        public void NoSpellFolderHoldsFramesBeyondWhatItsRecipeEmits()
+        {
+            var drift = DriftAmongRecipes();
+
+            Assert.IsEmpty(drift,
+                "a recipe now emits fewer frames than its folder holds -- a stale tail left behind by a " +
+                "shrinking recipe. A pre-layer vfx block with fps 0 fits the whole folder into `seconds`, " +
+                "so the extra frame does not sit there harmlessly, it silently retimes the spell " +
+                "(palace_passage, 2026-09-25):\n  " + string.Join("\n  ", drift));
+        }
+
+        // ---- and the two proofs that the arithmetic above is not vacuous ----------
+
+        [Test]
+        public void ExpectedFrameCountSumsSpinHoldAndDefaultStepsFromASequence()
+        {
+            const string recipe = "{\"sequence\": [" +
+                "{\"from\": \"f0\", \"spin\": 4}," +
+                "{\"from\": \"f1\", \"hold\": 3}," +
+                "{\"from\": \"f2\"}" +
+                "]}";
+
+            Assert.AreEqual(8, ExpectedFrameCount(recipe),
+                "a sequence step's own frame count is spin N, or hold N, or one by default -- the " +
+                "arithmetic mud_burst's spin:8 wind-up and hold:4 impact both rely on");
+        }
+
+        [Test]
+        public void ExpectedFrameCountSumsNamesAcrossSourcesWhenThereIsNoSequence()
+        {
+            const string recipe = "{\"sources\": [" +
+                "{\"sheet\": \"a.png\", \"names\": [\"f0\", \"f1\"]}," +
+                "{\"sheet\": \"b.png\", \"names\": [\"f2\"]}" +
+                "]}";
+
+            Assert.AreEqual(3, ExpectedFrameCount(recipe),
+                "a multi-source recipe with no sequence emits one frame per named cell, summed across " +
+                "sources -- palace_passage's own 8 + 3 = 11 split");
+        }
+
+        // A SYNTHETIC FOLDER, never real art: this is the one place the drift
+        // sweep's disk-reading half (Directory.GetFiles(folder, "f*.png").Length
+        // vs ExpectedFrameCount) is exercised end to end, so it has to build its
+        // own fixture rather than lean on whatever the real tree happens to ship.
+        [Test]
+        public void TheDriftSweepWouldCatchAStaleFrameLeftByAShrinkingRecipe()
+        {
+            const string recipe = "{\"names\": [\"f0\", \"f1\", \"f2\"]}";
+            int expected = ExpectedFrameCount(recipe);
+            Assert.AreEqual(3, expected, "the plain-names path did not read the 3 named cells");
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "SpellVfxRecipeDriftTests_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                // f0..f2 are what the recipe above emits; f3 is the stale tail a
+                // recipe that shrank from 4 frames to 3 would leave behind.
+                for (int i = 0; i <= 3; i++)
+                {
+                    File.WriteAllBytes(Path.Combine(tempDir, $"f{i}.png"), Array.Empty<byte>());
+                }
+
+                int actual = Directory.GetFiles(tempDir, "f*.png").Length;
+                Assert.Greater(actual, expected,
+                    "the fixture itself did not build a folder holding more frames than its recipe emits");
+            }
+            finally
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+
         // TWO SKILLS, ONE FOLDER, DIFFERENT TIMING IS LEGAL, and this is the
         // test that says so out loud rather than leaving it as an absence. The
         // recipe owns the frames; the skill owns the beat. A future tightening

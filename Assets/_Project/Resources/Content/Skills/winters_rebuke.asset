@@ -213,17 +213,17 @@ MonoBehaviour:
           seed: 0
           weights: []
       - id: tear
-        render: still
-        place: target-centre
+        render: sprite
+        place: target
         follow: 0
         at: hit
-        offset: 0
+        offset: 0.16
         path: Spells/winters_rebuke
-        seconds: 0.85
+        seconds: 0.27
         fps: 0
-        startFrame: 12
-        until: hold
-        fade: 0.45
+        startFrame: 9
+        until: once
+        fade: 0.13
         dx: 0
         dy: 0
         scale: 1
@@ -234,8 +234,8 @@ MonoBehaviour:
         align: 
         punch: 0
         glow: 0.75
-        impactX: -1
-        impactY: -1
+        impactX: 0.5
+        impactY: 0.22
         aspect: 0
         travelSeconds: 0
         travelDelay: 0
@@ -309,7 +309,7 @@ MonoBehaviour:
           drag: 1.8
           gravity: -520
           lifeMin: 0.28
-          lifeMax: 0.55
+          lifeMax: 0.5
           sizeMin: 0.12
           sizeMax: 0.3
           spinMin: -180

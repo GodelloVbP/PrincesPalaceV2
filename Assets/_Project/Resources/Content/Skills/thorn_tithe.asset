@@ -142,14 +142,14 @@ MonoBehaviour:
           sourceDx: 0
           sourceDy: 0
           spreadDegrees: 150
-          aimDegrees: 85
+          aimDegrees: 270
           speedMin: 55
           speedMax: 185
           inherit: 0
           drag: 1.8
           gravity: -600
-          lifeMin: 0.3
-          lifeMax: 0.58
+          lifeMin: 0.22
+          lifeMax: 0.42
           sizeMin: 0.11
           sizeMax: 0.28
           spinMin: -180
