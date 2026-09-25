@@ -43,10 +43,21 @@ namespace PrincesPalace.PlayModeTests
         // FightStageAnchors.StageSize so the crop follows that layout if it is
         // ever resized, rather than a value pinned here.
         public StageCaptureRig(Canvas canvas, int cropWidth, int cropHeight)
+            : this(canvas, CanvasCapture.DefaultWidth, CanvasCapture.DefaultHeight, cropWidth, cropHeight)
         {
-            int width = CanvasCapture.DefaultWidth;
-            int height = CanvasCapture.DefaultHeight;
+        }
 
+        // THE WHOLE CANVAS AT ONE UiFrames ASPECT, held across frames: from
+        // the next layout pass the canvas is solved at width x height, so
+        // anything placed in LateUpdate against the canvas rect (FocusMarker)
+        // is placed for THIS aspect -- which a one-shot
+        // CanvasCapture.RenderToFile at a non-reference size cannot give it.
+        // DialogueStageCaptureTests is the first caller.
+        public static StageCaptureRig FullFrame(Canvas canvas, int width, int height) =>
+            new StageCaptureRig(canvas, width, height, width, height);
+
+        private StageCaptureRig(Canvas canvas, int width, int height, int cropWidth, int cropHeight)
+        {
             CropWidth = cropWidth;
             CropHeight = cropHeight;
             CropX = (width - CropWidth) / 2;

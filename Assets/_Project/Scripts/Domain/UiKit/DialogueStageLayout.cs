@@ -8,7 +8,8 @@ namespace PrincesPalace.Domain.UiKit
     // (docs/PLAN_DIALOGUE_STAGE.md contracts 7-9). EventScreen builds the
     // tree at the left-speaker layout below; EventController moves the same
     // nodes with these answers when the speaker is on the right, when the
-    // line is narration, and when a backdrop has to cover the canvas.
+    // line is narration, when the speaker's bust is missing, and when a
+    // backdrop has to cover the canvas.
     //
     // Engine-free, so the geometry is pinned by EditMode literals rather than
     // by a capture. Every pin is bottom-edge anchored on the stage (y measured
@@ -33,7 +34,26 @@ namespace PrincesPalace.Domain.UiKit
             OffsetX = offsetX;
         }
 
+        // Where a node this wide lands, measured from the stage's left edge,
+        // on a stage this wide -- what a RectTransform does with the same
+        // three numbers.
+        public float LeftEdge(float stageWidth, float nodeWidth) =>
+            AnchorX * stageWidth + OffsetX - PivotX * nodeWidth;
+
         public override string ToString() => $"anchor {AnchorX} pivot {PivotX} offset {OffsetX}";
+    }
+
+    // How one line frames the stage. Derived from the line, never authored.
+    // A speaker whose bust failed every fallback (contract 11) is framed
+    // centred, as narration is, because there is no face for the box to
+    // stand beside (owner call 2026-09-25) -- but keeps the plate, because
+    // the speaker still has a name (contract 15).
+    public enum StageFraming
+    {
+        LeftSpeaker,
+        RightSpeaker,
+        CentredSpeaker,
+        Narration,
     }
 
     public static class DialogueStageLayout
@@ -68,9 +88,24 @@ namespace PrincesPalace.Domain.UiKit
         public const float BoxTop = BoxBottom + BoxHeight;
         public const float PlateCentreY = BoxTop + PlateRise;
 
-        // The choice rows stand above the box, clear of the plate's top.
-        public const float ChoicesGap = 16f;
-        public const float ChoicesBottom = PlateCentreY + PlateHeight * 0.5f + ChoicesGap;
+        // The choice rows stand just above the box (owner call 2026-09-25: a
+        // small fixed gap, not a climb over the plate). They clear the plate
+        // SIDEWAYS -- rows at the box's far end, plate at its near end -- so
+        // nothing has to stand above the plate's top.
+        public const float ChoicesGap = 20f;
+        public const float ChoicesBottom = BoxTop + ChoicesGap;
+
+        // The least distance from a screen edge to the focus marker's box
+        // (owner call 2026-09-25: the arrow sat 4-7px from the left edge).
+        public const float MarkerEdgeMargin = 24f;
+
+        // How far left of a row the marker's box can reach: a choice row is
+        // far wider than tall, so FocusMarkerPlacement puts the marker Gap +
+        // Size left of the row's edge, and its bob carries it BobAmplitude
+        // further out. A row whose left edge is at least this far in keeps
+        // the whole marker MarkerEdgeMargin clear of the screen's left edge.
+        public const float ChoicesMinLeft = MarkerEdgeMargin + FocusMarkerPlacement.Gap
+            + FocusMarkerPlacement.Size + FocusMarkerPlacement.BobAmplitude;
 
         // ---- cover-crop (contract 7) --------------------------------------
 
@@ -121,39 +156,79 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- box, plate, choices ---------------------------------------------
 
-        // Narration has no speaker and sits centred (contract 8). Otherwise
-        // the box starts BoxInset in from the speaker's edge, which puts it
-        // on the opposite side of the screen from the bust.
-        public static StagePin BoxPin(bool narration, DialogueSide speakerSide)
+        public static StageFraming FramingFor(bool narration, bool hasBust, DialogueSide side)
         {
-            if (narration) return new StagePin(0.5f, 0.5f, 0f);
+            if (narration) return StageFraming.Narration;
+            if (!hasBust) return StageFraming.CentredSpeaker;
+            return side == DialogueSide.Left ? StageFraming.LeftSpeaker : StageFraming.RightSpeaker;
+        }
 
-            return speakerSide == DialogueSide.Left
-                ? new StagePin(0f, 0f, BoxInset)
-                : new StagePin(1f, 1f, -BoxInset);
+        // Centred with no bust beside it (contract 8, and the missing-bust
+        // call). Otherwise the box starts BoxInset in from the speaker's
+        // edge, which puts it on the opposite side of the screen from the
+        // bust.
+        public static StagePin BoxPin(StageFraming framing)
+        {
+            switch (framing)
+            {
+                case StageFraming.LeftSpeaker: return new StagePin(0f, 0f, BoxInset);
+                case StageFraming.RightSpeaker: return new StagePin(1f, 1f, -BoxInset);
+                default: return new StagePin(0.5f, 0.5f, 0f);
+            }
         }
 
         // On the box's top edge, at its SPEAKER'S end -- the end nearest the
-        // bust, so the name reads as belonging to the face beside it.
-        public static StagePin PlatePin(DialogueSide speakerSide)
+        // bust, so the name reads as belonging to the face beside it. With no
+        // bust the box is centred and the plate takes its left end, the end
+        // a line reads from. Narration shows no plate; it gets the centred
+        // answer so no caller has to special-case the question.
+        public static StagePin PlatePin(StageFraming framing)
         {
             const float fromEdge = BoxInset + PlateInset;
-            return speakerSide == DialogueSide.Left
-                ? new StagePin(0f, 0f, fromEdge)
-                : new StagePin(1f, 1f, -fromEdge);
+            switch (framing)
+            {
+                case StageFraming.LeftSpeaker: return new StagePin(0f, 0f, fromEdge);
+                case StageFraming.RightSpeaker: return new StagePin(1f, 1f, -fromEdge);
+                default: return new StagePin(0.5f, 0f, -BoxWidth * 0.5f + PlateInset);
+            }
         }
 
-        // Above the box, flush with its FAR end, which is the end the plate
-        // is not on -- so the rows never land on the name. Centred over a
-        // centred box for narration.
-        public static StagePin ChoicesPin(bool narration, DialogueSide speakerSide)
+        // Above the box, flush with its FAR end -- the end the plate is not
+        // on -- so the rows never land on the name. Centred over a centred
+        // box for narration, which has no plate to avoid.
+        //
+        // Then pushed right, if it has to be, until the focus marker on the
+        // rows' left keeps MarkerEdgeMargin from the screen's left edge. That
+        // bites for a right-hand speaker on a 1920-wide stage (16:9, 16:10,
+        // 4:3), where the box's far end is 32px from the edge; at 21:9 the
+        // rows already stand far enough in. One rule for every framing rather
+        // than a case per side: the marker is always on the rows' left, so
+        // the left edge is the only one it can run off.
+        public static StagePin ChoicesPin(StageFraming framing, float stageWidth, float choicesWidth)
         {
-            if (narration) return new StagePin(0.5f, 0.5f, 0f);
-
             const float farEdge = BoxInset + BoxWidth;
-            return speakerSide == DialogueSide.Left
-                ? new StagePin(0f, 1f, farEdge)
-                : new StagePin(1f, 0f, -farEdge);
+            StagePin pin;
+            switch (framing)
+            {
+                case StageFraming.LeftSpeaker: pin = new StagePin(0f, 1f, farEdge); break;
+                case StageFraming.RightSpeaker: pin = new StagePin(1f, 0f, -farEdge); break;
+                case StageFraming.CentredSpeaker: pin = new StagePin(0.5f, 1f, BoxWidth * 0.5f); break;
+                default: pin = new StagePin(0.5f, 0.5f, 0f); break;
+            }
+
+            return pin.LeftEdge(stageWidth, choicesWidth) < ChoicesMinLeft
+                ? new StagePin(0f, 0f, ChoicesMinLeft)
+                : pin;
         }
+
+        // The rows' panel is built four rows tall and fills from its top, so
+        // pinning its BOTTOM at ChoicesBottom leaves every hidden row as a gap
+        // between the shown ones and the box (a concluded Leave stood three
+        // rows up). Pinned by where its shown rows END instead: the panel's
+        // bottom drops by the hidden rows' height, so the last shown row sits
+        // ChoicesGap above the box and more rows grow upward. The hidden part
+        // is a bare panel over the box, which draws nothing and takes no click.
+        public static float ChoicesPanelBottom(float panelHeight, float shownHeight) =>
+            ChoicesBottom - (panelHeight - shownHeight);
     }
 }

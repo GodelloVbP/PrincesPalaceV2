@@ -176,7 +176,9 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The legacy rows kept their screen positions through the move to
-        // their own panel -- pinned as literals from before the move.
+        // their own panel -- pinned as literals from before the move. Their
+        // left edge and heights are unchanged by the 704 width (2026-09-25);
+        // only the right edge came in 32, from 880 to 848.
         [Test]
         public void TheLegacyRowsSitWhereTheyAlwaysDid()
         {
@@ -186,9 +188,108 @@ namespace PrincesPalace.Domain.Tests
                 .OrderBy(n => n.Name).ToList();
 
             Assert.AreEqual(4, rows.Count);
-            Assert.AreEqual(512f, rows[0].Rect.Centre.X, 0.01f);
+            Assert.AreEqual(144f, rows[0].Rect.Left, 0.01f);
+            Assert.AreEqual(848f, rows[0].Rect.Right, 0.01f);
             Assert.AreEqual(-164f, rows[0].Rect.Centre.Y, 0.01f);
             Assert.AreEqual(-440f, rows[3].Rect.Centre.Y, 0.01f);
+        }
+
+        // ---- a choice row's own layout (owner call 2026-09-25) -------------------
+
+        private static UiRect RowLocal(string name)
+        {
+            var solved = UiSolver.Solve(Tree(), UiFrames.Reference);
+            var row = solved.Descendants().First(n => n.Name == "EventChoice0").Rect;
+            var child = solved.Descendants().First(n => n.Name == name).Rect;
+            return new UiRect(new UiVec(child.Centre.X - row.Centre.X, child.Centre.Y - row.Centre.Y), child.Size);
+        }
+
+        // Built as an open row: a lone label sits on the row's middle.
+        [Test]
+        public void ALoneLabelIsCentredInItsRow()
+        {
+            Assert.AreEqual(0f, RowLocal("EventChoice0Text").Centre.Y, 0.01f);
+            Assert.AreEqual(0f, EventScreen.ChoiceTextY(withLock: false));
+        }
+
+        // Label 34 over reason 26 with 2 between: a 62-tall pair centred in
+        // the 80 row, so 9 above and 9 below it.
+        [Test]
+        public void ALabelAndItsLockReasonAreCentredAsAPair()
+        {
+            float textY = EventScreen.ChoiceTextY(withLock: true);
+            var reason = RowLocal("EventChoice0Lock");
+
+            Assert.AreEqual(14f, textY, 0.01f);
+            Assert.AreEqual(-18f, reason.Centre.Y, 0.01f);
+            Assert.AreEqual(-18f, EventScreen.ChoiceLockY, 0.01f);
+
+            float pairTop = textY + 17f;
+            Assert.AreEqual(31f, pairTop, 0.01f);
+            Assert.AreEqual(-31f, reason.Bottom, 0.01f);
+            Assert.Less(reason.Top, textY - 17f, "the reason overlaps the label above it");
+        }
+
+        // One typeface for both lines of a row; the reason smaller, and in
+        // its own colour.
+        [Test]
+        public void TheLockReasonIsTheLabelsFamilyAtASmallerSize()
+        {
+            var nodes = Walk(Tree()).ToList();
+            var text = nodes.First(n => n.Name == "EventChoice0Text");
+            var reason = nodes.First(n => n.Name == "EventChoice0Lock");
+
+            Assert.AreEqual(TypographyRole.Body, text.Role);
+            Assert.AreEqual(TypographyRole.Body, reason.Role);
+            Assert.AreEqual(22, text.FontSize);
+            Assert.AreEqual(18, reason.FontSize);
+            Assert.AreEqual(EventScreen.LockReasonHex, reason.ColorHex);
+        }
+
+        // WCAG relative luminance, sRGB -> linear, for the contrast pin below.
+        private static double Luminance(double r, double g, double b)
+        {
+            double Lin(double c)
+            {
+                c /= 255.0;
+                return c <= 0.04045 ? c / 12.92 : System.Math.Pow((c + 0.055) / 1.055, 2.4);
+            }
+
+            return 0.2126 * Lin(r) + 0.7152 * Lin(g) + 0.0722 * Lin(b);
+        }
+
+        // The locked label against the row as drawn over the event ground:
+        // SubmenuRowFill (#120A1A at 0xD1) over ShopGround (#0B0612) is
+        // (16.7, 9.3, 24.6). Both colours are written out as literals so a
+        // palette change is caught here rather than silently re-measured.
+        [Test]
+        public void TheLockedLabelReadsAgainstTheRow()
+        {
+            Assert.AreEqual("#B0A0C6FF", EventScreen.LockedChoiceTextHex);
+
+            double text = Luminance(0xB0, 0xA0, 0xC6);
+            double row = Luminance(16.74, 9.28, 24.56);
+            double contrast = (text + 0.05) / (row + 0.05);
+
+            Assert.GreaterOrEqual(contrast, 4.5, "WCAG AA for body text");
+            Assert.AreEqual(8.07, contrast, 0.01);
+        }
+
+        // The lock reason against the same row: SubmenuRowFill (#120A1A at
+        // 0xD1) over ShopGround (#0B0612) is (16.7, 9.3, 24.6), same as
+        // above. Raised 2026-09-25 from #D9A87EFF (9.15:1) to #EDC9A2FF to
+        // keep the same margin over 4.5:1 the locked label has.
+        [Test]
+        public void TheLockReasonReadsAgainstTheRow()
+        {
+            Assert.AreEqual("#EDC9A2FF", EventScreen.LockReasonHex);
+
+            double text = Luminance(0xED, 0xC9, 0xA2);
+            double row = Luminance(16.74, 9.28, 24.56);
+            double contrast = (text + 0.05) / (row + 0.05);
+
+            Assert.GreaterOrEqual(contrast, 7.0, "same margin as the locked label");
+            Assert.AreEqual(12.51, contrast, 0.01);
         }
 
         // Owner rule 2026-09-23: container art is never stretched. The box

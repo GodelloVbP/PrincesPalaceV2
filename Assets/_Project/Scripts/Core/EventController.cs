@@ -133,6 +133,10 @@ namespace PrincesPalace
 
         private bool _rowsShown = true;
 
+        // How many rows the last PaintRows showed, so the stage can stand
+        // exactly that many on its box (DialogueStageLayout.ChoicesPanelBottom).
+        private int _paintedRowCount;
+
         // TMP draws every character up to this; set once a line is full, so
         // a count that disagrees with TMP's by a character never clips it.
         private const int AllCharacters = 99999;
@@ -416,14 +420,20 @@ namespace PrincesPalace
                     break;
             }
 
-            Pin(stageBox, DialogueStageLayout.BoxPin(narration, side), 0f, DialogueStageLayout.BoxBottom);
+            // Read after the cue painted it: a speaker whose bust failed every
+            // fallback has none showing, and is framed centred.
+            var activeBust = BustAt(_activeBust);
+            bool hasBust = activeBust != null && activeBust.gameObject.activeSelf;
+            var framing = DialogueStageLayout.FramingFor(narration, hasBust, side);
+
+            Pin(stageBox, DialogueStageLayout.BoxPin(framing), 0f, DialogueStageLayout.BoxBottom);
 
             // Narration has no plate (contract 8). A speaker with no bust
-            // still gets one (contract 15).
+            // still gets one (contract 15), at the centred box's left end.
             stageNamePlate.gameObject.SetActive(!narration);
             if (!narration)
             {
-                Pin(stageNamePlate, DialogueStageLayout.PlatePin(side), 0.5f, DialogueStageLayout.PlateCentreY);
+                Pin(stageNamePlate, DialogueStageLayout.PlatePin(framing), 0.5f, DialogueStageLayout.PlateCentreY);
                 stageName.SetContent(line.SpeakerName);
 
                 bool hasEpithet = !string.IsNullOrEmpty(line.Epithet);
@@ -461,10 +471,14 @@ namespace PrincesPalace
             }
 
             // Pinned by the beat on screen, so when the last beat opens the
-            // rows they stand clear of its plate.
+            // rows they stand clear of its plate, and by the rows PaintRows
+            // showed, so the last of them sits just above the box.
             if (choicesPanel != null)
             {
-                Pin(choicesPanel, DialogueStageLayout.ChoicesPin(narration, side), 0f, DialogueStageLayout.ChoicesBottom);
+                var panel = choicesPanel.rect.size;
+                float stageWidth = dialogueStage != null ? dialogueStage.rect.width : panel.x;
+                Pin(choicesPanel, DialogueStageLayout.ChoicesPin(framing, stageWidth, panel.x), 0f,
+                    DialogueStageLayout.ChoicesPanelBottom(panel.y, EventScreen.ChoicesHeightFor(_paintedRowCount)));
             }
         }
 
@@ -607,6 +621,8 @@ namespace PrincesPalace
                 }
             }
 
+            _paintedRowCount = row;
+
             for (; row < choiceButtons.Length; row++)
             {
                 choiceButtons[row].gameObject.SetActive(false);
@@ -626,6 +642,11 @@ namespace PrincesPalace
             bool showLock = !enabled && !string.IsNullOrEmpty(lockReason);
             choiceLocks[row].gameObject.SetActive(showLock);
             if (showLock) choiceLocks[row].Set(UiStrings.EventChoiceLocked, lockReason);
+
+            // Alone, the label is centred in the row; over a reason, the two
+            // are centred as a pair (EventScreen.ChoiceTextY).
+            var label = choiceTexts[row].rectTransform;
+            label.anchoredPosition = new Vector2(label.anchoredPosition.x, EventScreen.ChoiceTextY(showLock));
         }
 
         // ---- acting ---------------------------------------------------------------

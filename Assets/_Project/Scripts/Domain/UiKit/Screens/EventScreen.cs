@@ -47,8 +47,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Read by EventController to grey a locked row, so the tree and the
         // runtime share one home for each colour.
         public const string ChoiceTextHex = ChoiceText;
-        public const string LockedChoiceTextHex = FightHudPalette.TextMuted;
-        public const string LockReasonHex = "#D9A87EFF";
+
+        // A muted lilac that still reads on the row (owner call 2026-09-25).
+        // TextMuted (#8A7AA0) measured 3.3:1 against the row fill in the
+        // captures -- the camera's grade darkens it below its authored
+        // 5.0:1 -- and read as a smudge. This is 8.1:1 authored and about
+        // 5.1:1 through the same grade, and still well under the open rows'
+        // 15:1, so a locked row reads as locked.
+        public const string LockedChoiceTextHex = "#B0A0C6FF";
+        public const string LockReasonHex = "#EDC9A2FF";
 
         // ---- geometry (1920x1080 reference) -------------------------------------
         private const float ScreenHalfWidth = 960f;
@@ -85,8 +92,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RowPad = 20f;
         private const float RowTextHeight = 34f;
         private const float RowLockHeight = 26f;
+        private const float RowPairGap = 2f;
+        public const int ChoiceFontSize = 22;
+        public const int LockFontSize = 18;
 
-        private const float ChoicesHeight = ChoiceRowCount * RowHeight + (ChoiceRowCount - 1) * RowGap;
+        // Narrower than the text column (736) because the stage has to fit a
+        // row between the focus marker's margin and a right-hand speaker's
+        // name plate on a 1920-wide screen: 63 (DialogueStageLayout
+        // .ChoicesMinLeft) + 704 leaves 25px before the plate at 792. The
+        // legacy rows keep their left edge, so their text starts where it did.
+        public const float ChoiceRowWidth = 704f;
+
+        public const float ChoicesHeight = ChoiceRowCount * RowHeight + (ChoiceRowCount - 1) * RowGap;
+
+        // How tall `rows` shown rows stand, top of the first to bottom of the
+        // last. The stage pins its rows by this (DialogueStageLayout
+        // .ChoicesPanelBottom) so they sit on the box however many show.
+        public static float ChoicesHeightFor(int rows) =>
+            rows <= 0 ? 0f : rows * RowHeight + (rows - 1) * RowGap;
+
+        // A row's label alone is centred in the row; with a lock reason the
+        // two are centred as a pair, label above (owner call 2026-09-25: a
+        // single line at the top of an 80px row left a hole under it).
+        // Row-local y, read by EventController when it paints a row.
+        private const float RowPairHeight = RowTextHeight + RowPairGap + RowLockHeight;
+
+        public static float ChoiceTextY(bool withLock) =>
+            withLock ? RowPairHeight * 0.5f - RowTextHeight * 0.5f : 0f;
+
+        public const float ChoiceLockY = -(RowPairHeight * 0.5f - RowLockHeight * 0.5f);
         private const float ChoicesTop = ColumnBottom + ChoicesHeight;
 
         // The choice rows sit in their own panel (EventChoices) under the
@@ -96,7 +130,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // Read by EventController, which gives the rows' panel back its
         // legacy spot when a page without lines follows one with them.
-        public const float ChoicesLegacyX = TextCentreX;
+        public const float ChoicesLegacyX = TextLeft + ChoiceRowWidth * 0.5f;
         public const float ChoicesLegacyY = ChoicesCentreY;
 
         private const float TitleCentreY = ColumnTop - TitleHeight * 0.5f;
@@ -243,20 +277,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var panel = Ui.Panel("EventChoices", Place.At(ChoicesLegacyX, ChoicesLegacyY),
-                UiSize.Fixed(TextWidth, ChoicesHeight), rows);
+                UiSize.Fixed(ChoiceRowWidth, ChoicesHeight), rows);
             ChoicesPanel = panel;
             return panel;
         }
 
         // A button with its own fill and rim rather than a themed plate: a
-        // 736x80 row is nowhere near any plate's aspect, and the pack rows
+        // 704x80 row is nowhere near any plate's aspect, and the pack rows
         // (ShopScreen.BuildPackRow) are the same answer to the same shape.
         // Starts inactive; the controller shows one row per visible choice.
         private ChoiceRow BuildChoiceRow(int index, float y)
         {
             string name = $"EventChoice{index}";
-            var size = new UiVec(TextWidth, RowHeight);
-            float inner = TextWidth - RowPad * 2f;
+            var size = new UiVec(ChoiceRowWidth, RowHeight);
+            float inner = ChoiceRowWidth - RowPad * 2f;
 
             var children = new List<UiNode>
             {
@@ -264,19 +298,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             };
             children.AddRange(Ui.Rim(name, size, FrameRim));
 
-            // Text on the upper line, the lock reason under it. Fixed lines
-            // rather than recentring the text when the caption is off: a row
-            // that shifts its words when it locks reads as a different row.
-            var text = Ui.Label($"{name}Text", UiStrings.EventChoice, new UiVec(inner, RowTextHeight), 22,
-                    ChoiceText, Place.At(0f, RowHeight * 0.5f - 10f - RowTextHeight * 0.5f))
+            // Built as an open row: the label centred, the lock reason hidden
+            // at its place in the pair. EventController moves the label up to
+            // the pair's top line when it shows a reason (ChoiceTextY).
+            var text = Ui.Label($"{name}Text", UiStrings.EventChoice, new UiVec(inner, RowTextHeight), ChoiceFontSize,
+                    ChoiceText, Place.At(0f, ChoiceTextY(withLock: false)))
                 .Styled(TypographyRole.Body)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor();
             children.Add(text);
 
-            var lockReason = Ui.Label($"{name}Lock", UiStrings.EventChoiceLocked, new UiVec(inner, RowLockHeight), 17,
-                    LockReasonHex, Place.At(0f, -RowHeight * 0.5f + 8f + RowLockHeight * 0.5f))
-                .Styled(TypographyRole.TacticalData)
+            // The label's own family, smaller, in the lock colour: a second
+            // typeface under the label read as a different kind of text.
+            var lockReason = Ui.Label($"{name}Lock", UiStrings.EventChoiceLocked, new UiVec(inner, RowLockHeight), LockFontSize,
+                    LockReasonHex, Place.At(0f, ChoiceLockY))
+                .Styled(TypographyRole.Body)
                 .TextAligned(UiTextAlign.Left)
                 .AsDecor()
                 .Inactive();
@@ -292,7 +328,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         //
         // Built at the LEFT-speaker layout (DialogueStageLayout's pins with
         // DialogueSide.Left). The controller re-pins the bust, box, plate and
-        // choices for a right-hand speaker or for narration, and sizes the
+        // choices for a right-hand speaker, for narration and for a speaker
+        // whose bust is missing (DialogueStageLayout.FramingFor), and sizes the
         // backdrop and bust to their sprites; nothing here is stretched.
         //
         // EVERY PIECE IS DECOR. None of it takes a click in D2 (D3 adds the
@@ -329,7 +366,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float LinePadBottom = 28f;
         public const float LineWidth = DialogueStageLayout.BoxWidth - LinePadX * 2f;
         public const float LineHeight = DialogueStageLayout.BoxHeight - LinePadTop - LinePadBottom;
-        public const int LineFontSize = 26;
+        // 32 (owner call 2026-09-25: at 26 a 200-character line filled two
+        // of the box's five lines). The result beat binds, not the line: a
+        // cap-length result plus its effects line wraps to four lines, about
+        // 175 of the 180 available at 32, and overflows at 34. The line at
+        // the cap alone is three. DialogueStageTextFitTests measures both in
+        // the real label.
+        public const int LineFontSize = 32;
 
         // Two lines in the plate's inner ~452x70; the controller centres the
         // name alone when the epithet is empty (every character today).
@@ -409,7 +452,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             // Layer 4: the box, in front of the bust, with the line inside.
-            var boxPin = DialogueStageLayout.BoxPin(false, Content.DialogueSide.Left);
+            var boxPin = DialogueStageLayout.BoxPin(StageFraming.LeftSpeaker);
             var line = Ui.Label("StageLineText", UiStrings.EventLine, new UiVec(LineWidth, LineHeight), LineFontSize,
                     BodyText, Place.At(0f, (LinePadBottom - LinePadTop) * 0.5f))
                 .Styled(TypographyRole.Body)
@@ -428,7 +471,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // The plate straddles the box's top edge at the speaker's end, in
             // front of the box: the name is a label pinned to the frame.
-            var platePin = DialogueStageLayout.PlatePin(Content.DialogueSide.Left);
+            var platePin = DialogueStageLayout.PlatePin(StageFraming.LeftSpeaker);
             var name = Ui.Label("StageName", UiString.Runtime, new UiVec(PlateTextWidth, NameHeight), 30,
                     TitleText, Place.At(0f, NameWithEpithetY))
                 .Styled(TypographyRole.FunctionalHeading)
