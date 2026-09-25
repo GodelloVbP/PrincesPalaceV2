@@ -21,11 +21,7 @@ MonoBehaviour:
     - Id: zoo
       ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
       Title: The Petting Zoo
-      Body: 'Somewhere between two realities, someone has fenced off a paddock and
-        hung a sign: PETTING ZOO. A sheep chews at the rail. A peacock fans its tail
-        at nobody in particular. Two fawns nose at an empty trough, and a cooler
-        of cold ones sweats by the gate. Prince''s contract says nothing about petting
-        zoos. It doesn''t forbid them either.'
+      Body: 
       Choices:
       - Text: Pet the sheep
         Requires: []
@@ -911,361 +907,30 @@ MonoBehaviour:
           IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
-    - Id: zoo_after_pet
-      ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
-      Title: The Petting Zoo
-      Body: The sheep wanders back to the far rail. There's time to pick one more
-        thing before the contract calls you on.
-      Choices:
-      - Text: Strut for the peacock
-        Requires:
-        - Kind: 2
-          CharacterId: 
-          CharacterDisplayName: 
-          Ability: 5
-          Min: 20
-          HasMin: 1
-          Max: 0
-          HasMax: 0
-          CounterId: 
-          RequireStanding: 0
-          AuthoredReason: 
-        HiddenUntilMet: 0
-        Effects: []
-        Outcomes:
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 30
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 200
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 29
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 190
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 28
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 180
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 27
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 170
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 26
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 160
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 25
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 150
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 24
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 140
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 23
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 130
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 22
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 120
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires:
-          - Kind: 2
-            CharacterId: 
-            CharacterDisplayName: 
-            Ability: 5
-            Min: 21
-            HasMin: 1
-            Max: 0
-            HasMax: 0
-            CounterId: 
-            RequireStanding: 0
-            AuthoredReason: 
-          Effects:
-          - Kind: 0
-            Amount: 110
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-        - Requires: []
-          Effects:
-          - Kind: 0
-            Amount: 100
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The peacock looks your strut up and down, then fans its tail in
-            grudging approval. The crowd along the fence throws coins.
-          GoTo: 
-          IsLeave: 1
-      - Text: Feed the fawns
-        Requires: []
-        HiddenUntilMet: 0
-        Effects: []
-        Outcomes:
-        - Requires: []
-          Effects:
-          - Kind: 7
-            Amount: 10
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: The fawns eat out of your hand and trail you all the way to the
-            gate. Word reaches Prince, who purrs about it for days.
-          GoTo: 
-          IsLeave: 1
-      - Text: Crack open a cold one
-        Requires:
-        - Kind: 1
-          CharacterId: 
-          CharacterDisplayName: 
-          Ability: 0
-          Min: 15
-          HasMin: 1
-          Max: 0
-          HasMax: 0
-          CounterId: 
-          RequireStanding: 0
-          AuthoredReason: 
-        HiddenUntilMet: 0
-        Effects: []
-        Outcomes:
-        - Requires: []
-          Effects:
-          - Kind: 8
-            Amount: 1
-            Item: 
-            CounterId: 
-            CharacterId: 
-            CharacterDisplayName: 
-            RelicId: 
-            RelicDisplayName: 
-          Result: It's cold, it's crisp, and it goes straight to everyone's head.
-            Whatever waits down the road, the party meets it at full strength.
-          GoTo: 
-          IsLeave: 1
-      - Text: Say goodbye
-        Requires: []
-        HiddenUntilMet: 0
-        Effects: []
-        Outcomes:
-        - Requires: []
-          Effects: []
-          Result: 
-          GoTo: 
-          IsLeave: 1
-      BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
-      Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: 'Somewhere between two realities, someone has fenced off a paddock
+          and hung a sign: PETTING ZOO.'
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: A sheep chews at the rail. A peacock fans its tail at nobody in particular.
+          Two fawns nose at an empty trough, and a cooler of cold ones sweats by
+          the gate.
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Prince's contract says nothing about petting zoos. It doesn't forbid
+          them either.
     - Id: petter
       ArtKey: Assets/_Project/Art/Events/petting_zoo/zoo.png
       Title: The Sheep Waits
-      Body: The sheep looks your party over and seems unimpressed. It was expecting
-        someone woollier. Still, a scratch is a scratch, if anyone cares to give
-        it one.
+      Body: 
       Choices:
       - Text: Bjorn pets the sheep
         Requires:
@@ -1294,9 +959,9 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
           Result: Bjorn scratches the sheep behind the ears with one enormous claw.
-            It leans right into it. Pick one more thing before you go.
-          GoTo: zoo_after_pet
-          IsLeave: 0
+            It leans right into it.
+          GoTo: 
+          IsLeave: 1
       - Text: Odette pets the sheep
         Requires:
         - Kind: 0
@@ -1324,9 +989,9 @@ MonoBehaviour:
             RelicId: 
             RelicDisplayName: 
           Result: Odette preens a tuft of the sheep's wool back into place. The sheep
-            allows this. Pick one more thing before you go.
-          GoTo: zoo_after_pet
-          IsLeave: 0
+            allows this.
+          GoTo: 
+          IsLeave: 1
       - Text: Leave the sheep be
         Requires: []
         HiddenUntilMet: 0
@@ -1335,29 +1000,28 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
+          GoTo: zoo
           IsLeave: 0
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: The sheep looks your party over and seems unimpressed. It was expecting
+          someone woollier.
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Still, a scratch is a scratch, if anyone cares to give it one.
     - Id: step1_pair
       ArtKey: 
       Title: A Sheep?
-      Body: 'Shawn: "Is that... A sheep?"
-
-        Odette: "I presume so."
-
-        Shawn:
-        "..."
-
-        Odette: "Is that a good or a bad thing?"
-
-        Shawn: "I...
-        I don''t know..."
-
-        (Shawn proceeds to pet the sheep.)'
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1365,25 +1029,51 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
-      Cast: []
-      Lines: []
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      - CharacterId: owl
+        Side: 1
+      Lines:
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 5
+        Side: 0
+        Text: Is that... A sheep?
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: I presume so.
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: ...
+      - SpeakerId: owl
+        IsNarration: 0
+        Expression: 0
+        Side: 1
+        Text: Is that a good or a bad thing?
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: I... I don't know...
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: <i>Shawn proceeds to pet the sheep.</i>
     - Id: step1_solo
       ArtKey: 
       Title: A Sheep?
-      Body: 'Shawn: "Is that... A sheep?"
-
-        Shawn: "..."
-
-        Shawn: "I...
-        I don''t know how I feel about this."
-
-        (Shawn proceeds to pet the
-        sheep.)'
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1391,17 +1081,39 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
-      Cast: []
-      Lines: []
+      Cast:
+      - CharacterId: sheep
+        Side: 0
+      Lines:
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 5
+        Side: 0
+        Text: Is that... A sheep?
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: ...
+      - SpeakerId: sheep
+        IsNarration: 0
+        Expression: 3
+        Side: 0
+        Text: I... I don't know how I feel about this.
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: <i>Shawn proceeds to pet the sheep.</i>
     - Id: step2
       ArtKey: 
       Title: The Sheep, Visit 2
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1409,17 +1121,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step3
       ArtKey: 
       Title: The Sheep, Visit 3
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1427,17 +1144,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step4
       ArtKey: 
       Title: The Sheep, Visit 4
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1445,17 +1167,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step5
       ArtKey: 
       Title: The Sheep, Visit 5
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1463,17 +1190,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step6
       ArtKey: 
       Title: The Sheep, Visit 6
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1481,17 +1213,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step7
       ArtKey: 
       Title: The Sheep, Visit 7
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1499,17 +1236,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step8
       ArtKey: 
       Title: The Sheep, Visit 8
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1517,17 +1259,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step9
       ArtKey: 
       Title: The Sheep, Visit 9
-      Body: -> placeholder
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1535,21 +1282,22 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
     - Id: step10
       ArtKey: 
       Title: The Sheep, Visit 10
-      Body: '-> placeholder
-
-
-        Future visits with Shawn grant Kinship for
-        that run.'
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1557,21 +1305,27 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Future visits with Shawn grant Kinship for that run.
     - Id: post_arc
       ArtKey: 
       Title: The Sheep, Again
-      Body: '-> placeholder
-
-
-        Future visits with Shawn grant Kinship for
-        that run.'
+      Body: 
       Choices:
-      - Text: Carry on
+      - Text: Say goodbye
         Requires: []
         HiddenUntilMet: 0
         Effects: []
@@ -1579,9 +1333,19 @@ MonoBehaviour:
         - Requires: []
           Effects: []
           Result: 
-          GoTo: zoo_after_pet
-          IsLeave: 0
+          GoTo: 
+          IsLeave: 1
       BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png
       Cast: []
-      Lines: []
+      Lines:
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: -> placeholder
+      - SpeakerId: 
+        IsNarration: 1
+        Expression: 0
+        Side: 0
+        Text: Future visits with Shawn grant Kinship for that run.
     BackdropKey: Assets/_Project/Art/Backgrounds/Dungeon.png

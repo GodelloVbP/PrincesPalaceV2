@@ -16,6 +16,20 @@ favor seam was the wrong one. This revision settles each contract before any cod
 
 Step 0 on approval: save this file as `docs/PLAN_PETTING_ZOO.md`.
 
+## Owner decisions, 2026-09-25 (after M1; they override the rev-3 text they touch)
+
+1. **One choice per event.** Picking any option plays its scene and then the event ends. This
+   reverses the old D2 ("petting never ends the visit": a pet led to `zoo_after_pet`, which
+   offered one more pick). `zoo_after_pet` is removed. Step pages end the event; the petter
+   rows end it with a short result; "Leave the sheep be" goes back to `zoo`, because nothing was
+   chosen.
+2. **Text on the dialogue skeleton, not in page body or result prose.** Every page plays
+   `lines` (docs/EVENTS.md, "Dialogue lines"); every `body` is empty. The owner's step-1 script
+   is the `step1_pair` lines verbatim. The zoo intro and the petter page are narration lines split
+   from the M1 draft prose. Results that play on the stage fit its 200-character cap.
+
+D1 (arc length) stands as it is, and the placeholder text for steps 2-10 is accepted for now.
+
 ## Behavioural contracts
 
 ### Appearance
@@ -26,14 +40,15 @@ post-arc branch. Whether 10 is acceptable is decided on P0's numbers (D1).
 ### Page graph — every transition, nothing implicit
 | Page | Choices (≤4) → destination |
 |---|---|
-| `zoo` (opens) | Pet the sheep → step/petter pages · Strut for the peacock [CHA ≥20, greyed] → Leave with result · Feed the fawns → Leave with result · Crack open a cold one [level ≥15, greyed] → Leave with result |
-| `step1_pair`, `step1_solo`, `step2`…`step10`, `post_arc` | "Carry on" → `zoo_after_pet` |
-| `petter` | "Bjorn pets" [inParty bear, alive, hidden] → `zoo_after_pet` · "Odette pets" [inParty owl, alive, hidden] → `zoo_after_pet` · "Leave the sheep be" → `zoo_after_pet` (declining uses up the sheep for this visit; back to `zoo` let a first-available bot loop zoo ↔ petter forever) |
-| `zoo_after_pet` | Peacock · Fawns · Cold one (same as `zoo`) · "Say goodbye" → Leave |
+| `zoo` (opens) | Pet the sheep → step/petter pages · Strut for the peacock [CHA ≥20, greyed] → Leave with result · Feed the fawns → Leave with result · Crack open a cold one [level ≥15, greyed] → Leave with result. No Leave row: Fawns is always open. |
+| `step1_pair`, `step1_solo`, `step2`…`step10`, `post_arc` | "Say goodbye" → Leave (no result, so it closes at once) |
+| `petter` | "Bjorn pets the sheep" [inParty bear, alive, hidden] → Leave with result · "Odette pets the sheep" [inParty owl, alive, hidden] → Leave with result · "Leave the sheep be" → `zoo` |
 
-- **Petting never ends the visit, and it can happen only once per visit:** every route that
-  heals goes to `zoo_after_pet`, which has no sheep row. The page body there says so:
-  "Pet, then pick one more thing to do."
+- **One choice per visit (owner, 2026-09-25):** every pick plays its scene and ends the event.
+  The only edge back to `zoo` is declining on `petter`, which changes nothing.
+- **No bot loop:** a first-available bot circles zoo ↔ petter only if the pet goes to `petter`
+  and `petter` shows no pet row. That needs a squad with nobody standing, which cannot happen
+  mid-run. A test walks every squad drawn from the roster, with every standing/downed mix.
 - **Pet the sheep:** the counter `zoo_sheep` is bumped in **outcome** effects and gated on the
   pre-increment value. First match wins, and the last outcome is unconditional:
   1. inParty sheep (alive) + counter max 0 + inParty owl → heal Shawn to full, +1 → `step1_pair`
@@ -42,6 +57,12 @@ post-arc branch. Whether 10 is acceptable is decided on P0's numbers (D1).
   4. inParty sheep (alive) + counter min 9 max 9 → heal, +1, grant Kinship → `step10`
   5. inParty sheep (alive) + counter min 10 → heal, +1, grant Kinship → `post_arc`
   6. unconditional → `petter` (Shawn absent or downed; counter unchanged)
+- **Text:** every page plays `lines`. Step pages carry the scene (Odette speaks only on
+  `step1_pair`, whose incoming outcome requires `inParty owl`; Shawn only on the step-1 pages,
+  whose outcomes require `inParty sheep`). Steps 2-10 and `post_arc` are narration placeholders.
+  The zoo and petter pages are narration. The backdrop is the stage default
+  (`Art/Backgrounds/Dungeon.png`); `zoo.png` is the set piece (`artPath`) on `zoo` and `petter`,
+  and until it exists the stage hides that layer.
 - **Heals never revive.** A downed character never appears as a petter.
 - **Player-facing Kinship text** in `step10`/`post_arc`: "Future visits with Shawn grant
   Kinship for that run." Kinship is run-scoped (`RunSnapshot.relicIds`). Finishing the arc
@@ -130,16 +151,17 @@ dialogue-stage and Spell-VFX sessions, which share the TestRunner.
 ## Tests (literal values)
 - **Resolver on the real Zoo definition:** validator-legal, every `goTo` resolves, and every
   page has an unconditional row.
-- **Graph:** from each healing route, `zoo_after_pet` is reached and has no sheep row. Pet
-  twice in one visit is impossible. "Leave the sheep be" changes nothing except
-  removing the sheep row. No path loops back to `zoo`.
+- **Graph (2026-09-25):** every choice except "Leave the sheep be" ends the event after its
+  scene. "Leave the sheep be" changes nothing and returns to `zoo`. Whenever any squad member is
+  standing, the pet takes Shawn's branch or `petter` shows a pet row.
+- **Lines:** the step pages have lines with the right speakers and expressions; no page has a body.
 - **Counter 0→10:** steps 1…10; Kinship granted on the 10th pet, not the 9th; the 11th pet →
   `post_arc` plus Kinship.
 - **Owl present / benched:** pair text / solo text, and the counter moves in both cases.
   Shawn benched or downed → `petter`, counter unchanged. A downed ally's row is hidden.
   Heals never revive.
-- **Reload:** after each intermediate choice (`zoo` → pet → step page → `zoo_after_pet`,
-  and via `petter`), the reload lands on the same page with the counter and HP applied exactly
+- **Reload:** after each choice (`zoo` → pet → step page → closed, and via `petter` →
+  concluded), the reload lands on the same page with the counter and HP applied exactly
   once. Choose submitted twice on one page applies once. A save that throws leaves no
   half-applied state visible after reload (`RunOrchestrator.Event.cs:212`).
 - **Peacock:** Charisma 19 greyed; 20/25/30/40 → 100/150/200/200.
@@ -173,8 +195,8 @@ dialogue-stage and Spell-VFX sessions, which share the TestRunner.
 - **Dialogue stage** owns `EventScreen`, `EventController`, `ScreenRegistry.WireEvent`,
   `NavigationInputModule`, the epithet field, and the page fields in `RawEventEntry.cs` /
   `EventEntryResolver.cs`. P1 rebases on its D1 commit and edits only the effect and
-  requirement sections. Once the stage lands, step text moves into `lines` under
-  outcomes that require `inParty sheep`. A KO'd member may speak; `alive` is not required
+  requirement sections. The stage has landed: all Zoo text is in `lines`,
+  with speakers only under outcomes that require them (2026-09-25). A KO'd member may speak; `alive` is not required
   for speaker checks.
 - **Spell VFX** owns the `skills.json` vfx blocks for five spells and runs a `-BuildContent`
   gate. This plan does not touch `skills.json`. The M1 gate is announced first and sequenced

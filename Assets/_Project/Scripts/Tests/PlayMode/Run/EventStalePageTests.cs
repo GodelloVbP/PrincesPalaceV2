@@ -180,11 +180,12 @@ namespace PrincesPalace.PlayModeTests
         // ---- the real petting_zoo --------------------------------------------------------
 
         // Where the double press was found: on `petter`, "Bjorn pets the sheep"
-        // is index 0 and goes to zoo_after_pet, whose own index 0 is the
-        // peacock strut. A second press on `petter` must not spend that page's
-        // pick. NEEDS BUILT CONTENT: petting_zoo in Resources/Content.
+        // is index 0 and concludes the event on its result (one choice per
+        // visit, owner 2026-09-25). The second press arrives after the event
+        // has concluded, is refused as StalePage, and spends nothing.
+        // NEEDS BUILT CONTENT: petting_zoo in Resources/Content.
         [Test]
-        public void PettingZoo_ADoubleBjornPetsOnPetter_IsRefusedAndSpendsNothingOnZooAfterPet()
+        public void PettingZoo_ADoubleBjornPets_IsRefusedAfterTheEventConcludes()
         {
             const int bjornPets = 0;
 
@@ -204,15 +205,15 @@ namespace PrincesPalace.PlayModeTests
 
             var first = RunOrchestrator.ChooseEventOption(bjornPets, painted);
             Assert.AreEqual(EventChoiceOutcome.Ok, first.Outcome);
-            Assert.AreEqual("zoo_after_pet", Run.eventPageId);
+            Assert.AreEqual("", Run.eventPageId);
             string resultAfterFirst = Run.eventResult;
             int effectsAfterFirst = Run.eventResultEffects.Count;
 
             var second = RunOrchestrator.ChooseEventOption(bjornPets, painted);
 
             Assert.AreEqual(EventRefusal.StalePage, second.Reason);
-            Assert.AreEqual("zoo_after_pet", Run.eventPageId, "the page stays on what the first press opened");
-            Assert.AreEqual(100, Run.gold, "the peacock's pay on zoo_after_pet was not spent");
+            Assert.AreEqual("", Run.eventPageId, "the page stays on what the first press opened");
+            Assert.AreEqual(100, Run.gold, "the second press spent nothing");
             Assert.AreEqual(resultAfterFirst, Run.eventResult);
             Assert.AreEqual(effectsAfterFirst, Run.eventResultEffects.Count, "the first press's effects line stands");
             Assert.AreEqual(counterBefore, Save.EventCounter("zoo_sheep"));

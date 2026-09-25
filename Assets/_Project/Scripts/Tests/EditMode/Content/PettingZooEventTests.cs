@@ -11,13 +11,21 @@ namespace PrincesPalace.Domain.Tests
     // real resolvers (docs/PLAN_PETTING_ZOO.md, "Page graph" and "Tests").
     // The fixture tests in EventZooRowsTests pin the rows; this pins the
     // event the player walks through. Choices are found by their text, and
-    // every expected page, amount and caption is a literal.
+    // every expected page, amount, line and caption is a literal.
+    //
+    // One choice per visit (owner, 2026-09-25): every pick plays its scene
+    // and the event ends. The one way back to `zoo` is declining on `petter`,
+    // where nothing was chosen.
     //
     // What runs through RunOrchestrator (reload, a failed
     // save, HP actually moving) is PlayMode: PettingZooRunTests.
     public class PettingZooEventTests
     {
         private const string Counter = "zoo_sheep";
+        private const string ZooArt = "Assets/_Project/Art/Events/petting_zoo/zoo.png";
+        private const string Goodbye = "Say goodbye";
+        private const string LeaveBe = "Leave the sheep be";
+        private const string KinshipLine = "Future visits with Shawn grant Kinship for that run.";
 
         // ---- loading the real files ------------------------------------------------------
 
@@ -85,11 +93,19 @@ namespace PrincesPalace.Domain.Tests
         private static bool Grants(EventChoiceResolution resolution, EventEffectKind kind) =>
             resolution.Effects.Any(e => e.Kind == kind);
 
-        private static readonly string[] AllPages =
+        private static readonly string[] StepPages =
         {
-            "zoo", "zoo_after_pet", "petter", "step1_pair", "step1_solo",
-            "step2", "step3", "step4", "step5", "step6", "step7", "step8", "step9", "step10", "post_arc",
+            "step1_pair", "step1_solo", "step2", "step3", "step4", "step5", "step6", "step7", "step8", "step9",
+            "step10", "post_arc",
         };
+
+        private static readonly string[] AllPages = new[] { "zoo", "petter" }.Concat(StepPages).ToArray();
+
+        // A scene page plays its lines and then only ends the event: every
+        // row is an unconditional, effect-free, silent Leave.
+        private static bool IsScenePage(ResolvedEventPage page) =>
+            page.Choices.Length > 0
+            && page.Choices.All(c => c.Effects.Length == 0 && c.Outcomes.All(o => o.IsLeave && o.Effects.Length == 0 && o.Result == ""));
 
         // ---- resolver --------------------------------------------------------------------
 
@@ -118,12 +134,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(RelicRarity.Rare, kinship.Rarity);
         }
 
+        // The set piece is the page's artPath (dialogue stage contract 6); the
+        // file does not exist yet, which the stage draws as no layer 2. The
+        // backdrop is the stage's default, since the zoo names none.
         [Test]
-        public void TheSetPiecePagesShowTheZooArt_AndTheRestShowTheEmptyFrame()
+        public void TheZooAndPetterShowTheSetPiece_AndEveryPageTheDefaultBackdrop()
         {
-            foreach (string id in new[] { "zoo", "zoo_after_pet", "petter" })
+            Assert.AreEqual(ZooArt, Page("zoo").ArtKey);
+            Assert.AreEqual(ZooArt, Page("petter").ArtKey);
+            foreach (string id in StepPages) Assert.AreEqual("", Page(id).ArtKey, id);
+
+            foreach (string id in AllPages)
             {
-                Assert.AreEqual("Assets/_Project/Art/Events/petting_zoo/zoo.png", Page(id).ArtKey, id);
+                Assert.AreEqual("Assets/_Project/Art/Backgrounds/Dungeon.png", Page(id).BackdropKey, id);
             }
         }
 
@@ -160,72 +183,100 @@ namespace PrincesPalace.Domain.Tests
                 new[] { "Pet the sheep", "Strut for the peacock", "Feed the fawns", "Crack open a cold one" },
                 Page("zoo").Choices.Select(c => c.Text).ToArray());
             CollectionAssert.AreEqual(
-                new[] { "Strut for the peacock", "Feed the fawns", "Crack open a cold one", "Say goodbye" },
-                Page("zoo_after_pet").Choices.Select(c => c.Text).ToArray());
-            CollectionAssert.AreEqual(
-                new[] { "Bjorn pets the sheep", "Odette pets the sheep", "Leave the sheep be" },
+                new[] { "Bjorn pets the sheep", "Odette pets the sheep", LeaveBe },
                 Page("petter").Choices.Select(c => c.Text).ToArray());
 
-            foreach (string id in AllPages.Where(p => p.StartsWith("step") || p == "post_arc"))
+            foreach (string id in StepPages)
             {
                 var page = Page(id);
                 Assert.AreEqual(1, page.Choices.Length, id);
-                Assert.AreEqual("Carry on", page.Choices[0].Text, id);
-                Assert.AreEqual("zoo_after_pet", page.Choices[0].Outcomes.Single().GoTo, id);
-                Assert.AreEqual(0, page.Choices[0].Outcomes.Single().Effects.Length, id);
+                Assert.AreEqual(Goodbye, page.Choices[0].Text, id);
+                Assert.AreEqual(0, page.Choices[0].Requires.Length, id);
+                var outcome = page.Choices[0].Outcomes.Single();
+                Assert.IsTrue(outcome.IsLeave, id);
+                Assert.AreEqual(0, outcome.Effects.Length, id);
+                Assert.AreEqual("", outcome.Result, id + ": a silent Leave closes at once");
             }
         }
 
-        // Every outcome that heals lands on a page from which no further heal
-        // is reachable: the step pages lead only to zoo_after_pet, and
-        // zoo_after_pet has no sheep row and no heal at all. So a second pet
-        // in one visit has no route, whatever the party.
+        // ONE CHOICE PER EVENT. Every choice but declining on petter ends the
+        // event after its scene: it leaves outright, or goes to a scene page
+        // whose only row leaves. "Pet the sheep" without a standing Shawn goes
+        // to petter having chosen nothing -- no effects -- and petter's rows
+        // are held to the same rule. The one edge back to zoo is declining.
         [Test]
-        public void EveryHealingRoute_LeadsToZooAfterPet_AndNoSecondHealIsReachable()
+        public void EveryChoiceButLeaveTheSheepBe_EndsTheEventAfterItsScene()
         {
             var zoo = Zoo();
-            var healDestinations = new HashSet<string>();
+            var backToZoo = new List<string>();
+
             foreach (var page in zoo.Pages)
             {
                 foreach (var choice in page.Choices)
                 {
-                    Assert.IsFalse(choice.Effects.Any(e => e.Kind == EventEffectKind.HealPercent),
-                        $"{page.Id} '{choice.Text}': a heal on the choice itself would apply before routing");
-                    foreach (var outcome in choice.Outcomes.Where(o => o.Effects.Any(e => e.Kind == EventEffectKind.HealPercent)))
+                    foreach (var outcome in choice.Outcomes)
                     {
-                        healDestinations.Add(outcome.GoTo);
+                        string where = $"{page.Id} '{choice.Text}' -> {outcome.GoTo}";
+                        if (outcome.GoTo == "zoo") backToZoo.Add($"{page.Id}/{choice.Text}");
+                        if (choice.Text == LeaveBe || outcome.IsLeave) continue;
+
+                        if (outcome.GoTo == "petter")
+                        {
+                            Assert.AreEqual("Pet the sheep", choice.Text, where);
+                            Assert.AreEqual(0, choice.Effects.Length + outcome.Effects.Length, where + ": nothing is chosen yet");
+                            continue;
+                        }
+
+                        Assert.IsTrue(IsScenePage(zoo.PageById(outcome.GoTo)), where + ": not a page that only ends the event");
                     }
                 }
             }
 
-            CollectionAssert.AreEquivalent(
-                new[] { "step1_pair", "step1_solo", "step2", "step3", "step4", "step5", "step6", "step7", "step8",
-                        "step9", "step10", "post_arc", "zoo_after_pet" },
-                healDestinations);
+            CollectionAssert.AreEqual(new[] { "petter/" + LeaveBe }, backToZoo);
+        }
 
-            // Everything reachable after a heal.
-            var reachable = new HashSet<string>();
-            var frontier = new Queue<string>(healDestinations);
-            while (frontier.Count > 0)
+        // THE BOT-LOOP GUARD. A first-available bot could circle zoo <-> petter
+        // only if Pet sends it to petter AND petter offers no pet row, which
+        // needs a squad with nobody standing -- a run over, not a node reached.
+        // Every squad drawn from the real roster, every standing/downed mix,
+        // at counters inside, at the end of, and past the arc.
+        [Test]
+        public void WheneverAnyoneIsStanding_ShawnsBranchFiresOrPetterShowsAPetRow()
+        {
+            var roster = CharacterNames().Keys.ToList();
+            var petter = Page("petter");
+            int checkedSquads = 0;
+
+            for (int members = 1; members < 1 << roster.Count; members++)
             {
-                string id = frontier.Dequeue();
-                if (!reachable.Add(id)) continue;
-                foreach (var outcome in zoo.PageById(id).Choices.SelectMany(c => c.Outcomes).Where(o => !o.IsLeave))
+                var squad = roster.Where((_, i) => (members & (1 << i)) != 0).ToList();
+                for (int downedMask = 0; downedMask < 1 << squad.Count; downedMask++)
                 {
-                    frontier.Enqueue(outcome.GoTo);
+                    if (downedMask == (1 << squad.Count) - 1) continue; // nobody standing
+                    foreach (int counter in new[] { 0, 5, 9, 10, 40 })
+                    {
+                        var context = Party(squad.ToArray());
+                        for (int i = 0; i < squad.Count; i++)
+                        {
+                            if ((downedMask & (1 << i)) != 0) context.Downed.Add(squad[i]);
+                        }
+
+                        context.Counters[Counter] = counter;
+                        string label = $"[{string.Join(",", squad)}] downed [{string.Join(",", context.Downed)}] counter {counter}";
+
+                        var pet = Pet(context);
+                        checkedSquads++;
+                        if (pet.NextPageId != "petter") continue;
+
+                        bool aPetRowShows = petter.Choices
+                            .Where(c => c.Text != LeaveBe)
+                            .Any(c => EventChoiceGate.Evaluate(c, context).Enabled);
+                        Assert.IsTrue(aPetRowShows, label + ": petter offers only '" + LeaveBe + "', so a bot loops");
+                    }
                 }
             }
 
-            CollectionAssert.DoesNotContain(reachable, "zoo");
-            CollectionAssert.DoesNotContain(reachable, "petter");
-            foreach (string id in reachable)
-            {
-                bool heals = zoo.PageById(id).Choices
-                    .Any(c => c.Effects.Concat(c.Outcomes.SelectMany(o => o.Effects)).Any(e => e.Kind == EventEffectKind.HealPercent));
-                Assert.IsFalse(heals, $"'{id}' is reachable after a pet and heals again");
-            }
-
-            CollectionAssert.DoesNotContain(Page("zoo_after_pet").Choices.Select(c => c.Text).ToArray(), "Pet the sheep");
+            Assert.Greater(checkedSquads, 0, "fixture: the roster is empty");
         }
 
         [Test]
@@ -240,58 +291,20 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // Declining uses up the sheep for this visit: no effect, and the page
-        // it lands on is the one without the sheep row.
+        // Declining is not a choice: no effect, no text, back to the opening page.
         [Test]
-        public void LeaveTheSheepBe_ChangesNothingButRemovingTheSheepRow()
+        public void LeaveTheSheepBe_ChangesNothing_AndGoesBackToTheZoo()
         {
             var petter = Page("petter");
-            var choice = petter.Choices[Index(petter, "Leave the sheep be")];
+            var choice = petter.Choices[Index(petter, LeaveBe)];
 
             Assert.AreEqual(0, choice.Requires.Length);
+            Assert.IsFalse(choice.HiddenUntilMet);
             Assert.AreEqual(0, choice.Effects.Length);
             var outcome = choice.Outcomes.Single();
             Assert.AreEqual(0, outcome.Effects.Length);
             Assert.AreEqual("", outcome.Result);
-            Assert.AreEqual("zoo_after_pet", outcome.GoTo);
-        }
-
-        // Nothing returns to the opening page, so no choice policy (the bot
-        // takes the first available row) can walk in a circle: every route
-        // out of zoo reaches Leave in a bounded number of picks.
-        [Test]
-        public void NoPathLoopsBackToTheZoo()
-        {
-            var zoo = Zoo();
-            foreach (var page in zoo.Pages)
-            {
-                foreach (var choice in page.Choices)
-                {
-                    foreach (var outcome in choice.Outcomes)
-                    {
-                        Assert.AreNotEqual("zoo", outcome.GoTo, $"{page.Id} '{choice.Text}' returns to zoo");
-                    }
-                }
-            }
-
-            // And the graph as a whole is acyclic.
-            var state = new Dictionary<string, int>();
-            void Visit(string id)
-            {
-                state.TryGetValue(id, out int s);
-                Assert.AreNotEqual(1, s, $"a cycle runs through '{id}'");
-                if (s == 2) return;
-                state[id] = 1;
-                foreach (var outcome in zoo.PageById(id).Choices.SelectMany(c => c.Outcomes).Where(o => !o.IsLeave))
-                {
-                    Visit(outcome.GoTo);
-                }
-
-                state[id] = 2;
-            }
-
-            Visit("zoo");
-            CollectionAssert.AreEquivalent(AllPages, state.Keys, "every page is reachable from zoo");
+            Assert.AreEqual("zoo", outcome.GoTo);
         }
 
         // ---- the counter, 0 -> 11 --------------------------------------------------------
@@ -317,7 +330,7 @@ namespace PrincesPalace.Domain.Tests
             var pet = Pet(context);
 
             Assert.AreEqual(expectedPage, pet.NextPageId);
-            Assert.AreEqual("", pet.Result, "the step page's own body is the text; a result would replace it");
+            Assert.AreEqual("", pet.Result, "the step page's lines are the text; a result would play before them");
             var bump = pet.Effects.Single(e => e.Kind == EventEffectKind.Counter);
             Assert.AreEqual(Counter, bump.CounterId);
             Assert.AreEqual(1, bump.Amount);
@@ -401,9 +414,11 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- petter ------------------------------------------------------------------------
 
-        [TestCase("Bjorn pets the sheep", "bear")]
-        [TestCase("Odette pets the sheep", "owl")]
-        public void APetterRow_ShowsForAStandingMember_AndHealsThemAlone(string text, string id)
+        [TestCase("Bjorn pets the sheep", "bear",
+            "Bjorn scratches the sheep behind the ears with one enormous claw. It leans right into it.")]
+        [TestCase("Odette pets the sheep", "owl",
+            "Odette preens a tuft of the sheep's wool back into place. The sheep allows this.")]
+        public void APetterRow_ShowsForAStandingMember_HealsThemAlone_AndEndsTheEvent(string text, string id, string result)
         {
             var petter = Page("petter");
             int index = Index(petter, text);
@@ -414,7 +429,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(state.Enabled);
 
             var resolution = EventFlow.Resolve(petter, index, context);
-            Assert.AreEqual("zoo_after_pet", resolution.NextPageId);
+            Assert.IsTrue(resolution.IsLeave);
+            Assert.AreEqual(result, resolution.Result);
             var heal = resolution.Effects.Single();
             Assert.AreEqual(EventEffectKind.HealPercent, heal.Kind);
             Assert.AreEqual(id, heal.CharacterId);
@@ -439,11 +455,10 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- peacock -----------------------------------------------------------------------
 
-        [TestCase("zoo")]
-        [TestCase("zoo_after_pet")]
-        public void ThePeacock_AtCharisma19_IsGreyedNotHidden(string pageId)
+        [Test]
+        public void ThePeacock_AtCharisma19_IsGreyedNotHidden()
         {
-            var page = Page(pageId);
+            var page = Page("zoo");
             var context = Party("sheep");
             context.Abilities[("sheep", AbilityScore.Charisma)] = 19;
 
@@ -462,32 +477,31 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(40, 200)]
         public void ThePeacock_PaysByTheBestCharisma(int charisma, int gold)
         {
-            foreach (string pageId in new[] { "zoo", "zoo_after_pet" })
-            {
-                var page = Page(pageId);
-                var context = Party("sheep", "bear");
-                context.Abilities[("sheep", AbilityScore.Charisma)] = 12;
-                context.Abilities[("bear", AbilityScore.Charisma)] = charisma;
+            var page = Page("zoo");
+            var context = Party("sheep", "bear");
+            context.Abilities[("sheep", AbilityScore.Charisma)] = 12;
+            context.Abilities[("bear", AbilityScore.Charisma)] = charisma;
 
-                int index = Index(page, "Strut for the peacock");
-                Assert.IsTrue(EventChoiceGate.Evaluate(page.Choices[index], context).Enabled, pageId);
+            int index = Index(page, "Strut for the peacock");
+            Assert.IsTrue(EventChoiceGate.Evaluate(page.Choices[index], context).Enabled);
 
-                var resolution = EventFlow.Resolve(page, index, context);
-                Assert.IsTrue(resolution.IsLeave, pageId);
-                Assert.IsNotEmpty(resolution.Result, pageId);
-                var effect = resolution.Effects.Single();
-                Assert.AreEqual(EventEffectKind.Gold, effect.Kind, pageId);
-                Assert.AreEqual(gold, effect.Amount, pageId);
-            }
+            var resolution = EventFlow.Resolve(page, index, context);
+            Assert.IsTrue(resolution.IsLeave);
+            Assert.AreEqual(
+                "The peacock looks your strut up and down, then fans its tail in grudging approval. " +
+                "The crowd along the fence throws coins.",
+                resolution.Result);
+            var effect = resolution.Effects.Single();
+            Assert.AreEqual(EventEffectKind.Gold, effect.Kind);
+            Assert.AreEqual(gold, effect.Amount);
         }
 
         // ---- fawns and the cold one --------------------------------------------------------
 
-        [TestCase("zoo")]
-        [TestCase("zoo_after_pet")]
-        public void TheFawns_AreAlwaysOpen_AndGrantTenFavorForTheRun(string pageId)
+        [Test]
+        public void TheFawns_AreAlwaysOpen_AndGrantTenFavorForTheRun()
         {
-            var page = Page(pageId);
+            var page = Page("zoo");
             int index = Index(page, "Feed the fawns");
             var context = Party("bear");
 
@@ -495,19 +509,20 @@ namespace PrincesPalace.Domain.Tests
             var resolution = EventFlow.Resolve(page, index, context);
 
             Assert.IsTrue(resolution.IsLeave);
-            Assert.IsNotEmpty(resolution.Result);
+            Assert.AreEqual(
+                "The fawns eat out of your hand and trail you all the way to the gate. " +
+                "Word reaches Prince, who purrs about it for days.",
+                resolution.Result);
             var effect = resolution.Effects.Single();
             Assert.AreEqual(EventEffectKind.PrincesFavor, effect.Kind);
             Assert.AreEqual(10, effect.Amount);
         }
 
-        [TestCase("zoo", 14, false)]
-        [TestCase("zoo", 15, true)]
-        [TestCase("zoo_after_pet", 14, false)]
-        [TestCase("zoo_after_pet", 15, true)]
-        public void TheColdOne_NeedsALevel15Member_AndFillsSpecialPoolsForTheLeg(string pageId, int level, bool open)
+        [TestCase(14, false)]
+        [TestCase(15, true)]
+        public void TheColdOne_NeedsALevel15Member_AndFillsSpecialPoolsForTheLeg(int level, bool open)
         {
-            var page = Page(pageId);
+            var page = Page("zoo");
             int index = Index(page, "Crack open a cold one");
             var context = Party("sheep", "bear");
             context.Levels["sheep"] = 3;
@@ -524,36 +539,72 @@ namespace PrincesPalace.Domain.Tests
 
             var resolution = EventFlow.Resolve(page, index, context);
             Assert.IsTrue(resolution.IsLeave);
-            Assert.IsNotEmpty(resolution.Result);
+            Assert.AreEqual(
+                "It's cold, it's crisp, and it goes straight to everyone's head. " +
+                "Whatever waits down the road, the party meets it at full strength.",
+                resolution.Result);
             Assert.AreEqual(EventEffectKind.FillSpecialPool, resolution.Effects.Single().Kind);
         }
 
-        [Test]
-        public void SayGoodbye_LeavesAtOnce()
-        {
-            var page = Page("zoo_after_pet");
-            var resolution = EventFlow.Resolve(page, Index(page, "Say goodbye"), Party("sheep"));
+        // ---- text: the dialogue skeleton ---------------------------------------------------
 
-            Assert.IsTrue(resolution.IsLeave);
-            Assert.AreEqual("", resolution.Result);
-            Assert.AreEqual(0, resolution.Effects.Count);
+        private static string Speaker(ResolvedEventLine line) => line.IsNarration ? "narration" : line.SpeakerId;
+
+        private static void AssertLines(string pageId, params (string speaker, DialogueExpression expression, string text)[] expected)
+        {
+            var lines = Page(pageId).Lines;
+            CollectionAssert.AreEqual(expected.Select(e => e.speaker).ToArray(), lines.Select(Speaker).ToArray(), pageId + " speakers");
+            CollectionAssert.AreEqual(expected.Select(e => e.text).ToArray(), lines.Select(l => l.Text).ToArray(), pageId + " text");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                if (expected[i].speaker == "narration") continue;
+                Assert.AreEqual(expected[i].expression, lines[i].Expression, $"{pageId} line {i + 1} expression");
+            }
         }
 
-        // ---- text ----------------------------------------------------------------------------
+        private const DialogueExpression N = DialogueExpression.Neutral;
 
-        // The owner's script, verbatim (M1). Moves into `lines` once the
-        // dialogue stage plays them; until then it is the page body.
+        // All text is on the skeleton: no page body, and every page plays lines.
         [Test]
-        public void StepOnePair_IsTheOwnersScriptVerbatim()
+        public void EveryPagePlaysLines_AndNoneHasABody()
         {
-            Assert.AreEqual(
-                "Shawn: \"Is that... A sheep?\"\n" +
-                "Odette: \"I presume so.\"\n" +
-                "Shawn: \"...\"\n" +
-                "Odette: \"Is that a good or a bad thing?\"\n" +
-                "Shawn: \"I... I don't know...\"\n" +
-                "(Shawn proceeds to pet the sheep.)",
-                Page("step1_pair").Body);
+            foreach (string id in AllPages)
+            {
+                Assert.IsTrue(Page(id).HasLines, id);
+                Assert.AreEqual("", Page(id).Body, id);
+            }
+        }
+
+        // The owner's script, verbatim (M1). Odette speaks only here, where
+        // the outcome that leads in requires her in the squad.
+        [Test]
+        public void StepOnePair_IsTheOwnersScript_ShawnLeftOdetteRight()
+        {
+            AssertLines("step1_pair",
+                ("sheep", DialogueExpression.Surprised, "Is that... A sheep?"),
+                ("owl", DialogueExpression.Neutral, "I presume so."),
+                ("sheep", DialogueExpression.Nervous, "..."),
+                ("owl", DialogueExpression.Neutral, "Is that a good or a bad thing?"),
+                ("sheep", DialogueExpression.Nervous, "I... I don't know..."),
+                ("narration", N, "<i>Shawn proceeds to pet the sheep.</i>"));
+
+            var cast = Page("step1_pair").Cast;
+            CollectionAssert.AreEqual(new[] { "sheep", "owl" }, cast.Select(c => c.CharacterId).ToArray());
+            CollectionAssert.AreEqual(new[] { DialogueSide.Left, DialogueSide.Right }, cast.Select(c => c.Side).ToArray());
+        }
+
+        [Test]
+        public void StepOneSolo_IsShawnAlone()
+        {
+            AssertLines("step1_solo",
+                ("sheep", DialogueExpression.Surprised, "Is that... A sheep?"),
+                ("sheep", DialogueExpression.Nervous, "..."),
+                ("sheep", DialogueExpression.Nervous, "I... I don't know how I feel about this."),
+                ("narration", N, "<i>Shawn proceeds to pet the sheep.</i>"));
+
+            var cast = Page("step1_solo").Cast.Single();
+            Assert.AreEqual("sheep", cast.CharacterId);
+            Assert.AreEqual(DialogueSide.Left, cast.Side);
         }
 
         [Test]
@@ -561,12 +612,25 @@ namespace PrincesPalace.Domain.Tests
         {
             for (int k = 2; k <= 9; k++)
             {
-                Assert.AreEqual("-> placeholder", Page("step" + k).Body, "step" + k);
+                AssertLines("step" + k, ("narration", N, "-> placeholder"));
             }
 
-            const string withKinship = "-> placeholder\n\nFuture visits with Shawn grant Kinship for that run.";
-            Assert.AreEqual(withKinship, Page("step10").Body);
-            Assert.AreEqual(withKinship, Page("post_arc").Body);
+            AssertLines("step10", ("narration", N, "-> placeholder"), ("narration", N, KinshipLine));
+            AssertLines("post_arc", ("narration", N, "-> placeholder"), ("narration", N, KinshipLine));
+        }
+
+        [Test]
+        public void TheZooAndPetter_AreNarrated()
+        {
+            AssertLines("zoo",
+                ("narration", N, "Somewhere between two realities, someone has fenced off a paddock and hung a sign: PETTING ZOO."),
+                ("narration", N, "A sheep chews at the rail. A peacock fans its tail at nobody in particular. " +
+                                 "Two fawns nose at an empty trough, and a cooler of cold ones sweats by the gate."),
+                ("narration", N, "Prince's contract says nothing about petting zoos. It doesn't forbid them either."));
+
+            AssertLines("petter",
+                ("narration", N, "The sheep looks your party over and seems unimpressed. It was expecting someone woollier."),
+                ("narration", N, "Still, a scratch is a scratch, if anyone cares to give it one."));
         }
     }
 }

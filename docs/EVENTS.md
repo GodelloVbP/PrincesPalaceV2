@@ -40,15 +40,22 @@ outcome  { requires[], effects[], result, goTo }       first match wins
 `petting_zoo` is the first real event (`docs/PLAN_PETTING_ZOO.md`, page graph
 there). Things it does that a new event may want to copy:
 
-- **A once-per-visit action.** Every route that heals goes to `zoo_after_pet`,
-  which repeats the other rows but has no sheep row, so a second pet has no route.
-  Declining ("Leave the sheep be") goes there too: no route leads back to `zoo`,
-  so a first-available bot cannot loop.
+- **One choice per visit** (owner, 2026-09-25). Every pick plays its scene and
+  ends the event. The step pages' single row, "Say goodbye", is a silent Leave,
+  so it closes at once. The petter rows leave with a short result. The one
+  edge back to `zoo` is "Leave the sheep be", which picks nothing. A
+  first-available bot could loop zoo <-> petter only with nobody standing,
+  and `PettingZooEventTests` walks every squad to prove it.
 - **A counter arc in one choice.** "Pet the sheep" has no choice-level effects.
   Each outcome gates on the pre-increment `zoo_sheep` and bumps it itself; the
   unconditional last outcome (`petter`) bumps nothing.
-- **Outcomes into a script page leave `result` empty**, because a result replaces
-  the next page's body. Step text lives in the page body until it moves into `lines`.
+- **All text on the dialogue skeleton.** Every page plays `lines` and has an
+  empty `body`. Outcomes into a scene page leave `result` empty, so the scene
+  opens on its own first line. Odette speaks only on `step1_pair`, whose
+  outcome requires `inParty owl`. Shawn speaks only on the step-1 pages, whose
+  outcomes require `inParty sheep`. The fallback page (`petter`) is narration.
+- **Results on a staged event take the 200 cap.** The peacock, fawns, cold one
+  and petter results all play on the stage, because `zoo` and `petter` have lines.
 - Pinned by `PettingZooEventTests` (content, fast host) and `PettingZooRunTests`
   (through the run, needs built content).
 

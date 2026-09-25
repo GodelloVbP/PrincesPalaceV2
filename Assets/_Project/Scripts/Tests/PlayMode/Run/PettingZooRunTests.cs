@@ -18,6 +18,10 @@ namespace PrincesPalace.PlayModeTests
     // PettingZooEventTests; this file pins what only the run can show -- HP
     // moving, the counter and relic landing once, and what survives a reload.
     //
+    // One choice per visit (owner, 2026-09-25): a step page's "Say goodbye"
+    // closes the event, a petter row concludes it with a result, and only
+    // "Leave the sheep be" goes back to zoo.
+    //
     // NEEDS BUILT CONTENT: petting_zoo must be in Resources/Content.
     public class PettingZooRunTests
     {
@@ -27,7 +31,7 @@ namespace PrincesPalace.PlayModeTests
         // Authored positions on the pages (events.json); PettingZooEventTests
         // pins every page's row texts in this order.
         private const int PetTheSheep = 0;
-        private const int CarryOn = 0;
+        private const int SayGoodbye = 0;
         private const int BjornPets = 0;
         private const int OdettePets = 1;
 
@@ -118,7 +122,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(MaxHp("sheep"), Hp("sheep"));
             Assert.AreEqual(10, Hp("owl"), "the heal is Shawn's alone");
             Assert.AreEqual("Shawn fully healed", result.EffectsLine);
-            Assert.AreEqual("", result.ResultText, "the step page's body is what the player reads");
+            Assert.AreEqual("", result.ResultText, "the step page's lines are what the player reads");
+
+            // The scene plays on the stage: Shawn and Odette, then narration.
+            var lines = RunOrchestrator.CurrentEvent().Lines;
+            CollectionAssert.AreEqual(new[] { "sheep", "owl", "sheep", "owl", "sheep", "" },
+                lines.Select(l => l.IsNarration ? "" : l.SpeakerId).ToArray());
+            Assert.IsTrue(lines.Last().IsNarration);
         }
 
         [Test]
@@ -130,6 +140,8 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual("step1_solo", Run.eventPageId);
             Assert.AreEqual(1, Save.EventCounter(Counter));
+            Assert.IsTrue(RunOrchestrator.CurrentEvent().Lines.All(l => l.IsNarration || l.SpeakerId == "sheep"),
+                "the solo scene is Shawn's alone");
         }
 
         [TestCase(8, "step9", false)]
@@ -164,7 +176,8 @@ namespace PrincesPalace.PlayModeTests
         }
 
         // Heals never revive: a downed Shawn goes to petter, stays at 0 through
-        // an ally's pet, and the ally's heal is the ally's alone.
+        // an ally's pet, and the ally's heal is the ally's alone. The ally's
+        // pet is the visit's one choice, so the event concludes on its result.
         [Test]
         public void WithShawnDowned_ThePetGoesToPetter_AndAnAllysPetNeverRaisesHim()
         {
@@ -176,7 +189,10 @@ namespace PrincesPalace.PlayModeTests
 
             var result = EventPicks.OnCurrentPage(BjornPets);
 
-            Assert.AreEqual("zoo_after_pet", Run.eventPageId);
+            Assert.AreEqual("", Run.eventPageId, "concluded: the result and a single Leave");
+            Assert.IsTrue(RunOrchestrator.EventIsOpen);
+            Assert.AreEqual("Bjorn scratches the sheep behind the ears with one enormous claw. It leans right into it.",
+                result.ResultText);
             Assert.AreEqual(MaxHp("bear"), Hp("bear"));
             Assert.AreEqual(0, Hp("sheep"));
             Assert.AreEqual("Bjorn fully healed", result.EffectsLine);
@@ -195,8 +211,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual("petter", Run.eventPageId);
         }
 
+        // Declining is not a choice: back to the opening page, nothing moved,
+        // and the sheep row is still there.
         [Test]
-        public void LeaveTheSheepBe_ChangesNothingButRemovingTheSheepRow()
+        public void LeaveTheSheepBe_ChangesNothing_AndGoesBackToTheZoo()
         {
             OpenTheZoo(new[] { "owl", "bear" }, 2, ("owl", 7), ("bear", 9));
             EventPicks.OnCurrentPage(PetTheSheep);
@@ -205,8 +223,8 @@ namespace PrincesPalace.PlayModeTests
             int leaveBe = RunOrchestrator.CurrentEvent().Choices.First(c => c.Text == "Leave the sheep be").Index;
             var result = EventPicks.OnCurrentPage(leaveBe);
 
-            Assert.AreEqual("zoo_after_pet", Run.eventPageId);
-            Assert.IsFalse(RunOrchestrator.CurrentEvent().Choices.Any(c => c.Text == "Pet the sheep"));
+            Assert.AreEqual("zoo", Run.eventPageId);
+            Assert.IsTrue(RunOrchestrator.CurrentEvent().Choices.Any(c => c.Text == "Pet the sheep"));
             Assert.AreEqual("", result.EffectsLine);
             Assert.AreEqual(2, Save.EventCounter(Counter));
             Assert.AreEqual(7, Hp("owl"));
@@ -232,10 +250,14 @@ namespace PrincesPalace.PlayModeTests
             // A second reload re-applies nothing.
             AssertOnDisk("step1_pair", 1);
 
-            EventPicks.OnCurrentPage(CarryOn);
-            AssertOnDisk("zoo_after_pet", 1);
+            // Saying goodbye closes the event: the reload finds no zoo, and
+            // the pet it already paid for stays paid once.
+            var goodbye = EventPicks.OnCurrentPage(SayGoodbye);
+            Assert.AreEqual(EventChoiceOutcome.Ok, goodbye.Outcome);
+            Reload();
+            Assert.IsFalse(RunOrchestrator.EventIsOpen, "the visit is over");
+            Assert.AreEqual(1, Save.EventCounter(Counter));
             Assert.AreEqual(max, Hp("sheep"));
-            Assert.IsFalse(RunOrchestrator.CurrentEvent().Choices.Any(c => c.Text == "Pet the sheep"));
         }
 
         [Test]
@@ -249,7 +271,13 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(6, Hp("owl"));
 
             EventPicks.OnCurrentPage(OdettePets);
-            AssertOnDisk("zoo_after_pet", 4);
+            AssertOnDisk("", 4);
+            Assert.AreEqual(max, Hp("owl"));
+            Assert.AreEqual("Odette preens a tuft of the sheep's wool back into place. The sheep allows this.",
+                Run.eventResult, "the concluded result survives the reload");
+
+            // A second reload re-applies nothing.
+            AssertOnDisk("", 4);
             Assert.AreEqual(max, Hp("owl"));
         }
 
