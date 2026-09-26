@@ -122,40 +122,7 @@ The pass that established the v1/v2 split documented at the top. It struck #38 (
 struck), #29 and #19 (both obsoleted by the rebuild), and refiled the one piece of #19 that
 genuinely carries across.
 
-### 46. Twelve `Assert.Ignore`s skip on CONTENT shape, and three of them guard the regression #42 describes
-v2 has 20 `Assert.Ignore` calls across 11 PlayMode files. **Eight are legitimate and should stay** —
-they gate on `CanvasCapture.IsSupported` because `camera.Render()` is a no-op under `-nographics`
-(`HitFlashPixelTests.cs:109`, `PostProcessingLegibilityTests.cs:178`/`:208`/`:243`,
-`CharacterOverlayCaptureTests.cs:25`, `FightPlayableTests.cs:209`, `MapCaptureTests.cs:30`,
-`RuntimeScreenshotTests.cs:51`). A pixel test with no pixels has nothing to assert.
-
-The other **twelve skip because content or a generated map did not happen to contain what the test
-wanted**, and those quietly stop testing as content drifts:
-
-- `RelicsReachCombatTests.cs:106`, `:129`, `:135` — "content has only one character", "no relic in
-  content carries a numeric modifier yet", "that relic does not touch attack"
-- `CharacterOverlayTests.cs:230`, `:243`, `:265`, `:314` — "no wearable item in the starting kit",
-  "the starting kit holds no consumable on the first page"
-- `MapFlowTests.cs:228`, `:273` — "this leg offers no fight from the entry", "only fights"
-- `EquipmentReachesCombatTests.cs:187`, `GlossaryTests.cs:167`, `FightPlayableTests.cs:172`
-
-**`RelicsReachCombatTests` is the sharp end, and the reason this is filed rather than tidied.**
-That file exists *because of #42*: relics were implemented, correct, and unreachable from actual
-play for their entire life, and every relic test passed the whole time because each built its own
-`PlayerKit` by hand. It is the guard against that recurring — and it can currently skip itself on
-three separate content conditions without failing anything. A guard that silently declines to run
-is indistinguishable from a guard that passes.
-
-**This is NOT #19 wearing new clothes, and the difference decides the fix.** #19's skip was driven
-by unseeded combat RNG, so seeding fixed it. These are driven by content shape and generated map
-shape; seeding does not help, because the draw is not the problem — the *fixture* is. The remedy
-is the one #24's fix already established as the house pattern: state the precondition rather than
-hope for it. Either assert the content invariant loudly (`"content no longer has a relic with a
-numeric modifier — this test has stopped covering #42"`), or build the fixture that guarantees it.
-For the two `MapFlowTests` cases there is a third option the others lack: the map is seeded and
-reproducible, so a seed known to offer both a fight and a quiet room can be pinned instead.
-
-Cheap to fix, and worth doing before the next content change rather than after.
+### ~~46. Twelve `Assert.Ignore`s skip on CONTENT shape, and three of them guard the regression #42 describes~~ — fixed in `794f2278`: the twelve named sites were already converted in `0625b823`; sixteen newer content-shape skips turned into hard failures or fixtures; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ---
 
@@ -244,36 +211,7 @@ way, which means nothing was tuned around the absence.
 
 ### ~~49. `Character.cs` documented an invariant that was inverted, unimplemented, and guarded by a test that did not exist~~ — fixed in `457bce0`: both comments now say what is true and `RunManagerTests` gained the test that was claimed; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 50. `SaveData.relicLoadout` is written by nothing and read by nothing
-
-`RelicLoadout` is a 160-line class with a careful exclusivity rule ("assigning a
-relic that is already in use takes it away from whoever had it"), a `Set` that
-returns the displaced relic, `CharacterHolding` for greying out a card on an
-assign screen, and eleven EditMode tests. **Nothing in the game calls any of
-it.** `save.relicLoadout` appears in exactly two places outside its own file and
-its own tests: the field declaration (`SaveData.cs:126`) and `Reconcile`
-(`:491-492`), which validates entries that nothing ever creates.
-
-Relics in play live on `RunSnapshot.relicIds` instead, and that file says why:
-*"Drafted at the start of a descent and GONE when it ends -- which is why they
-live here rather than on SaveData."* `RelicDraftController` writes there,
-`FightBootstrap` reads there, `ReckoningController` and `RunStatsController` read
-there. The per-character loadout is a v1 shape that survived the rebuild with its
-tests attached, which is what kept it looking alive.
-
-Same class as #41 (`CurrencyType.Embers` with no live reader), and the tests are
-what make it expensive rather than merely untidy: eleven passing tests over a
-type the game never invokes read, from the outside, as coverage.
-
-**This one has already cost planning time.** `docs/archive/PLAN_PROGRESSION_TRACK.md`
-priced the track's level-25 and level-45 "extra relic slot" rewards as a
-widening of `RelicLoadout` from one entry per character to one per
-(characterId, slotIndex) -- following that class's own header, which specifies
-the widening as a stated future extension. The widening would have been correct,
-tested, and reachable from nothing.
-
-Not deleted yet: see the reward-track note below, because whether these
-milestones become real is what decides whether the type has a future.
+### ~~50. `SaveData.relicLoadout` is written by nothing and read by nothing~~ — superseded: its subject (`SaveData.relicLoadout`) was deleted in `a7ebbf28` under #119; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 51. The track's "extra relic slot" rewards have nothing to unlock
 
@@ -559,58 +497,13 @@ decision recorded in that file's own header (lines ~606-617) and gets no entry h
 
 ### ~~76. `architecture_audit.md` §7 stated two partial-class line counts as precise numbers, both stale~~ — fixed in `1656372a`: the `FightController` and `ContentDatabase` rows now read approximate, sha-stamped counts, same phrasing as the `FightSession` row fixed the same morning; full reasoning in the commit message
 
-### 77. `ContentDatabase.ValidateContent()`'s six pre-existing whole-catalogue rules have no test
+### ~~77. `ContentDatabase.ValidateContent()`'s six pre-existing whole-catalogue rules have no test~~ — fixed in `51a3dba6`: the six rules became pure predicates in `Domain/Content/CatalogueCrossChecks.cs` with one fixture test per rule; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-Found while adding the seventh (`24797a93`): grep for `ValidateContent(` in
-`Assets/_Project/Scripts/Tests/` returned nothing. The new rule is tested via a Domain
-predicate (`AchievementProgress.ValidateDefeatSpecificBossParameter`) plus a PlayMode
-check against real content, because Core's `InternalsVisibleTo` names only the Editor
-assembly and no test assembly can construct a synthetic `AchievementDefinition` to
-drive `ValidateContent` directly. The six rules beside it, in
-`Core/Content/ContentDatabase.Validation.cs`, would pass a broken catalogue silently if
-any regressed: the cross-catalogue id-uniqueness sweep (the shared `seen` set walking
-Character/Talent/Upgrade/Relic/Modifier/Enemy/Item/Skill ids, line 84), a talent's
-`GrantsSkillId` naming a real skill owned by the granting character (line 156), a
-talent's `GrantsStartingItemId` naming a real item (line 192), a talent's `CharacterId`
-naming a real character (line 201), a skill's `CharacterId` naming a real character or
-enemy (line 432), and an enemy ability's `SkillId` naming a real skill (line 138). (The
-function's own header comment names "a relic naming an achievement" as an example of
-this class of check — that gate is not one of these six: it is `RelicEntryResolver`'s,
-enforced per-file at authoring time against the known achievement ids `ContentBuilder`
-hands it, not `ValidateContent`'s. The header is describing the class of problem, not
-an accurate list of six live rules.)
-
-The fix is the same shape #66 used: pull each comparison into a pure Domain predicate
-over primitives, EditMode-test the predicate's own branches, and let one PlayMode test
-prove `ValidateContent` actually wires the predicate to real content.
-
-### 78. `docs/BOT_SUMMARY_SCHEMA.md` lists room fields in two places
-
-The `traces.jsonl` `RoomTrace` block is now covered by `tools/bot_schema_test.py`
-(finding #71), but the `runs.jsonl` `rooms[]` prose list — a second, independent
-listing of the same fields inside the same doc — still omits
-`learnedSpellCountAfterRoom`, `unassignedSpellBookCountAfterRoom`, and
-`spellAssignments`. `7975c5a1`'s own commit message flags this exact gap as
-deliberately out of scope. Two listings of one fact inside one doc is the finding; the
-fix is one section pointing at the other, not a second test. ~10 min.
+### ~~78. `docs/BOT_SUMMARY_SCHEMA.md` lists room fields in two places~~ — fixed in `2fffa3d5`: the `runs.jsonl` `rooms[]` section points at the `RoomTrace` block; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ## Findings from the positions pass, 2026-09-07
 
-### 79. `ContentTop` has the same crop-offset bug the ring measurement had
-
-`FightController.StageVisuals.cs:1403-1420`. `ContentTop(sprite)` calls
-`sprite.texture.GetPixels((int)rect.x, (int)rect.y, ...)` against
-`sprite.textureRect` -- a Tight-mesh crop, offset from the authored canvas --
-and then returns the first opaque row it finds (`y + 1`, line 1418) with no
-`+ rect.y` added back. That return value is in CROP space; every caller that
-compares it against a canvas-space measurement is reading a wrong number by
-exactly the crop's own Y offset, the identical class of bug
-`FootBandCentreFraction` had until `2026-09-07` (see `docs/INCIDENTS.md`,
-"The ring at canvas centre"). `ContentTopForActor` feeds the intent badge's
-vertical placement; it was flagged and deliberately left for its own pass
-when the ring fix landed rather than folded in as a drive-by. Same fix
-shape: map the returned row back into canvas space before anything divides
-or compares it.
+### ~~79. `ContentTop` has the same crop-offset bug the ring measurement had~~ — fixed in `6e8c71d5`: `ContentTopForActor` reads `OpaqueBoxForActor`'s measured box; `FootBandCentreFraction` uses `textureRectOffset`; `IntentBadgeContentTopTests` pins the rat idle. Note: intent badges on trimmed idles now sit higher, and this has not been looked at on screen yet (see #211); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 80. The six-theme container kit's LEFT pad is asymmetric on two ratios
 
@@ -921,27 +814,7 @@ it because no script in `run_tests_parallel.ps1` calls it.
 **Why it is the owner's:** wiring it into the gate needs Pillow available on whatever machine
 runs the gate, which is an environment decision, not a code one.
 
-### 99. `SystemMenuController.MeasuredLabelWidths` has no fallback for a zero-width live measurement
-
-`SystemMenuController.cs:339-352`. The fallback to `defs[slot].LabelWidth` fires only when a
-label is null or its text is empty (`:348-350`); it does not fire when `TMP_Text.GetPreferredValues`
-legitimately returns 0 for a label that has text but has never been active. `ApplyContext()` is
-called before `panel.SetShown(true)` on the open path (`:186-187`), so the first `ApplyContext`
-after opening measures every tab label before any of them have been active in the hierarchy --
-exactly the condition TMPro's own measurement is unreliable under. A 0 width collapses that
-tab and its underline.
-
-**Why it is the owner's:** the fix is either reordering `SetShown`/`ApplyContext` or adding a
-second fallback branch, and both are cheap; filed because nothing in the tree currently proves
-which labels are actually hit by this on a real first open.
-
-**Cleared, 2026-09-08, by test rather than struck with a sha:** a live `TMP_Text.GetPreferredValues`
-does not in fact return 0 for a label that has never been active in this tree --
-`SystemMenuLabelWidthTests.TheUnderlineIsTheWidthOfTheWordItMarks` measures exactly that call
-shape and would itself fail on a 0. The zero-width path this finding worried about is not
-reachable as described. Kept rather than struck because the underlying claim ("TMPro's
-measurement is unreliable before `SetShown(true)`") was never shown false in general, only in
-this one call shape -- a struck-with-sha entry implies a fix landed, and none did.
+### ~~99. `SystemMenuController.MeasuredLabelWidths` has no fallback for a zero-width live measurement~~ — resolved: cleared by test on 2026-09-08 per its own entry; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 100. `IdleBreathing` puts an opposing slot-0 pair in phase with each other
 
@@ -952,13 +825,7 @@ on that index -- so enemy slot 0 and party slot 0 breathe in phase with each oth
 side breathing in lockstep, not against the two sides mirroring each other. Cosmetic, and
 plausibly nobody would notice at a glance; filed rather than fixed because it may be intended.
 
-### 101. `CombatEncounter.UpcomingTurns` throws on a zero-length ask, and its one caller has no guard
-
-`CombatEncounter.cs:193-197` throws `ArgumentOutOfRangeException` for `count <= 0`.
-`RefreshInitiative` (`FightController.Hud.cs:1698`) always calls it with `initiativeIcons.Length`,
-which is 6 today and therefore never zero -- unreachable in production, but the call site trusts
-a `[SerializeField] Image[]` to never come back empty, and nothing states that assumption where
-the call is made.
+### ~~101. `CombatEncounter.UpcomingTurns` throws on a zero-length ask, and its one caller has no guard~~ — fixed in `27034b2b`: `FightSession` refuses `initiativeSlots <= 0` at construction; `RefreshInitiative` returns early on an empty icon array; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 102. `SaveSystem.Save`'s in-memory backend stores the caller's live object, not a copy
 
@@ -998,6 +865,11 @@ message text at all (a false positive costs a blocked commit; not scanning risks
 `-a` disguised some other way), and whether it should also refuse a bare `commit` whenever the
 `add` immediately before it in the same chained command was the one just refused. Both are
 policy questions about how paranoid this hook should be, not bugs in what it currently does.
+
+**2026-09-26:** happened again, same shape -- the hook refused a legitimate commit because the
+message body contained the word "-Changed" (from `-Changed`, the flag name, spelled out in
+prose). Agents worked around it with `git commit -F -` piping a file instead of a message-text
+argument the hook could scan.
 
 ## Open investigations
 
@@ -1093,34 +965,7 @@ Fix shape: author the contact effect as content, one presentation per
 because content assets are already built once. Needs a schema entry and
 `ContentBuilder` support, so it is its own pass, not a cleanup.
 
-### 110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file
-
-Found 2026-09-09 while running the gate against a shared TestRunner pair.
-Unity refused to start (`Aborting batchmode due to fatal error: It looks
-like another Unity instance is running with this project open` -- the other
-session had taken `-TestRunner2` between the lock check and the launch), so
-no PlayMode run happened at all. The script then read
-`test-results-PlayMode.xml` left behind by an EARLIER, narrower run, printed
-`PlayMode -- Total: 39  Passed: 39  Failed: 0`, and ended with **`All tests
-passed.`** The real suite is 897.
-
-That is the AUDIT #43 shape one level up: #43 was the screenshot tool
-checking whether the output directory held ANY png rather than the one it
-was asked for. Here it is the gate checking whether a results file parses
-rather than whether THIS run wrote it. The exit code is deliberately ignored
-(the script's own header says why, and that reasoning still holds), so the
-results file is the only signal -- and a stale one is indistinguishable from
-a fresh one.
-
-Fix shape: delete both `test-results-*.xml` before launching, and refuse the
-run if the file the platform was supposed to write is missing afterwards --
-the same "check the expected artifact, by name" rule #43 landed for
-`screenshot.ps1`. A count sanity floor would be a weaker version of the same
-thing and would need maintaining.
-
-Not blocking: the run was repeated until it got a clean slot and the real
-suite was green. But a gate that can say "All tests passed" having run 4% of
-the suite is the one kind of green nobody re-checks.
+### ~~110. `run_tests_parallel.ps1` reports "All tests passed" off a STALE results file~~ — fixed in `44473ae6`: per-run results file names, a failed delete refuses the run (helpers in `tools/unity_lock.ps1`); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 111. `absorbsDamage` is authorable on a pools.json row, resolved, copied onto the runtime pool -- and read by nothing
 
@@ -1843,6 +1688,16 @@ is not warranted).**
    `scratchpad/hunt2/stage4/content/notes.md`'s clearance ledger) as the standing check until a
    resolver-hardening pass is scheduled.
 
+**Update, 2026-09-26, partly fixed in `d33040b6`:** B3, B4, B5, B6 and B8's negative-stat half
+landed (`princesFavor` is no longer clamped); B9 closed with fixture tests in
+`Tests/EditMode/Content/ContentResolverBlindSpotTests.cs`; B10(c) was already covered by
+`bb4b6c6f` and half of B11's `castPoint` gap by `917e17e0`. Still open, as the owner's forks:
+B7 (= #128 option 2, fails the shipped `three_bosses`), B8's `plateTheme` uniqueness (would cap
+the roster at six `ButtonTheme` values), B10(a) (= #129), B10(b), and B11's single-stance
+outlier (no rule stated). Also record: B9 was implemented as "`capacityRule` alone decides",
+reading `PoolPrecedence`; the entry's "or `restoredByManaEffects`" was not counted — owner to
+say if it should be.
+
 ## Findings from the integration pass, 2026-09-11
 
 ### 146. The dossier's AlreadyKnown refusal draws on top of the slot it is refusing
@@ -1941,49 +1796,7 @@ needs a new pin to replace `SheepLevel30UnlocksStaticFleece` (removed in this sa
 
 ## Findings from gamepad-navigation phase 3a, 2026-09-17
 
-### 157. Two Combat/Stage tests fail on this tree, unrelated to phase 3a's own changes
-
-Found while gating the Map screen commit (`7a16ce67`) of phase 3a's rollout:
-`FightPlayableTests.AStillDrawingSwingCarriesTheFigureAndBringsItBack`
-(`Tests/PlayMode/Combat/FightPlayableTests.cs:168`, "the attacker never left its mark, so a
-single-drawing swing showed nothing at all", expected greater than 1.0f, got 0.0f) and
-`StageFormationTests.AMoveCrossesBeforeTheEnemySwingsAndTheSwingFindsTheNewFront`
-(`Tests/PlayMode/Combat/StageFormationTests.cs:191`, "the ogre never swung", expected >= 0, got
--1) both fail, consistently and identically, across four separate `tools/run_tests_parallel.ps1`/
-`tools/test.ps1` invocations.
-
-**Verified not caused by this plan's own changes**: `git stash`-ing every phase-3a file
-(`MapController.cs`, the Map/CancelOpensSystemMenuTests test files) and re-running the same two
-classes against the bare Main Menu commit (`d39d955b`) reproduces the identical two failures with
-identical messages. Neither test touches Hub, Main Menu, Map, Talent or Shop; both are
-Combat/Stage swing-timing tests, an area this plan does not read or write.
-
-**Confirmed pre-existing on main, predates the branch entirely** (phase 3b job 0,
-2026-09-17): the previous entry's "most likely trigger" (the Main Menu commit's incidental
-`build_content.ps1` run) is ruled out. `git checkout f20d76de` -- the gamepad-nav branch's own
-base commit, one commit before `ec81b29f` (phase 3a screen 1, the first commit this whole plan
-made) -- and running `tools/test.ps1 FightPlayableTests,StageFormationTests` there reproduces
-both failures verbatim:
-```
-FAILED: PrincesPalace.PlayModeTests.FightPlayableTests.AStillDrawingSwingCarriesTheFigureAndBringsItBack
-  the attacker never left its mark, so a single-drawing swing showed nothing at all
-  Expected: greater than 1.0f
-  But was:  0.0f
-
-FAILED: PrincesPalace.PlayModeTests.StageFormationTests.AMoveCrossesBeforeTheEnemySwingsAndTheSwingFindsTheNewFront
-  the ogre never swung
-  Expected: greater than or equal to 0
-  But was:  -1
-```
-Same PlayMode totals both times (`Total: 11  Passed: 8  Failed: 2  Skipped: 1`). Since
-`f20d76de` sits before any gamepad-navigation commit -- phase 2 and phase 3a's own content
-rebuilds included -- these two tests were already failing on `main` before this plan touched
-anything; no commit on `gamepad-nav` regenerated content or changed combat code in a way that
-could have introduced this. Confirmed with `git stash push -u` / `git checkout f20d76de` /
-`git checkout gamepad-nav` / `git stash pop` on the main tree (working-tree line count identical
-before and after: 173). Left unfixed -- out of scope for the gamepad-navigation plan; `combat`
-is the area to chase the actual swing-timing regression, and whether it's stale content or a
-real formula bug is still open. Not this plan's call to make.
+### ~~157. Two Combat/Stage tests fail on this tree, unrelated to phase 3a's own changes~~ — resolved with no change: both named tests pass on this tree (`tools/test.ps1 FightPlayableTests,StageFormationTests`: 10 passed, 1 legitimate graphics skip); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~158. Three Hub-covering modals still do not push their own NavContext (RelicDraft, Glossary, Debug menu -- corrected from four)~~ -- fixed in `ccb1b08d`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 159. ~~Main Menu's Manage Saves and reset-confirm modals are mouse-only~~ -- fixed in `232f310b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
@@ -2020,31 +1833,7 @@ do -- nothing production-facing is wrong here, this is a test-harness capability
 ("whether a scripted pointer resolves against this scene's ScreenSpaceCamera canvas is not this
 capture's own claim").
 
-### 165. `FightTeardownLifecycleTests.TwoPopsOnOneBadgeLeaveItAtItsRestScale` can exit its own wait at a value its own assertion rejects
-
-Seen once under a full `tools/run_tests_parallel.ps1` (2026-09-18) and not reproduced since,
-including on an immediate re-run of the same gate. Not a behaviour bug and not related to whatever
-change is in flight when it fires -- the numbers are an off-by-one-float inside the test itself:
-
-```
-the badge never reached its rest scale
-Expected: 1.0d +/- 0.0010000000474974513d
-But was:  1.0010000467300415d
-```
-
-The wait loop exits once `rect.localScale.x > 1.001f` is false, and `1.001f` widened to double is
-`1.0010000467300415`; the assertion that follows allows `1.0 +/- 0.001d`, which is
-`1.0010000000474975`. The float literal is the larger of the two by 4.7e-8, so there is a sliver of
-values the loop treats as settled and the assertion treats as unsettled, and the pop's own lerp
-lands in it whenever a loaded run's frame timing puts it there. Nothing about the badge, the pop or
-the teardown is wrong when this fires.
-
-The fix is to make the two agree -- one tolerance, read by both, rather than a `float` literal in
-the loop and a `double` tolerance in the assertion. Not done here: this was found while gating an
-unrelated change in `ui`/`run`, the class lives in `combat`, and changing a test's own arithmetic
-deserves its own gated pass rather than a drive-by. Recorded so the next person who sees it does not
-spend the afternoon looking for a real regression in the pop animation, which is where the message
-points and is not where the problem is.
+### ~~165. `FightTeardownLifecycleTests.TwoPopsOnOneBadgeLeaveItAtItsRestScale` can exit its own wait at a value its own assertion rejects~~ — fixed in `b1adf41b`: the wait, assertion and hold check share one `AtRestScale` predicate; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 166. The D-pad bindings are correct for one controller by documentation, and unverified on any
 
@@ -2143,19 +1932,7 @@ Fixed in `ce405df9` (`Core/FocusMarker.cs`, `Domain/UiKit/FocusMarkerPlacement.c
 deleted.
 
 ### ~~169. Fight's ATTACK verb wore the branch-is-open plate at rest, forever~~ -- fixed in `0995736b`; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
-### 170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong
-
-Not a defect in shipped code -- it is a defect the capture pass caught in the marker itself before
-it shipped, recorded because the reasoning is reusable. The first implementation parented the
-marker to `canvas.rootCanvas` and made it the last sibling, on the ordinary uGUI rule that later
-siblings draw on top. `FightScreen` wraps its whole HUD in `Ui.NestedCanvas("FightHud", 1000)` with
-`overrideSorting`, so every root-canvas child draws UNDER all of it however late a sibling it is.
-
-The symptom is the one worth recognising: the Reckoning's marker reported itself shown, at the
-right coordinates, with the right target -- and was nowhere in the picture. No assertion in this
-project could have caught that; the capture did. The rule is now "the target's own nearest canvas,
-last sibling", which cannot be wrong for the reason that a canvas covering the marker covers the
-control it points at too.
+### ~~170. The focus marker attaches to its target's own canvas, and "root canvas, last sibling" would have been wrong~~ — recorded, not a defect: caught before ship; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~171. OWNER'S CALL: ATTACK still wears the Primary ring at rest, and that is a separate decision from #169~~ -- closed in `b12a1682`: the owner made the call ("the attack button in the fight menu is still glowing always") and the ring is gone from the verb column entirely; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 ### 172. OWNER'S CALL: the marker's edge is derived from the control's aspect, not authored per control
@@ -2383,46 +2160,7 @@ rather than a threshold everything is measured against.
 
 ### ~~182. A formation spell layer whose beat struck nobody spends a pooled renderer on a zero-sized box~~ — fixed in `818a00eb`: `PlaceOnFormation`'s `stood.Count == 0` branch now sets `instance.Placed = false` before returning, matching `PlaceOne`'s `on == null` branch. Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
 
-### 183. The reel is four times slower, and the two legs that moved are the two that are motion
-
-The owner, 2026-09-19: "Reeling happens way too fast: it should happen 4x as slow."
-`FightBeatPlayer.cs:1464` is the factor (`ReelSlowdown = 4f`), spread over the legs
-of a recoil that are MOVEMENT rather than stillness:
-
-| Leg | Was | Is | Why |
-|---|---|---|---|
-| Push out (`StageActorAnimator.LungeSeconds`) | 0.055s | 0.055s | unchanged -- it is what puts the body where the flash and the damage number already are, so stretching it slides the impact frame off them |
-| Dwell (`RecoilDwellBeats`, `:1467`) | 0.2025s | 0.81s | the motionless beat at full extent |
-| Spring back (`RecoilReturnBeats`, `:1473`) | 0.16s | 0.64s | the recovery, and the leg an earlier attempt left alone |
-
-**Stated in BEATS, not seconds** (`:1467`, `:1473`), which is the other half of the
-fix: the dwell was always a fraction of `BeatHoldSeconds`, and replacing it with a
-flat number would have taken the reel out of the beat's unit system, so the speed
-preset and the beat budget could move underneath it. The reel is 3.2 beats at every
-speed. `RecoilReturnBeats` is written as `(0.16f / BeatHoldSeconds) * ReelSlowdown`
-rather than as the literal 1.4222f so the number reads as "the old constant, in
-beats, times four" -- `FightBeatPacingTests` pins the products literally (0.81,
-0.64, 1.8, 1.4222, 1.505).
-
-**`RecoilDistance` (`:1431`, 45f) is deliberately NOT 4x.** A body shoved four times
-as far reads as a knockback, which is a different move from a flinch.
-
-**The dwell is stepped by `Time.deltaTime`, not `WaitForSeconds`**
-(`StageActorAnimator.PlayRoutine`). The tweens either side of it step by deltaTime,
-so under a pinned `Time.captureDeltaTime` -- how every capture fixture in this
-project records a strip -- they advance exactly one recorded frame per frame. A
-`WaitForSeconds` is measured against the engine's own clock instead, so a hold long
-enough to matter parks the figure mid-move for whole strips. At the old 0.2025s this
-was invisible; at 0.81s the struck figure sat 45px off its mark for every frame of a
-2.4s strip.
-
-**And a later beat aimed at a reeling body now waits for it.**
-`FightBeatPlayer.StillReeling` (`:1384`, with `_reeling` at `:1347` and `IsReeling`
-at `:1391`) is the predicate; `PlayBeats` gates on it at `:566`, in the same `while`
-as the formation walk. `TravelFor` measures the stand-off against both figures'
-MARKS, which silently assumes the bodies are standing on them -- true at a 0.4175s
-reel by the time the next beat opened, false at 1.505s, and the second and third
-attacker of a round were landing blows in 45px of daylight.
+### ~~183. The reel is four times slower, and the two legs that moved are the two that are motion~~ — recorded, not a defect: landed change, recorded for history; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 184. OWNER'S CALL: the settle gate is narrow (this beat's two figures), and widening it costs about 4.4s a round
 
@@ -2447,34 +2185,7 @@ beat needs the mark. That would make the reel's length depend on what happens af
 it, so the same blow would read differently in a duel and in a crowd. Waiting costs
 pacing and says so; it does not cost the reel its shape.
 
-### 185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it
-
-A reel is 1.505s and a beat is about 0.75s, so a figure struck on beat 1 is still
-moving during beat 3 and past the end of the round. `FightBeatPlayer.IsPlaying`
-answers about the beat QUEUE; `StageActorAnimator.IsPlaying` answers about the
-BODY, and after this round they are different questions.
-
-Four PlayMode fixtures were changed to wait on the animator rather than on the
-player: `FightBeatPlayerFixtureTests.cs:95`, `FightBeatPlayerLifecycleTests.cs:146`,
-`FightPlayableTests.cs:211` and `MeleeStandOffCaptureTests.cs:469`. (The brief for
-this round said five; `StaticPilotStageCaptureTests` was changed for other reasons
-and gained no such wait. Recorded rather than rounded.)
-
-**The fifth piece of fallout was found by the gate, not by the fixers.**
-`TransformFlashTests.TheRevertBeatFlashesTheActorsOwnSilhouette` failed with "the
-transform never expired inside eight rounds, so there was no revert to look at" --
-and the transform HAD expired. Its inner loop bounded one round of playback at a
-literal 1200 frames; with the 4x reel and `StillReeling` a round now costs about
-2350 (measured over three rounds: 1439 / 2349 / 1628). The bound was truncating
-playback mid-round, the outer loop then clicked its next turn while the fight was
-still busy, that click was dropped, and the revert beat was still QUEUED when the
-fixture gave up on it. Fixed here by naming the number (`RoundFrameBudget`, 6000,
-used by both loops in that file) and writing down what it measures.
-
-**The general form, for the next fixture that trips on this:** a bound measured in
-FRAMES pins how long playback takes, which is a number this project keeps moving on
-purpose. Every other wait in these fixtures is a `Time.realtimeSinceStartup`
-deadline, which does not. `TransformFlashTests` was the only frame-counted one left.
+### ~~185. "Playback finished" no longer implies "the stage is at rest", and five fixtures had to learn it~~ — recorded, not a defect: fixed as fallout in the same pass; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 186. A typed hit is two pulses now, because one tinted pulse read as repainting the monster
 
@@ -2499,25 +2210,7 @@ leaves a luminance margin of roughly 0.45 over the fixture's background. That is
 real margin but a smaller one than the white pulse's, and it is the first thing to
 suspect if that fixture ever goes intermittent over a lighter background.
 
-### 187. `BeginStatusTickBeat` duplicates `BeginBeat`'s constructor to skip one line of it
-
-`FightSession.Riders.cs:638` opens a beat for a status tick, and `:644-654` is a
-copy of `FightSession.Beats.cs:22-32` -- the same `new CombatBeat { Actor, Target,
-PreSnapshot, Approach }`, differing only in what it puts in the fields.
-
-**The reason it is not one call is sound and is written down** (`:611-619`):
-`BeginBeat`'s last line is `NotePoolActivity(actor, PoolActivity.Action)`, the seam
-that tells a decaying pool "this turn was not idle". A tick is not an action its
-holder took -- it is something done TO them at the top of a turn they have not spent
-yet -- so routing it through `BeginBeat` would quietly stop wool decaying on any turn
-its owner happened to be poisoned.
-
-**The duplication is still duplication.** The fix is to extract the constructor half
-of `BeginBeat` into `FightSession.Beats.cs` (a `NewBeat(...)` that builds and assigns
-`_recordingBeat` and nothing else), and let `BeginBeat` be that plus
-`NotePoolActivity` while `BeginStatusTickBeat` is that plus its own element and
-stance work. Left undone because it is a pure refactor in a file the round was
-already changing for behaviour, and the two should not land in one commit.
+### ~~187. `BeginStatusTickBeat` duplicates `BeginBeat`'s constructor to skip one line of it~~ — fixed in `efbce0fa`: one `NewBeat` constructor; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### ~~188. `TickReport` names poison specifically, so the second damage-over-time will not fit~~ — fixed in `fbbccc44`
 
@@ -2548,24 +2241,7 @@ called once per row, not once per tick — the real second case (Burn) landed
 in the same milestone and is the one `StatusEffectsTests
 .OneTick_CarryingBurnAndPoison_ReportsBothRowsSeparately` pins.
 
-### 189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats
-
-A status tick now opens its own beat (`FightSession.Riders.cs:638`), and
-`BeginStatusTickBeat` sets `Actor = isHealing ? victim : null` (`:644`). So a REGEN
-tick on an enemy produces a beat whose `Actor` is that enemy -- and the idiom three
-test helpers use to count enemy turns counts it as one. (A poison tick is safe: its
-`Actor` is null by design, which is also what makes the victim flinch.)
-
-Four call sites, not three:
-`TurnRiderTests.cs:77` (`EnemyTurnsIn`), `EnemyAiTests.cs:70`,
-`FightConsumableTests.cs:114` and `FightConsumableTests.cs:201`.
-
-All four pass today because nothing in the shipped content gives an enemy a regen
-status. That is the definition of a test that will break for a content reason, in a
-file whose author will have no idea why. The fix is a predicate on the session side
-that says "this beat is an action somebody took" rather than four copies of a null
-check -- `CombatBeat` is where it belongs, beside `PaintActorDamageType`, which is
-the other reader that had to learn the same lesson this round.
+### ~~189. `b.Actor != null && !b.Actor.IsPlayerSide` stopped meaning "an enemy turn" the moment ticks became beats~~ — fixed in `559f3069`: `CombatBeat.IsAction` predicate across 13 sites; later refined by `fb0a06ab` (`BeatCause`); full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ### 190. OWNER'S CALL: on the ally rack, Right means "nearer", and that needs a hand on a pad to confirm
 
@@ -2703,25 +2379,7 @@ category would need a second reason to exist (`docs/CODE_STANDARDS.md` §10).
 Not tuned. `SpellExpansionBalanceTests.VelvetShacklesDeniesAWholeTurnOnlyFromAnEnemyWithNoCast`
 pins every figure above, so a decision either way moves a literal.
 
-### 195. Rooted gaining "no physical moves" silently retuned the Sylvan modifier
-
-`modifiers.json`'s `Sylvan` carries `RootChancePercent: 10` — a 10% chance on a
-landed hit to root the target for `FightTuning.RootOnHitTurns` (**1** turn; the
-baseline's §8 says 2 and is stale). It is a weapon modifier, so it only ever
-roots an enemy, and it is the ONLY authored source of Rooted in the game.
-
-Before `2c64a252` that root cost a monster its plain swing. Three of the five
-monsters with authored kits would rather have cast anyway, and two of them
-(`golem`, `forest_warden`) author `attackWeight: 0` and had no swing to lose, so
-the modifier's on-hit effect was close to nothing against exactly the enemies a
-player would want it against. It now costs `golem` its entire turn and
-`forest_warden` its two best abilities.
-
-**Recorded rather than fixed** because it is not a defect: it is the rule change
-working, and it lands on one item modifier that nobody edited. Flagged so a
-later balance pass on `Sylvan` reads the right history — if the modifier looks
-strong, this is when it became so, and the cause is in `CombatActions`, not in
-`modifiers.json`.
+### ~~195. Rooted gaining "no physical moves" silently retuned the Sylvan modifier~~ — recorded, not a defect: the rule change working as intended; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ## Findings from the shop pricing, spell-book, and QA-backlog pass, 2026-09-22
 
@@ -2794,6 +2452,8 @@ Thorn Tithe `fit: target`; treant slam and spores. No captures were taken
 because graphics-mode launches steal the owner's focus. Owner: schedule a
 focus-safe QA pass.
 
+**2026-09-26:** a focus-safe QA capture pass is scheduled next in this sweep.
+
 ### 204. Graphics-mode tooling still steals focus; the hidden-desktop fix is an untested candidate
 
 `tools/screenshot.ps1 -Runtime`, `graphics_tests.ps1`, and `preview.ps1
@@ -2839,4 +2499,20 @@ None of them take `fit: target`. Owner: say if the ally-target rituals should
 move onto the ally's body.
 
 ### ~~209. Clearing `VfxPaddingCache` per fight breaks a travelling-effect placement test -- cause not chased down~~ — fixed in `756abfbf`: a cold scan was a 35ms hitch that outlasted the fixture's 11ms 60x flight, so the test read a released renderer; scan is now row-wise from the bottom, cache cleared per fight and keyed by (path, first frame). Full write-up: `docs/AUDIT_STRUCK_ARCHIVE.md`
+
+### 210. OWNER'S CALL: a forfeited turn (stunned or helplessly rooted) still counts as an action
+
+`ForfeitTurn` in `FightSession.Enemies.cs` opens through `BeginBeat`, so
+`IsAction` is true and an AnyAction pool does not decay while stunned. Since
+`fb0a06ab` (`BeatCause`: `Action`/`StatusTick`/`TransformExpiry`, owner
+decision "a transform expiring should definitely not be an action") a
+`Forfeit` cause is a one-line change. Options: keep as-is, or add
+`BeatCause.Forfeit`.
+
+### 211. OWNER'S CALL: intent badge height moved on trimmed idles (from #79) and is unreviewed on screen
+
+#79's fix (`ContentTopForActor` reading `OpaqueBoxForActor`'s measured box)
+moves the intent badge higher on trimmed idles than it sat before. Correct
+by the new measurement, but nobody has looked at it in the running game yet.
+Pending the runtime QA capture pass (#203).
 
