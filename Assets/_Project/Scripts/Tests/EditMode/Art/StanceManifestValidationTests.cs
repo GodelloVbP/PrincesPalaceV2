@@ -56,6 +56,7 @@ namespace PrincesPalace.Domain.Tests
             internal string RawSource;
             internal float? CastPointDx;
             internal float? CastPointDy;
+            internal float? HeadSize;
         }
 
         private static string Root() => RepoTree.Root();
@@ -76,6 +77,7 @@ namespace PrincesPalace.Domain.Tests
                     : null;
 
                 string castPointBlock = JsonBlocks.ObjectFor(block, "castPoint");
+                string headBlock = JsonBlocks.ObjectFor(block, "head");
 
                 entries.Add(new Entry
                 {
@@ -87,6 +89,7 @@ namespace PrincesPalace.Domain.Tests
                         : rawSource.Trim().ToLowerInvariant(),
                     CastPointDx = castPointBlock == null ? (float?)null : (float?)(JsonBlocks.Number(castPointBlock, "dx") ?? 0d),
                     CastPointDy = castPointBlock == null ? (float?)null : (float?)(JsonBlocks.Number(castPointBlock, "dy") ?? 0d),
+                    HeadSize = headBlock == null ? (float?)null : (float?)(JsonBlocks.Number(headBlock, "size") ?? 0d),
                 });
             }
 
@@ -114,6 +117,33 @@ namespace PrincesPalace.Domain.Tests
                 "else, and the runtime reads every one of them as 'authored' -- which means a typo intended " +
                 "to hand the number to the slicer would silently keep it from ever being updated: " +
                 string.Join(", ", wrong));
+        }
+
+        // EVERY ENEMY FRAMES ITS OWN HEAD (8852f19d). The plate icon crops
+        // the idle still to the authored `head` box; without one it falls
+        // back to a square off the top of the figure, which frames an upright
+        // body and misses anything that is not -- the beetle's head is out
+        // front at shoulder height, the treant's face is mid-trunk. A new
+        // enemy that forgot the box would ship that fallback silently, so the
+        // box is required of every Enemies/ entry, with a positive size.
+        [Test]
+        public void EveryEnemyAuthorsAHeadBox()
+        {
+            var enemies = Manifest()
+                .Where(e => e.SpritePath.StartsWith("Enemies/", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.IsNotEmpty(enemies, "no Enemies/ entries parsed -- the manifest's shape changed under the parse.");
+
+            var missing = enemies
+                .Where(e => !e.HeadSize.HasValue || e.HeadSize.Value <= 0f)
+                .Select(e => e.HeadSize.HasValue ? $"{e.SpritePath} (size {e.HeadSize.Value})" : e.SpritePath)
+                .ToList();
+
+            Assert.IsEmpty(missing,
+                "every enemy in StanceManifest.json authors a `head` box {dx, dy, size} (castPoint's convention: " +
+                "dx from the canvas centre, dy above the ground line), set by eye on the idle still -- " +
+                "the plate icon crops to it. Missing or non-positive: " + string.Join(", ", missing));
         }
 
         [Test]
