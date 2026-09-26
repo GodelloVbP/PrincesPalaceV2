@@ -69,12 +69,12 @@ namespace PrincesPalace.PlayModeTests
 
         // AN UNASKED-FOR MODE IGNORES, IT DOES NOT FAIL.
         //
-        // preview.ps1 filters this fixture by CLASS, so every capture in it
-        // runs and exactly one of them has its variable set. The other three
-        // used to fail with "PP_PREVIEW_* is empty" -- three red tests and a
-        // non-zero exit beside three correct pictures, which reads as a broken
-        // preview to anyone who has not read this file. Found the first time
-        // -Spell ran for real.
+        // Run by CLASS (by hand, through graphics_tests.ps1), every capture in
+        // it runs and at most one has its variable set. The others used to
+        // fail with "PP_PREVIEW_* is empty" -- red tests beside correct
+        // pictures. preview.ps1 itself names only its mode's tests (see its
+        // Invoke-PreviewCapture): graphics_tests.ps1 counts a Skipped result
+        // as a failure, so running the whole class exited 1 on every preview.
         //
         // Ignore rather than a silent early return: an ignored test is
         // reported by name, so a preview that photographed nothing because the

@@ -350,7 +350,8 @@ function Invoke-EnemyPreview {
 function Invoke-EnemyCapture {
     param([string]$Id)
 
-    return (Invoke-PreviewCapture -Variable "PP_PREVIEW_IDS" -Value $Id -Prefix $Id)
+    return (Invoke-PreviewCapture -Variable "PP_PREVIEW_IDS" -Value $Id -Prefix $Id `
+        -Tests @("CaptureStanceSheets", "CaptureShowcaseTurns"))
 }
 
 # --- spell mode -------------------------------------------------------------
@@ -444,6 +445,7 @@ function Invoke-SpellPreview {
         if ($versusIds.Count -gt 0) { $prefix = "$prefix`_vs_" + ($versusIds -join "-") }
 
         return (Invoke-PreviewCapture -Variable "PP_PREVIEW_SPELL" -Value $resolved -Prefix $prefix `
+            -Tests @("CaptureSpellCast") `
             -ExtraVariable "PP_PREVIEW_ELEMENT" -ExtraValue $chosenElement)
     }
 
@@ -484,7 +486,7 @@ function Invoke-CharacterPreview {
 
     if (-not $Launch) {
         return (Invoke-PreviewCapture -Variable "PP_PREVIEW_CHARACTER" -Value $resolved `
-            -Prefix "character_$resolved")
+            -Prefix "character_$resolved" -Tests @("CaptureCharacter"))
     }
 
     $timeout = Start-EditorIfNeeded
@@ -526,6 +528,17 @@ function Invoke-PreviewCapture {
         [string]$Value,
         [string]$Prefix,
 
+        # THE TESTS THIS MODE ASKED FOR, by method name, and ONLY those are
+        # run. The fixture used to be filtered by CLASS, so every -Spell run
+        # also ran the three -Enemy/-Character tests, which Assert.Ignore when
+        # their variable is unset -- and graphics_tests.ps1 counts anything
+        # that is not "Passed" as a failure, because for a capture a skip means
+        # no picture (no graphics device). So every preview exited 1 beside a
+        # correct set of frames. Naming the tests keeps graphics_tests.ps1's
+        # rule intact (a skip in a test this mode DID ask for, e.g. no device,
+        # still fails the run) and removes the skips nobody asked for.
+        [Parameter(Mandatory = $true)][string[]]$Tests,
+
         # A SECOND variable that NARROWS a mode already asked for, rather than
         # selecting one -- -Element is the only one so far. ALWAYS SET, empty
         # included: an inherited value from an earlier shell would silently
@@ -549,9 +562,12 @@ function Invoke-PreviewCapture {
     $out = Join-Path $Project "tools\screenshots\preview"
     Write-Host "capturing '$Value' -- pictures land in $out"
 
+    # Unity's -testFilter takes a semicolon-separated list of full names.
+    $filter = ($Tests | ForEach-Object { "PrincesPalace.PlayModeTests.PreviewCaptureTests.$_" }) -join ";"
+
     & powershell -NoProfile -ExecutionPolicy Bypass `
         -File (Join-Path $PSScriptRoot "graphics_tests.ps1") `
-        -Filter "PrincesPalace.PlayModeTests.PreviewCaptureTests" | Out-Host
+        -Filter $filter | Out-Host
 
     $exit = $LASTEXITCODE
 
