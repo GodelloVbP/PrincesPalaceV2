@@ -231,7 +231,8 @@ namespace PrincesPalace.PlayModeTests
             // THE POP STARTS OVERSIZED (1.3) and settles down to 1 -- it is a
             // punch in, not a grow in, so "mid-pop" reads as a scale ABOVE
             // rest rather than below it.
-            Assert.Greater(rect.localScale.x, 1.001f, "fixture: the first pop never started");
+            Assert.IsFalse(AtRestScale(rect), "fixture: the first pop never started");
+            Assert.Greater(rect.localScale.x, 1f, "fixture: the first pop started below rest, not above it");
 
             // THE SECOND POP ON THE SAME SLOT. A status that leaves and comes
             // back is a code this row has not seen since its last repaint, so
@@ -243,21 +244,35 @@ namespace PrincesPalace.PlayModeTests
             _fight.RefreshUi();
             yield return null;
 
+            // ONE PREDICATE for "at rest", read by the wait, the assertion and
+            // the hold check alike (AUDIT #165). The wait used to stop on a
+            // float literal (`> 1.001f`) while the assertion allowed a double
+            // tolerance (`1.0 +/- 0.001d`); 1.001f widens to 1.00100004673,
+            // which is past 1.0010000000475, so a lerp frame landing in that
+            // 4.7e-8 sliver ended the wait and then failed the assertion.
             float deadline = Time.realtimeSinceStartup + 5f;
-            while (rect.localScale.x > 1.001f && Time.realtimeSinceStartup < deadline) yield return null;
+            while (!AtRestScale(rect) && Time.realtimeSinceStartup < deadline) yield return null;
 
-            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                "the badge never reached its rest scale");
+            Assert.IsTrue(AtRestScale(rect),
+                $"the badge never reached its rest scale (still {rect.localScale.x:R} after 5s)");
 
             // AND NOTHING IS STILL WRITING IT. One stopped pop left running
-            // would keep lerping this rect from its own start scale.
+            // would keep lerping this rect from its own start scale. The pop
+            // eases monotonically from 1.3 down to exactly 1, so a badge the
+            // wait saw inside the band stays inside it unless something
+            // restarts the pop.
             for (int frame = 0; frame < 10; frame++)
             {
                 yield return null;
-                Assert.AreEqual(1f, rect.localScale.x, 0.001f,
-                    $"the badge grew back to {rect.localScale.x:F3} on frame {frame} -- " +
+                Assert.IsTrue(AtRestScale(rect),
+                    $"the badge grew back to {rect.localScale.x:R} on frame {frame} -- " +
                     "an interrupted appearance pop is still running");
             }
         }
+
+        private const float RestScaleTolerance = 0.001f;
+
+        private static bool AtRestScale(RectTransform rect) =>
+            Mathf.Abs(rect.localScale.x - 1f) <= RestScaleTolerance;
     }
 }
