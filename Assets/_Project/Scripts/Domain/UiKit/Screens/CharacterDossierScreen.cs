@@ -1504,7 +1504,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildTooltip()
         {
             var built = ItemComparisonPanel.Build("DossierTooltip", Place.At(0f, 0f),
-                new UiVec(420f, 420f), titleHeight: 30f,
+                new UiVec(DossierLayout.TooltipWidth, DossierLayout.TooltipMaxHeight),
+                titleHeight: DossierLayout.TooltipTitleHeight,
                 titleFontSize: 20, titleHex: AccentHi,
                 bodyFontSize: 15, bodyHex: TextDim);
 

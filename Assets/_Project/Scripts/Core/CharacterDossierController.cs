@@ -2847,8 +2847,33 @@ namespace PrincesPalace
 
             if (tooltipTitle != null) tooltipTitle.SetContent(title ?? "");
             if (tooltipBody != null) tooltipBody.SetContent(body ?? "");
+            FitTooltipToBody();
             PlaceTooltip(near);
             tooltip.SetShown(true);
+        }
+
+        // AS TALL AS ITS TEXT, not the 420 it was built at (QA 2026-09-26:
+        // both captured item tooltips were about half empty under their
+        // text). Only the panel's height moves -- ItemComparisonPanel pins
+        // its fill, rim, title and body to the panel's edges, so they follow
+        // -- and it never grows past the built size, which
+        // DossierTooltipTextFitTests already proves holds the worst-case
+        // body. MUST RUN BEFORE PlaceTooltip, which reads the height back.
+        private void FitTooltipToBody()
+        {
+            var self = tooltip == null ? null : tooltip.transform as RectTransform;
+            if (self == null || tooltipBody == null) return;
+
+            float bodyWidth = ItemComparisonPanel.BodyWidthFor(DossierLayout.TooltipWidth);
+            float wanted = string.IsNullOrEmpty(tooltipBody.text)
+                ? 0f
+                : tooltipBody.GetPreferredValues(tooltipBody.text, bodyWidth, 0f).y;
+
+            float height = Mathf.Min(
+                ItemComparisonPanel.HeightFor(DossierLayout.TooltipTitleHeight, Mathf.Ceil(wanted)),
+                DossierLayout.TooltipMaxHeight);
+
+            self.sizeDelta = new Vector2(self.sizeDelta.x, height);
         }
 
         // The tooltip follows what it describes.
@@ -2867,6 +2892,8 @@ namespace PrincesPalace
         // the same answer for its offer cards. What is left here is the part
         // that is genuinely this screen's: which rect is being hovered, and
         // what space it has to be expressed in.
+        private static readonly UiRect[] TooltipKeepOut = DossierLayout.TooltipKeepOut();
+
         private void PlaceTooltip(RectTransform near)
         {
             var self = tooltip == null ? null : tooltip.transform as RectTransform;
@@ -2879,14 +2906,20 @@ namespace PrincesPalace
             // ended up 339px off the panel they belong to.
             Vector2 local = parent.InverseTransformPoint(near.TransformPoint(Vector3.zero));
 
-            const float Margin = 8f;
+            // NEVER OVER THE LOADOUT (owner, 2026-09-26): the mannequin, the
+            // slots and the Carried row are keep-outs, so a pack item beside
+            // the loadout opens under or over its own cell instead of across
+            // the figure it is being weighed against. DossierLayout owns the
+            // list; the rule is TooltipPlacement's.
+            const float Margin = DossierLayout.TooltipMargin;
             var at = TooltipPlacement.Beside(
                 local.x, local.y, near.rect.width, near.rect.height,
                 self.sizeDelta.x, self.sizeDelta.y,
                 interiorLeft: -DossierLayout.HalfWidth + Margin,
                 interiorRight: DossierLayout.HalfWidth - Margin,
                 interiorBottom: -DossierLayout.HalfHeight + Margin,
-                interiorTop: DossierLayout.HalfHeight - Margin);
+                interiorTop: DossierLayout.HalfHeight - Margin,
+                keepOut: TooltipKeepOut);
 
             self.anchoredPosition = new Vector2(at.X, at.Y);
         }

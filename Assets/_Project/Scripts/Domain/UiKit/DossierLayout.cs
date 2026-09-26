@@ -807,5 +807,44 @@ namespace PrincesPalace.Domain.UiKit
         // zero by half of what the stepper column and its gutter took.
         public static float AttributesTextCentreX =>
             (-AttributesContentWidth * 0.5f + AttributesTextRight) * 0.5f;
+
+        // ---- the hover tooltip ---------------------------------------------------
+
+        // Built at this size (ItemComparisonPanel's shared shape); at runtime
+        // only its height changes, down to what its text measures.
+        public const float TooltipWidth = 420f;
+        public const float TooltipMaxHeight = 420f;
+        public const float TooltipTitleHeight = 30f;
+
+        // Clear air between the tooltip and the dossier's own frame.
+        public const float TooltipMargin = 8f;
+
+        // WHAT A TOOLTIP MAY NEVER COVER, in the dossier's own space (owner,
+        // 2026-09-26: "if something blocks the head and upper slots we have
+        // to change that, that is no question"). The mannequin, every
+        // equipment slot, and the pack's Carried row: the loadout is what a
+        // hovered item is being weighed against, so a box over it hides the
+        // evidence it was opened to answer. Handed to TooltipPlacement.Beside
+        // as keep-out rects; the pack's other cells and the stats column are
+        // deliberately NOT here -- something has to give way, and the box
+        // itself carries the VS.-EQUIPPED deltas the stats column would show.
+        public static UiRect[] TooltipKeepOut()
+        {
+            var rects = new System.Collections.Generic.List<UiRect>();
+
+            var mannequin = FromStage(MannequinLeft, MannequinTop, MannequinWidth, MannequinHeight);
+            rects.Add(new UiRect(mannequin, new UiVec(MannequinWidth, MannequinHeight)));
+
+            foreach (var slot in EquipmentSlots.All)
+            {
+                rects.Add(new UiRect(SlotAt(slot), new UiVec(SlotSize, SlotSize)));
+            }
+
+            // The Carried label and its count share one footer row across the
+            // pack's content width (CharacterDossierScreen.BuildPack).
+            rects.Add(new UiRect(new UiVec(ColumnACentreX, PackFooterY), new UiVec(ContentAWidth, 20f)));
+
+            return rects.ToArray();
+        }
     }
 }

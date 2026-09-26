@@ -312,5 +312,125 @@ namespace PrincesPalace.Domain.Tests
                 AssertInsideDossier(at, 210f);
             }
         }
+
+        // ---- keep-out rects (QA 2026-09-26, owner: "if something blocks the
+        // head and upper slots we have to change that") ----------------------
+        //
+        // Literal geometry: a 100x100 anchor at the origin, a 200x200 box,
+        // gap 14, the generous +/-500 x +/-300 interior. Beside it on the
+        // right is (164, 0); a keep-out there must push it to the left.
+        [Test]
+        public void AKeepOutOnTheRight_SendsItLeft()
+        {
+            var keepOut = new[] { new UiRect(new UiVec(200f, 0f), new UiVec(100f, 100f)) };
+
+            var at = TooltipPlacement.Beside(0f, 0f, 100f, 100f, 200f, 200f,
+                Left, Right, Bottom, Top, keepOut: keepOut);
+
+            Assert.AreEqual(-164f, at.X, 0.01f, "0 - (14 + 50 + 100)");
+            Assert.AreEqual(0f, at.Y, 0.01f);
+        }
+
+        [Test]
+        public void KeepOutsOnBothSides_SendItUnder()
+        {
+            var keepOut = new[]
+            {
+                new UiRect(new UiVec(200f, 0f), new UiVec(100f, 100f)),
+                new UiRect(new UiVec(-200f, 0f), new UiVec(100f, 100f)),
+            };
+
+            var at = TooltipPlacement.Beside(0f, 0f, 100f, 100f, 200f, 200f,
+                Left, Right, Bottom, Top, keepOut: keepOut);
+
+            Assert.AreEqual(0f, at.X, 0.01f);
+            Assert.AreEqual(-164f, at.Y, 0.01f, "under: -(14 + 50 + 100)");
+        }
+
+        // All four near positions blocked by one 560x560 keep-out around the
+        // anchor. The box (200 tall) cannot fit above or below it inside a
+        // 600-tall interior, so it has to clear the keep-out sideways: its
+        // left edge 14 past the keep-out's right edge at 280, centre
+        // 280 + 14 + 100 = 394, level with the anchor, and right rather than
+        // the equally near left.
+        [Test]
+        public void WhenAllFourNearPositionsAreBlocked_ItTakesTheNearestClearOne()
+        {
+            var keepOut = new[] { new UiRect(new UiVec(0f, 0f), new UiVec(560f, 560f)) };
+
+            var at = TooltipPlacement.Beside(0f, 0f, 100f, 100f, 200f, 200f,
+                Left, Right, Bottom, Top, keepOut: keepOut);
+
+            Assert.AreEqual(394f, at.X, 0.01f);
+            Assert.AreEqual(0f, at.Y, 0.01f);
+        }
+
+        // No keep-outs at all: every one of the old cases still resolves the
+        // way it did (spot check of the first).
+        [Test]
+        public void AnEmptyKeepOutList_ChangesNothing()
+        {
+            var at = TooltipPlacement.Beside(-300f, 0f, 100f, 100f, 200f, 200f,
+                Left, Right, Bottom, Top, keepOut: new UiRect[0]);
+
+            Assert.AreEqual(-136f, at.X, 0.01f);
+            Assert.AreEqual(0f, at.Y, 0.01f);
+        }
+
+        // THE DOSSIER, walked: every visible pack cell and every equipment
+        // slot, at the tooltip's shortest, typical and tallest heights. The
+        // box must stay inside the dossier, clear its own anchor, and cover
+        // none of the mannequin, the slots or the Carried row
+        // (DossierLayout.TooltipKeepOut). The QA captures had the Coif's box
+        // over HEAD/NECKLACE/GLOVES and the Torso's over LEGS and Carried.
+        [TestCase(120f)]
+        [TestCase(290f)]
+        [TestCase(420f)]
+        public void NoDossierTooltip_CoversTheLoadoutOrTheCarriedRow(float height)
+        {
+            var keepOut = DossierLayout.TooltipKeepOut();
+            float halfW = DossierLayout.HalfWidth;
+            float halfH = DossierLayout.HalfHeight;
+            float m = DossierLayout.TooltipMargin;
+
+            var anchors = new System.Collections.Generic.List<(string Name, UiRect Rect)>();
+            for (int row = 0; row < DossierLayout.PackVisibleRows; row++)
+            {
+                for (int col = 0; col < (int)DossierLayout.PackColumns; col++)
+                {
+                    anchors.Add(($"pack r{row}c{col}", new UiRect(
+                        new UiVec(DossierLayout.ColumnACentreX + DossierLayout.PackCellCentreX(col),
+                                  DossierLayout.PackCellCentreY(row)),
+                        new UiVec(DossierLayout.PackCellWidth, DossierLayout.PackCellHeight))));
+                }
+            }
+            foreach (var slot in EquipmentSlots.All)
+            {
+                anchors.Add(($"slot {slot}", new UiRect(DossierLayout.SlotAt(slot),
+                    new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize))));
+            }
+
+            foreach (var (name, anchor) in anchors)
+            {
+                var at = TooltipPlacement.Beside(
+                    anchor.Centre.X, anchor.Centre.Y, anchor.Width, anchor.Height,
+                    DossierLayout.TooltipWidth, height,
+                    -halfW + m, halfW - m, -halfH + m, halfH - m,
+                    keepOut: keepOut);
+
+                var box = new UiRect(at, new UiVec(DossierLayout.TooltipWidth, height));
+
+                Assert.IsTrue(new UiRect(UiVec.Zero, new UiVec(2f * (halfW - m), 2f * (halfH - m))).Contains(box),
+                    $"{name} at height {height}: the box {box.Left:F0}..{box.Right:F0} x {box.Bottom:F0}..{box.Top:F0} leaves the dossier");
+                Assert.IsFalse(box.Overlaps(anchor), $"{name} at height {height}: the box covers its own anchor");
+
+                for (int i = 0; i < keepOut.Length; i++)
+                {
+                    Assert.IsFalse(box.Overlaps(keepOut[i]),
+                        $"{name} at height {height}: the box {box.Left:F0}..{box.Right:F0} x {box.Bottom:F0}..{box.Top:F0} " +
+                        $"covers keep-out {i} ({keepOut[i].Left:F0}..{keepOut[i].Right:F0} x {keepOut[i].Bottom:F0}..{keepOut[i].Top:F0})");
+                }
+            }
+        }
     }
 }

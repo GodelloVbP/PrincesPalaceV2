@@ -35,8 +35,19 @@ namespace PrincesPalace.Domain.UiKit
         public const string PlateHex = "#1D1226F2";
         public static readonly string RimHex = FightHudPalette.Hairline;
 
-        private const float Pad = 20f;
-        private const float TitleToBodyGap = 12f;
+        public const float Pad = 20f;
+        public const float TitleToBodyGap = 12f;
+
+        // How tall the panel has to be to hold a title of `titleHeight` and
+        // a body that measures `bodyHeight` -- the inverse of Build's own
+        // carve-up, so a caller that sizes the panel to its text at runtime
+        // (the dossier's hover tooltip) cannot disagree with the builder
+        // about where the pads and the gap go.
+        public static float HeightFor(float titleHeight, float bodyHeight) =>
+            Pad + titleHeight + TitleToBodyGap + bodyHeight + Pad;
+
+        // The wrap width the body label gets inside a panel `panelWidth` wide.
+        public static float BodyWidthFor(float panelWidth) => panelWidth - Pad * 2f;
 
         // The three parts a caller wires up: the whole panel (to show/hide),
         // and the title/body labels (to paint into). No StatRows collection
@@ -70,33 +81,56 @@ namespace PrincesPalace.Domain.UiKit
             float titleHeight, int titleFontSize, string titleHex,
             int bodyFontSize, string bodyHex)
         {
-            float halfW = size.X * 0.5f;
-            float halfH = size.Y * 0.5f;
-
+            // EVERY PART IS ANCHORED TO AN EDGE, not placed at a fixed offset
+            // from the centre. The shop shows this panel at its built size and
+            // nothing changes; the dossier's hover tooltip sets only the
+            // panel's HEIGHT to fit its text (QA 2026-09-26: a 420x420 box
+            // half empty under a six-line body), and the fill, the rim and
+            // the body follow that one number because they are pinned to the
+            // edges they belong to. Centre offsets would have left the title
+            // floating mid-panel and the rim tracing the old 420 square.
             var parts = new List<UiNode>
             {
-                Ui.Solid(name + "Fill", PlateHex, size, Place.At(0f, 0f)).AsDecor(),
+                Ui.Solid(name + "Fill", PlateHex, Place.Stretch(), UiSize.Fixed(size)).AsDecor(),
             };
-            parts.AddRange(Ui.Rim(name, size, RimHex));
 
-            float titleCentreY = halfH - Pad - titleHeight * 0.5f;
+            // The rim, one 1px edge per side, each pinned INSIDE its own edge
+            // (the containment audit refuses a hairline centred on the
+            // boundary; Ui.Rim's header). Same four names Ui.Rim emits.
+            parts.Add(RimEdge(name + "RimTop", RimHex, new UiVec(size.X, 1f),
+                Place.Frac(new UiVec(0f, 1f), new UiVec(1f, 1f), bottom: -1f)));
+            parts.Add(RimEdge(name + "RimBottom", RimHex, new UiVec(size.X, 1f),
+                Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -1f)));
+            parts.Add(RimEdge(name + "RimLeft", RimHex, new UiVec(1f, size.Y),
+                Place.Frac(new UiVec(0f, 0f), new UiVec(0f, 1f), right: -1f)));
+            parts.Add(RimEdge(name + "RimRight", RimHex, new UiVec(1f, size.Y),
+                Place.Frac(new UiVec(1f, 0f), new UiVec(1f, 1f), left: -1f)));
+
+            // Title: pinned to the top edge, its own fixed height.
             var title = Ui.Label(name + "Title", UiString.Runtime,
-                    new UiVec(size.X - Pad * 2f, titleHeight), titleFontSize, titleHex,
-                    Place.At(0f, titleCentreY))
+                    new UiVec(BodyWidthFor(size.X), titleHeight), titleFontSize, titleHex,
+                    Place.Frac(new UiVec(0f, 1f), new UiVec(1f, 1f),
+                        left: Pad, right: Pad, bottom: -(Pad + titleHeight), top: Pad))
                 .TextAligned(UiTextAlign.Left);
             parts.Add(title);
 
-            float bodyTop = titleCentreY - titleHeight * 0.5f - TitleToBodyGap;
-            float bodyBottom = -halfH + Pad;
-            float bodyHeight = bodyTop - bodyBottom;
+            // Body: everything under the title down to the bottom pad, so it
+            // grows and shrinks with the panel. Its declared Size is still the
+            // built-size box (the solver ignores it for an edge-anchored node,
+            // DossierTooltipTextFitTests reads it as the worst-case capacity).
+            float bodyInsetTop = Pad + titleHeight + TitleToBodyGap;
+            float bodyHeight = size.Y - bodyInsetTop - Pad;
             var body = Ui.Label(name + "Body", UiString.Runtime,
-                    new UiVec(size.X - Pad * 2f, bodyHeight), bodyFontSize, bodyHex,
-                    Place.At(0f, bodyBottom + bodyHeight * 0.5f))
+                    new UiVec(BodyWidthFor(size.X), bodyHeight), bodyFontSize, bodyHex,
+                    Place.Stretch(left: Pad, right: Pad, bottom: Pad, top: bodyInsetTop))
                 .TextAligned(UiTextAlign.TopLeft);
             parts.Add(body);
 
             var panel = Ui.Panel(name, place, UiSize.Fixed(size), parts);
             return new Built(panel, title, body);
         }
+
+        private static UiNode RimEdge(string name, string hex, UiVec size, Place place) =>
+            Ui.Solid(name, hex, place, UiSize.Fixed(size)).AsDecor();
     }
 }

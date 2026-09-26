@@ -45,11 +45,15 @@ namespace PrincesPalace.Domain.UiKit
             float tooltipWidth, float tooltipHeight,
             float interiorLeft, float interiorRight,
             float interiorBottom, float interiorTop,
-            float gap = DefaultGap)
+            float gap = DefaultGap,
+            System.Collections.Generic.IReadOnlyList<UiRect> keepOut = null)
         {
             float halfW = tooltipWidth * 0.5f;
             float halfH = tooltipHeight * 0.5f;
             float reach = gap + anchorWidth * 0.5f + halfW;
+
+            var anchor = new UiRect(new UiVec(anchorX, anchorY), new UiVec(anchorWidth, anchorHeight));
+            var size = new UiVec(tooltipWidth, tooltipHeight);
 
             // Right by preference, because the eye is already travelling that
             // way and the leftmost anchor is the one most likely to have room.
@@ -57,44 +61,149 @@ namespace PrincesPalace.Domain.UiKit
             // pushed just far enough to stay inside.
             float beside = Clamp(anchorY, interiorBottom + halfH, interiorTop - halfH);
 
-            float right = anchorX + reach;
-            if (right + halfW <= interiorRight) return new UiVec(right, beside);
-
-            float left = anchorX - reach;
-            if (left - halfW >= interiorLeft) return new UiVec(left, beside);
-
-            // NEITHER SIDE HAS ROOM, and this is where the rule changed for
-            // the gamepad pass. It used to clamp x back inside and accept
-            // landing ON the anchor as "the lesser evil against hanging off
-            // the panel" -- which is the exact failure the pack's own
-            // placement comment records ("the box answering the question was
-            // covering the evidence"), only reached by a narrower path. A
-            // focus-driven tooltip makes that path ordinary rather than
-            // exotic: there is no cursor to move off the box, so a tooltip
-            // that covers its own subject covers it until the player
-            // navigates away.
-            //
-            // So before any clamp: go UNDER the anchor, then OVER it. Under
-            // first because that is where a tooltip conventionally sits and
-            // because the thing above an anchor is usually what named it.
+            // NEITHER SIDE HAS ROOM is where the rule changed for the gamepad
+            // pass: before any clamp, go UNDER the anchor, then OVER it. It
+            // used to clamp x back inside and land ON the anchor -- the exact
+            // failure the pack's own placement comment records ("the box
+            // answering the question was covering the evidence"). Under first
+            // because that is where a tooltip conventionally sits and because
+            // the thing above an anchor is usually what named it.
             float x = Clamp(anchorX, interiorLeft + halfW, interiorRight - halfW);
             float reachY = gap + anchorHeight * 0.5f + halfH;
 
-            float below = anchorY - reachY;
-            if (below - halfH >= interiorBottom) return new UiVec(x, below);
+            var preferred = new[]
+            {
+                new UiVec(anchorX + reach, beside),
+                new UiVec(anchorX - reach, beside),
+                new UiVec(x, anchorY - reachY),
+                new UiVec(x, anchorY + reachY),
+            };
 
-            float above = anchorY + reachY;
-            if (above + halfH <= interiorTop) return new UiVec(x, above);
+            foreach (var at in preferred)
+            {
+                if (Clear(at, size, anchor, interiorLeft, interiorRight, interiorBottom, interiorTop, keepOut))
+                    return at;
+            }
 
-            // Nothing clears it on either axis -- an interior with no room
-            // for the box anywhere outside the anchor. Clamped inside and
-            // overlapping, the old behaviour, kept as the last resort rather
-            // than as the second one: a box half off the panel is not better
-            // than a box over the anchor, and something has to be returned.
-            // Neither shipped screen can reach this (TooltipPlacementTests
-            // walks both against their real geometry); it is here so the
-            // degradation is stated instead of being an accident.
+            // NONE OF THE FOUR IS CLEAR -- usually because a keep-out rect
+            // (the dossier's mannequin and slots, 2026-09-26) sits where the
+            // box wanted to go. Look further out for the clear position
+            // NEAREST the anchor rather than giving up: a box one column
+            // further away is better than a box over what it must not hide.
+            var found = NearestClear(anchor, size, gap, interiorLeft, interiorRight, interiorBottom, interiorTop, keepOut);
+            if (found.HasValue) return found.Value;
+
+            // Nothing clears it anywhere -- an interior with no room for the
+            // box outside the anchor and the keep-outs. Clamped inside and
+            // overlapping, kept as the stated last resort: a box half off the
+            // panel is not better than a box over the anchor, and something
+            // has to be returned. TooltipPlacementTests walks both shipped
+            // screens against their real geometry to prove neither reaches it.
             return new UiVec(x, Clamp(anchorY, interiorBottom + halfH, interiorTop - halfH));
+        }
+
+        // THE CANDIDATES ARE EDGES, not a grid. A box that has to dodge
+        // axis-aligned rects is nearest its anchor either level with the
+        // anchor or standing `gap` off one of the obstacles' edges (or
+        // against a wall), on each axis independently -- so those x's and
+        // y's, crossed, are every position worth trying, and the answer is
+        // exact rather than rounded to a pitch. Ranked by the gap between the
+        // box's edge and the anchor's (a wide box beside a narrow anchor is
+        // near when its EDGE is), then by how far its centre sits from the
+        // anchor's, then right over left -- the same right-first preference
+        // the four fixed positions above have.
+        private static UiVec? NearestClear(UiRect anchor, UiVec size, float gap,
+            float interiorLeft, float interiorRight, float interiorBottom, float interiorTop,
+            System.Collections.Generic.IReadOnlyList<UiRect> keepOut)
+        {
+            float halfW = size.X * 0.5f;
+            float halfH = size.Y * 0.5f;
+            float minX = interiorLeft + halfW;
+            float maxX = interiorRight - halfW;
+            float minY = interiorBottom + halfH;
+            float maxY = interiorTop - halfH;
+            if (minX > maxX || minY > maxY) return null;
+
+            var xs = new System.Collections.Generic.List<float> { anchor.Centre.X, minX, maxX };
+            var ys = new System.Collections.Generic.List<float> { anchor.Centre.Y, minY, maxY };
+
+            void AddEdges(UiRect r)
+            {
+                xs.Add(r.Left - gap - halfW);
+                xs.Add(r.Right + gap + halfW);
+                ys.Add(r.Bottom - gap - halfH);
+                ys.Add(r.Top + gap + halfH);
+            }
+
+            AddEdges(anchor);
+            if (keepOut != null)
+            {
+                for (int i = 0; i < keepOut.Count; i++) AddEdges(keepOut[i]);
+            }
+
+            UiVec? best = null;
+            float bestGap = float.MaxValue;
+            float bestCentre = float.MaxValue;
+            bool bestRight = false;
+
+            foreach (float rawX in xs)
+            {
+                if (rawX < minX - 0.001f || rawX > maxX + 0.001f) continue;
+
+                foreach (float rawY in ys)
+                {
+                    if (rawY < minY - 0.001f || rawY > maxY + 0.001f) continue;
+
+                    var at = new UiVec(rawX, rawY);
+                    if (!Clear(at, size, anchor, interiorLeft, interiorRight, interiorBottom, interiorTop, keepOut))
+                        continue;
+
+                    float dx = System.Math.Max(0f, System.Math.Max(anchor.Left - (rawX + halfW), (rawX - halfW) - anchor.Right));
+                    float dy = System.Math.Max(0f, System.Math.Max(anchor.Bottom - (rawY + halfH), (rawY - halfH) - anchor.Top));
+                    float edgeGap = dx * dx + dy * dy;
+
+                    float cx = rawX - anchor.Centre.X;
+                    float cy = rawY - anchor.Centre.Y;
+                    float centre = cx * cx + cy * cy;
+                    bool right = rawX >= anchor.Centre.X;
+
+                    bool better = edgeGap < bestGap - 0.001f
+                        || (System.Math.Abs(edgeGap - bestGap) <= 0.001f
+                            && (centre < bestCentre - 0.001f
+                                || (System.Math.Abs(centre - bestCentre) <= 0.001f && right && !bestRight)));
+
+                    if (!better) continue;
+
+                    best = at;
+                    bestGap = edgeGap;
+                    bestCentre = centre;
+                    bestRight = right;
+                }
+            }
+
+            return best;
+        }
+
+        // Inside the interior, off the anchor, off every keep-out rect.
+        private static bool Clear(UiVec at, UiVec size, UiRect anchor,
+            float interiorLeft, float interiorRight, float interiorBottom, float interiorTop,
+            System.Collections.Generic.IReadOnlyList<UiRect> keepOut)
+        {
+            const float Slop = 0.01f;
+            var box = new UiRect(at, size);
+            if (box.Left < interiorLeft - Slop || box.Right > interiorRight + Slop) return false;
+            if (box.Bottom < interiorBottom - Slop || box.Top > interiorTop + Slop) return false;
+            if (box.Overlaps(anchor)) return false;
+
+            if (keepOut != null)
+            {
+                for (int i = 0; i < keepOut.Count; i++)
+                {
+                    if (box.Overlaps(keepOut[i])) return false;
+                }
+            }
+
+            return true;
         }
 
         // A tooltip taller or wider than the box it must fit in makes the two
