@@ -64,7 +64,7 @@ namespace PrincesPalace.Domain.Tests
             // 0.070, four points over neutral -> 1 + 0.070*4 = 1.28.
             var weaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
 
-            Assert.AreEqual("weapon scaling: STR-<font=\"SourceSans3-SemiBold SDF\">A</font> (x1.28)",
+            Assert.AreEqual("weapon scaling: STR-<size=110%><font=\"SourceSans3-SemiBold SDF\">A</font></size> (x1.28)",
                 AbilityEffectDescriptions.Strength(Scores(), weaponScaling));
         }
 
@@ -74,7 +74,7 @@ namespace PrincesPalace.Domain.Tests
             // Neutral weapon scaling and real Strength -> CombatMath's own
             // unarmed fallback applies: grade B, PerPoint(B) = 0.050, four
             // points over neutral -> 1 + 0.050*4 = 1.20.
-            Assert.AreEqual("no weapon: unarmed STR-<font=\"SourceSans3-SemiBold SDF\">B</font> (x1.20)",
+            Assert.AreEqual("no weapon: unarmed STR-<size=110%><font=\"SourceSans3-SemiBold SDF\">B</font></size> (x1.20)",
                 AbilityEffectDescriptions.Strength(Scores(), ScalingSet.None));
         }
 
@@ -88,7 +88,7 @@ namespace PrincesPalace.Domain.Tests
                 ScalingProfile.None,
                 ScalingProfile.None);
 
-            Assert.AreEqual("spell scaling: INT-<font=\"SourceSans3-SemiBold SDF\">S</font> (x1.20)",
+            Assert.AreEqual("spell scaling: INT-<size=110%><font=\"SourceSans3-SemiBold SDF\">S</font></size> (x1.20)",
                 AbilityEffectDescriptions.Intelligence(Scores(), skillScaling));
         }
 
@@ -104,7 +104,7 @@ namespace PrincesPalace.Domain.Tests
                 ScalingProfile.None,
                 ScalingProfile.None);
 
-            Assert.AreEqual("spell scaling: INT-<font=\"SourceSans3-SemiBold SDF\">D</font> (x0.97)",
+            Assert.AreEqual("spell scaling: INT-<size=110%><font=\"SourceSans3-SemiBold SDF\">D</font></size> (x0.97)",
                 AbilityEffectDescriptions.Intelligence(scores, skillScaling));
         }
 

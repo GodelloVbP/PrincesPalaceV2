@@ -233,17 +233,20 @@ namespace PrincesPalace.Domain.Tests
         public void Describe_LeadsWithTheStrongestGrade()
         {
             var sword = Riding(AbilityScore.Dexterity, ScalingGrade.C).With(AbilityScore.Strength, ScalingGrade.S);
-            Assert.AreEqual("STR <font=\"SourceSans3-SemiBold SDF\">S</font>  DEX <font=\"SourceSans3-SemiBold SDF\">C</font>", sword.Describe());
+            Assert.AreEqual("STR <size=110%><font=\"SourceSans3-SemiBold SDF\">S</font></size>  DEX <size=110%><font=\"SourceSans3-SemiBold SDF\">C</font></size>", sword.Describe());
         }
 
         // QA 2026-09-26: the UI font draws D/0, B/8 and S/5 as one glyph each,
-        // so every letter a player reads is drawn in a second face.
-        [TestCase(ScalingGrade.S, "<font=\"SourceSans3-SemiBold SDF\">S</font>")]
-        [TestCase(ScalingGrade.A, "<font=\"SourceSans3-SemiBold SDF\">A</font>")]
-        [TestCase(ScalingGrade.B, "<font=\"SourceSans3-SemiBold SDF\">B</font>")]
-        [TestCase(ScalingGrade.C, "<font=\"SourceSans3-SemiBold SDF\">C</font>")]
-        [TestCase(ScalingGrade.D, "<font=\"SourceSans3-SemiBold SDF\">D</font>")]
-        [TestCase(ScalingGrade.E, "<font=\"SourceSans3-SemiBold SDF\">E</font>")]
+        // so every letter a player reads is drawn in a second face. Sized up
+        // 110% too: measured at tooltip size, SourceSans3's capitals sit
+        // ~1px short of ChakraPetch's, so the swap would otherwise read as a
+        // smaller letter, not just a different one.
+        [TestCase(ScalingGrade.S, "<size=110%><font=\"SourceSans3-SemiBold SDF\">S</font></size>")]
+        [TestCase(ScalingGrade.A, "<size=110%><font=\"SourceSans3-SemiBold SDF\">A</font></size>")]
+        [TestCase(ScalingGrade.B, "<size=110%><font=\"SourceSans3-SemiBold SDF\">B</font></size>")]
+        [TestCase(ScalingGrade.C, "<size=110%><font=\"SourceSans3-SemiBold SDF\">C</font></size>")]
+        [TestCase(ScalingGrade.D, "<size=110%><font=\"SourceSans3-SemiBold SDF\">D</font></size>")]
+        [TestCase(ScalingGrade.E, "<size=110%><font=\"SourceSans3-SemiBold SDF\">E</font></size>")]
         public void Display_DrawsEveryGradeLetterInTheGradeFace(ScalingGrade grade, string expected)
         {
             Assert.AreEqual(expected, ScalingGrades.Display(grade));

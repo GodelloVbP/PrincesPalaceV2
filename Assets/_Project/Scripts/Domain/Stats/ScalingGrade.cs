@@ -93,7 +93,7 @@ namespace PrincesPalace.Domain.Stats
         {
             return grade == ScalingGrade.None
                 ? Letter(grade)
-                : $"<font=\"{DisplayFontName}\">{grade}</font>";
+                : $"<size=110%><font=\"{DisplayFontName}\">{grade}</font></size>";
         }
 
         public static ScalingGrade FromIndex(int index)
