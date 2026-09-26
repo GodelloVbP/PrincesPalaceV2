@@ -67,7 +67,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static IReadOnlyList<CombatBeat> EnemyBeats(FightSession session) =>
-            session.DrainBeats().Where(b => b.Actor != null && !b.Actor.IsPlayerSide).ToList();
+            session.DrainBeats().Where(b => b.IsAction && !b.Actor.IsPlayerSide).ToList();
 
         private static IEnumerable<string> MessagesOf(IReadOnlyList<CombatBeat> beats) =>
             beats.SelectMany(b => b.Messages);

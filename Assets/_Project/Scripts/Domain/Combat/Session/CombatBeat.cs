@@ -413,6 +413,21 @@ namespace PrincesPalace.Domain.Combat.Session
         public CombatantState Actor;
         public CombatantState Target;
 
+        // WHICH STATUS TICKED, when this beat is a status tick rather than
+        // something a combatant did -- set by FightSession.OpenStatusTickBeat
+        // and by nothing else. Null on every action beat.
+        public StatusEffectType? StatusTick;
+
+        // "SOMEBODY TOOK AN ACTION HERE." The question every reader that
+        // counts turns is actually asking, and one `Actor != null` stopped
+        // answering the moment status ticks became beats: a damaging tick has
+        // no actor, but a HEALING tick (Regen) names its holder as Actor so
+        // the view does not make them flinch -- so an enemy's regen tick read
+        // as an enemy turn to every `b.Actor != null && !b.Actor.IsPlayerSide`
+        // in the suite (AUDIT #189). Ask this, then Actor.IsPlayerSide for
+        // whose.
+        public bool IsAction => Actor != null && StatusTick == null;
+
         // A spell's presentation, RECORDED rather than played at the moment it
         // resolves. Everything else about a beat already works this way and for
         // the same reason: one command resolves the whole round in a single

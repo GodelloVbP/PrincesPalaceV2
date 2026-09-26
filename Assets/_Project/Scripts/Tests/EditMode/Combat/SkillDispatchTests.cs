@@ -623,7 +623,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _, encounter) = Fight(Kit(relics: new[] { relic }));
 
             session.ExecuteAttack(encounter.Enemies[0]);
-            var mine = session.DrainBeats().Where(b => b.Actor != null && b.Actor.IsPlayerSide).ToList();
+            var mine = session.DrainBeats().Where(b => b.IsAction && b.Actor.IsPlayerSide).ToList();
 
             Assert.AreEqual(2, mine.Count);
             Assert.IsTrue(mine.SelectMany(b => b.Messages).Any(m => m.Contains("Dual Wield strikes")));
@@ -638,7 +638,7 @@ namespace PrincesPalace.Domain.Tests
             var (session, _, _) = Fight(Kit(relics: new[] { relic }), null, frail, tank);
 
             session.ExecuteAttack(frail);
-            var mine = session.DrainBeats().Where(b => b.Actor != null && b.Actor.IsPlayerSide).ToList();
+            var mine = session.DrainBeats().Where(b => b.IsAction && b.Actor.IsPlayerSide).ToList();
 
             Assert.AreEqual(1, mine.Count);
         }

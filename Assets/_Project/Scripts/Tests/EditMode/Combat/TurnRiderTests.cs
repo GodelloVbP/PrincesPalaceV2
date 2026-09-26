@@ -74,7 +74,7 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static int EnemyTurnsIn(IReadOnlyList<CombatBeat> round) =>
-            round.Count(b => b.Actor != null && !b.Actor.IsPlayerSide);
+            round.Count(b => b.IsAction && !b.Actor.IsPlayerSide);
 
         private static IEnumerable<string> MessagesIn(IReadOnlyList<CombatBeat> round) =>
             round.SelectMany(b => b.Messages);
@@ -99,6 +99,34 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.GreaterOrEqual(EnemyTurnsIn(round), 1, "with no rider the turn passes on");
             Assert.AreEqual(0, encounter.PendingExtraTurns(hero));
+        }
+
+        // AUDIT #189. EnemyTurnsIn above -- and every other "count the enemy's
+        // turns" reader in the suite -- used to ask `Actor != null`, which a
+        // status tick on an enemy can satisfy: a healing tick names its holder
+        // as Actor (so the view does not make them flinch). Nothing shipped
+        // gives a monster Regen yet, so this is the content change that would
+        // otherwise break those tests for no reason their author could see.
+        [Test]
+        public void AStatusTickOnAnEnemyIsNotAnEnemyTurn()
+        {
+            var hero = Hero();
+            var foe = Foe("Tank", 1000);
+            var (session, _, _) = Fight(hero, null, foe);
+            foe.CurrentHealth = 500;
+            session.ApplyStatusToForTest(foe, StatusEffectType.Regen, 10, 3);
+            session.ApplyStatusToForTest(foe, StatusEffectType.Poison, 10, 3);
+            session.CrossTurnBoundaryForTest();
+            session.DrainBeats();
+
+            session.TickStatusesForTest(foe);
+            var ticks = session.DrainBeats();
+
+            Assert.IsTrue(ticks.Any(b => ReferenceEquals(b.Actor, foe) && b.StatusTick == StatusEffectType.Regen),
+                "the regen tick is a beat whose Actor is the enemy -- the case the old idiom miscounted");
+            Assert.IsTrue(ticks.Any(b => b.StatusTick == StatusEffectType.Poison),
+                "and the poison tick is a beat too");
+            Assert.AreEqual(0, EnemyTurnsIn(ticks), "neither tick is a turn the enemy took");
         }
 
         // ---- Brave: DELETED WITH THE BANK IT SPENT ----------------------------

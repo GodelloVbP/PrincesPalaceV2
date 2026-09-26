@@ -238,7 +238,7 @@ namespace PrincesPalace.PlayModeTests
             // and forfeited (both message shapes are distinct from the plain
             // "X attacks Y for N damage!" line a legal plain swing prints).
             var enemyLines = beats
-                .Where(b => b.Actor != null && !b.Actor.IsPlayerSide)
+                .Where(b => b.IsAction && !b.Actor.IsPlayerSide)
                 .SelectMany(b => b.Messages)
                 .ToList();
 

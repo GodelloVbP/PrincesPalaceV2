@@ -111,7 +111,7 @@ namespace PrincesPalace.Domain.Tests
             session.UseConsumable("Health Potion", 20, restoresMana: false);
             var beats = session.DrainBeats();
 
-            Assert.IsTrue(beats.Any(b => b.Actor != null && !b.Actor.IsPlayerSide),
+            Assert.IsTrue(beats.Any(b => b.IsAction && !b.Actor.IsPlayerSide),
                 "the monster got its turn, so the potion cost one");
         }
 
@@ -198,7 +198,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(used, "the caller has to be told, or it deletes the item anyway");
             Assert.AreEqual(0, hero.PrimaryPool.Current, "nothing landed");
-            Assert.IsFalse(session.DrainBeats().Any(b => b.Actor != null && !b.Actor.IsPlayerSide),
+            Assert.IsFalse(session.DrainBeats().Any(b => b.IsAction && !b.Actor.IsPlayerSide),
                 "a refused press must not cost the turn either");
         }
 

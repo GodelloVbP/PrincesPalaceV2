@@ -52,7 +52,7 @@ namespace PrincesPalace.Domain.Tests
                 { DamageVarianceRange = 0f };
 
         private static IReadOnlyList<CombatBeat> EnemyBeats(IReadOnlyList<CombatBeat> beats) =>
-            beats.Where(b => b.Actor != null && !b.Actor.IsPlayerSide).ToList();
+            beats.Where(b => b.IsAction && !b.Actor.IsPlayerSide).ToList();
 
         private static IEnumerable<string> MessagesOf(IReadOnlyList<CombatBeat> beats) =>
             beats.SelectMany(b => b.Messages);

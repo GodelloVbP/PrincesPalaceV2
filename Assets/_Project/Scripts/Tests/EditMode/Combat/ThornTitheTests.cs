@@ -54,7 +54,7 @@ namespace PrincesPalace.Domain.Tests
                 null, SpellPresentation.None, 0, physicalMove: false);
 
         private static IReadOnlyList<CombatBeat> EnemyBeats(IReadOnlyList<CombatBeat> beats) =>
-            beats.Where(b => b.Actor != null && !b.Actor.IsPlayerSide).ToList();
+            beats.Where(b => b.IsAction && !b.Actor.IsPlayerSide).ToList();
 
         private static IEnumerable<string> MessagesOf(IReadOnlyList<CombatBeat> beats) =>
             beats.SelectMany(b => b.Messages);

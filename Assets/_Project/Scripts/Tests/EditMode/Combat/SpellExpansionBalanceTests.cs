@@ -645,7 +645,7 @@ namespace PrincesPalace.Domain.Tests
                 session.ExecuteAttack(foe);
                 foreach (var beat in session.DrainBeats())
                 {
-                    if (beat.Actor == null || beat.Actor.IsPlayerSide) continue;
+                    if (!beat.IsAction || beat.Actor.IsPlayerSide) continue;
                     if (beat.Messages.Any(m => m.Contains("rooted"))) denied++;
                     else acted++;
                 }
@@ -732,7 +732,7 @@ namespace PrincesPalace.Domain.Tests
                 session.ExecuteAttack(foe);
                 foreach (var beat in session.DrainBeats())
                 {
-                    if (beat.Actor == null || beat.Actor.IsPlayerSide) continue;
+                    if (!beat.IsAction || beat.Actor.IsPlayerSide) continue;
                     if (beat.Messages.Any(m => m.Contains("rooted"))) denied++;
                     else acted++;
                 }

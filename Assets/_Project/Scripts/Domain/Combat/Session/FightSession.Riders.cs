@@ -1016,6 +1016,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // BeginBeat -- see BeginStatusTickBeat's header for why a tick
             // must not reach the action seam.
             NewBeat(isHealing ? victim : null, victim, StageApproach.Hold, pre);
+            _recordingBeat.StatusTick = type;
 
             // THE ELEMENT COMES FROM THE STATUS, not from anyone's weapon --
             // StatusEffects.ElementOf is the one home for that question, and
