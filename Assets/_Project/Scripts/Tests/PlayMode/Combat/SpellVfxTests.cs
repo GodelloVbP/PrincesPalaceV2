@@ -54,6 +54,7 @@ namespace PrincesPalace.PlayModeTests
 
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             SpellPerformancePlayer.ClockOverride = null;
+            FightController.LogFloorOverride = null;
         }
 
         // ---- seeing an effect that lasts 13ms ------------------------------------
@@ -1986,6 +1987,76 @@ namespace PrincesPalace.PlayModeTests
                 }
             });
             Assert.Greater(tails, 0, $"{skillId}: no tail layer was placed, so nothing was checked");
+        }
+
+        // NO LAYER CROSSES THE COMBAT LOG, at either end of its flight.
+        //
+        // AT THE 1920x1080 FLOOR, forced: the log label's bottom is 127 below
+        // the top (bark 130 pinned to the top, label 108 tall centred 8 below
+        // its middle), 540 - 127 = 413, less the 8 gap = 405. The batchmode
+        // window is 4:3, where the pool's top is 720 and the rule never fires.
+        private const float ReferenceLogFloor = 405f;
+
+        [UnityTest]
+        public IEnumerator NoLayerOfASkySpellReachesIntoTheLog([ValueSource(nameof(SkySpells))] string skillId)
+        {
+            FightController.LogFloorOverride = ReferenceLogFloor;
+            try
+            {
+                yield return PlacedOnTheTreant(skillId, (performance, body) =>
+                {
+                    float floor = ReferenceLogFloor;
+
+                    foreach (var instance in performance.Instances)
+                    {
+                        if (!instance.Placed || instance.Layer.Render == SpellRender.Emitter) continue;
+                        float half = Domain.Stage.SpellFlight.RotatedHalfHeight(instance.Box, instance.Degrees);
+                        float top = Mathf.Max(instance.From.Y, instance.To.Y) + half;
+                        Assert.LessOrEqual(top, floor + 0.5f,
+                            $"{skillId}.{instance.Layer.id}: reaches {top:0} into the log band above {floor:0}");
+                    }
+                });
+            }
+            finally
+            {
+                FightController.LogFloorOverride = null;
+            }
+        }
+
+        // THE LIVE FLOOR IS THE LABEL'S: with no override, a wired scene
+        // measures one, and it sits above the treant's head.
+        [UnityTest]
+        public IEnumerator TheLogFloorIsMeasuredOffTheWiredLogLabel()
+        {
+            FightController.LogFloorOverride = null;
+            yield return LoadFight(1, 1.45f, "Enemies/treant");
+            Assert.IsTrue(_fight.LogFloorForTest(out float floor), "the fight scene has no combat log wired");
+            Assert.Greater(floor, 300f, "the log's lower edge is below the stage's upper air");
+        }
+
+        // CROWNFALL LANDS ON THE TREANT, not on the air point beside it: the
+        // shatter is centred inside the drawn body and the spike's arrival box
+        // covers the body's middle.
+        [UnityTest]
+        public IEnumerator CrownfallLandsOnTheTreantsDrawnBody()
+        {
+            yield return PlacedOnTheTreant("crownfall", (performance, body) =>
+            {
+                var shatter = performance.Instances.First(i => i.Layer.id == "shatter");
+                Assert.That(shatter.To.X, Is.InRange(body.Left, body.Right), "the shatter is beside the treant");
+                Assert.That(shatter.To.Y, Is.InRange(body.Bottom, body.Top), "the shatter is above or below the treant");
+
+                var spike = performance.Instances.First(i => i.Layer.id == "spike");
+                // The arrival box's axis-aligned bounds, turned onto its flight.
+                float halfW = Domain.Stage.SpellFlight.RotatedHalfHeight(
+                    new Domain.UiKit.UiVec(spike.Box.Y, spike.Box.X), spike.Degrees);
+                float halfH = Domain.Stage.SpellFlight.RotatedHalfHeight(spike.Box, spike.Degrees);
+                var centre = body.Centre;
+                Assert.That(centre.X, Is.InRange(spike.To.X - halfW, spike.To.X + halfW),
+                    "the spike arrives beside the treant");
+                Assert.That(centre.Y, Is.InRange(spike.To.Y - halfH, spike.To.Y + halfH),
+                    "the spike arrives above or below the treant's middle");
+            });
         }
     }
 }

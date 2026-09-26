@@ -49,6 +49,56 @@ namespace PrincesPalace.Domain.Stage
             return new UiVec(x, y);
         }
 
+        // ---- nothing a spell draws may cross the combat log ----------------
+        //
+        // QA 2026-09-26 (AUDIT #205, now ruled): against an Elder Treant the
+        // air point meets SkyCeiling and the sheets drawn around it are sized
+        // to the treant's body (fit: target, x1.63), so Winter's Rebuke's
+        // spear reached y~85 on screen across log lines 2-4, Blackglass
+        // Spear's ran off the top edge, and Crownfall's crown sat over line 2.
+        // Owner: "If it doesn't show it's a bug." Lowering the ceiling alone
+        // cannot fix it -- the treant's head is at 240, so an air point any
+        // lower is beside the head rather than above it, and a 490-unit spear
+        // launched from it still reaches past the top of the screen. What has
+        // to give is the SIZE of the drawing near the ceiling.
+        //
+        // SHRUNK ABOUT ITS ANCHOR, not moved. Every placed layer has a point
+        // that must not move -- the air point a spear leaves from, the body an
+        // impact lands on -- and its box sits at a fixed offset from that point
+        // that scales with the box (the impact-point correction is a fraction
+        // of the art). So the top of the drawing is `anchor + s * reach`, and
+        // the largest s that keeps it under the log's lower edge is one
+        // division. The spell still amasses at the same air point and still
+        // flies the same line; it is only drawn smaller when, and only as much
+        // as, the stage has no room above it. Against a rat nothing changes.
+
+        // THE SMALLEST THIS WILL EVER DRAW A LAYER. An anchor already inside
+        // the band cannot be fixed by shrinking; a quarter-size drawing there
+        // is a visible degradation rather than a vanished spell.
+        public const float MinFitScale = 0.25f;
+
+        // HOW MUCH TO SCALE a drawing whose top would be `anchorY +
+        // reachAboveAnchor` at full size, so that its top stays at or under
+        // `ceiling`. 1 when it already fits (or reaches down, not up).
+        public static float ScaleUnder(float anchorY, float reachAboveAnchor, float ceiling)
+        {
+            if (reachAboveAnchor <= 0f || anchorY + reachAboveAnchor <= ceiling) return 1f;
+
+            float room = ceiling - anchorY;
+            if (room <= 0f) return MinFitScale;
+            return Math.Max(MinFitScale, room / reachAboveAnchor);
+        }
+
+        // HALF THE HEIGHT OF A BOX TURNED BY `degrees`: the vertical half-extent
+        // of its axis-aligned bounds. A spear drawn corner to corner in its box
+        // reaches the box's corner, so the rotated box's bounds -- not its
+        // unrotated half-height -- are where its tail ends.
+        public static float RotatedHalfHeight(UiVec size, float degrees)
+        {
+            double r = degrees * Math.PI / 180.0;
+            return (float)(Math.Abs(size.X * 0.5 * Math.Sin(r)) + Math.Abs(size.Y * 0.5 * Math.Cos(r)));
+        }
+
         // THE ANGLE OF A LINE, counter-clockwise from +x, in degrees.
         public static float DegreesOf(UiVec from, UiVec to)
         {

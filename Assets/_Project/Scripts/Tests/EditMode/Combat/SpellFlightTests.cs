@@ -100,5 +100,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(95f, tip.X, Tolerance);
             Assert.AreEqual(31.25f, tip.Y, Tolerance);
         }
+
+        // ---- nothing a spell draws crosses the combat log -----------------------
+
+        // The log's lower edge in the effect pool's frame: the label's bottom at
+        // 127 below the top (bark 130 tall pinned to the top, label 108 tall
+        // centred 8 below the bark's middle: 65 + 8 + 54), so 540 - 127 = 413,
+        // less the 8 gap = 405.
+        private const float LogFloor = 405f;
+
+        [Test]
+        public void ADrawingReachingIntoTheLogIsShrunkAboutItsAnchorUntilItsTopMeetsTheFloor()
+        {
+            // A spear leaving the treant's air point (240) whose tail reaches
+            // 320 above it: 560 > 405. Room 405 - 240 = 165; 165 / 320 = 0.515625.
+            Assert.AreEqual(0.515625f, SpellFlight.ScaleUnder(240f, 320f, LogFloor), Tolerance);
+        }
+
+        [Test]
+        public void ADrawingThatAlreadyClearsTheLogIsLeftAlone()
+        {
+            // The rat's air point (117) plus 200 = 317 <= 405.
+            Assert.AreEqual(1f, SpellFlight.ScaleUnder(117f, 200f, LogFloor), Tolerance);
+        }
+
+        [Test]
+        public void AnAnchorInsideTheBandDegradesToTheSmallestDrawingNotToNothing()
+        {
+            Assert.AreEqual(0.25f, SpellFlight.ScaleUnder(420f, 100f, LogFloor), Tolerance);
+            // 165 / 1000 = 0.165, floored at 0.25.
+            Assert.AreEqual(0.25f, SpellFlight.ScaleUnder(240f, 1000f, LogFloor), Tolerance);
+        }
+
+        [Test]
+        public void ATurnedBoxReachesAsHighAsItsCorner()
+        {
+            // 300 square at -45: 150 sin45 + 150 cos45 = 212.132.
+            Assert.AreEqual(212.132f, SpellFlight.RotatedHalfHeight(new UiVec(300f, 300f), -45f), 1e-2f);
+            // 200 x 100 on its side: the width becomes the height, 100.
+            Assert.AreEqual(100f, SpellFlight.RotatedHalfHeight(new UiVec(200f, 100f), 90f), 1e-2f);
+            // Unturned: its own half-height.
+            Assert.AreEqual(50f, SpellFlight.RotatedHalfHeight(new UiVec(200f, 100f), 0f), 1e-2f);
+        }
     }
 }

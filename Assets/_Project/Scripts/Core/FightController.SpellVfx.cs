@@ -488,11 +488,13 @@ namespace PrincesPalace
                 instance.Degrees = degrees;
                 instance.To = new UiVec(aim.x, aim.y) - tip;
                 instance.From = new UiVec(from.x, from.y) - tip;
+                KeepUnderTheLog(instance, from, aim, art, parent);
                 return;
             }
 
             var to = BoxCentreForLayer(layer, performance, instance, aim, box, facing, standing: !centred);
             instance.To = new UiVec(to.x, to.y);
+            var drawn = RenderedSize(layer.path, box);
 
             // THE LAUNCH IS NOT IMPACT-CORRECTED, and the asymmetry is on
             // purpose. `to` is placed so the sheet's impact sits on the target;
@@ -503,10 +505,12 @@ namespace PrincesPalace
             {
                 var launch = LaunchPoint(layer, caster, casterRect, parent, body, casterX, to.y);
                 instance.From = new UiVec(launch.x, launch.y);
+                KeepUnderTheLog(instance, launch, aim, drawn, parent);
             }
             else
             {
                 instance.From = instance.To;
+                KeepUnderTheLog(instance, aim, aim, drawn, parent);
             }
         }
 
@@ -520,6 +524,74 @@ namespace PrincesPalace
             && layer.Render != SpellRender.Emitter
             && layer.Place != SpellPlace.Sky
             && !SpellPlaceNames.OnCaster(layer.Place);
+
+        // THE COMBAT LOG'S LOWER EDGE, in the effect pool's frame, less a gap.
+        //
+        // MEASURED OFF THE LABEL ITSELF rather than restated as a number here:
+        // the log is FightScreen's to lay out, and a copy of its geometry in
+        // this file would be the second home that drifts. False when there is
+        // no log wired (a headless fixture), which leaves every layer as
+        // placed -- the behaviour before this rule existed.
+        private const float LogGap = 8f;
+        private static readonly Vector3[] LogCorners = new Vector3[4];
+
+        // THE REFERENCE FRAME'S FLOOR, for a PlayMode test. The batchmode
+        // runner's window is 4:3, and with the canvas matched on width the
+        // pool's top edge is 720 there rather than 540 -- room enough that the
+        // treant's spells never meet the log, so a test reading the live floor
+        // would pass without the rule ever firing. Null in every real fight.
+        public static float? LogFloorOverride;
+
+        private bool LogFloor(Transform parent, out float floor)
+        {
+            floor = 0f;
+            if (LogFloorOverride.HasValue)
+            {
+                floor = LogFloorOverride.Value;
+                return true;
+            }
+
+            if (barkLabel == null || parent == null) return false;
+
+            barkLabel.rectTransform.GetWorldCorners(LogCorners);
+            float lowest = float.MaxValue;
+            foreach (var corner in LogCorners)
+            {
+                lowest = Mathf.Min(lowest, parent.InverseTransformPoint(corner).y);
+            }
+
+            floor = lowest - LogGap;
+            return true;
+        }
+
+        public bool LogFloorForTest(out float floor)
+        {
+            var parent = PrimaryPlayer != null ? PrimaryPlayer.transform.parent : null;
+            return LogFloor(parent, out floor);
+        }
+
+        // NO LAYER DRAWS INTO THE LOG BAND (SpellFlight.ScaleUnder has the
+        // why). Both ends of a flight are checked -- the launch is the high
+        // one for a sky spear, the arrival for anything landing on a tall
+        // head -- and the one scale that satisfies both is applied about each
+        // end's own anchor, so the air point and the struck point stay put.
+        private void KeepUnderTheLog(SpellLayerInstance instance, Vector2 fromAnchor, Vector2 toAnchor,
+            Vector2 art, Transform parent)
+        {
+            if (!LogFloor(parent, out float floor)) return;
+
+            float half = SpellFlight.RotatedHalfHeight(new UiVec(art.x, art.y), instance.Degrees);
+            float scale = Mathf.Min(
+                SpellFlight.ScaleUnder(fromAnchor.y, instance.From.Y - fromAnchor.y + half, floor),
+                SpellFlight.ScaleUnder(toAnchor.y, instance.To.Y - toAnchor.y + half, floor));
+            if (scale >= 1f) return;
+
+            var from = new UiVec(fromAnchor.x, fromAnchor.y);
+            var to = new UiVec(toAnchor.x, toAnchor.y);
+            instance.Box = instance.Box * scale;
+            instance.From = from + (instance.From - from) * scale;
+            instance.To = to + (instance.To - to) * scale;
+        }
 
         // PLACED BUT NOT BEGUN: the boxes, ends and turns PlaceCast wrote, for
         // the PlayMode tests that pin the placement rules without racing a
