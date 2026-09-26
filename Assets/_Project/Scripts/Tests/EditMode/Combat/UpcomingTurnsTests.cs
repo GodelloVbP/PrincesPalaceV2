@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -167,6 +168,20 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.Throws<ArgumentOutOfRangeException>(() => encounter.UpcomingTurns(0));
             Assert.Throws<ArgumentOutOfRangeException>(() => encounter.UpcomingTurns(-1));
+        }
+
+        // AUDIT #101. FightSession hands its initiative depth to UpcomingTurns
+        // at every CommitBeat, so a zero depth used to construct fine and then
+        // throw out of the middle of the first action. Refused at the door.
+        [Test]
+        public void AFightSessionRefusesAZeroInitiativeDepthAtConstruction()
+        {
+            var encounter = new CombatEncounter(new[] { Fighter("Hero", true, 10) }, new[] { Fighter("Rat", false, 5) });
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new FightSession(encounter, null, null, new Rng.SeededRandom(1), initiativeSlots: 0));
+            Assert.DoesNotThrow(() =>
+                new FightSession(encounter, null, null, new Rng.SeededRandom(1), initiativeSlots: 1));
         }
     }
 }

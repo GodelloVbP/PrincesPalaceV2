@@ -93,6 +93,17 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             _encounter = encounter ?? throw new ArgumentNullException(nameof(encounter));
             _rng = rng;
+
+            // REFUSED HERE, not at the first CommitBeat. The depth is handed
+            // straight to CombatEncounter.UpcomingTurns, which rejects a
+            // non-positive ask (UpcomingTurnsTests.RejectsNonPositiveCounts);
+            // left unchecked, a zero would construct fine and then throw out
+            // of the middle of the first action the fight resolves (AUDIT #101).
+            if (initiativeSlots <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(initiativeSlots), initiativeSlots,
+                    "A fight records at least one upcoming turn per beat.");
+            }
             _initiativeSlots = initiativeSlots;
             _summonFactory = summonFactory;
             _stageSlotsPerSide = stageSlotsPerSide;

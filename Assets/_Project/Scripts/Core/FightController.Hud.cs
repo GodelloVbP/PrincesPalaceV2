@@ -2821,7 +2821,12 @@ namespace PrincesPalace
 
         private void RefreshInitiative()
         {
-            if (initiativeIcons == null || _session == null) return;
+            // NO CHIPS, NOTHING TO DRAW -- and nothing to ask for. Every
+            // projection below is sized by initiativeIcons.Length, and
+            // CombatEncounter.UpcomingTurns* reject a zero-length ask, so an
+            // empty serialized array would throw out of every HUD refresh
+            // rather than just showing no tracker (AUDIT #101).
+            if (initiativeIcons == null || initiativeIcons.Length == 0 || _session == null) return;
 
             var live = _session.IsOver
                 ? new List<CombatantState>()
