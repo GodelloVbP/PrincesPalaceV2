@@ -139,6 +139,30 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.Contains("The forest closes in.", TextOf("MessageLabel"));
         }
 
+        // THE LOG STAYS IN ITS BOX. QA 2026-09-26: the label now stops short of
+        // the enemy plates, so long entries wrap -- and four wrapped entries
+        // are more than its 108 units hold. The oldest go first; the newest
+        // line always survives.
+        [UnityTest]
+        public IEnumerator FourLongLogLinesNeverOverflowTheLogBox()
+        {
+            yield return LoadFight();
+
+            const string longLine =
+                "Shawn casts Winter's Rebuke on Elder Treant for 4! - 4 Ice It's not very effective... " +
+                "and the cold hangs on them for two more turns while the canopy shakes overhead.";
+            for (int i = 0; i < 4; i++) _fight.PushLogLineForTest(longLine + " #" + i);
+            yield return null;
+
+            var label = Named("MessageLabel").GetComponent<TMP_Text>();
+            var rect = label.rectTransform.rect;
+            float needed = label.GetPreferredValues(label.text, rect.width, 0f).y;
+
+            Assert.LessOrEqual(needed, rect.height + 0.5f, "the log spills out of its own band");
+            StringAssert.Contains("#3", label.text, "the newest line was trimmed instead of the oldest");
+            StringAssert.DoesNotContain("#0", label.text, "nothing was trimmed, so this did not exercise the fit");
+        }
+
         [UnityTest]
         public IEnumerator ThePlatesReadTheRealEnemies()
         {

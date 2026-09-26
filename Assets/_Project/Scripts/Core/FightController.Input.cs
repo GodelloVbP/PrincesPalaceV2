@@ -1332,8 +1332,30 @@ namespace PrincesPalace
             if (string.IsNullOrEmpty(line)) return;
             _log.Add(line);
             TrimLog();
+            TrimLogToFit();
             barkLabel.SetContent(string.Join("\n", _log));
             ShowBark(true);
+        }
+
+        // FOUR ENTRIES IS NOT FOUR LINES. The label wraps now that it stops
+        // short of the enemy plates (FightScreen.BuildBark), so one long entry
+        // takes two lines and a fourth entry pushed the block past its own
+        // 108-unit box -- down into the initiative strip, since TMP's overflow
+        // is unclamped. Dropping from the FRONT for the reason TrimLog does:
+        // the newest line is the one being read. The last entry always stays,
+        // however long, because an empty log is worse than an overfull one.
+        private void TrimLogToFit()
+        {
+            if (barkLabel == null) return;
+
+            var rect = barkLabel.rectTransform.rect;
+            if (rect.width <= 0f || rect.height <= 0f) return;
+
+            while (_log.Count > 1 &&
+                   barkLabel.GetPreferredValues(string.Join("\n", _log), rect.width, 0f).y > rect.height)
+            {
+                _log.RemoveAt(0);
+            }
         }
 
         // docs/archive/PLAN_BATTLE_SPEED.md G5: the one door onto the visible bark

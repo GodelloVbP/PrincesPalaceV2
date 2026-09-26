@@ -996,6 +996,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // stack instead of overlapping. Change one, change the other.
         private const float BarkHeight = 130f;
 
+        // THE LOG'S OWN BOX, in the bark's frame (x from the screen's centre).
+        // Left clears the bark portrait's column; right stops one plate gap
+        // short of the enemy block (PlateFirstX - PlateW / 2 is its left edge,
+        // and the ENEMIES heading's).
+        private const float LogLabelLeft = -820f;
+        private const float LogLabelHeight = 108f;
+        private const float LogLabelRight = PlateFirstX - PlateW * 0.5f - PlateGap;
+
         // NO BOX. Used to be a plain black plate the full width of the screen
         // -- a placeholder the comment here admitted was never meant to ship
         // -- and it read as a slab dropped over the battlefield. The log now
@@ -1016,8 +1024,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the box instead of spilling past it -- TMP's default overflow is
             // unclamped, so a box too short for its own text was the other half
             // of "pops in one go and overflows."
-            var label = Ui.Label("MessageLabel", UiString.Runtime, new UiVec(1780f, 108f), 20,
-                FightHudPalette.TextPrimary, Place.At(-820f, -8f, new UiVec(0f, 0.5f)));
+            //
+            // ENDS BEFORE THE ENEMY COLUMN, not at the screen's right edge. At
+            // 1780 wide it ran to x 960, straight across the ENEMIES heading and
+            // the plate stack: QA 2026-09-26 caught "...It's not very
+            // effective." printed into the heading at x~1390 and a long line
+            // sliding under the plates. AsDecor below kept the clicks right and
+            // did nothing for the reading. The right edge is now the plate
+            // block's left edge (the heading's too) less one plate gap, derived
+            // from the same constants, so a wider plate moves the log with it.
+            var label = Ui.Label("MessageLabel", UiString.Runtime,
+                new UiVec(LogLabelRight - LogLabelLeft, LogLabelHeight), 20,
+                FightHudPalette.TextPrimary, Place.At(LogLabelLeft, -8f, new UiVec(0f, 0.5f)));
 
             BarkPortrait = portrait;
             BarkLabel = label;
