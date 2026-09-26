@@ -689,6 +689,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.LessOrEqual(bar.Right, tags.Left, "the bar must not run under BRK");
         }
 
+        // QA 2026-09-26: the break meter hung below the plate's frame, in
+        // the gutter between rows, where it read as nobody's -- or as the
+        // next plate's. It is part of this plate, so it lives inside it.
+        [Test]
+        public void TheBreakMeterSitsInsideItsOwnPlate_UnderTheHpBar()
+        {
+            for (int i = 0; i < FightHudSpec.EnemyPlates; i++)
+            {
+                var plate = RectOf($"EnemyPlate{i}");
+                var bar = RectOf($"EnemyPlate{i}Bar");
+                var meter = RectOf($"EnemyPlate{i}BreakTrack");
+
+                Assert.GreaterOrEqual(meter.Bottom, plate.Bottom, $"plate {i}: the meter hangs out of the bottom of its plate");
+                Assert.LessOrEqual(meter.Top, plate.Top, $"plate {i}");
+                Assert.GreaterOrEqual(meter.Left, plate.Left, $"plate {i}");
+                Assert.LessOrEqual(meter.Right, plate.Right, $"plate {i}");
+
+                Assert.AreEqual(4f, bar.Bottom - meter.Top, 0.01f, $"plate {i}: 4px under the HP bar");
+                Assert.AreEqual(bar.Left, meter.Left, 0.01f, $"plate {i}: the same span as the HP bar");
+                Assert.AreEqual(bar.Width, meter.Width, 0.01f, $"plate {i}");
+            }
+        }
+
         [Test]
         public void TheVerbsRunBottomUpFromTheCommandLine()
         {

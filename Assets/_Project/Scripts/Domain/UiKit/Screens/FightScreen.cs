@@ -1365,24 +1365,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
-                // THE BREAK METER, hanging BELOW the plate rather than inside
-                // it. The two rows above now sit centred with 11px of margin
-                // on both edges (see topY/barY), so there IS free space inside
-                // the plate again -- but the meter stays outside it anyway:
-                // the 12px gap PlatePitch leaves before the next row down is
-                // real, unused space, and a 6px bar fits it with margin
-                // either side without reopening the vertical layout. Same
-                // fill mechanism the HP bar already uses (SetFill), same
-                // width and x-position, one row lower. Only an elite or boss
-                // carries a BreakShield at all, so this stays hidden for
-                // everything else.
+                // THE BREAK METER, INSIDE the plate, one row under the HP bar
+                // (QA 2026-09-26). It used to hang in the 12px gutter below
+                // the frame under an AllowOverflow, from when the plate was
+                // 64px tall and packed; at 130 the two rows sit centred with
+                // 39.5px of margin under the bar, so the reason for leaving
+                // the frame was gone and the meter read as belonging to
+                // nothing -- or to the plate below. Same fill mechanism the
+                // HP bar uses (SetFill), same width and x, BreakMeterGap
+                // under it. It sits in the bottom margin rather than joining
+                // the centred block because it is shown only for an elite or
+                // boss (a BreakShield); re-centring on its presence would
+                // move every ordinary plate's rows for a row they never show.
+                const float breakH = 6f;
+                const float BreakMeterGap = 4f;
+                float breakY = barY - 4.5f - BreakMeterGap - breakH * 0.5f;
                 var breakFill = Ui.Solid($"EnemyPlate{i}BreakFill", FightHudPalette.TargetAmber,
                     Place.Stretch(), UiSize.Fill);
                 var breakTrack = Ui.Panel($"EnemyPlate{i}BreakTrack",
-                        Place.At(barCentreX, -PlateH * 0.5f - 6f), UiSize.Fixed(barWidth, 6f), breakFill)
+                        Place.At(barCentreX, breakY), UiSize.Fixed(barWidth, breakH), breakFill)
                     .Coloured(FightHudPalette.Track)
-                    .Inactive()
-                    .AllowOverflow("the break meter hangs in the 12px row gap below the plate, not inside it - see PlatePitch");
+                    .Inactive();
 
                 EnemyPlateIcons.Add(icon);
                 EnemyPlateNames.Add(name);
