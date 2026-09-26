@@ -660,6 +660,8 @@ if (-not $SkipSync) {
 # Anchored on the class segment (".<Class>."), so a preset for "combat" cannot
 # also drag in an unrelated class that merely has "Fight" in a METHOD name.
 # Unity matches -testFilter against the full namespace.class.method.
+# Per-run results names -- AUDIT #110, "Results files" in tools/unity_lock.ps1.
+$TestRunId = New-TestRunId
 $procs = @{}
 foreach ($platform in $platforms) {
     $runner = $RunnerFor[$platform]
@@ -669,12 +671,13 @@ foreach ($platform in $platforms) {
     $onThis = $unityWanted | Where-Object { $classes[$_] -eq $platform }
     $pattern = ".*\.(" + (($onThis | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")\..*"
 
-    $resultsPath = Join-Path $runner.Path "test-results-$platform.xml"
+    $canonicalResults = Join-Path $runner.Path "test-results-$platform.xml"
+    $resultsPath = New-RunResultsPath -CanonicalPath $canonicalResults -RunId $TestRunId
     # Hoisted rather than inlined into the argument list: a Join-Path with its
     # own double quotes, inside a subexpression, inside a double-quoted string
     # is a parse error in PowerShell 5.1.
     $runLogPath = Join-Path $runner.Path "test-run-$platform.log"
-    if (Test-Path $resultsPath) { Remove-Item $resultsPath -Force }
+    if (-not (Clear-StaleResults -Path $canonicalResults)) { exit 1 }
 
     $procs[$platform] = Start-UnityQuiet -FilePath $UnityExe -ArgumentList @(
         "-batchmode", "-nographics", "-silent-crashes",
@@ -696,8 +699,10 @@ foreach ($platform in $platforms) {
     $resultsPath = Join-Path $runner.Path "test-results-$platform.xml"
     $logPath = Join-Path $runner.Path "test-run-$platform.log"
 
-    if (-not (Test-Path $resultsPath)) {
-        Write-Host "No results for $platform. Tail of log:"
+    # Only the file this run's Unity was told to write counts (AUDIT #110).
+    $runResults = New-RunResultsPath -CanonicalPath $resultsPath -RunId $TestRunId
+    if (-not (Complete-RunResults -RunPath $runResults -CanonicalPath $resultsPath)) {
+        Write-Host "No results from THIS run for $platform (its Unity never wrote $runResults). Tail of log:"
         Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
         $allPassed = $false
         continue

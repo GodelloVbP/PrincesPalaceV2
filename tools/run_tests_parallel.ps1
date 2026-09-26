@@ -758,14 +758,23 @@ $script:LastStamp = $Watch.Elapsed
 $staleOutputs = @($MergedPlayResults | Where-Object { $_ })
 $staleOutputs += @($Runners | ForEach-Object { Join-Path $_.Path $_.Results })
 $staleOutputs += @($PlayRunners | ForEach-Object { Join-Path $_.Path "test-profile-PlayMode.csv" })
+#
+# A delete that fails refuses the run (Clear-StaleResults). And deleting is
+# only half of AUDIT #110: Unity is handed a per-run name, never the fixed
+# one, so a same-named file another session writes into a shared copy
+# mid-run cannot pass for this run's either -- see "Results files" in
+# tools/unity_lock.ps1.
 foreach ($stale in $staleOutputs) {
-    if (Test-Path $stale) { Remove-Item $stale -Force }
+    if (-not (Clear-StaleResults -Path $stale)) { exit 1 }
 }
 
+$TestRunId = New-TestRunId
+$runResultsFor = @{}
 $procs = @{}
 $launchedAt = @{}
 foreach ($runner in $TestRunners) {
-    $resultsPath = Join-Path $runner.Path $runner.Results
+    $resultsPath = New-RunResultsPath -CanonicalPath (Join-Path $runner.Path $runner.Results) -RunId $TestRunId
+    $runResultsFor[$runner.Label] = $resultsPath
     $runLogPath = Join-Path $runner.Path "test-run-$($runner.Platform).log"
 
     $unityArgs = @(
@@ -872,8 +881,11 @@ foreach ($runner in $TestRunners) {
     $mem = ""
     if ($peakWs.ContainsKey($runner.Label)) { $mem = "  peak {0:N0} MB" -f ($peakWs[$runner.Label] / 1MB) }
 
-    if (-not (Test-Path $resultsPath)) {
-        Write-Host "No results for $($runner.Label) ($resultsPath). Tail of $logPath :"
+    # ONLY THE FILE THIS RUN'S UNITY WAS TOLD TO WRITE counts; it is moved onto
+    # the fixed name here, so everything below reads the fixed name knowing
+    # it is this run's (AUDIT #110).
+    if (-not (Complete-RunResults -RunPath $runResultsFor[$runner.Label] -CanonicalPath $resultsPath)) {
+        Write-Host "No results from THIS run for $($runner.Label): its Unity never wrote $($runResultsFor[$runner.Label]). Anything at $resultsPath is not this run's and is not read. Tail of $logPath :"
         Get-Content $logPath -Tail 40 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ }
         $allPassed = $false
         continue

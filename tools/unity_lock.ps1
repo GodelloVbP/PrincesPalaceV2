@@ -1,6 +1,7 @@
 # tools/unity_lock.ps1 -- is a Unity Editor actually holding this project?
 #
-# Dot-sourced by build_content.ps1 and preview.ps1. Never invoked directly.
+# Dot-sourced by build_content.ps1, preview.ps1, test.ps1 and
+# run_tests_parallel.ps1. Never invoked directly.
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here as everywhere
 # else in tools/ -- PS 5.1 reads a BOM-less file as Windows-1252 and an em-dash
@@ -156,6 +157,76 @@ function Test-RunnerFree {
 
     if ($state.Ambiguous) {
         Write-Host "$Label : a Unity.exe is running whose project could not be read (AUDIT #94). Proceeding; Unity's own Library lock is the backstop."
+    }
+    return $true
+}
+
+# --- Results files: only THIS run's Unity may produce this run's verdict ----
+#
+# AUDIT #110. A gate ignores Unity's exit code (run_tests_parallel.ps1's
+# header says why), so the results XML is the only signal -- and a fixed
+# name in a SHARED runner copy cannot say who wrote it. The incident: Unity
+# refused to start because another session had taken -TestRunner2 between
+# the lock check and the launch, the script read the test-results-PlayMode.xml
+# an earlier, narrower run had left there, printed 39/39 and ended "All tests
+# passed" having run 4% of the suite. Deleting the file before launch closes
+# the stale-file half; it does not close the other half, where the session
+# that took the copy writes the SAME fixed name while this run is still
+# waiting on its other runners, and that file is read as this run's.
+#
+# So Unity is never handed the fixed name. Each run hands it a name no other
+# process was ever given (New-RunResultsPath: the fixed name plus a run id of
+# timestamp and this script's PID), and only a file at THAT path counts
+# (Complete-RunResults). Once it is there it is moved onto the fixed name, so
+# every reader that knows the historical file names -- the shard merge,
+# coverage checks, docs/TESTING.md, a human -- still finds it where it always
+# was, now guaranteed to be this run's.
+
+function New-TestRunId {
+    return ("{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), $PID)
+}
+
+function New-RunResultsPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$CanonicalPath,
+        [Parameter(Mandatory = $true)][string]$RunId
+    )
+    $dir = Split-Path $CanonicalPath -Parent
+    $leaf = [System.IO.Path]::GetFileNameWithoutExtension($CanonicalPath)
+    return (Join-Path $dir "$leaf.run-$RunId.xml")
+}
+
+# Deletes an earlier run's output at a fixed name. A delete that FAILS is a
+# refusal, not a warning: a file that survived here is exactly the one a
+# later reader would take for this run's. Returns $true when the path is
+# clear.
+function Clear-StaleResults {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $true }
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+    } catch {
+        Write-Host "Cannot delete the earlier run's $Path ($($_.Exception.Message)). Refusing: it would be read as this run's results."
+        return $false
+    }
+    return (-not (Test-Path -LiteralPath $Path))
+}
+
+# $true when this run's Unity wrote $RunPath, which is then moved onto
+# $CanonicalPath. $false when it did not (Unity never started, aborted, or
+# crashed before writing) -- whatever sits at $CanonicalPath is then NOT this
+# run's and must not be read as a verdict.
+function Complete-RunResults {
+    param(
+        [Parameter(Mandatory = $true)][string]$RunPath,
+        [Parameter(Mandatory = $true)][string]$CanonicalPath
+    )
+    if (-not (Test-Path -LiteralPath $RunPath)) { return $false }
+    try {
+        Move-Item -LiteralPath $RunPath -Destination $CanonicalPath -Force -ErrorAction Stop
+    } catch {
+        Write-Host "This run's results are at $RunPath but could not be moved onto $CanonicalPath ($($_.Exception.Message))."
+        return $false
     }
     return $true
 }
