@@ -82,55 +82,18 @@ fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
                   at, which is what taking that node cost (PLAN_SHOP.md
                   SS7.1 point 1). A lost fight pays zero, so the median has
                   to be able to exclude it.
-rooms[]           step, floor, nodeId, roomType, offerItemIds, pickedIndex,
-                  favor, encounterClass, offers[], equippedItemIds,
-                  goldOnArrival, goldSpent, goldOnLeave,
-                  purchasesBySection[], rerollsBySection[], shopOffers[],
-                  shopChoices[]
-                  equippedItemIds is what
-                  the equip pass after this room actually put on; feeds
-                  itemEquipRate.
-                  favor is ItemOfferRoll.CurrentSquadFavor() at the moment
-                  this room's offer was rolled (0 / "" for a room that made
-                  no offer). encounterClass is "Normal" or "Elite", read off
-                  the exact same expression RunOrchestrator.RollOffers uses
-                  (session.IsEliteFight ? Elite : Normal,
-                  Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:472-474)
-                  -- IsBossFight is never consulted there, so a boss room's
-                  offer rolls as "Normal" (or "Elite" if it also happens to
-                  be flagged elite) today; encounterClass records what the
-                  roll actually saw, not what a boss room arguably deserves.
-                  offers[] is one entry per offerItemIds entry, index-aligned:
-                  {itemId, tier, plus, riftTier, modifierCount} -- the axes
-                  RarityTable/LootLadder/ModifierTable actually rolled for
-                  that copy (riftTier is the plain int backing
-                  Domain.Content.RiftTier, 0..3).
-                  goldOnArrival is recorded for EVERY room, not only for
-                  shops, and read BEFORE the room resolves -- so a treasure
-                  room's stash is not already in it. It is what a player
-                  HOLDS when a door opens, which is neither their lifetime
-                  winnings nor a median over fights they won, and it is what
-                  the arrival-gold-by-step table is computed from.
-                  goldSpent / goldOnLeave are 0 for every room that is not a
-                  shop. Kept as two numbers rather than one difference so a
-                  sale, which moves gold the other way, cannot hide inside a
-                  subtraction.
-                  purchasesBySection[] / rerollsBySection[] are indexed by
-                  ShopStock's section constants (gear 0, books 1, relics 2).
-                  shopOffers[] is the shelf as it stood when the visit ENDED:
-                  {kind, contentId, price, sold}, NO OFFER placeholders
-                  excluded. Affordability "on arrival" is this price against
-                  goldOnArrival.
-                  shopChoices[] is every ChooseShop answer IN ORDER, refusals
-                  and the closing leave included:
-                  {kind, section, index, goldDelta, outcome, refusal}.
-                  `kind` is ShopChoiceKind's name, plus two the policy never
-                  says: "Leave" for the answer that ended the visit and
-                  "Capped" for a visit cut off at BotRunDriver's twelve-choice
-                  ceiling. The counters above cannot express ORDER, and order
-                  is the difference between "sold the duplicate, then bought
-                  what beat it" and the reverse; they cannot express a
-                  REFUSAL at all.
+rooms[]           one row per RoomTrace -- the SAME fields, documented once,
+                  in the `RoomTrace` block under `traces.jsonl` below (and
+                  its OfferEntry / ShopOfferTrace / ShopChoiceTrace /
+                  SpellAssignmentTrace sub-blocks). Keys are the camelCase of
+                  those names (GoldOnArrival -> goldOnArrival, and so on
+                  down to spellAssignments[]), with one reshaping:
+                  Equipped (EquipTrace[]) is written as equippedItemIds
+                  (string[], item ids only; feeds itemEquipRate). Do not
+                  list room fields here again -- a second list is how
+                  learnedSpellCountAfterRoom and its siblings went
+                  undocumented on this side (AUDIT #78);
+                  tools/bot_schema_test.py checks the RoomTrace block.
 relicRounds[]     offerIds, pickedIndex   -- -1 for "took nothing"
 bugs[]            invariant, step, nodeId, detail, lastActions, stack
                   (the merger adds seed/archetype/profile on the way out)
@@ -270,7 +233,8 @@ RoomTrace
                         folded into GoldSpent as one difference, so a
                         sale, which moves gold the other way, cannot hide
                         inside a subtraction.
-  PurchasesBySection int[] -- indexed by ShopStock's section constants.
+  PurchasesBySection int[] -- indexed by ShopStock's section constants
+                        (gear 0, books 1, relics 2).
                         Sized by the runner, so a section added later
                         widens this without a shape change here.
   RerollsBySection int[] -- same indexing as PurchasesBySection.
@@ -279,6 +243,8 @@ RoomTrace
                         "Rerolls followed by no purchase in that section"
                         and "arrived with less than the cheapest card" are
                         both read off this plus the counters above.
+                        NO OFFER placeholders are excluded; affordability
+                        "on arrival" is Price against GoldOnArrival.
   ShopChoices   ShopChoiceTrace[] -- every choice the policy made, in
                         order, including the ones that were refused and
                         the leave that ended the visit. The counters above
@@ -317,7 +283,10 @@ ShopOfferTrace
   Sold          bool
 
 ShopChoiceTrace
-  Kind          string -- ShopChoiceKind's name
+  Kind          string -- ShopChoiceKind's name, plus two the policy never
+                        says: "Leave" for the answer that ended the visit
+                        and "Capped" for a visit cut off at BotRunDriver's
+                        twelve-choice ceiling
   Section       int    -- -1 where the kind does not use it
   Index         int    -- -1 where the kind does not use it
   GoldDelta     int    -- signed the way the purse moved, straight off
