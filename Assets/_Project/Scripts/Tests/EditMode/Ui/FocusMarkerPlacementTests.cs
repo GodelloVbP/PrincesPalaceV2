@@ -128,6 +128,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, at.Y, 0.001f, "still on the row's own height, not above it");
         }
 
+        // ---- a control inside a clipping window --------------------------
+
+        [Test]
+        public void ARowInsideItsWindowIsThereToPointAt()
+        {
+            // The fight submenu's shape: a 240x300 window centred at (0, 0),
+            // so y -150..150; a 40-tall row centred at y = 100 is inside it.
+            Assert.IsTrue(FocusMarkerPlacement.IsVisibleWithin(Box(0f, 100f, 240f, 40f), Box(0f, 0f, 240f, 300f)));
+        }
+
+        [Test]
+        public void ARowScrolledAboveItsWindowIsNot()
+        {
+            // Centre at y = 200, past the window's top edge at 150: the list
+            // was wheeled down and this row is drawn nowhere.
+            Assert.IsFalse(FocusMarkerPlacement.IsVisibleWithin(Box(0f, 200f, 240f, 40f), Box(0f, 0f, 240f, 300f)));
+        }
+
+        [Test]
+        public void ARowHalfOutStillCountsWhileItsCentreIsIn()
+        {
+            // Centre exactly on the top edge (150): half the row still shows,
+            // and it is the half the arrow lines up with. Inclusive on purpose.
+            Assert.IsTrue(FocusMarkerPlacement.IsVisibleWithin(Box(0f, 150f, 240f, 40f), Box(0f, 0f, 240f, 300f)));
+            Assert.IsFalse(FocusMarkerPlacement.IsVisibleWithin(Box(0f, 150.5f, 240f, 40f), Box(0f, 0f, 240f, 300f)));
+        }
+
+        [Test]
+        public void AControlBesideTheWindowIsNotInIt()
+        {
+            // Same height, but centred at x = 300, right of the window's
+            // right edge at 120.
+            Assert.IsFalse(FocusMarkerPlacement.IsVisibleWithin(Box(300f, 0f, 40f, 40f), Box(0f, 0f, 240f, 300f)));
+        }
+
         // ---- which way it points ------------------------------------------
 
         [Test]

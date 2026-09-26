@@ -114,6 +114,28 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(built.Session.IsPlayerTurn, "never reached a player turn to drive input against");
         }
 
+        // The same encounter with a twelve-potion satchel, the cheapest list
+        // that overflows the submenu's five-row window.
+        private IEnumerator BindAnEncounterWithALongSatchel()
+        {
+            var hero = ContentDatabase.Characters.FirstOrDefault(c => c != null);
+            var enemyIds = ContentDatabase.Enemies.Where(e => e != null).Take(2).Select(e => e.id).ToList();
+            Assert.IsNotNull(hero, "no characters in content");
+
+            var built = FightEncounterAdapter.Build(
+                new List<string> { hero.id }, enemyIds, new Domain.Rng.SeededRandom(3));
+
+            var satchel = new List<SatchelStack>();
+            for (int i = 0; i < 12; i++) satchel.Add(new SatchelStack($"potion_{i}", $"Potion {i + 1}", 3, restoresMana: false));
+
+            built.Session.Begin();
+            _fight.Bind(built.Session, Domain.Rewards.EncounterClass.Normal, satchel);
+            yield return null;
+
+            for (int i = 0; i < 60 && !built.Session.IsPlayerTurn; i++) yield return null;
+            Assert.IsTrue(built.Session.IsPlayerTurn, "never reached a player turn to drive input against");
+        }
+
         // ---- the rest state (the ATTACK complaint) -----------------------------
 
         [UnityTest]
@@ -215,6 +237,47 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreSame(Node("EnemyHitArea1").transform, Marker.Target,
                 "and a stick press walks it along the rack");
+        }
+
+        // QA 2026-09-26: the ITEM list wheeled two notches down with Potion 1
+        // still focused put the arrow in empty stage space above the list --
+        // pointing at a row the viewport had clipped away. The marker now
+        // hides while its row is scrolled out, and comes back ON THAT ROW'S
+        // successor the moment the pad arrows (which scrolls it into view).
+        [UnityTest]
+        public IEnumerator AFocusedRowWheeledOutOfItsWindow_HidesTheMarker_UntilThePadBringsARowBack()
+        {
+            yield return LoadFight();
+            yield return BindAnEncounterWithALongSatchel();
+
+            // Up twice onto ITEM (verb 2 in this bottom-up column), then open it.
+            yield return Move(1f);
+            yield return Move(1f);
+            Assert.AreEqual(2, _fight.FocusedVerbForTest, "precondition: the stick reached ITEM");
+            yield return PressSubmit();
+            yield return DriveFrame();
+
+            Assert.AreSame(Node("CharacterSkill0").transform, Marker.Target,
+                "precondition: opening the list focuses its first row");
+            Assert.IsTrue(Marker.IsShown, "precondition: the first row is in view and the marker is on it");
+
+            // The wheel, through the component the viewport really carries.
+            var wheel = Node("SubmenuViewport").GetComponent<ListScroll>();
+            Assert.IsNotNull(wheel, "nothing is listening for a wheel over the list");
+            wheel.Scrolled(FightSubmenuLayout.RowPitch * 3f);
+            yield return DriveFrame();
+
+            Assert.AreSame(Node("CharacterSkill0").transform, Marker.Target,
+                "the wheel scrolls the list, it does not move the focus");
+            Assert.IsFalse(Marker.IsShown,
+                "row 0 is scrolled out of the window; an arrow beside it would point at empty stage");
+
+            // Stick down one row: the pad scrolls the row it lands on into view.
+            yield return Move(-1f);
+
+            Assert.AreSame(Node("CharacterSkill1").transform, Marker.Target,
+                "precondition: stick down stepped the focus to the next row");
+            Assert.IsTrue(Marker.IsShown, "the arrowed-onto row is back in the window, and so is the marker");
         }
 
         // A HOVER CAN OUTLIVE THE MONSTER IT LANDED ON. AddEnemyHover wires

@@ -129,6 +129,19 @@ namespace PrincesPalace
 
             var canvasRect = (RectTransform)_canvas.transform;
             var box = BoxIn(canvasRect, _target);
+
+            // SCROLLED OUT OF ITS OWN WINDOW. A row a list has clipped away is
+            // still active, still focused, and still has a rect -- it is just
+            // not drawn. Pointing at it put the arrow in empty stage space
+            // beside no row (QA 2026-09-26, the fight's twelve-potion list
+            // wheeled two notches down with Potion 1 still focused). Every
+            // enabled RectMask2D above the target is a window it can be
+            // scrolled out of, whichever screen it is on.
+            if (!VisibleThroughEveryClip(canvasRect, _target, box))
+            {
+                _image.enabled = false;
+                return;
+            }
             var frame = new UiRect(
                 new UiVec(canvasRect.rect.center.x, canvasRect.rect.center.y),
                 new UiVec(canvasRect.rect.width, canvasRect.rect.height));
@@ -168,6 +181,23 @@ namespace PrincesPalace
             _canvas = canvas;
             _rect.SetParent(canvas.transform, worldPositionStays: false);
             _rect.SetAsLastSibling();
+        }
+
+        private static readonly System.Collections.Generic.List<RectMask2D> Clips =
+            new System.Collections.Generic.List<RectMask2D>();
+
+        private static bool VisibleThroughEveryClip(RectTransform frame, RectTransform target, UiRect box)
+        {
+            target.GetComponentsInParent(false, Clips);
+
+            for (int i = 0; i < Clips.Count; i++)
+            {
+                var clip = Clips[i];
+                if (clip == null || !clip.enabled) continue;
+                if (!FocusMarkerPlacement.IsVisibleWithin(box, BoxIn(frame, clip.rectTransform))) return false;
+            }
+
+            return true;
         }
 
         // The target's own rect, expressed in `frame`'s local space -- corners

@@ -90,6 +90,27 @@ namespace PrincesPalace.Domain.UiKit
             return Clamp(at, canvas);
         }
 
+        // WHETHER A CONTROL INSIDE A CLIPPING WINDOW IS THERE TO POINT AT.
+        //
+        // The control's CENTRE has to lie inside the window, edges inclusive,
+        // because the centre is exactly what the marker lines up with (Place
+        // above: level with a row's centre, on a card's centre line). A row
+        // scrolled half out still shows the part the arrow points at; a row
+        // whose centre is gone would have the arrow pointing at the window's
+        // frame, or at nothing.
+        //
+        // Hidden, not clamped to the window's edge: a marker pinned to the
+        // edge would stand beside a DIFFERENT, visible row while Submit
+        // presses the clipped one. The pad itself never needs this -- arrowing
+        // scrolls the focused row into view (FightController.
+        // ScrollSubmenuRowIntoView) -- so this only answers a wheel or a
+        // scrollbar drag that moved the list out from under the focus.
+        public static bool IsVisibleWithin(UiRect target, UiRect clip)
+        {
+            var c = target.Centre;
+            return c.X >= clip.Left && c.X <= clip.Right && c.Y >= clip.Bottom && c.Y <= clip.Top;
+        }
+
         // Keeps the marker's whole box inside `canvas`. A canvas narrower than
         // the marker itself cannot satisfy both edges; the low edge wins,
         // which is arbitrary and unreachable (the reference canvas is
