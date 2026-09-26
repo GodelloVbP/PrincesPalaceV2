@@ -1,3 +1,8 @@
+# PositionalBinding off: every parameter here is named, so a bare word on the
+# command line is one of -CommandScript's arguments (CommandArgs), never a
+# silent -HeadlessClass. Seen while fixing -CommandScript: "combat" in
+# "-CommandScript tools\test.ps1 combat -List" bound to HeadlessClass.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [ValidateSet("Headless", "Runtime", "Both", "Command")]
     [string]$Mode = "Both",
@@ -12,10 +17,30 @@ param(
     # WINDOWED path -- the one the guard actually has work to do on.
     [string]$RuntimeFilter = "DossierTooltipCaptureTests",
 
-    # Mode Command: an arbitrary child powershell.exe argument line, watched
-    # the same way as the two built-in modes. Lets this script be pointed at
-    # ANY tools/ entry point (run_tests_parallel.ps1, an area slice, ...)
-    # without teaching it a new named mode every time one is needed.
+    # Mode Command: any tools/ entry point (run_tests_parallel.ps1, an area
+    # slice, ...), watched the same way as the two built-in modes, without
+    # teaching this script a new named mode every time one is needed.
+    #
+    # -CommandScript <path> [args...] is the form to use. This script builds
+    # the child's command line itself and quotes every piece, so a path with
+    # a space or an apostrophe in it -- this repo lives under "Prince's
+    # Palace-v2" -- arrives as one argument. Everything this script does not
+    # recognise is passed on to <path> (CommandArgs takes the remaining
+    # arguments), so "-CommandScript tools\test.ps1 combat -List" works from
+    # powershell -File as well as in-process. A name this script ALSO has
+    # (-SkipSync, -Mode ...) is taken here: in-process, put the child's
+    # arguments after "--" or pass -CommandArgs combat,'-SkipSync'.
+    #
+    # -CommandLine '<raw powershell.exe argument line>' is the older form,
+    # kept for callers that already have one; it is passed through untouched,
+    # which is why it broke here. The documented single-quoted shape cannot
+    # hold "Prince's" at all (the apostrophe ends the string), and the
+    # double-quoted shape loses its inner quotes when a PowerShell 5.1 caller
+    # hands it to a native powershell.exe -File, so the child got
+    # "-File C:\...\Prince's" plus a stray "Palace-v2\..." and failed --
+    # which, before COMMAND was reported, still read "FOCUS CHECK: ok".
+    [string]$CommandScript,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$CommandArgs = @(),
     [string]$CommandLine,
     [string]$CommandLabel = "command",
 
@@ -59,7 +84,8 @@ param(
 #   ... -Mode Headless                     (just tools/test.ps1 <HeadlessClass>)
 #   ... -Mode Runtime                      (just tools/screenshot.ps1 -Runtime -RuntimeFilter <RuntimeFilter>)
 #   ... -HeadlessClass Wool -RuntimeFilter RuntimeScreenshotTests
-#   ... -Mode Command -CommandLine '-NoProfile -ExecutionPolicy Bypass -File "..\run_tests_parallel.ps1"' -CommandLabel "full suite"
+#   ... -Mode Command -CommandScript tools\run_tests_parallel.ps1 -CommandLabel "full suite"
+#   ... -Mode Command -CommandScript tools\test.ps1 combat -List
 #
 # TWO RESULTS, REPORTED SEPARATELY. "FOCUS CHECK" is whether the foreground
 # window was left alone; "COMMAND" is whether the watched command itself
@@ -249,6 +275,38 @@ function Get-TreeWindows {
     return ,$found
 }
 
+# One argument, quoted for a Windows command line (the CommandLineToArgvW
+# rules powershell.exe's -File parsing follows): wrapped in double quotes
+# when it is empty or has whitespace or a quote; a quote inside becomes \"
+# and a run of backslashes before a quote (or before the closing one) is
+# doubled. An apostrophe needs nothing -- it is only special to PowerShell's
+# own parser, which a -File argument never goes through.
+function ConvertTo-NativeArgument {
+    param([string]$Value)
+    if ($Value -ne "" -and $Value -notmatch '[\s"]') { return $Value }
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.Append('"')
+    $slashes = 0
+    foreach ($ch in $Value.ToCharArray()) {
+        if ($ch -eq '\') { $slashes++; continue }
+        if ($ch -eq '"') { [void]$sb.Append('\', 2 * $slashes + 1) }
+        elseif ($slashes -gt 0) { [void]$sb.Append('\', $slashes) }
+        $slashes = 0
+        [void]$sb.Append($ch)
+    }
+    if ($slashes -gt 0) { [void]$sb.Append('\', 2 * $slashes) }
+    [void]$sb.Append('"')
+    return $sb.ToString()
+}
+
+# The child powershell.exe argument line that runs $Script with $Arguments.
+function New-ScriptArgumentLine {
+    param([string]$Script, [string[]]$Arguments = @())
+    $parts = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (ConvertTo-NativeArgument $Script))
+    foreach ($a in $Arguments) { $parts += (ConvertTo-NativeArgument $a) }
+    return ($parts -join " ")
+}
+
 # Runs one tools/ command line as a CHILD powershell.exe (so this script's own
 # console is never what gets watched) and polls the foreground window every
 # 150ms for exactly as long as that child process is alive -- covering the
@@ -351,21 +409,32 @@ function Watch-Launch {
 $launches = @()
 
 if ($Mode -eq "Headless" -or $Mode -eq "Both") {
-    $line = "-NoProfile -ExecutionPolicy Bypass -File `"$ProjectRoot\tools\test.ps1`" $HeadlessClass"
-    if ($SkipSync) { $line += " -SkipSync" }
+    $childArgs = @($HeadlessClass)
+    if ($SkipSync) { $childArgs += "-SkipSync" }
+    $line = New-ScriptArgumentLine -Script "$ProjectRoot\tools\test.ps1" -Arguments $childArgs
     $launches += Watch-Launch -Label "headless: tools/test.ps1 $HeadlessClass" -ArgumentLine $line
 }
 
 if ($Mode -eq "Runtime" -or $Mode -eq "Both") {
-    $line = "-NoProfile -ExecutionPolicy Bypass -File `"$ProjectRoot\tools\screenshot.ps1`" -Runtime -RuntimeFilter $RuntimeFilter"
-    if ($SkipSync) { $line += " -SkipSync" }
+    $childArgs = @("-Runtime", "-RuntimeFilter", $RuntimeFilter)
+    if ($SkipSync) { $childArgs += "-SkipSync" }
+    $line = New-ScriptArgumentLine -Script "$ProjectRoot\tools\screenshot.ps1" -Arguments $childArgs
     $launches += Watch-Launch -Label "windowed: tools/screenshot.ps1 -Runtime -RuntimeFilter $RuntimeFilter" -ArgumentLine $line
 }
 
 if ($Mode -eq "Command") {
-    if (-not $CommandLine) {
-        Write-Host "-Mode Command requires -CommandLine."
+    if ([bool]$CommandScript -eq [bool]$CommandLine) {
+        Write-Host "-Mode Command takes exactly one of -CommandScript <path> [args...] (preferred) or -CommandLine '<raw argument line>'."
         exit 2
+    }
+    if ($CommandScript) {
+        # Relative to where the caller stands, as any path argument would be.
+        $resolved = Resolve-Path -LiteralPath $CommandScript -ErrorAction SilentlyContinue
+        if (-not $resolved) {
+            Write-Host "-CommandScript: no such file: $CommandScript"
+            exit 2
+        }
+        $CommandLine = New-ScriptArgumentLine -Script $resolved.ProviderPath -Arguments $CommandArgs
     }
     $launches += Watch-Launch -Label $CommandLabel -ArgumentLine $CommandLine
 }
