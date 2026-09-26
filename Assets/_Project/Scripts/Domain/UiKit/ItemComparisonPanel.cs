@@ -29,10 +29,17 @@ namespace PrincesPalace.Domain.UiKit
     public static class ItemComparisonPanel
     {
         // The dossier tooltip's own plate colour and hairline, carried over
-        // unchanged rather than re-picked: "the reference shape the dossier
-        // tooltip will later be matched to" means match its palette too, not
-        // just its silhouette.
-        public const string PlateHex = "#1D1226F2";
+        // rather than re-picked: "the reference shape the dossier tooltip
+        // will later be matched to" means match its palette too, not just
+        // its silhouette.
+        //
+        // FULLY OPAQUE. It was #1D1226F2 (95%), and the 5% that got through
+        // was enough: over the dossier's pack the bright gear art and the
+        // cell names showed faintly under the tooltip's text (QA 2026-09-26).
+        // This panel is a READING surface that stands over art by design --
+        // the dossier places it over neighbouring pack cells, the shop over
+        // its offer strip -- so nothing may show through it at all.
+        public const string PlateHex = "#1D1226FF";
         public static readonly string RimHex = FightHudPalette.Hairline;
 
         public const float Pad = 20f;
