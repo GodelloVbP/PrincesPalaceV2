@@ -39,11 +39,18 @@ namespace PrincesPalace.Content
         // What is left is the half a resolver structurally cannot do, because
         // it sees ONE file: ids unique ACROSS catalogues (a relic sharing an
         // id with an item resolves a save to the wrong definition), a talent
-        // naming an item or skill that does not exist, a relic naming an
-        // achievement, a skill owned by no character, an enemy weak to and
-        // resistant to the same type, and the ability-score reachability
-        // ceiling. Returns one message per problem found; an empty list means
+        // naming an item, skill or character that does not exist, an enemy
+        // ability naming no skill, a skill owned by no character or enemy, an
+        // achievement naming an enemy that is not a boss, an enemy weak to
+        // and resistant to the same type, and the ability-score reachability
+        // ceiling. (A relic naming an achievement is RelicEntryResolver's
+        // check, made per-file against the ids ContentBuilder hands it.) Returns one message per problem found; an empty list means
         // the catalogues agree with each other.
+        private static void AddIfRefused(List<string> errors, string refusal)
+        {
+            if (refusal != null) errors.Add(refusal);
+        }
+
         public static List<string> ValidateContent()
         {
             EnsureLoaded();
@@ -60,8 +67,12 @@ namespace PrincesPalace.Content
             // spot was exactly this check missing for one type; stating it
             // once over a list of catalogues is what stops the next type
             // added from being forgotten the same way.
-            var seen = new HashSet<string>();
-            foreach (var (kind, ids) in new (string, IEnumerable<string>)[]
+            //
+            // The comparison itself is CatalogueCrossChecks.DuplicateIds, as
+            // is every other cross-catalogue id check below, so each rule is
+            // EditMode-tested against a fixture that breaks it (AUDIT #77);
+            // this method only hands the predicates the loaded catalogue.
+            errors.AddRange(CatalogueCrossChecks.DuplicateIds(new (string, IEnumerable<string>)[]
                      {
                          ("Character", _characters.Select(x => x.id)),
                          ("Talent", _talents.Select(x => x.id)),
@@ -107,15 +118,19 @@ namespace PrincesPalace.Content
                          // so sweeping it in here would flag every shipped
                          // reward track as a "duplicate id" against its own
                          // Character entry.
-                     })
+                     }));
+
+            var skillIds = new HashSet<string>(_skills.Select(x => x.id));
+            var itemIds = new HashSet<string>(_items.Select(x => x.id));
+            var characterIds = new HashSet<string>(_characters.Select(x => x.id));
+            var enemyIds = new HashSet<string>(_enemies.Select(x => x.id));
+            // First definition wins on a repeated id, the same one GetSkill's
+            // FirstOrDefault would return; the repeat itself is already
+            // refused by the duplicate sweep above.
+            var skillOwnerById = new Dictionary<string, string>();
+            foreach (var skill in _skills)
             {
-                foreach (string id in ids)
-                {
-                    if (!seen.Add(id))
-                    {
-                        errors.Add($"Duplicate id '{id}' (on a {kind}) — every id must be unique across all content types.");
-                    }
-                }
+                if (!skillOwnerById.ContainsKey(skill.id)) skillOwnerById[skill.id] = skill.Data.CharacterId;
             }
 
             foreach (var character in _characters)
@@ -180,13 +195,7 @@ namespace PrincesPalace.Content
 
                 foreach (var ability in enemy.Data.Abilities)
                 {
-                    if (string.IsNullOrEmpty(ability.SkillId)) continue;
-
-                    if (GetSkill(ability.SkillId) == null)
-                    {
-                        errors.Add($"Enemy '{enemy.id}' has an ability naming unknown skill id " +
-                                   $"'{ability.SkillId}'.");
-                    }
+                    AddIfRefused(errors, CatalogueCrossChecks.EnemyAbilitySkill(enemy.id, ability.SkillId, skillIds));
                 }
             }
 
@@ -198,29 +207,18 @@ namespace PrincesPalace.Content
                 // exactly the same failure mode as grantsStartingItemId
                 // below, and worth the same named check rather than a null
                 // silently reaching FightController's skill strip.
-                if (!string.IsNullOrEmpty(talent.Data.GrantsSkillId))
-                {
-                    var granted = GetSkill(talent.Data.GrantsSkillId);
-                    if (granted == null)
-                    {
-                        errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.Data.GrantsSkillId}'.");
-                    }
-                    else if (!talent.IsSharedByEveryCharacter && granted.Data.CharacterId != talent.Data.CharacterId)
-                    {
-                        // Caught for real: the Fragile Lamb's ward ability was
-                        // first authored as "ward", which the OWL already
-                        // owned. TalentGrantedSkillsFor's runtime owner check
-                        // refused it — correctly — so the node simply granted
-                        // nothing, the ability never appeared, and the only
-                        // symptom was a button that was not there. An id
-                        // collision between two characters' kits is a typo,
-                        // and it should fail the content build rather than
-                        // quietly delete a talent's whole payload.
-                        errors.Add($"Talent '{talent.id}' belongs to '{talent.Data.CharacterId}' but grants skill " +
-                                   $"'{talent.Data.GrantsSkillId}', which belongs to '{granted.Data.CharacterId}'. " +
-                                   "A character cannot hand out another character's kit.");
-                    }
-                }
+                //
+                // Caught for real: the Fragile Lamb's ward ability was
+                // first authored as "ward", which the OWL already
+                // owned. TalentGrantedSkillsFor's runtime owner check
+                // refused it — correctly — so the node simply granted
+                // nothing, the ability never appeared, and the only
+                // symptom was a button that was not there. An id
+                // collision between two characters' kits is a typo,
+                // and it should fail the content build rather than
+                // quietly delete a talent's whole payload.
+                AddIfRefused(errors, CatalogueCrossChecks.TalentGrantedSkill(talent.id, talent.Data.CharacterId,
+                    talent.IsSharedByEveryCharacter, talent.Data.GrantsSkillId, skillOwnerById));
 
                 // RequirementResolver's greatest-fixpoint guarantee (order
                 // independent, unique largest legal set — see its own
@@ -236,19 +234,14 @@ namespace PrincesPalace.Content
                     }
                 }
 
-                if (!string.IsNullOrEmpty(talent.Data.GrantsStartingItemId) && GetItem(talent.Data.GrantsStartingItemId) == null)
-                {
-                    errors.Add($"Talent '{talent.id}' grants unknown item id '{talent.Data.GrantsStartingItemId}'.");
-                }
+                AddIfRefused(errors, CatalogueCrossChecks.TalentStartingItem(talent.id, talent.Data.GrantsStartingItemId, itemIds));
 
                 // A talent owned by a character who does not exist can never
                 // be taken by anyone, so it is dead content that still shows
                 // up in the global Talents list. Mirrors the same check on
                 // skills and on grantsStartingItemId.
-                if (!talent.IsSharedByEveryCharacter && GetCharacter(talent.Data.CharacterId) == null)
-                {
-                    errors.Add($"Talent '{talent.id}' belongs to unknown character id '{talent.Data.CharacterId}'.");
-                }
+                AddIfRefused(errors, CatalogueCrossChecks.TalentCharacter(talent.id, talent.Data.CharacterId,
+                    talent.IsSharedByEveryCharacter, characterIds));
 
                 // The one invariant the talent PANEL depends on: two nodes
                 // visible to the same character may not occupy one grid cell,
@@ -476,13 +469,13 @@ namespace PrincesPalace.Content
                 // anything unrecognised: the whole value of this check is that
                 // a typo'd owner is invisible until someone wonders where the
                 // button went, and that is exactly as true for a monster.
-                bool ownedByCharacter = GetCharacter(skill.Data.CharacterId) != null;
-                bool ownedByEnemy = GetEnemy(skill.Data.CharacterId) != null;
+                bool ownedByCharacter = skill.Data.CharacterId != null && characterIds.Contains(skill.Data.CharacterId);
+                bool ownedByEnemy = skill.Data.CharacterId != null && enemyIds.Contains(skill.Data.CharacterId);
 
-                if (!ownedByCharacter && !ownedByEnemy)
+                string ownerRefusal = CatalogueCrossChecks.SkillOwner(skill.id, skill.Data.CharacterId, characterIds, enemyIds);
+                if (ownerRefusal != null)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.Data.CharacterId}'. " +
-                               "It must name a character or an enemy.");
+                    errors.Add(ownerRefusal);
                 }
 
                 // THE TWO FACTS HAVE TO AGREE. playerSelectable exists because

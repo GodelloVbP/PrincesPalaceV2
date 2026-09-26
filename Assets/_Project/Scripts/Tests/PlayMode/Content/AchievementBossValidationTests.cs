@@ -6,10 +6,10 @@ namespace PrincesPalace.PlayModeTests
 {
     // ValidateContent()'s achievement -> enemy rule, against the real
     // catalogue. Nothing in this tree called ValidateContent() from a test
-    // before this file existed -- the other six whole-catalogue rules it
-    // holds are exercised the same way (never directly), which is a gap
-    // worth someone's attention on its own but out of scope for this one
-    // rule's coverage.
+    // before this file existed. The six cross-catalogue id rules beside it
+    // now have the same split (AUDIT #77): CatalogueCrossChecksTests
+    // (EditMode) for each rule's refusal, ContentValidationWiringTests for
+    // the whole method over shipped content.
     //
     // Real content only, and that is a constraint rather than a choice:
     // ValidateContent() reads ContentDatabase's Resources-loaded catalogue,
