@@ -1,31 +1,23 @@
 #!/usr/bin/env python3
-"""Assemble typed, glyph-less spell-book covers for the expansion books.
+"""Assemble typed expansion spell books from the shared cover and glyphs.
 
-Owner item: "Fix spell-book art in menus" (2026-09-22). Thirteen bookOnly
-expansion skills (docs/PLAN_SPELL_EXPANSION.md milestone A) have no commissioned
-glyph and no iconPath, so their books draw nothing in the dossier/shop/fight
-submenu. This produces a typed base cover only -- leather tinted to the
-spell's damage type(s), glyph opening left genuinely transparent -- as the
-same graceful-degradation posture ItemIcons.Apply already takes for a gear
-card with no art. It is a placeholder awaiting a commissioned glyph, not a
-final asset.
+Thirteen bookOnly expansion skills from docs/PLAN_SPELL_EXPANSION.md share the
+existing book master and each supplies its own generated glyph. The template
+keeps its transparent opening; assembled icons fill that opening with a dark
+backing and a glyph clipped to the medallion.
 
 output/spell-books/build.cjs is the authored compositor for this kit and is
 NOT modified or re-run here: it needs the `sharp` npm package, which is not
 installed anywhere under this tree (`node -e "require.resolve('sharp')"`
 throws MODULE_NOT_FOUND from both the repo root and output/spell-books). This
-script reproduces build.cjs's own tint() step in Python/Pillow/numpy, reading
-the SAME full-resolution (1254x1254) masks and templates that build.cjs wrote
-and that are already delivered under Shared/ -- the neutral leather shading,
-the leather/region-A/region-B masks -- rather than re-deriving them from the
-raw book-master scan. No glyph compositing happens here (there is no glyph to
-composite): this is exactly build.cjs's tint(colors[, split]) with nothing
-drawn into the slot afterward, which is what build.cjs itself emits for a
-palette swatch (its own line 56, `palette/<type>.png`) before any per-spell
-glyph is ever touched.
+script reproduces build.cjs's tint() and glyph-compositing steps in
+Python/Pillow/numpy, reading the SAME full-resolution masks and templates
+already delivered under Shared/ rather than re-deriving them from the raw
+book-master scan.
 
 Usage: python3 tools/build_spellbook_bases.py
 Reads:  Assets/_Project/Art/Items/SpellBooks/Shared/{Templates,Masks}/*.png
+        Assets/_Project/Art/Items/SpellBooks/<Display Name>/* - Generated Glyph.png
 Writes: Assets/_Project/Art/Items/SpellBooks/<Display Name>/
             <Display Name> - Spell Book.png       (512x512)
             <Display Name> - Spell Book - 48x48.png
@@ -109,6 +101,15 @@ def main() -> None:
     b_alpha = region_b[:, :, 3] > 0
     shade = neutral[:, :, 0] / 255.0  # neutral's R==G==B (grayscale), per build.cjs
 
+    opening = load_rgba(SHARED / "Masks/Spell Book - Glyph Opening Mask.png")[:, :, 3] > 0
+    # The technical opening mask has sparse stray pixels far from its round
+    # center. Measure the dense medallion, otherwise glyphs are scaled twice
+    # too large and almost completely clipped by the opening.
+    rows = np.flatnonzero(opening.sum(axis=1) > opening.sum(axis=1).max() * .2)
+    cols = np.flatnonzero(opening.sum(axis=0) > opening.sum(axis=0).max() * .2)
+    slot_bounds = (int(cols.min()), int(rows.min()), int(cols.max()) + 1, int(rows.max()) + 1)
+    slot_center = ((slot_bounds[0] + slot_bounds[2]) / 2,
+                   (slot_bounds[1] + slot_bounds[3]) / 2)
     written = []
     for display_name, keys in SPELLS:
         colors = [hex_to_rgb(PALETTE[k]) for k in keys]
@@ -148,9 +149,33 @@ def main() -> None:
             for k in range(3):
                 out[:, :, k] = np.where(band, clamp(out[:, :, k] * 0.38), out[:, :, k])
 
-        img = Image.fromarray(out.astype(np.uint8), mode="RGBA")
         folder = OUT_ROOT / display_name
         folder.mkdir(parents=True, exist_ok=True)
+        glyph_path = folder / f"{display_name} - Generated Glyph.png"
+        if not glyph_path.exists():
+            raise FileNotFoundError(f"Missing glyph: {glyph_path}")
+        glyph = Image.open(glyph_path).convert("RGBA")
+        bbox = glyph.getchannel("A").getbbox()
+        if bbox is None:
+            raise ValueError(f"Empty glyph: {glyph_path}")
+        glyph = glyph.crop(bbox)
+        glyph.thumbnail((int((slot_bounds[2] - slot_bounds[0]) * .85),
+                         int((slot_bounds[3] - slot_bounds[1]) * .85)), Image.Resampling.LANCZOS)
+        gx = round(slot_center[0] - glyph.width / 2)
+        gy = round(slot_center[1] - glyph.height / 2)
+
+        # The opening has a dark backing only in assembled icons. The neutral
+        # templates retain their genuine alpha opening for future recoloring.
+        out[opening, :3] = (37, 40, 44)
+        out[opening, 3] = 255
+        glyph_pixels = np.array(glyph, dtype=np.float64)
+        glyph_pixels[:, :, :3] = 255 * (glyph_pixels[:, :, :3] / 255) ** .75
+        target = out[gy:gy + glyph.height, gx:gx + glyph.width]
+        mask = opening[gy:gy + glyph.height, gx:gx + glyph.width]
+        alpha = glyph_pixels[:, :, 3] / 255.0 * mask
+        target[:, :, :3] = np.round(glyph_pixels[:, :, :3] * alpha[:, :, None]
+                                    + target[:, :, :3] * (1 - alpha[:, :, None]))
+        img = Image.fromarray(out.astype(np.uint8), mode="RGBA")
 
         big = img.resize((512, 512), Image.LANCZOS)
         big_path = folder / f"{display_name} - Spell Book.png"
@@ -164,7 +189,7 @@ def main() -> None:
 
     for display_name, keys, big_path, small_path in written:
         print(f"{display_name}: {'+'.join(keys)} -> {big_path.name}, {small_path.name}")
-    print(f"Wrote {len(written)} typed base covers, no glyph.")
+    print(f"Wrote {len(written)} typed spell books with glyphs.")
 
 
 if __name__ == "__main__":

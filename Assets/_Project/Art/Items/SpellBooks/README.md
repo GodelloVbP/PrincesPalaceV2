@@ -1,6 +1,6 @@
 # Spell Books
 
-Each named spell folder contains a 512x512 assembled book, a 48x48 assembled book, and a separate full-resolution transparent glyph. Spell titles match the authored names: Mud Burst, Frost Flare, Cinderfault, Lightning Bolt.
+Each named spell folder contains a 512x512 assembled book, a 48x48 assembled book, and a separate full-resolution transparent glyph. The four original books are Mud Burst, Frost Flare, Cinderfault and Lightning Bolt; thirteen expansion books use the same shared cover kit.
 
 `Shared/Templates` contains matching solid/split neutral books with genuinely transparent center openings. `Shared/Masks` contains leather, both color regions, and opening masks. `Shared/Palette` contains all eleven damage-color variants and palette/slot coordinates. `Previews` contains comparison sheets with opaque backgrounds. `Source` holds generated originals and prompts.
 
@@ -18,31 +18,25 @@ finding: the softness is minification, not import settings). Each folder
 already had a `- 48x48.png` sibling that nothing referenced; `skills.json`'s
 four `iconPath` lines now point at it instead.
 
-## Thirteen expansion books: typed placeholders, no glyph
+## Thirteen expansion books: distinct glyphs
 
 The thirteen `bookOnly` expansion skills from `docs/PLAN_SPELL_EXPANSION.md`
-milestone A had no `iconPath` at all, so their books drew nothing in the
-dossier, shop and fight submenu. None of the thirteen has a commissioned
-glyph. Each now gets a folder of its own (`<Display Name>/<Display Name> -
-Spell Book.png` at 512px, plus the `- 48x48.png` export `skills.json`
-actually points at) built by `tools/build_spellbook_bases.py`, which reads
-the SAME full-resolution masks and templates `output/spell-books/build.cjs`
-delivered here (`Shared/Templates`, `Shared/Masks`) and reproduces its own
-`tint()` step in Python/Pillow/numpy -- leather tinted to the spell's
-damage type(s), glyph opening left genuinely transparent. `build.cjs` itself
-was not run: it requires the npm `sharp` package, which is not installed
-anywhere under this tree. These are placeholders awaiting a commissioned
-glyph, the same graceful-degradation posture a gear card with no art
-already takes (ItemIcons.Apply hides the slot's mark rather than drawing a
-blank square).
+milestone A each have a distinct generated glyph. Each spell folder holds the
+original generated glyph, a 512px assembled book, and the 48px export that
+`skills.json` points at. `tools/build_spellbook_bases.py` reads the shared
+full-resolution templates and masks, tints the leather to the spell's damage
+type, and places the glyph over a dark backing in the center opening. The
+shared templates retain their genuine transparent opening. The reproducible
+build uses Python/Pillow/numpy; `output/spell-books/build.cjs` remains the
+original four-book package.
 
 A dual-type spell (one, so far) uses the jagged-split cover, region A/B per
 `docs/PLAN_SPELL_BOOK_ART.md`. Type was read off the spell's own
 `damageInstances`/`detonationSplit` field in `skills.json` where one exists;
-where none exists, the type below is a placeholder choice (Arcane), not
-something declared anywhere in the spell's data -- flagged in the "declared?"
-column for the owner to override if a different element reads better on the
-finished glyph.
+where none exists, the cover uses Arcane as a visual fallback, not as a
+declared damage type. The glyphs follow each spell's name and effect rather
+than implying a new gameplay element. Compare all thirteen at the actual
+48px size in `output/spell-books/preview-expansion-48.png`.
 
 | Spell | Type(s) | Declared? |
 | --- | --- | --- |
@@ -60,9 +54,7 @@ finished glyph.
 | Thorn Tithe | Arcane | No damage/element field; `appliesStatus: Thorned` reads Nature thematically but isn't a typed field, so left at the fallback rather than invented |
 | Court of Whispers | Arcane | No damage/element field; fallback |
 
-Open owner call: Velvet Shackles, Censer of Embers and Thorn Tithe each have
-an obvious thematic element (Nature/Earth, Fire, Nature respectively) via
-their applied status, but nothing in `skills.json` types them that way, so
-this pass left them on the Arcane fallback rather than authoring an element
-the content file doesn't declare. Retinting any of the eight Arcane
-placeholders is a `tools/build_spellbook_bases.py` re-run away.
+Velvet Shackles, Censer of Embers and Thorn Tithe retain Arcane covers because
+their skill rows do not declare a damage type. Their glyphs show shackles,
+embers and thorns respectively. Changing a cover palette is a one-row update
+in `tools/build_spellbook_bases.py` followed by a rebuild.
