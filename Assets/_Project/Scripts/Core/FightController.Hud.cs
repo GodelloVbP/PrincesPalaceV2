@@ -702,13 +702,19 @@ namespace PrincesPalace
         // "one per repaint".
         private readonly Dictionary<Sprite, Sprite> _enemyIconHeadCrops = new Dictionary<Sprite, Sprite>();
 
-        // THE CROP ITSELF -- the top PcPlateArt.EnemyIconHeadZoneFrac of the
-        // sprite's own height, full width, as a NEW Sprite over the SAME
-        // texture. Sprite.Create needs no Read/Write-enabled texture for
-        // this: it references a sub-rect of the existing texture for
-        // rendering, the same trick a spritesheet slicer uses, so nothing
-        // about the source asset's import settings has to change.
-        private Sprite EnemyIconHeadCrop(Sprite full)
+        // THE CROP ITSELF, as a NEW Sprite over the SAME texture. WHICH
+        // square is Domain's answer (EnemyIconCrop.HeadSquare: the manifest's
+        // authored head box, else the top of the figure's opaque box); this
+        // only supplies the canvas facts and makes the Sprite. Sprite.Create
+        // needs no Read/Write-enabled texture: it references a sub-rect of
+        // the existing texture for rendering, the same trick a spritesheet
+        // slicer uses, so the source asset's import settings stay as they are.
+        //
+        // Canvas space is the sprite's own rect with a bottom-left origin;
+        // texture space is that plus rect.x/rect.y. The opaque box is the
+        // Tight mesh's textureRect, placed on the canvas by
+        // textureRectOffset -- the split StageActorAnimator.SpanOf documents.
+        private Sprite EnemyIconHeadCrop(Sprite full, string folder)
         {
             if (full == null) return null;
 
@@ -718,12 +724,28 @@ namespace PrincesPalace
             }
 
             var rect = full.rect;
-            float headHeight = Mathf.Max(1f, rect.height * PcPlateArt.EnemyIconHeadZoneFrac);
+            var opaque = new CanvasRect(0f, 0f, rect.width, rect.height);
+            try
+            {
+                var trimmed = full.textureRect;
+                var offset = full.textureRectOffset;
+                if (trimmed.width > 0f && trimmed.height > 0f)
+                {
+                    opaque = new CanvasRect(offset.x, offset.y, trimmed.width, trimmed.height);
+                }
+            }
+            catch (UnityException)
+            {
+                // A sprite packed into a tight atlas has no textureRect to
+                // give; the whole canvas is the safe, if loose, answer.
+            }
 
-            // Texture space is Y-up from the BOTTOM of the rect, so the top
-            // of the sprite is the last `headHeight` pixels of it.
-            var cropRect = new Rect(rect.x, rect.yMax - headHeight, rect.width, headHeight);
-            cropped = Sprite.Create(full.texture, cropRect, new Vector2(0.5f, 1f), full.pixelsPerUnit);
+            var manifest = StanceManifestLoader.Manifest;
+            var square = EnemyIconCrop.HeadSquare(rect.width, rect.height, manifest.GroundLineFor(folder),
+                manifest.HeadFor(folder), opaque, PcPlateArt.EnemyIconHeadZoneFrac);
+
+            var cropRect = new Rect(rect.x + square.X, rect.y + square.Y, square.Width, square.Height);
+            cropped = Sprite.Create(full.texture, cropRect, new Vector2(0.5f, 0.5f), full.pixelsPerUnit);
 
             _enemyIconHeadCrops[full] = cropped;
             return cropped;
@@ -878,7 +900,7 @@ namespace PrincesPalace
                 if (Has(enemyPlateIcons, i))
                 {
                     var art = StanceSpriteFor(enemy, FightSession.Stances.Idle);
-                    var headArt = EnemyIconHeadCrop(art);
+                    var headArt = EnemyIconHeadCrop(art, SpriteFolderFor(enemy));
                     enemyPlateIcons[i].gameObject.SetShown(headArt != null);
                     if (headArt != null)
                     {

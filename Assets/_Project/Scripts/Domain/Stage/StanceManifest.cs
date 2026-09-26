@@ -41,6 +41,7 @@ namespace PrincesPalace.Domain.Stage
         private readonly Dictionary<string, float> _breaths;
         private readonly Dictionary<string, HoverSpec> _hovers;
         private readonly Dictionary<string, CastPointSpec> _castPoints;
+        private readonly Dictionary<string, HeadBoxSpec> _heads;
 
         public StanceManifest(RawStanceManifest raw)
         {
@@ -49,6 +50,7 @@ namespace PrincesPalace.Domain.Stage
             _breaths = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             _hovers = new Dictionary<string, HoverSpec>(StringComparer.OrdinalIgnoreCase);
             _castPoints = new Dictionary<string, CastPointSpec>(StringComparer.OrdinalIgnoreCase);
+            _heads = new Dictionary<string, HeadBoxSpec>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var actor in raw?.actors ?? new List<RawStanceActor>())
             {
@@ -69,6 +71,13 @@ namespace PrincesPalace.Domain.Stage
                 if (actor.castPoint != null)
                 {
                     _castPoints[path] = new CastPointSpec(actor.castPoint.dx, actor.castPoint.dy);
+                }
+
+                // A size of zero or less is JsonUtility's "absent" -- a
+                // square with no side frames nothing, so it is not an entry.
+                if (actor.head != null && actor.head.size > 0f)
+                {
+                    _heads[path] = new HeadBoxSpec(actor.head.dx, actor.head.dy, actor.head.size);
                 }
             }
         }
@@ -94,6 +103,18 @@ namespace PrincesPalace.Domain.Stage
         public CastPointSpec? CastPointFor(string spritePath)
         {
             if (string.IsNullOrWhiteSpace(spritePath) || !_castPoints.TryGetValue(Normalise(spritePath), out var spec))
+            {
+                return null;
+            }
+
+            return spec;
+        }
+
+        // WHERE THIS ACTOR'S HEAD IS on its idle still (see RawHeadBox).
+        // Null when unauthored; EnemyIconCrop turns null into its fallback.
+        public HeadBoxSpec? HeadFor(string spritePath)
+        {
+            if (string.IsNullOrWhiteSpace(spritePath) || !_heads.TryGetValue(Normalise(spritePath), out var spec))
             {
                 return null;
             }
@@ -199,6 +220,22 @@ namespace PrincesPalace.Domain.Stage
         {
             Dx = dx;
             Dy = dy;
+        }
+    }
+
+    // ONE AUTHORED SQUARE: the head's centre in CastPointSpec's convention
+    // and the side of the square that frames it. See RawHeadBox.
+    public readonly struct HeadBoxSpec
+    {
+        public readonly float Dx;
+        public readonly float Dy;
+        public readonly float Size;
+
+        public HeadBoxSpec(float dx, float dy, float size)
+        {
+            Dx = dx;
+            Dy = dy;
+            Size = size;
         }
     }
 }

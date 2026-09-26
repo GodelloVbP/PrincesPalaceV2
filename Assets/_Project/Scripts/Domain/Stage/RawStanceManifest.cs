@@ -86,6 +86,28 @@ namespace PrincesPalace.Domain.Stage
         // which pixel the spell should appear to leave from. See CastPoint
         // for the coordinate convention.
         public RawCastPoint castPoint;
+
+        // WHERE THIS ACTOR'S HEAD IS, for the enemy plate's 34px icon
+        // (FightController.Hud.EnemyIconHeadCrop). Absent means the plate
+        // falls back to EnemyIconCrop's rule -- the top of the opaque figure
+        // -- which frames a standing biped and misses a quadruped whose head
+        // is out front at shoulder height (the beetle).
+        //
+        // A JUDGEMENT, like castPoint: which pixels "are the face" is a
+        // choice about the drawing, not a measurement. Same coordinate
+        // convention as RawCastPoint (dx from the canvas centre, dy above the
+        // ground line), measured on the actor's idle still.
+        public RawHeadBox head;
+    }
+
+    // THE HEAD'S CENTRE in RawCastPoint's convention, plus the side of the
+    // square that frames it, in canvas pixels of the idle still.
+    [Serializable]
+    public class RawHeadBox
+    {
+        public float dx;
+        public float dy;
+        public float size;
     }
 
     [Serializable]

@@ -79,16 +79,34 @@
   "actors": [
     {
       "spritePath": "Enemies/golem",
-      "groundLine": 69
+      "groundLine": 69,
+      "head": {
+        "dx": 37.5,
+        "dy": 261,
+        "size": 150
+      },
+      "_headNote": "The face, by eye, on Enemies/golem/idle.png: a 150px square centred at canvas pixel (300, 130) -- 525x461 canvas, groundLine 69, so dx = 300 - 525/2 = 37.5 and dy = (461 - 1 - 130) - 69 = 261 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Enemies/rat",
       "groundLine": 8,
-      "_groundLineNote": "Dropped from 12 to 8 when the whole actor was re-sliced onto one shared canvas; 8 is what that canvas measures, re-confirmed 2026-08-30 with every pose agreeing within 1px. Unchanged by the move to stills -- idle.png and attack.png are two of those same frames, on that same canvas."
+      "_groundLineNote": "Dropped from 12 to 8 when the whole actor was re-sliced onto one shared canvas; 8 is what that canvas measures, re-confirmed 2026-08-30 with every pose agreeing within 1px. Unchanged by the move to stills -- idle.png and attack.png are two of those same frames, on that same canvas.",
+      "head": {
+        "dx": 92.0,
+        "dy": 202,
+        "size": 130
+      },
+      "_headNote": "The face, by eye, on Enemies/rat/idle.png: a 130px square centred at canvas pixel (400, 95) -- 616x306 canvas, groundLine 8, so dx = 400 - 616/2 = 92 and dy = (306 - 1 - 95) - 8 = 202 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Enemies/bog_witch",
-      "groundLine": 10.5
+      "groundLine": 10.5,
+      "head": {
+        "dx": -3.5,
+        "dy": 237.5,
+        "size": 140
+      },
+      "_headNote": "The face, by eye, on Enemies/bog_witch/idle.png: a 140px square centred at canvas pixel (240, 80) -- 487x329 canvas, groundLine 10.5, so dx = 240 - 487/2 = -3.5 and dy = (329 - 1 - 80) - 10.5 = 237.5 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Characters/owl",
@@ -119,17 +137,35 @@
     {
       "spritePath": "Enemies/forest_warden",
       "groundLine": 8,
-      "_groundLineNote": "Re-measured 2026-09-04. Was 14, which was never a foot position at all -- it was the uniform pad around six independently cropped frames per stance, and the entry admitted to a possible vertical pop between stances because of it. The six delivered stills were recomposited onto ONE 741x499 canvas by the same ground-band anchor slice_actor_sheet.py uses, so the pop is gone and this is a measured ground line like every other entry here."
+      "_groundLineNote": "Re-measured 2026-09-04. Was 14, which was never a foot position at all -- it was the uniform pad around six independently cropped frames per stance, and the entry admitted to a possible vertical pop between stances because of it. The six delivered stills were recomposited onto ONE 741x499 canvas by the same ground-band anchor slice_actor_sheet.py uses, so the pop is gone and this is a measured ground line like every other entry here.",
+      "head": {
+        "dx": 129.5,
+        "dy": 325,
+        "size": 170
+      },
+      "_headNote": "The face, by eye, on Enemies/forest_warden/idle.png: a 170px square centred at canvas pixel (500, 165) -- 741x499 canvas, groundLine 8, so dx = 500 - 741/2 = 129.5 and dy = (499 - 1 - 165) - 8 = 325 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Enemies/beetle",
-      "groundLine": 8
+      "groundLine": 8,
+      "head": {
+        "dx": 245.0,
+        "dy": 154,
+        "size": 150
+      },
+      "_headNote": "The face, by eye, on Enemies/beetle/idle.png: a 150px square centred at canvas pixel (660, 250) -- 830x413 canvas, groundLine 8, so dx = 660 - 830/2 = 245 and dy = (413 - 1 - 250) - 8 = 154 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Enemies/treant",
       "groundLine": 8,
       "groundLineSource": "slicer",
-      "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 646x478 canvas; the slicer measured this ground line and every pose agrees within 0px. Handed to the slicer 2026-09-06, once Art/Enemies/treant/recipe.json was shown to replay the committed stills byte for byte -- a measurement a tool can reproduce is a measurement that tool should own."
+      "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 646x478 canvas; the slicer measured this ground line and every pose agrees within 0px. Handed to the slicer 2026-09-06, once Art/Enemies/treant/recipe.json was shown to replay the committed stills byte for byte -- a measurement a tool can reproduce is a measurement that tool should own.",
+      "head": {
+        "dx": -58.0,
+        "dy": 279,
+        "size": 180
+      },
+      "_headNote": "The face, by eye, on Enemies/treant/idle.png: a 180px square centred at canvas pixel (265, 190) -- 646x478 canvas, groundLine 8, so dx = 265 - 646/2 = -58 and dy = (478 - 1 - 190) - 8 = 279 (castPoint's own convention). Framed for the enemy plate's 34px icon (EnemyIconCrop); without it the plate crops the top of the figure, which is the shell, not the head, on anything that is not upright."
     },
     {
       "spritePath": "Characters/bear",

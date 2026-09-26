@@ -122,6 +122,12 @@ namespace PrincesPalace.Domain.UiKit
         // takes the WORST case across three PCs rather than one per
         // character: a badge that changed crop with its occupant would be a
         // second rule for the player to learn per monster.
+        //
+        // THE FALLBACK SINCE 2026-09-26, and measured on the FIGURE, not the
+        // canvas: the fraction of the idle still's OPAQUE height a square
+        // icon crop takes from the top of the figure (Domain.Stage.
+        // EnemyIconCrop). An actor whose manifest entry authors a `head` box
+        // uses that instead -- the beetle's head is out front, not on top.
         public const float EnemyIconHeadZoneFrac = 0.35f;
     }
 }
