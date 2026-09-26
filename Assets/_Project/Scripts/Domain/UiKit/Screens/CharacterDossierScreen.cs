@@ -1418,14 +1418,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         UiSize.Fixed(DossierLayout.AttributesContentWidth, DossierLayout.AttributesRowHeight - 2f))
                     .NoChrome();
 
+                // ACTIVE in the tree. They were built .Inactive() and nothing
+                // ever switched them on -- PaintAttributesPanel only sets
+                // their text -- so all six rows drew blank (QA 2026-09-26
+                // #203.1). The modal itself is what starts hidden; its
+                // labels have no state in which they should be off.
                 var name = Ui.Label($"DossierAttrRowName{i}", UiString.Runtime,
                         new UiVec(textWidth, 20f), 16, Text, Place.At(textCx, nameY))
-                    .Inactive().AsDecor()
+                    .AsDecor()
                     .TextAligned(UiTextAlign.TopLeft);
 
                 var effect = Ui.Label($"DossierAttrRowEffect{i}", UiString.Runtime,
                         new UiVec(textWidth, 40f), 13, TextDim, Place.At(textCx, effectY))
-                    .Inactive().AsDecor()
+                    .AsDecor()
                     .TextAligned(UiTextAlign.TopLeft);
 
                 // The two steppers, children of the row like the compact

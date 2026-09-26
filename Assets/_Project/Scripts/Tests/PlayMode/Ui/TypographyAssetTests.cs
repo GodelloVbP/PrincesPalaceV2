@@ -65,6 +65,26 @@ namespace PrincesPalace.PlayModeTests
                 $"{assetName} should be static (committed once), not dynamic -- see AUDIT.md #47 for why that matters here.");
         }
 
+        // The one DYNAMIC project font must not clear itself when the Editor
+        // quits: TMP's quitting hook wipes the glyph table and shrinks the
+        // atlas to 1x1 for any dynamic font with this flag set, every
+        // batchmode run quits, and the sync-back then carried a 2000-line
+        // deletion into the main tree (TmpBootstrap.KeepDynamicDataOnQuit).
+        [Test]
+        public void DynamicUiFont_DoesNotClearItsDataOnQuit()
+        {
+#if !UNITY_EDITOR
+            Assert.Ignore("AssetDatabase is editor-only.");
+#else
+            var font = LoadFont("ChakraPetch-Regular SDF");
+            Assert.IsNotNull(font, "ChakraPetch-Regular SDF is the UI font SceneBuilder wires everywhere");
+            var flag = new UnityEditor.SerializedObject(font).FindProperty("m_ClearDynamicDataOnBuild");
+            Assert.IsNotNull(flag, "TMP renamed m_ClearDynamicDataOnBuild; re-find the flag");
+            Assert.IsFalse(flag.boolValue,
+                "ChakraPetch-Regular SDF has Clear Dynamic Data On Build set: every batchmode quit will wipe it");
+#endif
+        }
+
         [TestCaseSource(nameof(FontAssetNames))]
         public void FontAsset_HasAsciiRange(string assetName)
         {

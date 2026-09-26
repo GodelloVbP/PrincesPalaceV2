@@ -94,7 +94,11 @@ public static partial class TmpBootstrap
     {
         string assetPath = $"{FontOutputDir}/{Path.GetFileNameWithoutExtension(ttfFileName)} SDF.asset";
         var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            KeepDynamicDataOnQuit(existing);
+            return existing;
+        }
 
         string ttfPath = $"{SourceFontDir}/{ttfFileName}";
         var source = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
@@ -114,6 +118,7 @@ public static partial class TmpBootstrap
 
         font.name = Path.GetFileNameWithoutExtension(ttfFileName) + " SDF";
         AssetDatabase.CreateAsset(font, assetPath);
+        KeepDynamicDataOnQuit(font);
 
         // The atlas texture and material are sub-assets; without this they are
         // silently dropped and the font renders as blank boxes.
@@ -129,5 +134,28 @@ public static partial class TmpBootstrap
         AssetDatabase.SaveAssets();
         Debug.Log($"[TmpBootstrap] Generated {assetPath}");
         return font;
+    }
+
+    // TMP clears a dynamic font asset's glyph table and shrinks its atlas to
+    // 1x1 when the Editor QUITS, not only on a player build, for every font
+    // with "Clear Dynamic Data On Build" set (TMP_EditorResourceManager's
+    // EditorApplication.quitting hook). Every batchmode run -- a test run, a
+    // capture, a scene build -- quits, so every run wiped ChakraPetch-Regular
+    // SDF.asset in the TestRunner copy and the sync-back carried a
+    // 2000-line deletion into the main tree (2026-09-26: the dossier
+    // attributes rows were blank and the dirty font was the first suspect;
+    // it was not the cause, but it hid the real one for a QA pass). The
+    // atlas repopulates at runtime either way, so clearing buys nothing
+    // here. The flag is internal to TMP, hence the SerializedObject.
+    public static void KeepDynamicDataOnQuit(TMP_FontAsset font)
+    {
+        if (font == null) return;
+        var so = new SerializedObject(font);
+        var prop = so.FindProperty("m_ClearDynamicDataOnBuild");
+        if (prop == null || !prop.boolValue) return;
+        prop.boolValue = false;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(font);
+        AssetDatabase.SaveAssetIfDirty(font);
     }
 }
