@@ -100,6 +100,7 @@ $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $TestProject = Join-Path $ProjectParent "$ProjectLeaf-TestRunner"
 . (Join-Path $PSScriptRoot "unity_path.ps1")
+. (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
 # Process-tree focus guard, for this script's WHOLE run -- see
@@ -141,6 +142,14 @@ if ($Panel) {
 
 if (-not $OutDir) { $OutDir = Join-Path $SourceProject "tools\screenshots" }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+
+# Claimed before the sync and held to the end: the capture copy is the
+# EditMode runner the commit gate and test.ps1 also use, and this script
+# mirrors into it, clears its capture folders and launches Unity there. It
+# used to do all of that without looking. Waits, bounded; see "Runner
+# claims" in tools/unity_lock.ps1.
+$RunnerClaims = Enter-RunnerClaim -RunnerPaths @($TestProject) -Tool "screenshot.ps1"
+if ($null -eq $RunnerClaims) { exit 1 }
 
 if (-not $SkipSync) {
     Write-Host "Syncing into the isolated capture copy..."
@@ -367,5 +376,6 @@ if ($missing.Count -gt 0) {
 $produced | ForEach-Object { Write-Host "  $($_.FullName)" }
 
 } finally {
+    Exit-RunnerClaim -Claims $RunnerClaims
     Stop-FocusGuard
 }

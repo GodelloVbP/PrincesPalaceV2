@@ -13,10 +13,11 @@ Update rule: see §11.
 2. `git status --short`.
 3. `git config core.hooksPath` MUST print `tools/githooks`
    (`git config core.hooksPath tools/githooks` if not).
-4. Check `Temp\UnityLockfile` in `C:\Games\Prince's Palace-v2-TestRunner`,
-   `-v2-TestRunner2`, `-v2-TestRunner3` and `-v2-TestRunner4` before tests —
-   locked means another session is mid-run against the same copies (the gate
-   uses all four; `Test-RunnerFree` refuses on a held one).
+4. The runner copies (`C:\Games\Prince's Palace-v2-TestRunner`, `-2`, `-3`,
+   `-4`) are shared with any other live session. Every tool that uses one
+   claims it first and waits (bounded) while another session holds it —
+   `waiting for ... held by <tool>` in the output is that, not a hang. See
+   `docs/TESTING.md` "Runner copies are claimed".
 
 `docs/CODE_MAP.md` is searched, never read whole.
 

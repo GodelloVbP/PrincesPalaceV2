@@ -640,9 +640,11 @@ which):
   copies and no sync-back to get wrong. Refuses while the Editor holds the
   project and says which route to use instead; a lockfile with no Unity
   behind it is recognised as debris and cleared
-- `unity_lock.ps1` — dot-sourced by both of the above, never run directly.
-  "Is a Unity Editor actually holding this project" answered from the process
-  table rather than from a zero-byte file that outlives a crash
+- `unity_lock.ps1` — dot-sourced, never run directly. "Is a Unity Editor
+  actually holding this project" answered from the process table rather than
+  from a zero-byte file that outlives a crash; `Enter-RunnerClaim` /
+  `Exit-RunnerClaim`, the one way every tool takes a runner copy; per-run
+  results names (AUDIT #110)
 - `content_schema.ps1` — regenerates `docs/CONTENT_SCHEMA.md` from the
   `Raw*Entry` types themselves, so the per-field reference cannot drift from
   the fields. Run it whenever a content field is added or its `[ContentDoc]`

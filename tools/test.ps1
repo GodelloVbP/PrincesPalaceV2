@@ -94,9 +94,8 @@ $ProjectLeaf = Split-Path $SourceProject -Leaf
 $ProjectParent = Split-Path $SourceProject -Parent
 $RunnerProduct = $ProjectLeaf -replace '[^A-Za-z0-9]',''
 . (Join-Path $PSScriptRoot "unity_path.ps1")
-# Test-RunnerFree: is a runner copy free to launch into? See its own header --
-# it refuses rather than waits, and it branches on a Unity that CERTAINLY has
-# this path open rather than on any Unity at all.
+# Enter-RunnerClaim: claims a runner copy for this whole run, waiting (bounded)
+# while another session holds it. See "Runner claims" in its own file.
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
@@ -625,14 +624,13 @@ if ($dotnetWanted) {
     } -ArgumentList $solutionDir, $dotnetFilter, $dotnetLog
 }
 
-# --- is the runner free? ----------------------------------------------------
-# BEFORE the sync, not just before the launch: mirroring main into a copy some
-# other session's Unity has open is its own way to corrupt a run. See
-# Test-RunnerFree in tools/unity_lock.ps1 for why it refuses rather than waits
-# and why it branches on .Certain.
-foreach ($platform in $platforms) {
-    if (-not (Test-RunnerFree -RunnerPath $RunnerFor[$platform].Path -Label "the $platform runner")) { exit 1 }
-}
+# --- claim the runners -----------------------------------------------------
+# BEFORE the sync, not just before the launch, and held until this script
+# exits: mirroring main into a copy another session is using is its own way
+# to corrupt a run. Waits, bounded; see "Runner claims" in
+# tools/unity_lock.ps1.
+$RunnerClaims = Enter-RunnerClaim -RunnerPaths @($platforms | ForEach-Object { $RunnerFor[$_].Path }) -Tool "test.ps1"
+if ($null -eq $RunnerClaims) { exit 1 }
 
 # --- sync ------------------------------------------------------------------
 # Only the copies actually about to run. Syncing the other one is ~0.15s, but
@@ -771,5 +769,6 @@ Write-Host "`nSome tests failed."
 exit 1
 
 } finally {
+    Exit-RunnerClaim -Claims $RunnerClaims
     Stop-FocusGuard
 }

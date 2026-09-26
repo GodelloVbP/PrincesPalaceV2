@@ -1,7 +1,9 @@
 # tools/unity_lock.ps1 -- is a Unity Editor actually holding this project?
 #
-# Dot-sourced by build_content.ps1, preview.ps1, test.ps1 and
-# run_tests_parallel.ps1. Never invoked directly.
+# Dot-sourced by build_content.ps1, preview.ps1, test.ps1,
+# run_tests_parallel.ps1, graphics_tests.ps1, screenshot.ps1 and bot.ps1.
+# Never invoked directly. Every tool that mirrors into or launches Unity in a
+# runner copy takes it through Enter-RunnerClaim ("Runner claims", below).
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here as everywhere
 # else in tools/ -- PS 5.1 reads a BOM-less file as Windows-1252 and an em-dash
@@ -99,66 +101,226 @@ function Clear-StaleUnityLock {
     return $true
 }
 
-# Is a TestRunner copy free to be launched into? Returns $true when it is.
+# --- Runner claims: one session per runner copy, for the WHOLE of its use ----
 #
-# WHY THE TEST HARNESS NEEDED THIS AT ALL. Neither tools/test.ps1 nor
-# tools/run_tests_parallel.ps1 looked at a lock before launching Unity into a
-# runner -- WORKFLOW.md section 1 told the HUMAN to check, and nothing in the
-# tools did. AUDIT #110 is what that costs: two sessions share one pair of
-# runner copies, the second one's Unity dies on "another Unity instance is
-# running with this project open", and the run reports off whatever the
-# previous run left on disk. #110's own fix (delete the results file before
-# launching, refuse when it is absent afterwards) made that loud instead of
-# silent, and this narrows the window that produces it in the first place.
+# WHY THE HARNESS LOCKS AT ALL. Two sessions share the runner copies
+# (WORKFLOW.md section 4). AUDIT #110 is what an unlocked launch costs: the
+# second session's Unity dies on "another Unity instance is running with this
+# project open" and the run reports off whatever the previous run left on
+# disk. The first fix, Test-RunnerFree (this file, 2026-09-11 to 2026-09-26),
+# read the process table once before the sync and refused on a held copy.
+# That only sees a holder while its Unity.exe is running, and a run's use of a
+# copy is longer than that: it mirrors main in (robocopy /MIR), clears output
+# folders, launches Unity, and copies results and frames back out after Unity
+# has exited. Before the sync and after the exit nothing names the copy, so a
+# second session checking then saw "free" and mirrored over the first one's
+# sync or cleared its frames. And the capture tools did not check at all:
+# graphics_tests.ps1 (which preview.ps1 goes through) deleted whatever
+# Temp\UnityLockfile it found on the belief that the copy was "ours alone" --
+# on 2026-09-26 that was another session's live lock, mid-run -- and
+# screenshot.ps1 and bot.ps1 mirrored in with, at best, a Test-Path.
 #
 # MEASURED, not assumed, during the 2026-09-11 runner audit:
-#   - a lockfile that merely EXISTS does not stop Unity. A hand-made empty
-#     Temp\UnityLockfile was placed in the runner and a slice ran green
-#     straight through it. So Test-Path alone is not the question, which is
-#     the same conclusion this file's header reaches for the Editor.
-#   - a lockfile HELD open exclusively does stop Unity, in 2s, with the
-#     "Aborting batchmode" fatal error above.
+#   - a Unity lockfile that merely EXISTS does not stop Unity. A hand-made
+#     empty Temp\UnityLockfile was placed in a runner and a slice ran green
+#     straight through it. So Test-Path is not the question.
+#   - a lockfile HELD open exclusively does stop Unity, in 2s, with "Aborting
+#     batchmode".
 #
-# REFUSES, DOES NOT WAIT. A wait needs a protocol -- how long, what if the
-# holder never lets go, what if the file is debris -- and a wait on a stale
-# lock hangs a run forever, which is the failure mode this file's header
-# already argues against for the Editor. Refusing costs one re-run and reads
-# as an instruction.
+# THE CLAIM is a file at <runner>\.pp-runner-claim held OPEN by the claiming
+# process with write sharing denied -- the same "held open exclusively"
+# property that makes Unity's own lockfile work (MEASURED, above). Two
+# consequences carry the design:
+#   - it cannot go stale. Windows closes the handle when the process exits,
+#     however it exits (crash, kill, reboot), so there is no debris to judge
+#     and no staleness rule to get wrong. The file's CONTENTS (pid, tool,
+#     since) only let a waiter say who it is waiting for; an unheld file with
+#     old contents is simply free.
+#   - nothing ever deletes it. A contender that cannot open it waits.
+#
+# WAITS, BOUNDED, rather than refusing. Test-RunnerFree refused because a
+# wait on a stale lock hangs forever -- which a handle-held claim cannot be. The bound is PP_RUNNER_WAIT_SECONDS (default
+# 1200: a full gate run with a cold import fits in it; a hung holder does not
+# keep a waiter forever); 0 means refuse at once. Unity's own lock is still
+# checked INSIDE the claim: a Unity.exe that certainly has the copy open is
+# waited on too (an orphan whose script was killed, or one launched by hand),
+# and a lockfile nothing holds is cleared by Clear-StaleUnityLock -- the one
+# staleness rule, process table first, never the file's mere presence.
 #
 # BRANCHES ON .Certain, NOT .Held. .Held folds in the AMBIGUOUS case: a
-# Unity.exe whose command line could not be read, which is usually a Hub
-# window and names no project at all (AUDIT #94). Refusing a runner because
-# some unrelated Unity exists would make this harness unusable while the
-# owner's Editor is open, which is most of the time. Ambiguity is reported
-# and then proceeded through: Unity's own Library lock is still the backstop,
-# and #110's fix means a collision fails loudly rather than green.
-function Test-RunnerFree {
+# Unity.exe whose command line could not be read, usually a Hub window naming
+# no project at all (AUDIT #94). Waiting on a runner because some unrelated
+# Unity exists would make the harness unusable while the owner's Editor is
+# open, which is most of the time. Ambiguity is reported and proceeded
+# through; Unity's own Library lock is the backstop, and #110's per-run
+# results names make a collision fail loudly rather than green.
+#
+# NESTED TOOLS. preview.ps1 claims the runner, then runs graphics_tests.ps1
+# as a CHILD process, and static_pilot_qa.ps1 runs it in-process. Either
+# would otherwise wait on its own caller until the bound ran out. So a claim
+# whose recorded pid is this process or one of its ANCESTORS counts as
+# already held (Owned = $false, releasing it is a no-op). The recorded pid is
+# trustworthy because the file is only unreadable-for-write while its writer
+# is alive to hold it. A sibling or unrelated session is never an ancestor.
+#
+# ORDER. A caller that needs several copies passes them all in one call; they
+# are claimed in sorted path order and, on a timeout, every one already taken
+# is let go -- two sessions each holding one runner and waiting on the
+# other's is the deadlock that avoids.
+
+$RunnerClaimFileName = ".pp-runner-claim"
+
+function Get-RunnerWaitSeconds {
+    $raw = $env:PP_RUNNER_WAIT_SECONDS
+    $n = 0
+    if ($raw -and [int]::TryParse($raw, [ref]$n) -and $n -ge 0) { return $n }
+    return 1200
+}
+
+function Read-RunnerClaimHolder {
+    param([Parameter(Mandatory = $true)][string]$ClaimPath)
+    $text = ""
+    try {
+        $fs = [System.IO.File]::Open($ClaimPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+        try {
+            $reader = New-Object System.IO.StreamReader($fs)
+            $text = $reader.ReadToEnd()
+        } finally { $fs.Dispose() }
+    } catch { return @{} }
+    $holder = @{}
+    foreach ($line in ($text -split "`r?`n")) {
+        if ($line -match '^(\w+)=(.*)$') { $holder[$Matches[1]] = $Matches[2] }
+    }
+    return $holder
+}
+
+# Is $HolderPid this process or one of its ancestors?
+function Test-IsSelfOrAncestor {
+    param([int]$HolderPid)
+    $cur = $PID
+    for ($i = 0; $i -lt 32 -and $cur -gt 0; $i++) {
+        if ($cur -eq $HolderPid) { return $true }
+        $row = Get-CimInstance Win32_Process -Filter "ProcessId = $cur" -ErrorAction SilentlyContinue
+        if (-not $row) { return $false }
+        $next = [int]$row.ParentProcessId
+        if ($next -eq $cur) { return $false }
+        $cur = $next
+    }
+    return $false
+}
+
+# One attempt at one runner. Returns a claim object, or $null when another
+# process holds it ($Holder is then filled in for the message).
+function Open-RunnerClaim {
     param(
         [Parameter(Mandatory = $true)][string]$RunnerPath,
-        [string]$Label = "runner"
+        [Parameter(Mandatory = $true)][string]$Tool,
+        [ref]$Holder
     )
-
-    if (-not (Test-Path $RunnerPath)) { return $true }
-
-    $state = Get-UnityLockState -ProjectRoot $RunnerPath
-    if ($state.Certain) {
-        Write-Host "$Label is HELD: Unity.exe pid $($state.HolderPid) has $RunnerPath open."
-        Write-Host "  Two Unity instances cannot share one project copy, so this run would abort on"
-        Write-Host "  'another Unity instance is running with this project open' and report nothing."
-        Write-Host "  Another session is mid-run (WORKFLOW.md section 4). Wait for it and re-run."
-        return $false
+    if (-not (Test-Path -LiteralPath $RunnerPath)) {
+        New-Item -ItemType Directory -Force -Path $RunnerPath | Out-Null
     }
-
-    # Debris from a crash or a killed run. The runner copies are disposable and
-    # nothing else writes here, so clearing it is safe -- but only AFTER the
-    # process table has said nothing is behind it, which is the part
-    # graphics_tests.ps1's unconditional delete skips.
-    [void](Clear-StaleUnityLock -State $state)
-
-    if ($state.Ambiguous) {
-        Write-Host "$Label : a Unity.exe is running whose project could not be read (AUDIT #94). Proceeding; Unity's own Library lock is the backstop."
+    $claimPath = Join-Path $RunnerPath $RunnerClaimFileName
+    try {
+        $fs = [System.IO.File]::Open($claimPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read)
+    } catch [System.IO.IOException] {
+        $h = Read-RunnerClaimHolder -ClaimPath $claimPath
+        $holderPid = 0
+        if ($h['pid'] -and [int]::TryParse($h['pid'], [ref]$holderPid) -and (Test-IsSelfOrAncestor -HolderPid $holderPid)) {
+            return [PSCustomObject]@{ RunnerPath = $RunnerPath; ClaimPath = $claimPath; Stream = $null; Owned = $false }
+        }
+        $Holder.Value = $h
+        return $null
     }
-    return $true
+    $body = "pid=$PID`r`ntool=$Tool`r`nsince=$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))`r`n"
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes($body)
+    $fs.SetLength(0)
+    $fs.Write($bytes, 0, $bytes.Length)
+    $fs.Flush()
+    return [PSCustomObject]@{ RunnerPath = $RunnerPath; ClaimPath = $claimPath; Stream = $fs; Owned = $true }
+}
+
+function Format-RunnerClaimHolder {
+    param($Holder)
+    if (-not $Holder -or -not $Holder['pid']) { return "another process (its claim file could not be read yet)" }
+    return "$($Holder['tool']) (pid $($Holder['pid']), since $($Holder['since']))"
+}
+
+# Claims every runner in $RunnerPaths for this process, waiting up to
+# $WaitSeconds in total. Returns the claims -- hand them to Exit-RunnerClaim
+# in a finally -- or $null after saying why, in which case nothing is held.
+# Process exit releases them too, so a forgotten Exit-RunnerClaim costs the
+# rest of this process's lifetime, never a stale lock.
+function Enter-RunnerClaim {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$RunnerPaths,
+        [Parameter(Mandatory = $true)][string]$Tool,
+        [int]$WaitSeconds = -1
+    )
+    if ($WaitSeconds -lt 0) { $WaitSeconds = Get-RunnerWaitSeconds }
+    $deadline = (Get-Date).AddSeconds($WaitSeconds)
+    $claims = @()
+
+    foreach ($path in @($RunnerPaths | Sort-Object -Unique)) {
+        $announced = $false
+        $lastNote = Get-Date
+        while ($true) {
+            $holder = $null
+            $claim = Open-RunnerClaim -RunnerPath $path -Tool $Tool -Holder ([ref]$holder)
+            $waitingOn = $null
+            if ($claim) {
+                # Inside the claim: is a Unity outside the protocol still in
+                # there? See ".Certain, NOT .Held" above.
+                $state = Get-UnityLockState -ProjectRoot $path
+                if ($state.Certain) {
+                    $waitingOn = "Unity.exe pid $($state.HolderPid), which has it open outside any claim"
+                    Exit-RunnerClaim -Claims @($claim)
+                } else {
+                    [void](Clear-StaleUnityLock -State $state)
+                    if ($state.Ambiguous) {
+                        Write-Host "$path : a Unity.exe is running whose project could not be read (AUDIT #94). Proceeding; Unity's own Library lock is the backstop."
+                    }
+                    $claims += $claim
+                    if ($announced) { Write-Host "runner released, claimed: $path" }
+                    break
+                }
+            } else {
+                $waitingOn = Format-RunnerClaimHolder $holder
+            }
+
+            if ((Get-Date) -ge $deadline) {
+                Write-Host "RUNNER BUSY: $path is held by $waitingOn."
+                Write-Host "  Waited ${WaitSeconds}s (PP_RUNNER_WAIT_SECONDS) and it was not released. Nothing was"
+                Write-Host "  mirrored into it and no lock was touched. Re-run once that session finishes."
+                Exit-RunnerClaim -Claims $claims
+                return $null
+            }
+            if (-not $announced) {
+                Write-Host "waiting for $path -- held by $waitingOn (up to ${WaitSeconds}s in total)"
+                $announced = $true
+                $lastNote = Get-Date
+            } elseif (((Get-Date) - $lastNote).TotalSeconds -ge 60) {
+                Write-Host "  still waiting for $path -- held by $waitingOn"
+                $lastNote = Get-Date
+            }
+            Start-Sleep -Seconds 2
+        }
+    }
+    return ,$claims
+}
+
+# Lets go of claims Enter-RunnerClaim returned. Safe on $null, on a nested
+# (not-owned) claim and on one already released. Never deletes the claim
+# file: an unheld file is free, and deleting it would race a contender that
+# has just opened it.
+function Exit-RunnerClaim {
+    param($Claims)
+    foreach ($c in @($Claims)) {
+        if ($c -and $c.Owned -and $c.Stream) {
+            try { $c.Stream.Dispose() } catch { }
+            $c.Stream = $null
+        }
+    }
 }
 
 # --- Results files: only THIS run's Unity may produce this run's verdict ----

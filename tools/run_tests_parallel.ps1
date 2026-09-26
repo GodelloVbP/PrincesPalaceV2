@@ -81,9 +81,10 @@ $SyncScenesToMain = $BuildScenes
 # moment ProjectVersion.txt did.
 $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
-# Test-RunnerFree -- see its header in tools/unity_lock.ps1. AUDIT #110 is the
-# reason it exists: this script had no lock check at all, so a runner another
-# session already had open was discovered only when Unity aborted into it.
+# Enter-RunnerClaim -- see "Runner claims" in tools/unity_lock.ps1. AUDIT #110
+# is the reason it exists: this script had no lock check at all, so a runner
+# another session already had open was discovered only when Unity aborted
+# into it.
 . (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
@@ -409,13 +410,14 @@ if ($DryRun) {
 
 # --- are the runners free? --------------------------------------------------
 #
-# EVERY one of them, and before the sync -- mirroring main into a copy another
-# session's Unity has open is its own way to break a run, and this script
-# generates content and scenes into one of them. Costs one process-table read
-# each. Refuses rather than waits; see Test-RunnerFree's header for why.
-foreach ($runner in $Runners) {
-    if (-not (Test-RunnerFree -RunnerPath $runner.Path -Label "the $($runner.Label) runner")) { exit 1 }
-}
+# EVERY one of them, in one call, and before the sync -- mirroring main into a
+# copy another session is using is its own way to break a run, and this
+# script generates content and scenes into one of them. Held until this
+# script exits (the finally at the bottom), so a capture tool cannot mirror
+# into a copy between this run's sync and its Unity launch. Waits, bounded;
+# see "Runner claims" in tools/unity_lock.ps1.
+$RunnerClaims = Enter-RunnerClaim -RunnerPaths @($Runners | ForEach-Object { $_.Path }) -Tool "run_tests_parallel.ps1"
+if ($null -eq $RunnerClaims) { exit 1 }
 
 $freshRunners = @($Runners | Where-Object { -not (Test-Path (Join-Path $_.Path "Library")) })
 if ($SkipSync -and @($Runners | Where-Object { -not (Test-Path (Join-Path $_.Path "Assets")) }).Count -gt 0) {
@@ -986,5 +988,6 @@ Write-Host "`nSome tests failed."
 exit 1
 
 } finally {
+    Exit-RunnerClaim -Claims $RunnerClaims
     Stop-FocusGuard
 }

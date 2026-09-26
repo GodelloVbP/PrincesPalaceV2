@@ -556,6 +556,16 @@ function Invoke-PreviewCapture {
         return 1
     }
 
+    # Claimed BEFORE the sync and held until the frames are copied back: the
+    # sync, the folder clear below and graphics_tests.ps1's Unity launch all
+    # act on a copy the commit gate and other sessions' captures share.
+    # graphics_tests.ps1 claims it too; as our child it sees this process as
+    # the holder's ancestor and passes straight through. Waits, bounded; see
+    # "Runner claims" in tools/unity_lock.ps1.
+    $claims = Enter-RunnerClaim -RunnerPaths @($runner) -Tool "preview.ps1"
+    if ($null -eq $claims) { return 1 }
+    try {
+
     Write-Host "syncing main into the runner copy so it photographs the content you just built ..."
     robocopy "$Project\Assets" "$runner\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
@@ -615,6 +625,10 @@ function Invoke-PreviewCapture {
         return 1
     }
     return 0
+
+    } finally {
+        Exit-RunnerClaim -Claims $claims
+    }
 }
 
 function Start-Editor {

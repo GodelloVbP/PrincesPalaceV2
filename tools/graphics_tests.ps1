@@ -29,6 +29,7 @@ $ErrorActionPreference = "Stop"
 if ($Label -ne "") { $env:PP_CAPTURE_LABEL = $Label }
 
 . (Join-Path $PSScriptRoot "unity_path.ps1")
+. (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
 # Process-tree focus guard, for this script's WHOLE run -- see
@@ -49,15 +50,17 @@ if (-not (Test-Path $Target)) {
     exit 1
 }
 
-# A run that aborts on exit leaves its lockfile behind, and the NEXT run then
-# refuses to start with "another Unity instance is running with this project
-# open" -- which is untrue and costs a confusing five minutes every time. The
-# runner copy is ours alone, so a lockfile here is always stale by definition.
-$lock = Join-Path $Target "Temp\UnityLockfile"
-if (Test-Path $lock) {
-    Write-Host "clearing a stale lockfile from a previous run"
-    Remove-Item $lock -Force -ErrorAction SilentlyContinue
-}
+# CLAIMED, never cleared blind. This used to delete any Temp\UnityLockfile it
+# found, on the belief that "the runner copy is ours alone, so a lockfile
+# here is always stale" -- it is not ours alone: the commit gate, test.ps1
+# and every other capture tool share it, and on 2026-09-26 the lockfile this
+# deleted belonged to another session's run in progress. Enter-RunnerClaim
+# waits (bounded) for whoever holds the copy, and clears a lockfile only when
+# the process table says nothing is behind it. A caller that already holds
+# the claim (preview.ps1, which syncs first) is recognised as our ancestor
+# and passes straight through. See "Runner claims" in tools/unity_lock.ps1.
+$RunnerClaims = Enter-RunnerClaim -RunnerPaths @($Target) -Tool "graphics_tests.ps1"
+if ($null -eq $RunnerClaims) { exit 1 }
 
 # PER INVOCATION, for the reason test.ps1 states at its own $dotnetLog:
 # $env:TEMP is per user, so two sessions running different runner copies
@@ -135,5 +138,6 @@ Write-Host "All graphics tests passed."
 exit 0
 
 } finally {
+    Exit-RunnerClaim -Claims $RunnerClaims
     Stop-FocusGuard
 }

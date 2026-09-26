@@ -140,6 +140,7 @@ $ErrorActionPreference = "Stop"
 
 $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
+. (Join-Path $PSScriptRoot "unity_lock.ps1")
 $UnityExe = Get-UnityExe
 
 # Process-tree focus guard, for this script's WHOLE run -- see
@@ -214,25 +215,16 @@ else {
 
 # ---- locks ------------------------------------------------------------------
 
-# A concurrent run_tests_parallel.ps1 or test.ps1 (or another bot.ps1)
-# against the SAME copy would clobber this batch mid-flight -- WORKFLOW.md SS4
-# says check the lock, not clear it, because -TestRunner2 is shared with the
-# PlayMode leg of the commit-gate script and a second live session. A lock
-# here might be real, not stale, so this refuses rather than guessing. The
-# -BotN copies are this script's own and should never be locked by anything
-# else; if one is, the honest reading is still "somebody is using it".
-$locked = @()
-foreach ($shard in $shardList) {
-    $lock = Join-Path $shard.Path "Temp\UnityLockfile"
-    if (Test-Path $lock) { $locked += $shard.Path }
-}
-
-if ($locked.Count -gt 0) {
-    Write-Host "Locked (Temp\UnityLockfile present) -- another Unity run is using these copies:"
-    $locked | ForEach-Object { Write-Host "  $_" }
-    Write-Host "Wait for it to finish, or confirm the lock is stale before removing it by hand."
-    exit 1
-}
+# A concurrent run_tests_parallel.ps1 or test.ps1 (or another bot.ps1, or a
+# capture tool) against the SAME copy would clobber this batch mid-flight --
+# -TestRunner2 is shared with the PlayMode leg of the commit gate and a second
+# live session. This used to refuse on a mere Temp\UnityLockfile, which is
+# both too strong (a crash's debris refused forever) and too weak (a session
+# between its sync and its Unity launch has no lockfile yet). All shards are
+# claimed in one call and held until this script exits. Waits, bounded; see
+# "Runner claims" in tools/unity_lock.ps1.
+$RunnerClaims = Enter-RunnerClaim -RunnerPaths @($shardList | ForEach-Object { $_.Path }) -Tool "bot.ps1"
+if ($null -eq $RunnerClaims) { exit 1 }
 
 # ---- sync -------------------------------------------------------------------
 
@@ -457,5 +449,6 @@ Write-Host "Offers: $(Join-Path $MainOutDir "offers.html")"
 exit $reportExit
 
 } finally {
+    Exit-RunnerClaim -Claims $RunnerClaims
     Stop-FocusGuard
 }

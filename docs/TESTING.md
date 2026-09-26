@@ -47,6 +47,26 @@ Triage order, cheapest first:
 - A new window-spawning script that skips `Start-FocusGuard` is back to
   pre-2026-09-18 unguarded behavior.
 
+## Runner copies are claimed, never cleared blind
+
+- Every tool that mirrors into or launches Unity in a `-TestRunner*` or
+  `-Bot*` copy -- `run_tests_parallel.ps1`, `test.ps1`, `graphics_tests.ps1`
+  (so `preview.ps1` and `static_pilot_qa.ps1`), `screenshot.ps1`, `bot.ps1`
+  -- first takes it with `Enter-RunnerClaim` (`tools/unity_lock.ps1`,
+  "Runner claims") and holds it until it exits: sync, launch and copy-back.
+- The claim is `<runner>\.pp-runner-claim` held open by the claiming
+  process. The OS drops it when that process exits however it exits, so it
+  cannot go stale and nothing ever deletes it.
+- A busy copy is WAITED on: `waiting for <runner> -- held by <tool> (pid,
+  since)`, then `runner released, claimed`. Bounded by
+  `PP_RUNNER_WAIT_SECONDS` (default 1200; `0` refuses at once); past it,
+  `RUNNER BUSY: ...` and exit 1 with nothing mirrored and no lock touched.
+- A Unity `Temp\UnityLockfile` is cleared only when the process table shows
+  no Unity.exe holding that copy (`Clear-StaleUnityLock`), with a
+  `stale lockfile ... removing it` line.
+- A child of the holder (preview.ps1 -> graphics_tests.ps1) passes through
+  its parent's claim.
+
 ## Shared scenes in PlayMode
 
 - A fixture loads its scene once per FIXTURE, via `SharedScene.Ensure` /
