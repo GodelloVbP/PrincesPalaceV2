@@ -157,6 +157,7 @@ namespace PrincesPalace
             {
                 label.SetContent(text);
                 label.color = color;
+                ApplyOutline();
                 ApplyGlow(GlowAt(0f));
             }
 
@@ -228,6 +229,43 @@ namespace PrincesPalace
 
             material.SetColor(ShaderUtilities.ID_FaceColor,
                 new Color(multiplier, multiplier, multiplier, 1f));
+        }
+
+        // ---- the edge that keeps a number readable on anything ------------------
+        //
+        // QA 2026-09-26: Winter's Rebuke's "-4" (Ice, a pale green-white face)
+        // landed on the white-blue impact burst and the struck body's own white
+        // hit flash, and could barely be read. The number is already the LAST
+        // sibling (FightScreen.BuildDamagePopups), so nothing draws over it --
+        // what it lacked was contrast against a background it cannot choose.
+        // Every element colour in FightHudPalette is light-to-mid, and a spell
+        // or a flash can put white, violet or black under any of them, so the
+        // only edge that separates them all is a dark one.
+        //
+        // ON THE SAME PER-LABEL MATERIAL INSTANCE the glow already writes
+        // (fontMaterial), so it costs nothing new and the six pooled labels do
+        // not share it. Written on every play rather than once, because the
+        // glow's own writes go through the same instance and a TMP material
+        // refresh would otherwise be the thing that decides whether it stuck.
+        internal const float OutlineWidth = 0.22f;
+        internal static readonly Color32 OutlineColour = new Color32(10, 7, 16, 235);
+
+        //
+        // THE KEYWORD TOO. The fonts are on TMP_SDF-Mobile, whose outline
+        // branch is `#ifdef OUTLINE_ON` -- setting the width alone changes a
+        // number no pixel reads, which is how the first cut of this passed its
+        // property test and drew no edge in the capture. The variant ships
+        // because OnBarCaption's material already enables it on that shader.
+        private void ApplyOutline()
+        {
+            var material = label.fontMaterial;
+            if (material != null && !material.IsKeywordEnabled(ShaderUtilities.Keyword_Outline))
+            {
+                material.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            }
+
+            label.outlineColor = OutlineColour;
+            label.outlineWidth = OutlineWidth;
         }
 
         // A pure static seam, like every other animator in this project: the

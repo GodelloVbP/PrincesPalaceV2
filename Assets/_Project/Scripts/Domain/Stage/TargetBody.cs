@@ -104,5 +104,37 @@ namespace PrincesPalace.Domain.Stage
             float extent = body.Extent;
             return extent > 0.01f ? extent / ReferenceExtent : 1f;
         }
+
+        // ---- a tail lands ON the target; it never replaces it ---------------
+        //
+        // QA 2026-09-26: Winter's Rebuke's and Blackglass Spear's impact stills
+        // (authored 320, i.e. 1.14 rat-bodies) and Crownfall's shatter (340,
+        // 1.21) were fitted to an Elder Treant at 1.63x -- 520-555 unit
+        // starbursts over a 360 x 457 body, canopy to roots gone, and the
+        // damage number sitting on the burst. The authored sizes were tuned on
+        // a rat, where "a bit bigger than the body" reads as a hit; the rule
+        // they were reaching for is relative to the body, so it is stated
+        // relative to the body.
+        //
+        // THREE QUARTERS OF THE BODY'S LARGER EXTENT, whatever was authored.
+        // The burst then covers the struck middle and leaves the outline --
+        // canopy, roots, the rat's snout and tail -- visible around it, which
+        // is what reads as "hit" rather than "replaced". Applied at run time
+        // to every layer that opens AT THE HIT on the struck body (FightController
+        // .PlaceOne), so a spell authored tomorrow cannot re-open the defect.
+        // Release-time layers are not tails: Thorn Tithe's ring is meant to
+        // span the body and is hollow.
+        public const float TailMaxOfBody = 0.75f;
+
+        // THE SCALE a tail's box of side `boxSide` is drawn at on `body`: 1
+        // when it already fits, and 1 for a body with no measurable extent,
+        // the same degrade-to-authored posture FitFactor takes.
+        public static float TailScale(float boxSide, StageBody body)
+        {
+            float extent = body.Extent;
+            if (extent <= 0.01f || boxSide <= 0f) return 1f;
+            float cap = TailMaxOfBody * extent;
+            return boxSide > cap ? cap / boxSide : 1f;
+        }
     }
 }

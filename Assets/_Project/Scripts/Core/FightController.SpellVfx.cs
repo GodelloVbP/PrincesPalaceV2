@@ -410,6 +410,15 @@ namespace PrincesPalace
             instance.Fit = fit;
 
             var box = BoxForLayer(layer, fit);
+
+            // A TAIL NEVER COVERS THE WHOLE OF WHAT IT STRUCK (TargetBody.
+            // TailMaxOfBody has the why). Before anything below reads the box,
+            // so the impact-point correction is taken off the size actually drawn.
+            if (body.HasValue && IsTail(layer))
+            {
+                box *= TargetBody.TailScale(Mathf.Max(box.x, box.y), body.Value);
+            }
+
             bool fromCaster = SpellPlaceNames.OnCaster(layer.Place) && !layer.Travels;
             bool centred = SpellPlaceNames.Centred(layer.Place);
 
@@ -499,6 +508,27 @@ namespace PrincesPalace
             {
                 instance.From = instance.To;
             }
+        }
+
+        // WHICH LAYERS ARE TAILS: drawn on the struck body, opening at the
+        // hit. Not a traveller (its arrival IS the hit, and a spear is long by
+        // design), not the air point, not the caster's side, and not an
+        // emitter, whose particles are sized by instance.Fit rather than a box.
+        private static bool IsTail(SpellLayer layer) =>
+            layer.At == SpellCue.Hit
+            && !layer.Travels
+            && layer.Render != SpellRender.Emitter
+            && layer.Place != SpellPlace.Sky
+            && !SpellPlaceNames.OnCaster(layer.Place);
+
+        // PLACED BUT NOT BEGUN: the boxes, ends and turns PlaceCast wrote, for
+        // the PlayMode tests that pin the placement rules without racing a
+        // 60x clock for a renderer. Public for the reason every seam here is.
+        public SpellPerformance PlacedCastForTest(CombatBeat beat)
+        {
+            var performance = ResolveCast(beat);
+            PlaceCast(beat, performance);
+            return performance;
         }
 
         // WHERE A TRAVELLING LAYER LEAVES FROM: the air point for `sky`, the

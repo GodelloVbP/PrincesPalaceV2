@@ -203,5 +203,45 @@ namespace PrincesPalace.PlayModeTests
             AssertSameColor(Hex(FightHudPalette.DamageTypePhysical), ActivePopupColor(),
                 "a Physical attack's popup drifted off the flat red every hit used to show");
         }
+
+        // READABLE ON ANY SPELL. QA 2026-09-26: Winter's Rebuke's "-4" (Ice, a
+        // pale face) sat on a white-blue impact burst and could barely be read.
+        // Every number now carries a dark edge, and the pool still draws after
+        // every spell layer -- both halves are needed: on top and unreadable is
+        // what shipped.
+        [UnityTest]
+        public IEnumerator EveryNumberIsDrawnAboveTheSpellsWithADarkEdge()
+        {
+            yield return LoadFightWithAttackType(DamageType.Ice);
+
+            var popup = _fight.GetComponentsInChildren<DamagePopup>(includeInactive: true).FirstOrDefault();
+            Assert.IsNotNull(popup, "the fight scene has no damage popup");
+
+            popup.Play(Vector2.zero, 4, false, DamageType.Ice, 5f);
+            var label = popup.GetComponentInChildren<TMP_Text>(includeInactive: true);
+            Assert.IsNotNull(label);
+
+            Assert.GreaterOrEqual(label.outlineWidth, 0.2f, "the number has no edge to read against a bright spell");
+            // TMP_SDF-Mobile draws no outline at any width without this keyword.
+            Assert.IsTrue(label.fontMaterial.IsKeywordEnabled(ShaderUtilities.Keyword_Outline),
+                "the outline width is set but the shader's outline branch is off, so no edge is drawn");
+            Color32 edge = label.outlineColor;
+            Assert.LessOrEqual((edge.r + edge.g + edge.b) / 3f, 32f, "the number's edge is not dark");
+            Assert.GreaterOrEqual(edge.a, 200, "the number's edge is too faint to separate it from a bright spell");
+
+            // Draw order: the popup pool is a later sibling than every spell pool
+            // under their shared parent, so it paints over them.
+            var pool = Named("DamagePopups").transform;
+            foreach (var name in new[] { "SpellVfx", "SpellParticles", "SpellGroundVfx" })
+            {
+                var spell = Named(name);
+                if (spell == null) continue;
+                Assert.AreSame(pool.parent, spell.transform.parent, $"{name} and the popups no longer share a parent");
+                Assert.Greater(pool.GetSiblingIndex(), spell.transform.GetSiblingIndex(),
+                    $"{name} paints over the damage numbers");
+            }
+
+            popup.Reclaim();
+        }
     }
 }

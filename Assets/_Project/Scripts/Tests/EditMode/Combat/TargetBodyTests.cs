@@ -105,5 +105,35 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(1f, TargetBody.FitFactor(default), Tolerance);
         }
+
+        // ---- a tail never replaces what it struck ------------------------------
+
+        // The Elder Treant in the front rank (SpellFlightTests' literal):
+        // 360.4862 wide, 456.82308 tall -> extent 456.82308.
+        private static readonly StageBody Treant = new StageBody(58.64f, 419.1262f, -216.96412f, 239.85896f);
+
+        [Test]
+        public void ATailFittedPastThreeQuartersOfTheBodyIsDrawnAtThreeQuarters()
+        {
+            // Winter's Rebuke's impact, 320 x fit 1.6315 = 522.08 on the treant.
+            // Cap 0.75 x 456.82308 = 342.61731; 342.61731 / 522.08 = 0.65626.
+            float scale = TargetBody.TailScale(522.08f, Treant);
+            Assert.AreEqual(0.65626f, scale, 1e-4f);
+            Assert.AreEqual(342.6173f, 522.08f * scale, 1e-2f,
+                "the drawn tail must not exceed three quarters of the struck body's larger extent");
+        }
+
+        [Test]
+        public void ATailAlreadyInsideTheBodyIsLeftAlone()
+        {
+            // 300 < 342.61731.
+            Assert.AreEqual(1f, TargetBody.TailScale(300f, Treant), Tolerance);
+        }
+
+        [Test]
+        public void ATailOnABodyWithNoExtentKeepsItsAuthoredSize()
+        {
+            Assert.AreEqual(1f, TargetBody.TailScale(320f, default), Tolerance);
+        }
     }
 }

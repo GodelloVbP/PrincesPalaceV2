@@ -1927,5 +1927,65 @@ namespace PrincesPalace.PlayModeTests
         private UnityEngine.UI.Image FadeLayer() =>
             _player.GetComponentsInChildren<UnityEngine.UI.Image>(includeInactive: true)
                 .FirstOrDefault(i => i.name.EndsWith("Next"));
+
+        // ---- QA 2026-09-26: the three sky spells against an Elder Treant --------
+        //
+        // Placed but not begun (PlacedCastForTest), so these read the boxes and
+        // ends PlaceCast wrote without racing the 60x clock for a renderer.
+
+        private static SpellPresentation ShippedVfx(string skillId)
+        {
+            var definition = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == skillId);
+            Assert.IsNotNull(definition, $"'{skillId}' is not in the content database");
+            var vfx = PreviewFight.PreviewPresentationOf(definition.Data);
+            Assert.IsTrue(vfx != null && vfx.HasArt, $"'{skillId}' resolves to a presentation with no art");
+            return vfx;
+        }
+
+        private IEnumerator PlacedOnTheTreant(string skillId, System.Action<SpellPerformance, Domain.Stage.StageBody> check)
+        {
+            yield return LoadFight(1, 1.45f, "Enemies/treant");
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+            var body = _fight.BodyOfForTest(foe);
+
+            // 441 opaque rows at x0.7144 x1.45 = 456.8: if the body is not that
+            // tall the art never loaded and this measures the slot fallback.
+            Assert.Greater(body.Height, 400f, "fixture: the treant's art did not load");
+
+            var performance = _fight.PlacedCastForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = ShippedVfx(skillId),
+            });
+            Assert.IsNotNull(performance, $"'{skillId}' resolved to no performance");
+            check(performance, body);
+        }
+
+        private static readonly string[] SkySpells = { "winters_rebuke", "blackglass_spear", "crownfall" };
+
+        // THE TAIL COVERS AT MOST THREE QUARTERS OF THE BODY. Winter's Rebuke
+        // and Blackglass Spear author a 320 impact and Crownfall a 340 shatter;
+        // fitted to the treant (x1.63) those were 522-555 units over a 457-tall
+        // body. 0.75 x 456.8 = 342.6.
+        [UnityTest]
+        public IEnumerator EveryTailOnTheTreantIsAtMostThreeQuartersOfItsBody([ValueSource(nameof(SkySpells))] string skillId)
+        {
+            int tails = 0;
+            yield return PlacedOnTheTreant(skillId, (performance, body) =>
+            {
+                foreach (var instance in performance.Instances)
+                {
+                    var layer = instance.Layer;
+                    if (layer.At != SpellCue.Hit || layer.Travels || layer.Render == SpellRender.Emitter) continue;
+                    tails++;
+                    Assert.LessOrEqual(Mathf.Max(instance.Box.X, instance.Box.Y), 342.7f,
+                        $"{skillId}.{layer.id}: a {instance.Box.X:0}-unit tail hides the whole treant");
+                }
+            });
+            Assert.Greater(tails, 0, $"{skillId}: no tail layer was placed, so nothing was checked");
+        }
     }
 }
