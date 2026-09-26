@@ -573,7 +573,18 @@ namespace PrincesPalace
             // every party member resolved to the fallback plate and stayed there.
             // Making the order matter would be a rule nobody can see; repainting
             // here makes the two calls commutative.
-            RefreshStage();
+            //
+            // THE WHOLE SCREEN, not only the stage. The stage was the one
+            // reader of this map when this line was written; the turn-order
+            // ribbon became a second (RefreshInitiative -> StanceSpriteFor ->
+            // SpriteFolderFor), and a stage-only repaint left every party chip
+            // on its letter fallback ("S", "O", "B") while the enemy chips
+            // beside it drew -- in a real fight, FightBootstrap binds the art
+            // after Bind, until the player's first press repainted the HUD
+            // (QA 2026-09-26). RefreshUi includes RefreshStage, so the next
+            // reader of party art is covered without being listed here.
+            if (_session != null) RefreshUi();
+            else RefreshStage();
         }
 
         // True while beats are playing. Every click checks it, in one place.
